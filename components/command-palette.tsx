@@ -160,6 +160,13 @@ const GROUP_BOOSTS: Record<string, number> = {
   "wiki-pages": 80,
   // Notebook tasks are data too, written by the user for themselves.
   [SCRATCHPAD_CATEGORY]: 80,
+  // The workspace's other objects (MIN-846): data again, and search-only.
+  // A notification only points at something else, so the object itself
+  // ranks first when both answer the same words.
+  routines: 80,
+  "pull-requests": 80,
+  "board-views": 80,
+  notifications: 70,
 };
 
 /** Ticket status icon: the SAME indicator as board cards and
@@ -409,6 +416,7 @@ export function CommandPalette({
           return ProjectIcon ? <AppIcon icon={ProjectIcon} className="size-3.5" /> : undefined;
         })(),
         filterCategory: cat,
+        searchOnly: it.searchOnly,
         // Issue search order (MIN-726): work under way first, closed and
         // triage issues last, the typed identifier before all.
         ...(issue
@@ -454,8 +462,8 @@ export function CommandPalette({
           if (HIDDEN_KEYS.has(it.key)) return false;
           if (!navigationSearch || paletteDestinationHref(it.href) !== null) return true;
           if (destinationOnly && it.onSelectInNewTab) return true;
-          // Tickets and navigation panels can open in place without a tab destination.
-          return mobile && !destinationOnly && (it.entityType === "issue" || ["go-inbox", "open-notes", "go-agents", "cmd-shortcuts"].includes(it.key));
+          // Tickets, notifications and navigation panels open in place without a tab destination.
+          return mobile && !destinationOnly && (it.entityType === "issue" || it.entityType === "notification" || ["go-inbox", "open-notes", "go-agents", "cmd-shortcuts"].includes(it.key));
         })
         .map((it) => toPaletteItem(it, cat));
     });

@@ -43,7 +43,7 @@
 }
 
 .item.active .icon {
-  color: var(--cp-accent-fg);
+  color: var(--cp-icon-active, var(--cp-accent-fg));
 }
 
 .icon svg {
@@ -51,23 +51,24 @@
   height: 16px;
 }
 
-/* Icon colors by item type */
-.icon[data-item-type="project"] { color: var(--cp-icon-project); }
-.icon[data-item-type="task"] { color: var(--cp-icon-task); }
-.icon[data-item-type="subtask"] { color: var(--cp-icon-subtask); }
-.icon[data-item-type="note"] { color: var(--cp-icon-note); }
-.icon[data-item-type="event"] { color: var(--cp-icon-event); }
-.icon[data-item-type="assignment"] { color: var(--cp-icon-assignment); }
-.icon[data-item-type="friend"] { color: var(--cp-icon-friend); }
-.icon[data-item-type="action"] { color: var(--cp-icon-action); }
-.icon[data-item-type="conversation"] { color: var(--cp-icon-conversation); }
-.icon[data-item-type="setting"] { color: var(--cp-icon-setting); }
-.icon[data-item-type="navigation"] { color: var(--cp-icon-navigation); }
-.icon[data-item-type="shortcut"] { color: var(--cp-icon-shortcut); }
+/* Icon colors by item type. A type whose token the host leaves undefined
+   stays muted instead of inheriting the row's text color. */
+.icon[data-item-type="project"] { color: var(--cp-icon-project, var(--cp-muted)); }
+.icon[data-item-type="task"] { color: var(--cp-icon-task, var(--cp-muted)); }
+.icon[data-item-type="subtask"] { color: var(--cp-icon-subtask, var(--cp-muted)); }
+.icon[data-item-type="note"] { color: var(--cp-icon-note, var(--cp-muted)); }
+.icon[data-item-type="event"] { color: var(--cp-icon-event, var(--cp-muted)); }
+.icon[data-item-type="assignment"] { color: var(--cp-icon-assignment, var(--cp-muted)); }
+.icon[data-item-type="friend"] { color: var(--cp-icon-friend, var(--cp-muted)); }
+.icon[data-item-type="action"] { color: var(--cp-icon-action, var(--cp-muted)); }
+.icon[data-item-type="conversation"] { color: var(--cp-icon-conversation, var(--cp-muted)); }
+.icon[data-item-type="setting"] { color: var(--cp-icon-setting, var(--cp-muted)); }
+.icon[data-item-type="navigation"] { color: var(--cp-icon-navigation, var(--cp-muted)); }
+.icon[data-item-type="shortcut"] { color: var(--cp-icon-shortcut, var(--cp-muted)); }
 
 /* Override icon color when item is active */
 .item.active .icon[data-item-type] {
-  color: var(--cp-accent-fg);
+  color: var(--cp-icon-active, var(--cp-accent-fg));
 }
 
 /* Content area */

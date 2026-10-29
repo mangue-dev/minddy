@@ -2172,6 +2172,7 @@
     "projects": "Projects",
     "tickets": "Issues",
     "allIssues": "All issues",
+    "boardViews": "Views",
     "cycle": "Cycle",
     "pullRequests": "Code review",
     "agents": "Numo",

@@ -524,7 +524,7 @@ describe("la teinte du clignement", () => {
     // an invisible animation. Without beating, the bottom must STAY — this is the
     // `flashBlock` timer that removes it, not the duration of the animation.
     const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
-    const start = css.indexOf(".page-block-target {");
+    const start = css.indexOf(".page-block-target");
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)", start));
     const block = reduced.slice(0, reduced.indexOf("}", reduced.indexOf("}") + 1));
     expect(block).toContain("animation: none");

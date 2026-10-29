@@ -62,8 +62,24 @@
   --cp-space-6: 1.5rem;
   --cp-space-8: 2rem;
 
-  /* === Per-entity icon tints (data-item-type = filterCategory here).
- Neutral by default; to adjust during the test if you want shades. === */
+  /* === Row icons: muted for every entity type, and on the highlighted
+ row too, so no row's icon reads louder than another's (MIN-846). The
+ palette module's own tints (theme.css) are overridden here; a type
+ without a token falls back to --cp-muted in the module. Status and
+ objective indicators keep their own colors: they carry meaning. === */
+  --cp-icon-active: var(--muted-foreground);
+  --cp-icon-navigation: var(--muted-foreground);
+  --cp-icon-project: var(--muted-foreground);
+  --cp-icon-task: var(--muted-foreground);
+  --cp-icon-subtask: var(--muted-foreground);
+  --cp-icon-note: var(--muted-foreground);
+  --cp-icon-event: var(--muted-foreground);
+  --cp-icon-assignment: var(--muted-foreground);
+  --cp-icon-friend: var(--muted-foreground);
+  --cp-icon-action: var(--muted-foreground);
+  --cp-icon-conversation: var(--muted-foreground);
+  --cp-icon-setting: var(--muted-foreground);
+  --cp-icon-shortcut: var(--muted-foreground);
   --cp-icon-issue: var(--muted-foreground);
   --cp-icon-theme: var(--muted-foreground);
   --cp-icon-create: var(--muted-foreground);

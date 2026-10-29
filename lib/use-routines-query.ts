@@ -58,11 +58,14 @@ export function patchRoutineInCache(
   return previous;
 }
 
-export function useRoutinesQuery() {
+/** `enabled: false` reads nothing: the command palette loads the list only
+ *  while it is open (MIN-846). */
+export function useRoutinesQuery({ enabled = true }: { enabled?: boolean } = {}) {
   const { data, isPending } = useQuery({
     queryKey: routinesQueryKey(),
     queryFn: fetchRoutinesApi,
     refetchOnMount: refetchOnRevealWhenStale,
+    enabled,
   });
   return { routines: data?.routines ?? [], loading: isPending };
 }

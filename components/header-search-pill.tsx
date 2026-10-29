@@ -43,6 +43,9 @@ export interface PaletteItem {
    * desktop palette (e.g. the project orb). Ignored by the mobile search.
    */
   contextIcon?: ReactNode;
+  /** Desktop palette only: the row answers a query but stays out of the list
+   *  shown before typing (routines, pull requests, notifications, MIN-846). */
+  searchOnly?: boolean;
   /** Entity type for the palette's contextual-action routing (e.g. "issue"). */
   entityType?: string;
   /** Project this row belongs to. The desktop palette boosts rows whose

@@ -92,6 +92,8 @@
   border: none;
   border-radius: var(--cp-radius-sm);
   background: transparent;
+  /* Muted like the search icon and every row icon. */
+  color: var(--cp-muted);
   cursor: default;
   transition: opacity 120ms ease-out;
 }

@@ -3,7 +3,7 @@
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useFormatter, useTranslations } from "next-intl";
@@ -66,6 +66,22 @@ const FILTERS: readonly { key: InboxFilter; labelKey: string }[] = [
   { key: "all", labelKey: "filterAll" },
   { key: "mentions", labelKey: "filterMentions" },
 ];
+
+/** A notification a launcher asked the inbox to show (MIN-846). A new `seq`
+ *  is a new request, even for the same row. */
+export interface InboxFocus {
+  id: string;
+  seq: number;
+}
+
+/** How long a targeted row keeps the pulse class: the `page-block-pulse`
+ *  animation (app/globals.css) plus a margin, like a page block's flash. */
+const ROW_PULSE_MS = 1_700;
+
+/** The tab that lists a notification: Unread while it is unread, All after. */
+export function inboxFilterFor(notification: Pick<MyNotification, "read_at">): InboxFilter {
+  return notification.read_at ? "all" : "unread";
+}
 
 type DateGroup = "today" | "yesterday" | "earlier";
 
@@ -162,7 +178,13 @@ function ActionTooltip({
   );
 }
 
-export default function InboxContent({ onNavigate }: { onNavigate: () => void }) {
+export default function InboxContent({
+  onNavigate,
+  focus = null,
+}: {
+  onNavigate: () => void;
+  focus?: InboxFocus | null;
+}) {
   const router = useAppRouter();
   const t = useTranslations("Inbox");
   const tCommon = useTranslations("Common");
@@ -200,6 +222,36 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
   const [filter, setFilter] = useState<InboxFilter>("unread");
   const [clearReadOpen, setClearReadOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  // A targeted launch (the command palette, MIN-846): switch to the tab that
+  // lists the row, then scroll to it and pulse it like a page block reached
+  // by its link. Each request is handled once — a realtime refresh of the
+  // list must not pulse it again — and waits for the list to hold the row.
+  const [pulse, setPulse] = useState<InboxFocus | null>(null);
+  const handledFocus = useRef(0);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const fadeRef = contentFade.ref;
+  const setListRef = useCallback((element: HTMLDivElement | null) => {
+    listRef.current = element;
+    fadeRef(element);
+  }, [fadeRef]);
+  useEffect(() => {
+    if (!focus || handledFocus.current === focus.seq) return;
+    const target = notifications.find((notification) => notification.id === focus.id);
+    if (!target) return;
+    handledFocus.current = focus.seq;
+    setFilter(inboxFilterFor(target));
+    setPulse(focus);
+  }, [focus, notifications]);
+  useEffect(() => {
+    if (!pulse) return;
+    const row = Array.from(
+      listRef.current?.querySelectorAll<HTMLElement>("[data-notification-id]") ?? [],
+    ).find((element) => element.dataset.notificationId === pulse.id);
+    row?.scrollIntoView({ block: "nearest" });
+    const timer = setTimeout(() => setPulse(null), ROW_PULSE_MS);
+    return () => clearTimeout(timer);
+  }, [pulse]);
 
   const titleOf = (notification: MyNotification): string =>
     notificationTitle(notification, labels);
@@ -330,7 +382,7 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
         </ActionTooltip>
       </div>
         <div
-          ref={contentFade.ref}
+          ref={setListRef}
           {...contentFade.scrollProps}
           className="min-h-0 flex-1 overflow-y-auto"
         >
@@ -438,7 +490,16 @@ export default function InboxContent({ onNavigate }: { onNavigate: () => void })
                         },
                       );
                       return (
-                        <li key={notification.id} className="group relative hover:bg-muted/50 focus-within:bg-muted/50">
+                        <li
+                          // A new key per request restarts the pulse animation
+                          // on a row that is still pulsing.
+                          key={pulse?.id === notification.id ? `${notification.id}:${pulse.seq}` : notification.id}
+                          data-notification-id={notification.id}
+                          className={cn(
+                            "group relative hover:bg-muted/50 focus-within:bg-muted/50",
+                            pulse?.id === notification.id && "inbox-row-target",
+                          )}
+                        >
                           <button
                             type="button"
                             data-sidebar-filter-result
