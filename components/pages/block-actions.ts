@@ -387,6 +387,41 @@ export function turnBlocksInto(editor: Editor, block: PageBlock): boolean {
   return turned;
 }
 
+/** What the block menu's actions can act on, in the selected blocks. */
+export interface BlockMenuAbilities {
+  /** A text block to convert: “Turn into” flattens the selection and turns
+      its text blocks, so a divider, an equation, an image, a file or a
+      subpage alone has nothing it could become. */
+  turnInto: boolean;
+  /** Text a color can paint: the colors are marks, which only a text block
+      that accepts them takes. A callout's own color counts. */
+  color: boolean;
+  /** Text to send to Numo: a divider or a media block alone has none. */
+  text: boolean;
+}
+
+/**
+ * Read on the selected blocks, so a mixed selection keeps an action as soon
+ * as one of its blocks can take it — the action then applies where it can.
+ */
+export function blockMenuAbilities(editor: Editor): BlockMenuAbilities {
+  const range = blockRange(editor);
+  if (!range) return { turnInto: false, color: false, text: false };
+  const { doc, schema } = editor.state;
+  const textColor = schema.marks.pageTextColor;
+  let turnInto = false;
+  let color = false;
+  doc.nodesBetween(range.from, range.to, (node) => {
+    if (node.type.name === "callout") color = true;
+    if (!node.isTextblock) return !(turnInto && color);
+    turnInto = true;
+    if (textColor && node.type.allowsMarkType(textColor)) color = true;
+    return false;
+  });
+  const text = doc.textBetween(range.from, range.to, "\n", " ").trim() !== "";
+  return { turnInto, color, text };
+}
+
 /** Duplicate the selection JUST BELOW her, including children. */
 export function duplicateBlocks(editor: Editor): boolean {
   const range = blockRange(editor);

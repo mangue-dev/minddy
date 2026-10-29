@@ -49,6 +49,15 @@ import { COMMENTED_BLOCK_CLASS } from "@/components/pages/block-comments";
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 import { trackBlockDrag } from "@/components/pages/block-drag";
 import {
+  BUTTON_SIZE,
+  GUTTER_BUTTON,
+  GUTTER_EDGE_MIN,
+  GUTTER_GAP_EXTRA,
+  GUTTER_GAP_MIN,
+  commentButtonOffset,
+  firstLineOffset,
+} from "@/components/pages/block-chrome-geometry";
+import {
   GUTTER_WIDTH,
   blockRange,
   insertBlockAround,
@@ -65,27 +74,10 @@ import {
     that this object changes identity. */
 const POSITION = { placement: "left-start", strategy: "absolute" } as const;
 
-/** Side of the handle, the taller gutter button, in pixels: its 24 px icon
-    (the 24 px body line height) and a 2 px padding. It is used to centre the
-    buttons on the block's first line, which has no CSS equivalent. */
-const BUTTON_SIZE = 28;
-
 /** The handle and the smaller `+` beside it, side by side, in pixels. */
 const BUTTONS_WIDTH = 24 + BUTTON_SIZE;
 
-/** The gap between the buttons and the text: `GUTTER_GAP_MIN` always, plus
-    up to `GUTTER_GAP_EXTRA` while the pane leaves the room for it. */
-const GUTTER_GAP_MIN = 4;
-const GUTTER_GAP_EXTRA = 10;
 
-/** The margin the buttons keep from the pane's edge (a side panel's border):
-    the gap to the text gives way first. */
-const GUTTER_EDGE_MIN = 8;
-
-/** The comment button on the right of a hovered page block, and its gap to
-    the text. It lives in the column's right reserve (`app-desktop:pr-10`). */
-const COMMENT_BUTTON_SIZE = 24;
-const COMMENT_BUTTON_GAP = 6;
 
 /**
  * Where the pointer asks for which button. Beside the text, up to
@@ -101,8 +93,6 @@ type HoverZone = "gutter" | "comment" | "none";
 /** How long the buttons take to fade in beside a newly hovered block. */
 const GUTTER_FADE_MS = 120;
 
-/** Keep both gutter buttons clear of a commented block's left edge. */
-const COMMENTED_GUTTER_SHIFT = 12;
 
 /**
  * Gutter tooltips wait before appearing.
@@ -119,11 +109,7 @@ const COMMENTED_GUTTER_SHIFT = 12;
  */
 const TOOLTIP_DELAY_MS = 600;
 
-const BUTTON = cn(
-  "flex items-center justify-center rounded-md p-0.5 text-muted-foreground/60",
-  "transition-colors hover:bg-muted hover:text-foreground",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-);
+const BUTTON = GUTTER_BUTTON;
 
 /**
  * Where a `position: fixed` descendant of `element` is measured from: the
@@ -154,31 +140,6 @@ export function fixedContainingBlockOffset(element: Element | null): { top: numb
   return { top: 0, left: 0 };
 }
 
-/**
- * How far below a block's top edge its buttons start, so they sit centred on
- * the block's FIRST LINE — or on a code block's language picker, its first
- * row. Read from the DOM: it follows the block's typography, insets and
- * borders without a value written here.
- */
-function firstLineOffset(dom: HTMLElement): number {
-  const box = styledBox(dom);
-  const languageTrigger = box.querySelector(".code-block-node-language-trigger");
-  if (languageTrigger instanceof HTMLElement) {
-    const blockRect = dom.getBoundingClientRect();
-    const triggerRect = languageTrigger.getBoundingClientRect();
-    return Math.round(triggerRect.top - blockRect.top + (triggerRect.height - BUTTON_SIZE) / 2);
-  }
-  const style = getComputedStyle(box);
-  // Quotes, callouts and other framed blocks carry their own padding or border.
-  const inset = parseFloat(style.paddingTop || "0") + parseFloat(style.borderTopWidth || "0");
-  // `line-height: normal` cannot be read in pixels: the font height is still
-  // much fairer than zero.
-  const parsed = parseFloat(style.lineHeight);
-  const lineHeight = Number.isFinite(parsed) ? parsed : parseFloat(style.fontSize || "0") * 1.5;
-  // The buttons are taller than a line of body text: centred on it, they rise
-  // above the block's top, so the offset may be negative.
-  return Math.round(inset + (lineHeight - BUTTON_SIZE) / 2);
-}
 
 export function BlockGutter({
   editor,
@@ -268,17 +229,10 @@ export function BlockGutter({
         preview.style.width = `${Math.round(block.width)}px`;
         preview.style.height = `${Math.round(block.height)}px`;
       }
-      // Like the gutter, a little further from the text where the pane
-      // leaves the room for it.
-      const room = scrollPane(dom).getBoundingClientRect().right - block.right;
-      const gap =
-        COMMENT_BUTTON_GAP +
-        Math.max(0, Math.min(GUTTER_GAP_EXTRA, room - COMMENT_BUTTON_SIZE - COMMENT_BUTTON_GAP - GUTTER_EDGE_MIN));
-      const top =
-        block.top - frame.top + parent.scrollTop + firstLineOffset(dom) + (BUTTON_SIZE - COMMENT_BUTTON_SIZE) / 2;
-      const left = block.right - frame.left + parent.scrollLeft + Math.floor(gap);
-      button.style.top = `${Math.round(top)}px`;
-      button.style.left = `${Math.round(left)}px`;
+      // The place a commented block's badge takes too (block-comments.ts).
+      const offset = commentButtonOffset(dom);
+      button.style.top = `${Math.round(block.top - frame.top + parent.scrollTop + offset.top)}px`;
+      button.style.left = `${Math.round(block.left - frame.left + parent.scrollLeft + offset.left)}px`;
       button.dataset.shown = "true";
     },
     [onComment, commentHost]
@@ -381,13 +335,6 @@ export function BlockGutter({
         Math.min(GUTTER_GAP_EXTRA, room - BUTTONS_WIDTH - GUTTER_GAP_MIN - GUTTER_EDGE_MIN)
       );
       element.style.paddingRight = `${GUTTER_GAP_MIN + Math.floor(extra)}px`;
-      const box = styledBox(dom);
-      const commented =
-        dom.classList.contains(COMMENTED_BLOCK_CLASS) ||
-        box.classList.contains(COMMENTED_BLOCK_CLASS);
-      element.style.transform = commented
-        ? `translateX(-${COMMENTED_GUTTER_SHIFT}px)`
-        : "";
       element.style.marginTop = `${firstLineOffset(dom)}px`;
     },
     [editor]

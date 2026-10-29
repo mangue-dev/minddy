@@ -8,6 +8,7 @@ import {
   type RefCallback,
   type RefObject,
 } from "react";
+import { MARQUEE_DRAWING_CLASS } from "@/components/editor/block-marquee";
 
 /**
  * Selection lasso on the bottom of the boards, “like on the desk”: press
@@ -19,21 +20,25 @@ import {
  * - **Everything is calculated in screen coordinates.** Each column scrolls on its own side
  * and the board scrolls horizontally: reasoning in content coordinates
  * would mean following three origins at once. `getBoundingClientRect` them
- * brings them all back to the same thing. Happy corollary: a card pushed out of its
- * column by scrolling is not caught, because we only take what
- * the rectangle SHOW — `visibleRect` intersects the map with what trims it.
+ * brings them all back to the same thing.
+ *
+ * - **The rectangle is anchored in the content, like the blocks of a page**
+ *   (components/editor/block-marquee.ts). Each card is measured against the
+ *   rectangle as its OWN column's content saw it: its start point moved by
+ *   how far that column — and the board, sideways — scrolled since the press,
+ *   at an edge or under the wheel. So a card stays selected after the scroll
+ *   pushes it out of view, as long as the rectangle still reaches it in the
+ *   content, whether the press started in that column or on the background
+ *   around the columns — and after a long column unmounts it (windowing):
+ *   it then keeps the verdict it had when last measured. Only the
+ *   rectangle's DRAWING stops at the board's edge, and follows the column
+ *   the press started in.
  *
  * - **The rectangle does not go through React.** It is written directly in the
  * style of the `overlayRef` element. A `setState` per image would render all
  * the cards on the board sixty times per second to move a frame. The only one
  * rendering that we trigger is the selection change — and again, filtered:
  * `emit` compares before calling.
- *
- * - **Auto-scroll moves the anchor.** When an edge scrolls, the
- * content slides under a starting point which is fixed on the screen: we
- * shifts by the same amount, otherwise the lasso will become detached from the card from which it started.
- * Only the column where the gesture started counts — scroll ANOTHER
- *   column must pass its cards beneath a stationary rectangle.
  *
  * - **Mouse only.** With your finger, the same gesture is scrolling the board,
  * exactly like dragging and dropping cards (MouseSensor).
@@ -96,17 +101,19 @@ function clippingAncestors(el: HTMLElement, root: HTMLElement): HTMLElement[] {
 }
 
 /**
- * The part of the card actually visible. `null` if scrolling its column
- * completely evaded it: we don't select what we don't see.
+ * The part of the card the rectangle can reach: the card trimmed by the
+ * boxes that clip it, except the scrolling ones (its column, the board),
+ * whose scroll the rectangle follows. `null` when a fixed box hides it.
  *
- * Trimming ancestors are cached for the duration of the gesture — find them
- * asks for a `getComputedStyle` per level, and we go back to each card
- * chaque image.
+ * Trimming ancestors are cached for the duration of the gesture — finding
+ * them asks for a `getComputedStyle` per level, and every card is measured
+ * at each frame.
  */
-function visibleRect(
+function reachableRect(
   el: HTMLElement,
   root: HTMLElement,
-  cache: Map<HTMLElement, HTMLElement[]>
+  cache: Map<HTMLElement, HTMLElement[]>,
+  followed: ReadonlySet<HTMLElement>
 ): Box | null {
   let box: Box | null = rectOf(el);
   let clippers = cache.get(el);
@@ -115,6 +122,7 @@ function visibleRect(
     cache.set(el, clippers);
   }
   for (const clipper of clippers) {
+    if (followed.has(clipper)) continue;
     box = intersect(box, rectOf(clipper));
     if (!box) return null;
   }
@@ -133,6 +141,16 @@ function edgeVelocity(pos: number, min: number, max: number): number {
   if (pos < min + EDGE) return -rampSpeed(min + EDGE - pos);
   if (pos > max - EDGE) return rampSpeed(pos - (max - EDGE));
   return 0;
+}
+
+/** The nearest box between a card and the board that scrolls vertically,
+    the board included: its column, in practice. */
+function verticalScroller(clippers: readonly HTMLElement[]): HTMLElement | null {
+  for (const clipper of clippers) {
+    const { overflowY } = getComputedStyle(clipper);
+    if (overflowY === "auto" || overflowY === "scroll") return clipper;
+  }
+  return null;
 }
 
 /** The column (or other scrolling box) under this point, inside the board. */
@@ -193,6 +211,7 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     () => () => {
       abortRef.current?.abort();
       document.body.style.userSelect = "";
+      document.documentElement.classList.remove(MARQUEE_DRAWING_CLASS);
     },
     []
   );
@@ -235,14 +254,46 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     );
     /** The scrollable box below the pointer, maintained by `pointermove`. */
     let pointerScroller: HTMLElement | null = anchorScroller;
-    let anchorX = event.clientX;
-    let anchorY = event.clientY;
+    const anchorX = event.clientX;
+    const anchorY = event.clientY;
     let pointerX = anchorX;
     let pointerY = anchorY;
     let started = false;
     let dirty = false;
     let frame: number | null = null;
     let emitted = new Set(selected);
+    // Each card's column, and where every column stood at the press: a card
+    // meets the rectangle moved by its column's scroll since then. A card
+    // mounted during the gesture takes its column's scroll as it finds it.
+    const startLeft = container.scrollLeft;
+    const startTops = new Map<HTMLElement, number>();
+    const columnOf = new Map<HTMLElement, HTMLElement | null>();
+    const column = (el: HTMLElement): HTMLElement | null => {
+      if (columnOf.has(el)) return columnOf.get(el) ?? null;
+      let trims = clippers.get(el);
+      if (!trims) {
+        trims = clippingAncestors(el, container);
+        clippers.set(el, trims);
+      }
+      const scroller = verticalScroller(trims);
+      columnOf.set(el, scroller);
+      if (scroller && !startTops.has(scroller)) startTops.set(scroller, scroller.scrollTop);
+      return scroller;
+    };
+    if (anchorScroller) startTops.set(anchorScroller, anchorScroller.scrollTop);
+    // Whether each card was inside the rectangle when last measured. A long
+    // column is windowed (board-windowed-items.tsx): a card the scroll takes
+    // far from view is unmounted, and keeps the verdict it had until the
+    // scroll brings it back and it is measured again.
+    const verdicts = new Map<string, boolean>();
+    const scrolledBy = (scroller: HTMLElement | null) =>
+      scroller ? scroller.scrollTop - (startTops.get(scroller) ?? scroller.scrollTop) : 0;
+    const spanning = (dx: number, dy: number): Box => ({
+      left: Math.min(anchorX - dx, pointerX),
+      right: Math.max(anchorX - dx, pointerX),
+      top: Math.min(anchorY - dy, pointerY),
+      bottom: Math.max(anchorY - dy, pointerY),
+    });
 
     const emit = (next: Set<string>) => {
       if (sameIds(next, emitted)) return;
@@ -251,31 +302,24 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
     };
 
     const apply = () => {
-      const containerBox = rectOf(container);
-      // The lasso does not extend beyond the board: we only select what it shows.
-      const box = intersect(
-        {
-          left: Math.min(anchorX, pointerX),
-          right: Math.max(anchorX, pointerX),
-          top: Math.min(anchorY, pointerY),
-          bottom: Math.max(anchorY, pointerY),
-        },
-        containerBox
-      );
+      const dx = container.scrollLeft - startLeft;
+      // What is drawn: the rectangle in the content of the column the press
+      // started in, cut at the board's edge — the selection is not.
+      const box = intersect(spanning(dx, scrolledBy(anchorScroller)), rectOf(container));
 
       // ⚠ **READ BEFORE WRITING** (MIN-320). The overlay styles were
       // placed first, then came the N `getBoundingClientRect()` of the
       // cards: the exact opposite order of that which avoids a reflow. THE
       // measurements first, writing second — only one layout per image.
-      const touched = new Set<string>();
-      if (box) {
-        for (const el of container.querySelectorAll<HTMLElement>(ITEM_SELECTOR)) {
-          const id = el.dataset.issueId;
-          if (!id) continue;
-          const rect = visibleRect(el, container, clippers);
-          if (rect && overlaps(rect, box)) touched.add(id);
-        }
+      for (const el of container.querySelectorAll<HTMLElement>(ITEM_SELECTOR)) {
+        const id = el.dataset.issueId;
+        if (!id) continue;
+        const scroller = column(el);
+        const rect = reachableRect(el, container, clippers, new Set(scroller ? [container, scroller] : [container]));
+        verdicts.set(id, !!rect && overlaps(rect, spanning(dx, scrolledBy(scroller))));
       }
+      const touched = new Set<string>();
+      for (const [id, inside] of verdicts) if (inside) touched.add(id);
 
       const overlay = overlayRef.current;
       if (overlay) {
@@ -322,23 +366,16 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
 
       if (dx === 0 && dy === 0) return;
 
+      // `apply` reads the scroll this moves and shifts the anchor with it.
       if (dx !== 0) {
         const before = container.scrollLeft;
         container.scrollLeft = before + dx;
-        const applied = container.scrollLeft - before;
-        if (applied !== 0) {
-          anchorX -= applied;
-          dirty = true;
-        }
+        if (container.scrollLeft !== before) dirty = true;
       }
       if (dy !== 0 && scroller) {
         const before = scroller.scrollTop;
         scroller.scrollTop = before + dy;
-        const applied = scroller.scrollTop - before;
-        if (applied !== 0) {
-          if (scroller === anchorScroller) anchorY -= applied;
-          dirty = true;
-        }
+        if (scroller.scrollTop !== before) dirty = true;
       }
     };
 
@@ -355,6 +392,7 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       if (frame != null) cancelAnimationFrame(frame);
       frame = null;
       document.body.style.userSelect = "";
+      document.documentElement.classList.remove(MARQUEE_DRAWING_CLASS);
       const overlay = overlayRef.current;
       if (overlay) overlay.style.display = "none";
       if (abortRef.current === controller) abortRef.current = null;
@@ -380,6 +418,10 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
           }
           started = true;
           document.body.style.userSelect = "none";
+          document.documentElement.classList.add(MARQUEE_DRAWING_CLASS);
+          // The columns' scroll at the start, read once the press is a drag
+          // (a click measures nothing) and before anything has scrolled.
+          for (const el of container.querySelectorAll<HTMLElement>(ITEM_SELECTOR)) column(el);
           loop();
         }
         dirty = true;
@@ -412,8 +454,10 @@ export function useMarqueeSelection<T extends HTMLElement = HTMLElement>({
       { signal }
     );
 
-    // Wheel during the gesture: the cards move, the rectangle does not — you must
-    // redo the calculation. `capture` because a column scroll does not go up.
+    // Wheel during the gesture: in the board or the starting column the
+    // anchor follows the cards (`apply` reads their scroll); another column's
+    // cards pass beneath a still rectangle. Either way the selection is
+    // measured again. `capture` because a column scroll does not bubble.
     window.addEventListener(
       "scroll",
       () => {

@@ -61,6 +61,7 @@ import {
   type PageColorKind,
 } from "@/components/pages/blocks";
 import {
+  blockMenuAbilities,
   blockRange,
   blockLink,
   copyBlocks,
@@ -198,6 +199,18 @@ export function BlockMenu({
     useMemo(() => (open ? selectionIsMediaOnly(editor) : false), [open, editor])
   );
   const plain = !subpageId && !mediaOnly;
+  // Beyond those two vocabularies, an action shows only where it can act:
+  // no “Turn into” or colors on a divider or an equation, no Numo where
+  // there is no text (blockMenuAbilities).
+  const can = useHeldWhileClosed(
+    open,
+    useMemo(
+      () => (open ? blockMenuAbilities(editor) : { turnInto: false, color: false, text: false }),
+      [open, editor]
+    )
+  );
+  const showTurnInto = plain && can.turnInto;
+  const showColor = plain && can.color;
   const canComment = Boolean(onComment) && count === 1;
   // The selected blocks' text, as the selection toolbar sends a passage;
   // absent where Numo is not.
@@ -211,7 +224,7 @@ export function BlockMenu({
   };
   // The separator divides the actions from Delete: with nothing above it (an
   // image or a file without a block link), it would underline nothing.
-  const hasActionsAbove = plain || !mediaOnly || blockLinks || canComment;
+  const hasActionsAbove = showTurnInto || showColor || !mediaOnly || blockLinks || canComment;
 
   const duplicateSubpage = async (pageId: string) => {
     const duplicate = editor.storage.subpage?.duplicate;
@@ -275,7 +288,7 @@ export function BlockMenu({
           </DropdownMenuLabel>
         )}
 
-        {plain && (
+        {showTurnInto && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <HugeiconsIcon icon={RepeatOne02Icon} />
@@ -307,7 +320,7 @@ export function BlockMenu({
         </DropdownMenuSub>
         )}
 
-        {plain && (
+        {showColor && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <HugeiconsIcon icon={ColorPickerIcon} />
@@ -329,7 +342,7 @@ export function BlockMenu({
         </DropdownMenuSub>
         )}
 
-        {plain && <DropdownMenuSeparator />}
+        {(showTurnInto || showColor) && <DropdownMenuSeparator />}
 
         {!mediaOnly && (
           <DropdownMenuItem
@@ -369,7 +382,7 @@ export function BlockMenu({
           </DropdownMenuItem>
         ) : null}
 
-        {askNumo && !mediaOnly ? (
+        {askNumo && can.text ? (
           <DropdownMenuItem onSelect={askAboutBlocks}>
             <NumoIcon animated={false} className="size-4" />
             <span className="truncate">{tBulk("askNumo")}</span>

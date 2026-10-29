@@ -7,6 +7,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { GUTTER_BUTTON } from "@/components/pages/block-chrome-geometry";
 
 export function BlockCommentBadge({
   blockId,
@@ -28,7 +30,9 @@ export function BlockCommentBadge({
       <TooltipTrigger asChild>
         <button
           type="button"
-          className="page-block-comment-badge"
+          // The new-comment button's twin (block-gutter.tsx): same button,
+          // same size, the count in its corner.
+          className={cn(GUTTER_BUTTON, "page-block-comment-badge relative size-6")}
           data-block-id={blockId}
           aria-label={label}
           contentEditable={false}
@@ -42,8 +46,8 @@ export function BlockCommentBadge({
             onOpen(blockId);
           }}
         >
-          <HugeiconsIcon icon={Message01Icon} aria-hidden />
-          <span>{count}</span>
+          <HugeiconsIcon icon={Message01Icon} className="size-5" aria-hidden />
+          <span className="page-block-comment-count">{count}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent side="top">{label}</TooltipContent>

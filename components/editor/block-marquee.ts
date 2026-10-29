@@ -34,6 +34,16 @@ const AUTOSCROLL_STEP = 14;
 
 /** The rectangle's element, styled in app/globals.css. */
 export const BLOCK_MARQUEE_CLASS = "block-marquee";
+/** The class on <html> while a rectangle is drawn (here or on a board): the
+    default cursor everywhere. */
+export const MARQUEE_DRAWING_CLASS = "marquee-drawing";
+
+/** Whether a selection rectangle is being drawn: the selection card
+    (page-comment-bubble.tsx) waits for its release, as it waits for the end
+    of a text drag. */
+export function isMarqueeDrawing(): boolean {
+  return document.documentElement.classList.contains(MARQUEE_DRAWING_CLASS);
+}
 /** The empty space under a document that a press may start from. */
 export const EDITOR_RESERVE_ATTR = "data-editor-reserve";
 
@@ -190,6 +200,7 @@ function trackMarquee(editor: Editor, pane: HTMLElement, start: MouseEvent) {
       if (Math.hypot(pointerX - anchorX, pointerY - anchorY) < START_DISTANCE) return;
       started = true;
       document.body.style.userSelect = "none";
+      document.documentElement.classList.add(MARQUEE_DRAWING_CLASS);
       overlay = document.createElement("div");
       overlay.className = BLOCK_MARQUEE_CLASS;
       document.body.appendChild(overlay);
@@ -218,6 +229,7 @@ function trackMarquee(editor: Editor, pane: HTMLElement, start: MouseEvent) {
     if (frame) cancelAnimationFrame(frame);
     overlay?.remove();
     document.body.style.userSelect = "";
+    document.documentElement.classList.remove(MARQUEE_DRAWING_CLASS);
   };
 
   const onUp = () => {

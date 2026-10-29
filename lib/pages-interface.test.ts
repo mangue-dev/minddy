@@ -45,7 +45,8 @@ describe("page interface regressions", () => {
     expect(comments).not.toContain(".title =");
     expect(comments).toContain("Decoration.inline(range.from, range.to");
     expect(css).toContain(".page-commented-passage");
-    expect(gutter).toContain("COMMENTED_GUTTER_SHIFT");
+    // A commented block keeps the gutter where every block has it.
+    expect(gutter).not.toContain("COMMENTED_GUTTER_SHIFT");
   });
 
   it("keeps page actions in a fixed header and opens the requested side-panel tab", () => {

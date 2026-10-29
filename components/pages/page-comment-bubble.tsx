@@ -30,6 +30,7 @@ import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { isBlockSelection } from "@/components/editor/block-selection";
+import { isMarqueeDrawing } from "@/components/editor/block-marquee";
 import { posToDOMRect } from "@tiptap/core";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -109,10 +110,13 @@ export function shouldShowSelectionMenu({ editor }: { editor: Editor }): boolean
   return (
     editor.isEditable &&
     editor.view.hasFocus() &&
-    // Text, or whole blocks (dragged across, Esc, Cmd/Ctrl+A): the card's
-    // formats, colors and "Turn into" apply to every selected block, as in
-    // Notion. A node selection (an image, an equation) has its own controls.
-    (selection instanceof TextSelection || isBlockSelection(selection)) &&
+    !isMarqueeDrawing() &&
+    // Text, or ONE whole block (Esc, a drag that reached it): the card's
+    // formats, colors and "Turn into" apply to it. Several blocks take the
+    // block menu of their handle, which acts on all of them, and the card
+    // stays out of the way. A node selection (an image, an equation) has its
+    // own controls.
+    (selection instanceof TextSelection || (isBlockSelection(selection) && selection.ranges.length === 1)) &&
     !empty &&
     !!editor.state.doc.textBetween(from, to, " ").trim()
   );
@@ -354,6 +358,22 @@ export function PageCommentBubble({
       }
     });
     observer.observe(document.body, { childList: true });
+    return () => observer.disconnect();
+  }, [editor]);
+
+  // A selection rectangle (block-marquee.ts) puts the card aside while it is
+  // drawn, as a text drag does, and the card comes back over what it
+  // selected on release. The bubble menu only re-reads its rule when the
+  // selection changes, so the rectangle's start and end are told to it.
+  useEffect(() => {
+    let drawing = isMarqueeDrawing();
+    const observer = new MutationObserver(() => {
+      if (editor.isDestroyed || isMarqueeDrawing() === drawing) return;
+      drawing = !drawing;
+      const meta = drawing ? "hide" : shouldShowSelectionMenu({ editor }) ? "show" : null;
+      if (meta) editor.view.dispatch(editor.state.tr.setMeta(SELECTION_MENU_KEY, meta));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     return () => observer.disconnect();
   }, [editor]);
 

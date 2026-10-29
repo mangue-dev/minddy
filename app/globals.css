@@ -2097,12 +2097,19 @@ html.block-dragging * {
   user-select: none !important;
 }
 /* The selection rectangle drawn from beside a page's text
-   (components/editor/block-marquee.ts), the board's one. */
+   (components/editor/block-marquee.ts), the board's one. It sits above
+   dialogs, since the task notebook is one, like the dragged blocks' copy.
+   While a rectangle is drawn, here or on a board, the cursor stays the
+   default arrow: neither the text cursor of the margin nor a card's hand. */
+html.marquee-drawing,
+html.marquee-drawing * {
+  cursor: default !important;
+}
 .block-marquee {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 30;
+  z-index: 80;
   border: 1px solid color-mix(in oklab, var(--primary) 70%, transparent);
   border-radius: 3px;
   background: color-mix(in oklab, var(--primary) 15%, transparent);
@@ -2178,7 +2185,12 @@ html.block-dragging * {
    box (the "Selection boxes" rules below), so the button names its block. */
 .page-editor [data-block-comment-preview] {
   position: absolute;
-  border-radius: 0.375rem;
+  /* Sized to the block by script; the box reaches past it as a selected
+     block's does. */
+  box-sizing: content-box;
+  padding: var(--block-selection-y) var(--block-selection-x);
+  translate: calc(-1 * var(--block-selection-x)) calc(-1 * var(--block-selection-y));
+  border-radius: var(--block-selection-radius);
   background-color: var(--selection-block);
   pointer-events: none;
   transition: opacity 120ms ease-out;
@@ -2300,82 +2312,83 @@ html.block-dragging * {
    which made the old version invisible to those who checked the box): we
    remove the beat and HOLD the bottom. It's `flashBlock`
    (components/pages/block-actions.ts) which sets the class and removes it. */
-/* The EDGE of a COMMENTED block (MIN-282) — “there is a discussion here”.
-   Placed by a ProseMirror decoration (components/pages/block-comments.ts), not
-   by a mark: it is not content, it does not start either in the base or in the
-   markdown projection. A line to the left, indenting the text rather than
-   in the gutter, already taken by the handle and the `+`. */
+/* A COMMENTED block (MIN-282) — “there is a discussion here” — in the
+   comments' yellow (the palette's amber). Placed by a ProseMirror decoration
+   (components/pages/block-comments.ts), not by a mark: it is not content, it
+   reaches neither the database nor the Markdown projection. The block keeps
+   its neighbors' layout, and the gutter its place: its badge in the right
+   margin and its passages say it. */
 .page-block-commented {
   position: relative;
-  --page-comment-accent: color-mix(
-    in oklab,
-    var(--page-color-teal) 70%,
-    transparent
-  );
+  /* The tint behind a commented passage, and the badge's ink. */
+  --page-comment-accent: var(--page-ink-amber);
+  --page-comment-ink: var(--page-color-amber);
 }
 
-.page-block-commented::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -0.75rem;
-  width: 2px;
-  border-radius: 1px;
-  background-color: var(--page-comment-accent);
-}
-
-/* A frozen excerpt is underlined only while the same text still exists in the
-   commented block. Like the edge, this is an editor decoration rather than
-   document content. */
+/* A frozen excerpt is underlined and tinted only while the same text still
+   exists in the commented block. Like the badge, this is an editor
+   decoration rather than document content. */
 .page-commented-passage {
   text-decoration-line: underline;
   text-decoration-color: var(--page-comment-accent);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.2em;
-  text-decoration-skip-ink: auto;
+  /* One unbroken line, drawn over the descenders of y, g or q. */
+  text-decoration-skip-ink: none;
+  border-radius: 0.2em;
+  background-color: color-mix(in oklab, var(--page-comment-accent) 26%, transparent);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
-/* The PASTILLE of a commented block: the count, and the button that opens the thread.
-   Out of flow, in the RIGHT margin — the left is taken by the handle and the
-   `+`. It therefore does not push anything: a commented block has exactly the same layout.
-   page than its neighbors, and this is what allows it to be placed on all blocks
-   without distorting the document. */
-.page-block-comment-badge {
+/* The BADGE of a commented block: the new-comment button's twin
+   (components/pages/block-gutter.tsx) — the same button, at the same place,
+   with the message count in its corner — and it stays while the pointer is
+   elsewhere. Out of flow, in the RIGHT margin, so a commented block keeps
+   exactly its neighbors' layout; components/pages/block-comments.ts places
+   it, as the gutter places the new-comment button. */
+.page-block-comment-host {
   position: absolute;
-  /* In the RESERVE on the right of the column (`md:pr-10`, 2.5 rem), no
-     beyond: further, the pellet would protrude from the moving container. */
-  right: -1.75rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.125rem;
-  padding: 0.125rem 0.25rem;
-  border-radius: 0.375rem;
-  font-size: 0.6875rem;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: color-mix(in oklab, var(--page-color-teal) 85%, var(--foreground));
-  background-color: transparent;
-  transition: background-color 120ms ease;
-  cursor: default;
+  top: 0;
+  left: 0;
+  z-index: 1;
   user-select: none;
 }
 
-.page-block-comment-badge:hover {
-  background-color: color-mix(in oklab, var(--page-color-teal) 16%, transparent);
+.page-block-comment-badge {
+  color: var(--page-comment-ink);
+  cursor: default;
 }
 
-.page-block-comment-badge svg {
-  width: 0.875rem;
+.page-block-comment-badge:hover {
+  color: var(--page-comment-ink);
+  background-color: color-mix(in oklab, var(--page-comment-accent) 18%, transparent);
+}
+
+.page-block-comment-count {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.3125rem;
+  min-width: 0.875rem;
   height: 0.875rem;
+  padding: 0 0.1875rem;
+  border-radius: 999px;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 0.875rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--background);
+  background-color: var(--page-comment-ink);
 }
 
 /* Below the width where the right margin exists, the pad returns INTO the stream,
    at the end of the block: better a shift of one line than a button that comes out of
    the screen and you can no longer click. */
 @media (max-width: 48rem) {
-  .page-block-comment-badge {
+  .page-block-comment-host {
     position: static;
+    display: inline-block;
     margin-left: 0.375rem;
     vertical-align: middle;
   }
@@ -3570,7 +3583,19 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      goes, so the two never stack.
    - An inline atom (an equation, a mention) or a whole inline-code run in a
      text selection (`.is-inline-selected`), and a selected inline equation,
-     get an inline rounded background. */
+     get an inline rounded background.
+
+   The box reaches OUTSIDE the block by `--block-selection-x` and `-y`, so
+   the text has room inside it without moving: an overlay adds no
+   indentation. The vertical reach stays under half the 8px between two
+   paragraphs, so two selected blocks still read as two. Every block gets
+   the same small corners, a block drawn as a card (a code block, a callout)
+   included: the box frames it rather than echoing its own corners. */
+:root {
+  --block-selection-x: 0.5rem;
+  --block-selection-y: 0.1875rem;
+  --block-selection-radius: 0.3125rem;
+}
 .ProseMirror .is-block-selected,
 .ProseMirror .ProseMirror-selectednode:not(span) {
   position: relative;
@@ -3580,21 +3605,14 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 .ProseMirror .ProseMirror-selectednode:not(span)::after {
   content: "";
   position: absolute;
-  inset: 0;
-  border-radius: 0.375rem;
+  inset: calc(-1 * var(--block-selection-y)) calc(-1 * var(--block-selection-x));
+  border-radius: var(--block-selection-radius);
   background-color: var(--selection-block);
   pointer-events: none;
 }
-/* A rounded card keeps its own corners under the box. */
-.ProseMirror :is(.is-block-selected, .ProseMirror-selectednode):has(> [data-node-view-wrapper] > .code-block-node-view)::after {
-  border-radius: 1.5rem;
-}
-.ProseMirror :is(.is-block-selected, .ProseMirror-selectednode):has(> [data-type="callout"])::after {
-  border-radius: 0.75rem;
-}
 /* A list item's marker hangs in the list's indent: the box takes it in. */
 .ProseMirror :is(ul:not([data-type="taskList"]), ol) > li.is-block-selected::after {
-  left: -1.25rem;
+  left: calc(-1.25rem - var(--block-selection-x));
 }
 /* A divider is one line tall, and the browser clips its children: the box
    reaches above and below the line. */
@@ -3602,7 +3620,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   overflow: visible;
 }
 .ProseMirror hr:is(.is-block-selected, .ProseMirror-selectednode)::after {
-  inset: -0.375rem 0;
+  inset: -0.375rem calc(-1 * var(--block-selection-x));
 }
 .ProseMirror .is-block-selected ::selection,
 .ProseMirror .is-block-selected::selection,

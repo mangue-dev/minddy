@@ -22,14 +22,17 @@ async function make(content: string, focused = true) {
 afterEach(() => editor?.destroy());
 
 describe("the selection card's visibility", () => {
-  it("shows for a text selection and for selected blocks", async () => {
+  it("shows for a text selection and for one selected block, not for several", async () => {
     await make("<p>one</p><p>two</p>");
     editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, 1, 4)));
     expect(shouldShowSelectionMenu({ editor })).toBe(true);
 
+    editor.view.dispatch(editor.state.tr.setSelection(BlockSelection.create(editor.state.doc, 0, 0)));
+    expect(shouldShowSelectionMenu({ editor })).toBe(true);
+
     const second = editor.state.doc.child(0).nodeSize;
     editor.view.dispatch(editor.state.tr.setSelection(BlockSelection.create(editor.state.doc, 0, second)));
-    expect(shouldShowSelectionMenu({ editor })).toBe(true);
+    expect(shouldShowSelectionMenu({ editor })).toBe(false);
   });
 
   it("stays hidden for a caret, a node selection, or an unfocused editor", async () => {

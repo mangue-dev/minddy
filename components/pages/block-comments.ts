@@ -18,8 +18,10 @@
 //
 // ─── Two decorations, and they don't say the same thing ─────────────────
 //
-// • the EDGE (`Decoration.node`): “there is a discussion here”, visible in
-// browse the page without clicking anything;
+// • the BLOCK (`Decoration.node`): “there is a discussion here” — the class
+// the CSS gives the comments' yellow, with the quoted passages that still
+// exist underlined and tinted (`Decoration.inline`), visible while browsing
+// the page without clicking anything;
 // • the PASTILLE (`Decoration.widget`): the message count, and the button
 // which opens the thread NEXT TO THE BLOCK. She is the one who keeps the discussion alive
 // on the text she is talking about rather than in a footer.
@@ -39,6 +41,7 @@ import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 import { BlockCommentBadge } from "@/components/pages/block-comment-badge";
+import { commentButtonOffset } from "@/components/pages/block-chrome-geometry";
 import { pageCommentHighlightRanges } from "@/lib/page-comment-highlights";
 import { PAGE_BLOCK_ID_ATTRIBUTE } from "@/lib/pages-mentions";
 
@@ -48,6 +51,8 @@ const COMMENTED_PASSAGE_CLASS = "page-commented-passage";
 
 /** The attribute that carries the anchor: the layer reads it on click. */
 const BLOCK_ATTR = "data-block-id";
+/** The widget that holds a block's badge, placed by `placeBadge`. */
+const BADGE_HOST_CLASS = "page-block-comment-host";
 
 export const blockCommentsKey = new PluginKey<DecorationSet>("blockComments");
 
@@ -94,6 +99,7 @@ function badge(
 ): HTMLElement {
   const host = document.createElement("span");
   host.contentEditable = "false";
+  host.className = BADGE_HOST_CLASS;
   const root = createRoot(host);
   root.render(
     createElement(BlockCommentBadge, {
@@ -105,6 +111,27 @@ function badge(
   );
   badgeRoots.set(host, root);
   return host;
+}
+
+/**
+ * Puts a badge where the block's new-comment button appears (block-gutter.tsx):
+ * centred on its first line, at the same distance to the right of the text.
+ * Out of flow, it is measured against the box it is positioned in; on a
+ * narrow screen the CSS puts it back in the line, and nothing is placed.
+ */
+function placeBadge(host: HTMLElement): void {
+  const block = host.parentElement?.closest<HTMLElement>(`[${BLOCK_ATTR}]`);
+  const parent = host.offsetParent;
+  if (!block || !(parent instanceof HTMLElement) || getComputedStyle(host).position !== "absolute") {
+    host.style.top = "";
+    host.style.left = "";
+    return;
+  }
+  const offset = commentButtonOffset(block);
+  const at = block.getBoundingClientRect();
+  const frame = parent.getBoundingClientRect();
+  host.style.top = `${Math.round(at.top - frame.top - parent.clientTop + offset.top)}px`;
+  host.style.left = `${Math.round(at.left - frame.left - parent.clientLeft + offset.left)}px`;
 }
 
 function destroyBadge(dom: globalThis.Node): void {
@@ -205,6 +232,18 @@ export const BlockComments = Extension.create<
         },
         props: {
           decorations: (state) => blockCommentsKey.getState(state),
+        },
+        // The badges follow their blocks: after every update of the view,
+        // and whenever the document's box changes size (a window resize, an
+        // image that loads, a panel that opens).
+        view: (view) => {
+          const layout = () => {
+            for (const host of view.dom.querySelectorAll<HTMLElement>(`.${BADGE_HOST_CLASS}`)) placeBadge(host);
+          };
+          const observer = typeof ResizeObserver === "function" ? new ResizeObserver(layout) : null;
+          observer?.observe(view.dom);
+          layout();
+          return { update: layout, destroy: () => observer?.disconnect() };
         },
       }),
     ];
