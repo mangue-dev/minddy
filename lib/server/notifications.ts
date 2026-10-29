@@ -426,7 +426,8 @@ export async function insertNotifications(
     const prefs = prefsById.get(r.user_id);
     // The LINE, not just its type: a routine borrows the types of
     // the agent, and only its `routine_id` places it under the correct toggle.
-    return !prefs || prefs[categoryOfNotification(r)];
+    const category = categoryOfNotification(r);
+    return !prefs || category === null || prefs[category];
   });
   if (kept.length === 0) return;
 

@@ -394,8 +394,12 @@ export async function readInboxNotifications({
       projectMemberSet.has(`${projectId}\u0000${userId}`)
     );
   };
+  // An instance-wide notification (MIN-847) has no project: its actor is an
+  // instance administrator, and only administrators receive it.
   const actorAllowedFor = (n: (typeof scopedNotifications)[number]) =>
-    userBelongsToProject(n.actor_id as string | null, n.project_id);
+    n.type === "instance_config_changed" && !n.project_id
+      ? Boolean(n.actor_id)
+      : userBelongsToProject(n.actor_id as string | null, n.project_id);
   const keyIdFor = (n: (typeof scopedNotifications)[number]) =>
     (commentFor(n)?.api_key_id ?? n.api_key_id) as string | null;
   const keyAllowedFor = (n: (typeof scopedNotifications)[number]) => {

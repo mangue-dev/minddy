@@ -31,6 +31,16 @@ password_requirements = "lower_upper_letters_digits"
 timebox = "8760h"
 inactivity_timeout = "720h"
 
+# Two-factor authentication: the admin dashboard requires it, and the CLI's
+# own default leaves TOTP enrolment off, which locked every local
+# instance out of its administration.
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
 [auth.email]
 enable_signup = true
 double_confirm_changes = true

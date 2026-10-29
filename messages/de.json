@@ -931,7 +931,12 @@
     "slashCreateIssueLabel": "Ticket erstellen",
     "slashCreateIssueDescription": "Numo sammelt den Kontext und erstellt dann das Ticket",
     "stopConfirmTitle": "Numo stoppen?",
-    "stopConfirmDescription": "Der laufende Durchlauf wird unterbrochen. Bereits Geschriebenes und Gespeichertes bleibt in der Konversation."
+    "stopConfirmDescription": "Der laufende Durchlauf wird unterbrochen. Bereits Geschriebenes und Gespeichertes bleibt in der Konversation.",
+    "contextAdminAccounts": "Admin · Konten",
+    "contextAdminCosts": "Admin · Kosten",
+    "contextAdminModels": "Admin · Modelle",
+    "contextAdminTooltip": "Admin-Dashboard der Instanz im Kontext",
+    "contextAdminInstance": "Admin · Instanz"
   },
   "Auth": {
     "callbackFailed": "Dieser Anmeldelink ist nicht mehr gültig. Versuche erneut, dich anzumelden.",
@@ -1763,7 +1768,9 @@
     "linePageMention": "{actor} hat dich auf dieser Seite erwähnt",
     "linePageAgentEdit": "Numo hat diese Seite aktualisiert",
     "somePageFallback": "Unbenannte Seite",
-    "linePageComment": "{actor} hat diese Seite kommentiert"
+    "instanceConfigTitle": "Variablen der Instanz",
+    "linePageComment": "{actor} hat diese Seite kommentiert",
+    "lineInstanceConfigChanged": "{actor} hat eine Variable der Instanz geändert"
   },
   "NotificationSettings": {
     "title": "Posteingangsbenachrichtigungen",
@@ -3984,7 +3991,29 @@
     "secretStoreServerSide": "Kopiere sie jetzt in deine Serverumgebung. Sie werden nicht in dieser Unterhaltung gespeichert und nicht erneut angezeigt.",
     "secretReveal": "Anmeldeinformationen anzeigen",
     "secretHide": "Anmeldeinformationen ausblenden",
-    "secretCopy": "Anmeldeinformationen kopieren"
+    "secretCopy": "Anmeldeinformationen kopieren",
+    "loadingInstanceModels": "Modelle der Instanz werden gelesen…",
+    "instanceModelsLoaded": "Modelle der Instanz gelesen",
+    "loadInstanceModelsFailed": "Modelle der Instanz konnten nicht gelesen werden",
+    "updatingInstanceModels": "Modelle der Instanz werden aktualisiert…",
+    "instanceModelsUpdated": "Modelle der Instanz aktualisiert",
+    "updateInstanceModelsFailed": "Modelle der Instanz konnten nicht aktualisiert werden",
+    "importingInstanceModels": "Konfigurationsdatei wird gelesen…",
+    "instanceModelsImportPreviewed": "Änderungen des Imports aufgelistet",
+    "instanceModelsImported": "Konfiguration importiert",
+    "importInstanceModelsFailed": "Konfiguration konnte nicht importiert werden",
+    "findingAccount": "Konto wird gesucht…",
+    "accountFound": "Kontosuche abgeschlossen",
+    "findAccountFailed": "Konto konnte nicht gesucht werden",
+    "loadingAccount": "Plan und Nutzung des Kontos werden gelesen…",
+    "accountLoaded": "Plan und Nutzung des Kontos gelesen",
+    "loadAccountFailed": "Konto konnte nicht gelesen werden",
+    "settingAccountPlan": "Plan des Kontos wird aktualisiert…",
+    "accountPlanSet": "Plan des Kontos aktualisiert",
+    "setAccountPlanFailed": "Plan des Kontos konnte nicht aktualisiert werden",
+    "loadingInstanceCosts": "Kosten der Instanz werden gelesen…",
+    "instanceCostsLoaded": "Kosten der Instanz gelesen",
+    "loadInstanceCostsFailed": "Kosten der Instanz konnten nicht gelesen werden"
   },
   "PullRequests": {
     "descriptionMoreActions": "Beschreibungsaktionen",
@@ -4526,10 +4555,10 @@
     "pageTitle": "Administration",
     "filterPlaceholder": "{count, plural, =0 {Admin-Bereiche} one {# Admin-Bereich} other {# Admin-Bereiche}} filtern…",
     "tabs": {
-      "overview": "Übersicht",
-      "users": "Benutzer",
-      "finances": "Finanzen",
-      "models": "Modelle"
+      "models": "Modelle",
+      "accounts": "Konten",
+      "costs": "Kosten",
+      "instance": "Instanz"
     },
     "billing": {
       "title": "Einen Plan verschenken",
@@ -4563,7 +4592,7 @@
       "saved": "Plan aktualisiert."
     },
     "title": "KI-Modelle",
-    "subtitle": "Modelle, die minddy ausführt. Jede Auswahl gilt sofort; „Standardmodell“ setzt die Einstellung auf den Produktstandard zurück.",
+    "subtitle": "Jede Karte hat ein Standardmodell; öffne „Modelle pro Aufgabe“, um einer Aufgabe ein eigenes zu geben. Jede Auswahl gilt sofort.",
     "loadError": "Die Konfiguration konnte nicht geladen werden.",
     "saved": "Einstellung gespeichert",
     "fieldDefault": "Standardmodell",
@@ -4576,12 +4605,12 @@
     },
     "groups": {
       "assistant": {
-        "title": "Numo-Unterhaltungen",
-        "desc": "Numo in Unterhaltungen und Kommentaren."
+        "title": "Assistent",
+        "desc": "Numo in Unterhaltungen und Kommentaren, mit Titeln und Websuche."
       },
       "automations": {
         "title": "Automatisierungen",
-        "desc": "Smart Assign, Smart Fill, Briefings, Importe und Merge-Commit-Nachrichten."
+        "desc": "Smart Fill, Smart Assign, Beziehungen, Briefings, Importe und Merge-Commit-Nachrichten."
       },
       "byok": {
         "title": "Persönliche Schlüssel",
@@ -4591,14 +4620,14 @@
         "title": "Spracheingabe"
       },
       "feedback": {
-        "title": "Feedback",
-        "desc": "Feedback-Board-Verarbeitung."
+        "title": "Feedback und öffentliche Website",
+        "desc": "Verarbeitung des Feedback-Boards und KI-Antworten für Besucher ohne Konto."
       },
-      "site": {
-        "title": "Öffentliche Website",
-        "desc": "KI-Funktionen für Besucher ohne Konto."
-      },
-      "byokOther": "Andere Endpunkte"
+      "byokOther": "Andere Endpunkte",
+      "embeddings": {
+        "title": "Embeddings",
+        "desc": "Wandelt Tickets und Feedback in Vektoren um, um Zusammenhänge zu finden."
+      }
     },
     "fields": {
       "assistant_model": {
@@ -4608,10 +4637,6 @@
       "assistant_reasoning_level": {
         "label": "Reasoning-Stufe",
         "desc": "Höhere Stufen können komplexe Aufgaben verbessern, brauchen aber mehr Zeit und Tokens. Gilt für Numo-Chats und -Kommentare."
-      },
-      "fallback_model": {
-        "label": "Fallback-Modell",
-        "desc": "Wird verwendet, wenn das Numo-Modell leer bleibt."
       },
       "recommended_models": {
         "label": "Empfohlene Modelle",
@@ -4679,6 +4704,18 @@
       "faq_ask_model": {
         "label": "FAQ-Fragenfeld-Modell",
         "desc": "Beantwortet die Frage eines Besuchers aus der FAQ der Seite und der Produktdokumentation. Jemand wartet auf die Antwort, und das Feld läuft den ganzen Tag auf der öffentlichen Website: wähle ein schnelles, günstiges Modell."
+      },
+      "category_assistant_model": {
+        "label": "Standardmodell des Assistenten"
+      },
+      "category_automations_model": {
+        "label": "Standardmodell der Automatisierungen"
+      },
+      "category_embeddings_model": {
+        "label": "Standardmodell der Embeddings"
+      },
+      "category_feedback_model": {
+        "label": "Standardmodell für Feedback und öffentliche Website"
       }
     },
     "decisionModelErrors": {
@@ -4687,82 +4724,65 @@
       "compatibility_check_failed": "Dieses Modell hat die Testentscheidung nicht bestanden (abgelehnt, ungültig oder langsamer als 5 Sekunden). Das aktuelle Modell bleibt erhalten.",
       "capability_mismatch": "Dieses Modell passt nicht zu diesem Feld (zum Beispiel ein Chatmodell in einem Embedding-Feld). Das aktuelle Modell wurde beibehalten."
     },
-    "finance": {
-      "title": "Finanzen",
-      "summary": "Monatsübersicht",
-      "subtitle": "Was eingeht und was ausgeht, auf derselben Zeitachse. Die Einnahmen stammen aus Stripe-Saldotransaktionen (abzüglich Gebühren und Rückerstattungen), die Kosten von OpenRouter, umgerechnet zum jeweiligen Tageskurs.",
-      "window": "{days}d",
-      "loadError": "Die Finanzen konnten nicht geladen werden.",
-      "empty": "Keine Aufrufe.",
-      "noData": "In diesem Zeitraum hat sich nichts bewegt.",
-      "netCollected": "Diesen Monat eingenommen",
-      "netCollectedInfo": "Was diesen Monat tatsächlich auf dem Stripe-Konto gelandet ist: abzüglich Stripe-Gebühren und Rückerstattungen. Eine Administratorüberschreibung ist nie Umsatz; ein Geschenk erzeugt keine Transaktion.",
-      "stripeFees": "davon {amount} Stripe-Gebühren",
-      "mrr": "MRR",
-      "mrrInfo": "Theoretischer wiederkehrender Umsatz: die Summe der aktiven Abonnements, Jahrespläne werden mit ihrem monatlichen Äquivalent gezählt. Ein Indikator für wiederkehrende Einnahmen; die Marge wird nicht daraus berechnet. Administratorüberschreibungen werden ignoriert.",
-      "payingAccounts": "{count, plural, =0 {keine Abonnenten} one {# Abonnent} other {# Abonnenten}}",
-      "monthCost": "KI-Kosten in diesem Monat",
-      "monthCostInfo": "Tatsächliche Kosten der KI-Aufrufe in diesem Monat, zum Tageskurs in Euro umgerechnet. Interne Konten werden mitgezählt: Die dafür ausgegebenen Beträge verlassen das Konto tatsächlich.",
-      "monthCostUsd": "{amount} USD",
-      "margin": "Marge",
-      "marginHint": "eingenommen – KI-Kosten",
-      "marginInfo": "Eingenommener Nettobetrag abzüglich der KI-Kosten dieses Monats. Nur diese beiden Positionen: Hosting und andere Gebühren sind nicht enthalten.",
-      "fxRate": "1 USD = €{rate} (Kurs vom {date})",
-      "fxMissing": "Wechselkurs nicht verfügbar; Kosten bleiben in USD.",
-      "stripeFresh": "Stripe vor {minutes} Min. aktualisiert",
-      "stripeUnreachable": "Stripe nicht erreichbar",
-      "testMode": "Testmodus",
-      "refresh": "Aktualisieren",
-      "chartTitle": "Einnahmen und Kosten pro Tag",
-      "chartInfo": "Einnahmen nach oben, Kosten nach unten – beides auf derselben Euro-Skala. Jede Zahlung wird an ihrem Eingangstag VOLLSTÄNDIG angezeigt; eine monatliche Abbuchung erscheint am Abbuchungstag als einzelner Balken, nicht als geglätteter Durchschnitt. Für Rückerstattungen gilt dieselbe Regel.",
-      "legendRevenue": "Einnahmen",
-      "legendCost": "KI-Kosten",
-      "tooltipRevenue": "Einnahmen: {amount}",
-      "tooltipCost": "Kosten: {amount}",
-      "tooltipMargin": "Marge: {amount}",
-      "capTitle": "OpenRouter-Schlüsselobergrenze",
-      "capInfo": "Die monatliche Obergrenze für den minddy-Schlüssel. Wird sie erreicht, stoppt die Verarbeitung von Numo, Diktaten und Feedback bis zum nächsten Monat. Bei 90 % wird eine Push-Benachrichtigung ausgelöst.",
-      "capUnavailable": "Obergrenze nicht lesbar; prüfe den OpenRouter-Schlüssel.",
-      "capUsage": "{usage} von {limit}",
-      "capPercent": "{percent} % der Obergrenze",
-      "capRemaining": "Verbleibend",
-      "capProjected": "Obergrenze erreicht am",
-      "capProjectedInfo": "Prognostiziert im Tempo der letzten 7 Tage.",
-      "capNotBeforeReset": "Nicht vor dem Zurücksetzen",
-      "capReset": "Zurücksetzung am",
-      "managedKeysTitle": "OpenRouter-Schlüssel pro Konto",
-      "managedKeysInfo": "Jedes Konto zahlt mit einem eigenen OpenRouter-Schlüssel, begrenzt auf die Nutzung, die sein Plan noch enthält. OpenRouter lehnt einen Schlüssel an seiner Grenze ab, auch wenn die Prüfung von Minddy sie übersieht.",
-      "managedKeysUnavailable": "Schlüssel nicht lesbar; prüfe den OpenRouter-Verwaltungsschlüssel.",
-      "managedKeysAccounts": "Kontoschlüssel",
-      "managedKeysRemaining": "Noch verfügbar",
-      "managedKeysRemainingInfo": "Was alle Kontoschlüssel zusammen noch ausgeben können, bevor OpenRouter sie ablehnt.",
-      "managedKeysToday": "Heute ausgegeben",
-      "managedKeysPublic": "Öffentlicher Schlüssel heute",
-      "managedKeysPublicInfo": "Der Schlüssel der Diktat-Demo und der FAQ-Antworten, pro Tag begrenzt.",
-      "managedKeysPublicUsage": "{usage} von {limit}",
-      "managedKeysSweep": "Verwaiste Schlüssel löschen",
-      "managedKeysSweepTitle": "Verwaiste Schlüssel löschen?",
-      "managedKeysSweepDescription": "Von Minddy ausgegebene Schlüssel, die kein Konto mehr nutzt, werden bei OpenRouter gelöscht. Schlüssel aus den letzten 10 Minuten und Schlüssel, die Minddy nicht ausgegeben hat, bleiben erhalten.",
-      "managedKeysSweepConfirm": "Löschen",
-      "managedKeysSweepCancel": "Abbrechen",
-      "managedKeysSweepDone": "{count, plural, =0 {Kein verwaister Schlüssel gefunden} one {# verwaister Schlüssel gelöscht} other {# verwaiste Schlüssel gelöscht}}",
-      "managedKeysSweepFailed": "Die verwaisten Schlüssel konnten nicht gelöscht werden.",
-      "byType": "Kosten nach Funktion",
-      "logs": "Protokoll",
-      "recentRuns": "Letzte Läufe",
-      "recentRunsHint": "Ein Lauf gruppiert die Aufrufe einer Aktion.",
-      "colType": "Funktion",
+    "quotas": {
+      "usersTitle": "KI-Nutzung pro Benutzer",
+      "usersDescription": "Das monatliche Budget des Plans begrenzt die Nutzung jedes Benutzers über alle KI-Funktionen hinweg. Beim Zurücksetzen beginnt die Zählung ab diesem Zeitpunkt neu; bisherige Nutzung wird nicht gelöscht.",
+      "empty": "Keine KI-Nutzung in diesem Monat.",
+      "counted": "Zum Budget gezählt",
+      "realSpend": "Ausgaben diesen Monat",
+      "blocked": "Blockiert",
+      "calls": "{count, plural, one {# Aufruf} other {# Aufrufe}}",
+      "reset": "Zurücksetzen",
+      "resetsTitle": "Zurücksetzungen in diesem Zeitraum",
+      "resetsHint": "Nur die neueste zählt; wird sie entfernt, gilt wieder die vorherige.",
+      "resetsCount": "{count, plural, one {# Zurücksetzung} other {# Zurücksetzungen}}",
+      "resetActive": "aktuell",
+      "undoOne": "Diese Zurücksetzung rückgängig machen",
+      "resetToast": "Kontingent von {name} zurückgesetzt.",
+      "undoToast": "Zurücksetzung für {name} rückgängig gemacht."
+    },
+    "users": {
+      "subtitle": "Suche ein Konto über die genaue E-Mail-Adresse und öffne es, um Plan oder Budget zu verwalten.",
+      "searchPlaceholder": "E-Mail-Adresse des Kontos",
+      "clearSearch": "Suche löschen",
+      "empty": "Kein Konto für diese E-Mail-Adresse gefunden.",
+      "emailStatus": "E-Mail",
+      "confirmed": "Bestätigt",
+      "unconfirmed": "Unbestätigt",
+      "overrideMark": "erzwungen",
+      "accountTitle": "Konto",
+      "usageDescription": "Der aktuelle Zeitraum und die tatsächliche Nutzung in diesem Monat.",
+      "usageTitle": "KI-Nutzungsbudget",
+      "usageSubtitle": "Beim Zurücksetzen beginnt die Zählung ab diesem Zeitpunkt neu; bisherige Nutzung wird nicht gelöscht.",
+      "emailLabel": "E-Mail-Adresse",
+      "findAccount": "Konto suchen",
+      "openAccount": "Konto öffnen",
+      "supportPurpose": "Öffne Konten nur für Support- oder Abrechnungsaufgaben. Aktivitäten und persönliche Inhalte werden hier nicht angezeigt.",
+      "lookupFailed": "Das Konto konnte nicht gefunden werden. Prüfe die Adresse und versuche es erneut.",
+      "detailsFailed": "Plan und Budget konnten nicht geladen werden. Öffne das Konto erneut."
+    },
+    "recommended": {
+      "pickModel": "Modell auswählen",
+      "add": "Modell hinzufügen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "reset": "Zurück zur Standardauswahl",
+      "remove": "Dieses Modell entfernen",
+      "empty": "Keine Empfehlungen: Die Auswahl zeigt den gesamten Katalog. Durch das Speichern einer leeren Liste wird die Einstellung auf die Standardauswahl zurückgesetzt.",
+      "incomplete": "Wähle vor dem Speichern für jede Zeile ein Modell aus.",
+      "duplicate": "Dasselbe Modell kommt zweimal vor: Entferne eines vor dem Speichern.",
+      "hint": "Werden in jeder Modellauswahl zuerst angezeigt, das günstigste zuerst."
+    },
+    "byok": {
+      "borderDefault": "Kontoweite Standardeinstellung"
+    },
+    "costs": {
+      "callCount": "{count, plural, one {# Aufruf} other {# Aufrufe}}",
+      "colCompletion": "Ausgabe-Tokens",
       "colCost": "Kosten",
-      "colRuns": "Läufe",
-      "colCalls": "Aufrufe",
-      "colAvgRun": "Durchschn. Kosten/Lauf",
-      "colAvgCall": "Durchschn. Kosten/Aufruf",
-      "colTokens": "Tokens",
       "colModel": "Modell",
       "colPrompt": "Eingabe-Tokens",
-      "colCompletion": "Ausgabe-Tokens",
-      "callCount": "{count} Aufrufe",
-      "loadingCalls": "Aufrufe werden geladen…",
+      "empty": "Keine Aufrufe.",
       "features": {
         "numo_chat": "Numo; Chat",
         "numo_comment": "Numo; Kommentare",
@@ -4787,98 +4807,299 @@
         "jev_shadow": "Entscheidungsprüfungen",
         "issue_embedding": "Ticket-Embeddings",
         "issue_relation": "Smart-Fill-Beziehungen",
-        "issue_search": "Ticketsuche"
+        "issue_search": "Ticketsuche",
+        "faq_ask": "FAQ-Fragefeld"
       },
-      "stripeHidden": "Stripe-Umsatz ist ausgeblendet: Die Abrechnung ist auf dieser Instanz nicht verbunden."
+      "loadingCalls": "Aufrufe werden geladen…",
+      "noData": "Keine KI-Aufrufe in diesem Zeitraum.",
+      "recentRunsHint": "Ein Lauf gruppiert die Aufrufe einer Aktion.",
+      "logsTitle": "Letzte Ausführungen",
+      "title": "Kosten",
+      "subtitle": "Was die KI-Anbieter diese Instanz kosten, nach Funktion und nach Modell. Die Beträge sind in Dollar, wie die Anbieter sie abrechnen.",
+      "summaryTitle": "Übersicht",
+      "loadError": "Die Kosten konnten nicht geladen werden.",
+      "periodLabel": "Zeitraum",
+      "period": "Letzte {days} Tage",
+      "filterFamily": "Alle Funktionen",
+      "filterModel": "Alle Modelle",
+      "filterKey": "Verwendeter Schlüssel",
+      "keyAll": "Alle Schlüssel",
+      "keyPlatform": "Schlüssel der Instanz",
+      "keyByok": "Persönliche Schlüssel",
+      "clearFilters": "Filter löschen",
+      "kpiSpend": "Gesamtausgaben",
+      "kpiRequests": "Anfragen",
+      "kpiTokens": "Tokens",
+      "kpiCostPerMillion": "Kosten pro 1 Mio. Tokens",
+      "vsPrevious": "ggü. vorherigem Zeitraum",
+      "noPrevious": "Kein vorheriger Zeitraum zum Vergleich",
+      "topFeaturesTitle": "Teuerste Funktionen",
+      "topModelsTitle": "Teuerste Modelle",
+      "spendByModelTitle": "Ausgaben pro Modell",
+      "spendByGroupTitle": "Ausgaben pro Funktionsfamilie",
+      "requestsByModelTitle": "Anfragen pro Modell",
+      "otherSeries": "Andere",
+      "noModel": "Ohne Modell",
+      "total": "Gesamt",
+      "runsPageOf": "Seite {page} von {pages}",
+      "runsPrev": "Vorherige Seite",
+      "runsNext": "Nächste Seite",
+      "groups": {
+        "numo": "Numo",
+        "routines": "Routinen",
+        "automations": "Automatisierungen",
+        "dictation": "Diktat",
+        "feedback": "Feedback",
+        "site": "Öffentliche Website",
+        "other": "Andere"
+      }
     },
-    "quotas": {
-      "usersTitle": "KI-Nutzung pro Benutzer",
-      "usersDescription": "Das monatliche Budget des Plans begrenzt die Nutzung jedes Benutzers über alle KI-Funktionen hinweg. Beim Zurücksetzen beginnt die Zählung ab diesem Zeitpunkt neu; bisherige Nutzung wird nicht gelöscht.",
-      "empty": "Keine KI-Nutzung in diesem Monat.",
-      "counted": "Zum Budget gezählt",
-      "realSpend": "Ausgaben diesen Monat",
-      "blocked": "Blockiert",
-      "calls": "{count, plural, one {# Aufruf} other {# Aufrufe}}",
-      "reset": "Zurücksetzen",
-      "resetsTitle": "Zurücksetzungen in diesem Zeitraum",
-      "resetsHint": "Nur die neueste zählt; wird sie entfernt, gilt wieder die vorherige.",
-      "resetsCount": "{count, plural, one {# Zurücksetzung} other {# Zurücksetzungen}}",
-      "resetActive": "aktuell",
-      "undoOne": "Diese Zurücksetzung rückgängig machen",
-      "resetToast": "Kontingent von {name} zurückgesetzt.",
-      "undoToast": "Zurücksetzung für {name} rückgängig gemacht."
+    "accounts": {
+      "countLabel": "Konten",
+      "countHint": "Alle Konten dieser Instanz.",
+      "countFailed": "Die Konten konnten nicht gezählt werden.",
+      "supportTitle": "Kontosupport"
     },
-    "users": {
-      "title": "Kontosupport",
-      "subtitle": "Suche ein Konto über die genaue E-Mail-Adresse und öffne es, um Plan oder Budget zu verwalten.",
-      "searchPlaceholder": "E-Mail-Adresse des Kontos",
+    "categoryDefault": {
+      "label": "Standardmodell",
+      "builtIn": "Integrierte Standards",
+      "hint_assistant": "Wird von Numo, Unterhaltungstiteln und der Websuche verwendet.",
+      "hint_automations": "Wird von jeder Automatisierung unten ohne eigenes Modell verwendet.",
+      "hint_embeddings": "Eine Änderung startet einen neuen Index: Tickets werden neu indexiert.",
+      "hint_feedback": "Wird von der Feedback-Analyse und dem FAQ-Fragefeld verwendet.",
+      "tasks": "Modelle pro Aufgabe ({count})",
+      "overridden": "{count, plural, =0 {Alle Aufgaben nutzen das Standardmodell} one {# Aufgabe nutzt ein eigenes Modell} other {# Aufgaben nutzen ein eigenes Modell}}",
+      "overrides": "Nutzt ein eigenes Modell statt des Standardmodells.",
+      "follows": "Nutzt das Standardmodell.",
+      "useDefault": "Standardmodell"
+    },
+    "modelsFile": {
+      "title": "Export und Import",
+      "export": "Exportieren",
+      "import": "Importieren",
+      "previewTitle": "Diese Konfiguration importieren?",
+      "previewDescription": "{count, plural, one {# Einstellung ändert sich} other {# Einstellungen ändern sich}} mit {file}. Einstellungen, die die Datei nicht enthält, kehren zu ihrem Standard zurück.",
+      "previewNone": "{file} entspricht der aktuellen Konfiguration. Es ändert sich nichts.",
+      "change": "{from} → {to}",
+      "defaultValue": "Standard",
+      "upgraded": "Diese Datei stammt aus einer früheren Version von minddy und wurde ins aktuelle Format gebracht.",
+      "ignored": "{count, plural, one {# Eintrag ist} other {# Einträge sind}} dieser Version unbekannt und {count, plural, one {wird} other {werden}} übersprungen: {entries}",
+      "cancel": "Abbrechen",
+      "apply": "Übernehmen",
+      "applied": "Konfiguration importiert",
+      "errors": {
+        "invalid_json": "Diese Datei ist kein gültiges JSON.",
+        "not_a_model_config": "Diese Datei ist keine Modellkonfiguration von minddy.",
+        "newer_version": "Diese Datei stammt aus einer neueren Version von minddy. Aktualisiere diese Instanz und importiere sie dann erneut.",
+        "invalid_value": "Diese Datei enthält eine ungültige Einstellung: {detail}",
+        "refused": "{setting} wurde abgelehnt: {detail} Es wurde nichts geändert."
+      }
+    },
+    "instance": {
+      "title": "Variablen der Instanz",
+      "subtitle": "Konfiguriere diese Instanz, ohne ihre Dateien zu bearbeiten. Ein hier gesetzter Wert ersetzt den der Konfigurationsdatei; entferne ihn, um zur Datei zurückzukehren.",
+      "loadError": "Die Variablen der Instanz konnten nicht geladen werden.",
+      "searchPlaceholder": "Variablen suchen…",
       "clearSearch": "Suche löschen",
-      "empty": "Kein Konto für diese E-Mail-Adresse gefunden.",
-      "emailStatus": "E-Mail",
-      "confirmed": "Bestätigt",
-      "unconfirmed": "Unbestätigt",
-      "overrideMark": "erzwungen",
-      "accountTitle": "Konto",
-      "internalHint": "Aus jeder Statistik ausgeschlossen.",
-      "usageDescription": "Der aktuelle Zeitraum und die tatsächliche Nutzung in diesem Monat.",
-      "usageTitle": "KI-Nutzungsbudget",
-      "usageSubtitle": "Beim Zurücksetzen beginnt die Zählung ab diesem Zeitpunkt neu; bisherige Nutzung wird nicht gelöscht.",
-      "internalTitle": "Internes Konto",
-      "internalBadge": "Intern",
-      "internalSubtitle": "Das Team, Demokonten, Bots. Das Konto bleibt hier aufgelistet und verwaltbar, zählt jedoch nicht für Statistiken: weder Konten, Aktive, Anmeldungen, Pläne, Onboarding noch seine Projekte und Tickets.",
-      "internalOnToast": "{name} ist jetzt ein internes Konto.",
-      "internalOffToast": "{name} zählt wieder für Statistiken.",
-      "emailLabel": "E-Mail-Adresse",
-      "findAccount": "Konto suchen",
-      "openAccount": "Konto öffnen",
-      "supportPurpose": "Öffne Konten nur für Support- oder Abrechnungsaufgaben. Aktivitäten und persönliche Inhalte werden hier nicht angezeigt.",
-      "lookupFailed": "Das Konto konnte nicht gefunden werden. Prüfe die Adresse und versuche es erneut.",
-      "detailsFailed": "Plan und Budget konnten nicht geladen werden. Öffne das Konto erneut."
-    },
-    "overview": {
-      "summary": "Kennzahlen",
-      "totalUsers": "Konten",
-      "newUsers": "{count, plural, one {# neu diese Woche} other {# neu diese Woche}}",
-      "newUsers30d": "Neu (30 Tage)",
-      "activeWeek": "Aktiv diese Woche",
-      "activeMonth": "{count} in 30 Tagen",
-      "activeToday": "Heute aktiv",
-      "activeInfo": "Ein Konto gilt an einem bestimmten Tag als aktiv, wenn es sich angemeldet oder eine Aktion ausgeführt hat: ein Ticket erstellt oder abgeschlossen, einen Kommentar verfasst oder einen KI-Aufruf ausgelöst.",
-      "signupsToday": "{count, plural, one {# Anmeldung heute} other {# Anmeldungen heute}}",
-      "internalExcluded": "{count, plural, one {# internes Konto ausgeschlossen} other {# interne Konten ausgeschlossen}}",
-      "internalInfo": "Interne Konten (Team, Demo, Bots) fließen in keine der Zahlen auf dieser Seite ein. Die Markierung wird im Datensatz eines Kontos auf der Registerkarte „Benutzer“ gesetzt.",
-      "tooltipValue": "{label}: {value}",
-      "activity": "Letzte 30 Tage",
-      "activeDaily": "Aktiv pro Tag",
-      "signupsDaily": "Anmeldungen pro Tag",
-      "noActivity": "Keine Aktivität während des Zeitraums.",
-      "noSignups": "Keine Anmeldung während des Zeitraums.",
-      "onboarding": "Onboarding",
-      "onboardingInfo": "Zählt über die Konten, denen das Onboarding mindestens einmal angezeigt wurde.",
-      "onboardingStarted": "Angezeigt",
-      "onboardingCompleted": "Abgeschlossen",
-      "onboardingDismissed": "Übersprungen",
-      "onboardingNeverSeen": "Nie angezeigt",
-      "plans": "Pläne",
-      "plansInfo": "Der effektive Plan jedes Kontos: Administratorüberschreibung, sonst Stripe-Abonnement, sonst der Standardplan.",
-      "content": "Inhalt",
-      "totalProjects": "Projekte",
-      "totalIssues": "Tickets",
-      "issuesPerProject": "Tickets pro Projekt"
-    },
-    "recommended": {
-      "pickModel": "Modell auswählen",
-      "add": "Modell hinzufügen",
+      "searchEmpty": "Keine Variable passt zu „{query}“.",
+      "themes": {
+        "ai": {
+          "title": "KI",
+          "desc": "Der Anbieterschlüssel, mit dem die KI-Funktionen laufen."
+        },
+        "administrators": {
+          "title": "Administratoren",
+          "desc": "Wer dieses Dashboard öffnen darf. Jede Änderung hier wird allen Administratoren angekündigt."
+        },
+        "email": {
+          "title": "E-Mail",
+          "desc": "Die E-Mails, die minddy selbst versendet. Leer lassen, wenn die Instanz keine sendet."
+        },
+        "forges": {
+          "title": "GitHub und GitLab",
+          "desc": "Deine eigenen Forge-Apps, statt des verwalteten Relays oder zusätzlich."
+        },
+        "analytics": {
+          "title": "Analysen",
+          "desc": "Produktanalysen, nur für Mitglieder, die zustimmen."
+        },
+        "site": {
+          "title": "Website",
+          "desc": "Wie sich die Instanz präsentiert."
+        }
+      },
+      "source": {
+        "database": "Hier gesetzt",
+        "file": "Aus der Datei",
+        "both": "Hier gesetzt · ersetzt die Datei",
+        "unset": "Nicht gesetzt"
+      },
+      "sourceHelp": {
+        "database": "In diesem Tab gesetzt. Die Konfigurationsdatei setzt diese Variable nicht.",
+        "file": "In der Konfigurationsdatei gesetzt. Wenn du sie hier bearbeitest, ersetzt das den Wert der Datei, ohne die Datei zu ändern.",
+        "both": "In diesem Tab gesetzt, anstelle des Werts aus der Konfigurationsdatei. Entferne ihn, um zum Wert der Datei zurückzukehren.",
+        "unset": "Weder hier noch in der Konfigurationsdatei gesetzt: minddy nutzt sein Standardverhalten oder lässt die Funktion, die sie braucht, aus."
+      },
+      "applies": {
+        "live": "Gilt innerhalb einer Minute.",
+        "restart": "Gilt nach einem Neustart der Instanz."
+      },
+      "fileValue": "Wert in der Datei: {value}",
+      "overridesFile": "Die Konfigurationsdatei setzt diese Variable ebenfalls: Der hier gespeicherte Wert tritt an ihre Stelle.",
+      "sensitiveNote": "Beim Speichern wirst du nach deinem Zwei-Faktor-Code gefragt, wenn du ihn in den letzten Minuten nicht eingegeben hast.",
+      "keepOwnAddress": "Deine Adresse {email} muss in der Liste bleiben: ohne sie verlierst du den Zugang zu diesem Dashboard.",
+      "keepOwnAddressRemove": "Die Konfigurationsdatei enthält deine Adresse nicht: Wenn du diesen Wert entfernst, verlierst du den Zugang zu diesem Dashboard.",
+      "keepOwnAddressRestore": "Diese Version enthält deine Adresse nicht: Wenn du sie wiederherstellst, verlierst du den Zugang zu diesem Dashboard.",
+      "secretPlaceholder": "Neuen Wert eingeben",
+      "choose": "Auswählen",
+      "on": "An",
+      "off": "Aus",
+      "choices": {
+        "EMAIL_PROVIDER": {
+          "resend": "Resend",
+          "console": "Nur protokollieren (Entwicklung)"
+        },
+        "MINDDY_FORGE_RELAY": {
+          "0": "Aus"
+        }
+      },
+      "edit": "Bearbeiten",
       "save": "Speichern",
       "cancel": "Abbrechen",
-      "reset": "Zurück zur Standardauswahl",
-      "remove": "Dieses Modell entfernen",
-      "empty": "Keine Empfehlungen: Die Auswahl zeigt den gesamten Katalog. Durch das Speichern einer leeren Liste wird die Einstellung auf die Standardauswahl zurückgesetzt.",
-      "incomplete": "Wähle vor dem Speichern für jede Zeile ein Modell aus.",
-      "duplicate": "Dasselbe Modell kommt zweimal vor: Entferne eines vor dem Speichern."
-    },
-    "byok": {
-      "borderDefault": "Kontoweite Standardeinstellung"
+      "saved": "Variable gespeichert",
+      "remove": "Entfernen",
+      "removeTitle": "Den Wert von {name} entfernen?",
+      "removeDescriptionFile": "Der Wert aus der Konfigurationsdatei gilt wieder.",
+      "removeDescriptionUnset": "Die Variable ist danach nicht gesetzt: Die Konfigurationsdatei setzt sie nicht.",
+      "removeConfirm": "Entfernen",
+      "removed": "Wert entfernt",
+      "history": "Verlauf ({count})",
+      "historyEntry": "{action} von {actor}, {date}",
+      "action": {
+        "set": "Gesetzt",
+        "clear": "Entfernt",
+        "rollback": "Wiederhergestellt"
+      },
+      "someone": "einem Administrator",
+      "restore": "Wiederherstellen",
+      "restored": "Version wiederhergestellt",
+      "reauthTitle": "Bestätige, dass du es bist",
+      "reauthDescription": "Gib den Code aus deiner Authenticator-App ein, um diese Variable zu ändern.",
+      "reauthCode": "Authentifizierungscode",
+      "reauthConfirm": "Bestätigen",
+      "reauthFailed": "Dieser Code hat nicht funktioniert. Versuche den aktuellen.",
+      "reauthNoFactor": "Dein Konto hat keine Authenticator-App.",
+      "restartNeeded": "Einige Änderungen gelten nach einem Neustart der Instanz. Starte den minddy-Dienst auf seinem Host neu, zum Beispiel mit docker compose restart minddy.",
+      "restartNeededDesktop": "Einige Änderungen gelten nach einem Neustart der Instanz.",
+      "restartNow": "Jetzt neu starten",
+      "restartFailed": "Die Instanz konnte nicht neu gestartet werden.",
+      "errors": {
+        "invalid": "Dieser Wert ist ungültig.",
+        "invalid_email": "Gib gültige E-Mail-Adressen ein, durch Kommas getrennt.",
+        "invalid_url": "Gib eine vollständige http- oder https-Adresse ein.",
+        "invalid_choice": "Wähle eine der Optionen.",
+        "empty": "Gib einen Wert ein oder entferne stattdessen den hier gesetzten Wert.",
+        "not_overridable": "Diese Variable kann nur in der Konfigurationsdatei gesetzt werden.",
+        "disabled": "Diese Instanz erlaubt keine Bearbeitung der Variablen im Dashboard.",
+        "cannot_remove_self": "Behalte deine eigene Adresse in der Liste: Sonst verlierst du den Zugang zu diesem Dashboard.",
+        "no_such_version": "Diese Version existiert nicht mehr."
+      },
+      "emailSubject": "Eine Variable der Instanz wurde geändert",
+      "emailBody": "{actor} hat eine Variable deiner minddy-Instanz geändert. Sieh dir die Änderung im Admin-Dashboard an: {link}\n\nWenn du diese Änderung nicht erwartet hast, prüfe dort den Verlauf und sichere die Administratorkonten.",
+      "vars": {
+        "OPENROUTER_API_KEY": {
+          "label": "OpenRouter-Schlüssel",
+          "desc": "Der Schlüssel, mit dem die KI-Funktionen von minddy bei OpenRouter bezahlen."
+        },
+        "ADMIN_EMAILS": {
+          "label": "Administratoradressen",
+          "desc": "Bestätigte Adressen, die dieses Dashboard öffnen dürfen, durch Kommas getrennt. Jede braucht weiterhin die Zwei-Faktor-Authentifizierung."
+        },
+        "EMAIL_PROVIDER": {
+          "label": "E-Mail-Anbieter",
+          "desc": "Wie minddy seine eigenen E-Mails versendet (Einladungen, Feedback-Codes). Anmelde-E-Mails laufen über Supabase."
+        },
+        "RESEND_API_KEY": {
+          "label": "Resend-Schlüssel",
+          "desc": "Der Resend-API-Schlüssel, wenn der Anbieter Resend ist."
+        },
+        "INVITATION_EMAIL_FROM": {
+          "label": "Absender der Einladungen",
+          "desc": "Der Absender von Einladungs- und Verwaltungs-E-Mails, zum Beispiel minddy <hello@example.com>."
+        },
+        "FEEDBACK_EMAIL_FROM": {
+          "label": "Absender für Feedback",
+          "desc": "Der Absender der Bestätigungscodes des öffentlichen Feedback-Boards."
+        },
+        "GITHUB_APP_ID": {
+          "label": "GitHub-App-ID",
+          "desc": "Die numerische ID deiner eigenen GitHub-App."
+        },
+        "GITHUB_APP_SLUG": {
+          "label": "GitHub-App-Slug",
+          "desc": "Der Name deiner GitHub-App in ihrer URL."
+        },
+        "GITHUB_APP_CLIENT_ID": {
+          "label": "Client-ID der GitHub-App",
+          "desc": "Die OAuth-Client-ID deiner GitHub-App."
+        },
+        "GITHUB_APP_CLIENT_SECRET": {
+          "label": "Client-Geheimnis der GitHub-App",
+          "desc": "Das OAuth-Client-Geheimnis deiner GitHub-App."
+        },
+        "GITHUB_APP_PRIVATE_KEY": {
+          "label": "Privater Schlüssel der GitHub-App",
+          "desc": "Der für deine GitHub-App erzeugte private PEM-Schlüssel."
+        },
+        "GITHUB_WEBHOOK_SECRET": {
+          "label": "GitHub-Webhook-Geheimnis",
+          "desc": "Das Geheimnis, mit dem GitHub die Webhooks deiner App signiert."
+        },
+        "GITLAB_OAUTH_CLIENT_ID": {
+          "label": "GitLab-Anwendungs-ID",
+          "desc": "Die ID deiner eigenen GitLab-OAuth-Anwendung."
+        },
+        "GITLAB_OAUTH_CLIENT_SECRET": {
+          "label": "GitLab-Anwendungsgeheimnis",
+          "desc": "Das Geheimnis deiner GitLab-OAuth-Anwendung."
+        },
+        "GITLAB_WEBHOOK_SECRET": {
+          "label": "GitLab-Webhook-Geheimnis",
+          "desc": "Das Token, das GitLab mit den Webhooks deiner Projekte sendet."
+        },
+        "MINDDY_FORGE_RELAY": {
+          "label": "Verwaltetes Forge-Relay",
+          "desc": "Standardmäßig verbinden sich GitHub und GitLab über das Relay von minddy. Schalte es aus, um nur deine eigenen Apps oben zu nutzen."
+        },
+        "POSTHOG_API_KEY": {
+          "label": "PostHog-Serverschlüssel",
+          "desc": "Der Projektschlüssel, mit dem der Server von minddy seine Ereignisse sendet."
+        },
+        "POSTHOG_HOST": {
+          "label": "PostHog-Serveradresse",
+          "desc": "Die PostHog-Instanz, an die der Server sendet, zum Beispiel https://eu.i.posthog.com."
+        },
+        "MINDDY_PUBLIC_POSTHOG_KEY": {
+          "label": "PostHog-Browserschlüssel",
+          "desc": "Der öffentliche Schlüssel im Browser, für Mitglieder, die Analysen zugestimmt haben."
+        },
+        "MINDDY_PUBLIC_POSTHOG_HOST": {
+          "label": "PostHog-Browseradresse",
+          "desc": "Die PostHog-Adresse, an die der Browser sendet."
+        },
+        "MINDDY_PUBLIC_SITE_NAME": {
+          "label": "Name der Instanz",
+          "desc": "Der Name in Seitentiteln und E-Mails."
+        },
+        "MINDDY_PUBLIC_CONTACT_EMAIL": {
+          "label": "Kontaktadresse",
+          "desc": "Die Adresse auf öffentlichen Seiten für Fragen zu dieser Instanz."
+        },
+        "MINDDY_PUBLISH_MODEL_CONFIG": {
+          "label": "Modellkonfiguration veröffentlichen",
+          "desc": "Stellt die KI-Modellkonfiguration dieser Instanz unter /api/recommended-models bereit, damit andere Instanzen sie importieren."
+        }
+      }
     }
   },
   "Legal": {

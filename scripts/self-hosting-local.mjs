@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import net from "node:net";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -17,7 +17,7 @@ function fail(message) {
 }
 
 export function parseArgs(argv) {
-  const options = { port: DEFAULT_LOCAL_PORT, open: true, stopBackendOnExit: true, prepareOnly: false };
+  const options = { port: DEFAULT_LOCAL_PORT, open: true, stopBackendOnExit: true, prepareOnly: false, rebuild: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--") continue;
@@ -34,6 +34,8 @@ export function parseArgs(argv) {
       options.stopBackendOnExit = false;
     } else if (arg === "--prepare-only") {
       options.prepareOnly = true;
+    } else if (arg === "--rebuild") {
+      options.rebuild = true;
     } else if (arg === "--help" || arg === "-h") {
       options.help = true;
     } else {
@@ -44,7 +46,7 @@ export function parseArgs(argv) {
 }
 
 export function help() {
-  return `Usage: pnpm self-host:local [-- --port <port>] [--no-open] [--keep-backend] [--prepare-only]
+  return `Usage: pnpm self-host:local [-- --port <port>] [--no-open] [--keep-backend] [--prepare-only] [--rebuild]
 
 Starts minddy's minimal local stack and binds the app to localhost only.
 
@@ -54,6 +56,7 @@ Options:
   --keep-backend  Keep Supabase running after minddy stops.
   --prepare-only  Prepare Supabase and build the app, then exit without
                   starting minddy. Supabase keeps running.
+  --rebuild       Build the app again even when the last build looks current.
   -h, --help      Shows this help.`;
 }
 
@@ -146,11 +149,21 @@ async function runLocalServer(packageRunner, port, runtimeEnv, onReady) {
   }
 }
 
-export function productionBuildIsCurrent({ buildIdFile, stateFile, version, appUrl }) {
+/**
+ * The commit of a Git checkout, or null for a release archive. A checkout that
+ * pulls `main` between two releases keeps its version number, so the version
+ * alone would leave the previous build running.
+ */
+export function sourceRevision(root = ROOT_DIR) {
+  const result = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
+  return result.status === 0 ? result.stdout.trim() || null : null;
+}
+
+export function productionBuildIsCurrent({ buildIdFile, stateFile, version, appUrl, revision = null }) {
   if (!existsSync(buildIdFile) || !existsSync(stateFile)) return false;
   try {
     const state = JSON.parse(readFileSync(stateFile, "utf8"));
-    return state.version === version && state.appUrl === appUrl;
+    return state.version === version && state.appUrl === appUrl && (state.revision ?? null) === revision;
   } catch {
     return false;
   }
@@ -175,12 +188,15 @@ export async function main(argv = process.argv.slice(2)) {
   const packageRunner = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
   const packageJson = JSON.parse(readFileSync(resolve(ROOT_DIR, "package.json"), "utf8"));
   const runtimeEnv = { ...process.env, MINDDY_PUBLIC_APP_URL: appUrl };
+  const revision = sourceRevision();
   if (
+    options.rebuild ||
     !productionBuildIsCurrent({
       buildIdFile: BUILD_ID_FILE,
       stateFile: BUILD_STATE_FILE,
       version: packageJson.version,
       appUrl,
+      revision,
     })
   ) {
     console.log("→ Building the production app. This is needed only after installation or an update.");
@@ -188,7 +204,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (buildCode !== 0) fail(`the production build exited with code ${buildCode}.`);
     writeFileSync(
       BUILD_STATE_FILE,
-      `${JSON.stringify({ version: packageJson.version, appUrl }, null, 2)}\n`,
+      `${JSON.stringify({ version: packageJson.version, appUrl, revision }, null, 2)}\n`,
       "utf8",
     );
   }

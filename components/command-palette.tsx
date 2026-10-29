@@ -149,6 +149,9 @@ const GROUP_BOOSTS: Record<string, number> = {
   // having asked them is already having said which ones.
   "settings-project": 135,
   "settings-account": 130,
+  // The admin dashboard (MIN-829): navigation an administrator looks for
+  // less often than their own settings.
+  admin: 120,
   account: 100,
   issues: 80,
   objectives: 80,

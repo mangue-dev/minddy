@@ -1,18 +1,43 @@
 import { describe, expect, it } from "vitest";
 
-import { giftSectionVisible, visibleAdminTabs } from "./admin-tabs";
+import { giftSectionVisible, resolveAdminTab, visibleAdminTabs } from "./admin-tabs";
 
 describe("visibleAdminTabs", () => {
   it("shows every tab while the capabilities are unknown", () => {
-    expect(visibleAdminTabs(null)).toEqual(["overview", "users", "finances", "models"]);
+    expect(visibleAdminTabs(null)).toEqual(["accounts", "costs", "models"]);
   });
 
-  it("keeps finances when OpenRouter is linked", () => {
-    expect(visibleAdminTabs(true)).toContain("finances");
+  it("keeps costs when OpenRouter is linked", () => {
+    expect(visibleAdminTabs(true)).toContain("costs");
   });
 
-  it("drops the finances tab without an OpenRouter key", () => {
-    expect(visibleAdminTabs(false)).toEqual(["overview", "users", "models"]);
+  it("drops the costs tab without an OpenRouter key", () => {
+    expect(visibleAdminTabs(false)).toEqual(["accounts", "models"]);
+  });
+});
+
+describe("Instance tab (MIN-847)", () => {
+  it("exists only where the environment file allows the overrides", () => {
+    expect(visibleAdminTabs(true, true)).toEqual(["accounts", "costs", "models", "instance"]);
+    expect(visibleAdminTabs(true, false)).not.toContain("instance");
+    expect(visibleAdminTabs(true)).not.toContain("instance");
+  });
+});
+
+describe("resolveAdminTab (MIN-829)", () => {
+  it("sends the spend-guard notification's finances tab to costs", () => {
+    expect(resolveAdminTab("finances")).toBe("costs");
+  });
+
+  it("sends the former overview and users tabs to accounts", () => {
+    expect(resolveAdminTab("overview")).toBe("accounts");
+    expect(resolveAdminTab("users")).toBe("accounts");
+  });
+
+  it("keeps current tabs and ignores unknown values", () => {
+    expect(resolveAdminTab("models")).toBe("models");
+    expect(resolveAdminTab("billing")).toBeNull();
+    expect(resolveAdminTab(null)).toBeNull();
   });
 });
 

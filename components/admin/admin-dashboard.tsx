@@ -1,6 +1,6 @@
 "use client";
 
-import { BotIcon, DashboardCircleIcon, DollarCircleIcon as CircleDollarSign, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, DollarCircleIcon as CircleDollarSign, ServerStack01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "framer-motion";
@@ -15,13 +15,15 @@ import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
+import { useAssistantContext } from "@/lib/assistant-panel-context";
 import {
+  DEFAULT_ADMIN_TAB,
+  resolveAdminTab,
   visibleAdminTabs,
   type AdminTabId,
 } from "@/lib/admin-tabs";
 import {
   ADMIN_SECTION_PARAM,
-  ADMIN_SECTIONS,
   adminSectionAnchor,
   useAdminSections,
   type AdminSection,
@@ -32,48 +34,40 @@ function PanelLoading() {
   return <Skeleton className="h-48 rounded-xl" />;
 }
 
-const AdminOverviewDashboard = dynamic(
-  () => import("./admin-overview-dashboard").then((module) => module.AdminOverviewDashboard),
+const AdminAccountsDashboard = dynamic(
+  () => import("./admin-accounts-dashboard").then((module) => module.AdminAccountsDashboard),
   { loading: PanelLoading },
 );
-const AdminUsersDashboard = dynamic(
-  () => import("./admin-users-dashboard").then((module) => module.AdminUsersDashboard),
+const AdminInstanceDashboard = dynamic(
+  () => import("./admin-instance-dashboard").then((module) => module.AdminInstanceDashboard),
   { loading: PanelLoading },
 );
 const AdminModelsDashboard = dynamic(
   () => import("./admin-models-dashboard").then((module) => module.AdminModelsDashboard),
   { loading: PanelLoading },
 );
-const AdminFinanceDashboard = dynamic(
-  () => import("./admin-finance-dashboard").then((module) => module.AdminFinanceDashboard),
+const AdminCostsDashboard = dynamic(
+  () => import("./admin-costs-dashboard").then((module) => module.AdminCostsDashboard),
   { loading: PanelLoading },
 );
 
 /**
- * Shell of `/admin` (MIN-90). Four tabs: “Overview” (the app in
- * numbers), “Users” (THE accounts view, where all of them now live
- * the admin actions), “Finances” and “Models”.
+ * Shell of `/admin`: the administration of ONE instance (MIN-90, MIN-829).
+ * Three tabs: “Accounts” (how many there are, and support on one of them),
+ * “Costs” (what the AI providers cost) and “Models” (which model does what).
  *
- * “Finances” (MIN-92) replaces the old “AI Costs”, which only showed a
- * half of the equation. Its tab value is a CONTRACT: this is the URL that
- * carries the expense guard push notification (`/admin?tab=finances`).
+ * The tab values of earlier releases still open the right screen
+ * (`resolveAdminTab`, lib/admin-tabs.ts): `?tab=finances` is a CONTRACT, the
+ * spend-guard push notification carries it, and it lands on Costs.
  *
- * The “Quotas” and “Billing” tabs have disappeared: they were not
- * screens but actions — resetting a budget, forcing a plan — and a
- * action is taken where we look at the account concerned, not in a tab which
- * asks for his email again. The dashboard therefore follows the same rule as the rest of
- * the app: one tab = one object, not a verb.
+ * Actions live where the account is looked at, never in a tab of their own:
+ * one tab = one object, not a verb.
  *
- * The miter rail is a SECONDARY SIDEBAR (MIN-262), and no longer a line
- * of tabs placed above the cards: the same full height column, at the
- * same place and with the same grammar as sorting, returns, pull
- * requests, agent sessions and settings. The title of the screen is
- * title line of this bar; it is therefore no longer written above the content,
- * where it duplicated the breadcrumbs. The filter searches the individual
- * sections inside those tabs, then opens and highlights the selected section,
- * matching account and project settings.
+ * The rail is a SECONDARY SIDEBAR (MIN-262), with the same grammar as
+ * settings. The filter searches the sections inside those tabs, then opens
+ * and highlights the selected section.
  *
- * The current tab lives in the URL (`?tab=`) — a link to `/admin?tab=users`
+ * The current tab lives in the URL (`?tab=`) — a link to `/admin?tab=models`
  * reopens the correct view.
  *
  * Access locked on the server side by `app/(app)/admin/layout.tsx`.
@@ -81,16 +75,16 @@ const AdminFinanceDashboard = dynamic(
 
 type AdminTab = AdminTabId;
 
-const DEFAULT_TAB: AdminTab = "overview";
+const DEFAULT_TAB: AdminTab = DEFAULT_ADMIN_TAB;
 const ICONS: Record<AdminTab, AppIcon> = {
-  overview: DashboardCircleIcon,
-  users: UserGroupIcon,
-  finances: CircleDollarSign,
+  accounts: UserGroupIcon,
+  costs: CircleDollarSign,
   models: BotIcon,
+  instance: ServerStack01Icon,
 };
 
 /** The content column is wider than the settings column (`max-w-3xl`):
- the financial tables and the counter grids are already cramped there. */
+ the cost table is already cramped there. */
 const ADMIN_MAX_WIDTH = "max-w-5xl";
 const FOCUS_HIGHLIGHT_MS = 2000;
 const FOCUS_WAIT_MS = 5000;
@@ -143,20 +137,38 @@ export function AdminDashboard() {
   const reduceMotion = useReducedMotion();
   const contentFade = useScrollFade<HTMLDivElement>();
   // Tab existence follows the instance, not the product (MIN-416): the
-  // “Finances” screen reads the OpenRouter ledger, so an instance without a
+  // “Costs” screen reads the OpenRouter ledger, so an instance without a
   // linked OpenRouter key has nothing to show there and the tab disappears.
   // While the capabilities have not arrived (`null`) the tab stays — no
   // flicker on first paint; the API itself re-checks every access anyway.
   const capabilities = useAdminCapabilities();
   const openRouterLinked = capabilities.configured("managedAi");
-  const billingAvailable = capabilities.configured("managedBilling") !== false;
 
-  const requested = searchParams.get("tab");
-  const visibleTabs = useMemo(() => visibleAdminTabs(openRouterLinked), [openRouterLinked]);
-  const valid = (visibleTabs as readonly string[]).includes(requested ?? "");
-  const active: AdminTab = valid ? (requested as AdminTab) : DEFAULT_TAB;
+  const rawTab = searchParams.get("tab");
+  const requested = resolveAdminTab(rawTab);
+  const instanceOverrides = capabilities.instanceOverrides;
+  const visibleTabs = useMemo(
+    () => visibleAdminTabs(openRouterLinked, instanceOverrides),
+    [openRouterLinked, instanceOverrides],
+  );
+  const active: AdminTab = requested && visibleTabs.includes(requested) ? requested : DEFAULT_TAB;
+
+  // A tab value of an earlier release (`finances`, `overview`, `users`) is
+  // rewritten to the tab that replaced it, so the address bar names it.
+  useEffect(() => {
+    if (!rawTab || !requested || rawTab === requested) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (requested === DEFAULT_TAB) params.delete("tab");
+    else params.set("tab", requested);
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+  }, [pathname, rawTab, requested, router, searchParams]);
 
   const [query, setQuery] = useState("");
+
+  // Numo opened here knows which admin tab the user is on (MIN-829).
+  const assistantContext = useMemo(() => ({ admin: active }), [active]);
+  useAssistantContext(assistantContext);
 
   const items = useMemo(
     () =>
@@ -170,9 +182,8 @@ export function AdminDashboard() {
 
   const sections = useAdminSections();
   const searchableSections = useMemo(
-    () => sections.filter((section) => visibleTabs.includes(section.tab) &&
-      (section.id !== ADMIN_SECTIONS.overviewPlans || billingAvailable)),
-    [sections, visibleTabs, billingAvailable],
+    () => sections.filter((section) => visibleTabs.includes(section.tab)),
+    [sections, visibleTabs],
   );
   const matches = useMemo(() => {
     if (!query.trim()) return [];
@@ -314,14 +325,12 @@ export function AdminDashboard() {
           className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 app-desktop:px-6 app-desktop:pt-6"
         >
           <div className={cn("mx-auto flex flex-col gap-4", ADMIN_MAX_WIDTH)}>
-            {/* Only the open panel is mounted - this is already what was done
- `TabsContent`, which dismantles the others: each of them leaves
- to look for its numbers during assembly, and the four at once
- would wake up the entire dashboard to show only a quarter. */}
-            {active === "overview" && <AdminOverviewDashboard />}
-            {active === "users" && <AdminUsersDashboard />}
-            {active === "finances" && <AdminFinanceDashboard />}
+            {/* Only the open panel is mounted: each one fetches its data
+                when it mounts, and the others would load for nothing. */}
+            {active === "accounts" && <AdminAccountsDashboard />}
+            {active === "costs" && <AdminCostsDashboard />}
             {active === "models" && <AdminModelsDashboard />}
+            {active === "instance" && <AdminInstanceDashboard />}
           </div>
         </div>
       </div>

@@ -8,6 +8,10 @@ import messages from "@/messages/en.json";
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 vi.mock("@/lib/use-admin-capabilities", () => ({ useAdminCapabilities: () => ({ configured: () => true }) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
+vi.mock("@/components/stats/stats-chrome", () => ({
+  StatsCard: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Metric: ({ label, value, hint }: { label: string; value: React.ReactNode; hint: React.ReactNode }) => <div data-metric>{label}{value}{hint}</div>,
+}));
 vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ children, title, footer }: { children: React.ReactNode; title: string; footer: React.ReactNode }) => <section><h2>{title}</h2>{children}{footer}</section>,
   SettingsRow: ({ control, children, label }: { control: React.ReactNode; children: React.ReactNode; label: string }) => <div>{label}{control}{children}</div>,
@@ -28,7 +32,7 @@ const uiStubs = vi.hoisted(() => {
     Badge: Wrapper, Select: Wrapper, SelectContent: Wrapper, SelectItem: Wrapper, SelectTrigger: Wrapper, SelectValue: () => null,
     Sheet: ({ children, onOpenChange }: { children: React.ReactNode; onOpenChange: (open: boolean) => void }) => <div data-sheet><button onClick={() => onOpenChange(false)}>Close account</button>{children}</div>,
     SheetContent: Wrapper, SheetDescription: Wrapper, SheetHeader: Wrapper, SheetTitle: Wrapper,
-    Skeleton: () => null, Spinner: () => null, Switch: () => null,
+    Skeleton: () => null, Spinner: () => null,
     cn: (...values: unknown[]) => values.filter(Boolean).join(" "), toast: { success: vi.fn(), error: vi.fn() },
   };
 })());
@@ -61,17 +65,13 @@ vi.mock("@/components/ui/spinner", async (importOriginal) => {
   const stubs = await uiStubs();
   return { ...(await importOriginal<Record<string, unknown>>()), Spinner: stubs.Spinner };
 });
-vi.mock("@/components/ui/switch", async (importOriginal) => {
-  const stubs = await uiStubs();
-  return { ...(await importOriginal<Record<string, unknown>>()), Switch: stubs.Switch };
-});
 vi.mock("sonner", async (importOriginal) => {
   const stubs = await uiStubs();
   return { ...(await importOriginal<Record<string, unknown>>()), toast: stubs.toast };
 });
-import { AdminUsersDashboard } from "./admin-users-dashboard";
+import { AdminAccountsDashboard } from "./admin-accounts-dashboard";
 
-const account = { userId: "11111111-1111-4111-8111-111111111111", name: "Support Fixture", email: "support@example.test", internal: false, emailConfirmed: true };
+const account = { userId: "11111111-1111-4111-8111-111111111111", name: "Support Fixture", email: "support@example.test", emailConfirmed: true };
 const user = { ...account, billing: { planId: "pro", source: "default", override: null, overrideNote: null, overrideExpiresAt: null, stripePlanId: null, stripeStatus: null }, usage: { budgetUsd: 20, spentUsd: 2, spentMonthUsd: 3, blocked: false } };
 const json = (data: unknown) => new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
 const fetchMock = vi.fn<typeof fetch>();
@@ -90,11 +90,22 @@ beforeEach(async () => {
   vi.stubGlobal("React", React);
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.stubGlobal("fetch", fetchMock);
-  fetchMock.mockReset();
+  // The account count loads with the tab; every other request is queued per test.
+  fetchMock.mockReset().mockImplementation(async (url) =>
+    url === "/api/admin/overview" ? json({ totalAccounts: 1234 }) : new Response("", { status: 500 }));
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
-  await flush(() => root.render(<NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminUsersDashboard /></NextIntlClientProvider>));
+  await flush(() => root.render(<NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminAccountsDashboard /></NextIntlClientProvider>));
+  await flush();
+  fetchMock.mockClear();
 });
 afterEach(async () => { await flush(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+
+describe("account count (MIN-829)", () => {
+  it("shows the number of accounts and nothing else about them", () => {
+    expect(host.querySelector("[data-metric]")?.textContent).toContain("1,234");
+    expect(host.textContent).not.toMatch(/Onboarding|Sign-ups|Active today|Projects|Internal/);
+  });
+});
 
 describe("account support flow", () => {
   it("loads no accounts until an explicit form submission and opens details on demand", async () => {

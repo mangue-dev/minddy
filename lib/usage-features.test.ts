@@ -43,15 +43,15 @@ describe("FEATURE_LABEL_KEYS", () => {
     }
   });
 
-  it("follows the admin finance table, except the landing demo and retired code-agent lines", () => {
+  it("follows the admin cost table, except the landing demo and retired code-agent lines", () => {
     // The admin lists ALL the features of the ledger, up to date by construction (we
     // read a margin, we notice it immediately). It therefore serves as a witness:
     // a feature added there and forgotten here would be placed under “Numo” in
     // the history of the user who pays it. `landing_demo` is billed per
     // platform — no account has a line in this name. The code-agent features
     // (MIN-721) stay readable for the admin's historical margins only.
-    const adminOnly = new Set(["landing_demo", "agent_code", "sandbox_compute", "pr_review", "routine_compute"]);
-    for (const feature of Object.keys(en.Admin.finance.features)) {
+    const adminOnly = new Set(["landing_demo", "faq_ask", "agent_code", "sandbox_compute", "pr_review", "routine_compute"]);
+    for (const feature of Object.keys(en.Admin.costs.features)) {
       if (adminOnly.has(feature)) continue;
       expect(USAGE_HISTORY_FEATURES, `feature ${feature}`).toContain(feature);
     }

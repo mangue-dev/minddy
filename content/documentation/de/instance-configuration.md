@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
-    "language": "agent:/root/min750 (de table row and release delta sentence; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 13,
+    "fact": "agent:claude-code (MIN-847 MINDDY_CONFIG_OVERRIDES sentence checked against lib/server/instance-variables.ts and scripts/self-hosting-install.mjs); agent:claude-code (MIN-829 MINDDY_PUBLISH_MODEL_CONFIG sentence checked against app/api/recommended-models/route.ts); agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
+    "language": "agent:claude-code (de MIN-829 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min750 (de table row and release delta sentence; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/de/optional-providers-flow.svg",
       "alt": "Diagramm: Betreiber wählt optionale Funktion. Vollständige Zugangsdaten und Bedingungen. Ausdrückliches externes Datenziel. Verhalten prüfen und Kosten beobachten.",
       "caption": "Prüfe vor der Aktivierung einer Integration, wohin sie Daten sendet und welche laufenden Kosten sie verursacht.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/de/proxy-network-and-jobs-flow.svg",
       "alt": "Diagramm: Öffentlicher HTTPS-Proxy. App und öffentlicher Supabase-Origin. Private Datenbank- und interne Ports. Authentifizierte Jobs; Wartungsstopp.",
       "caption": "Öffentlicher Zugriff und interne Dienste bleiben getrennt; geplante Arbeit wird authentifiziert und während der Wartung gestoppt.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -152,7 +152,7 @@ Der Installer ergänzt fehlende `GIT_STATE_SECRET`, `GIT_TOKEN_ENCRYPTION_SECRET
 
 ### Änderungen anwenden und prüfen {#capabilities}
 
-`MINDDY_PUBLIC_SITE_NAME` und `MINDDY_PUBLIC_CONTACT_EMAIL` kennzeichnen deine Instanz. `ADMIN_EMAILS` enthält kommagetrennte Administratoradressen; privilegierter Zugriff verlangt zusätzlich MFA. `OAUTH_ISSUER` bleibt normalerweise leer, außer OAuth soll bewusst über einen anderen stabilen Origin angeboten werden. Lass verwaltete KI und Abrechnung beim Selbsthosting aus. Optionale Dienste benötigen ihre vollständige Konfiguration. Starte oder erstelle die Anwendung nach Änderungen öffentlicher Laufzeitwerte neu; ein OCI-Neubuild ist unnötig. doctor unterscheidet unvollständige Funktionen von Kernfehlern. Teste danach Kontolinks und Callbacks am vorgesehenen Origin.
+`MINDDY_PUBLIC_SITE_NAME` und `MINDDY_PUBLIC_CONTACT_EMAIL` kennzeichnen deine Instanz. `ADMIN_EMAILS` enthält kommagetrennte Administratoradressen; privilegierter Zugriff verlangt zusätzlich MFA. `MINDDY_PUBLISH_MODEL_CONFIG=1` veröffentlicht die KI-Modellkonfiguration der Instanz unter `/api/recommended-models` (siehe [empfohlene Modellkonfiguration](/docs/recommended-models)); lass die Variable leer, außer andere Instanzen importieren sie. `MINDDY_CONFIG_OVERRIDES=1` erlaubt Administratoren, einige Variablen im Admin-Dashboard zu bearbeiten, deren Werte dann diese Datei ersetzen ([die Variablen der Instanz bearbeiten](/docs/instance-administration#instance-variables)); nur die Datei kann sie setzen. `OAUTH_ISSUER` bleibt normalerweise leer, außer OAuth soll bewusst über einen anderen stabilen Origin angeboten werden. Lass verwaltete KI und Abrechnung beim Selbsthosting aus. Optionale Dienste benötigen ihre vollständige Konfiguration. Starte oder erstelle die Anwendung nach Änderungen öffentlicher Laufzeitwerte neu; ein OCI-Neubuild ist unnötig. doctor unterscheidet unvollständige Funktionen von Kernfehlern. Teste danach Kontolinks und Callbacks am vorgesehenen Origin.
 
 ### Feedback und Dokumentationsmeldungen konfigurieren {#product-feedback}
 

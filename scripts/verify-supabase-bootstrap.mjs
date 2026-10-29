@@ -34,6 +34,17 @@ export function parseArgs(argv) {
   return parseStorageArgs(argv);
 }
 
+/**
+ * The database container of the local stack: the Supabase CLI names it after
+ * the `project_id` of supabase/config.toml, so a renamed or second local
+ * stack (a disposable test next to a desktop-managed instance) is found too.
+ */
+export function localDatabaseContainer(path = CONFIG_PATH) {
+  const projectId = /^\s*project_id\s*=\s*"([^"]+)"/m.exec(readFileSync(path, "utf8"))?.[1];
+  if (!projectId) fail("supabase/config.toml has no project_id.");
+  return `supabase_db_${projectId}`;
+}
+
 function query(dbUrl, sql, { dryRun = false, local = false } = {}) {
   if (dryRun) {
     console.log("→ would query PostgreSQL with psql for extensions, schemas, tables, config, and policies.");
@@ -41,7 +52,7 @@ function query(dbUrl, sql, { dryRun = false, local = false } = {}) {
   }
   const command = local ? "docker" : "psql";
   const args = local
-    ? ["exec", "supabase_db_minddy", "psql", "-U", "postgres", "-d", "postgres", "-X", "-v", "ON_ERROR_STOP=1", "-At", "-c", sql]
+    ? ["exec", localDatabaseContainer(), "psql", "-U", "postgres", "-d", "postgres", "-X", "-v", "ON_ERROR_STOP=1", "-At", "-c", sql]
     : [dbUrl, "-X", "-v", "ON_ERROR_STOP=1", "-At", "-c", sql];
   const result = spawnSync(command, args, {
     cwd: ROOT_DIR,

@@ -72,13 +72,15 @@ export function appTabRoute(href: string): {
   prId: string | null;
   /** `routines?routine=` — a selected routine. */
   routineId: string | null;
+  /** `admin?tab=` — the admin dashboard tab the app tab is on. */
+  adminTab: string | null;
 } {
   const normalized = normalizeAppTabLocation(href) ?? "/home";
   const [path, query] = normalized.split(/[?#]/);
   const parts = path.slice(1).split("/");
   const params = new URLSearchParams(query);
   if (parts[0] !== "projects") {
-    return { section: parts[0], projectId: null, objectiveId: null, familyId: null, view: params.get("view"), pageId: null, prId: params.get("pr"), routineId: params.get("routine") };
+    return { section: parts[0], projectId: null, objectiveId: null, familyId: null, view: params.get("view"), pageId: null, prId: params.get("pr"), routineId: params.get("routine"), adminTab: parts[0] === "admin" ? params.get("tab") : null };
   }
   return {
     section: parts[2] ?? "tickets",
@@ -89,5 +91,6 @@ export function appTabRoute(href: string): {
     pageId: parts[2] === "pages" && parts[3] ? parts[3] : null,
     prId: params.get("pr"),
     routineId: params.get("routine"),
+    adminTab: null,
   };
 }

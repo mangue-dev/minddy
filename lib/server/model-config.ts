@@ -6,6 +6,7 @@ import { getAppConfigValues } from "@/lib/server/app-config";
 import {
   aiModelFallback,
   applyModelSuffix,
+  categoryKeyOf,
   modelSuffixKey,
   stripModelSuffix,
 } from "@/lib/ai-model-config";
@@ -43,8 +44,7 @@ export interface ResolvedModel {
  * above: reading the suffix does not cost an extra round trip.
  */
 export async function resolveConfiguredModel(key: string): Promise<ResolvedModel> {
-  const suffixKey = modelSuffixKey(key);
-  const cfg = await getAppConfigValues([key, suffixKey]).catch(() => ({}) as Record<
+  const cfg = await getAppConfigValues(modelConfigKeys(key)).catch(() => ({}) as Record<
     string,
     string | null
   >);
@@ -61,8 +61,15 @@ export function resolveFromValues(
   key: string,
   values: Record<string, string | null | undefined>,
 ): ResolvedModel {
-  const base = values[key]?.trim() || aiModelFallback(key);
-  const suffix = values[modelSuffixKey(key)]?.trim() || null;
+  // A task inherits its category's default until it is overridden (MIN-829).
+  // The suffix travels with the row that supplied the model: an inherited
+  // model is served the way the category asks, an override its own way.
+  const own = values[key]?.trim();
+  const categoryKey = own ? null : categoryKeyOf(key);
+  const inherited = categoryKey ? values[categoryKey]?.trim() : "";
+  const source = inherited ? categoryKey! : key;
+  const base = own || inherited || aiModelFallback(key);
+  const suffix = values[modelSuffixKey(source)]?.trim() || null;
   return { model: applyModelSuffix(base, suffix), base, suffix };
 }
 
@@ -82,8 +89,11 @@ export function resolveCascadeFromValues(
 }
 
 /** The keys to request from `getAppConfigValues` to resolve `key` in full. */
-export function modelConfigKeys(key: string): [string, string] {
-  return [key, modelSuffixKey(key)];
+export function modelConfigKeys(key: string): string[] {
+  const categoryKey = categoryKeyOf(key);
+  return categoryKey
+    ? [key, modelSuffixKey(key), categoryKey, modelSuffixKey(categoryKey)]
+    : [key, modelSuffixKey(key)];
 }
 
 /**

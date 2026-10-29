@@ -29,6 +29,7 @@ export type AssistantContextKind =
   | "view"
   | "cycle"
   | "settings"
+  | "admin"
   | "member"
   | "selection";
 
@@ -168,6 +169,19 @@ export function contextChips(
     });
   }
 
+  if (ctx?.admin) {
+    const label = t(
+      ctx.admin === "accounts"
+        ? "contextAdminAccounts"
+        : ctx.admin === "costs"
+          ? "contextAdminCosts"
+          : ctx.admin === "instance"
+            ? "contextAdminInstance"
+            : "contextAdminModels",
+    );
+    chips.push({ key: "admin", kind: "admin", label, tooltip: t("contextAdminTooltip") });
+  }
+
   if (ctx?.objectiveId) {
     chips.push({
       key: "objective",
@@ -274,6 +288,7 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   project: ["projectId"],
   inbox: ["inbox"],
   settings: ["settings"],
+  admin: ["admin"],
   issue: [
     "issueId",
     "issueIdentifier",

@@ -274,6 +274,12 @@ export interface DesktopBridge {
    * desktop shells released before it existed.
    */
   flushStorage?(): Promise<void>;
+  /**
+   * Restarts the local instance this desktop app runs (MIN-847); `false` when
+   * the window does not show that instance. Optional for desktop shells
+   * released before it existed.
+   */
+  restartLocalInstance?(): Promise<boolean>;
 }
 
 declare global {

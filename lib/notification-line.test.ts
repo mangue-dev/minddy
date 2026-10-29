@@ -8,6 +8,7 @@ const LABELS = {
   mcpFallback: "Un agent",
   somePageFallback: "Page sans titre",
   someIssueFallback: "un ticket",
+  instanceConfigTitle: "Variables de l’instance",
 };
 
 function notification(patch: Partial<MyNotification>): MyNotification {
@@ -39,7 +40,7 @@ describe("notificationActor", () => {
     expect(notificationActor(n, LABELS)).toBe("Smart Assign");
   });
 
-  it("nomme l'agent MCP, et son repli quand la clé n'a pas de nom", () => {
+  it("names the MCP agent, and its fallback when the key has no name", () => {
     expect(
       notificationActor(
         notification({ via_mcp: true, api_key_name: "Claude" }),
@@ -51,7 +52,7 @@ describe("notificationActor", () => {
     ).toBe("Un agent");
   });
 
-  it("nomme l'humain, et retombe sur « Quelqu'un » sans acteur", () => {
+  it("names the human, and falls back to “someone” without an actor", () => {
     expect(
       notificationActor(notification({ actor_name: "Léa" }), LABELS)
     ).toBe("Léa");
@@ -67,7 +68,7 @@ describe("notificationLineKey", () => {
 });
 
 describe("notificationTitle", () => {
-  it("prend l'objectif avant le ticket de contexte", () => {
+  it("takes the objective before the context ticket", () => {
     const n = notification({
       objective_id: "o1",
       objective_name: "Refonte",
@@ -77,7 +78,7 @@ describe("notificationTitle", () => {
     expect(notificationTitle(n, LABELS)).toBe("Refonte");
   });
 
-  it("nomme chaque cible par ce qu'elle a", () => {
+  it("names each target by what it has", () => {
     expect(
       notificationTitle(
         notification({ feedback_post_id: "f1", feedback_title: "Idée" }),
@@ -108,6 +109,12 @@ describe("notificationTitle", () => {
     expect(
       notificationTitle(notification({ page_id: "pg1", page_title: "" }), LABELS)
     ).toBe("Page sans titre");
+  });
+
+  it("names an instance-wide change by its subject, never as a ticket", () => {
+    expect(
+      notificationTitle(notification({ type: "instance_config_changed" }), LABELS)
+    ).toBe("Variables de l’instance");
   });
 
   it("falls back when the ticket has no title", () => {

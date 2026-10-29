@@ -15,7 +15,7 @@
 // hand, he withdraws for good — a cross.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon as CycleIcon, File02Icon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, MessageMultiple01Icon, QuoteDownIcon, Settings01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, File02Icon, Cancel01Icon, FileAttachmentIcon, GitPullRequestIcon, InboxIcon, Layers01Icon, MessageMultiple01Icon, QuoteDownIcon, Settings01Icon, Shield01Icon, Target01Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
@@ -89,6 +89,11 @@ const STYLES: Record<
   cycle: {
     icon: CycleIcon,
     tint: "bg-teal-500/12 text-teal-600 dark:text-teal-400",
+  },
+  // The admin dashboard (MIN-829): the shield of its tab.
+  admin: {
+    icon: Shield01Icon,
+    tint: "bg-violet-500/12 text-violet-600 dark:text-violet-400",
   },
   settings: {
     icon: Settings01Icon,

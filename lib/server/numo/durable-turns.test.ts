@@ -174,6 +174,13 @@ vi.mock("@/lib/managed-services", () => ({
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
 vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
+const adminGate = vi.hoisted(() => ({ live: vi.fn() }));
+vi.mock("@/lib/server/assistant/admin-tools", () => ({
+  ADMIN_ASSISTANT_TOOLS: [{ function: { name: "admin_get_instance_models" } }],
+  ADMIN_PROMPT_BLOCK: "\n## Instance administration",
+  ADMIN_READ_TOOLS: new Set(),
+  adminGrantIsLive: adminGate.live,
+}));
 
 
 const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
@@ -251,6 +258,7 @@ beforeEach(() => {
   h.fetchModelIndex.mockRejectedValue(new Error("Catalog unavailable"));
   h.recordAiUsage.mockReset();
   vi.mocked(resolveAiRuntime).mockResolvedValue(runtime as never);
+  adminGate.live.mockReset().mockResolvedValue(true);
   h.processChat.mockResolvedValue({
     fullContent: "Done without code.",
     finalReasoning: null,
@@ -272,6 +280,33 @@ describe("durable Numo execution", () => {
     expect(context).toMatchObject({ documentationHelp: true, userId: h.turn.user_id });
     expect(resolveAiRuntime).toHaveBeenCalledWith(expect.objectContaining({ managedOnly: true }));
   });
+  it("offers the admin tools only while the recorded admin session is live (MIN-829)", async () => {
+    const adminSession = { sessionId: "51600000-0000-4000-8000-000000000009", aal: "aal2", amr: [] };
+    h.turn = { ...h.turn!, intent: { ...(h.turn!.intent as object), adminSession } };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
+    const [messages, tools, , context] = h.processChat.mock.calls[0];
+    expect(adminGate.live).toHaveBeenCalledWith(h.turn.user_id, adminSession);
+    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toContain("admin_get_instance_models");
+    expect(messages[0].content).toContain("Instance administration");
+    expect(context).toMatchObject({ adminGrant: adminSession });
+
+    h.processChat.mockClear();
+    adminGate.live.mockResolvedValue(false);
+    h.turn = { ...h.turn!, status: "queued" };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
+    const [lostMessages, lostTools, , lostContext] = h.processChat.mock.calls[0];
+    expect(lostTools.map((tool: { function: { name: string } }) => tool.function.name)).not.toContain("admin_get_instance_models");
+    expect(lostMessages[0].content).not.toContain("Instance administration");
+    expect(lostContext).toMatchObject({ adminGrant: null });
+  });
+
+  it("never offers the admin tools to a turn without an admin session", async () => {
+    await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
+    const [, tools] = h.processChat.mock.calls[0];
+    expect(adminGate.live).not.toHaveBeenCalled();
+    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_issue", "get_help"]);
+  });
+
   it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
     let releaseCatalog!: () => void;
     h.fetchModelIndex.mockReturnValue(new Promise((resolve) => {

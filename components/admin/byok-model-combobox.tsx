@@ -1,9 +1,10 @@
 "use client";
 
+import { ChevronDownIcon } from "lucide-react";
 import { CommandList } from "@/components/ui/command";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpDownIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { CheckIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Command, CommandInput, CommandItem } from "@/components/ui/command";
@@ -108,7 +109,7 @@ export function ByokModelCombobox({
               <span className="truncate">{defaultLabel}</span>
             </span>
           )}
-          <HugeiconsIcon icon={ArrowUpDownIcon} className="ml-2 size-4 shrink-0 opacity-50" />
+          <ChevronDownIcon className="pointer-events-none ml-2 size-4 shrink-0 text-muted-foreground" />
         </Button>
       </ResponsivePopoverTrigger>
       {/* Same width ceiling as `ModelCombobox`: a long native id must not leave the screen. */}

@@ -931,7 +931,12 @@
     "slashCreateIssueLabel": "créer ticket",
     "slashCreateIssueDescription": "Numo réunit le contexte, puis crée le ticket",
     "stopConfirmTitle": "Arrêter Numo ?",
-    "stopConfirmDescription": "Le tour en cours va être interrompu. Ce qui a déjà été écrit et enregistré reste dans la conversation."
+    "stopConfirmDescription": "Le tour en cours va être interrompu. Ce qui a déjà été écrit et enregistré reste dans la conversation.",
+    "contextAdminAccounts": "Admin · Comptes",
+    "contextAdminCosts": "Admin · Coûts",
+    "contextAdminModels": "Admin · Modèles",
+    "contextAdminTooltip": "Tableau d’administration de l’instance en contexte",
+    "contextAdminInstance": "Admin · Instance"
   },
   "Auth": {
     "callbackFailed": "Ce lien de connexion n'est plus valide. Réessayez de vous connecter.",
@@ -1763,7 +1768,9 @@
     "linePageMention": "{actor} vous a mentionné dans cette page",
     "linePageAgentEdit": "Numo a mis cette page à jour",
     "somePageFallback": "Page sans titre",
-    "linePageComment": "{actor} a commenté cette page"
+    "instanceConfigTitle": "Variables de l’instance",
+    "linePageComment": "{actor} a commenté cette page",
+    "lineInstanceConfigChanged": "{actor} a modifié une variable de l’instance"
   },
   "NotificationSettings": {
     "title": "Notifications de l'inbox",
@@ -3984,7 +3991,29 @@
     "secretStoreServerSide": "Copiez-le tout de suite dans l'environnement de votre serveur. Il n'est pas conservé dans cette conversation et ne sera plus affiché.",
     "secretReveal": "Afficher l'identifiant",
     "secretHide": "Masquer l'identifiant",
-    "secretCopy": "Copier l'identifiant"
+    "secretCopy": "Copier l'identifiant",
+    "loadingInstanceModels": "Lecture des modèles de l’instance…",
+    "instanceModelsLoaded": "Modèles de l’instance lus",
+    "loadInstanceModelsFailed": "Impossible de lire les modèles de l’instance",
+    "updatingInstanceModels": "Mise à jour des modèles de l’instance…",
+    "instanceModelsUpdated": "Modèles de l’instance mis à jour",
+    "updateInstanceModelsFailed": "Impossible de mettre à jour les modèles de l’instance",
+    "importingInstanceModels": "Lecture du fichier de configuration…",
+    "instanceModelsImportPreviewed": "Changements de l’import listés",
+    "instanceModelsImported": "Configuration importée",
+    "importInstanceModelsFailed": "Impossible d’importer la configuration",
+    "findingAccount": "Recherche du compte…",
+    "accountFound": "Recherche du compte terminée",
+    "findAccountFailed": "Impossible de rechercher le compte",
+    "loadingAccount": "Lecture de l’offre et de l’usage du compte…",
+    "accountLoaded": "Offre et usage du compte lus",
+    "loadAccountFailed": "Impossible de lire le compte",
+    "settingAccountPlan": "Mise à jour de l’offre du compte…",
+    "accountPlanSet": "Offre du compte mise à jour",
+    "setAccountPlanFailed": "Impossible de mettre à jour l’offre du compte",
+    "loadingInstanceCosts": "Lecture des coûts de l’instance…",
+    "instanceCostsLoaded": "Coûts de l’instance lus",
+    "loadInstanceCostsFailed": "Impossible de lire les coûts de l’instance"
   },
   "PullRequests": {
     "descriptionMoreActions": "Actions de la description",
@@ -4526,10 +4555,10 @@
     "pageTitle": "Administration",
     "filterPlaceholder": "Filtrer {count, plural, =0 {les sections} one {la section} other {les # sections}}…",
     "tabs": {
-      "overview": "Vue d'ensemble",
-      "users": "Utilisateurs",
-      "finances": "Finances",
-      "models": "Modèles"
+      "models": "Modèles",
+      "accounts": "Comptes",
+      "costs": "Coûts",
+      "instance": "Instance"
     },
     "billing": {
       "title": "Offrir un plan",
@@ -4563,7 +4592,7 @@
       "saved": "Plan mis à jour."
     },
     "title": "Modèles IA",
-    "subtitle": "Modèles utilisés par minddy. Chaque choix s'applique tout de suite ; « modèle par défaut » rend le réglage au défaut du produit.",
+    "subtitle": "Chaque carte a un modèle par défaut ; ouvrez « Modèles par tâche » pour donner son propre modèle à une tâche. Chaque choix s’applique tout de suite.",
     "loadError": "Impossible de charger la configuration.",
     "saved": "Réglage enregistré",
     "fieldDefault": "Modèle par défaut",
@@ -4576,12 +4605,12 @@
     },
     "groups": {
       "assistant": {
-        "title": "Conversations avec Numo",
-        "desc": "Numo dans les conversations et les commentaires."
+        "title": "Assistant",
+        "desc": "Numo dans les conversations et les commentaires, avec ses titres et sa recherche web."
       },
       "automations": {
         "title": "Automatisations",
-        "desc": "Assignation, remplissage intelligent, briefs, imports et messages de commit de fusion."
+        "desc": "Smart Fill, Smart Assign, relations, briefs, imports et messages de commit de fusion."
       },
       "byok": {
         "title": "Clés personnelles",
@@ -4591,14 +4620,14 @@
         "title": "Voix"
       },
       "feedback": {
-        "title": "Retours",
-        "desc": "Traitement du board de retours."
+        "title": "Retours et site public",
+        "desc": "Traitement du tableau de retours, et réponses IA proposées aux visiteurs sans compte."
       },
-      "site": {
-        "title": "Site public",
-        "desc": "Fonctions d’IA proposées aux visiteurs sans compte."
-      },
-      "byokOther": "Autres endpoints"
+      "byokOther": "Autres endpoints",
+      "embeddings": {
+        "title": "Embeddings",
+        "desc": "Transforme les tickets et les retours en vecteurs pour trouver ce qui est lié."
+      }
     },
     "fields": {
       "assistant_model": {
@@ -4608,10 +4637,6 @@
       "assistant_reasoning_level": {
         "label": "Niveau de raisonnement",
         "desc": "Un niveau élevé peut améliorer les demandes complexes, mais prend plus de temps et utilise plus de jetons. S'applique au chat et aux commentaires de Numo."
-      },
-      "fallback_model": {
-        "label": "Modèle de repli",
-        "desc": "Utilisé quand le modèle de Numo n'est pas renseigné."
       },
       "recommended_models": {
         "label": "Modèles conseillés",
@@ -4679,6 +4704,18 @@
       "faq_ask_model": {
         "label": "Modèle de l'encart FAQ",
         "desc": "Répond à la question d'un visiteur à partir de la FAQ de la page et de la documentation produit. Quelqu'un attend la réponse, et l'encart tourne toute la journée sur le site public : choisir un modèle rapide et pas cher."
+      },
+      "category_assistant_model": {
+        "label": "Modèle par défaut de l’assistant"
+      },
+      "category_automations_model": {
+        "label": "Modèle par défaut des automatisations"
+      },
+      "category_embeddings_model": {
+        "label": "Modèle par défaut des embeddings"
+      },
+      "category_feedback_model": {
+        "label": "Modèle par défaut des retours et du site public"
       }
     },
     "decisionModelErrors": {
@@ -4687,82 +4724,65 @@
       "compatibility_check_failed": "Ce modèle a échoué à la décision de test (refus, réponse invalide ou plus de 5 secondes). Le modèle actuel est conservé.",
       "capability_mismatch": "Ce modèle ne correspond pas à ce champ (par exemple un modèle de chat dans un champ d'embeddings). Le modèle actuel est conservé."
     },
-    "finance": {
-      "title": "Finances",
-      "summary": "Synthèse du mois",
-      "subtitle": "Ce qui rentre et ce qui sort, sur le même axe de temps. Les entrées viennent des transactions Stripe (net des frais et des remboursements), les coûts d'OpenRouter, convertis au taux de chaque journée.",
-      "window": "{days} j",
-      "loadError": "Impossible de charger les finances.",
-      "empty": "Aucun appel.",
-      "noData": "Aucun mouvement sur la période.",
-      "netCollected": "Encaissé ce mois",
-      "netCollectedInfo": "Ce qui a réellement atterri sur le compte Stripe ce mois-ci : net des frais Stripe et des remboursements. Un override admin n'est jamais du revenu; un cadeau ne génère aucune transaction.",
-      "stripeFees": "dont {amount} de frais Stripe",
-      "mrr": "MRR",
-      "mrrInfo": "Revenu récurrent théorique : la somme des abonnements actifs, l'annuel ramené à son équivalent mensuel. Indicateur de récurrence; ce n'est pas lui qui calcule la marge. Les overrides admin sont ignorés.",
-      "payingAccounts": "{count, plural, =0 {aucun abonné} one {# abonné} other {# abonnés}}",
-      "monthCost": "Coût IA ce mois",
-      "monthCostInfo": "Coût réel des appels IA du mois, converti en euros au taux de chaque journée. Les comptes internes y sont comptés : l'argent dépensé pour eux sort vraiment de la poche.",
-      "monthCostUsd": "{amount} en USD",
-      "margin": "Marge",
-      "marginHint": "encaissé − coût IA",
-      "marginInfo": "Encaissé net moins le coût IA du mois. Ne comptabilise que ces deux postes : l'hébergement et les autres charges n'y sont pas.",
-      "fxRate": "1 USD = {rate} € (taux du {date})",
-      "fxMissing": "Taux de change indisponible; les coûts restent en USD.",
-      "stripeFresh": "Stripe actualisé il y a {minutes} min",
-      "stripeUnreachable": "Stripe injoignable",
-      "testMode": "Mode test",
-      "refresh": "Actualiser",
-      "chartTitle": "Entrées et coûts par jour",
-      "chartInfo": "Le revenu monte, le coût descend, sur une seule échelle en euros. Chaque encaissement est porté ENTIER par le jour où il tombe; un prélèvement mensuel est une barre le jour du prélèvement, pas une moyenne étalée. Les remboursements suivent la même règle.",
-      "legendRevenue": "Entrées",
-      "legendCost": "Coûts IA",
-      "tooltipRevenue": "Entrées : {amount}",
-      "tooltipCost": "Coûts : {amount}",
-      "tooltipMargin": "Marge : {amount}",
-      "capTitle": "Plafond de la clé OpenRouter",
-      "capInfo": "Le plafond mensuel de la clé minddy. L'atteindre coupe Numo, la dictée et le traitement des retours jusqu'au mois suivant. Une notification push part à 90 %.",
-      "capUnavailable": "Plafond illisible; vérifier la clé OpenRouter.",
-      "capUsage": "{usage} sur {limit}",
-      "capPercent": "{percent} % du plafond",
-      "capRemaining": "Restant",
-      "capProjected": "Plafond atteint le",
-      "capProjectedInfo": "Projection au rythme des 7 derniers jours.",
-      "capNotBeforeReset": "Pas avant la remise à zéro",
-      "capReset": "Remise à zéro",
-      "managedKeysTitle": "Clés OpenRouter par compte",
-      "managedKeysInfo": "Chaque compte paie avec sa propre clé OpenRouter, plafonnée à l'usage que son plan inclut encore. OpenRouter refuse une clé à son plafond, même si le contrôle de Minddy le laisse passer.",
-      "managedKeysUnavailable": "Clés illisibles ; vérifiez la clé de gestion OpenRouter.",
-      "managedKeysAccounts": "Clés de compte",
-      "managedKeysRemaining": "Encore dépensable",
-      "managedKeysRemainingInfo": "Ce que l'ensemble des clés de compte peut encore dépenser avant qu'OpenRouter ne les refuse.",
-      "managedKeysToday": "Dépensé aujourd'hui",
-      "managedKeysPublic": "Clé publique aujourd'hui",
-      "managedKeysPublicInfo": "La clé de la démo de dictée et des réponses de la FAQ, plafonnée par jour.",
-      "managedKeysPublicUsage": "{usage} sur {limit}",
-      "managedKeysSweep": "Supprimer les clés orphelines",
-      "managedKeysSweepTitle": "Supprimer les clés orphelines ?",
-      "managedKeysSweepDescription": "Les clés émises par Minddy qu'aucun compte n'utilise plus sont supprimées chez OpenRouter. Les clés créées dans les 10 dernières minutes et celles que Minddy n'a pas émises sont conservées.",
-      "managedKeysSweepConfirm": "Supprimer",
-      "managedKeysSweepCancel": "Annuler",
-      "managedKeysSweepDone": "{count, plural, =0 {Aucune clé orpheline trouvée} one {# clé orpheline supprimée} other {# clés orphelines supprimées}}",
-      "managedKeysSweepFailed": "Impossible de supprimer les clés orphelines.",
-      "byType": "Coûts par fonctionnalité",
-      "logs": "Journal",
-      "recentRuns": "Runs récents",
-      "recentRunsHint": "Un run regroupe les appels d'une même action.",
-      "colType": "Fonctionnalité",
+    "quotas": {
+      "usersTitle": "Usage IA par utilisateur",
+      "usersDescription": "Chaque utilisateur est limité par le budget mensuel de son plan, toutes fonctionnalités IA confondues. La remise à zéro fait repartir le décompte à partir de maintenant ; aucune dépense n'est effacée.",
+      "empty": "Aucun usage IA ce mois-ci.",
+      "counted": "Compté sur le budget",
+      "realSpend": "Dépense du mois",
+      "blocked": "Bloqué",
+      "calls": "{count, plural, one {# appel} other {# appels}}",
+      "reset": "Remettre à zéro",
+      "resetsTitle": "Remises à zéro de la période",
+      "resetsHint": "Seule la plus récente compte ; la retirer rend la main à la précédente.",
+      "resetsCount": "{count, plural, one {# remise à zéro} other {# remises à zéro}}",
+      "resetActive": "en cours",
+      "undoOne": "Annuler cette remise à zéro",
+      "resetToast": "Quota de {name} remis à zéro.",
+      "undoToast": "Remise à zéro annulée pour {name}."
+    },
+    "users": {
+      "subtitle": "Recherchez un compte avec son adresse e-mail exacte, puis ouvrez-le pour gérer son offre ou son budget.",
+      "searchPlaceholder": "Adresse e-mail du compte",
+      "clearSearch": "Effacer la recherche",
+      "empty": "Aucun compte trouvé pour cette adresse e-mail.",
+      "emailStatus": "Email",
+      "confirmed": "Confirmé",
+      "unconfirmed": "Non confirmé",
+      "overrideMark": "forcé",
+      "accountTitle": "Compte",
+      "usageDescription": "La fenêtre en cours, et la dépense réelle du mois.",
+      "usageTitle": "Budget d'usage IA",
+      "usageSubtitle": "La remise à zéro fait repartir le décompte à partir de maintenant ; aucune dépense n'est effacée.",
+      "emailLabel": "Adresse e-mail",
+      "findAccount": "Rechercher",
+      "openAccount": "Ouvrir le compte",
+      "supportPurpose": "Consultez les comptes uniquement pour une demande d’assistance ou de facturation. L’activité et les contenus personnels ne sont pas affichés ici.",
+      "lookupFailed": "La recherche a échoué. Vérifiez l’adresse et réessayez.",
+      "detailsFailed": "Impossible de charger l’offre et le budget. Ouvrez le compte pour réessayer."
+    },
+    "recommended": {
+      "pickModel": "Choisir un modèle",
+      "add": "Ajouter un modèle",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "reset": "Revenir à la sélection par défaut",
+      "remove": "Retirer ce modèle",
+      "empty": "Aucun conseil : le picker s'ouvrira sur le catalogue entier. Enregistrer une liste vide rend le réglage à la sélection par défaut.",
+      "incomplete": "Choisissez un modèle pour chaque ligne avant d'enregistrer.",
+      "duplicate": "Le même modèle apparaît deux fois : retirez-en un avant d'enregistrer.",
+      "hint": "Affichés en premier dans chaque sélecteur de modèle, du moins cher au plus cher."
+    },
+    "byok": {
+      "borderDefault": "Défaut du compte"
+    },
+    "costs": {
+      "callCount": "{count, plural, one {# appel} other {# appels}}",
+      "colCompletion": "Tokens sortie",
       "colCost": "Coût",
-      "colRuns": "Runs",
-      "colCalls": "Appels",
-      "colAvgRun": "Coût moy./run",
-      "colAvgCall": "Coût moy./appel",
-      "colTokens": "Tokens",
       "colModel": "Modèle",
       "colPrompt": "Tokens entrée",
-      "colCompletion": "Tokens sortie",
-      "callCount": "{count} appels",
-      "loadingCalls": "Chargement des appels…",
+      "empty": "Aucun appel.",
       "features": {
         "numo_chat": "Numo; chat",
         "numo_comment": "Numo; commentaires",
@@ -4787,98 +4807,299 @@
         "jev_shadow": "Contrôles des décisions",
         "issue_embedding": "Embeddings des tickets",
         "issue_relation": "Relations Smart-fill",
-        "issue_search": "Recherche de tickets"
+        "issue_search": "Recherche de tickets",
+        "faq_ask": "Boîte à questions de la FAQ"
       },
-      "stripeHidden": "Les revenus Stripe sont masqués : la facturation n'est pas connectée sur cette instance."
+      "loadingCalls": "Chargement des appels…",
+      "noData": "Aucun appel IA sur cette période.",
+      "recentRunsHint": "Un run regroupe les appels d'une même action.",
+      "logsTitle": "Exécutions récentes",
+      "title": "Coûts",
+      "subtitle": "Ce que les fournisseurs d’IA coûtent à cette instance, par fonctionnalité et par modèle. Les montants sont en dollars, comme les fournisseurs les facturent.",
+      "summaryTitle": "Vue d’ensemble",
+      "loadError": "Impossible de charger les coûts.",
+      "periodLabel": "Période",
+      "period": "{days} derniers jours",
+      "filterFamily": "Toutes les fonctionnalités",
+      "filterModel": "Tous les modèles",
+      "filterKey": "Clé utilisée",
+      "keyAll": "Toutes les clés",
+      "keyPlatform": "Clé de l’instance",
+      "keyByok": "Clés personnelles",
+      "clearFilters": "Effacer les filtres",
+      "kpiSpend": "Dépense totale",
+      "kpiRequests": "Requêtes",
+      "kpiTokens": "Tokens",
+      "kpiCostPerMillion": "Coût par million de tokens",
+      "vsPrevious": "par rapport à la période précédente",
+      "noPrevious": "Pas de période précédente à comparer",
+      "topFeaturesTitle": "Fonctionnalités les plus coûteuses",
+      "topModelsTitle": "Modèles les plus coûteux",
+      "spendByModelTitle": "Dépense par modèle",
+      "spendByGroupTitle": "Dépense par famille de fonctionnalités",
+      "requestsByModelTitle": "Requêtes par modèle",
+      "otherSeries": "Autres",
+      "noModel": "Sans modèle",
+      "total": "Total",
+      "runsPageOf": "Page {page} sur {pages}",
+      "runsPrev": "Page précédente",
+      "runsNext": "Page suivante",
+      "groups": {
+        "numo": "Numo",
+        "routines": "Routines",
+        "automations": "Automatisations",
+        "dictation": "Dictée",
+        "feedback": "Retours",
+        "site": "Site public",
+        "other": "Autres"
+      }
     },
-    "quotas": {
-      "usersTitle": "Usage IA par utilisateur",
-      "usersDescription": "Chaque utilisateur est limité par le budget mensuel de son plan, toutes fonctionnalités IA confondues. La remise à zéro fait repartir le décompte à partir de maintenant ; aucune dépense n'est effacée.",
-      "empty": "Aucun usage IA ce mois-ci.",
-      "counted": "Compté sur le budget",
-      "realSpend": "Dépense du mois",
-      "blocked": "Bloqué",
-      "calls": "{count, plural, one {# appel} other {# appels}}",
-      "reset": "Remettre à zéro",
-      "resetsTitle": "Remises à zéro de la période",
-      "resetsHint": "Seule la plus récente compte ; la retirer rend la main à la précédente.",
-      "resetsCount": "{count, plural, one {# remise à zéro} other {# remises à zéro}}",
-      "resetActive": "en cours",
-      "undoOne": "Annuler cette remise à zéro",
-      "resetToast": "Quota de {name} remis à zéro.",
-      "undoToast": "Remise à zéro annulée pour {name}."
+    "accounts": {
+      "countLabel": "Comptes",
+      "countHint": "Tous les comptes de cette instance.",
+      "countFailed": "Impossible de compter les comptes.",
+      "supportTitle": "Assistance aux comptes"
     },
-    "users": {
-      "title": "Assistance aux comptes",
-      "subtitle": "Recherchez un compte avec son adresse e-mail exacte, puis ouvrez-le pour gérer son offre ou son budget.",
-      "searchPlaceholder": "Adresse e-mail du compte",
+    "categoryDefault": {
+      "label": "Modèle par défaut",
+      "builtIn": "Défauts intégrés",
+      "hint_assistant": "Utilisé par Numo, les titres de conversation et la recherche web.",
+      "hint_automations": "Utilisé par chaque automatisation ci-dessous qui n’a pas son propre modèle.",
+      "hint_embeddings": "Le changer démarre un nouvel index : les tickets sont indexés à nouveau.",
+      "hint_feedback": "Utilisé par l’analyse des retours et la boîte à questions de la FAQ.",
+      "tasks": "Modèles par tâche ({count})",
+      "overridden": "{count, plural, =0 {Toutes les tâches utilisent le modèle par défaut} one {# tâche utilise son propre modèle} other {# tâches utilisent leur propre modèle}}",
+      "overrides": "Utilise son propre modèle au lieu du modèle par défaut.",
+      "follows": "Utilise le modèle par défaut.",
+      "useDefault": "Modèle par défaut"
+    },
+    "modelsFile": {
+      "title": "Export et import",
+      "export": "Exporter",
+      "import": "Importer",
+      "previewTitle": "Importer cette configuration ?",
+      "previewDescription": "{count, plural, one {# réglage va changer} other {# réglages vont changer}} avec {file}. Les réglages absents du fichier reviennent à leur valeur par défaut.",
+      "previewNone": "{file} correspond à la configuration actuelle. Rien ne changera.",
+      "change": "{from} → {to}",
+      "defaultValue": "Par défaut",
+      "upgraded": "Ce fichier vient d’une version antérieure de minddy et a été mis au format actuel.",
+      "ignored": "{count, plural, one {# entrée est inconnue} other {# entrées sont inconnues}} de cette version et {count, plural, one {sera ignorée} other {seront ignorées}} : {entries}",
+      "cancel": "Annuler",
+      "apply": "Appliquer",
+      "applied": "Configuration importée",
+      "errors": {
+        "invalid_json": "Ce fichier n’est pas un JSON valide.",
+        "not_a_model_config": "Ce fichier n’est pas une configuration de modèles minddy.",
+        "newer_version": "Ce fichier vient d’une version plus récente de minddy. Mettez cette instance à jour, puis importez-le à nouveau.",
+        "invalid_value": "Ce fichier contient un réglage invalide : {detail}",
+        "refused": "{setting} a été refusé : {detail} Rien n’a été modifié."
+      }
+    },
+    "instance": {
+      "title": "Variables de l’instance",
+      "subtitle": "Configurez cette instance sans modifier ses fichiers. Une valeur définie ici remplace celle du fichier de configuration ; retirez-la pour revenir au fichier.",
+      "loadError": "Impossible de charger les variables de l’instance.",
+      "searchPlaceholder": "Rechercher une variable…",
       "clearSearch": "Effacer la recherche",
-      "empty": "Aucun compte trouvé pour cette adresse e-mail.",
-      "emailStatus": "Email",
-      "confirmed": "Confirmé",
-      "unconfirmed": "Non confirmé",
-      "overrideMark": "forcé",
-      "accountTitle": "Compte",
-      "internalHint": "Retiré de toutes les statistiques.",
-      "usageDescription": "La fenêtre en cours, et la dépense réelle du mois.",
-      "usageTitle": "Budget d'usage IA",
-      "usageSubtitle": "La remise à zéro fait repartir le décompte à partir de maintenant ; aucune dépense n'est effacée.",
-      "internalTitle": "Compte interne",
-      "internalBadge": "Interne",
-      "internalSubtitle": "L'équipe, les comptes de démo, les bots. Le compte reste listé et administrable ici, mais ne compte dans aucune statistique : ni comptes, ni actifs, ni inscriptions, ni plans, ni onboarding, ni ses projets et tickets.",
-      "internalOnToast": "{name} est maintenant un compte interne.",
-      "internalOffToast": "{name} recompte dans les statistiques.",
-      "emailLabel": "Adresse e-mail",
-      "findAccount": "Rechercher",
-      "openAccount": "Ouvrir le compte",
-      "supportPurpose": "Consultez les comptes uniquement pour une demande d’assistance ou de facturation. L’activité et les contenus personnels ne sont pas affichés ici.",
-      "lookupFailed": "La recherche a échoué. Vérifiez l’adresse et réessayez.",
-      "detailsFailed": "Impossible de charger l’offre et le budget. Ouvrez le compte pour réessayer."
-    },
-    "overview": {
-      "summary": "Indicateurs clés",
-      "totalUsers": "Comptes",
-      "newUsers": "{count, plural, one {# nouveau cette semaine} other {# nouveaux cette semaine}}",
-      "newUsers30d": "Nouveaux sur 30 j",
-      "activeWeek": "Actifs cette semaine",
-      "activeMonth": "{count} sur 30 jours",
-      "activeToday": "Actifs aujourd'hui",
-      "activeInfo": "Un compte est actif un jour donné s'il s'est connecté ou a laissé une trace : ticket créé ou terminé, commentaire, appel IA.",
-      "signupsToday": "{count, plural, one {# inscription aujourd'hui} other {# inscriptions aujourd'hui}}",
-      "internalExcluded": "{count, plural, one {# compte interne exclu} other {# comptes internes exclus}}",
-      "internalInfo": "Les comptes internes (équipe, démo, bots) n'entrent dans aucun chiffre de cette page. Le drapeau se pose depuis la fiche d'un compte, dans l'onglet Utilisateurs.",
-      "tooltipValue": "{label} : {value}",
-      "activity": "30 derniers jours",
-      "activeDaily": "Actifs par jour",
-      "signupsDaily": "Inscriptions par jour",
-      "noActivity": "Aucune activité sur la période.",
-      "noSignups": "Aucune inscription sur la période.",
-      "onboarding": "Onboarding",
-      "onboardingInfo": "Compté sur les comptes à qui l'onboarding a été présenté au moins une fois.",
-      "onboardingStarted": "Présenté",
-      "onboardingCompleted": "Terminé",
-      "onboardingDismissed": "Passé",
-      "onboardingNeverSeen": "Jamais vu",
-      "plans": "Plans",
-      "plansInfo": "Plan effectif de chaque compte : override admin, sinon abonnement Stripe, sinon plan par défaut.",
-      "content": "Contenu",
-      "totalProjects": "Projets",
-      "totalIssues": "Tickets",
-      "issuesPerProject": "Tickets par projet"
-    },
-    "recommended": {
-      "pickModel": "Choisir un modèle",
-      "add": "Ajouter un modèle",
+      "searchEmpty": "Aucune variable ne correspond à « {query} ».",
+      "themes": {
+        "ai": {
+          "title": "IA",
+          "desc": "La clé du fournisseur sur laquelle tournent les fonctionnalités IA."
+        },
+        "administrators": {
+          "title": "Administrateurs",
+          "desc": "Qui peut ouvrir cette administration. Chaque changement ici est annoncé à tous les administrateurs."
+        },
+        "email": {
+          "title": "E-mail",
+          "desc": "Les e-mails que minddy envoie lui-même. Laissez vide si l’instance n’en envoie pas."
+        },
+        "forges": {
+          "title": "GitHub et GitLab",
+          "desc": "Vos propres apps de forge, utilisées à la place du relais géré ou en plus."
+        },
+        "analytics": {
+          "title": "Statistiques",
+          "desc": "Les statistiques d’usage, uniquement pour les membres qui les acceptent."
+        },
+        "site": {
+          "title": "Site",
+          "desc": "La façon dont l’instance se présente."
+        }
+      },
+      "source": {
+        "database": "Défini ici",
+        "file": "Depuis le fichier",
+        "both": "Défini ici · remplace le fichier",
+        "unset": "Non défini"
+      },
+      "sourceHelp": {
+        "database": "Définie dans cet onglet. Le fichier de configuration ne définit pas cette variable.",
+        "file": "Définie dans le fichier de configuration. La modifier ici remplace celle du fichier, sans toucher au fichier.",
+        "both": "Définie dans cet onglet, à la place de la valeur du fichier de configuration. Retirez-la pour revenir à la valeur du fichier.",
+        "unset": "Définie ni ici ni dans le fichier de configuration : minddy applique son comportement par défaut, ou laisse désactivée la fonction qui en a besoin."
+      },
+      "applies": {
+        "live": "S’applique en une minute.",
+        "restart": "S’applique après le redémarrage de l’instance."
+      },
+      "fileValue": "Valeur du fichier : {value}",
+      "overridesFile": "Le fichier de configuration définit aussi cette variable : la valeur enregistrée ici prend sa place.",
+      "sensitiveNote": "L’enregistrement demande votre code à deux facteurs si vous ne l’avez pas saisi ces dernières minutes.",
+      "keepOwnAddress": "Votre adresse {email} doit rester dans la liste : sans elle, vous perdriez l’accès à cette administration.",
+      "keepOwnAddressRemove": "Le fichier de configuration ne contient pas votre adresse : retirer cette valeur vous fermerait l’accès à cette administration.",
+      "keepOwnAddressRestore": "Cette version ne contient pas votre adresse : la restaurer vous fermerait l’accès à cette administration.",
+      "secretPlaceholder": "Saisissez la nouvelle valeur",
+      "choose": "Choisir",
+      "on": "Activé",
+      "off": "Désactivé",
+      "choices": {
+        "EMAIL_PROVIDER": {
+          "resend": "Resend",
+          "console": "Journal uniquement (développement)"
+        },
+        "MINDDY_FORGE_RELAY": {
+          "0": "Désactivé"
+        }
+      },
+      "edit": "Modifier",
       "save": "Enregistrer",
       "cancel": "Annuler",
-      "reset": "Revenir à la sélection par défaut",
-      "remove": "Retirer ce modèle",
-      "empty": "Aucun conseil : le picker s'ouvrira sur le catalogue entier. Enregistrer une liste vide rend le réglage à la sélection par défaut.",
-      "incomplete": "Choisissez un modèle pour chaque ligne avant d'enregistrer.",
-      "duplicate": "Le même modèle apparaît deux fois : retirez-en un avant d'enregistrer."
-    },
-    "byok": {
-      "borderDefault": "Défaut du compte"
+      "saved": "Variable enregistrée",
+      "remove": "Retirer",
+      "removeTitle": "Retirer la valeur de {name} ?",
+      "removeDescriptionFile": "La valeur du fichier de configuration s’applique à nouveau.",
+      "removeDescriptionUnset": "La variable ne sera plus définie : le fichier de configuration ne la définit pas.",
+      "removeConfirm": "Retirer",
+      "removed": "Valeur retirée",
+      "history": "Historique ({count})",
+      "historyEntry": "{action} par {actor}, {date}",
+      "action": {
+        "set": "Définie",
+        "clear": "Retirée",
+        "rollback": "Restaurée"
+      },
+      "someone": "un administrateur",
+      "restore": "Restaurer",
+      "restored": "Version restaurée",
+      "reauthTitle": "Confirmez votre identité",
+      "reauthDescription": "Saisissez le code de votre application d’authentification pour modifier cette variable.",
+      "reauthCode": "Code d’authentification",
+      "reauthConfirm": "Confirmer",
+      "reauthFailed": "Ce code n’a pas fonctionné. Essayez le code actuel.",
+      "reauthNoFactor": "Votre compte n’a pas d’application d’authentification.",
+      "restartNeeded": "Certains changements s’appliquent après le redémarrage de l’instance. Redémarrez le service minddy sur son hôte, par exemple avec docker compose restart minddy.",
+      "restartNeededDesktop": "Certains changements s’appliquent après le redémarrage de l’instance.",
+      "restartNow": "Redémarrer maintenant",
+      "restartFailed": "Impossible de redémarrer l’instance.",
+      "errors": {
+        "invalid": "Cette valeur n’est pas valide.",
+        "invalid_email": "Saisissez des adresses e-mail valides, séparées par des virgules.",
+        "invalid_url": "Saisissez une adresse http ou https complète.",
+        "invalid_choice": "Choisissez l’une des options.",
+        "empty": "Saisissez une valeur, ou retirez plutôt la valeur définie ici.",
+        "not_overridable": "Cette variable ne peut être définie que dans le fichier de configuration.",
+        "disabled": "Cette instance ne permet pas de modifier les variables depuis l’administration.",
+        "cannot_remove_self": "Gardez votre propre adresse dans la liste : vous perdriez l’accès à cette administration.",
+        "no_such_version": "Cette version n’existe plus."
+      },
+      "emailSubject": "Une variable de l’instance a été modifiée",
+      "emailBody": "{actor} a modifié une variable de votre instance minddy. Consultez le changement dans l’administration : {link}\n\nSi vous n’attendiez pas ce changement, vérifiez l’historique et sécurisez les comptes administrateurs.",
+      "vars": {
+        "OPENROUTER_API_KEY": {
+          "label": "Clé OpenRouter",
+          "desc": "La clé avec laquelle les fonctionnalités IA de minddy paient sur OpenRouter."
+        },
+        "ADMIN_EMAILS": {
+          "label": "Adresses des administrateurs",
+          "desc": "Adresses confirmées qui peuvent ouvrir cette administration, séparées par des virgules. Chacune exige encore l’authentification à deux facteurs."
+        },
+        "EMAIL_PROVIDER": {
+          "label": "Fournisseur d’e-mail",
+          "desc": "Comment minddy envoie ses propres e-mails (invitations, codes des retours). Les e-mails de connexion passent par Supabase."
+        },
+        "RESEND_API_KEY": {
+          "label": "Clé Resend",
+          "desc": "La clé d’API Resend utilisée quand le fournisseur est Resend."
+        },
+        "INVITATION_EMAIL_FROM": {
+          "label": "Expéditeur des invitations",
+          "desc": "L’expéditeur des e-mails d’invitation et d’administration, par exemple minddy <hello@example.com>."
+        },
+        "FEEDBACK_EMAIL_FROM": {
+          "label": "Expéditeur des retours",
+          "desc": "L’expéditeur des codes de vérification du tableau de retours public."
+        },
+        "GITHUB_APP_ID": {
+          "label": "ID de l’app GitHub",
+          "desc": "L’identifiant numérique de votre propre app GitHub."
+        },
+        "GITHUB_APP_SLUG": {
+          "label": "Slug de l’app GitHub",
+          "desc": "Le nom de votre app GitHub dans son URL."
+        },
+        "GITHUB_APP_CLIENT_ID": {
+          "label": "ID client de l’app GitHub",
+          "desc": "L’identifiant client OAuth de votre app GitHub."
+        },
+        "GITHUB_APP_CLIENT_SECRET": {
+          "label": "Secret client de l’app GitHub",
+          "desc": "Le secret client OAuth de votre app GitHub."
+        },
+        "GITHUB_APP_PRIVATE_KEY": {
+          "label": "Clé privée de l’app GitHub",
+          "desc": "La clé privée PEM générée pour votre app GitHub."
+        },
+        "GITHUB_WEBHOOK_SECRET": {
+          "label": "Secret des webhooks GitHub",
+          "desc": "Le secret avec lequel GitHub signe les webhooks de votre app."
+        },
+        "GITLAB_OAUTH_CLIENT_ID": {
+          "label": "ID de l’application GitLab",
+          "desc": "L’identifiant de votre propre application OAuth GitLab."
+        },
+        "GITLAB_OAUTH_CLIENT_SECRET": {
+          "label": "Secret de l’application GitLab",
+          "desc": "Le secret de votre application OAuth GitLab."
+        },
+        "GITLAB_WEBHOOK_SECRET": {
+          "label": "Secret des webhooks GitLab",
+          "desc": "Le jeton que GitLab envoie avec les webhooks de vos projets."
+        },
+        "MINDDY_FORGE_RELAY": {
+          "label": "Relais de forge géré",
+          "desc": "Par défaut, GitHub et GitLab se connectent via le relais de minddy. Désactivez-le pour n’utiliser que vos propres apps ci-dessus."
+        },
+        "POSTHOG_API_KEY": {
+          "label": "Clé serveur PostHog",
+          "desc": "La clé de projet avec laquelle le serveur de minddy envoie ses événements."
+        },
+        "POSTHOG_HOST": {
+          "label": "Adresse serveur PostHog",
+          "desc": "L’instance PostHog à laquelle le serveur envoie, par exemple https://eu.i.posthog.com."
+        },
+        "MINDDY_PUBLIC_POSTHOG_KEY": {
+          "label": "Clé navigateur PostHog",
+          "desc": "La clé publique utilisée dans le navigateur, pour les membres qui ont accepté les statistiques."
+        },
+        "MINDDY_PUBLIC_POSTHOG_HOST": {
+          "label": "Adresse navigateur PostHog",
+          "desc": "L’adresse PostHog à laquelle le navigateur envoie."
+        },
+        "MINDDY_PUBLIC_SITE_NAME": {
+          "label": "Nom de l’instance",
+          "desc": "Le nom affiché dans les titres des pages et les e-mails."
+        },
+        "MINDDY_PUBLIC_CONTACT_EMAIL": {
+          "label": "Adresse de contact",
+          "desc": "L’adresse affichée sur les pages publiques pour les questions sur cette instance."
+        },
+        "MINDDY_PUBLISH_MODEL_CONFIG": {
+          "label": "Publier la configuration des modèles",
+          "desc": "Sert la configuration des modèles IA de cette instance à /api/recommended-models, pour que d’autres instances l’importent."
+        }
+      }
     }
   },
   "Legal": {

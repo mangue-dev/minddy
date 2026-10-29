@@ -11,6 +11,7 @@ import {
   loginShellPathProbe,
   nodeVersionSupported,
   withAdminEmail,
+  withConfigOverrides,
 } from "./local-installer";
 
 describe("local installer prerequisites", () => {
@@ -68,6 +69,19 @@ describe("local installer steps", () => {
     expect(withAdminEmail("A=1\nADMIN_EMAILS=old@example.com\nB=2\n", " owner@local.minddy.app ")).toBe(
       "A=1\nADMIN_EMAILS=owner@local.minddy.app\nB=2\n",
     );
+  });
+});
+
+describe("instance variables from the admin dashboard (MIN-847)", () => {
+  it("turns the overrides on for the instance it installs", () => {
+    expect(withConfigOverrides("ADMIN_EMAILS=owner@local.minddy.app\n")).toBe(
+      "ADMIN_EMAILS=owner@local.minddy.app\nMINDDY_CONFIG_OVERRIDES=1\n",
+    );
+  });
+
+  it("keeps a choice already written in the file", () => {
+    expect(withConfigOverrides("MINDDY_CONFIG_OVERRIDES=0\n")).toBe("MINDDY_CONFIG_OVERRIDES=0\n");
+    expect(withConfigOverrides("MINDDY_CONFIG_OVERRIDES=\n")).toBe("MINDDY_CONFIG_OVERRIDES=1\n");
   });
 });
 

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { AI_MODEL_CONFIG_FIELDS, AI_MODEL_CONFIG_GROUPS } from "@/lib/ai-model-config";
+import {
+  AI_MODEL_CATEGORY_IDS,
+  AI_MODEL_CONFIG_FIELDS,
+  AI_MODEL_CONFIG_GROUPS,
+  categoryMembers,
+  categoryModelKey,
+} from "@/lib/ai-model-config";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
@@ -74,7 +80,8 @@ describe("AI settings registry and i18n catalogs", () => {
     const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
     expect(byKey.get("issue_embedding_model")).toMatchObject({
       catalogCapability: "embedding",
-      group: "automations",
+      group: "embeddings",
+      category: "embeddings",
     });
     // The relation decision's LLM fallback is a text model.
     expect(byKey.get("issue_relation_model")?.catalogCapability).toBeUndefined();
@@ -85,6 +92,23 @@ describe("AI settings registry and i18n catalogs", () => {
       "gemini-embedding-001",
     );
     expect(byKey.has("byok_default_anthropic_issue_embedding_model")).toBe(false);
+  });
+
+  it("groups only tasks of one catalog capability under a category", () => {
+    for (const id of AI_MODEL_CATEGORY_IDS) {
+      const defaultField = AI_MODEL_CONFIG_FIELDS.find((field) => field.categoryDefault === id);
+      expect(defaultField?.key).toBe(categoryModelKey(id));
+      const members = categoryMembers(id);
+      expect(members.length).toBeGreaterThan(1);
+      for (const member of members) {
+        expect(member.catalogCapability).toBe(defaultField?.catalogCapability);
+        expect(member.group).toBe(defaultField?.group);
+      }
+    }
+    // Alone in their capability, these stay standalone rows.
+    for (const key of ["jev_model", "transcription_model", "dictate_model"]) {
+      expect(AI_MODEL_CONFIG_FIELDS.find((field) => field.key === key)?.category).toBeUndefined();
+    }
   });
 
   it("omits provider-specific fields for unsupported model families", () => {

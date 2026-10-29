@@ -1,9 +1,10 @@
 "use client";
 
+import { ChevronDownIcon } from "lucide-react";
 import { CommandList } from "@/components/ui/command";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpDownIcon, BrainIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { BrainIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -117,7 +118,7 @@ export function ReasoningCombobox({
         >
           <HugeiconsIcon icon={BrainIcon} className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="whitespace-nowrap text-left">{label}</span>
-          <HugeiconsIcon icon={ArrowUpDownIcon} className="size-3 shrink-0 opacity-50" />
+          <ChevronDownIcon className="pointer-events-none size-4 shrink-0 text-muted-foreground" />
         </Button>
       </ResponsivePopoverTrigger>
       {/* The name of the level is enough to designate it: the list is short, ordered from

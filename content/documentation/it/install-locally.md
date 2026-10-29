@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 10,
+  "revision": 12,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.1 (release documentation gate)",
     "editions": [
@@ -54,10 +54,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of install-locally-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.20.1 release documentation gate: Node.js minimum aligned with README and docs/self-hosting.md after MIN-780; release delta v0.20.0..main audited against the manual; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app and built-in local installer: source review of components/desktop/server-choice.tsx, components/auth/auth-chrome.tsx, components/auth/desktop-local-sign-in.tsx, desktop/src/main.ts, desktop/src/local-installer.ts, desktop/src/local-toolchain.ts, desktop/src/local-account.ts and the matching lib/desktop modules; no installation run, no screenshot recaptured)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it Node.js minimum; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-781 translation on self-hosting from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 12,
+    "fact": "agent:claude-code (MIN-847 desktop configuration step checked against scripts/self-hosting-install.mjs and lib/desktop/local-installer.ts); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of install-locally-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.20.1 release documentation gate: Node.js minimum aligned with README and docs/self-hosting.md after MIN-780; release delta v0.20.0..main audited against the manual; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app and built-in local installer: source review of components/desktop/server-choice.tsx, components/auth/auth-chrome.tsx, components/auth/desktop-local-sign-in.tsx, desktop/src/main.ts, desktop/src/local-installer.ts, desktop/src/local-toolchain.ts, desktop/src/local-account.ts and the matching lib/desktop modules; no installation run, no screenshot recaptured)",
+    "language": "agent:claude-code (it MIN-847 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it Node.js minimum; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-781 translation on self-hosting from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-29"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/it/install-locally-flow.svg",
       "alt": "Schema: App desktop seleziona il clone. Applicazione loopback: porta 6463. Supabase minimo e dati duraturi. Uscire ferma app e backend.",
       "caption": "L’app desktop controlla avvio e arresto dell’istanza locale; i dati devono restare conservati tra un avvio e l’altro.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/it/install-locally-wizard.png",
       "alt": "Assistente pubblico di installazione con il profilo per questo computer selezionato.",
       "caption": "Scegli l’installazione personale quando l’applicazione desktop deve gestire i servizi locali.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -138,7 +138,7 @@ L’app desktop include un programma di installazione che esegue tutta la proced
 6. Tieni aperta la finestra mentre vengono eseguiti i passaggi. Gli strumenti mancanti vengono per primi, ognuno come passaggio a sé: **Installa Git**, **Installa Node.js 24**, **Installa pnpm**, **Installa Supabase CLI**, poi **Installa Docker** o **Avvia Docker**. **Scarica minddy**, seguito dal numero di versione, esegue un `git clone` superficiale della versione usata anche dalla guida pubblica di installazione. **Installa le dipendenze** esegue `pnpm install --frozen-lockfile`, **Configura l’istanza** rende il tuo account locale amministratore dell’istanza, **Prepara Supabase e compila l’app** esegue `pnpm self-host:local -- --no-open --prepare-only` **Avvia minddy** avvia il runtime locale e **Crea il tuo account locale** crea il tuo account sull’istanza. La prima installazione può richiedere alcuni minuti, mentre Docker scarica le immagini di Supabase e l’app viene compilata.
 7. Quando minddy è in esecuzione, l’app lo apre con l’accesso già effettuato al tuo account locale.
 
-L’account locale è un account normale, con il nome del tuo account utente del computer e l’indirizzo `owner@local.minddy.app`. Amministra l’istanza, e impostazioni e proprietà dei progetti funzionano come al solito. L’app genera la sua password e la conserva cifrata nel portachiavi del sistema: non la digiti mai e la pagina riceve solo una sessione. Ogni volta che la finestra mostra questa istanza, l’app fa accedere l’account da sola dietro una breve schermata **Apertura del tuo minddy…**. Se reinstalli in una cartella i cui dati Supabase sono stati conservati, l’app ritrova lo stesso account e gli assegna una nuova password; i tuoi dati restano. Vale solo per un’istanza installata dall’app: una cartella aperta con **Usa un’installazione esistente** › **Su questo computer** mantiene i propri account e l’accesso abituale, e i server remoti usano sempre l’accesso abituale.
+L’account locale è un account normale, con il nome del tuo account utente del computer e l’indirizzo `owner@local.minddy.app`. Amministra l’istanza, e impostazioni e proprietà dei progetti funzionano come al solito. L’app genera la sua password e la conserva cifrata nel portachiavi del sistema: non la digiti mai e la pagina riceve solo una sessione. Ogni volta che la finestra mostra questa istanza, l’app fa accedere l’account da sola dietro una breve schermata **Apertura del tuo minddy…**. Se reinstalli in una cartella i cui dati Supabase sono stati conservati, l’app ritrova lo stesso account e gli assegna una nuova password; i tuoi dati restano. Vale solo per un’istanza installata dall’app: una cartella aperta con **Usa un’installazione esistente** › **Su questo computer** mantiene i propri account e l’accesso abituale, e i server remoti usano sempre l’accesso abituale. L’app scrive anche `MINDDY_CONFIG_OVERRIDES=1` nel file `.env.local` della cartella, così la scheda **Istanza** della dashboard di amministrazione modifica le variabili dell’istanza; vedi [modificare le variabili dell’istanza](/docs/instance-administration#instance-variables).
 
 Node.js, pnpm e Supabase CLI si installano senza diritti di amministratore in una cartella `toolchain` all’interno della cartella dei dati utente dell’app. Node.js proviene dall’archivio ufficiale di nodejs.org, verificato con i checksum SHA-256 pubblicati; pnpm 10.28.0 e Supabase CLI 2.115.0 si installano con npm. Questo Node.js non sostituisce quello già presente nel sistema: l’app lo mette in testa al `PATH` solo per il suo programma di installazione e il runtime locale.
 

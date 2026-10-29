@@ -19,6 +19,7 @@ import {
   lastOutputLine,
   launcherSupportsPrepareOnly,
   withAdminEmail,
+  withConfigOverrides,
   type InstallMessage,
   type LocalInstallFolderState,
   type LocalInstallProgress,
@@ -190,7 +191,7 @@ export async function runLocalInstall(
     if (managedAccount) {
       const envFile = path.join(root, ".env.local");
       const env = existsSync(envFile) ? readFileSync(envFile, "utf8") : "";
-      writeFileSync(envFile, withAdminEmail(env, LOCAL_ACCOUNT_EMAIL), { encoding: "utf8", mode: 0o600 });
+      writeFileSync(envFile, withConfigOverrides(withAdminEmail(env, LOCAL_ACCOUNT_EMAIL)), { encoding: "utf8", mode: 0o600 });
     }
     report({ step: "configure", state: "done" });
 

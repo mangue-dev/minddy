@@ -25,6 +25,7 @@ const articleIcons: Record<string, IconSvgElement> = {
   installation: CheckmarkCircle01Icon,
   "instance-administration": Shield01Icon,
   "instance-configuration": ServerStack01Icon,
+  "recommended-models": BotIcon,
   "integration-troubleshooting": PlugIcon,
   issues: Layout3ColumnIcon,
   "minddy-mcp": PlugIcon,

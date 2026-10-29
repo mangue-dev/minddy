@@ -2419,6 +2419,19 @@
       ],
       "functionReferences": []
     },
+    "get_ai_cost_breakdown(timestamp with time zone,timestamp with time zone,text)": {
+      "sha256": "0962a178406eb0b1a79f2f516a0906bbc07126915c4fcb0a94f24206cc42ff95",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "ai_usage"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "get_ai_cost_daily(integer,text)": {
       "sha256": "0f26519d604f5f8fb4c4cbe8708f3f46c7e0ffa30468eeeb96e5e65f27c55c33",
       "securityDefiner": true,

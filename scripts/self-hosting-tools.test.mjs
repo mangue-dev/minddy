@@ -141,6 +141,20 @@ test("the forge relay is on by default and --no-forge-relay writes the opt-out",
   assert.equal(optedOut.MINDDY_FORGE_RELAY, "0");
 });
 
+test("the admin dashboard may edit instance variables unless the operator declines (MIN-847)", () => {
+  const base = [
+    "--non-interactive", "--mode", "managed", "--domain", "tickets.example.test",
+    "--admin-email", "ops@example.test", "--supabase-url", "https://project.supabase.co",
+    "--anon-key", "anon", "--service-role-key", "service",
+  ];
+  assert.equal(environmentValues(parseInstallArgs(base)).MINDDY_CONFIG_OVERRIDES, "1");
+  assert.equal(
+    environmentValues(parseInstallArgs([...base, "--config-overrides", "disabled"])).MINDDY_CONFIG_OVERRIDES,
+    "0",
+  );
+  assert.throws(() => parseInstallArgs([...base, "--config-overrides", "sometimes"]), /enabled or disabled/);
+});
+
 test("a private server uses its LAN origin without requesting a domain", () => {
   const options = parseInstallArgs([
     "--non-interactive",

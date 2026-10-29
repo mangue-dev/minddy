@@ -18,7 +18,8 @@ import { captureDocumentationControl, settleDocumentationPage } from "../../lib/
 assertNonProductionOrigin(CAPTURE.baseUrl, "the instance administration capture");
 
 const SCREENS = [
-  { id: "instance-administration-overview", path: "/admin?tab=overview", api: "/api/admin/overview" },
+  // The figure keeps its historical file name; it now shows the Accounts tab.
+  { id: "instance-administration-overview", path: "/admin?tab=accounts", api: "/api/admin/overview" },
   { id: "instance-administration-models", path: "/admin?tab=models", api: "/api/admin/app-config" },
 ];
 const locales = process.env.CAPTURE_LOCALES?.split(",").filter(Boolean) ?? CAPTURE_LOCALES;

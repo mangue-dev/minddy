@@ -337,6 +337,10 @@ const bridge: DesktopBridge = {
     >;
   },
 
+  restartLocalInstance() {
+    return ipcRenderer.invoke("minddy:local-runtime:restart") as Promise<boolean>;
+  },
+
   flushStorage() {
     return ipcRenderer.invoke("minddy:storage:flush") as Promise<void>;
   },
