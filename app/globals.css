@@ -2096,6 +2096,18 @@ html.block-dragging * {
   cursor: grabbing !important;
   user-select: none !important;
 }
+/* The selection rectangle drawn from beside a page's text
+   (components/editor/block-marquee.ts), the board's one. */
+.block-marquee {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  border: 1px solid color-mix(in oklab, var(--primary) 70%, transparent);
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--primary) 15%, transparent);
+  pointer-events: none;
+}
 .block-drag-ghost {
   position: fixed;
   top: 0;

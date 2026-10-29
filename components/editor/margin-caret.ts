@@ -54,7 +54,7 @@ const MAX_WALK = 5000;
  * to the line's start. The textblock is found from its left edge instead,
  * and the line's end is the last of its positions drawn at that height.
  */
-function lineEdge(
+export function lineEdge(
   view: Editor["view"],
   rect: DOMRect,
   y: number,

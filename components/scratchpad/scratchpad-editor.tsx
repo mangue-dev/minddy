@@ -427,6 +427,7 @@ export function ScratchpadEditor({
           // The notebook is edited like a page (MIN-728): handles, `+` and
           // the block menu, without a block link — a note has no address.
           blockChrome
+          marquee
           blockLinks={false}
           size="page"
           mentions={engineMentions}

@@ -76,6 +76,7 @@ import {
   pagePlaceholder,
 } from "@/components/pages/block-placeholder";
 import { BlockGutter } from "@/components/pages/block-gutter";
+import { EDITOR_RESERVE_ATTR, useBlockMarquee } from "@/components/editor/block-marquee";
 import { BlockFlash } from "@/components/pages/block-flash";
 import { BlockComments } from "@/components/pages/block-comments";
 import { FileDrop, viewBlockGapAt } from "@/components/editor/file-drop";
@@ -266,6 +267,9 @@ export interface RichEditorProps {
   blocks?: BlockSet;
   /** The handle and `+` gutter beside each block. */
   blockChrome?: boolean;
+  /** The selection rectangle drawn from beside the text (block-marquee.ts):
+      pages and the task notebook. */
+  marquee?: boolean;
   /** “Copy link to block” in the block menu: only where the document has an
    address of its own (a page); the notebook has none. */
   blockLinks?: boolean;
@@ -370,6 +374,7 @@ export function RichEditor({
   onChange,
   blocks = "page",
   blockChrome = true,
+  marquee = false,
   blockLinks = true,
   bottomReserve = false,
   size = "page",
@@ -834,6 +839,7 @@ export function RichEditor({
   // A click in the side margins of the pane puts the caret on that line.
   const rootRef = useRef<HTMLDivElement>(null);
   useMarginCaret(editor, rootRef, editable);
+  useBlockMarquee(editor, rootRef, marquee && editable && !mobile);
   const body = (
     // Neither `relative` nor withdrawal here, and that's the point: the GUTTER of chrome
     // (handle + `+`) is placed to the left of the block hovered over, therefore outside the
@@ -886,6 +892,7 @@ export function RichEditor({
         <div
           aria-hidden
           className="min-h-[15rem] w-full cursor-text"
+          {...{ [EDITOR_RESERVE_ATTR]: "" }}
           // `mousedown` rather than `click`, and `preventDefault` with: without that
           // the browser first places the cursor where it wants (often zero
           // leaves, the area is not editable), and we see him jump.

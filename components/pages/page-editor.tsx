@@ -79,6 +79,7 @@ export function PageEditor({
       onChange={(content) => onChange(content)}
       blocks="page"
       blockChrome
+      marquee
       bottomReserve
       find
       size="page"
