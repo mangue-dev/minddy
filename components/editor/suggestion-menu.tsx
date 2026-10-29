@@ -12,6 +12,7 @@
 
 import { useEffect, type ReactNode, type Ref } from "react";
 import { useMenuScrollFade, useMergedRef } from "@/components/ui/menu-scroll-fade";
+import { useEscapeLayer } from "@/lib/escape-layers";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { SuggestionSection } from "@/lib/suggestion-menu";
@@ -119,6 +120,8 @@ export function SuggestionMenu<T>({
   useEffect(() => {
     if (exhausted) onClose();
   }, [exhausted, onClose]);
+  // Escape in the menu closes the menu, not the dialog or panel around it.
+  useEscapeLayer(true, onClose);
   // Rows hidden past an edge fade out there, under a chevron.
   const fade = useMenuScrollFade<HTMLDivElement>();
   const scrollRef = useMergedRef(listRef, fade.ref);

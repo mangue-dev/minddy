@@ -718,7 +718,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   // Side panel issue: the linked ticket opens HERE, without navigation — even
   // cabling as the board (issues + relationships + project collections).
-  const { issues, createIssue, updateIssue, deleteIssue, setCategories } =
+  const { issues, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
@@ -1148,7 +1148,6 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           refresh();
         }}
         onSetCategories={setCategories}
-        onCreate={createIssue}
         onOpenIssue={setOpenIssueId}
         onAddRelation={handleAddRelation}
         onRemoveRelation={handleRemoveRelation}

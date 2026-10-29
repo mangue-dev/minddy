@@ -77,6 +77,8 @@ interface OpenIssueOptions {
   status?: IssueStatus;
   objectiveId?: string | null;
   assigneeId?: string | null;
+  /** Prefills the parent: the new issue is a sub-issue of this one. */
+  parentId?: string | null;
   /** Opens the already open microphone dialog (global shortcut ⌘⇧D). */
   dictate?: boolean;
   /** Reopens this saved draft of `projectId` in the form (drafts tray, MIN-753). */
@@ -178,7 +180,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     status?: IssueStatus;
     objectiveId: string | null;
     assigneeId: string | null;
-  }>({ objectiveId: null, assigneeId: null });
+    parentId: string | null;
+  }>({ objectiveId: null, assigneeId: null, parentId: null });
   const [objectiveOpen, setObjectiveOpen] = useState(false);
   const [objectiveMounted, setObjectiveMounted] = useState(false);
   // Pre-filled name + recipient of the created objective, set by quick addition
@@ -324,6 +327,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
         status: opts?.status,
         objectiveId,
         assigneeId: opts?.assigneeId ?? null,
+        parentId: opts?.parentId ?? null,
       });
       setIssueDictate(opts?.dictate === true);
       setIssueDraftId(opts?.draftId ?? null);
@@ -445,6 +449,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           initialStatus={issuePresets.status}
           initialObjectiveId={issuePresets.objectiveId}
           initialAssigneeId={issuePresets.assigneeId}
+          initialParentId={issuePresets.parentId}
           autoDictate={issueDictate}
           initialDraftId={issueDraftId}
         />

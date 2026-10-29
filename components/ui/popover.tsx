@@ -4,6 +4,7 @@ import * as React from "react"
 import { Popover as PopoverPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { escapeClosesMenusFirst } from "@/lib/escape-layers"
 import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
 
 function Popover({
@@ -43,6 +44,7 @@ function PopoverContent({
           className
         )}
         {...props}
+        onEscapeKeyDown={escapeClosesMenusFirst(props.onEscapeKeyDown)}
       />
     </PopoverPrimitive.Portal>
   )

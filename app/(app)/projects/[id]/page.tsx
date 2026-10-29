@@ -74,6 +74,10 @@ const CreateIssueDialog = dynamic(
   () => loadCreateIssueDialog().then((m) => m.CreateIssueDialog),
   { ssr: false },
 );
+const ObjectivesBoardSidebar = dynamic(
+  () => import("@/components/objectives/objectives-page").then((m) => m.ObjectivesBoardSidebar),
+  { ssr: false },
+);
 const IssueSidePanel = dynamic(
   () => loadIssueSidePanel().then((m) => m.IssueSidePanel),
   { ssr: false },
@@ -699,6 +703,11 @@ function ProjectBoard() {
 
   return (
     <div className="flex h-full flex-col">
+      {/* An objective's board stays in the objectives list: its bar takes
+          the sidebar's place, with this objective highlighted. */}
+      {objectiveParam && !activeFamily ? (
+        <ObjectivesBoardSidebar projectId={projectId} objectiveId={objectiveParam} />
+      ) : null}
       {issuesLoading ? (
         <BoardLoadingSkeleton position={boardScrollPosition} />
       ) : issues.length === 0 ? (
@@ -914,7 +923,6 @@ function ProjectBoard() {
           onUpdate={updateIssue}
           onDelete={deleteIssue}
           onSetCategories={setCategories}
-          onCreate={createIssue}
           onOpenIssue={(id) => {
             setOpenIssueId(id);
             setOpenIssueTab("description");

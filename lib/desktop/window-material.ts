@@ -67,6 +67,18 @@ export function desktopWindowMaterial(
   };
 }
 
+/**
+ * The material of one window. A full-screen window has no desktop behind it
+ * to show, only the black of its Space, so it keeps the opaque window until
+ * it leaves full screen, whatever the preference says.
+ */
+export function windowMaterialForWindow(
+  state: DesktopWindowMaterialState,
+  fullScreen: boolean,
+): DesktopWindowMaterialState {
+  return fullScreen && state.kind !== "none" ? { ...state, kind: "none" } : state;
+}
+
 /** The window's opaque color, unchanged from the window without material. */
 export const OPAQUE_WINDOW_BACKGROUND = "#000000";
 /** A fully transparent window lets the native material show through. */

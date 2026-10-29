@@ -4,6 +4,7 @@ import * as React from "react"
 import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { escapeClosesMenusFirst } from "@/lib/escape-layers"
 import { releasePoppersBelow } from "@/lib/overlay-dismiss"
 import { CloseButton } from "./close-button"
 
@@ -87,6 +88,7 @@ function SheetContent({
           className
         )}
         {...props}
+        onEscapeKeyDown={escapeClosesMenusFirst(props.onEscapeKeyDown)}
       >
         {children}
         {showCloseButton && (

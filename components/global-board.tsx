@@ -128,7 +128,6 @@ function GlobalBoardInner() {
     moveIssue,
     setCategories,
     deleteIssue,
-    createIssue,
     setIssueCycle,
     addRelation,
     removeRelation,
@@ -721,7 +720,6 @@ function GlobalBoardInner() {
         onUpdate={(id, patch) => updateIssue(id, patch, openPid)}
         onDelete={(id) => deleteIssue(id, openPid)}
         onSetCategories={(id, ids) => setCategories(id, ids, openPid)}
-        onCreate={(input) => createIssue(openPid, input)}
         onOpenIssue={(id) => {
           setOpenIssueId(id);
           setOpenIssueTab("description");

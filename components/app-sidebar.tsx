@@ -21,6 +21,8 @@ import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { useDisplayedPathname } from "@/lib/pending-navigation";
+import { useSearchParams } from "next/navigation";
+import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { documentationPath } from "@/lib/documentation-core.mjs";
@@ -1070,8 +1072,13 @@ export function SidebarBackRow({ label, onBack, ariaLabel, badge }: {
  */
 export function secondaryNavBackTarget(
   pathname: string,
-  t: (key: MessageKey<"Nav">) => string
+  t: (key: MessageKey<"Nav">) => string,
+  /** The project board shows one objective's issues (`?objective=`): it sits
+      in the objectives list, whose bar the board mounts. */
+  objectiveBoard = false,
 ): { label: string; href: string } | null {
+  const board = objectiveBoard ? /^\/projects\/([^/]+)\/?$/.exec(pathname) : null;
+  if (board) return { label: t("objectives"), href: `/projects/${board[1]}` };
   const project = /\/projects\/([^/]+)\/(triage|feedback|objectives|pages|settings)(?:\/|$)/.exec(
     pathname,
   );
@@ -1145,7 +1152,9 @@ export function AppSidebar({
 
   // The active route names the base level; the back rows stack browse levels
   // on top of it without touching the URL.
-  const back = secondaryNavBackTarget(pathname, t);
+  const searchParams = useSearchParams();
+  const objectiveBoard = objectiveIdFromBoardLocation(pathname, searchParams.get("objective")) !== null;
+  const back = secondaryNavBackTarget(pathname, t, objectiveBoard);
   const panel = sidebarPanelForRoute(
     back !== null,
     currentProject !== null,

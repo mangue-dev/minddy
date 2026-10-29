@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { Drawer } from "vaul"
 
 import { cn } from "@/lib/utils"
+import { escapeClosesMenusFirst } from "@/lib/escape-layers"
 import { useMediaQuery } from "@/lib/use-media-query"
 import { releasePoppersBelow } from "@/lib/overlay-dismiss"
 import { CloseButton } from "./close-button"
@@ -195,6 +196,7 @@ function ModalSidePanelContent({
           className
         )}
         {...props}
+        onEscapeKeyDown={escapeClosesMenusFirst(props.onEscapeKeyDown)}
       >
         {children}
       </DialogPrimitive.Content>

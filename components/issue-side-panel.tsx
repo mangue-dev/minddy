@@ -115,7 +115,6 @@ import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import type {
   Category,
-  CreateIssueInput,
   Issue,
   IssueDraftPatch,
   IssueRelation,
@@ -139,7 +138,6 @@ export function IssueSidePanel({
   onUpdate,
   onDelete,
   onSetCategories,
-  onCreate,
   onOpenIssue,
   onAddRelation,
   onRemoveRelation,
@@ -158,7 +156,6 @@ export function IssueSidePanel({
   onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<unknown>;
   onDelete: (issueId: string) => Promise<void>;
   onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
-  onCreate: (input: CreateIssueInput) => Promise<unknown>;
   onOpenIssue: (id: string) => void;
   onAddRelation: (
     sourceId: string,
@@ -1293,7 +1290,6 @@ export function IssueSidePanel({
                     allIssues={allIssues}
                     projectKey={projectKey}
                     onOpenIssue={onOpenIssue}
-                    onCreate={onCreate}
                     readOnly={readOnly}
                   />
                 )}

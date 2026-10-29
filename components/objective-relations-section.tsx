@@ -349,7 +349,7 @@ export function ObjectiveRelationsSection({
           <span
             className={cn(
               "flex size-7 shrink-0 items-center justify-center rounded-full",
-              blocked ? "bg-red-500/10" : "bg-muted",
+              blocked && "bg-red-500/10",
             )}
           >
             {blocked ? (

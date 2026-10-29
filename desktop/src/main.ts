@@ -76,6 +76,7 @@ import {
   TRANSPARENT_WINDOW_BACKGROUND,
   desktopWindowMaterial,
   windowMaterialFlag,
+  windowMaterialForWindow,
   windowMaterialOptions,
   type DesktopWindowMaterialState,
 } from "@/lib/desktop/window-material";
@@ -190,15 +191,21 @@ function currentWindowMaterial(): DesktopWindowMaterialState {
     reducedTransparency: nativeTheme.prefersReducedTransparency || nativeTheme.shouldUseHighContrastColors,
   });
 }
-let appliedWindowMaterial: DesktopWindowMaterialState["kind"] = "none";
+/** The material each window was last painted with (its creation options first). */
+const appliedWindowMaterial = new WeakMap<BrowserWindow, DesktopWindowMaterialState["kind"]>();
 
-/** Repaints every window with the material in force and tells their pages. */
+/**
+ * Repaints every window with the material in force and tells their pages. A
+ * full-screen window keeps the opaque window (`windowMaterialForWindow`), and
+ * gets its material back when it leaves full screen.
+ */
 function applyWindowMaterial(): void {
-  const state = currentWindowMaterial();
-  const changed = state.kind !== appliedWindowMaterial;
-  appliedWindowMaterial = state.kind;
+  const global = currentWindowMaterial();
   for (const window of BrowserWindow.getAllWindows()) {
     if (window.isDestroyed()) continue;
+    const state = windowMaterialForWindow(global, window.isFullScreen());
+    const changed = state.kind !== (appliedWindowMaterial.get(window) ?? "none");
+    appliedWindowMaterial.set(window, state.kind);
     if (changed) {
       // The material first, the transparent color last: the window never
       // shows the desktop unblurred in between.
@@ -791,6 +798,7 @@ function createWindow(
       backgroundThrottling: true,
     },
   });
+  appliedWindowMaterial.set(window, currentWindowMaterial().kind);
 
   integratedFrames.set(window, integrated);
 
@@ -974,14 +982,14 @@ function createWindow(
   // must learn it, otherwise she keeps the 78 px she reserved for them. In
   // take them out puts them back in — hence the application in both directions, and the position
   // reposted by `applyWindowButtons`.
-  window.on("enter-full-screen", () => applyWindowButtons());
-  window.on("leave-full-screen", () => applyWindowButtons());
+  window.on("enter-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
+  window.on("leave-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
   // The full screen requested by the PAGE (a media, a publisher) passes the window
   // in full screen too, but by another couple of events. Both
   // result in the same calculation, which rereads `isFullScreen()`: plug them all in
   // the four costs two lines and avoids discovering the missing half.
-  window.on("enter-html-full-screen", () => applyWindowButtons());
-  window.on("leave-html-full-screen", () => applyWindowButtons());
+  window.on("enter-html-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
+  window.on("leave-html-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
   // The window hides instead of dying (see ⌘W in menu.ts): the app remains
   // alive, so notifications keep coming.
   //
@@ -1264,10 +1272,12 @@ function registerIpc(): void {
       writeWindowMaterialEnabled(enabled);
       applyWindowMaterial();
     }
-    return currentWindowMaterial();
+    return windowMaterialForWindow(currentWindowMaterial(), mainWindow.isFullScreen());
   });
   ipcMain.on("minddy:window-material-ready", (event) => {
-    event.sender.send("minddy:window-material-state", currentWindowMaterial());
+    const window = BrowserWindow.fromWebContents(event.sender);
+    event.sender.send("minddy:window-material-state",
+      windowMaterialForWindow(currentWindowMaterial(), window?.isFullScreen() ?? false));
   });
 
   // Status replay, TARGETED at the requesting subscriber (MIN-310).
@@ -1646,7 +1656,6 @@ if (!app.requestSingleInstanceLock()) {
     // come back to stable here (MIN-765).
     if (resetRetiredDesktopChannel()) trace("channel", { reset: "stable" });
     windowMaterialEnabled = readWindowMaterialEnabled();
-    appliedWindowMaterial = currentWindowMaterial().kind;
     // "Reduce transparency" and high contrast win over the preference, live.
     nativeTheme.on("updated", applyWindowMaterial);
     customServerOrigin = readDesktopServerOrigin();

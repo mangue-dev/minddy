@@ -16,7 +16,7 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
-import React, { useMemo, useCallback, useState, useEffect, useRef, type ReactNode } from "react";
+import React, { useMemo, useCallback, useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { usePaletteConfig } from "../config";
 import { ActionsPopover } from "../components/ActionsPopover";
 import { Footer } from "../components/Footer";
@@ -320,6 +320,32 @@ export function SearchView({
     }
     return indices;
   }, [groups]);
+
+  // The highlight follows its ROW, not its index: rows that load late (pages,
+  // async groups, search by meaning) are inserted above or between the shown
+  // ones, and an index kept as is would land on another row under the
+  // keyboard. A new query or category starts from the top, as the store sets.
+  const setActiveIndex = usePaletteStore((state) => state.setActiveIndex);
+  const highlightRef = useRef<{ id: string | null; items: PaletteItem[]; query: string; category: string } | null>(null);
+  useLayoutEffect(() => {
+    const previous = highlightRef.current;
+    const listMoved = previous !== null && previous.items !== orderedItems &&
+      previous.query === debouncedQuery && previous.category === categoryFilter;
+    if (listMoved && previous.id !== null) {
+      const index = orderedItems.findIndex((item) => item.id === previous.id);
+      if (index >= 0 && index !== activeIndex) {
+        highlightRef.current = { ...previous, items: orderedItems };
+        setActiveIndex(index);
+        return;
+      }
+    }
+    highlightRef.current = {
+      id: orderedItems[activeIndex]?.id ?? null,
+      items: orderedItems,
+      query: debouncedQuery,
+      category: categoryFilter,
+    };
+  }, [orderedItems, activeIndex, debouncedQuery, categoryFilter, setActiveIndex]);
 
   // The highlighted row is the row Enter will open: give the host a chance
   // to prefetch its destination while the user keeps navigating (the same

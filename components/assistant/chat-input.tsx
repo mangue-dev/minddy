@@ -1,5 +1,6 @@
 "use client";
 
+import { useEscapeLayer } from "@/lib/escape-layers";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { pastedMentionPieces } from "@/lib/mention-paste";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
@@ -1024,6 +1025,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [slashQuery, commands, availableSkills],
     );
     const slashOpen = slashOptions.length > 0;
+    // Escape in an open menu closes that menu, never the panel around the
+    // composer (lib/escape-layers.ts).
+    useEscapeLayer(slashOpen, () => setSlashQuery(null));
+    useEscapeLayer(mentionOpen, closeMentionMenu);
 
     // The mention and "/" / "$" menus open where the text is typed, as in the
     // shared editor: just above the caret's line, starting at the caret,

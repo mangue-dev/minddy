@@ -5,6 +5,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FilterIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAppRouter } from "@/lib/use-app-router";
 import dynamic from "next/dynamic";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
@@ -261,13 +262,21 @@ function ObjectiveRow({
   );
 }
 
-function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: string; browse?: SidebarBrowseTarget } = {}) {
+function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
+  projectId?: string;
+  browse?: SidebarBrowseTarget;
+  /** The project board of one objective mounts the list as its sidebar: the
+      board's objective is the highlighted row, and a row opens its board. */
+  board?: { objectiveId: string; onOpen: (objectiveId: string) => void };
+} = {}) {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const tSeed = useTranslations("Seed");
   const { projectId: routeProjectId, pathname: livePathname, searchParams } = useAppTabRoute();
   const projectId = browseProjectId ?? routeProjectId!;
-  const pathname = browse ? `/projects/${projectId}/objectives` : livePathname;
+  // The list alone (a mobile browse, a board's sidebar) owns no address.
+  const listOnly = !!browse || !!board;
+  const pathname = listOnly ? `/projects/${projectId}/objectives` : livePathname;
   const active = useAppTabActive();
   const navigation = useOptionalAppTabNavigation();
   const consumeSelection = useCallback(() => {
@@ -276,8 +285,8 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       window.history.replaceState(null, "", pathname);
     }
   }, [active, navigation, pathname]);
-  const newParam = browse ? null : searchParams.get("new");
-  const openParam = browse ? null : searchParams.get("open");
+  const newParam = listOnly ? null : searchParams.get("new");
+  const openParam = listOnly ? null : searchParams.get("open");
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -355,7 +364,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 
   // Publish the objective being viewed (else just the project) to Numo.
   useAssistantContext(
-    !browse && project
+    !listOnly && project
       ? selected
         ? {
             projectId,
@@ -443,7 +452,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   // overlay — it belongs to the screen's address. It leaves the URL as soon as
   // `?open=` is consumed above, hence this publication for the app tab;
   // `?open=` is also what restores it.
-  usePublishCurrentView(browse ? null : {
+  usePublishCurrentView(listOnly ? null : {
     href: buildViewHref(pathname, searchParams.toString(), {
       open: selected?.id ?? null,
     }),
@@ -582,14 +591,14 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
                 projectId={projectId}
                 key={objective.id}
                 objective={objective}
-                selected={objective.id === selectedId}
+                selected={objective.id === (board ? board.objectiveId : selectedId)}
                 progress={progressByObjectiveId.get(objective.id) ?? { done: 0, total: 0, percent: 0 }}
                 lead={
                   objective.lead_user_id
                     ? memberMap.get(objective.lead_user_id) ?? null
                     : null
                 }
-                onSelect={() => select(objective.id)}
+                onSelect={() => (board ? board.onOpen(objective.id) : select(objective.id))}
               />
             ))}
           </div>
@@ -597,7 +606,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       </CollectionSidebar>
   );
 
-  if (browse) return <>{sidebar}{createDialog}</>;
+  if (listOnly) return <>{sidebar}{createDialog}</>;
 
   if (!loading && objectives.length === 0) {
     return (
@@ -683,6 +692,16 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 
 export function ObjectivesCollection(props: { projectId: string; browse: SidebarBrowseTarget }) {
   return <AppTabRouteBoundary><ObjectivesInner {...props} /></AppTabRouteBoundary>;
+}
+
+/** The objectives list as the sidebar of an objective's board. */
+export function ObjectivesBoardSidebar({ projectId, objectiveId }: { projectId: string; objectiveId: string }) {
+  const router = useAppRouter();
+  const board = useMemo(() => ({
+    objectiveId,
+    onOpen: (id: string) => router.push(`/projects/${projectId}?objective=${encodeURIComponent(id)}`),
+  }), [objectiveId, projectId, router]);
+  return <AppTabRouteBoundary><ObjectivesInner projectId={projectId} board={board} /></AppTabRouteBoundary>;
 }
 
 export default function ObjectivesPage() {

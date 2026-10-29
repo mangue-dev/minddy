@@ -30,7 +30,7 @@ export function GlobalIssuePanel({
 }) {
   const { projects } = useProjects();
   const project = projects.find((candidate) => candidate.id === projectId) ?? null;
-  const { issues, createIssue, updateIssue, deleteIssue, setCategories } =
+  const { issues, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } =
     useIssueRelationsQuery(projectId);
@@ -81,7 +81,6 @@ export function GlobalIssuePanel({
         onClose();
       }}
       onSetCategories={setCategories}
-      onCreate={createIssue}
       onOpenIssue={setOpenId}
       onAddRelation={handleAddRelation}
       onRemoveRelation={handleRemoveRelation}

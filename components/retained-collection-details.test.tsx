@@ -69,6 +69,7 @@ vi.mock("@/components/routines/routine-schedule-fields", () => ({ RoutineSchedul
 vi.mock("@/components/routines/spend-cap-select", () => ({ SpendCapSelect: () => null }));
 vi.mock("@/components/settings/settings-ui", () => ({ SettingsRow: () => null }));
 vi.mock("@/components/assistant/assistant-shell", () => ({ AssistantShell: ({ embeddedConversationId }: { embeddedConversationId: string }) => <p data-open-run={embeddedConversationId}>{embeddedConversationId}</p> }));
+vi.mock("@/lib/assistant-chat-context", () => ({ AssistantChatProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/lib/routines-api", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   updateRoutineApi: (...args: unknown[]) => state.updateRoutine(...args),

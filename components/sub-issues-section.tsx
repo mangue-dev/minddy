@@ -3,38 +3,44 @@
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
-import { Spinner } from "@/components/ui/spinner";
+import { SplitButton } from "@/components/ui/split-button";
+import { NumoIcon } from "@/components/numo-icon";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";
-import type { CreateIssueInput, Issue } from "@/lib/types";
+import { useCreateOptional } from "@/lib/create-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { issuesPageContext } from "@/lib/assistant-issue-context";
+import type { Issue } from "@/lib/types";
 
-/** Parent-side view of its children: progress + list + inline add (plan §4). */
+/**
+ * Parent-side view of its children: progress, the list, then "Create a
+ * sub-issue", which opens the creation dialog with this issue as parent; its
+ * menu asks Numo to split the issue into sub-issues instead.
+ */
 export function SubIssuesSection({
   issue,
   allIssues,
   projectKey,
   onOpenIssue,
-  onCreate,
   readOnly = false,
 }: {
   issue: Issue;
   allIssues: Issue[];
   projectKey: string;
   onOpenIssue: (id: string) => void;
-  onCreate: (input: CreateIssueInput) => Promise<unknown>;
-  /** Project readers: sub-issues are listed without the add form. */
+  /** Project readers: sub-issues are listed without the create button. */
   readOnly?: boolean;
 }) {
   const t = useTranslations("IssueUI");
   const tIssue = useTranslations("Issue");
-  const tCommon = useTranslations("Common");
+  const create = useCreateOptional();
+  const { openIntent } = useAssistantPanelActions();
+  const identifier = issueIdentifier(projectKey, issue.number);
   const children = useMemo(
     () =>
       allIssues
@@ -43,8 +49,6 @@ export function SubIssuesSection({
     [allIssues, issue.id]
   );
 
-  const [title, setTitle] = useState("");
-  const [adding, setAdding] = useState(false);
 
   const total = children.length;
   // A canceled (or duplicate) sub-ticket is finished for tracking, in the same way
@@ -53,22 +57,16 @@ export function SubIssuesSection({
   const done = children.filter((c) => isClosedStatus(c.status)).length;
   const percent = total === 0 ? 0 : Math.round((done / total) * 100);
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const t = title.trim();
-    if (!t) return;
-    setAdding(true);
-    try {
-      // Inherit the parent's objective by default (server does this when
-      // objective_id is omitted).
-      await onCreate({ title: t, parent_id: issue.id });
-      setTitle("");
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setAdding(false);
-    }
-  };
+  const createSubIssue = () =>
+    create?.openCreateIssue({ projectId: issue.project_id, parentId: issue.id });
+  const splitWithNumo = () =>
+    openIntent({
+      source: "issue",
+      action: "plan",
+      projectId: issue.project_id,
+      prompt: t("splitWithNumoPrompt", { identifier }),
+      pageContext: issuesPageContext([issue], () => identifier),
+    });
 
   return (
     <div>
@@ -110,18 +108,23 @@ export function SubIssuesSection({
         </div>
       )}
 
-      {!readOnly && (
-      <form onSubmit={handleAdd} className="flex items-center gap-2">
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t("addSubIssuePlaceholder")}
-          className="h-8"
-        />
-        <Button type="submit" size="icon-sm" disabled={adding || !title.trim()} aria-label={tCommon("add")}>
-          {adding ? <Spinner /> : <HugeiconsIcon icon={Add01Icon} />}
-        </Button>
-      </form>
+      {!readOnly && create && (
+        <SplitButton
+          variant="outline"
+          size="sm"
+          onClick={createSubIssue}
+          menuLabel={t("moreSubIssueOptions")}
+          menuAlign="start"
+          menu={
+            <DropdownMenuItem onSelect={splitWithNumo}>
+              <NumoIcon className="size-4" />
+              {t("splitWithNumo")}
+            </DropdownMenuItem>
+          }
+        >
+          <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
+          {t("createSubIssue")}
+        </SplitButton>
       )}
     </div>
   );

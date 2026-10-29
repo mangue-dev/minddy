@@ -3027,17 +3027,23 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
       & :is(.app-top-bar, aside[data-sidebar-navigation]) {
         --sidebar-accent: var(--desktop-chrome-hover);
       }
-      & .app-tab:not([data-active]):hover {
-        background-color: var(--desktop-chrome-hover);
-        filter: none;
+      /* Pointer hovers only: a touch screen keeps no hover state. */
+      @media (hover: hover) and (pointer: fine) {
+        & .app-tab:not([data-active]):hover {
+          background-color: var(--desktop-chrome-hover);
+          filter: none;
+        }
+        & :is(.app-top-bar, aside[data-sidebar-navigation]) :is(button, a, [role="button"]):not(.app-tab *):not([data-sidebar-row] *):not(:is(button, a, [role="button"]) *):not(.sidebar-row-active):not([data-variant="default"]):not(:disabled):hover {
+          background-color: var(--desktop-chrome-hover) !important;
+        }
+        /* A row of several controls (a page with its chevron and actions, a
+           project group header, a Numo conversation) hovers as one line, not
+           its link alone (SIDEBAR_COMPOSITE_ROW_HOVER_CLASS). */
+        & [data-sidebar-row]:not(.sidebar-row-active):hover {
+          background-color: var(--desktop-chrome-hover);
+        }
       }
-      & :is(.app-top-bar, aside[data-sidebar-navigation]) :is(button, a, [role="button"]):not(.app-tab *):not([data-sidebar-row] *):not(:is(button, a, [role="button"]) *):not(.sidebar-row-active):not([data-variant="default"]):not(:disabled):hover {
-        background-color: var(--desktop-chrome-hover) !important;
-      }
-      /* A row of several controls (a page with its chevron and actions, a
-         project group header, a Numo conversation) hovers as one line, not
-         its link alone (SIDEBAR_COMPOSITE_ROW_HOVER_CLASS). */
-      & [data-sidebar-row]:not(.sidebar-row-active):is(:hover, :focus-within) {
+      & [data-sidebar-row]:not(.sidebar-row-active):focus-within {
         background-color: var(--desktop-chrome-hover);
       }
     }
