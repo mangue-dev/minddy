@@ -546,8 +546,10 @@ export function RelationTypePicker({
   if (!position) return null;
   return (
     <CommandAnchor position={position} onClose={onClose}>
+      {/* No "Relations" eyebrow: the types name themselves. A selection
+          still says how many tickets the choice applies to. */}
       <CommandGroup
-        heading={targetCount > 1 ? tBulk("selected", { count: targetCount }) : t("relations")}
+        heading={targetCount > 1 ? tBulk("selected", { count: targetCount }) : undefined}
       >
         {[...RELATION_TYPES, ...hierarchy].map((type) => (
           <CommandItem

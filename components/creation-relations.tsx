@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { RelationIcon } from "@/components/issue-indicators";
+import { relationToneClass } from "@/components/relation-rows";
 import { useRelationPalettePicker } from "@/components/palette-picker-rows";
 import { SearchMenu } from "@/components/search-menu";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -13,7 +14,7 @@ import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { orderIssuesForSearch } from "@/lib/issue-search-order";
-import { RELATION_TYPES } from "@/lib/relation-constants";
+import { RELATION_TYPES, closedObjectivesLast } from "@/lib/relation-constants";
 import {
   HIERARCHY_RELATIONS,
   hierarchyCandidates,
@@ -122,10 +123,9 @@ export function CreationRelationsCompact({
   }, [issues, projectId, value, step]);
   const objectiveCandidates = useMemo(() => {
     const taken = new Set(value.filter((r) => r.type === step && r.target_type === "objective").map((r) => r.target_id));
-    return orderedObjectives.filter(
-      (o) => o.project_id === projectId && o.status !== "done" &&
-        o.status !== "canceled" && !taken.has(o.id),
-    );
+    return closedObjectivesLast(orderedObjectives.filter(
+      (o) => o.project_id === projectId && !taken.has(o.id),
+    ));
   }, [orderedObjectives, projectId, value, step]);
   const select = (
     target_id: string,
@@ -191,7 +191,7 @@ export function CreationRelationsCompact({
         </button>
       }
     >
-      <CommandGroup heading={t("relations")}>
+      <CommandGroup>
         {[...RELATION_TYPES, ...hierarchyTypes].map((type) => (
           <CommandItem
             key={type}
@@ -208,7 +208,8 @@ export function CreationRelationsCompact({
   );
 }
 
-/** Removable context pills, positioned above the new entity's title. */
+/** The chosen relations as removable pills, in the creation form's property
+ *  row next to the picker that adds them. */
 export function CreationRelationPills({
   projectId,
   projectKey,
@@ -216,14 +217,15 @@ export function CreationRelationPills({
   value,
   onChange,
   disabled,
-}: CreationRelationsProps) {
+  className = "flex flex-wrap items-center gap-1.5",
+}: CreationRelationsProps & { className?: string }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   const { issues } = useIssuesQuery(active && value.length > 0 ? projectId : null);
   const { objectives } = useObjectivesQuery(active && value.length > 0 ? projectId : null);
   if (!value.length) return null;
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+    <div className={className}>
       {value.map((relation, index) => {
         const issue = relation.target_type === "issue"
           ? issues.find((i) => i.id === relation.target_id) : null;
@@ -240,17 +242,16 @@ export function CreationRelationPills({
             key={`${relation.type}:${relation.target_type}:${relation.target_id}`}
             aria-label={fullLabel}
             className={cn(
-              "inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-xs",
-              relation.type === "blocked_by"
-                ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                : relation.type === "blocks"
-                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                  : "text-muted-foreground",
+              // The property row's size: same text as its controls, and a
+              // remove button large enough to hit.
+              "inline-flex h-7 max-w-full items-center gap-1.5 rounded-md pr-1 pl-2 text-sm",
+              relationToneClass(relation.type),
+              relation.type !== "blocked_by" && relation.type !== "blocks" && "bg-muted",
             )}
           >
             <AppTooltip label={fullLabel}>
               <span className="flex min-w-0 items-center gap-1">
-                <RelationIcon relation={relation.type} className="size-3" />
+                <RelationIcon relation={relation.type} className="size-3.5" />
                 <span className="truncate">{label}</span>
               </span>
             </AppTooltip>
@@ -260,9 +261,9 @@ export function CreationRelationPills({
                   type="button"
                   aria-label={`${tCommon("remove")}: ${fullLabel}`}
                   onClick={() => onChange(value.filter((_, i) => i !== index))}
-                  className="flex size-4 shrink-0 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex size-5 shrink-0 items-center justify-center rounded-sm hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+                  <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
                 </button>
               </AppTooltip>
             )}

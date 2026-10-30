@@ -543,14 +543,16 @@ export function CreateIssueDialog({
     onOpenChange(false);
   };
 
+  const showsRelationPicker = !(smartFill && smartFillLinksRelations) || openPicker === "relation";
+
   // Typed text or a finished upload is worth keeping — a pristine (or
-  // still-uploading-only) form is not.
+  // still-uploading-only) form is not. Relations, like the other pickers, are
+  // not content on their own: a sub-issue form opens with its parent set.
   const draftHasContent = () =>
     title.trim() !== "" ||
     description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.inputs.length > 0 ||
-    relations.length > 0;
+    uploads.inputs.length > 0;
 
   // Snapshot the form as a draft (MIN-41) — reuses the active id so saving a
   // recovered draft again updates it in place instead of piling up copies.
@@ -883,14 +885,6 @@ export function CreateIssueDialog({
                 uploads={uploads}
                 className="mb-3"
               />
-              <CreationRelationPills
-                projectId={activeProjectId}
-                projectKey={activeProject?.key ?? ""}
-                active={open}
-                value={relations}
-                onChange={setRelations}
-                disabled={submitting}
-              />
               {showsTitle && (<>
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
@@ -1017,6 +1011,40 @@ export function CreateIssueDialog({
                     shortcutHint={KEY_FOR_FIELD.assignee}
                   />
                 </CreationProperty>
+                {/* Relations sit between the assignee and the due date: the
+                    picker, then the chosen ones as pills. Smart Fill also links
+                    related issues after the save (MIN-717), so the picker leaves
+                    with the other inferred fields, unless the account turned
+                    relation linking off or R opened it; chosen pills stay. */}
+                {(showsRelationPicker || relations.length > 0) && (
+                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {showsRelationPicker && (
+                        <CreationRelationsCompact
+                          projectId={activeProjectId}
+                          projectKey={activeProject?.key ?? ""}
+                          active={open}
+                          value={relations}
+                          onChange={setRelations}
+                          disabled={submitting}
+                          open={openPicker === "relation"}
+                          onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
+                          shortcutHint={RELATION_SHORTCUT_HINT}
+                          hierarchy
+                        />
+                      )}
+                      <CreationRelationPills
+                        projectId={activeProjectId}
+                        projectKey={activeProject?.key ?? ""}
+                        active={open}
+                        value={relations}
+                        onChange={setRelations}
+                        disabled={submitting}
+                        className="contents"
+                      />
+                    </div>
+                  </CreationProperty>
+                )}
                 <CreationProperty mobile={mobile} label={tField("dueDate")}>
                   <DueDateCompact
                     value={fields.due_date}
@@ -1042,26 +1070,6 @@ export function CreateIssueDialog({
                       open={openPicker === "objective"}
                       onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
                       shortcutHint={KEY_FOR_FIELD.objective}
-                    />
-                  </CreationProperty>
-                )}
-                {/* Smart Fill also links related issues after the save (MIN-717):
-                    the picker leaves with the other inferred fields, unless the
-                    account turned relation linking off or R opened it. Relations already
-                    chosen stay visible as pills above the title. */}
-                {(!(smartFill && smartFillLinksRelations) || openPicker === "relation") && (
-                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
-                    <CreationRelationsCompact
-                      projectId={activeProjectId}
-                      projectKey={activeProject?.key ?? ""}
-                      active={open}
-                      value={relations}
-                      onChange={setRelations}
-                      disabled={submitting}
-                      open={openPicker === "relation"}
-                      onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
-                      shortcutHint={RELATION_SHORTCUT_HINT}
-                      hierarchy
                     />
                   </CreationProperty>
                 )}

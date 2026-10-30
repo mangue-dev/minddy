@@ -135,7 +135,7 @@ Use navigation to choose your personal work or a project, and the command palett
 
 ## Find personal work and switch projects {#navigation}
 
-The main navigation gives access to personal work and your projects. Select a project to see its own issues and secondary destinations, including triage, objectives, pages and project settings. The back row moves up one navigation level; it can change the sidebar's contents while the main page remains open. Select a destination to navigate there.
+The main navigation gives access to personal work and your projects. Select a project to see its own issues and secondary destinations, including triage, objectives, pages and project settings. The back row moves up one navigation level; it can change the sidebar's contents while the main page remains open. Select a destination to navigate there. In a list such as triage, objectives, feedback, code review or routines, the filter field at the top searches every item, whatever the filters narrowing the list; its placeholder gives their total.
 
 Counters and warnings follow you between levels. The control that leads back to **Home** shows the total waiting to be triaged across the projects **Home** lists, the current one included, and the Smart Assign warning when one of your projects needs rules. A back row shows the counter of the level it returns to as a badge on its arrow, amber while the Smart Assign warning applies. Inside a project, **Triage** and **Feedback** keep that project's own counts. Desktop tabs carry the same badge as their sidebar entry: the warning on **Home**, and the counts on **Inbox**, **Code review** and a project's **Triage** and **Feedback**, updated even when the tab is in the background.
 

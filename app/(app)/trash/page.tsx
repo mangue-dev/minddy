@@ -225,10 +225,12 @@ export default function TrashPage() {
     return counts;
   }, [items]);
 
+  const searching = query.trim() !== "";
   const groups = useMemo(() => {
     const byType = new Map<TrashType, TrashItem[]>();
     for (const item of items) {
-      if (filter !== "all" && item.type !== filter) continue;
+      // A search looks through every type, whatever the type filter.
+      if (!searching && filter !== "all" && item.type !== filter) continue;
       if (
         !matchesFilter(query, [
           item.title.trim() || tPages("untitled"),
@@ -248,7 +250,7 @@ export default function TrashPage() {
       type,
       items: byType.get(type)!,
     }));
-  }, [filter, items, query, t, tPages]);
+  }, [filter, items, query, searching, t, tPages]);
 
   const filterItems = [
     {

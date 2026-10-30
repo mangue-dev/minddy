@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  closedObjectivesLast,
   normalizeRelation,
   resolveRelations,
   resolveRelationsByIssue,
@@ -314,6 +315,23 @@ describe("display dependencies through objective membership", () => {
       "dependency",
       "soft",
       "resolved",
+    ]);
+  });
+});
+
+describe("closedObjectivesLast", () => {
+  it("keeps closed objectives eligible, after the open ones, in their order", () => {
+    const objectives = [
+      { id: "done", status: "done" },
+      { id: "in-progress", status: "in_progress" },
+      { id: "canceled", status: "canceled" },
+      { id: "planned", status: "planned" },
+    ] as Pick<Objective, "id" | "status">[];
+    expect(closedObjectivesLast(objectives).map((objective) => objective.id)).toEqual([
+      "in-progress",
+      "planned",
+      "done",
+      "canceled",
     ]);
   });
 });

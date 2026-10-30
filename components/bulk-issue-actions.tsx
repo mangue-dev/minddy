@@ -26,6 +26,7 @@ import { useUndoHistory } from "@/lib/undo/undo-context";
 import { useLinkIssuesToPullRequest, useUnlinkIssuesFromPullRequests } from "@/lib/use-link-issues-to-pull-request";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 import { ProjectsContext } from "@/lib/projects-context-store";
+import { useIssueSelection } from "@/lib/issue-selection-context";
 import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 import {
   Tooltip,
@@ -207,6 +208,16 @@ export function BulkIssueActions({
     registerSelectionActions(() => void openActionsRef.current());
     return () => registerSelectionActions(null);
   }, [registerSelectionActions, present]);
+
+  // A right-click on a selected card offers the same trash entry, behind the
+  // same confirmation (lib/issue-selection-context.tsx).
+  const { registerRequestDelete } = useIssueSelection();
+  const canDelete = !!onDelete;
+  useEffect(() => {
+    if (!present || !canDelete) return;
+    registerRequestDelete(() => setConfirmDeleteOpen(true));
+    return () => registerRequestDelete(null);
+  }, [registerRequestDelete, present, canDelete]);
 
   // No `backdrop-blur`: `bg-background/95` already completely hides the background,
   // the blur was not visible and cost a composition layer (MIN-323).

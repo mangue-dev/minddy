@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, ArrowRight01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -76,7 +76,6 @@ import {
   databasePropertyValue,
   type DatabaseProperty,
 } from "@/lib/page-databases";
-import { positionBetween } from "@/lib/pages";
 import type { PageSummary } from "@/lib/pages-api";
 import {
   DatabaseOptionsDialog,
@@ -632,19 +631,6 @@ export function PageDatabaseView({
       );
     });
   };
-  const move = (entry: PageSummary, direction: number) =>
-    void run(async () => {
-      const index = entries.findIndex((p) => p.id === entry.id);
-      const before =
-        direction < 0
-          ? entries[index - 2]?.position
-          : entries[index + 1]?.position;
-      const after =
-        direction < 0
-          ? entries[index - 1]?.position
-          : entries[index + 2]?.position;
-      await updatePage(entry.id, { position: positionBetween(before, after) });
-    });
   const visible = schema.filter((property) => !hidden.includes(property.id));
   const columnWidths = [
     240,
@@ -1224,28 +1210,6 @@ export function PageDatabaseView({
                               <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                               {t("duplicate")}
                             </DropdownMenuItem>
-                            {targets.length === 1 && (
-                              <>
-                                <DropdownMenuItem
-                                  disabled={
-                                    !manual || entries[0]?.id === entry.id
-                                  }
-                                  onSelect={() => move(entry, -1)}
-                                >
-                                  <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
-                                  {t("moveUp")}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  disabled={
-                                    !manual || entries.at(-1)?.id === entry.id
-                                  }
-                                  onSelect={() => move(entry, 1)}
-                                >
-                                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
-                                  {t("moveDown")}
-                                </DropdownMenuItem>
-                              </>
-                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               variant="destructive"

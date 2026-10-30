@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { AppIcon } from "@/components/icon";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { AppContentHeader } from "@/components/app-content-header";
+import { AdminHeaderSlotContext } from "@/components/admin/admin-header-slot";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { useScrollFade } from "@/lib/use-scroll-fade";
@@ -252,6 +253,7 @@ export function AdminDashboard() {
   }, [pathname, router, searchableSections, searchParams, sectionParam]);
 
   useAdminSectionFocus(focus, !!reduceMotion);
+  const [headerHost, setHeaderHost] = useState<HTMLDivElement | null>(null);
 
   return (
     // The ROW of the screen: the rail leaves in the secondary sidebar (by
@@ -316,8 +318,11 @@ export function AdminDashboard() {
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {/* Navigation already names the active section; keep the shared spacing. */}
-        <AppContentHeader />
+        {/* Navigation already names the active section; the strip holds the
+            open tab's controls (AdminHeaderActions). */}
+        <AppContentHeader>
+          <div ref={setHeaderHost} className="flex min-w-0 flex-1 items-center justify-end gap-1" />
+        </AppContentHeader>
 
         <div
           ref={contentFade.ref}
@@ -327,10 +332,12 @@ export function AdminDashboard() {
           <div className={cn("mx-auto flex flex-col gap-4", ADMIN_MAX_WIDTH)}>
             {/* Only the open panel is mounted: each one fetches its data
                 when it mounts, and the others would load for nothing. */}
-            {active === "accounts" && <AdminAccountsDashboard />}
-            {active === "costs" && <AdminCostsDashboard />}
-            {active === "models" && <AdminModelsDashboard />}
-            {active === "instance" && <AdminInstanceDashboard />}
+            <AdminHeaderSlotContext.Provider value={headerHost}>
+              {active === "accounts" && <AdminAccountsDashboard />}
+              {active === "costs" && <AdminCostsDashboard />}
+              {active === "models" && <AdminModelsDashboard />}
+              {active === "instance" && <AdminInstanceDashboard />}
+            </AdminHeaderSlotContext.Provider>
           </div>
         </div>
       </div>

@@ -21,7 +21,7 @@ vi.mock("@/components/route-loading-skeleton", () => ({
 
 const {
   PENDING_NAVIGATION_DELAY_MS, PENDING_NAVIGATION_TIMEOUT_MS,
-  beginPendingNavigation, clearPendingNavigation, useDisplayedPathname,
+  beginPendingNavigation, clearPendingNavigation, useDisplayedPathname, useDisplayedSearchParam,
 } = await import("./pending-navigation");
 const { AppTabViewHost } = await import("@/components/app-tab-view-host");
 
@@ -30,7 +30,7 @@ let root: ReturnType<typeof createRoot>;
 
 function Shell() {
   return <>
-    <nav data-displayed={useDisplayedPathname()} />
+    <nav data-displayed={useDisplayedPathname()} data-objective={useDisplayedSearchParam("objective") ?? ""} />
     <AppTabViewHost><p data-page={h.pathname} /></AppTabViewHost>
   </>;
 }
@@ -71,6 +71,20 @@ it("shows a cold destination's skeleton and sidebar location before the router c
   expect(displayed()).toBe("/trash");
   expect(skeleton()).toBeNull();
   expect(page()).toBe("/trash");
+});
+
+it("reads the query from the same location as the displayed pathname", () => {
+  h.search = "open=o1";
+  render();
+  act(() => beginPendingNavigation("/projects/p?objective=o1"));
+  act(() => { vi.advanceTimersByTime(PENDING_NAVIGATION_DELAY_MS); });
+  // The objectives page's query must not stand in for the board's.
+  expect(displayed()).toBe("/projects/p");
+  expect(host.querySelector("nav")!.getAttribute("data-objective")).toBe("o1");
+  h.search = "objective=o1";
+  commit("/projects/p");
+  expect(host.querySelector("nav")!.getAttribute("data-objective")).toBe("o1");
+  h.search = "";
 });
 
 it("never shows the pending state for a destination that commits within the delay", () => {

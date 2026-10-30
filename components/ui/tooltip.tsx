@@ -67,7 +67,7 @@ function isFocusVisible(element: Element): boolean {
  * throw, so a missing root provider surfaces on the first render.
  */
 export function TooltipProvider({
-  delayDuration = 200,
+  delayDuration = 500,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {

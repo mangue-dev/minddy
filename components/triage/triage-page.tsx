@@ -131,8 +131,11 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
    * once per letter — and we filter precisely to SEARCH for one.
    */
   const visibleIssues = useMemo(() => {
+    // A search looks through every triage ticket, whatever the property
+    // filters: they narrow the resting list, the query finds anything.
+    const searching = query.trim() !== "";
     return triageIssues.filter((i) =>
-      matchesCollectionFilters(i, properties, user?.id ?? null) && matchesFilter(query, [
+      (searching || matchesCollectionFilters(i, properties, user?.id ?? null)) && matchesFilter(query, [
         i.title,
         i.description,
         project ? issueIdentifier(project.key, i.number) : null,
@@ -462,7 +465,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: visibleIssues.length }),
+          placeholder: t("filterPlaceholder", { count: triageIssues.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={<CollectionFilterMenu filters={properties} onChange={setProperties} members={members}

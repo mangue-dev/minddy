@@ -20,8 +20,7 @@ import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { useDisplayedPathname } from "@/lib/pending-navigation";
-import { useSearchParams } from "next/navigation";
+import { useDisplayedPathname, useDisplayedSearchParam } from "@/lib/pending-navigation";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
@@ -1152,8 +1151,12 @@ export function AppSidebar({
 
   // The active route names the base level; the back rows stack browse levels
   // on top of it without touching the URL.
-  const searchParams = useSearchParams();
-  const objectiveBoard = objectiveIdFromBoardLocation(pathname, searchParams.get("objective")) !== null;
+  // The query comes from the same place as the pathname: mixing the pending
+  // board's path with the objectives page's query dropped the objective for
+  // the time of the navigation, and the sidebar played a level swap there
+  // and back.
+  const displayedObjective = useDisplayedSearchParam("objective");
+  const objectiveBoard = objectiveIdFromBoardLocation(pathname, displayedObjective) !== null;
   const back = secondaryNavBackTarget(pathname, t, objectiveBoard);
   const panel = sidebarPanelForRoute(
     back !== null,

@@ -11,16 +11,14 @@
 // then the target in the ⌘K palette (MIN-844), among the project's open
 // issues and other objectives.
 
-import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
+import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RelationObjectiveLabel } from "@/components/relation-objective-label";
+import { RelationGroupHeader, RelationRemoveButton, RelationRow } from "@/components/relation-rows";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -30,10 +28,11 @@ import {
   RELATION_PRIORITY,
   RELATION_TYPES,
   resolveRelations,
+  closedObjectivesLast,
 } from "@/lib/relation-constants";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import { RelationIcon, StatusIndicator } from "@/components/issue-indicators";
+import { RelationIcon } from "@/components/issue-indicators";
 import { useRelationPalettePicker } from "@/components/palette-picker-rows";
 import { SearchMenu } from "@/components/search-menu";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -113,8 +112,8 @@ export function ObjectiveRelationsSection({
     );
   }, [objective.id, relations, issues, objectives]);
 
-  // Candidates: open issues, then the other open objectives (a closed blocker
-  // doesn't block — the resolver would mark it spent immediately).
+  // Candidates: issues, then the other objectives; closed ones stay eligible
+  // and sort last (the resolver shows a closed blocker as spent).
   const linked = useMemo(
     () =>
       new Set(
@@ -131,13 +130,9 @@ export function ObjectiveRelationsSection({
   const orderedObjectives = useOrderedObjectives(objectives);
   const objectiveCandidates = useMemo(
     () =>
-      orderedObjectives.filter(
-        (o) =>
-          o.id !== objective.id &&
-          !linked.has(o.id) &&
-          o.status !== "done" &&
-          o.status !== "canceled",
-      ),
+      closedObjectivesLast(orderedObjectives.filter(
+        (o) => o.id !== objective.id && !linked.has(o.id),
+      )),
     [orderedObjectives, objective.id, linked],
   );
 
@@ -206,7 +201,7 @@ export function ObjectiveRelationsSection({
             </button>
           }
         >
-          <CommandGroup heading={t("relations")}>
+          <CommandGroup>
             {RELATION_TYPES.map((type) => (
               <CommandItem
                 key={type}
@@ -230,11 +225,7 @@ export function ObjectiveRelationsSection({
         <div className="flex flex-col gap-3 pb-2">
           {grouped.map((group) => (
             <div key={group.type}>
-              <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <RelationIcon relation={group.type} className="size-3.5" />
-                {t(group.type)}{" "}
-                <span className="tabular-nums">{group.items.length}</span>
-              </div>
+              <RelationGroupHeader type={group.type} count={group.items.length} />
               <div className="flex flex-col">
                 {group.items.map((r) => {
                   const isObjective = r.otherType === "objective";
@@ -244,79 +235,41 @@ export function ObjectiveRelationsSection({
                   const otherIssue = isObjective
                     ? undefined
                     : issues.find((i) => i.id === r.otherId);
+                  const identifier = otherIssue ? issueIdentifier(projectKey, otherIssue.number) : null;
                   return (
-                    <div
+                    <RelationRow
                       key={r.id}
-                      className="group/relrow flex items-center gap-2 rounded-md px-1.5 py-1.5 hover:bg-muted/60"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setBoardOpen(false);
-                          if (isObjective)
-                            router.push(
-                              `/projects/${projectId}/objectives?open=${r.otherId}`,
-                            );
-                          else if (onOpenIssue) onOpenIssue(r.otherId);
-                          else
-                            router.push(
-                              `/projects/${projectId}?issue=${r.otherId}`,
-                            );
-                        }}
-                        className="flex min-w-0 flex-1 items-center gap-2 text-left"
-                      >
-                        {isObjective && otherObjective ? (
-                          <RelationObjectiveLabel objective={otherObjective} />
-                        ) : (
-                          <>
-                            {otherIssue && (
-                              <StatusIndicator
-                                status={otherIssue.status}
-                                className="size-4 shrink-0"
-                              />
-                            )}
-                            {otherIssue && (
-                              <span className="shrink-0 whitespace-nowrap font-mono text-xs text-muted-foreground">
-                                {issueIdentifier(projectKey, otherIssue.number)}
-                              </span>
-                            )}
-                            <TruncatedText
-                              text={otherIssue?.title ?? ""}
-                              className={cn(
-                                "flex-1 truncate text-sm",
-                                otherIssue?.status === "done" &&
-                                  "text-muted-foreground line-through",
-                              )}
-                            />
-                          </>
-                        )}
-                        {r.resolved && (
-                          <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                            {t("resolved")}
-                          </span>
-                        )}
-                      </button>
-                      {canWrite && (
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={tCommon("remove")}
-                        className="size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/relrow:opacity-100 focus-visible:opacity-100 touch:opacity-100"
-                        onClick={() =>
-                          setRemoveTarget({
-                            id: r.id,
-                            name: isObjective
-                              ? (otherObjective?.name ?? "")
-                              : otherIssue
-                                ? `${issueIdentifier(projectKey, otherIssue.number)} ${otherIssue.title}`
-                                : "",
-                          })
-                        }
-                      >
-                        <HugeiconsIcon icon={Cancel01Icon} />
-                      </Button>
-                      )}
-                    </div>
+                      target={isObjective
+                        ? { kind: "objective", objective: otherObjective, name: otherObjective?.name ?? "" }
+                        : { kind: "issue", status: otherIssue?.status, identifier, title: otherIssue?.title ?? "" }}
+                      resolved={r.resolved}
+                      onOpen={() => {
+                        setBoardOpen(false);
+                        if (isObjective)
+                          router.push(
+                            `/projects/${projectId}/objectives?open=${r.otherId}`,
+                          );
+                        else if (onOpenIssue) onOpenIssue(r.otherId);
+                        else
+                          router.push(
+                            `/projects/${projectId}?issue=${r.otherId}`,
+                          );
+                      }}
+                      action={canWrite ? (
+                        <RelationRemoveButton
+                          onClick={() =>
+                            setRemoveTarget({
+                              id: r.id,
+                              name: isObjective
+                                ? (otherObjective?.name ?? "")
+                                : otherIssue
+                                  ? `${identifier} ${otherIssue.title}`
+                                  : "",
+                            })
+                          }
+                        />
+                      ) : null}
+                    />
                   );
                 })}
               </div>

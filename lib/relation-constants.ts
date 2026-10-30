@@ -94,6 +94,16 @@ function isClosedObjectiveStatus(status: ObjectiveStatus): boolean {
   return status === "done" || status === "canceled";
 }
 
+/** Relation picker order for objectives: every objective stays eligible, a
+ *  closed one (done, canceled) sorted after the open ones — as closed tickets
+ *  are. A finished objective can still be a blocker on record, or context. */
+export function closedObjectivesLast<T extends { status: ObjectiveStatus }>(objectives: readonly T[]): T[] {
+  return [
+    ...objectives.filter((objective) => !isClosedObjectiveStatus(objective.status)),
+    ...objectives.filter((objective) => isClosedObjectiveStatus(objective.status)),
+  ];
+}
+
 /** One relation endpoint, as callers pass it: an id plus (optionally) what it
  *  is — a bare id reads as an issue (pre-migration rows' implicit kind). */
 export interface RelationEndpoint {

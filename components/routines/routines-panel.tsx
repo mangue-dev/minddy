@@ -504,7 +504,7 @@ export function RoutinesPanel({
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: visible.length }),
+          placeholder: t("filterPlaceholder", { count: routines.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={

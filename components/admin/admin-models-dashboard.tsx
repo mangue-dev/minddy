@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminHeaderActions } from "@/components/admin/admin-header-slot";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, Delete02Icon, FileExportIcon, FileImportIcon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
@@ -190,13 +191,14 @@ export function AdminModelsDashboard() {
   return (
     /* Width and margins inherited from the shell (`admin-dashboard`). */
     <div className="space-y-8">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="text-sm font-semibold">{t("title")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-        </div>
-        <ModelsFileActions values={values} onImported={reload} />
+      <header className="min-w-0">
+        <h2 className="text-sm font-semibold">{t("title")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </header>
+      {/* Import and export drive the whole tab: they sit in the pane's header. */}
+      <AdminHeaderActions>
+        <ModelsFileActions values={values} onImported={reload} />
+      </AdminHeaderActions>
 
       {error ? (
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
@@ -613,12 +615,12 @@ function ModelsFileActions({
   const shown = (value: string | null) => value ? formatModelName(value) || value : t("modelsFile.defaultValue");
 
   return (
-    <div id={adminSectionAnchor(ADMIN_SECTIONS.modelsFile)} className="flex shrink-0 scroll-mt-20 items-center gap-2 rounded-lg">
-      <Button variant="outline" size="sm" onClick={exportFile} disabled={!values}>
+    <div id={adminSectionAnchor(ADMIN_SECTIONS.modelsFile)} className="flex shrink-0 items-center gap-1 rounded-lg">
+      <Button variant="ghost" size="sm" onClick={exportFile} disabled={!values}>
         <HugeiconsIcon icon={FileExportIcon} className="size-4" />
         {t("modelsFile.export")}
       </Button>
-      <Button variant="outline" size="sm" onClick={() => input.current?.click()} disabled={busy || !values}>
+      <Button variant="ghost" size="sm" onClick={() => input.current?.click()} disabled={busy || !values}>
         {busy && !pending ? <Spinner /> : <HugeiconsIcon icon={FileImportIcon} className="size-4" />}
         {t("modelsFile.import")}
       </Button>

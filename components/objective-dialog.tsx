@@ -384,14 +384,14 @@ export function ObjectiveDialog({
     onOpenChange(false);
   };
 
-  // Typed text or a finished upload is worth keeping — the pickers are two
-  // clicks to redo. Only in create mode; editing lives in the side panel now.
+  // Typed text or a finished upload is worth keeping — the pickers, relations
+  // included, are two clicks to redo. Only in create mode; editing lives in
+  // the side panel now.
   const draftHasContent = () =>
     form.name.trim() !== "" ||
     form.description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.inputs.length > 0 ||
-    relations.length > 0;
+    uploads.inputs.length > 0;
 
   // Snapshot the form as a local draft (MIN-41), reusing the active id.
   const saveDraft = async () => {
@@ -637,16 +637,6 @@ export function ObjectiveDialog({
                   className="mb-3"
                 />
               )}
-              {composerEnabled && (
-                <CreationRelationPills
-                  projectId={activeProjectId!}
-                  projectKey={activeProject?.key ?? projectKey ?? ""}
-                  active={open}
-                  value={relations}
-                  onChange={setRelations}
-                  disabled={submitting}
-                />
-              )}
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
                 // Remounted by a reset that lands as the dialog reopens, so
@@ -722,6 +712,32 @@ export function ObjectiveDialog({
                     {...pickerControl("lead")}
                   />
                 </CreationProperty>
+                {/* Relations sit between the lead and the target date: the
+                    picker, then the chosen ones as pills. */}
+                {composerEnabled && (
+                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <CreationRelationsCompact
+                        projectId={activeProjectId!}
+                        projectKey={activeProject?.key ?? projectKey ?? ""}
+                        active={open}
+                        value={relations}
+                        onChange={setRelations}
+                        disabled={submitting}
+                        {...pickerControl("relation")}
+                      />
+                      <CreationRelationPills
+                        projectId={activeProjectId!}
+                        projectKey={activeProject?.key ?? projectKey ?? ""}
+                        active={open}
+                        value={relations}
+                        onChange={setRelations}
+                        disabled={submitting}
+                        className="contents"
+                      />
+                    </div>
+                  </CreationProperty>
+                )}
                 <CreationProperty mobile={mobile} label={t("targetDatePlaceholder")}>
                   <DateTimePicker
                     variant="ghost"
@@ -740,19 +756,6 @@ export function ObjectiveDialog({
                     {...pickerControl("color")}
                   />
                 </CreationProperty>
-                {composerEnabled && (
-                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
-                    <CreationRelationsCompact
-                      projectId={activeProjectId!}
-                      projectKey={activeProject?.key ?? projectKey ?? ""}
-                      active={open}
-                      value={relations}
-                      onChange={setRelations}
-                      disabled={submitting}
-                      {...pickerControl("relation")}
-                    />
-                  </CreationProperty>
-                )}
               </div>
 
             </MobileSheetScrollArea>

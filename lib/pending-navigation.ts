@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 /**
  * A user navigation the router has not committed yet (MIN-843).
@@ -113,4 +113,13 @@ export function usePendingNavigation(): PendingNavigation | null {
 export function useDisplayedPathname(): string {
   const pathname = usePathname();
   return usePendingNavigation()?.pathname ?? pathname;
+}
+
+/** The `objective` (or any) query value the shell presents: read from the
+ * pending destination with its pathname, so the two never mix the page being
+ * left with the one being opened. */
+export function useDisplayedSearchParam(name: string): string | null {
+  const committed = useSearchParams().get(name);
+  const pending = usePendingNavigation();
+  return pending ? new URLSearchParams(pending.search).get(name) : committed;
 }

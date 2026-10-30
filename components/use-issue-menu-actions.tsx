@@ -38,6 +38,8 @@ export interface IssueMenuSelection {
   onCopyIdentifiers: () => void;
   /** Live pull requests some selected tickets have and others could take. */
   pullRequests?: ReadonlyArray<{ prId: string; prNumber: number; onLink: () => void }>;
+  /** Asks to move the whole selection to the trash, after confirmation. */
+  onDelete?: () => void;
 }
 
 export interface IssueMenuOptions {
@@ -107,6 +109,16 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
     onOpenField, extraActions = [], onDelete, onLinkPullRequest, readOnly = false, selection,
   }: IssueMenuOptions): ContextMenuAction[] => {
     const identifier = issueIdentifier(projectKey, issue.number);
+    const trashAction = (run: (() => void) | undefined): ContextMenuAction[] => run ? [{
+      id: "delete",
+      label: tCommon("moveToTrash"),
+      keywords: ["corbeille", "trash", "supprimer", "delete", "remove", "archiver"],
+      icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+      separatorBefore: true,
+      variant: "destructive",
+      transfersFocus: true,
+      onSelect: run,
+    }] : [];
     const relationsAction = (): ContextMenuAction[] => onSelectRelation
       ? [
           {
@@ -156,8 +168,8 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
     // the fields its pickers write to every selected ticket (MIN-795). The
     // objective and due date stay offered whatever the anchor card holds,
     // since the other tickets may lack them. Single-ticket entries (pull
-    // request, comment prompt, cycle, trash) are left to the card alone and
-    // to the selection's ⌘K actions.
+    // request, comment prompt, cycle) are left to the card alone and to the
+    // selection's ⌘K actions; the trash entry acts on the whole selection.
     if (selection) {
       const { count, planned } = selection;
       const copyIdentifiers: ContextMenuAction = {
@@ -201,6 +213,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
         ...relationsAction(),
         ...(hasObjectives ? [objectiveAction] : []),
         dueDateAction,
+        ...trashAction(selection.onDelete),
       ];
     }
     // An issue keeps at most one live pull request (the server refuses a
@@ -296,27 +309,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
       ...(!issue.objective_id && hasObjectives ? [objectiveAction] : []),
       ...(!issue.due_date ? [dueDateAction] : []),
       ...extraActions,
-      ...(onDelete
-        ? [
-            {
-              id: "delete",
-              label: tCommon("moveToTrash"),
-              keywords: [
-                "corbeille",
-                "trash",
-                "supprimer",
-                "delete",
-                "remove",
-                "archiver",
-              ],
-              icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
-              separatorBefore: true,
-              variant: "destructive" as const,
-              transfersFocus: true,
-              onSelect: () => onDelete(),
-            },
-          ]
-        : []),
+      ...trashAction(onDelete),
     ];
   }, [t, tAgent, tRel, tCommon, tAction, tPr, tBulk, isPending, requestUnlink, openPullRequest, setAutoMerge]);
 }

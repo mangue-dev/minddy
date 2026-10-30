@@ -150,7 +150,7 @@ The console has three tabs: **Accounts**, **Costs**, **Models** and, where it is
 
 ## Track the instance’s costs {#costs}
 
-**Costs** shows what the AI providers cost the instance, in dollars as they bill it, and refreshes itself while it stays open. Choose the period in the menu at the top and narrow everything by feature family, model or key used (the instance’s key or members’ personal keys). Four figures follow, each with its trend and its change against the previous period: total spend, requests, tokens and cost per million tokens. Below come the most expensive features and models, then the spend per day by model and by feature family, the requests per day by model, and the recent runs, which open on their calls. Revenue, subscriptions and margins are not shown: Stripe billing is managed in Stripe. Per-account OpenRouter keys that no account uses any more are deleted every night.
+**Costs** shows what the AI providers cost the instance, in dollars as they bill it, and refreshes itself while it stays open. Choose the period in the menu at the top right of the pane, and narrow everything with the **Filters** button beside it, by feature, model or key used (the instance’s key or members’ personal keys). Four figures follow, each with its trend and its change against the previous period: total spend, requests, tokens and cost per million tokens. Below come the most expensive features and models, then the spend per day by model and by feature family, the requests per day by model, and the recent runs, which open on their calls. Revenue, subscriptions and margins are not shown: Stripe billing is managed in Stripe. Per-account OpenRouter keys that no account uses any more are deleted every night.
 
 ## Choose models by category {#models}
 
@@ -158,7 +158,7 @@ Each card of **Models** has one **Default model** for its category: **Assistant*
 
 ## Export and import the model configuration {#models-file}
 
-**Export** downloads the model configuration as a versioned JSON file (format `minddy.instance-models`): category defaults, task models, routing shortcuts, reasoning level, recommended models and personal-key provider defaults. It contains no API key and no account. **Import** reads such a file and lists every change before anything is written; **Apply** writes them all, or none when one value is refused, for example a model that is not a decision model. An import replaces the configuration: settings the file leaves out return to their default. A file from an earlier minddy version is updated to the current format; a file from a newer version is refused until the instance is updated. Entries this version does not know are listed and skipped.
+At the top right of the **Models** pane, **Export** downloads the model configuration as a versioned JSON file (format `minddy.instance-models`): category defaults, task models, routing shortcuts, reasoning level, recommended models and personal-key provider defaults. It contains no API key and no account. **Import** reads such a file and lists every change before anything is written; **Apply** writes them all, or none when one value is refused, for example a model that is not a decision model. An import replaces the configuration: settings the file leaves out return to their default. A file from an earlier minddy version is updated to the current format; a file from a newer version is refused until the instance is updated. Entries this version does not know are listed and skipped.
 
 ## Administer the instance with Numo {#numo}
 

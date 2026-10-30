@@ -56,6 +56,7 @@ import { LinkablePullRequestsProbe, PullRequestPalettePicker } from "@/component
 import { useLinkIssuesToPullRequest } from "@/lib/use-link-issues-to-pull-request";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { useIssueSelection } from "@/lib/issue-selection-context";
+import { closedObjectivesLast } from "@/lib/relation-constants";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import {
   hasDirectRelation,
@@ -1241,12 +1242,11 @@ const IssueCardContent = memo(function IssueCardContent({
   const relationObjectiveCandidates = useMemo(() => {
     if (!relationType || isHierarchyRelation(relationType) || !objectiveMap) return [];
     const targets = relationTargets();
-    return [...objectiveMap.values()].filter(
+    return closedObjectivesLast([...objectiveMap.values()].filter(
       (objective) =>
         objective.project_id === issue.project_id &&
-        targets.some((target) => !hasDirectRelation(relationsOf(target.id), relationType, objective.id)) &&
-        objective.status !== "done" && objective.status !== "canceled",
-    );
+        targets.some((target) => !hasDirectRelation(relationsOf(target.id), relationType, objective.id)),
+    ));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the selection is read when the picker opens
   }, [objectiveMap, relationType, relations, issue.project_id]);
   // Context common to the two copyable prompts (implement the ticket, write
@@ -1488,6 +1488,7 @@ const IssueCardContent = memo(function IssueCardContent({
         setCustomPromptOpen(true);
       },
       onCopyIdentifiers: selection.copyIdentifiers,
+      onDelete: selection.getRequestDelete() ?? undefined,
       pullRequests: bulkPullRequestLinks(issues, prStore.get, [], prStore.linkedPullRequestIds).partial
         .map((target) => ({
           prId: target.prId,

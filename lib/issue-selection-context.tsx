@@ -3,7 +3,8 @@
 // The board selection, as the cards' field pickers read it (MIN-795). A board
 // owns its selection; a card whose picker opens while it is selected writes to
 // the whole selection (lib/issue-shortcut-targets.ts), and its right-click
-// menu copies the selection's prompts and identifiers (MIN-833).
+// menu copies the selection's prompts and identifiers (MIN-833) or moves it
+// to the trash through the selection pill's confirmation.
 //
 // The value is a set of getters and gestures over refs, so its identity never
 // changes: selecting a ticket must not re-render every memoized card
@@ -25,6 +26,11 @@ export interface IssueSelection {
   copyPrompt: (action: MultiIssueAction, request?: string) => void;
   /** Copies the selection's identifiers, comma-separated, smallest first. */
   copyIdentifiers: () => void;
+  /** Asks to move the selection to the trash, through the selection pill's
+   *  confirmation; null while no pill offers it (readers, no delete). */
+  getRequestDelete: () => (() => void) | null;
+  /** The mounted selection pill registers its delete request (null on unmount). */
+  registerRequestDelete: (request: (() => void) | null) => void;
 }
 
 /** The board's copy gestures on its selection (lib/use-bulk-selection-actions.ts). */
@@ -38,6 +44,8 @@ const NO_SELECTION: IssueSelection = {
   getRelations: () => undefined,
   copyPrompt: () => {},
   copyIdentifiers: () => {},
+  getRequestDelete: () => null,
+  registerRequestDelete: () => {},
 };
 
 const IssueSelectionContext = createContext<IssueSelection>(NO_SELECTION);
@@ -59,12 +67,17 @@ export function IssueSelectionProvider({
   relationsRef.current = relationsByIssue;
   const copyRef = useRef(copyActions);
   copyRef.current = copyActions;
+  const deleteRef = useRef<(() => void) | null>(null);
   const value = useMemo<IssueSelection>(
     () => ({
       getSelectedIssues: () => selectionRef.current,
       getRelations: (issueId) => relationsRef.current.get(issueId),
       copyPrompt: (action, request) => void copyRef.current.copyPrompt(action, request),
       copyIdentifiers: () => void copyRef.current.copyIdentifiers(),
+      getRequestDelete: () => deleteRef.current,
+      registerRequestDelete: (request) => {
+        deleteRef.current = request;
+      },
     }),
     [],
   );

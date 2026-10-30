@@ -321,10 +321,14 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
    * lives. A lens taken out of the filter (completed while looking at it) must
    * hand over to the next one, as if it had been deleted.
    */
-  const filtered = useMemo(
+  const stateFiltered = useMemo(
     () => objectives.filter((o) => matchesState(o, state)),
     [objectives, state]
   );
+  // A search looks through every objective, whatever the state filter: the
+  // filter narrows the resting list, the query finds anything.
+  const searching = query.trim() !== "";
+  const filtered = searching ? objectives : stateFiltered;
 
   const selected = filtered.find((o) => o.id === selectedId) ?? null;
 
@@ -516,7 +520,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: listed.length }),
+          placeholder: t("filterPlaceholder", { count: objectives.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={

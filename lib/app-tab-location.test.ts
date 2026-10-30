@@ -46,6 +46,11 @@ describe("application tab destinations", () => {
   it("exposes the objective param so tabs can name an objective's tickets", () => {
     expect(appTabRoute("/projects/p?objective=o")).toEqual({ section: "tickets", projectId: "p", objectiveId: "o", familyId: null, view: null, pageId: null, prId: null, routineId: null, adminTab: null });
   });
+  it("names the objective selected on the Objectives page, and only there", () => {
+    expect(appTabRoute("/projects/p/objectives?open=o").objectiveId).toBe("o");
+    expect(appTabRoute("/projects/p/objectives").objectiveId).toBeNull();
+    expect(appTabRoute("/projects/p/feedback?open=o").objectiveId).toBeNull();
+  });
   it("exposes the family param so tabs can name a family board", () => {
     expect(appTabRoute("/projects/p?family=parent")).toEqual({ section: "tickets", projectId: "p", objectiveId: null, familyId: "parent", view: null, pageId: null, prId: null, routineId: null, adminTab: null });
   });

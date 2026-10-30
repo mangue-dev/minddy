@@ -154,7 +154,10 @@ vi.mock("@/components/editor/document-editor-lazy", () => ({ LazyDocumentEditor:
 }, useIdleDocumentEditorPreload: vi.fn() }));
 vi.mock("@/components/resources", () => ({ AddResourceButton: () => null, ResourcePills: () => null, ComposerResourcePills: () => null, DropOverlay: () => null, pasteFileHandler: () => undefined, useFileDrop: () => ({ handlers: {} }) }));
 vi.mock("@/components/issue-compact-fields", () => ({
-  AssigneeCompact: () => null, CategoriesCompact: () => null, DueDateCompact: () => null,
+  // The assignee (an objective's lead) and the due date mark the property row
+  // around the relations.
+  AssigneeCompact: () => React.createElement("span", { "data-field": "assignee" }), CategoriesCompact: () => null,
+  DueDateCompact: () => React.createElement("span", { "data-field": "date" }),
   ObjectiveCompact: () => null, StatusCompact: () => null,
   // Priority and effort keep a trigger and one option, enough to see Smart Fill
   // hide them and a shortcut bring one back (MIN-746).
@@ -171,8 +174,7 @@ vi.mock("@/components/issue-compact-fields", () => ({
       manual?.onTitleRequest && React.createElement("button", { type: "button", onClick: () => { manual.onTitleRequest!(); queueMicrotask(() => manual.onTitleFocus?.()); } }, "Set title manually")),
 }));
 vi.mock("@/components/issue-indicators", () => ({ RelationIcon: () => null, StatusIndicator: () => null, ObjectiveStatusIndicator: () => null }));
-vi.mock("@/components/relation-objective-label", () => ({ RelationObjectiveLabel: ({ objective }: { objective: Objective }) => React.createElement("span", null, objective.name) }));
-vi.mock("@/components/date-time-picker", () => ({ DateTimePicker: () => null }));
+vi.mock("@/components/date-time-picker", () => ({ DateTimePicker: () => React.createElement("span", { "data-field": "date" }) }));
 vi.mock("@/components/search-select", () => ({ SearchSelect: () => null }));
 // The semantic group needs a real cmdk Command; it has its own test (lib/semantic-issue-group.test.tsx).
 vi.mock("@/components/semantic-issue-group", () => ({ SemanticIssueGroup: () => null }));
@@ -231,7 +233,7 @@ async function addRelation(type: PendingRelationInput["type"], target: "issue" |
   // A closed issue stays linkable (listed last); a closed objective does not.
   expect(document.body.textContent).toContain("Closed issue");
   expect(document.body.textContent).not.toContain("Foreign issue");
-  expect(document.body.textContent).not.toContain("Closed objective");
+  expect(document.body.textContent).toContain("Closed objective");
   expect(document.body.textContent).not.toContain("Foreign objective");
   await click(target === "issue" ? "MIN-12Target issue" : "Target objective");
 }
@@ -412,7 +414,9 @@ describe("creation relation controls", () => {
     await addRelation("blocked_by", "objective");
     const pill = host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)!;
     expect(pill).not.toBeNull();
-    expect(pill.compareDocumentPosition(host.querySelector("textarea")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The pills sit in the property row, between the assignee and the date.
+    expect(pill.compareDocumentPosition(host.querySelector("[data-field=assignee]")!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(pill.compareDocumentPosition(host.querySelector("[data-field=date]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await click(`${en.Common.remove}: ${en.Relations.blocked_by}: Target objective`);
     expect(host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)).toBeNull();
     await addRelation("blocks", "issue");
@@ -429,7 +433,9 @@ describe("creation relation controls", () => {
     const dialog = await mountDialog("issue");
     const relationButton = host.querySelector(`[aria-label="${en.Relations.addRelationAria}"]`)!;
     const smartFill = [...host.querySelectorAll("button")].find((button) => button.textContent === "Smart Fill")!;
-    expect(relationButton.closest("[data-picker]")!.nextElementSibling).toBe(smartFill);
+    expect(relationButton.compareDocumentPosition(host.querySelector("[data-field=assignee]")!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(relationButton.compareDocumentPosition(host.querySelector("[data-field=date]")!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(relationButton.compareDocumentPosition(smartFill) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await addRelation("related", "objective");
     // Smart Fill also links related issues after the save (MIN-717): the
     // picker leaves, the relation already chosen stays as a pill.
@@ -453,11 +459,23 @@ describe("creation relation controls", () => {
     expect(host.textContent).toContain("Target objective");
   });
 
+  it.each(["issue", "objective"] as const)("does not keep a closed %s form holding relations only", async (kind) => {
+    // Only a title, a description or an attachment make a draft.
+    if (kind === "issue") fixture.smartFillCreated = false;
+    const dialog = await mountDialog(kind);
+    await addRelation("related", "objective");
+    await click("Close creation");
+    await dialog.reopen();
+    expect(host.textContent).not.toContain("Target objective");
+    expect(fixture.save).not.toHaveBeenCalled();
+  });
+
   it.each(["issue", "objective"] as const)("keeps a closed %s form and saves it as a draft on demand", async (kind) => {
     // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
     if (kind === "issue") fixture.smartFillCreated = false;
     const dialog = await mountDialog(kind);
     await addRelation("related", "objective");
+    await typeTitle("Draft entity");
     // Closing asks nothing and keeps the form for the next opening (MIN-776).
     await click("Close creation");
     expect(fixture.save).not.toHaveBeenCalled();

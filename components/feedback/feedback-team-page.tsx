@@ -684,8 +684,13 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
   }, [toReviewCount, onlyToReview]);
 
-  const visiblePosts = useMemo(() => feedbackSelectionItems(posts, { state, sort, onlyToReview, properties }),
-    [posts, state, onlyToReview, sort, properties]);
+  // A search looks through every post, whatever the state, review and
+  // property filters: they narrow the resting list, the query finds anything.
+  const searching = query.trim() !== "";
+  const visiblePosts = useMemo(() => feedbackSelectionItems(posts, searching
+    ? { state: "all", sort }
+    : { state, sort, onlyToReview, properties }),
+  [posts, searching, state, onlyToReview, sort, properties]);
 
   /**
    * What the column DISPLAYS. One notch BELOW `visiblePosts`, which carries the
@@ -901,7 +906,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: listedPosts.length }),
+          placeholder: t("filterPlaceholder", { count: posts.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={

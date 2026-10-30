@@ -477,7 +477,14 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // stops carrying `pr` and the lens decides who belongs to the list.
   const pin = useMemo(() => ({ pr: prParam }), [prParam]);
   const active = useAllPullRequestsQuery("open", limit, pin);
-  const completed = useCompletedPullRequestsQuery(sections.has("completed"));
+  // A search looks through every section, whatever the checked ones: they
+  // narrow the resting list, the query finds anything — completed PRs too.
+  const searching = query.trim().length > 0;
+  const lensSections = useMemo<ReadonlySet<string>>(
+    () => (searching ? new Set(PULL_REQUEST_SECTIONS) : sections),
+    [searching, sections],
+  );
+  const completed = useCompletedPullRequestsQuery(lensSections.has("completed"));
   const { hasMore, repoCount, anyPr, loading, readFailed } = active;
   const fetching = active.fetching || completed.isFetching;
   const completedTruncated = completed.data?.pages.some((page) => page.truncated) ?? false;
@@ -530,7 +537,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   }, [setSections]);
   const refetch = () => {
     void active.refetch();
-    if (sections.has("completed")) void completed.refetch();
+    if (lensSections.has("completed")) void completed.refetch();
   };
 
   // Tracks param changes (client navigation to another PR).
@@ -634,8 +641,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * it loses the row, and only the detail may keep it (see `selectedId`).
    */
   const filtered = useMemo(
-    () => pullRequests.filter((pr) => sections.has(pullRequestSection(pr))),
-    [pullRequests, sections],
+    () => pullRequests.filter((pr) => lensSections.has(pullRequestSection(pr))),
+    [pullRequests, lensSections],
   );
 
   /**
@@ -791,12 +798,12 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   );
 
   const groups = useMemo(
-    () => groupPullRequestsBySection(visible, sections),
-    [visible, sections],
+    () => groupPullRequestsBySection(visible, lensSections),
+    [visible, lensSections],
   );
   // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
   // ask to see what fits, not to know where it is stored.
-  const filtering = query.trim().length > 0;
+  const filtering = searching;
 
   const readinessPrIds = useMemo(() => {
     const ids: string[] = [];
@@ -873,7 +880,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: visible.length }),
+          placeholder: t("filterPlaceholder", { count: pullRequests.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
