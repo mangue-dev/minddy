@@ -95,7 +95,12 @@ where `lib/theme-presets.test.ts` measures their contrast.
   become bottom sheets on phones; `ResponsivePopover` is a popover on desktop
   and a sheet on mobile; `DropdownMenu` submenus become inline accordions
   below 768px. Use plain `Popover` only for a surface that must stay anchored
-  on mobile.
+  on mobile. From 640px in the mobile layout (an unfolded phone, a tablet in
+  portrait, a phone in landscape), every bottom sheet floats: still anchored
+  at the bottom, with a width capped at 40rem, side gutters and four rounded
+  corners. Size a custom sheet with `--mobile-sheet-room`,
+  `--mobile-sheet-float` and `--mobile-sheet-safe-bottom`, never with the raw
+  viewport height or bottom inset.
 - **Touch.** Under a coarse pointer, controls get a 44px hit area through the
   helpers in `components/ui/touch-target.ts` without changing how they look.
   Rows use `COARSE_ROW`. Hover effects belong to a fine pointer: `hover:`
@@ -104,8 +109,10 @@ where `lib/theme-presets.test.ts` measures their contrast.
   affordances must also be reachable on touch: add `touch:opacity-100` to an
   `opacity-0 group-hover:opacity-100` control, or move it into a menu.
 - **Safe areas and the mobile nav.** Respect the device insets the shell
-  already pads, and keep fixed content above the mobile nav with
-  `--mobile-nav-clearance` or `.dock-above-nav`.
+  already pads on all four edges, including the side insets of landscape, and
+  keep fixed content above the mobile nav with `--mobile-nav-clearance` or
+  `.dock-above-nav`. Under a coarse pointer every text field and editable host
+  is at least 16px, or iOS zooms in on focus.
 
 ## Components
 
