@@ -10,7 +10,15 @@
 // This module is intentionally pure so every mention surface can share and
 // test the same decision without mounting React.
 
-import { issueHref, objectiveHref, pagePath, projectPath } from "./app-urls";
+import {
+  issueHref,
+  objectiveHref,
+  pagePath,
+  projectPath,
+  pullRequestHref,
+  routineHref,
+  withQuery,
+} from "./app-urls";
 
 /** What a mention can designate (see components/mention-chip.tsx). */
 export type MentionTargetType =
@@ -23,7 +31,22 @@ export type MentionTargetType =
   | "page"
   /** An attachment (MIN-742): its destination is the resource itself,
       resolved by the surface that holds it, never a route. */
-  | "resource";
+  | "resource"
+  // MIN-872.
+  | "pull_request"
+  | "routine"
+  /** The task notebook opens in place, it has no route. */
+  | "scratchpad"
+  | "cycle"
+  | "skill"
+  | "mcp"
+  /** A date opens its own editor in an editor, and leads nowhere else. */
+  | "date";
+
+/** The global board on its cycle view: a cycle has no screen of its own. */
+export const CYCLE_VIEW_PATH = withQuery("/all", { view: "cycle" });
+/** The account settings card listing connected MCP servers. */
+export const MCP_SETTINGS_PATH = withQuery("/settings", { tab: "agent", section: "account-mcp-clients" });
 
 /**
  * The path opened by a mention, or `null` when it leads nowhere.
@@ -41,8 +64,12 @@ export function mentionTargetPath(
   projectId?: string | null,
 ): string | null {
   // A project designates itself: its id IS that of its destination, it
-  // there is nothing to resolve.
+  // there is nothing to resolve. So do the account-wide targets.
   if (type === "project") return id ? projectPath(id) : null;
+  if (type === "pull_request") return id ? pullRequestHref(id) : null;
+  if (type === "routine") return id ? routineHref(id) : null;
+  if (type === "cycle") return CYCLE_VIEW_PATH;
+  if (type === "mcp") return MCP_SETTINGS_PATH;
   if (!id || !projectId) return null;
   switch (type) {
     case "issue":
@@ -52,8 +79,9 @@ export function mentionTargetPath(
     case "page":
       return pagePath(projectId, id);
     default:
-      // member, numo, forge: no one has a screen to open. A resource opens
-      // from its surface (lib/use-resource-mentions.ts), not from a route.
+      // member, numo, forge, skill: no one has a screen to open. A resource
+      // opens from its surface (lib/use-resource-mentions.ts), the notebook
+      // in place, and a date in its editor: none from a route.
       return null;
   }
 }

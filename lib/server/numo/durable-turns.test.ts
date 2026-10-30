@@ -171,6 +171,14 @@ vi.mock("@/lib/managed-services", () => ({
   isManagedAiEnabled: () => h.managedAi,
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
+// A typed mention reaches the model named for the conversation's user.
+vi.mock("@/lib/server/mention-access", async () => {
+  const { relabelMentions } = await import("@/lib/mention-link");
+  return {
+    markdownForReader: async (userId: string, markdown: string) =>
+      relabelMentions(markdown, (link) => `${link.type} seen by ${userId}`),
+  };
+});
 vi.mock("@/lib/server/ai-runtime", () => ({ resolveAiRuntime: vi.fn() }));
 const adminGate = vi.hoisted(() => ({ live: vi.fn() }));
 vi.mock("@/lib/server/assistant/admin-tools", () => ({
@@ -276,6 +284,13 @@ describe("durable Numo execution", () => {
     expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_help"]);
     expect(context).toMatchObject({ documentationHelp: true, userId: h.turn.user_id });
     expect(resolveAiRuntime).toHaveBeenCalledWith(expect.objectContaining({ managedOnly: true }));
+  });
+  it("names a message's typed mentions for its user in what the model reads (MIN-872)", async () => {
+    h.messages[0] = { ...h.messages[0], content: "Review [@](mention:issue/i1) today" };
+    await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
+    const [messages] = h.processChat.mock.calls[0];
+    const user = messages.find((message: { role: string }) => message.role === "user");
+    expect(user.content).toBe(`Review [@issue seen by ${h.turn!.user_id}](mention:issue/i1) today`);
   });
   it("offers the admin tools only while the recorded admin session is live (MIN-829)", async () => {
     const adminSession = { sessionId: "51600000-0000-4000-8000-000000000009", aal: "aal2", amr: [] };

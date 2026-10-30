@@ -44,6 +44,14 @@ import { projectOrbBaseColor } from "@/lib/project-orb-colors";
 import { UserAvatar } from "@/components/user-avatar";
 import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
 import { StatusIndicator } from "@/components/issue-indicators";
+import {
+  CYCLE_ICON,
+  DATE_ICON,
+  MCP_ICON,
+  PULL_REQUEST_ICON,
+  ROUTINE_ICON,
+  SCRATCHPAD_ICON,
+} from "@/components/feature-icons";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import type { IssueStatus } from "@/lib/issue-constants";
 
@@ -65,6 +73,13 @@ export type MentionChipType =
   | "skill"
   /** An attachment of the surface the text belongs to (MIN-742). */
   | "resource"
+  // MIN-872.
+  | "pull_request"
+  | "routine"
+  | "scratchpad"
+  | "cycle"
+  | "mcp"
+  | "date"
   /** A mention whose target the reader may not see (MIN-734): no name, no
    figure of its own, no link — the label is the neutral one it is given. */
   | "unavailable";
@@ -182,6 +197,8 @@ function MentionChipBody({
         <HugeiconsIcon icon={Layers01Icon} className="size-full" aria-hidden />
       ) : type === "resource" ? (
         <HugeiconsIcon icon={AttachmentIcon} className="size-full" aria-hidden />
+      ) : type in FEATURE_GLYPHS ? (
+        <HugeiconsIcon icon={FEATURE_GLYPHS[type as keyof typeof FEATURE_GLYPHS]} className="size-full" aria-hidden />
       ) : type === "page" ? (
         // The EMOJI of the page takes the place of the glyph when it has one:
         // it's her own face, and she wears her own colors.
@@ -282,6 +299,16 @@ function MentionChipBody({
   );
 }
 
+/** The bare glyph of a feature target: the one its sidebar entry shows. */
+const FEATURE_GLYPHS = {
+  pull_request: PULL_REQUEST_ICON,
+  routine: ROUTINE_ICON,
+  scratchpad: SCRATCHPAD_ICON,
+  cycle: CYCLE_ICON,
+  mcp: MCP_ICON,
+  date: DATE_ICON,
+} as const;
+
 /* ── The hue ────────────────────────────── ─────────────────────────────── */
 
 /**
@@ -317,6 +344,16 @@ function mentionTone(
       return "var(--color-emerald-500)";
     case "resource":
       return "var(--color-sky-600)";
+    case "pull_request":
+      return "var(--color-violet-600)";
+    case "routine":
+    case "mcp":
+      return "var(--color-amber-600)";
+    case "scratchpad":
+    case "cycle":
+      return "var(--color-teal-600)";
+    case "date":
+      return "var(--color-rose-600)";
     case "unavailable":
       return "var(--muted-foreground)";
     case "objective":

@@ -56,7 +56,20 @@ export function stepSuggestion(current: number, count: number, direction: "up" |
 }
 
 /** The section of a mention list, by the type of what it cites. */
-export type MentionSectionId = "people" | "projects" | "issues" | "objectives" | "pages" | "resources" | "semantic";
+export type MentionSectionId =
+  | "people"
+  | "projects"
+  | "issues"
+  | "objectives"
+  | "pages"
+  | "resources"
+  | "dates"
+  | "pullRequests"
+  | "routines"
+  | "skills"
+  | "mcp"
+  | "planning"
+  | "semantic";
 
 /** Numo, members and forge accounts are all people one can cite; issues
     found by meaning keep their own "Related by meaning" section. */
@@ -77,6 +90,20 @@ export function mentionSection(option: { type: string; semantic?: boolean }): Me
       return "pages";
     case "resource":
       return "resources";
+    case "date":
+      return "dates";
+    case "pull_request":
+      return "pullRequests";
+    case "routine":
+      return "routines";
+    case "skill":
+      return "skills";
+    case "mcp":
+      return "mcp";
+    // The notebook and the cycles: where one plans one's own work.
+    case "scratchpad":
+    case "cycle":
+      return "planning";
     default:
       return null;
   }

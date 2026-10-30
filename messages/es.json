@@ -1456,6 +1456,11 @@
   },
   "Common": {
     "mentionUnavailable": "No disponible",
+    "mentionScratchpad": "Cuaderno de tareas",
+    "mentionCycle": "Ciclo",
+    "mentionCurrentCycle": "Ciclo actual",
+    "mentionUpcomingCycle": "Próximo ciclo",
+    "mentionDateEdit": "Cambiar la fecha",
     "cancel": "Cancelar",
     "readSessionEnded": "Tu sesión ha terminado. Vuelve a iniciar sesión para continuar.",
     "readSecondFactor": "Confirma tu autenticación de dos factores para continuar.",
@@ -2670,7 +2675,14 @@
     "mentionSectionIssues": "Incidencias",
     "mentionSectionObjectives": "Objetivos",
     "mentionSectionPages": "Páginas",
-    "mentionSectionResources": "Recursos"
+    "mentionSectionResources": "Recursos",
+    "mentionSectionDates": "Fechas",
+    "mentionPickDate": "Elegir una fecha…",
+    "mentionSectionPullRequests": "Pull requests",
+    "mentionSectionRoutines": "Rutinas",
+    "mentionSectionSkills": "Skills",
+    "mentionSectionMcp": "Servidores MCP",
+    "mentionSectionPlanning": "Planificación"
   },
   "Plan": {
     "tabDescription": "Descripción",

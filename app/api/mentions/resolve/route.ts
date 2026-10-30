@@ -18,8 +18,8 @@ const RESOLVES_PER_MINUTE = 600;
 
 /**
  * POST /api/mentions/resolve — what the signed-in reader may see of the
- * mentions a text makes (MIN-734). Body: `{ refs: [{ type, id }] }`, at most
- * 200. Answer: `{ mentions: [{ type, id, label, status? }] }`, where `label`
+ * mentions a text makes (MIN-734). Body: `{ refs: [{ type, id, meta? }] }`,
+ * at most 200; `meta.project` names a skill's project (MIN-872). Answer: `{ mentions: [{ type, id, label, status? }] }`, where `label`
  * is the target's current label, or `null` when it is unknown, deleted or not
  * the reader's to see — the three are indistinguishable on purpose. An
  * objective the reader may see also carries its `status`. See
@@ -44,11 +44,13 @@ export async function POST(request: NextRequest) {
   }
   const refs: MentionRef[] = [];
   for (const item of raw) {
-    const { type, id } = (item ?? {}) as { type?: unknown; id?: unknown };
-    if (!isMentionLinkType(type) || typeof id !== "string" || id.length > 64) {
+    const { type, id, meta } = (item ?? {}) as { type?: unknown; id?: unknown; meta?: unknown };
+    const project = (meta as { project?: unknown } | null | undefined)?.project;
+    if (!isMentionLinkType(type) || typeof id !== "string" || id.length > 64 ||
+        (project !== undefined && (typeof project !== "string" || project.length > 64))) {
       return NextResponse.json({ error: "Invalid mentions" }, { status: 400, headers: NO_STORE });
     }
-    refs.push({ type, id });
+    refs.push(typeof project === "string" ? { type, id, meta: { project } } : { type, id });
   }
   const statuses = new Map<string, ObjectiveStatus>();
   const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses);

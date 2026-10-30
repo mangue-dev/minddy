@@ -23,6 +23,8 @@ import { parseSelfHostingHelpContext } from "@/lib/self-hosting-help-context";
 import { normalizeSelectionText } from "@/lib/assistant-selection";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
+import { mentionPlainText } from "@/lib/mention-link";
+import { markdownForReader } from "@/lib/server/mention-access";
 import { encodeConversationTitle, shouldProtectConversationTitle } from
   "@/lib/server/numo/conversation-title-content";
 import { newRunId } from "@/lib/server/ai-usage";
@@ -529,10 +531,13 @@ export async function POST(request: NextRequest) {
   // guarantees that it succeeds without delaying the first token of the response.
   let titleDone: Promise<void> | null = null;
   const titleController = new AbortController();
+  // A title is read as text: each typed mention (MIN-872) as the name its
+  // user sees, never the raw link.
+  const titleText = mentionPlainText(await markdownForReader(user.id, sanitizedUserMessage));
   let pendingTitle: { conversationId: string; fallback: string } | null = null;
   if (!convId) {
     const reservedConversationId = newConversationId ?? randomUUID();
-    const title = fallbackShortTitle(sanitizedUserMessage);
+    const title = fallbackShortTitle(titleText);
     const storedTitle = await shouldProtectConversationTitle(service)
       ? await encodeConversationTitle(user.id, reservedConversationId, title)
       : title;
@@ -616,7 +621,7 @@ export async function POST(request: NextRequest) {
     const { conversationId: titleConversationId, fallback } = pendingTitle;
     titleDone = generateShortTitle({
       signal: titleController.signal,
-      text: sanitizedUserMessage,
+      text: titleText,
       kind: "conversation",
       locale,
       usage: {

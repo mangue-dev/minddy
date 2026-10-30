@@ -13,6 +13,20 @@ export const MCP_DISCOVERY_INSTRUCTIONS =
   "complete usage guide is available at /llms-full.txt.";
 
 /**
+ * How an agent cites what it writes about (MIN-872), appended to every
+ * Markdown field it writes and to the usage guide. The app renders each typed
+ * mention as a live pill; minddy stores the reference without its label and
+ * shows each reader the target's current name.
+ */
+export const MCP_MENTIONS_IN_MARKDOWN =
+  " Cite each record you name as a typed mention '[@Label](mention:<type>/<id>)': type issue, " +
+  "objective, project, page, member (their user_id), pull_request, routine, cycle, mcp (a " +
+  "connection) or skill ('mention:skill/<folder of its SKILL.md>?project=<project_id>'); the " +
+  "notebook is '[@Task notebook](mention:scratchpad/notebook)', and a specific day is " +
+  "'[@](mention:date/YYYY-MM-DD)' ('?time=HH:MM' for a time, '&end=YYYY-MM-DD' for a range). " +
+  "Never invent an id: leave what you did not resolve as plain text.";
+
+/**
  * Complete operating guide rendered by `/llms-full.txt`.
  *
  * Keep this separate from initialization metadata: it is intentionally detailed and
@@ -203,6 +217,12 @@ export const MCP_FULL_USAGE_GUIDE =
       "Typed nested AND/OR filters can wait for later edits; status exit cancels the waiting item. Pausing or editing invalidates waiting items and activation listens to future events. Numo uses Minddy tools, " +
       "so a repository is optional; the occurrence " +
       "can pause visibly when owner input is required. " +
+      "MENTIONS. Every Markdown you write (descriptions, plans, comments, pages, the " +
+      "scratchpad) can cite records as typed mentions, which the app shows as live pills " +
+      "with each reader's current name — or 'unavailable' to someone who may not see " +
+      "the target — and a mentioned member is notified, so mention a member only in a " +
+      "text meant for them. Mentions you read come labeled for you; the label you write " +
+      "is never stored." + MCP_MENTIONS_IN_MARKDOWN + " " +
       "Start with minddy_list_projects to discover project ids.";
 
 /**

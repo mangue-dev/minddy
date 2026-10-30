@@ -1,15 +1,22 @@
 import type { MentionOption } from "@/components/mention-suggest";
+import { isMentionLinkType, mentionMetaToAttr } from "@/lib/mention-link";
 import { memberLabel, type ScannedMention } from "@/lib/mention-scan";
 
 /** Stable id of the pseudo-entity Numo in mention lists and editor nodes. */
 export const NUMO_MENTION_ID = "__numo__";
 
-/** Editor-node attributes for an option selected from a mention menu. */
+/**
+ * Editor-node attributes for an option selected from a mention menu. A typed
+ * mention stores no label (MIN-872): its pill resolves the current one.
+ * Numo and forge logins are their text, and keep it.
+ */
 export function mentionAttrsFromOption(option: MentionOption) {
+  const typed = isMentionLinkType(option.type);
   return {
     mentionType: option.type,
     mentionId: option.id,
-    mentionLabel: option.label,
+    mentionLabel: typed ? "" : option.label,
+    meta: typed ? mentionMetaToAttr(option.meta) : null,
     seed: option.avatarSeed ?? null,
     color: option.color ?? null,
     icon: option.iconUrl ?? option.icon ?? null,

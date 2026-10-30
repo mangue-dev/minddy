@@ -9,7 +9,7 @@ import { PageEditor, type PageEditorMentions } from "@/components/pages/page-edi
 
 // One stable translator that returns its key, as in page-editor-mentions.test.
 const translate = vi.hoisted(() => (key: string) => key);
-vi.mock("next-intl", () => ({ useTranslations: () => translate }));
+vi.mock("next-intl", () => ({ useTranslations: () => translate, useLocale: () => "en" }));
 vi.mock("@/components/pages/block-gutter", () => ({ BlockGutter: () => null }));
 vi.mock("@/components/pages/page-comment-bubble", () => ({ PageCommentBubble: () => null }));
 vi.mock("@/components/markdown-link-menu", () => ({ MarkdownLinkMenu: () => null }));

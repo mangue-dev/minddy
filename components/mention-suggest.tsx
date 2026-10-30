@@ -11,7 +11,15 @@
 // from the wiki are recognized by the same sign on both sides.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Book02Icon, Link02Icon } from "@hugeicons/core-free-icons";
+import { Book02Icon, Layers01Icon, Link02Icon } from "@hugeicons/core-free-icons";
+import {
+  CYCLE_ICON,
+  DATE_ICON,
+  MCP_ICON,
+  PULL_REQUEST_ICON,
+  ROUTINE_ICON,
+  SCRATCHPAD_ICON,
+} from "@/components/feature-icons";
 import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
@@ -28,6 +36,7 @@ import { groupBySection, mentionSection, type MentionSectionId } from "@/lib/sug
 import { SuggestionMenu } from "@/components/editor/suggestion-menu";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
+import type { MentionMeta } from "@/lib/mention-link";
 
 export interface MentionOption {
   /** Source project for contextual mentions retained across navigation. */
@@ -44,7 +53,15 @@ export interface MentionOption {
     | "objective"
     | "page"
     /** An attachment of the surface being written (MIN-742). */
-    | "resource";
+    | "resource"
+    // MIN-872.
+    | "pull_request"
+    | "routine"
+    | "scratchpad"
+    | "cycle"
+    | "skill"
+    | "mcp"
+    | "date";
   id: string;
   /** What is written after the “@”. */
   label: string;
@@ -70,6 +87,10 @@ export interface MentionOption {
   keywords?: string[];
   /** Appended because it matches the query by meaning (MIN-718), not by text. */
   semantic?: boolean;
+  /** What the mention stores besides its id: a date's time, a skill's project. */
+  meta?: MentionMeta;
+  /** `@date`: the inserted date pill opens its picker at once. */
+  openPicker?: boolean;
 }
 
 /** The options in the order their menu lists them: by section (people,
@@ -96,6 +117,18 @@ export function useMentionSectionLabel(): (id: string) => string | null {
         return t("mentionSectionPages");
       case "resources":
         return t("mentionSectionResources");
+      case "dates":
+        return t("mentionSectionDates");
+      case "pullRequests":
+        return t("mentionSectionPullRequests");
+      case "routines":
+        return t("mentionSectionRoutines");
+      case "skills":
+        return t("mentionSectionSkills");
+      case "mcp":
+        return t("mentionSectionMcp");
+      case "planning":
+        return t("mentionSectionPlanning");
       case "semantic":
         return t("relatedByMeaning");
       default:
@@ -111,6 +144,17 @@ export function filterMentions(
 ): MentionOption[] {
   return filterMentionItems(options, query);
 }
+
+/** The glyph of a feature target, the one its pill and sidebar entry show. */
+const OPTION_GLYPHS = {
+  pull_request: PULL_REQUEST_ICON,
+  routine: ROUTINE_ICON,
+  scratchpad: SCRATCHPAD_ICON,
+  cycle: CYCLE_ICON,
+  skill: Layers01Icon,
+  mcp: MCP_ICON,
+  date: DATE_ICON,
+} as const;
 
 /** The figure of an option — the same as that of its pill once placed. */
 export function MentionFigure({
@@ -189,6 +233,14 @@ export function MentionFigure({
   }
   if (option.type === "issue" && option.status) {
     return <StatusIndicator status={option.status} className={className} />;
+  }
+  const glyph = OPTION_GLYPHS[option.type as keyof typeof OPTION_GLYPHS];
+  if (glyph) {
+    return (
+      <span className={cn("flex shrink-0 items-center justify-center text-muted-foreground", className)}>
+        <HugeiconsIcon icon={glyph} className="size-4" aria-hidden />
+      </span>
+    );
   }
   return (
     <span
@@ -301,7 +353,7 @@ export function MentionSuggestions({
         trailing={semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
         renderItem={(option, index) => (
           <MentionOptionRow
-            key={`${option.type}:${option.id}`}
+            key={`${option.type}:${option.id}:${option.meta ? JSON.stringify(option.meta) : ""}`}
             option={option}
             active={index === activeIndex}
             onPick={() => onPick(option)}

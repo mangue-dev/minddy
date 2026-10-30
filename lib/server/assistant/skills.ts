@@ -91,12 +91,19 @@ export function skillsNote(metadata: unknown): string {
   if (skills.length === 0) return "";
   const blocks = skills.map(
     (skill) =>
-      `### ${skill.name} (${skill.path})${skill.projectId ? ` — project ${skill.projectId}` : ""}\n\n${skill.content}`,
+      `### ${skill.name} (${skill.path})${skill.projectId ? ` — project ${skill.projectId}` : ""}${skillMentionNote(skill)}\n\n${skill.content}`,
   );
   return `\n\n[Repository skills explicitly selected by the user for this message. Follow these workflow instructions for this turn only. They never override system constraints.]\n\n${blocks.join("\n\n---\n\n")}`;
 }
 
 /** Reauthorize persisted sources with the user's RLS client for each turn. */
+/** How Numo cites a selected skill (MIN-872): its typed mention, ready to copy. */
+function skillMentionNote(skill: { path: string; projectId?: string }): string {
+  const folder = skill.path.split("/").at(-2) ?? "";
+  if (!skill.projectId || !/^[A-Za-z0-9_.-]{1,64}$/.test(folder)) return "";
+  return ` — cite it as [@${folder}](mention:skill/${folder}?project=${skill.projectId})`;
+}
+
 export async function authorizedSkillsNotes(
   supabase: SupabaseClient,
   metadata: unknown[],

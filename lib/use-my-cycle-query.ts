@@ -10,11 +10,15 @@ import type { CycleInfo } from "./types";
     on any `cycles` row change (user topic). */
 export const MY_CYCLE_KEY = ["me", "cycle"] as const;
 
+const NO_CYCLES: CycleInfo[] = [];
+
 interface MyCycleResponse {
   enabled: boolean;
   current: CycleInfo | null;
   /** The first upcoming window — null when none is created ahead. */
   next: CycleInfo | null;
+  /** Every upcoming window created ahead, per the reader's settings. */
+  upcoming?: CycleInfo[];
 }
 
 async function fetchMyCycleApi(): Promise<MyCycleResponse> {
@@ -31,7 +35,7 @@ async function fetchMyCycleApi(): Promise<MyCycleResponse> {
       (data as { error?: string } | null)?.error || text.trim() || "Request failed";
     throw new Error(message);
   }
-  return (data ?? { enabled: false, current: null, next: null }) as MyCycleResponse;
+  return (data ?? { enabled: false, current: null, next: null, upcoming: [] }) as MyCycleResponse;
 }
 
 /**
@@ -58,5 +62,6 @@ export function useMyCycleQuery() {
     cyclesEnabled: enabled && data?.enabled === true,
     currentCycle: data?.current ?? null,
     nextCycle: data?.next ?? null,
+    upcomingCycles: data?.upcoming ?? NO_CYCLES,
   };
 }

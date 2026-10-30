@@ -1,52 +1,26 @@
 // A routine instruction in the shared document editor (ticket descriptions,
 // plans, pages).
 //
-// The instruction is stored as the text an agent reads: Markdown with
-// "@Label" for a mention and "$name" for a repository skill. The mentions'
-// identities travel next to the text (`AssistantMention`), each with its
-// occurrence among the tokens of the same label, so "@Alice" and a second,
-// different "@Alice" keep their own ids. The editor's Markdown carries
-// mentions as typed links instead: `promptToMarkdown` and
-// `promptFromMarkdown` convert between the two.
+// Since MIN-872 the instruction is stored as the editor's Markdown, with
+// typed mention links like every other text of the app (`promptFromMarkdown`).
+// An instruction saved before stored "@Label" tokens with their identities
+// beside the text (`AssistantMention`, with each token's occurrence) and
+// "$name" for a repository skill: `promptToMarkdown` reads it back as typed
+// pills, and its next save stores the new form.
 
 import type { AssistantMention } from "@/lib/assistant-types";
 import { splitAssistantMentionTokens } from "@/lib/agent-mentions";
-import {
-  escapeMentionLabel,
-  MENTION_TOKEN_END_PATTERN,
-  MENTION_TOKEN_START_PATTERN,
-} from "@/lib/mention-token";
-import { isMentionLinkType, mentionMarkdown, splitMentionLinks } from "@/lib/mention-link";
+import { mentionMarkdown, withoutMentionLabels } from "@/lib/mention-link";
 
-/**
- * Each pill's occurrence among the "@Label" tokens of its label in `text`,
- * the way the server resolves them (lib/agent-mentions.ts).
- */
-function withOccurrences(
-  text: string,
-  pills: ReadonlyArray<{ offset: number; mention: AssistantMention }>,
-): AssistantMention[] {
-  const occurrences = new Map<string, number>();
-  const labels = [...new Set(pills.map(({ mention }) => mention.label))]
-    .sort((a, b) => b.length - a.length);
-  if (labels.length > 0) {
-    const expression = new RegExp(
-      `${MENTION_TOKEN_START_PATTERN}@(${labels.map(escapeMentionLabel).join("|")})${MENTION_TOKEN_END_PATTERN}`,
-      "gu",
-    );
-    const next = new Map<string, number>();
-    let match: RegExpExecArray | null;
-    while ((match = expression.exec(text)) !== null) {
-      const count = next.get(match[1]) ?? 0;
-      occurrences.set(`${match.index}\0${match[1]}`, count);
-      next.set(match[1], count + 1);
-    }
-  }
-  return pills.map(({ offset, mention }) => {
-    const occurrence = occurrences.get(`${offset}\0${mention.label}`);
-    return occurrence === undefined ? mention : { ...mention, occurrence };
-  });
+/** A repository skill as the instruction names it: `$name`. */
+export interface PromptSkill {
+  /** The mention id: the skill's folder. */
+  id: string;
+  name: string;
 }
+
+/** `$name`, at the start of the text or after a space, up to a space. */
+const SKILL_TOKEN = /(^|[\s(])\$([A-Za-z0-9_.-]{1,64})(?=$|[\s.,;:!?)])/g;
 
 /**
  * The instruction as the shared document editor holds it (ticket
@@ -54,38 +28,32 @@ function withOccurrences(
  * link. The instruction already is Markdown for the agent; only its mentions
  * change form.
  */
-export function promptToMarkdown(text: string, mentions: readonly AssistantMention[]): string {
+export function promptToMarkdown(
+  text: string,
+  mentions: readonly AssistantMention[],
+  skills: { projectId: string; skills: readonly PromptSkill[] } | null = null,
+): string {
+  const byName = new Map((skills?.skills ?? []).flatMap((skill) => [[skill.name, skill], [skill.id, skill]] as const));
+  // A "$name" the project's repository knows reads back as its skill pill.
+  const withSkills = (plain: string) => skills && byName.size
+    ? plain.replace(SKILL_TOKEN, (whole, before: string, name: string) => {
+        const skill = byName.get(name);
+        return skill ? `${before}${mentionMarkdown("skill", skill.id, "", { project: skills.projectId })}` : whole;
+      })
+    : plain;
   return splitAssistantMentionTokens(text, mentions)
     .map((segment) => segment.mention !== undefined
       ? mentionMarkdown(segment.mention.type, segment.mention.id, segment.mention.label)
-      : segment.text)
+      : withSkills(segment.text))
     .join("");
 }
 
 /**
- * The stored form of the document editor's Markdown: "@Label" for each typed
- * mention, with its identity and occurrence. A mention kept from `previous`
- * keeps the display details saved with it (portrait, color, status).
+ * The stored form of the document editor's Markdown (MIN-872): the Markdown
+ * itself, every typed mention a link without a label, as in any other text
+ * of the app. Numo reads it named for the routine's owner when it runs
+ * (lib/server/numo/turns.ts). No identities travel beside it any more.
  */
-export function promptFromMarkdown(
-  markdown: string,
-  previous: readonly AssistantMention[] = [],
-): { text: string; mentions: AssistantMention[] } {
-  const pills: Array<{ offset: number; mention: AssistantMention }> = [];
-  let text = "";
-  for (const piece of splitMentionLinks(markdown)) {
-    if (typeof piece === "string") {
-      text += piece;
-      continue;
-    }
-    const token = `@${piece.label}`;
-    // An attachment is not an entity a routine run carries: its label stays text.
-    if (isMentionLinkType(piece.type) && piece.type !== "resource") {
-      const saved = previous.find((mention) => mention.type === piece.type && mention.id === piece.id);
-      const { occurrence: _occurrence, ...details } = saved ?? { type: piece.type, id: piece.id, label: piece.label };
-      pills.push({ offset: text.length, mention: { ...details, type: piece.type, id: piece.id, label: piece.label } });
-    }
-    text += token;
-  }
-  return { text, mentions: withOccurrences(text, pills) };
+export function promptFromMarkdown(markdown: string): { text: string; mentions: AssistantMention[] } {
+  return { text: withoutMentionLabels(markdown), mentions: [] };
 }

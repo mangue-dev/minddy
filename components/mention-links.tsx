@@ -12,6 +12,7 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import type { MentionTargetType } from "@/lib/mention-target";
+import type { MentionMeta } from "@/lib/mention-link";
 import type { IssueStatus } from "@/lib/issue-constants";
 import {
   OBJECTIVE_STATUS_MAP,
@@ -44,7 +45,9 @@ export interface MentionLinks {
    * `null` when they do not: the pill then asks the server, which answers
    * only for what the reader may see.
    */
-  label?: (type: MentionTargetType, id: string) => string | null;
+  label?: (type: MentionTargetType, id: string, meta?: MentionMeta) => string | null;
+  /** A second line for a pill's tooltip: a skill's description. */
+  detail?: (type: MentionTargetType, id: string, meta?: MentionMeta) => string | null;
 }
 
 const Context = createContext<MentionLinks | null>(null);

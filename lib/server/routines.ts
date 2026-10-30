@@ -1,4 +1,6 @@
 import "server-only";
+import { mentionPlainText } from "@/lib/mention-link";
+import { markdownForReader } from "@/lib/server/mention-access";
 
 import { RoutineTriggerError, type RoutineTrigger } from "@/lib/routine-triggers";
 import { validateRoutineTrigger } from "@/lib/server/routine-trigger-validation";
@@ -211,8 +213,10 @@ function toSchedule(input: {
  * cut off. An untitled routine has no readable line in the column.
  */
 async function titleFor(prompt: string, userId: string, projectId: string): Promise<string> {
+  // Typed mentions (MIN-872) read as the names their author sees.
+  const text = mentionPlainText(await markdownForReader(userId, prompt));
   const generated = await generateShortTitle({
-    text: prompt,
+    text,
     kind: "note",
     // The language of the title is that of the instruction, without having to
     // know here — this is the person who wrote it.
@@ -220,8 +224,8 @@ async function titleFor(prompt: string, userId: string, projectId: string): Prom
     usage: { feature: "routine_code", userId, projectId },
   }).catch(() => null);
   if (generated?.trim()) return generated.trim().slice(0, MAX_TITLE_LENGTH);
-  const first = prompt.trim().split(/[.\n!?]/)[0]?.trim() ?? "";
-  return (first || prompt.trim()).slice(0, MAX_TITLE_LENGTH);
+  const first = text.trim().split(/[.\n!?]/)[0]?.trim() ?? "";
+  return (first || text.trim()).slice(0, MAX_TITLE_LENGTH);
 }
 
 /** Translates a cadence refusal into a factory result. */

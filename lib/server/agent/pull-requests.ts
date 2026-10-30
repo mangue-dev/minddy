@@ -236,6 +236,37 @@ export async function findPullRequest(
 }
 
 /**
+ * Pull requests by id, each with the projects that link its repository: the
+ * projects through which a reader may see it (`pull_requests_select`). Read
+ * in service key for a mention's resolution, which applies that access.
+ */
+export async function findPullRequestsWithProjects(
+  ids: readonly string[],
+  service: SupabaseClient = getServiceClient(),
+): Promise<Array<{ pullRequest: PullRequestRow; projectIds: string[] }>> {
+  if (ids.length === 0) return [];
+  const { data, error } = await service.from("pull_requests").select(PR_COLUMNS).in("id", [...ids]);
+  if (error) throw new Error("Unable to read pull requests");
+  const rows = (data ?? []) as unknown as PullRequestRow[];
+  const repoKey = (provider: string, name: string) => `${provider}\0${name}`;
+  const links = new Map<string, string[]>();
+  const names = [...new Set(rows.map((row) => row.repo_full_name))];
+  if (names.length) {
+    const { data: linked, error: linkError } = await service.from("project_git_links")
+      .select("project_id, provider, repo_full_name").in("repo_full_name", names);
+    if (linkError) throw new Error("Unable to read repository links");
+    for (const link of (linked ?? []) as Array<{ project_id: string; provider: string; repo_full_name: string }>) {
+      const key = repoKey(link.provider, link.repo_full_name);
+      links.set(key, [...(links.get(key) ?? []), link.project_id]);
+    }
+  }
+  return Promise.all(rows.map(async (row) => ({
+    projectIds: links.get(repoKey(row.provider, row.repo_full_name)) ?? [],
+    pullRequest: await decodeStoredPr(row),
+  })));
+}
+
+/**
  * Pull requests whose id a URL short code prefixes (lib/app-urls.ts). Read in
  * service key: the caller keeps only those its user may see.
  */

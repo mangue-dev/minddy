@@ -1,5 +1,6 @@
 import { withRoutineCause } from "@/lib/server/supabase-fetch";
 import "server-only";
+import { markdownForReader } from "@/lib/server/mention-access";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -550,7 +551,12 @@ async function buildExecutionInput(input: {
       || (message.role === "tool" && recoveringToolCallIds.has(message.tool_call_id ?? ""))
     );
     if (recoveringPendingMessage) continue;
-    const sanitized = sanitizeAssistantMessageContent(message.content)
+    // A typed mention (MIN-872) reaches the model named as the conversation's
+    // user may see it: the current label, or "unavailable".
+    const text = sanitizeAssistantMessageContent(message.content);
+    const sanitized = (message.role === "user" && text.includes("](mention:")
+      ? await markdownForReader(turn.user_id, text)
+      : text)
       + (message.role === "user"
         ? mentionsNote(message.metadata) + commandNote(message.metadata) + historySkillNotes[index]
           + (message.context

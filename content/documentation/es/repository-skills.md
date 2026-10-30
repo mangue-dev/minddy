@@ -79,7 +79,7 @@ Haz commit y push de los archivos a la rama predeterminada del repositorio GitHu
 
 ## Seleccionar y comprobar {#selection}
 
-Usa `/`, `$` o el menú `+` y revisa la vista previa antes de enviar. Puedes seleccionar hasta cinco skills; las insignias verdes muestran la selección. `$` incluye solo skills del repositorio y `/` también otros comandos. En la instrucción de una rutina, escribe `$` para insertar una skill; `/` abre el menú de bloques del editor.
+Usa `/`, `@` o el menú `+` y revisa la vista previa antes de enviar. Puedes seleccionar hasta cinco skills; las insignias verdes muestran la selección. `@` muestra las skills en **Skills**, entre lo que puedes mencionar, y `/` también otros comandos. En la instrucción de una rutina, escribe `@` y elige una skill en **Skills**: queda como una mención de skill en la instrucción, y Numo la lee por su nombre. `/` abre el menú de bloques del editor. Una skill se puede mencionar en cualquier texto de su proyecto, como la descripción de una incidencia o una página, y en ningún otro lugar.
 
 La selección se aplica a ese turno del usuario. En rutinas se aplica a cada ejecución. Son archivos del repositorio, no instalaciones globales de cuenta, y no sustituyen instrucciones de sistema o seguridad. Para crear o editar una, cambia los archivos del repositorio tú mismo o con tu propio agente de código. Haz push antes de seleccionar la nueva versión.
 

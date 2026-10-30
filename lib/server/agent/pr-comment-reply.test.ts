@@ -38,6 +38,14 @@ vi.mock("./pr-actions", () => ({
   createPrCommentResponse: mocks.createPrCommentResponse,
 }));
 vi.mock("./pr-comment-sync", () => ({ syncPrCommentToIssues: mocks.syncPrCommentToIssues }));
+// The author sees each mention under its current name.
+vi.mock("@/lib/server/mention-access", async () => {
+  const { relabelMentions } = await import("@/lib/mention-link");
+  return {
+    markdownForReader: async (_userId: string, markdown: string) =>
+      relabelMentions(markdown, (link) => (link.type === "member" ? "Alice Fontaine" : "unavailable")),
+  };
+});
 
 const { forgeReplyResponse, quoteForReply } = await import("./pr-comment-reply");
 
@@ -80,7 +88,8 @@ describe("forgeReplyResponse", () => {
   });
 
   it("posts minddy mentions as plain @names, never as minddy links", async () => {
-    await reply("Thanks [@Alice Fontaine](mention:member/5ad9b962-93e7-4a7c-a44b-f4925484ba93), done.");
+    // A mention stores no name since MIN-872: the forge gets the one the author sees.
+    await reply("Thanks [@](mention:member/5ad9b962-93e7-4a7c-a44b-f4925484ba93), done.");
     expect(mocks.createPrReviewCommentResponse).toHaveBeenCalledWith(
       { canWrite: true }, { body: "Thanks @Alice Fontaine, done.", inReplyTo: 900 }, "user-1");
   });

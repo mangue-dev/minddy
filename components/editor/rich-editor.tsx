@@ -45,7 +45,8 @@ import type { AnyExtension } from "@tiptap/core";
 import { BlockSelectionExtension } from "@/components/editor/block-selection";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { dateMentionOptions, datesFirst } from "@/lib/mention-date";
 import { cn } from "@/lib/utils";
 import {
   MENTION_HYDRATION_META,
@@ -496,16 +497,28 @@ export function RichEditor({
   // mentions come from the keyboard toolbar's sheet.
   const [typedMentions] = useState(() => typeof window === "undefined" || !isMobileLayout());
   const mobile = useMobileLayout() === true;
+  // Dates are read from the query itself (MIN-872), in the reader's language.
+  const locale = useLocale();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  const pickDateLabelRef = useRef("");
+  pickDateLabelRef.current = tPicker("mentionPickDate");
+  const readDateOptions = useMemo(
+    () => (query: string) => dateMentionOptions(query, localeRef.current, new Date(), pickDateLabelRef.current),
+    []
+  );
   const mentionSuggest = useMemo(
     () =>
       hasMentions && typedMentions
         ? MentionSuggest.configure({
             items: () => mentionsRef.current?.items() ?? [],
+            dates: readDateOptions,
+            datesFirst: (query: string) => datesFirst(query, localeRef.current),
             onQuery: () => mentionsRef.current?.onQuery?.(),
             placeholder: readSearchPlaceholder,
           })
         : null,
-    [hasMentions, typedMentions, readSearchPlaceholder]
+    [hasMentions, typedMentions, readSearchPlaceholder, readDateOptions]
   );
   const mentionItems = useMemo(
     () => (hasMentions ? () => mentionsRef.current?.items() ?? [] : undefined),

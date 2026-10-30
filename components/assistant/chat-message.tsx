@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import rehypeSanitize from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { IconButton } from "@/components/ui/icon-button";
@@ -43,6 +43,7 @@ import {
 } from "@/components/assistant/adaptive-context-row";
 import { PAGE_CODE_COMPONENTS } from "@/components/assistant/shared-code-renderer";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
+import { keepMentionUrls, SANITIZE_SCHEMA } from "@/components/markdown";
 import { parseMentionHref } from "@/lib/mention-link";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import {
@@ -313,13 +314,21 @@ function UserText({
         remarkPlugins={[remarkGfm, remarkBreaks]}
         // No `rehypeRaw`: pasted/source HTML is displayed as text, while the
         // markdown syntax itself is still parsed into headings, lists and code.
+        // A message sent since MIN-872 carries typed mention links: they
+        // survive the URL rules and the sanitizer, and render as live pills.
+        urlTransform={keepMentionUrls}
         rehypePlugins={[
-          [rehypeSanitize, defaultSchema],
+          [rehypeSanitize, SANITIZE_SCHEMA],
           ...(mentions.length > 0 ? [rehypeUserMentions(mentions)] : []),
           ...(skills.length > 0 ? [rehypeUserSkills(skills)] : []),
         ]}
         components={{
-          a: MarkdownLink,
+          a: (props) => {
+            const target = parseMentionHref(typeof props.href === "string" ? props.href : null);
+            return target
+              ? <TypedMentionChip type={target.type} id={target.id} meta={target.meta} />
+              : <MarkdownLink {...props} />;
+          },
           span: ({ node, children }) => {
             const index = Number(
               (node?.properties as Record<string, unknown> | undefined)?.[
@@ -383,14 +392,15 @@ function UserText({
 // Streamdown's sanitizer drops an unknown URL scheme, so each mention travels
 // as an in-page address and its link renders as the pill an editor shows.
 const ASSISTANT_MENTION_PREFIX = "#mention:";
-const ASSISTANT_MENTION_LINK = /(\[@(?:[^\]\\\n]|\\.){0,256}\])\(mention:([a-z]{1,16}\/[A-Za-z0-9_-]{1,64})\)/g;
+const ASSISTANT_MENTION_LINK =
+  /(\[@(?:[^\]\\\n]|\\.){0,256}\])\(mention:([a-z_]{1,16}\/[A-Za-z0-9_.-]{1,64}(?:\?[A-Za-z0-9_.:=&-]{1,300})?)\)/g;
 
 function AssistantLink(props: ComponentProps<typeof MarkdownLink>) {
   const href = typeof props.href === "string" ? props.href : null;
   const target = href?.startsWith(ASSISTANT_MENTION_PREFIX)
     ? parseMentionHref(href.slice(1))
     : null;
-  if (target) return <TypedMentionChip type={target.type} id={target.id} />;
+  if (target) return <TypedMentionChip type={target.type} id={target.id} meta={target.meta} />;
   return <MarkdownLink {...props} />;
 }
 

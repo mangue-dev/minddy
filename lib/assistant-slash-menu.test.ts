@@ -36,46 +36,36 @@ describe("Numo slash options", () => {
     expect(filterSlashOptions([command, ...skills], "release")).toEqual(skills);
   });
 
-  it("recognizes slash commands and Codex-style dollar skill triggers", () => {
+  it("recognizes slash triggers, and no longer a dollar one (MIN-872)", () => {
     expect(composerMenuTrigger("/release")).toEqual({
       prefix: "/",
       query: "release",
     });
-    expect(composerMenuTrigger("$release")).toEqual({
-      prefix: "$",
-      query: "release",
-    });
-    expect(composerMenuTrigger("use $release")).toBeNull();
-    expect(composerMenuTrigger("$release\nnow")).toBeNull();
+    expect(composerMenuTrigger("$release")).toBeNull();
+    expect(composerMenuTrigger("/release\nnow")).toBeNull();
   });
 
-  it("finds slash and dollar skill queries immediately before the caret", () => {
+  it("finds slash queries immediately before the caret", () => {
     expect(findActiveComposerMenuQuery("Use /release")).toEqual({
       start: 4,
       end: 12,
       prefix: "/",
       query: "release",
     });
-    expect(findActiveComposerMenuQuery("Before $release after"))
-      .toEqual({
-        start: 7,
-        end: 21,
-        prefix: "$",
-        query: "release after",
-      });
-    expect(findActiveComposerMenuQuery("First line\n$release")).toEqual({
+    expect(findActiveComposerMenuQuery("First line\n/release")).toEqual({
       start: 11,
       end: 19,
-      prefix: "$",
+      prefix: "/",
       query: "release",
     });
+    expect(findActiveComposerMenuQuery("Before $release after")).toBeNull();
   });
 
   it("ignores path separators, repeated triggers, and completed queries", () => {
     expect(findActiveComposerMenuQuery("docs/release")).toBeNull();
     expect(findActiveComposerMenuQuery("Use /first/second")).toBeNull();
-    expect(findActiveComposerMenuQuery("Use $release  next")).toBeNull();
-    expect(findActiveComposerMenuQuery("Use $release. ")).toBeNull();
+    expect(findActiveComposerMenuQuery("Use /release  next")).toBeNull();
+    expect(findActiveComposerMenuQuery("Use /release. ")).toBeNull();
     expect(findActiveComposerMenuQuery("Use / ")).toBeNull();
     expect(findActiveComposerMenuQuery("Use /release ")?.query).toBe("release ");
   });
@@ -106,21 +96,17 @@ describe("Numo slash options", () => {
         options: [commandOption, ...skillOptions],
       }),
     );
-    const dollarHtml = renderToStaticMarkup(
-      createElement(SlashMenu, {
-        ...props,
-        prefix: "$",
-        options: skillOptions,
-      }),
+
+    const skillHtml = renderToStaticMarkup(
+      createElement(SlashMenu, { ...props, prefix: "/", options: skillOptions }),
     );
 
     expect(slashHtml).toContain(">/create issue</span>");
     expect(slashHtml).toContain(">release</span>");
     expect(slashHtml).not.toContain(">/release</span>");
-    expect(dollarHtml).toContain(">release</span>");
-    expect(dollarHtml).not.toContain(">$release</span>");
-    expect(dollarHtml).toContain("bg-emerald-500/10");
-    expect(dollarHtml).toContain("text-emerald-700");
+    expect(skillHtml).not.toContain(">/release</span>");
+    expect(skillHtml).toContain("bg-emerald-500/10");
+    expect(skillHtml).toContain("text-emerald-700");
   });
 
   it("renders skill badges without a slash prefix", () => {

@@ -1,9 +1,17 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { DateMentionChip } from "@/components/date-mention-chip";
 import { MentionChip } from "@/components/mention-chip";
-import { mentionStatus, useMentionLinks } from "@/components/mention-links";
-import { mentionMarkdown, type MentionLinkType } from "@/lib/mention-link";
+import { mentionStatus, useMentionLinks, type MentionLinks } from "@/components/mention-links";
+import {
+  mentionMarkdown,
+  SCRATCHPAD_MENTION_ID,
+  type MentionLinkType,
+  type MentionMeta,
+} from "@/lib/mention-link";
+import { formatMentionDate, mentionDateFrom, type MentionDate } from "@/lib/mention-date";
+import { useOptionalScratchpad } from "@/lib/scratchpad-context";
 import {
   rememberShownMention,
   useResolvedMentionLabel,
@@ -22,8 +30,51 @@ function knownLabel(label: string | null, type: MentionLinkType, untitled: strin
   return label || (type === "page" ? untitled : null);
 }
 
+/** Types whose label never comes from the server: a date is its own value,
+    the notebook a feature, and an attachment its surface's (MIN-742). */
+const LOCAL_ONLY: ReadonlySet<MentionLinkType> = new Set(["date", "scratchpad", "resource"]);
+
+/** A cycle's label as the server gives it, `Cycle 2026-10-26 → 2026-11-08`,
+    in the reader's language. */
+function cycleLabel(label: string, locale: string, word: string): string {
+  const days = label.match(/\d{4}-\d{2}-\d{2}/g);
+  if (!days || days.length !== 2) return label;
+  const format = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
+  const [start, end] = days.map((day) => {
+    const [year, month, date] = day.split("-").map(Number);
+    return format.format(new Date(year, month - 1, date));
+  });
+  return `${word} ${start} – ${end}`;
+}
+
 /**
- * The pill of a typed mention (MIN-734), in an editor or a rendered text.
+ * The current label of a typed mention for this reader: `undefined` while it
+ * resolves, `null` when the reader may not see it. Shared by the pill and the
+ * plain-text preview.
+ */
+function useTypedMentionLabel(
+  type: MentionLinkType,
+  id: string,
+  meta: MentionMeta | undefined,
+  links: MentionLinks | null,
+): string | null | undefined {
+  const tPages = useTranslations("Pages");
+  const tCommon = useTranslations("Common");
+  const locale = useLocale();
+  const local = knownLabel(links?.label?.(type, id, meta) ?? null, type, tPages("untitled"));
+  const ownOnly = LOCAL_ONLY.has(type);
+  const resolved = useResolvedMentionLabel(local || ownOnly ? null : type, local || ownOnly ? null : id, meta);
+  if (type === "scratchpad") return id === SCRATCHPAD_MENTION_ID ? tCommon("mentionScratchpad") : null;
+  if (type === "date") {
+    const date = mentionDateFrom(id, meta);
+    return date ? formatMentionDate(date, locale, null) : null;
+  }
+  const label = local ?? (ownOnly ? null : resolved);
+  return type === "cycle" && label ? cycleLabel(label, locale, tCommon("mentionCycle")) : label;
+}
+
+/**
+ * The pill of a typed mention (MIN-734, MIN-872), in an editor or a rendered text.
  *
  * Its label is the target's CURRENT label — from the sources already on
  * screen when they hold it, otherwise from the server — and never the label
@@ -35,24 +86,24 @@ function knownLabel(label: string | null, type: MentionLinkType, untitled: strin
 export function TypedMentionChip({
   type,
   id,
+  meta,
   appearance,
+  onChangeDate,
 }: {
   type: MentionLinkType;
   id: string;
+  /** What the target needs besides its id: a date's time, a skill's project. */
+  meta?: MentionMeta;
   /** The figure an editor node carries (portrait seed, color, emoji, favicon):
    shown only once the reader is known to see the target. */
   appearance?: { seed?: string | null; color?: string | null; icon?: string | null };
+  /** In an editor: a date pill opens its picker and writes the new date. */
+  onChangeDate?: (next: MentionDate) => void;
 }) {
   const t = useTranslations("Common");
-  const tPages = useTranslations("Pages");
   const links = useMentionLinks();
-  const local = knownLabel(links?.label?.(type, id) ?? null, type, tPages("untitled"));
-  // An attachment is mentioned only from the surface that holds it (MIN-742):
-  // its pill resolves from that surface's attachments alone, so a mention of
-  // another ticket's file reads as unavailable instead of asking the server.
-  const scopedOnly = type === "resource";
-  const resolved = useResolvedMentionLabel(local || scopedOnly ? null : type, local || scopedOnly ? null : id);
-  const label = local ?? (scopedOnly ? null : resolved);
+  const scratchpad = useOptionalScratchpad();
+  const label = useTypedMentionLabel(type, id, meta, links);
   // An objective's status: from the sources on screen, else from the server
   // resolution (MIN-785) — without it the pill falls back to the target.
   const resolvedStatus = useResolvedMentionStatus(type === "objective" ? type : null, id);
@@ -66,10 +117,22 @@ export function TypedMentionChip({
   if (label === null) {
     return <MentionChip type="unavailable" id={id} label={t("mentionUnavailable")} />;
   }
+  if (type === "date") {
+    const date = mentionDateFrom(id, meta);
+    if (date) {
+      return (
+        <span {...{ [MENTION_REF_ATTR]: mentionMarkdown(type, id, "", meta) }} className="contents">
+          <DateMentionChip value={date} onChange={onChangeDate} />
+        </span>
+      );
+    }
+  }
   const href = label === undefined ? null : links?.href(type, id) ?? null;
+  // The notebook opens in place, over the page being read.
+  const openNotebook = type === "scratchpad" && scratchpad ? () => scratchpad.open("mention") : undefined;
   return (
     <span
-      {...{ [MENTION_REF_ATTR]: label === undefined ? undefined : mentionMarkdown(type, id, label) }}
+      {...{ [MENTION_REF_ATTR]: label === undefined ? undefined : mentionMarkdown(type, id, label, meta) }}
       className="contents"
     >
       <MentionChip
@@ -78,8 +141,12 @@ export function TypedMentionChip({
         label={label ?? "…"}
         href={href}
         onNavigate={href ? () => links?.navigate(type, id) : undefined}
+        onClick={openNotebook}
         status={status ?? undefined}
-        tooltip={type === "issue" && label !== undefined ? links?.issueTitle?.(id) ?? null : null}
+        tooltip={label === undefined ? null
+          : type === "issue" ? links?.issueTitle?.(id) ?? null
+          : type === "skill" ? links?.detail?.(type, id, meta) ?? null
+          : null}
         avatarSeed={label === undefined ? null : appearance?.seed ?? null}
         color={label === undefined ? null : appearance?.color ?? null}
         iconUrl={label !== undefined && type === "project" ? appearance?.icon ?? null : null}
@@ -94,24 +161,24 @@ export function TypedMentionChip({
  * `@Label`, with the same rule as the pill: the target's current label, the
  * neutral label when the reader may not see it, and nothing stored.
  */
-export function TypedMentionText({ type, id }: { type: MentionLinkType; id: string }) {
+export function TypedMentionText({ type, id, meta }: { type: MentionLinkType; id: string; meta?: MentionMeta }) {
   const t = useTranslations("Common");
-  const tPages = useTranslations("Pages");
-  const links = useMentionLinks();
-  const local = knownLabel(links?.label?.(type, id) ?? null, type, tPages("untitled"));
-  const resolved = useResolvedMentionLabel(local ? null : type, local ? null : id);
-  const label = local ?? resolved;
+  const label = useTypedMentionLabel(type, id, meta, useMentionLinks());
   return <>@{label === null ? t("mentionUnavailable") : label ?? "…"}</>;
 }
 
 /** A plain preview whose typed mentions are rendered with `TypedMentionText`. */
-export function PlainPreview({ parts }: { parts: Array<string | { type: MentionLinkType; id: string }> }) {
+export function PlainPreview({
+  parts,
+}: {
+  parts: Array<string | { type: MentionLinkType; id: string; meta?: MentionMeta }>;
+}) {
   return (
     <>
       {parts.map((part, index) =>
         typeof part === "string"
           ? part
-          : <TypedMentionText key={index} type={part.type} id={part.id} />)}
+          : <TypedMentionText key={index} type={part.type} id={part.id} meta={part.meta} />)}
     </>
   );
 }

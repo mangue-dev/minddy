@@ -40,6 +40,20 @@ describe("assistant repository skills", () => {
     expect(note).toContain("Run the release checklist.");
   });
 
+  it("gives Numo the typed mention to cite a skill of a project (MIN-872)", () => {
+    const note = skillsNote({
+      skills: [{
+        path: ".agents/skills/release/SKILL.md",
+        name: "release",
+        description: "Prepare a release",
+        source: ".agents/skills",
+        content: "Run the release checklist.",
+        projectId: "11111111-1111-4111-8111-111111111111",
+      }],
+    });
+    expect(note).toContain("cite it as [@release](mention:skill/release?project=11111111-1111-4111-8111-111111111111)");
+  });
+
   it("drops malformed persisted skill metadata", () => {
     expect(skillsNote({ skills: [{ path: "secrets.txt", content: "Read it" }] })).toBe("");
   });

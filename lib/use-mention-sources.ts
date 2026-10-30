@@ -14,7 +14,7 @@
 // the palette (lib/palette-index-merge): a ticket created ten seconds ago is
 // immediately quotable, and a deleted ticket ceases to be cited.
 
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { displayName } from "@/lib/display-name";
@@ -33,6 +33,7 @@ import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useSearchIndex } from "@/lib/use-search-index";
 import { useOfferedProject } from "@/lib/use-offered-projects";
+import { useFeatureMentions } from "@/lib/use-feature-mentions";
 import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { pagesHref, pushPagesHistory } from "@/lib/pages-navigation";
@@ -323,7 +324,19 @@ export function useDescriptionMentions(
 ): DocumentEditorMentions {
   const { projects, issues, objectives, pages, offered, armNow } =
     useMentionSources(projectId);
-  const links = useMentionLinksFor({ issues, objectives, pages, members, projects }, onOpenIssue);
+  const entityLinks = useMentionLinksFor({ issues, objectives, pages, members, projects }, onOpenIssue);
+  // Pull requests, routines, the notebook, cycles, MCP servers and skills
+  // (MIN-872): loaded at the first "@", labeled from what they loaded.
+  const features = useFeatureMentions(projectId, useOfferedProject(projectId));
+  const links = useMemo<MentionLinks>(() => ({
+    ...entityLinks,
+    label: (type, id, meta) => entityLinks.label?.(type, id, meta) ?? features.label(type, id, meta),
+    detail: features.detail,
+  }), [entityLinks, features]);
+  const onQuery = useCallback(() => {
+    armNow();
+    features.arm();
+  }, [armNow, features]);
 
   // Split from the pages: renaming a page rebuilds its few rows, not the
   // thousands of ticket rows of the index.
@@ -378,8 +391,9 @@ export function useDescriptionMentions(
           label: p.title,
           icon: p.icon,
         })),
+      ...features.options,
     ],
-    [entityOptions, pages],
+    [entityOptions, pages, features.options],
   );
 
   const scan = useMemo(
@@ -392,7 +406,7 @@ export function useDescriptionMentions(
   // would give back all the pills. Making it new on each rendering would do the
   // two with each strike.
   return useMemo(
-    () => ({ options, scan, links, onQuery: armNow }),
-    [options, scan, links, armNow],
+    () => ({ options, scan, links, onQuery }),
+    [options, scan, links, onQuery],
   );
 }

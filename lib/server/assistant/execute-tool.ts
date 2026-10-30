@@ -88,6 +88,7 @@ import { GeneratedFileError } from "./generated-files";
 import { insertAttachments } from "@/lib/server/attachments";
 import { imagesIn } from "@/lib/server/document-images";
 import { readResultForReader } from "@/lib/server/mention-access";
+import { withoutMentionLabels } from "@/lib/mention-link";
 import {
   BULK_WRITE_CONCURRENCY,
   mapWithConcurrency,
@@ -810,7 +811,8 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
-  const raw = await executeToolUnlisted(toolName, args, ctx);
+  // What Numo writes stores its mentions without a label (MIN-872).
+  const raw = await executeToolUnlisted(toolName, withoutMentionLabels(args), ctx);
   // Typed mentions in what Numo reads carry the target's current label, or a
   // neutral one when the user may not see it (MIN-734).
   const execution = raw.success ? await mentionsForNumo(raw, ctx.userId) : raw;
@@ -1960,7 +1962,7 @@ async function executeToolUnlisted(
           args,
         );
         if ("error" in resolved) return toolError(resolved.error);
-        const { forge, target, number: prNumber } = resolved;
+        const { forge, target, number: prNumber, row } = resolved;
 
         const [pr, diff, reviewComments, reviewThreads, conversationComments] =
           await Promise.all([
@@ -2024,6 +2026,9 @@ async function executeToolUnlisted(
         const MAX_COMMENT_BODY_CHARS = 2_000;
         return {
           result: {
+            // minddy's id of the pull request: what its mention carries
+            // (`[@#12](mention:pull_request/<id>)`, MIN-872).
+            ...(row ? { id: row.id } : {}),
             number: pr.number,
             url: pr.url,
             state: pr.merged ? "merged" : pr.state,

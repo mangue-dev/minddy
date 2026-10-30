@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 //
-// Typed mentions (MIN-734): a mention is stored as `[@Label](mention:type/id)`,
-// and the reference survives the editor's Markdown round trip, the plan
-// parser and relabeling.
+// Typed mentions: since MIN-872 a mention is stored as `[@](mention:type/id)`,
+// without a name, with metadata in the query; links stored with a label
+// (MIN-734) still parse. The reference survives the editor's Markdown round
+// trip, the plan parser and relabeling.
 import { describe, expect, it } from "vitest";
 import {
   mentionHref,
@@ -14,6 +15,7 @@ import {
   relabelMentions,
   restoreStoredMentions,
   stripCutMention,
+  withoutMentionLabels,
 } from "@/lib/mention-link";
 import { bodyFromMarkdown, bodyToMarkdown } from "@/lib/pages-markdown";
 import { parsePlan } from "@/lib/plan";
@@ -28,6 +30,30 @@ describe("the mention link format", () => {
     expect(parseMentionHref("mention:secret/x")).toBeNull();
     expect(parseMentionHref("mention:issue/a/b")).toBeNull();
     expect(parseMentionHref("https://example.com")).toBeNull();
+    expect(parseMentionHref("mention:pull_request/abc")).toEqual({ type: "pull_request", id: "abc" });
+  });
+
+  it("stores new mentions without a name, and metadata in the query", () => {
+    expect(mentionMarkdown("issue", ISSUE)).toBe(`[@](mention:issue/${ISSUE})`);
+    const date = mentionMarkdown("date", "2026-11-02", "", { time: "09:30", end: "2026-11-04" });
+    expect(date).toBe("[@](mention:date/2026-11-02?time=09:30&end=2026-11-04)");
+    expect(mentionLinks(`On ${date}`)).toEqual([
+      { type: "date", id: "2026-11-02", label: "", meta: { time: "09:30", end: "2026-11-04" } },
+    ]);
+    expect(parseMentionHref("mention:skill/release?project=abc")).toEqual({
+      type: "skill", id: "release", meta: { project: "abc" },
+    });
+    // Malformed metadata is not a mention.
+    expect(parseMentionHref("mention:date/2026-11-02?time=<b>")).toBeNull();
+    expect(parseMentionHref("mention:date/2026-11-02?time=1&time=2")).toBeNull();
+    expect(mentionLinks("[@](mention:date/2026-11-02?x)")).toEqual([]);
+  });
+
+  it("round-trips label-less mentions with metadata through the editor", () => {
+    const markdown = `Due ${mentionMarkdown("date", "2026-11-02", "", { time: "09:30" })} for ${mentionMarkdown("issue", ISSUE)}`;
+    for (const profile of ["page", "document", "notebook"] as const) {
+      expect(bodyToMarkdown(bodyFromMarkdown(markdown, profile), profile)).toBe(markdown);
+    }
   });
 
   it("escapes labels and reads them back", () => {
@@ -65,9 +91,17 @@ describe("the mention link format", () => {
     const stored = `Review ${mentionMarkdown("page", ISSUE, "Secret roadmap")} today`;
     const seen = relabelMentions(stored, () => "unavailable");
     expect(restoreStoredMentions(seen, stored)).toBe(stored);
-    // A new mention the agent adds is kept as written.
+    // A new mention the agent adds is stored without its label (MIN-872).
     const added = `${seen} with ${mentionMarkdown("member", MEMBER, "Jean")}`;
-    expect(restoreStoredMentions(added, stored)).toBe(`${stored} with ${mentionMarkdown("member", MEMBER, "Jean")}`);
+    expect(restoreStoredMentions(added, stored)).toBe(`${stored} with [@](mention:member/${MEMBER})`);
+    expect(restoreStoredMentions(`Ask [@Jean](mention:member/${MEMBER})`, null)).toBe(`Ask [@](mention:member/${MEMBER})`);
+  });
+
+  it("stores what an agent sends without labels, value by value", () => {
+    const args = { description: `Ask [@Jean](mention:member/${MEMBER})`, tags: ["[@x] plain"], count: 2 };
+    expect(withoutMentionLabels(args)).toEqual({
+      description: `Ask [@](mention:member/${MEMBER})`, tags: ["[@x] plain"], count: 2,
+    });
   });
 
   it("relabels without moving the reference", () => {

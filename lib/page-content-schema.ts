@@ -143,6 +143,7 @@ export const PAGE_NODE_ATTRIBUTES: Record<string, readonly string[]> = {
     "mentionType",
     "mentionId",
     "mentionLabel",
+    "meta",
     "seed",
     "color",
     "icon",

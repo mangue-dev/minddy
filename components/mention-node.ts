@@ -8,9 +8,11 @@
 // outside browser. A node exported from a “use client” module does not arrive there
 // as is — on the server side, such a module only renders client references.
 //
-// What is STORED (MIN-734): a typed link, `[@Label](mention:issue/<id>)`
-// (lib/mention-link.ts), so the reference survives renames, homonyms and
-// copy-paste. `@Numo` and forge logins stay plain `@text`, which their
+// What is STORED: a typed link without a name, `[@](mention:issue/<id>)`
+// (lib/mention-link.ts, MIN-872), so the reference survives renames, homonyms
+// and copy-paste, and names nothing to a reader who cannot open it. A mention
+// stored with its author's label (MIN-734) keeps that text in `mentionLabel`
+// and is written back unchanged. `@Numo` and forge logins stay plain `@text`, which their
 // readers resolve themselves. Older `@Label` text is still re-deduced by
 // lib/mention-scan and written back as that text (`legacy`).
 
@@ -19,6 +21,8 @@ import {
   isMentionLinkType,
   mentionHref,
   mentionMarkdown,
+  mentionMetaFromAttr,
+  mentionMetaToAttr,
   parseMentionHref,
 } from "@/lib/mention-link";
 
@@ -33,7 +37,9 @@ function typedHref(attrs: Record<string, unknown>): string | null {
   if (attrs.legacy) return null;
   const type = attrs.mentionType;
   const id = attrs.mentionId;
-  return isMentionLinkType(type) && typeof id === "string" && id ? mentionHref(type, id) : null;
+  return isMentionLinkType(type) && typeof id === "string" && id
+    ? mentionHref(type, id, mentionMetaFromAttr(attrs.meta))
+    : null;
 }
 
 /** The attributes that a statement carries. They are enough to redraw
@@ -41,7 +47,11 @@ function typedHref(attrs: Record<string, unknown>): string | null {
 export const MENTION_ATTRS = [
   "mentionType",
   "mentionId",
+  /** The label stored in the link: empty since MIN-872, never displayed. */
   "mentionLabel",
+  /** What a target needs besides its id (a date's time and end), as
+      `key=value&…` (lib/mention-link.ts). */
+  "meta",
   "seed",
   "color",
   "icon",
@@ -80,7 +90,11 @@ export const MentionNodeBase = Node.create({
           return {
             mentionType: target.type,
             mentionId: target.id,
+            // The stored text of an older mention, kept so its document
+            // writes back unchanged. A pasted pill drops it
+            // (`transformPasted`, components/markdown-mention.tsx).
             mentionLabel: (node.textContent ?? "").replace(/^@/, ""),
+            meta: mentionMetaToAttr(target.meta),
             seed: node.dataset.mentionSeed ?? null,
             color: node.dataset.mentionColor ?? null,
             icon: node.dataset.mentionIcon ?? null,
@@ -146,7 +160,7 @@ export const MentionNodeBase = Node.create({
         ) {
           const { mentionType: type, mentionId: id, mentionLabel: label } = node.attrs;
           state.text(typedHref(node.attrs) && isMentionLinkType(type)
-            ? mentionMarkdown(type, id, label ?? "")
+            ? mentionMarkdown(type, id, label ?? "", mentionMetaFromAttr(node.attrs.meta))
             : `@${label}`, false);
         },
         parse: {},
