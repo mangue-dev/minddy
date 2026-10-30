@@ -203,6 +203,10 @@ vi.mock("@/lib/server/short-title", () => ({
   },
 }));
 
+// The live instruction (MIN-832): rewrites reach its open editors as steps.
+const syncDescriptionWrite = vi.fn(async (_input: Record<string, unknown>) => {});
+vi.mock("@/lib/server/description-collaboration", () => ({ syncDescriptionWrite }));
+
 vi.mock("@/lib/server/agent/model-plan", () => ({
   ensureModelInPlan: async () => {
     if (world.modelAbovePlan) {
@@ -237,6 +241,7 @@ beforeEach(() => {
   world.byok = false;
   world.byokSurfaces = [];
   titleCalls.length = 0;
+  syncDescriptionWrite.mockClear();
 });
 
 const validInput = (over: Record<string, unknown> = {}) => ({
@@ -386,6 +391,32 @@ describe("updateRoutine", () => {
     // Move the time either — the title describes the job, not the schedule.
     await updateRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID, hour: 7 });
     expect(titleCalls).toHaveLength(0);
+  });
+
+  it("sends a rewritten instruction to its live document, and nothing else", async () => {
+    await updateRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID, prompt: "A brand new instruction." });
+    expect(syncDescriptionWrite).toHaveBeenCalledWith({
+      kind: "routine", id: ROUTINE_ID, projectId: PROJECT_ID,
+      markdown: "A brand new instruction.", authorId: OWNER_ID,
+    });
+
+    syncDescriptionWrite.mockClear();
+    await updateRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID, hour: 7 });
+    expect(syncDescriptionWrite).not.toHaveBeenCalled();
+  });
+
+  it("writes the live document's instruction without renaming it, and renames on request", async () => {
+    await updateRoutine({
+      routineId: ROUTINE_ID, actorId: OWNER_ID, prompt: "Typed live.", promptMentions: [],
+      promptFromDocument: true,
+    });
+    expect(world.routines[0].prompt).toBe("Typed live.");
+    expect(titleCalls).toHaveLength(0);
+    expect(syncDescriptionWrite).not.toHaveBeenCalled();
+
+    await updateRoutine({ routineId: ROUTINE_ID, actorId: OWNER_ID, refreshTitle: true });
+    expect(titleCalls).toEqual(["Typed live."]);
+    expect(world.routines[0].title).toBe("Titre de « Typed live. »");
   });
 
   it("recalcule l'échéance dès qu'on touche à la cadence", async () => {

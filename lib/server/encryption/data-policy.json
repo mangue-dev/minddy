@@ -4171,6 +4171,7 @@
         "materializing_token",
         "objective_id",
         "project_id",
+        "routine_id",
         "user_id"
       ],
       "timestamp": [

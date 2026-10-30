@@ -10239,6 +10239,11 @@
         "type": "bigint",
         "nullable": false,
         "generated": false
+      },
+      "routine_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -10258,6 +10263,11 @@
       {
         "table": "projects",
         "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "agent_routines",
+        "column": "routine_id",
         "targetColumn": "id"
       },
       {

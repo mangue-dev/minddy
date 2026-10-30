@@ -11,6 +11,8 @@ import { decodeRoutine, encodeRoutine, routineContentValues } from
   "@/lib/server/routine-content";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { softDeleteItem } from "@/lib/server/trash";
+import { syncDescriptionWrite } from "@/lib/server/description-collaboration";
+import { promptToMarkdown } from "@/lib/prompt-document";
 import { userHasByokKey } from "@/lib/server/agent/model";
 import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { isManagedAiEnabled } from "@/lib/managed-services";
@@ -316,6 +318,14 @@ export interface UpdateRoutineInput {
   /** Rewrite the instruction REDOES the title: cf. `titleFor`. */
   prompt?: string;
   promptMentions?: AssistantMention[] | null;
+  /**
+   * The instruction is the live document's Markdown, written by its
+   * materialization (MIN-832): the document already holds it, and the title
+   * is redone once typing rests (`refreshTitle`), not on every pause.
+   */
+  promptFromDocument?: boolean;
+  /** Redo the title from the instruction as it now stands. */
+  refreshTitle?: boolean;
   /** New per-occurrence cap as a percentage of monthly usage (1–100). */
   maxSpendPercent?: number | null;
   frequency?: string;
@@ -374,9 +384,12 @@ export async function updateRoutine(
     // would otherwise keep the name of what she did before — and that’s the name
     // which we read in the column to decide if it is still useful.
     if (prompt !== routine.prompt) {
-      updates.title = await titleFor(prompt, input.actorId, routine.project_id);
+      if (!input.promptFromDocument) updates.title = await titleFor(prompt, input.actorId, routine.project_id);
       if (input.promptMentions === undefined) updates.prompt_mentions = [];
     }
+  }
+  if (input.refreshTitle) {
+    updates.title = await titleFor(String(updates.prompt ?? routine.prompt), input.actorId, routine.project_id);
   }
   if (input.promptMentions !== undefined) {
     updates.prompt_mentions = input.promptMentions?.length
@@ -449,7 +462,21 @@ export async function updateRoutine(
     console.error("[routines] update failed:", error?.message);
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
-  return { ok: true, routine: await decodeRoutine(data, input.actorId) as unknown as Routine };
+  const updated = await decodeRoutine(data, input.actorId) as unknown as Routine;
+  // The live instruction (MIN-832): a rewrite from Numo, MCP or a saved form
+  // reaches the open editors as steps, rebased over their typing.
+  if (!input.promptFromDocument && ("prompt" in updates || "prompt_mentions" in updates) &&
+      (updated.prompt !== routine.prompt ||
+        JSON.stringify(updated.prompt_mentions) !== JSON.stringify(routine.prompt_mentions))) {
+    await syncDescriptionWrite({
+      kind: "routine",
+      id: updated.id,
+      projectId: updated.project_id,
+      markdown: promptToMarkdown(updated.prompt, updated.prompt_mentions ?? []),
+      authorId: input.actorId,
+    });
+  }
+  return { ok: true, routine: updated };
 }
 
 /**

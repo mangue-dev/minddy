@@ -14,9 +14,9 @@ import type { CollabResetReason, CollabStepsPage } from "./page-collaboration";
 
 export const DESCRIPTION_COLLABORATION_PROTOCOL = 1;
 
-/** An issue or objective description, or an issue's plan (`plan`, keyed by
- its issue's id). */
-export type DescriptionKind = "issue" | "objective" | "plan";
+/** An issue or objective description, an issue's plan (`plan`, keyed by its
+ issue's id), or a routine's instruction (`routine`, MIN-832). */
+export type DescriptionKind = "issue" | "objective" | "plan" | "routine";
 
 /** Where a session starts: the document at the stream head. */
 export interface DescriptionSnapshot {
@@ -34,7 +34,8 @@ export type DescriptionCatchUp =
   | ({ kind: "steps" } & CollabStepsPage)
   | { kind: "reset"; reason: CollabResetReason; snapshot: DescriptionSnapshot };
 
-/** The private caret topic of a live description. */
+/** The private caret topic of a live description. A routine has none: only
+ its project owner writes it, so its sessions publish no carets. */
 export const descriptionCollaborationTopic = (kind: DescriptionKind, id: string) =>
   `${kind}-collaboration:${id}`;
 

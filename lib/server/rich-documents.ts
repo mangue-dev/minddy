@@ -12,7 +12,8 @@ import { documentToMarkdownServer } from "./pages-projection";
 
 /**
  * The ProseMirror documents of the rich text surfaces outside pages (MIN-728):
- * issue and objective descriptions, issue plans and the notebook. Comments use
+ * issue and objective descriptions, issue plans, routine instructions and the
+ * notebook. Comments use
  * the same editor but are rendered from their Markdown, so they keep none.
  *
  * The parent keeps its Markdown, which stays what every external reader sees.
@@ -23,18 +24,19 @@ import { documentToMarkdownServer } from "./pages-projection";
  * the parent with the requester's own client first.
  */
 
-export type RichDocumentKind = "issue" | "objective" | "plan" | "notebook";
+export type RichDocumentKind = "issue" | "objective" | "plan" | "routine" | "notebook";
 
 const OWNER_COLUMN: Record<RichDocumentKind, string> = {
   issue: "issue_id",
   objective: "objective_id",
   plan: "issue_id",
+  routine: "routine_id",
   notebook: "user_id",
 };
 
 /**
- * The row id of a document. A description and the notebook use their
- * parent's id; an issue's plan is a second document of the same issue, so its
+ * The row id of a document. A description, a routine's instruction and the
+ * notebook use their parent's id; an issue's plan is a second document of the same issue, so its
  * id is derived from the issue's (a name-based UUID, version 8): stable, so
  * every instance finds the same row, and never equal to an issue id.
  */
@@ -51,8 +53,8 @@ export function documentIdOf(owner: { kind: RichDocumentKind; id: string }): str
 /** The parent a document belongs to, as its route already resolved it. */
 export interface RichDocumentOwner {
   kind: RichDocumentKind;
-  /** The parent's id: the issue (description or plan), the objective, or the
-   notebook's user. */
+  /** The parent's id: the issue (description or plan), the objective, the
+   routine, or the notebook's user. */
   id: string;
   /** The parent's project; absent for the notebook. */
   projectId: string | null;
@@ -142,7 +144,9 @@ async function shouldEncryptFor(owner: RichDocumentOwner, service: SupabaseClien
     ? await service.from("issues").select("encryption_version").eq("id", owner.id).maybeSingle()
     : owner.kind === "objective"
       ? await service.from("objectives").select("encryption_version").eq("id", owner.id).maybeSingle()
-      : await service.from("user_scratchpad").select("encryption_version").eq("user_id", owner.id).maybeSingle();
+      : owner.kind === "routine"
+        ? await service.from("agent_routines").select("encryption_version").eq("id", owner.id).maybeSingle()
+        : await service.from("user_scratchpad").select("encryption_version").eq("user_id", owner.id).maybeSingle();
   if (error || !data) throw new Error("Unable to resolve the document's parent");
   return Number((data as Row).encryption_version) > 0;
 }
@@ -184,7 +188,7 @@ export async function readRichDocument(
   service: SupabaseClient = getServiceClient()
 ): Promise<JSONContent | null> {
   const { data, error } = await service.from("rich_documents")
-    .select("id, kind, issue_id, objective_id, user_id, project_id, content, encrypted_content, encryption_version")
+    .select("id, kind, issue_id, objective_id, routine_id, user_id, project_id, content, encrypted_content, encryption_version")
     .eq("id", documentIdOf(owner)).eq("kind", owner.kind).maybeSingle();
   if (error) throw new Error("Unable to read the document");
   if (!data) return null;
@@ -215,7 +219,8 @@ export async function purgeClearRichDocuments(limit = 200): Promise<{ removed: n
 
 /* ── Live descriptions (MIN-728, migration 20270109200063) ──────────────── */
 
-/** The project-owned documents that are step streams: descriptions and plans. */
+/** The project-owned documents that are step streams: descriptions, plans
+ and routine instructions. */
 export type DescriptionKind = Exclude<RichDocumentKind, "notebook">;
 
 let fingerprintKey: { source: string; key: Buffer } | null = null;
@@ -254,7 +259,7 @@ export interface DocumentHead {
 }
 
 const HEAD_COLUMNS =
-  "id, kind, issue_id, objective_id, user_id, project_id, content, encrypted_content, " +
+  "id, kind, issue_id, objective_id, routine_id, user_id, project_id, content, encrypted_content, " +
   "encryption_version, revision, materialized_revision, materialized_hash";
 
 /** The head of a description's stream, decoded, or `null` when it has none. */
@@ -512,25 +517,26 @@ export async function deferDocumentMaterialization(
   if (error) console.error("[rich-documents] materialization deferral failed");
 }
 
-/** Descriptions and plans whose typing has waited longer than `olderThanMs` for
- their Markdown, by parent. */
+/** Descriptions, plans and routine instructions whose typing has waited
+ longer than `olderThanMs` for their Markdown, by parent. */
 export async function staleDocumentStreams(
   olderThanMs: number,
   limit: number,
   service: SupabaseClient = getServiceClient()
 ): Promise<Array<{ kind: DescriptionKind; id: string; projectId: string }>> {
   const { data, error } = await service.from("rich_documents")
-    .select("id, kind, issue_id, objective_id, project_id")
+    .select("id, kind, issue_id, objective_id, routine_id, project_id")
     .lt("pending_since", new Date(Date.now() - olderThanMs).toISOString())
     .order("pending_since", { ascending: true })
     .limit(limit);
   if (error) throw new Error("Unable to list pending documents");
   return ((data ?? []) as Row[])
-    .filter((row) => (row.kind === "issue" || row.kind === "objective" || row.kind === "plan") &&
-      typeof row.project_id === "string")
+    .filter((row) => (row.kind === "issue" || row.kind === "objective" || row.kind === "plan" ||
+      row.kind === "routine") && typeof row.project_id === "string")
     .map((row) => ({
       kind: row.kind as DescriptionKind,
-      id: String(row.kind === "objective" ? row.objective_id : row.issue_id),
+      id: String(row.kind === "objective" ? row.objective_id
+        : row.kind === "routine" ? row.routine_id : row.issue_id),
       projectId: String(row.project_id),
     }));
 }

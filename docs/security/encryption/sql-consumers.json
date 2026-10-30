@@ -237,7 +237,7 @@
       "functionReferences": []
     },
     "guard_rich_document()": {
-      "sha256": "cff5da215afa2a86c54279994e15002644d6d6c7fd09aba1b57f6e73b694854d",
+      "sha256": "f076b678eb1da7ec7e61feffc087da69ef2e10b3f29a2f7a36c7329bd7b1a2c8",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -246,11 +246,13 @@
       "relations": [
         "issues",
         "objectives",
+        "agent_routines",
         "user_scratchpad"
       ],
       "protectedRelations": [
         "issues",
         "objectives",
+        "agent_routines",
         "user_scratchpad"
       ],
       "functionReferences": []
@@ -3377,7 +3379,7 @@
       "functionReferences": []
     },
     "purge_clear_rich_documents(integer)": {
-      "sha256": "854608f650e49ac49e4444f6f1c07cc00acf3669f93cd9f63df09d8ec63b4447",
+      "sha256": "dbf1c8cb17274e37ec57169f306be2e9c205af5f62d41c3a56106f088ec06c67",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
@@ -3386,6 +3388,7 @@
       "relations": [
         "issues",
         "objectives",
+        "agent_routines",
         "rich_documents",
         "user_scratchpad",
         "rich_document_batches"
@@ -3393,6 +3396,7 @@
       "protectedRelations": [
         "issues",
         "objectives",
+        "agent_routines",
         "rich_documents",
         "user_scratchpad",
         "rich_document_batches"

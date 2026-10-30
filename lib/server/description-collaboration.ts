@@ -6,6 +6,8 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { hasProjectAccess } from "@/lib/server/project-access";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
+import { decodeRoutine } from "@/lib/server/routine-content";
+import { promptFromMarkdown, promptToMarkdown } from "@/lib/prompt-document";
 import { readPageContent } from "@/lib/server/page-content-input";
 import { MAX_PLAN_LENGTH } from "@/lib/plan";
 import {
@@ -44,8 +46,8 @@ import {
 /**
  * The OPERATION AUTHORITY of live descriptions (MIN-728).
  *
- * An issue or objective description, or an issue's plan, is a step stream
- * like a page body
+ * An issue or objective description, an issue's plan, or a routine's
+ * instruction (MIN-832) is a step stream like a page body
  * (docs/document-collaboration.md). Its head document lives in
  * `rich_documents`; the parent's Markdown — what every other reader uses — is
  * materialized from it a couple of seconds after typing stops.
@@ -62,7 +64,10 @@ import {
  *   (`foldExternalWrite`).
  *
  * Access is decided here on every request; the document tables are
- * service-only and reached through lib/server/rich-documents.ts.
+ * service-only and reached through lib/server/rich-documents.ts. Any member
+ * who may write the project writes a description or a plan; only the project
+ * owner writes a routine's instruction, as for every other routine field
+ * (lib/server/routines.ts).
  */
 
 export type { DescriptionKind } from "@/lib/server/rich-documents";
@@ -77,9 +82,22 @@ const STALE_PENDING_MS = 15_000;
 const COMMIT_ATTEMPTS = 5;
 /** The same ceiling as every description write. */
 const MAX_DESCRIPTION_LENGTH = 65_536;
+/** The routine writer's ceiling (`MAX_PROMPT_LENGTH` of lib/server/routines.ts). */
+const MAX_INSTRUCTION_LENGTH = 20_000;
+/** How long an instruction rests before its routine is renamed after it. */
+const RETITLE_QUIET_MS = 30_000;
 
 export const isDescriptionKind = (value: unknown): value is DescriptionKind =>
-  value === "issue" || value === "objective" || value === "plan";
+  value === "issue" || value === "objective" || value === "plan" || value === "routine";
+
+/**
+ * The text the parent stores for the head's Markdown. A routine stores its
+ * instruction with every typed mention a link without a label
+ * (`promptFromMarkdown`); the other parents store the Markdown as it is.
+ */
+function storedText(kind: DescriptionKind, markdown: string): string {
+  return kind === "routine" ? promptFromMarkdown(markdown).text : markdown;
+}
 
 /** Materializations in flight on this instance, per document. */
 const keyOf = (owner: { kind: DescriptionKind; id: string }) => `${owner.kind}:${owner.id}`;
@@ -92,7 +110,8 @@ function serverClientId(): string {
 
 interface Parent {
   projectId: string;
-  /** The parent's Markdown for this document: its description, or its plan. */
+  /** The parent's Markdown for this document: its description, its plan, or
+   its instruction. */
   description: string;
 }
 
@@ -100,6 +119,20 @@ interface Parent {
  decide access first. */
 async function readParent(kind: DescriptionKind, id: string): Promise<Parent | null> {
   const service = getServiceClient();
+  if (kind === "routine") {
+    const { data, error } = await service.from("agent_routines").select("*")
+      .eq("id", id).is("deleted_at", null).maybeSingle();
+    if (error) throw new Error("Unable to read the instruction");
+    if (!data || typeof data.project_id !== "string") return null;
+    const routine = await decodeRoutine(data as Record<string, unknown>);
+    // An instruction saved before MIN-872 keeps its "@Label" identities
+    // beside the text: they read back as typed mentions.
+    return {
+      projectId: data.project_id,
+      description: promptToMarkdown(String(routine.prompt ?? ""),
+        Array.isArray(routine.prompt_mentions) ? routine.prompt_mentions : []),
+    };
+  }
   const column = kind === "plan" ? "plan" : "description";
   const { data, error } = kind === "objective"
     ? await objectiveStore(service).select("id, project_id, description")
@@ -136,8 +169,9 @@ export async function authorizeDescription(
     readDocumentHead(owner, actorId),
   ]);
   if (!access) return { ok: false, status: 404 };
-  if (write && !access.canWrite) return { ok: false, status: 403 };
-  return { ok: true, owner, parent, canWrite: access.canWrite, head };
+  const canWrite = kind === "routine" ? access.isOwner : access.canWrite;
+  if (write && !canWrite) return { ok: false, status: 403 };
+  return { ok: true, owner, parent, canWrite, head };
 }
 
 /* ── The head ─────────────────────────────────────────────────────────────── */
@@ -466,7 +500,9 @@ export async function submitDescriptionBatch(
   }
   const markdown = await descriptionMarkdownServer();
   const projected = markdown.toMarkdown(next);
-  if (projected.length > (kind === "plan" ? MAX_PLAN_LENGTH : MAX_DESCRIPTION_LENGTH)) return { ok: true, result: refused("too-large") };
+  const ceiling = kind === "plan" ? MAX_PLAN_LENGTH
+    : kind === "routine" ? MAX_INSTRUCTION_LENGTH : MAX_DESCRIPTION_LENGTH;
+  if (storedText(kind, projected).length > ceiling) return { ok: true, result: refused("too-large") };
   if (submission.presentation && projected !== markdown.toMarkdown(head.content)) {
     return { ok: true, result: refused("presentation-changed") };
   }
@@ -555,7 +591,7 @@ export async function materializeDescription(
     }
     head = await readDocumentHead(owner, null) ?? head;
     if (head.materializedRevision >= head.revision) return "unchanged";
-    const markdown = (await descriptionMarkdownServer()).toMarkdown(head.content);
+    const markdown = storedText(owner.kind, (await descriptionMarkdownServer()).toMarkdown(head.content));
     // A presentation batch (pills rebuilt by a reader) has no author: the
     // signer is the last author across everything pending.
     const pending = await readPendingBatches(owner, head.materializedRevision, head.revision)
@@ -572,6 +608,12 @@ export async function materializeDescription(
       await markDocumentMaterialized(documentIdOf(owner), head.revision, hash);
       return "unchanged";
     }
+    if (owner.kind === "routine" && !markdown.trim()) {
+      // A routine always has an instruction: an emptied one is not written,
+      // and the document returns to the saved instruction.
+      await foldExternalWrite(owner, parent.description, null);
+      return "unchanged";
+    }
     const write = async (actor: string) => owner.kind === "issue" || owner.kind === "plan"
       ? (await import("@/lib/server/update-issue")).updateIssueFields({
           issueId: owner.id, actorId: actor,
@@ -579,10 +621,15 @@ export async function materializeDescription(
           descriptionFromDocument: owner.kind === "issue",
           planFromDocument: owner.kind === "plan",
         })
-      : (await import("@/lib/server/objectives")).updateObjective({
-          objectiveId: owner.id, actorId: actor, input: { description: markdown || null },
-          descriptionFromDocument: true,
-        });
+      : owner.kind === "routine"
+        ? (await import("@/lib/server/routines")).updateRoutine({
+            routineId: owner.id, actorId: actor, prompt: markdown, promptMentions: [],
+            promptFromDocument: true,
+          })
+        : (await import("@/lib/server/objectives")).updateObjective({
+            objectiveId: owner.id, actorId: actor, input: { description: markdown || null },
+            descriptionFromDocument: true,
+          });
     let result: Awaited<ReturnType<typeof write>> | null = null;
     for (const actor of authors) {
       result = await write(actor);
@@ -601,10 +648,33 @@ export async function materializeDescription(
       return "unchanged";
     }
     await markDocumentMaterialized(documentIdOf(owner), head.revision, hash);
+    if (owner.kind === "routine" && authors[0]) scheduleRoutineRetitle(owner.id, authors[0]);
     return "materialized";
   } finally {
     await releaseDocumentMaterialization(documentId, claim);
   }
+}
+
+const retitleGenerations = new Map<string, number>();
+
+/**
+ * Rename a routine after its instruction once typing has rested for a while
+ * on this instance. Each materialization writes the instruction without
+ * renaming it: a title is a model call, made once per edit rather than once
+ * per pause in the typing.
+ */
+function scheduleRoutineRetitle(routineId: string, actorId: string): void {
+  const generation = (retitleGenerations.get(routineId) ?? 0) + 1;
+  retitleGenerations.set(routineId, generation);
+  afterOrNow(async () => {
+    await new Promise((resolve) => setTimeout(resolve, RETITLE_QUIET_MS));
+    if (retitleGenerations.get(routineId) !== generation) return;
+    retitleGenerations.delete(routineId);
+    const result = await (await import("@/lib/server/routines")).updateRoutine({
+      routineId, actorId, refreshTitle: true,
+    });
+    if (!result.ok) console.error("[description-collaboration] routine retitle failed:", result.status);
+  });
 }
 
 /**

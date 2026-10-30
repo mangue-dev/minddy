@@ -4,7 +4,8 @@ MIN-728. Several people, Numo and MCP-connected agents edit the same issue or
 objective description, or the same issue plan, at the same time, with named
 colored carets. A plan is a second document of its issue (kind `plan`): what
 this document says about descriptions applies to it, with `issues.plan` as
-its Markdown. This
+its Markdown. A routine's instruction (kind `routine`, MIN-832) is one too,
+with `agent_routines.prompt` as its text. This
 document is the contract between the browser session, the HTTP route, the
 server authority and the database. It reuses the page protocol of
 [live page collaboration](page-collaboration.md) and only describes what
@@ -20,7 +21,7 @@ same batches, limits, refusals, catch-up pages, rebasing client
 | What | Where |
 | --- | --- |
 | The document at the stream head | `rich_documents.content` (sealed in `encrypted_content` when protected), `revision` |
-| The Markdown every other reader uses | `issues.description`, `objectives.description` |
+| The Markdown every other reader uses | `issues.description`, `issues.plan`, `objectives.description`, `agent_routines.prompt` |
 | Which revision that Markdown reflects | `rich_documents.materialized_revision`, with `materialized_hash`, a keyed fingerprint of that Markdown |
 | Accepted steps | `rich_document_batches`, sealed with the project key when the document is protected |
 
@@ -41,6 +42,7 @@ Markdown cannot carry: block identities, colors, mention pills.
 | `supabase/migrations/20270109200064_description_materialization_claim.sql` | One materialization at a time |
 | `supabase/migrations/20270109200065_issue_plan_documents.sql` | The `plan` kind and its caret topic |
 | `supabase/migrations/20270109200066_description_collaboration_review_fixes.sql` | Clear steps purged on sealing, metadata writes on clear documents, writer-only carets, claim tokens |
+| `supabase/migrations/20270109200097_routine_instruction_documents.sql` | The `routine` kind (`routine_id`), its guard and purge |
 
 ## The authority
 
@@ -73,6 +75,33 @@ plan's (`MAX_PLAN_LENGTH`). Every plan write in `updateIssueFields` (Numo,
 MCP task updates and appends, a PATCH) reaches open editors as steps, and
 the plan tools of Numo and MCP materialize pending typing first. The panel
 opens a plan session only while the Plan tab shows.
+
+### Routine instructions
+
+A routine's instruction (MIN-832) is the stream of kind `routine`, addressed
+by the routine's id, which is also its row id. It differs from a description
+in four ways:
+
+- **Access.** Only the project owner writes a routine (`lib/server/routines.ts`),
+  so only the owner's session may send steps; every other member gets a
+  read-only session (`canWrite: false`) and `403` on a batch. There is no
+  caret topic: with a single writer, routine sessions publish no carets.
+- **Text.** `agent_routines.prompt` stores the editor's Markdown with every
+  typed mention a link without a label (`promptFromMarkdown` in
+  `lib/prompt-document.ts`); the authority compares, fingerprints and writes
+  that stored form. An instruction saved before MIN-872, with "@Label" tokens
+  and `prompt_mentions`, is read through `promptToMarkdown`. The limit is the
+  routine writer's 20,000 characters.
+- **Materialization.** It goes through `updateRoutine` with
+  `promptFromDocument`, which writes the instruction without renaming the
+  routine; the title is redone once typing has rested 30 seconds
+  (`refreshTitle`), a model call per edit rather than per pause. A routine
+  always has an instruction: an emptied document is never written, and it
+  returns to the saved instruction.
+- **Reads.** Every instruction write in `updateRoutine` (Numo, MCP, the
+  fallback save) reaches open editors as steps, and an occurrence
+  materializes pending typing before it starts, so it runs the last typed
+  instruction (`startRoutineOccurrence`).
 
 ### Writers outside a session
 
@@ -132,15 +161,16 @@ on `online`, `focus`, `pageshow`, visibility and every 45 seconds while an
 editor is attached.
 
 Carets travel as client Broadcast on the private `issue-collaboration:<id>`,
-`plan-collaboration:<id>` and `objective-collaboration:<id>` topics. The database binds them to the
+`plan-collaboration:<id>` and `objective-collaboration:<id>` topics (a
+routine's instruction has none). The database binds them to the
 parent's project membership generation; members of that project receive,
 members who may write it send, while the parent is not trashed; the channel behavior is the
 page caret channel's (`lib/page-collaboration-presence.ts`).
 
 ## Surfaces
 
-The issue panel (every issue view uses it), the triage page and the objective
-page open a live session. Opening is kept short:
+The issue panel (every issue view uses it), the triage page, the objective
+page and the routine page (its instruction) open a live session. Opening is kept short:
 
 - the snapshot reads the head alongside the access decision, and a batch
   looks up its receipt alongside it;
@@ -171,7 +201,14 @@ and the next reader rebuilds the document from the Markdown. See
   catch-up and rebase of two sessions, retries, refusals, agent writes rebased
   over concurrent typing, external writes, materialization and its claim;
   plans: their own document id, materialization into `issues.plan`, and an
-  agent's task tick rebased over concurrent typing.
+  agent's task tick rebased over concurrent typing; routine instructions:
+  owner-only writing, materialization through the routine writer, stored
+  mentions without labels, legacy identities, emptied instructions and the
+  length limit.
+- `lib/server/routines.test.ts`: instruction rewrites reach the live document,
+  and the document's writes skip the title until `refreshTitle`.
+- `components/routines/routine-detail-sections.test.tsx`: the routine page
+  edits through its live session, and saves on blur without one.
 - `lib/server/rich-documents-route.test.ts`: description routes derive the
   Markdown on the server and hand the document to the writers.
 - `components/editor/document-editor.test.tsx`, `lib/editor-block-sets.test.ts`,
