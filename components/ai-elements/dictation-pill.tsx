@@ -262,7 +262,7 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
         onInteractOutside={(event) => event.preventDefault()}
         className={
           mobile
-            ? "gap-3 pb-[max(1rem,env(safe-area-inset-bottom))]"
+            ? "gap-3 pb-[max(1rem,var(--mobile-sheet-safe-bottom,env(safe-area-inset-bottom)))]"
             : "top-auto bottom-[max(1.5rem,env(safe-area-inset-bottom))] w-auto max-w-none translate-y-0 gap-0 overflow-visible rounded-full bg-transparent p-0 ring-0 sm:max-w-none data-open:slide-in-from-bottom-4 data-closed:slide-out-to-bottom-4"
         }
       >

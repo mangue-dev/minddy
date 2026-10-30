@@ -227,7 +227,8 @@
 
 :global(html[data-app-layout="mobile"]) .popoverWrapper {
   position: fixed;
-  bottom: 0;
+  /* Above the software keyboard, like minddy's sheets (app/globals.css). */
+  bottom: var(--mobile-keyboard-room, 0px);
   right: 0;
   left: 0;
   z-index: 9999;
@@ -235,7 +236,8 @@
 
 :global(html[data-app-layout="mobile"]) .popover {
   width: 100%;
-  max-height: 60vh;
+  max-height: min(60vh, calc(var(--mobile-visible-height, 100dvh) - 1rem));
+  padding-bottom: var(--mobile-sheet-safe-bottom, env(safe-area-inset-bottom));
   border-radius: var(--cp-radius-xl, 12px) var(--cp-radius-xl, 12px) 0 0;
   animation: popoverMobileSlideIn 200ms ease-out;
   /* Reset transform for mobile (sheet slides from bottom) */

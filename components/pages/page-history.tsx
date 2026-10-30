@@ -298,7 +298,7 @@ export function PageHistorySheet({
             Only on the Activity tab: nothing to comment on a list of
             versions, and an inert field before the eyes is a false promise. */}
         {tab === "activity" && (
-          <SidePanelFooter className="border-t-0 pt-3 sm:flex-row">
+          <SidePanelFooter data-keyboard-dock className="border-t-0 pt-3 sm:flex-row">
             <PageCommentBar projectId={projectId} pageId={pageId} />
           </SidePanelFooter>
         )}

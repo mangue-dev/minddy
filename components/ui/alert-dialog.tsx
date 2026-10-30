@@ -102,7 +102,7 @@ function AlertDialogContent({
           // Bottom sheet below 480px: dock to the bottom edge, full width,
           // rounded top, slide up/down instead of zoom-from-center. Padding stays
           // p-4 on the sheet (the desktop modal is the more spacious one).
-          "max-[479px]:inset-x-0 max-[479px]:bottom-0 max-[479px]:top-auto max-[479px]:left-0 max-[479px]:max-h-[92dvh] max-[479px]:!w-full max-[479px]:!max-w-none max-[479px]:translate-x-0 max-[479px]:translate-y-0 max-[479px]:rounded-b-none max-[479px]:rounded-t-2xl max-[479px]:p-4 max-[479px]:pb-[max(1rem,env(safe-area-inset-bottom))] max-[479px]:data-open:zoom-in-100 max-[479px]:data-closed:zoom-out-100 max-[479px]:data-open:slide-in-from-bottom-6 max-[479px]:data-closed:slide-out-to-bottom-6",
+          "max-[479px]:inset-x-0 max-[479px]:bottom-0 max-[479px]:top-auto max-[479px]:left-0 max-[479px]:max-h-[92dvh] max-[479px]:!w-full max-[479px]:!max-w-none max-[479px]:translate-x-0 max-[479px]:translate-y-0 max-[479px]:rounded-b-none max-[479px]:rounded-t-2xl max-[479px]:p-4 max-[479px]:pb-[max(1rem,var(--mobile-sheet-safe-bottom,env(safe-area-inset-bottom)))] max-[479px]:data-open:zoom-in-100 max-[479px]:data-closed:zoom-out-100 max-[479px]:data-open:slide-in-from-bottom-6 max-[479px]:data-closed:slide-out-to-bottom-6",
           className
         )}
         {...props}

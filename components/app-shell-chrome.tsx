@@ -272,7 +272,7 @@ function AppTabChangeEffect({ onChange }: { onChange: () => void }) {
 }
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
-  useMobileViewport();
+  useMobileViewport({ pinDocument: true });
   // A root marker keeps application typography scoped without repeatedly
   // matching relational :has() selectors against the entire workspace DOM.
   useLayoutEffect(() => {

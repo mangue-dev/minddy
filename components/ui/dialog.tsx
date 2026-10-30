@@ -51,10 +51,13 @@ function ModalDialog({
   const drawer = useMediaQuery("(max-width: 479px)")
   const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
   const Root = (drawer ? Drawer.Root : DialogPrimitive.Root) as React.ElementType
+  // vaul's keyboard handling misreads iOS Safari; app/globals.css anchors the
+  // drawer above the keyboard instead (MIN-870).
+  const drawerProps = drawer ? { repositionInputs: false } : {}
   return (
     <DialogModeContext.Provider value={{ drawer, onOpenChange: tracked.onOpenChange }}>
       <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
-        <Root data-slot="dialog" open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
+        <Root data-slot="dialog" {...drawerProps} open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
       </OverlayOpenProvider>
     </DialogModeContext.Provider>
   )
@@ -175,7 +178,7 @@ function ModalDialogContent({
         >
           {/* Drag handle */}
           <div className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25" />
-          <div className="flex flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,var(--mobile-sheet-safe-bottom,env(safe-area-inset-bottom)))]">
             {shown}
           </div>
         </Drawer.Content>

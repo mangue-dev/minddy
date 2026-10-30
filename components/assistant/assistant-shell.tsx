@@ -1085,6 +1085,7 @@ export const AssistantShell = forwardRef<
             visible bottom even when a host lets the column scroll, and the
             fixed bottom padding keeps it off the edge of the content zone. */}
             <div
+              data-keyboard-dock
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
                 compact ? "px-4" : "px-2 app-desktop:px-0",

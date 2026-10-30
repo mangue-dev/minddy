@@ -137,7 +137,7 @@ export function PageCommentDialog({
         </MobileSheetScrollArea>
 
         {fresh && canComment && (
-          <div className="relative shrink-0 border-t border-border/60 p-4">
+          <div data-keyboard-dock className="relative shrink-0 border-t border-border/60 p-4">
             <CommentComposer
               members={members}
               projectId={projectId}

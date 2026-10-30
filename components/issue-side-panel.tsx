@@ -1353,7 +1353,7 @@ export function IssueSidePanel({
           />
 
           {canComment && (
-            <SidePanelFooter className="flex-col border-t-0 pt-3 sm:flex-col">
+            <SidePanelFooter data-keyboard-dock className="flex-col border-t-0 pt-3 sm:flex-col">
               <CommentFollowUpButton followUp={followUp} onCopy={copyCommentsPrompt} />
               <CommentComposer
                 members={members}
