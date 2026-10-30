@@ -143,6 +143,6 @@ Histórico escasso ou mudança recente de escopo reduzem sua utilidade. A estima
 
 ## Escolher um objetivo para um feedback {#objective-feedback}
 
-Nas propriedades do objetivo, a contagem de feedbacks abre a seção Feedback do projeto filtrada por esse objetivo, incluindo solicitações resolvidas. O valor zero também é exibido. As solicitações continuam separadas do progresso dos tickets e do ritmo.
+Nas propriedades do objetivo, a contagem de feedbacks abre a seção Feedback do projeto filtrada por esse objetivo, incluindo solicitações resolvidas. A linha fica oculta enquanto nenhuma solicitação pertence ao objetivo. As solicitações continuam separadas do progresso dos tickets e do ritmo.
 
 Um feedback pode pertencer a um objetivo sem virar um ticket. Nos feedbacks do projeto, escolha o objetivo nas propriedades da solicitação. Elas não contribuem para o progresso ou o ritmo dos tickets. A conversão herda o objetivo e as categorias, respeitando as alterações no formulário de criação.

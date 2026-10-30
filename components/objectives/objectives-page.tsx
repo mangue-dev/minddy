@@ -3,7 +3,10 @@
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, FilterIcon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Delete02Icon, FilterIcon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import dynamic from "next/dynamic";
@@ -223,6 +226,7 @@ function ObjectiveRow({
       data-sidebar-filter-result
       data-navigation-href={`/projects/${projectId}/objectives?open=${encodeURIComponent(objective.id)}`}
       data-comment-target={commentTarget("objective", objective.id)}
+      data-objective-id={objective.id}
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
@@ -295,6 +299,53 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
 
   const { objectives, loading, createObjective, updateObjective, deleteObjective } =
     useObjectivesQuery(projectId);
+  const tStatus = useTranslations("ObjectiveStatus");
+  const tIssue = useTranslations("Issue");
+  const router = useAppRouter();
+  // The objective a row's right-click menu moves to the trash, once confirmed.
+  const [trashTarget, setTrashTarget] = useState<Objective | null>(null);
+
+  /**
+   * The right-click menu of an objective row, built from the row under the
+   * pointer: its status, its tickets on the board, and the trash. Readers get
+   * the board only.
+   */
+  const itemContextActions = (target: Element): ContextMenuAction[] => {
+    const id = target.closest<HTMLElement>("[data-objective-id]")?.dataset.objectiveId;
+    const objective = id ? objectives.find((o) => o.id === id) : undefined;
+    if (!objective) return [];
+    const viewIssues: ContextMenuAction = {
+      id: "objective-issues",
+      label: t("viewLinkedIssues", { issues: tIssue("entityPlural").toLowerCase() }),
+      icon: <HugeiconsIcon icon={TaskEdit01Icon} className="size-4" />,
+      onSelect: () => router.push(`/projects/${projectId}?objective=${encodeURIComponent(objective.id)}`),
+    };
+    if (!canWrite) return [viewIssues];
+    return [
+      {
+        id: "objective-status",
+        label: t("statusFieldLabel"),
+        icon: <ObjectiveStatusIndicator status={objective.status} className="size-4" />,
+        children: OBJECTIVE_STATUSES.map((s) => ({
+          id: `objective-status-${s.value}`,
+          label: tStatus(s.value),
+          icon: <ObjectiveStatusIndicator status={s.value} className="size-4" />,
+          disabled: s.value === objective.status,
+          onSelect: () => void updateObjective(objective.id, { status: s.value }),
+        })),
+      },
+      viewIssues,
+      {
+        id: "objective-trash",
+        label: tCommon("moveToTrash"),
+        icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+        variant: "destructive",
+        separatorBefore: true,
+        transfersFocus: true,
+        onSelect: () => setTrashTarget(objective),
+      },
+    ];
+  };
   const { issues } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
   const { open: openAssistant } = useAssistantPanelActions();
@@ -516,6 +567,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
   const sidebar = (
       <CollectionSidebar browse={browse}
         title={t("title")}
+        itemContextActions={itemContextActions}
         hiddenOnMobile
         filter={{
           value: query,
@@ -610,7 +662,28 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
       </CollectionSidebar>
   );
 
-  if (listOnly) return <>{sidebar}{createDialog}</>;
+  const trashDialog = (
+    <ConfirmDeleteDialog
+      open={trashTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setTrashTarget(null);
+      }}
+      title={t("deleteConfirmTitle", { name: trashTarget?.name ?? "" })}
+      description={t("deleteConfirmDescription", {
+        issues: tIssue("entityPlural").toLowerCase(),
+        days: TRASH_RETENTION_DAYS,
+      })}
+      confirmLabel={tCommon("moveToTrash")}
+      cancelLabel={tCommon("cancel")}
+      onConfirm={async () => {
+        if (!trashTarget) return;
+        await deleteObjective(trashTarget.id);
+        toast.success(t("deletedToast"));
+      }}
+    />
+  );
+
+  if (listOnly) return <>{sidebar}{createDialog}{trashDialog}</>;
 
   if (!loading && objectives.length === 0) {
     return (
@@ -690,6 +763,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
       </div>
 
       {createDialog}
+      {trashDialog}
     </div>
   );
 }

@@ -139,6 +139,6 @@ Ein geschätztes Abschlussdatum setzt mindestens zwei Abschlüsse, eine volle be
 
 ## Ein Ziel für Feedback wählen {#objective-feedback}
 
-In den Zieleigenschaften öffnet die Feedbackzahl den Feedbackbereich des Projekts mit einem Filter für dieses Ziel, einschließlich erledigter Anfragen. Auch null wird angezeigt. Feedback bleibt von Ticketfortschritt und Momentum getrennt.
+In den Zieleigenschaften öffnet die Feedbackzahl den Feedbackbereich des Projekts mit einem Filter für dieses Ziel, einschließlich erledigter Anfragen. Die Zeile ist ausgeblendet, solange keine Anfrage zum Ziel gehört. Feedback bleibt von Ticketfortschritt und Momentum getrennt.
 
 Feedback kann einem Ziel zugeordnet sein, ohne ein Ticket zu werden. Wähle das Ziel in den Eigenschaften einer Rückmeldung unter Feedback im Projekt. Diese Anfragen zählen weder zum Ticketfortschritt noch zur Dynamik. Bei der Umwandlung übernimmt das Ticket Ziel und Kategorien, sofern du sie im Erstellungsformular nicht änderst.

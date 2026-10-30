@@ -143,6 +143,6 @@ Un historique limité ou un changement récent de périmètre rend l’estimatio
 
 ## Choisir un objectif pour un retour {#objective-feedback}
 
-Dans les propriétés de l’objectif, le nombre de retours ouvre la page Retours du projet filtrée sur cet objectif, avec les demandes résolues. Le nombre reste affiché lorsqu’il est égal à zéro. Les retours restent distincts de la progression des tickets et de la dynamique.
+Dans les propriétés de l’objectif, le nombre de retours ouvre la page Retours du projet filtrée sur cet objectif, avec les demandes résolues. La ligne est masquée tant qu’aucune demande n’appartient à l’objectif. Les retours restent distincts de la progression des tickets et de la dynamique.
 
 Un retour peut aussi être lié à un objectif sans devenir un ticket. Dans les Retours du projet, choisissez l’objectif dans les propriétés de la demande. Ces demandes ne contribuent ni à la progression des tickets ni à leur dynamique. Lors de la conversion, le ticket reprend l’objectif et les catégories du retour, sous réserve des modifications dans le formulaire de création.

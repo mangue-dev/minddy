@@ -7,7 +7,7 @@
 // issue-property-fields.tsx.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
@@ -444,6 +444,12 @@ export interface SmartFillManualFields {
    */
   onTitleRequest?: () => void;
   onTitleFocus?: () => void;
+  /**
+   * Opens the relation picker Smart Fill would otherwise hide, as R does.
+   * Given only while Smart Fill links related issues; runs once the menu has
+   * closed, so the picker keeps the focus.
+   */
+  onRelationRequest?: () => void;
 }
 
 /**
@@ -464,9 +470,11 @@ function SmartFillManualMenu({
   objectives,
   objectiveId,
   onObjectiveChange,
+  onRelationRequest,
 }: Omit<SmartFillManualFields, "onTitleFocus">) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
+  const tRelations = useTranslations("Relations");
   const tPriority = useTranslations("Priority");
   const orderedObjectives = useOrderedObjectives(objectives);
   return (
@@ -563,6 +571,12 @@ function SmartFillManualMenu({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       )}
+      {onRelationRequest && (
+        <DropdownMenuItem onSelect={onRelationRequest}>
+          <HugeiconsIcon icon={Link02Icon} className="size-4 text-muted-foreground" />
+          {tRelations("relations")}
+        </DropdownMenuItem>
+      )}
     </>
   );
 }
@@ -591,11 +605,19 @@ export function SmartFillCompact({
   const id = useId();
   /** Title was chosen: the closing menu hands the caret to the title field. */
   const titleChosenRef = useRef(false);
+  /** Relations were chosen: the closing menu opens their picker. */
+  const relationChosenRef = useRef(false);
   const menu = manual && (
     <DropdownMenuContent
       align="end"
       className="w-52"
       onCloseAutoFocus={(event) => {
+        if (relationChosenRef.current) {
+          relationChosenRef.current = false;
+          event.preventDefault();
+          manual.onRelationRequest?.();
+          return;
+        }
         if (!titleChosenRef.current) return;
         titleChosenRef.current = false;
         event.preventDefault();
@@ -604,6 +626,12 @@ export function SmartFillCompact({
     >
       <SmartFillManualMenu
         {...manual}
+        onRelationRequest={
+          manual.onRelationRequest &&
+          (() => {
+            relationChosenRef.current = true;
+          })
+        }
         onTitleRequest={
           manual.onTitleRequest &&
           (() => {

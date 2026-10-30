@@ -143,6 +143,6 @@ Poco storico o un recente cambio di ambito ne riducono l’utilità. La stima no
 
 ## Scegliere un obiettivo per un feedback {#objective-feedback}
 
-Nelle proprietà dell’obiettivo, il numero di feedback apre la sezione Feedback del progetto filtrata per questo obiettivo, incluse le richieste risolte. Anche zero viene mostrato. Le richieste restano separate dall’avanzamento dei ticket e dallo slancio.
+Nelle proprietà dell’obiettivo, il numero di feedback apre la sezione Feedback del progetto filtrata per questo obiettivo, incluse le richieste risolte. La riga è nascosta finché nessuna richiesta appartiene all’obiettivo. Le richieste restano separate dall’avanzamento dei ticket e dallo slancio.
 
 Un feedback può essere associato a un obiettivo senza diventare un ticket. Nei feedback del progetto, scegli l’obiettivo nelle proprietà della richiesta. Non contribuiscono all’avanzamento o alla dinamica dei ticket. La conversione eredita obiettivo e categorie, salvo le modifiche nel modulo di creazione.

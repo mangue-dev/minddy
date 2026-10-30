@@ -150,6 +150,9 @@ Right-click a row in the sidebar to act on what it represents without opening it
 - The **All issues** row offers **New issue**, and the **Routines** row offers **New routine** when you own a project.
 - A project row, or the project name at the top of its panel, offers **New** (an issue, objective or page in that project) and **Project settings**. The project owner also sees **Move to trash**, which asks for the same confirmation as the project settings. The same menu also offers **Hide project**, or **Show project** for a project you hid; see [Hide a project for yourself](/docs/projects#hide-project).
 - A project tab offers its own creation entry: **New issue** on Issues, **New objective** on Objectives, **New page** on Pages and **New feedback** on Feedback, which opens the internal feedback composer.
+- A triage row offers **Accept**, **Decline** and **Mark as duplicate…**, which ask for the same confirmation or picker as the triage pane, then the copy of its identifier and **Move to trash**. A reader can copy the identifier only. See [Review incoming work in triage](/docs/issues#triage-incoming-work).
+- An objective row offers **Status**, **View issues** on the project board and **Move to trash**. A reader sees **View issues** only.
+- A feedback row offers **Status**, unless a linked issue sets it, **Link to an existing issue**, **Merge into…** when another request can take it, and **Move to trash**. Each opens the request and asks for the same confirmation as its pane.
 - A routine row offers **Open latest run** and, to the project owner, **Run now**, **Pause** or **Resume**, **Edit** and **Move to trash**. See [Manage and verify runs](/docs/scheduled-routines#runs).
 - A pull request row offers the state changes its current state allows, **Merge** when it is ready, and fix actions when something blocks it. See [Review and merge](/docs/code-work#decision).
 

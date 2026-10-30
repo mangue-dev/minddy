@@ -143,6 +143,6 @@ Sparse history or a recent scope change makes the estimate less useful. It is no
 
 ## Choose an objective for feedback {#objective-feedback}
 
-In the objective properties, the feedback count opens the project’s Feedback destination filtered to this objective, including resolved requests. A zero count is also shown. Requests remain separate from issue progress and momentum.
+In the objective properties, the feedback count opens the project’s Feedback destination filtered to this objective, including resolved requests. The row is hidden while no request belongs to the objective. Requests remain separate from issue progress and momentum.
 
 Feedback can also belong to an objective without becoming an issue. In the project’s Feedback destination, choose the objective in a request’s properties. These requests do not contribute to issue progress or momentum. When promoted, the new issue inherits the selected objective and feedback categories, subject to changes in the creation form.

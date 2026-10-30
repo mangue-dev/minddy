@@ -1096,6 +1096,10 @@ export function CreateIssueDialog({
                         objectiveId: fields.objective_id,
                         onObjectiveChange: (objective_id) =>
                           setFields((f) => ({ ...f, objective_id })),
+                        // The relations Smart Fill would link, picked as R does.
+                        ...(!showsRelationPicker && {
+                          onRelationRequest: () => setOpenPicker("relation"),
+                        }),
                         // The title Smart Fill would write (MIN-813).
                         ...(writesTitle && {
                           onTitleRequest: () => setTitleRequested(true),

@@ -139,6 +139,6 @@ La fecha estimada requiere al menos dos finalizaciones, una semana completa obse
 
 ## Elegir un objetivo para un comentario {#objective-feedback}
 
-En las propiedades del objetivo, el número de comentarios abre la sección de comentarios del proyecto filtrada por este objetivo, incluidas las solicitudes resueltas. También se muestra el valor cero. Las solicitudes siguen separadas del progreso de los tickets y del impulso.
+En las propiedades del objetivo, el número de comentarios abre la sección de comentarios del proyecto filtrada por este objetivo, incluidas las solicitudes resueltas. La fila queda oculta mientras ninguna solicitud pertenezca al objetivo. Las solicitudes siguen separadas del progreso de los tickets y del impulso.
 
 Un comentario puede pertenecer a un objetivo sin convertirse en ticket. En los comentarios del proyecto, elige el objetivo en las propiedades de la solicitud. No contribuyen al progreso ni al ritmo de los tickets. Al convertirlas, el ticket hereda el objetivo y las categorías, salvo los cambios realizados en el formulario de creación.

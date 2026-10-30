@@ -35,6 +35,9 @@ vi.mock("@/components/empty-scene", () => ({ EmptyScene: ({ children }: { childr
 vi.mock("@/components/ui/tooltip", () => ({ Tooltip: ({ children }: { children: ReactNode }) => children, TooltipTrigger: ({ children }: { children: ReactNode }) => children, TooltipContent: () => null }));
 vi.mock("next/navigation", () => ({ usePathname: () => { throw new Error("Retained objectives must not read the live route"); }, useSearchParams: () => { throw new Error("Retained objectives must not read live selection"); } }));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
+// The row menu's board link navigates through the app router.
+vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
+vi.mock("@/components/ui/confirm-delete-dialog", () => ({ ConfirmDeleteDialog: () => null }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({ projects: state.projects, loading: false }) }));
 vi.mock("@/lib/use-objectives-query", async (original) => ({ ...await original<typeof import("@/lib/use-objectives-query")>(), useObjectivesQuery: (id: string) => ({ objectives: state.rows[id] ?? [], loading: false, createObjective: vi.fn(), updateObjective: vi.fn(), deleteObjective: vi.fn() }) }));
