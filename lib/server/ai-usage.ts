@@ -28,6 +28,10 @@ export { OPENROUTER_USAGE_INCLUDE, parseOpenRouterUsage } from "./ai-usage-shape
  * by run and by type (`feature`). The cost comes from the usage reported by
  * OpenRouter when adding `usage: { include: true }` to the request body.
  *
+ * Calls made with a member's personal key (`keyMode: "byok"`, MIN-874) are
+ * never written: the member pays the provider, so minddy keeps no trace of
+ * them, neither for the quota nor for the instance's cost dashboard.
+ *
  * RULE: `recordAiUsage` NEVER throw — cost tracking must never make
  * fail the AI feature who calls it (best effort, like `insertStatEvents`).
  */
@@ -100,7 +104,7 @@ export interface AiUsageInput {
   model?: string | null;
   /** DB default: 'openrouter'. Add 'vercel' for the compute sandbox. */
   provider?: string;
-  /** Who paid for the LLM call. The user quota is only `platform`. */
+  /** Who paid for the LLM call. A `byok` call is dropped, never recorded. */
   keyMode?: "platform" | "byok";
   generationId?: string | null;
   promptTokens?: number | null;
@@ -230,7 +234,11 @@ async function resolveProjectOwners(projectIds: string[]): Promise<Map<string, s
 export async function recordAiUsage(
   input: AiUsageInput | AiUsageInput[]
 ): Promise<void> {
-  const inputs = Array.isArray(input) ? input : [input];
+  // Personal-key usage belongs to the member alone (MIN-874): drop it before
+  // anything is resolved or written.
+  const inputs = (Array.isArray(input) ? input : [input]).filter(
+    (entry) => entry.keyMode !== "byok"
+  );
   const rows = inputs.map(toRow);
   if (rows.length === 0) return;
   try {

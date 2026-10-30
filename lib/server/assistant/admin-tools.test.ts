@@ -146,8 +146,8 @@ describe("executeAdminTool", () => {
   });
 
   it("reads the costs like the Costs tab, filters and previous period included", async () => {
-    const row = (day: string, feature: string, model: string, costUsd: number, keyMode: "platform" | "byok" = "platform") => ({
-      day, feature, model, keyMode, costUsd, calls: 2, promptTokens: 100, completionTokens: 50, cachedTokens: 25,
+    const row = (day: string, feature: string, model: string, costUsd: number) => ({
+      day, feature, model, costUsd, calls: 2, promptTokens: 100, completionTokens: 50, cachedTokens: 25,
     });
     h.getFinanceSummary.mockResolvedValue({
       windowDays: 2,
@@ -157,10 +157,10 @@ describe("executeAdminTool", () => {
         row("2026-10-26", "numo_chat", "a/x", 1),
         row("2026-10-28", "numo_chat", "a/x", 3),
         row("2026-10-29", "smart_fill", "b/y", 1),
-        row("2026-10-29", "numo_chat", "a/x", 5, "byok"),
+        row("2026-10-29", "numo_chat", "c/z", 5),
       ],
     });
-    const result = await executeAdminTool("admin_get_costs", { days: 2, key_mode: "platform" }, { userId: USER, adminGrant: grant });
+    const result = await executeAdminTool("admin_get_costs", { days: 2, model: "a/x" }, { userId: USER, adminGrant: grant });
     expect(h.getFinanceSummary).toHaveBeenCalledWith({ days: 2 });
     expect(result.success).toBe(true);
     const costs = result.result as {
@@ -170,12 +170,12 @@ describe("executeAdminTool", () => {
       by_family: Array<{ family: string; spend_usd: number }>;
       spend_per_day_usd: Array<{ day: string; spend: number }>;
     };
-    // The personal-key call is filtered out; the previous period held $1.
-    expect(costs.totals).toMatchObject({ spend_usd: 4, requests: 4 });
-    expect(costs.change_vs_previous.spend).toBe(3);
-    expect(costs.top_models[0]).toMatchObject({ model: "a/x", spend_usd: 3 });
-    expect(costs.by_family.map((entry) => entry.family)).toEqual(["numo", "automations"]);
-    expect(costs.spend_per_day_usd).toEqual([{ day: "2026-10-28", spend: 3 }, { day: "2026-10-29", spend: 1 }]);
+    // The other models are filtered out; the previous period held $1.
+    expect(costs.totals).toMatchObject({ spend_usd: 3, requests: 2 });
+    expect(costs.change_vs_previous.spend).toBe(2);
+    expect(costs.top_models).toEqual([expect.objectContaining({ model: "a/x", spend_usd: 3 })]);
+    expect(costs.by_family.map((entry) => entry.family)).toEqual(["numo"]);
+    expect(costs.spend_per_day_usd).toEqual([{ day: "2026-10-28", spend: 3 }, { day: "2026-10-29", spend: 0 }]);
   });
 
   it("never reads the costs without a live administrator session", async () => {

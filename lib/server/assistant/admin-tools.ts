@@ -173,14 +173,13 @@ export const ADMIN_ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "admin_get_costs",
       description:
-        `INSTANCE ADMIN. Read what the AI providers cost this instance, the same figures as the admin Costs tab: totals in USD (spend, requests, tokens, cost per million tokens, cache hit rate) with their change against the previous period of the same length, the most expensive features and models, spend per feature family, and the spend per day. Optional filters narrow everything like the tab's menus: a feature family (${ADMIN_COST_GROUPS.join(", ")}), a model id, or the key used (platform = the instance's key, byok = members' personal keys, which the instance did not pay for). Aggregates only: no account, project or prompt. Read-only.`,
+        `INSTANCE ADMIN. Read what the AI providers cost this instance, the same figures as the admin Costs tab: totals in USD (spend, requests, tokens, cost per million tokens, cache hit rate) with their change against the previous period of the same length, the most expensive features and models, spend per feature family, and the spend per day. Optional filters narrow everything like the tab's menus: a feature family (${ADMIN_COST_GROUPS.join(", ")}) or a model id. Calls made with members' personal keys are never recorded, so they are not part of these figures. Aggregates only: no account, project or prompt. Read-only.`,
       parameters: {
         type: "object",
         properties: {
           days: { type: "integer", minimum: 1, maximum: 365, description: "Period length in days, ending today (default 30)." },
           family: { type: "string", enum: ADMIN_COST_GROUPS, description: "Only this feature family." },
           model: { type: "string", description: "Only this model id (as returned in top_models)." },
-          key_mode: { type: "string", enum: ["platform", "byok"], description: "Only calls paid with this kind of key." },
         },
       },
     },
@@ -279,7 +278,6 @@ async function readCosts(args: Record<string, unknown>): Promise<AdminToolResult
   const filters: CostFilters = {
     group: family,
     model: typeof args.model === "string" && args.model.trim() ? args.model.trim() : "all",
-    keyMode: args.key_mode === "platform" || args.key_mode === "byok" ? args.key_mode : "all",
   };
   const summary = await getFinanceSummary({ days });
   const { current, previous } = splitPeriods(filterCostRows(summary.breakdown, filters), summary.windowStartDay);
@@ -300,7 +298,7 @@ async function readCosts(args: Record<string, unknown>): Promise<AdminToolResult
   return {
     result: {
       period: { days: summary.windowDays, from: summary.windowStartDay, to: dayList[dayList.length - 1] },
-      filters: { family, model: filters.model, key_mode: filters.keyMode },
+      filters: { family, model: filters.model },
       currency: "USD",
       totals: totalsOut(totals),
       previous_period: previous.length > 0 ? totalsOut(before) : null,
@@ -328,11 +326,6 @@ async function readCosts(args: Record<string, unknown>): Promise<AdminToolResult
         family: entry.key,
         spend_usd: round(entry.costUsd),
         share: share(entry.costUsd),
-      })),
-      by_key: rankBy(current, (row) => row.keyMode).map((entry) => ({
-        key_mode: entry.key,
-        spend_usd: round(entry.costUsd),
-        requests: entry.calls,
       })),
       // Days without a call are zeros; a long period stays short enough to read.
       spend_per_day_usd: dayList.map((day, index) => ({ day, spend: round(perDay[index]) })),

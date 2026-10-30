@@ -1529,14 +1529,16 @@ export interface AdminAccountsOverview {
   totalAccounts: number;
 }
 
-/** One aggregate of the AI ledger: a day, a feature, a model, a key mode. */
+/**
+ * One aggregate of the AI ledger: a day, a feature, a model. The ledger only
+ * holds calls paid by the instance: personal-key calls are never recorded
+ * (MIN-874).
+ */
 export interface AdminCostRow {
   day: string;
   feature: string;
   /** Empty when the ledger did not record it (machine time, for example). */
   model: string;
-  /** `byok` = the account's own key: the instance paid nothing for it. */
-  keyMode: "platform" | "byok";
   costUsd: number;
   calls: number;
   promptTokens: number;

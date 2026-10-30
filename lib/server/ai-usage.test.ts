@@ -218,3 +218,29 @@ describe("routine usage attribution", () => {
     expect(inserted[0].feature).toBe("web_search");
   });
 });
+
+// MIN-874: a member's personal key is paid by the member, so minddy keeps no
+// trace of its calls.
+describe("personal key usage", () => {
+  it("never writes a call made with a personal key", async () => {
+    const projectId = "aaaaaaaa-0005-4000-8000-000000000000";
+    projects = [{ id: projectId, owner_id: OWNER }];
+
+    await recordAiUsage({ runId: newRunId(), feature: "embedding", keyMode: "byok",
+      billTo: { projectOwner: projectId }, projectId, cost: 0.2 });
+
+    expect(inserted).toEqual([]);
+    expect(upsertOptions).toEqual([]);
+  });
+
+  it("keeps the platform calls of a mixed batch", async () => {
+    const runId = newRunId();
+
+    await recordAiUsage([
+      { runId, seq: 0, feature: "numo_chat", keyMode: "byok", billTo: { userId: MEMBER } },
+      { runId, seq: 1, feature: "web_search", keyMode: "platform", billTo: { userId: MEMBER } },
+    ]);
+
+    expect(inserted.map((row) => [row.seq, row.key_mode])).toEqual([[1, "platform"]]);
+  });
+});

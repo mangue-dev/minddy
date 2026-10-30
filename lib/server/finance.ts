@@ -5,7 +5,7 @@ import type { AdminCostRow, AdminFinance } from "@/lib/types";
 
 /**
  * Cost tracking of the instance (MIN-92, MIN-829): the AI ledger aggregated
- * per day, feature, model and key mode, over the chosen window and the one
+ * per day, feature and model, over the chosen window and the one
  * before it. The Costs tab filters and charts it on the client. Revenue, MRR,
  * margin and the key caps left with the commercial dashboard.
  */
@@ -49,7 +49,6 @@ export async function getFinanceSummary(options: {
     day: String(row.day),
     feature: String(row.feature),
     model: String(row.model ?? ""),
-    keyMode: row.key_mode === "byok" ? "byok" : "platform",
     costUsd: Number(row.cost_usd) || 0,
     calls: Number(row.calls) || 0,
     promptTokens: Number(row.prompt_tokens) || 0,
