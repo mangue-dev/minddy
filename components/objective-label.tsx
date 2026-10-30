@@ -108,3 +108,12 @@ export function ObjectiveBadge({
     </>
   );
 }
+
+/** An objective's name in its color, for a menu row's label. */
+export function ObjectiveName({ objective }: { objective: Pick<Objective, "name" | "color"> }) {
+  return (
+    <span className={cn("truncate", OBJECTIVE_TEXT)} style={objectiveTextStyle(objective.color)}>
+      {objective.name}
+    </span>
+  );
+}

@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { feedbackWrites } from "@/lib/optimistic/feedback-writes";
 import { matchesFeedbackFilters, collectionFilterParams } from "./collection-filters";
 import { parseFeedbackListFilters, type FeedbackListFilters } from "./feedback-list-filters";
 import { FEEDBACK_OPEN_STATUSES } from "./feedback/types";
@@ -10,6 +11,7 @@ export function feedbackQueryOptions(projectId: string, filters: FeedbackListFil
   return {
     queryKey: Object.values(filters).some((values) => values?.length) ? ["feedback", projectId, filters] as const : ["feedback", projectId] as const,
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
+      const startedAt = Date.now();
       const params = collectionFilterParams(filters, new URLSearchParams());
       for (const status of filters.statuses ?? []) params.append("statuses", status);
       const scope = params.size ? `?${params}` : "";
@@ -17,7 +19,9 @@ export function feedbackQueryOptions(projectId: string, filters: FeedbackListFil
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || "Unable to load feedback");
       // `total` counts the whole project, not the filtered `posts`.
-      return data as { posts: TeamFeedbackListItem[]; total?: number; board_enabled: boolean };
+      const result = data as { posts: TeamFeedbackListItem[]; total?: number; board_enabled: boolean };
+      // A row's write still pending wins over a response that left before it.
+      return { ...result, posts: feedbackWrites.apply(result.posts, startedAt) };
     },
   };
 }

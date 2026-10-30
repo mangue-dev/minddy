@@ -2,6 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { fetchFeedbackCommentsApi, fetchFeedbackEventsApi, fetchObjectiveCommentsApi, fetchObjectiveEventsApi } from "./comments-api";
 import type { Attachment } from "./types";
 import type { TeamFeedbackDetail } from "./server/feedback/team-queries";
+import { applyFeedbackWritesToPost } from "./optimistic/feedback-writes";
 
 async function read<T>(path: string, signal?: AbortSignal, fallback = "error"): Promise<T> {
   const response = await fetch(path, { signal, cache: "no-store" });
@@ -12,7 +13,11 @@ async function read<T>(path: string, signal?: AbortSignal, fallback = "error"): 
 
 export const feedbackDetailOptions = (projectId: string, postId: string) => queryOptions({
   queryKey: ["feedback-detail", projectId, postId] as const,
-  queryFn: ({ signal }) => read<{ post: TeamFeedbackDetail }>(`/api/projects/${projectId}/feedback/${postId}`, signal),
+  queryFn: async ({ signal }) => {
+    const startedAt = Date.now();
+    const data = await read<{ post: TeamFeedbackDetail }>(`/api/projects/${projectId}/feedback/${postId}`, signal);
+    return { ...data, post: applyFeedbackWritesToPost(data.post, startedAt) };
+  },
 });
 export const feedbackCommentsOptions = (projectId: string, postId: string) => queryOptions({
   queryKey: ["feedback-comments", projectId, postId] as const,

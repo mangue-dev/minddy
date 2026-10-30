@@ -31,7 +31,9 @@ import {
   StatusIndicator,
   PriorityIndicator,
   EffortIndicator,
+  RelationIcon,
 } from "@/components/issue-indicators";
+import type { RelationMenuKind } from "@/lib/issue-hierarchy";
 import { Dot } from "@/components/issue-property-fields";
 import { OBJECTIVE_PILL_TRIGGER, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
@@ -445,11 +447,12 @@ export interface SmartFillManualFields {
   onTitleRequest?: () => void;
   onTitleFocus?: () => void;
   /**
-   * Opens the relation picker Smart Fill would otherwise hide, as R does.
-   * Given only while Smart Fill links related issues; runs once the menu has
-   * closed, so the picker keeps the focus.
+   * The relation types Smart Fill would otherwise link: choosing one opens
+   * the picker on its targets. Given only while Smart Fill links related
+   * issues; `onRequest` runs once the menu has closed, so the picker keeps
+   * the focus.
    */
-  onRelationRequest?: () => void;
+  relations?: { kinds: readonly RelationMenuKind[]; onRequest: (kind: RelationMenuKind) => void };
 }
 
 /**
@@ -470,8 +473,12 @@ function SmartFillManualMenu({
   objectives,
   objectiveId,
   onObjectiveChange,
-  onRelationRequest,
-}: Omit<SmartFillManualFields, "onTitleFocus">) {
+  onRelationPick,
+  relationKinds,
+}: Omit<SmartFillManualFields, "onTitleFocus" | "relations"> & {
+  relationKinds?: readonly RelationMenuKind[];
+  onRelationPick?: (kind: RelationMenuKind) => void;
+}) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tRelations = useTranslations("Relations");
@@ -571,11 +578,21 @@ function SmartFillManualMenu({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       )}
-      {onRelationRequest && (
-        <DropdownMenuItem onSelect={onRelationRequest}>
-          <HugeiconsIcon icon={Link02Icon} className="size-4 text-muted-foreground" />
-          {tRelations("relations")}
-        </DropdownMenuItem>
+      {onRelationPick && relationKinds && relationKinds.length > 0 && (
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <HugeiconsIcon icon={Link02Icon} className="size-4 text-muted-foreground" />
+            {tRelations("relations")}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-52">
+            {relationKinds.map((kind) => (
+              <DropdownMenuItem key={kind} onSelect={() => onRelationPick(kind)}>
+                <RelationIcon relation={kind} className="size-4" />
+                {tRelations(kind)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
       )}
     </>
   );
@@ -605,17 +622,18 @@ export function SmartFillCompact({
   const id = useId();
   /** Title was chosen: the closing menu hands the caret to the title field. */
   const titleChosenRef = useRef(false);
-  /** Relations were chosen: the closing menu opens their picker. */
-  const relationChosenRef = useRef(false);
+  /** A relation type was chosen: the closing menu opens its picker. */
+  const relationChosenRef = useRef<RelationMenuKind | null>(null);
   const menu = manual && (
     <DropdownMenuContent
       align="end"
       className="w-52"
       onCloseAutoFocus={(event) => {
-        if (relationChosenRef.current) {
-          relationChosenRef.current = false;
+        const kind = relationChosenRef.current;
+        if (kind) {
+          relationChosenRef.current = null;
           event.preventDefault();
-          manual.onRelationRequest?.();
+          manual.relations?.onRequest(kind);
           return;
         }
         if (!titleChosenRef.current) return;
@@ -626,10 +644,11 @@ export function SmartFillCompact({
     >
       <SmartFillManualMenu
         {...manual}
-        onRelationRequest={
-          manual.onRelationRequest &&
-          (() => {
-            relationChosenRef.current = true;
+        relationKinds={manual.relations?.kinds}
+        onRelationPick={
+          manual.relations &&
+          ((kind) => {
+            relationChosenRef.current = kind;
           })
         }
         onTitleRequest={

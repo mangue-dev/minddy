@@ -3,7 +3,9 @@
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Delete02Icon, FilterIcon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Delete02Icon, FilterIcon, Target01Icon, TaskEdit01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
+import { useCreateOptional } from "@/lib/create-context";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -197,6 +199,15 @@ function ObjectiveFilterMenu({
   );
 }
 
+/** A color in a menu row: a dot centered in the 16px icon slot. */
+function ColorSwatch({ color }: { color: string }) {
+  return (
+    <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>
+      <span className="size-3 rounded-full" style={{ backgroundColor: color }} />
+    </span>
+  );
+}
+
 /**
  * One row of the column — same template as sort, returns and pull
  * requests: a rounded pellet in an 8 px gutter. What the line
@@ -301,6 +312,13 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
     useObjectivesQuery(projectId);
   const tStatus = useTranslations("ObjectiveStatus");
   const tIssue = useTranslations("Issue");
+  const tNav = useTranslations("Nav");
+  const tColors = useTranslations("Categories.colors");
+  const colorLabel = (hex: string) => {
+    const name = tColors(CATEGORY_COLOR_NAMES[hex]);
+    return name.charAt(0).toLocaleUpperCase() + name.slice(1);
+  };
+  const create = useCreateOptional();
   const router = useAppRouter();
   // The objective a row's right-click menu moves to the trash, once confirmed.
   const [trashTarget, setTrashTarget] = useState<Objective | null>(null);
@@ -321,6 +339,9 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
       onSelect: () => router.push(`/projects/${projectId}?objective=${encodeURIComponent(objective.id)}`),
     };
     if (!canWrite) return [viewIssues];
+    const lead = objective.lead_user_id ? memberMap.get(objective.lead_user_id) ?? null : null;
+    const update = (updates: Parameters<typeof updateObjective>[1]) =>
+      void updateObjective(objective.id, updates).catch((err: Error) => toast.error(err.message));
     return [
       {
         id: "objective-status",
@@ -330,9 +351,61 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
           id: `objective-status-${s.value}`,
           label: tStatus(s.value),
           icon: <ObjectiveStatusIndicator status={s.value} className="size-4" />,
-          disabled: s.value === objective.status,
-          onSelect: () => void updateObjective(objective.id, { status: s.value }),
+          checked: s.value === objective.status,
+          onSelect: () => update({ status: s.value }),
         })),
+      },
+      {
+        id: "objective-lead",
+        label: t("leadFieldLabel"),
+        // The current lead's face, as in the row; the person icon when none.
+        icon: lead
+          ? <UserAvatar seed={lead.avatar_seed} title={displayName(lead)} className="size-4" />
+          : <HugeiconsIcon icon={UserCircleIcon} className="size-4" />,
+        // Only the owner or a Member can lead (MIN-693).
+        children: [
+          {
+            id: "objective-lead-none",
+            label: t("noLead"),
+            checked: objective.lead_user_id === null,
+            onSelect: () => update({ lead_user_id: null }),
+          },
+          ...members.filter((m) => m.role !== "reader").map((m) => ({
+            id: `objective-lead-${m.user_id}`,
+            label: displayName(m),
+            icon: <UserAvatar seed={m.avatar_seed} title={displayName(m)} className="size-4" />,
+            checked: objective.lead_user_id === m.user_id,
+            onSelect: () => update({ lead_user_id: m.user_id }),
+          })),
+        ],
+      },
+      {
+        id: "objective-color",
+        label: t("colorFieldLabel"),
+        icon: <ColorSwatch color={objective.color ?? "var(--muted-foreground)"} />,
+        children: [
+          {
+            id: "objective-color-none",
+            label: t("noColor"),
+            checked: objective.color === null,
+            onSelect: () => update({ color: null }),
+          },
+          ...CATEGORY_COLORS.map((hex) => ({
+            id: `objective-color-${hex}`,
+            label: colorLabel(hex),
+            icon: <ColorSwatch color={hex} />,
+            checked: objective.color?.toLowerCase() === hex,
+            onSelect: () => update({ color: hex }),
+          })),
+        ],
+      },
+      {
+        id: "objective-new-issue",
+        label: tNav("newIssue"),
+        icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />,
+        separatorBefore: true,
+        transfersFocus: true,
+        onSelect: () => create?.openCreateIssue({ projectId, objectiveId: objective.id }),
       },
       viewIssues,
       {

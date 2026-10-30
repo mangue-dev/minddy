@@ -5,10 +5,11 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { usePalettePicker, type PalettePickerRequest } from "@/lib/palette-picker";
 import { IssuePalettePicker } from "@/components/issue-palette-picker";
+import { writeFeedbackPost } from "@/lib/optimistic/feedback-writes";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
@@ -57,7 +58,7 @@ import { buildViewHref } from "@/lib/view-href";
 import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
-import { ObjectivePill } from "@/components/objective-label";
+import { ObjectivePill, ObjectiveName } from "@/components/objective-label";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
@@ -103,7 +104,8 @@ import {
   LazyDocumentEditor,
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
-import { StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
+import { Dot } from "@/components/ui/color-dot";
 import {
   FeedbackStatusBadge,
 } from "@/app/f/[token]/feedback-bits";
@@ -877,6 +879,23 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const tPublic = useTranslations("PublicFeedback");
   const tCommonList = useTranslations("Common");
   const tFieldList = useTranslations("Field");
+  // Row menu writes are optimistic and survive late responses (feedbackWrites).
+  const writePost = (postId: string, updates: Partial<TeamFeedbackListItem>) => {
+    void writeFeedbackPost(queryClient, projectId, postId, updates, () =>
+      api(`/api/projects/${projectId}/feedback/${postId}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      }),
+    ).catch((e: Error) => toast.error(e.message || t("errorGeneric")));
+  };
+  const writePostCategories = (postId: string, ids: string[]) => {
+    void writeFeedbackPost(queryClient, projectId, postId, { category_ids: ids }, () =>
+      api(`/api/projects/${projectId}/feedback/${postId}/categories`, {
+        method: "PUT",
+        body: JSON.stringify({ category_ids: ids }),
+      }),
+    ).catch((e: Error) => toast.error(e.message || t("errorGeneric")));
+  };
   const runOnPost = (postId: string, intent: FeedbackIntent) => {
     setSelectedId(postId);
     setDetailIntent({ postId, intent });
@@ -884,9 +903,10 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   /**
    * The right-click menu of a feedback row, built from the row under the
-   * pointer: its status (unless a linked ticket drives it), linking to an
-   * issue, merging, and the trash. Each gesture opens the post and runs
-   * there, behind the same confirmations as its own controls.
+   * pointer: its status (unless a linked ticket drives it), its objective,
+   * categories, visibility and AI review, then linking to an issue, merging
+   * and the trash. Properties are written from the row; the other gestures
+   * open the post and run there, behind its own confirmations.
    */
   const itemContextActions = (target: Element): ContextMenuAction[] => {
     // A browsed list has no detail pane to run the gesture in.
@@ -906,13 +926,95 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           icon: status === "spam"
             ? <AppIcon icon={Ban} className="size-4" />
             : <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[status]} className="size-4" />,
-          disabled: status === post.status,
+          checked: status === post.status,
           transfersFocus: status === "declined" || status === "spam",
-          onSelect: () => runOnPost(post.id, { action: "status", status }),
+          // Declining and spam say no to someone: their confirmation lives
+          // in the post's pane. The other statuses are written from the row.
+          onSelect: () => (status === "declined" || status === "spam"
+            ? runOnPost(post.id, { action: "status", status })
+            : writePost(post.id, { status })),
         })),
       });
+    }
+    // Properties written from the row, as in the post's own table.
+    if (objectives.length > 0) {
+      menu.push({
+        id: "feedback-objective",
+        label: tFieldList("objective"),
+        icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
+        children: [
+          {
+            id: "feedback-objective-none",
+            label: tCommonList("none"),
+            checked: post.objective_id === null,
+            onSelect: () => writePost(post.id, { objective_id: null }),
+          },
+          ...objectives.map((objective) => ({
+            id: `feedback-objective-${objective.id}`,
+            label: objective.name,
+            labelNode: <ObjectiveName objective={objective} />,
+            icon: <ObjectiveStatusIndicator status={objective.status} className="size-4" />,
+            checked: post.objective_id === objective.id,
+            onSelect: () => writePost(post.id, { objective_id: objective.id }),
+          })),
+        ],
+      });
+    }
+    if (categories.length > 0) {
+      menu.push({
+        id: "feedback-categories",
+        label: tFieldList("categories"),
+        icon: <HugeiconsIcon icon={Tag01Icon} className="size-4" />,
+        children: categories.map((category) => {
+          const on = post.category_ids.includes(category.id);
+          return {
+            id: `feedback-category-${category.id}`,
+            label: category.name,
+            icon: <Dot color={category.color} />,
+            checked: on,
+            keepOpen: true,
+            onSelect: () => writePostCategories(post.id, on
+              ? post.category_ids.filter((categoryId) => categoryId !== category.id)
+              : [...post.category_ids, category.id]),
+          };
+        }),
+      });
+    }
+    if (boardEnabled) {
+      menu.push({
+        id: "feedback-visibility",
+        label: t("visibility"),
+        icon: <HugeiconsIcon icon={post.is_public ? GlobeIcon : LockIcon} className="size-4" />,
+        children: [
+          {
+            id: "feedback-visibility-public",
+            label: t("public"),
+            icon: <HugeiconsIcon icon={GlobeIcon} className="size-4" />,
+            checked: post.is_public,
+            onSelect: () => writePost(post.id, { is_public: true }),
+          },
+          {
+            id: "feedback-visibility-private",
+            label: t("private"),
+            icon: <HugeiconsIcon icon={LockIcon} className="size-4" />,
+            checked: !post.is_public,
+            onSelect: () => writePost(post.id, { is_public: false }),
+          },
+        ],
+      });
+    }
+    if (post.review_state !== "published") {
+      menu.push({
+        id: "feedback-publish-review",
+        label: t("publishReview"),
+        icon: <HugeiconsIcon icon={SentIcon} className="size-4" />,
+        onSelect: () => writePost(post.id, { review_state: "published" }),
+      });
+    }
+    if (!post.issue_id) {
       menu.push({
         id: "feedback-link",
+        separatorBefore: true,
         label: t("linkToIssue"),
         icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
         transfersFocus: true,

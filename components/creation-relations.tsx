@@ -42,7 +42,24 @@ type CreationRelationsCompactProps = CreationRelationsProps & {
   shortcutHint?: string;
   /** A new issue also offers Parent of / Sub-issue of (MIN-844). */
   hierarchy?: boolean;
+  /** Opens straight on this type's targets, skipping the type dropdown (a
+   *  type already chosen in Smart Fill's menu). */
+  startStep?: RelationMenuKind | null;
 };
+
+/**
+ * The relation types a creation form can still add: every relation, and with
+ * `hierarchy` the parent / sub-issue entries the one-level rule leaves
+ * (MIN-804) — one parent, or sub-issues, never both.
+ */
+export function creationRelationKinds(value: readonly PendingRelationInput[], hierarchy: boolean): RelationMenuKind[] {
+  const chosenParent = value.some((r) => r.type === "sub_issue_of");
+  const chosenChildren = value.some((r) => r.type === "parent_of");
+  const hierarchyTypes = hierarchy
+    ? HIERARCHY_RELATIONS.filter((kind) => (kind === "parent_of" ? !chosenParent : !chosenParent && !chosenChildren))
+    : [];
+  return [...RELATION_TYPES, ...hierarchyTypes];
+}
 
 /** Stands for the issue being created in the one-level nesting rules. */
 const NEW_ISSUE_ID = "new-issue";
@@ -59,6 +76,7 @@ export function CreationRelationsCompact({
   onOpenChange,
   shortcutHint,
   hierarchy = false,
+  startStep = null,
 }: CreationRelationsCompactProps) {
   const t = useTranslations("Relations");
   const [ownOpen, setOwnOpen] = useState(false);
@@ -69,7 +87,11 @@ export function CreationRelationsCompact({
     setOwnOpen(next);
     if (next !== openRef.current) onOpenChange?.(next);
   };
-  const [step, setStep] = useState<RelationMenuKind | null>(null);
+  const [step, setStep] = useState<RelationMenuKind | null>(() => (open ? startStep : null));
+  // A type chosen elsewhere opens its targets directly.
+  useEffect(() => {
+    if (open && startStep) setStep(startStep);
+  }, [open, startStep]);
   // The type chosen in the dropdown, handed to the palette once the dropdown
   // has closed: opened earlier, the palette would lose its focus to the
   // dropdown's exit.
@@ -105,13 +127,7 @@ export function CreationRelationsCompact({
     value.some((r) =>
       r.type === step && r.target_id === id && r.target_type === type,
     );
-  // The hierarchy entries the new issue may still take, under the one-level
-  // rule (MIN-804): it gets one parent, or sub-issues, never both.
-  const chosenParent = value.some((r) => r.type === "sub_issue_of");
-  const chosenChildren = value.some((r) => r.type === "parent_of");
-  const hierarchyTypes = hierarchy
-    ? HIERARCHY_RELATIONS.filter((kind) => (kind === "parent_of" ? !chosenParent : !chosenParent && !chosenChildren))
-    : [];
+  const kinds = creationRelationKinds(value, hierarchy);
   // Work under way first, triage last (MIN-726).
   const issueCandidates = useMemo(() => {
     const taken = new Set(value.filter((r) => r.type === step && r.target_type === "issue").map((r) => r.target_id));
@@ -192,7 +208,7 @@ export function CreationRelationsCompact({
       }
     >
       <CommandGroup>
-        {[...RELATION_TYPES, ...hierarchyTypes].map((type) => (
+        {kinds.map((type) => (
           <CommandItem
             key={type}
             value={type}

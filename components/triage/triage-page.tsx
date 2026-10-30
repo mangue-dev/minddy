@@ -61,6 +61,7 @@ import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
 import { IssuePalettePicker } from "@/components/issue-palette-picker";
+import { useIssuePropertyMenuActions } from "@/components/issue-property-menu-actions";
 import { addCommentApi } from "@/lib/comments-api";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -97,6 +98,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const tIssueUI = useTranslations("IssueUI");
   const tAction = useTranslations("CommandPaletteActions");
   const tPr = useTranslations("PullRequests");
+  const propertyActions = useIssuePropertyMenuActions();
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
   const tPicker = useTranslations("Picker");
@@ -500,6 +502,15 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         transfersFocus: true,
         onSelect: () => setDuplicateTarget(issue),
       },
+      // The fields worth setting before the decision, written at once.
+      ...propertyActions({
+        issue,
+        members,
+        categories,
+        objectives,
+        onPatch: (updates) => void patch(issue, updates),
+        onSetCategories: (ids) => void setCategories(issue.id, ids),
+      }).map((action, index) => (index === 0 ? { ...action, separatorBefore: true } : action)),
       { ...copy, separatorBefore: true },
       {
         id: "triage-trash",

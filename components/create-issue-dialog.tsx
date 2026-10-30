@@ -15,7 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
+import { CreationRelationPills, CreationRelationsCompact, creationRelationKinds } from "@/components/creation-relations";
+import type { RelationMenuKind } from "@/lib/issue-hierarchy";
 // Deferred editor: keeps tiptap (~1.5 MB) out of every board route's graph —
 // see components/editor/document-editor-lazy.tsx. The chunk is warmed from idle time by the
 // hook below, so the first open waits on nothing.
@@ -544,6 +545,12 @@ export function CreateIssueDialog({
   };
 
   const showsRelationPicker = !(smartFill && smartFillLinksRelations) || openPicker === "relation";
+  // A type chosen in Smart Fill's menu opens its targets directly; any other
+  // way into the picker starts from the type dropdown.
+  const [relationStartStep, setRelationStartStep] = useState<RelationMenuKind | null>(null);
+  useEffect(() => {
+    if (openPicker !== "relation") setRelationStartStep(null);
+  }, [openPicker]);
 
   // Typed text or a finished upload is worth keeping — a pristine (or
   // still-uploading-only) form is not. Relations, like the other pickers, are
@@ -1031,6 +1038,7 @@ export function CreateIssueDialog({
                           onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
                           shortcutHint={RELATION_SHORTCUT_HINT}
                           hierarchy
+                          startStep={relationStartStep}
                         />
                       )}
                       <CreationRelationPills
@@ -1098,7 +1106,13 @@ export function CreateIssueDialog({
                           setFields((f) => ({ ...f, objective_id })),
                         // The relations Smart Fill would link, picked as R does.
                         ...(!showsRelationPicker && {
-                          onRelationRequest: () => setOpenPicker("relation"),
+                          relations: {
+                            kinds: creationRelationKinds(relations, true),
+                            onRequest: (kind) => {
+                              setRelationStartStep(kind);
+                              setOpenPicker("relation");
+                            },
+                          },
                         }),
                         // The title Smart Fill would write (MIN-813).
                         ...(writesTitle && {
