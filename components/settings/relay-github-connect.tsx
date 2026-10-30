@@ -173,7 +173,7 @@ function ClaimCard({
 }) {
   return (
     <div className="mx-auto flex min-h-[60vh] w-full max-w-lg flex-col items-center justify-center gap-4 px-4 text-center">
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-8 shadow-sm">
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-border bg-card p-8">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <Github className="h-4 w-4" aria-hidden />
           {title}

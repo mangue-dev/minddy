@@ -102,10 +102,10 @@ export function SkillPreviewDialog({
               </p>
             ) : (
               <div data-sheet-section className="mt-8 border-t border-border pt-8">
-                <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+                <p className="content-selectable mb-6 text-sm leading-relaxed text-muted-foreground">
                   {loaded.description}
                 </p>
-                <Markdown className="[&_h1]:text-2xl [&_h2]:mt-8 [&_h2]:text-xl [&_h3]:mt-6 [&_h3]:text-lg">
+                <Markdown className="content-selectable [&_h1]:text-2xl [&_h2]:mt-8 [&_h2]:text-xl [&_h3]:mt-6 [&_h3]:text-lg">
                   {loaded.content}
                 </Markdown>
               </div>

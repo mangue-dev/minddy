@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { SecondarySidebarProvider, useSecondarySidebar } from "./secondary-sidebar-context";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/projects/project/pages" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/projects/project/pages", useSearchParams: () => new URLSearchParams() }));
 const viewport = vi.hoisted(() => ({ mobile: false }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("@/lib/use-media-query", async (importOriginal) => ({

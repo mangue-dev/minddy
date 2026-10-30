@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -66,13 +66,19 @@
       "lib/server/assistant/markdown-pdf.ts",
       "components/assistant/generated-file-cards.tsx",
       "components/assistant/assistant-starter-list.tsx",
-      "components/home/home-numo-composer.tsx"
+      "components/home/home-numo-composer.tsx",
+      "lib/keyboard/typeahead.ts",
+      "lib/keyboard/keyboard-context.tsx",
+      "components/assistant/assistant-shell.tsx",
+      "components/assistant/chat-message.tsx",
+      "components/typed-mention-chip.tsx",
+      "lib/server/assistant/prompt.ts"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (Home composer showing the same suggestion rows as the empty panel, checked against components/home/home-numo-composer.tsx, components/assistant/assistant-starter-list.tsx, lib/assistant-starters.ts and the Assistant.starters.home catalog entries; not checked in the running app; no figure recaptured, existing figures do not show Home; earlier evidence retained in git history)",
-    "language": "agent:claude-code (de sentence added on the Home composer with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 25,
+    "fact": "agent:claude-code (type-ahead from Home and the expanded or focused Numo panel into the composer, single keys still running their shortcut after the 200 ms window, checked against lib/keyboard/typeahead.ts, lib/keyboard/keyboard-context.tsx, components/home/home-numo-composer.tsx and components/assistant/assistant-shell.tsx; Numo citing issues, objectives, projects, pages and members as mention pills in replies and in what it writes (issue descriptions and plans, objective descriptions, comments, pages, notebook), checked against lib/server/assistant/prompt.ts, lib/server/assistant/tools.ts, components/assistant/chat-message.tsx and components/typed-mention-chip.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the conversation figure predates mention pills in answers)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -103,7 +109,7 @@
       "src": "/documentation/de/work-with-numo-workflow.png",
       "alt": "Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.",
       "caption": "Vorhandener Demonstrationsverlauf, für die Anzeige übersetzt. Die gespeicherte Antwort nennt AUR-11 und AUR-7. Die Aufnahme belegt keine neue Ausführung.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -120,7 +126,7 @@
       "src": "/documentation/de/numo-permissions-and-approvals-workflow.svg",
       "alt": "Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.",
       "caption": "Projektzugriff und ausdrückliche Aufträge begrenzen Numo-Aktionen. Externe Inhalte können keine Berechtigung erteilen.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -181,7 +187,7 @@
       "src": "/documentation/de/numo-execution-model-flow.svg",
       "alt": "Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
       "caption": "Lies die Schritte in dieser Reihenfolge. Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -213,7 +219,7 @@
       "src": "/documentation/de/numo-mcp-connections-workflow.png",
       "alt": "Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.",
       "caption": "Numo-Verbindungen sind persönlich. Projektroutinen verwenden die Verbindungen des Projektinhabers.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -230,7 +236,7 @@
       "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
       "alt": "Notion-Verbindungsassistent mit der aus dem Katalog bekannten Anmeldemethode.",
       "caption": "Anmeldeschritt eines Katalogdienstes. Es wurden keine Zugangsdaten eingegeben und kein Server kontaktiert.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -261,9 +267,11 @@ Numo arbeitet mit dem Kontext deiner Unterhaltung und den Berechtigungen deines 
 1. Prüfe den Kontext im Eingabebereich. Nenne das Ticket ausdrücklich, wenn mehrere Einträge relevant sind. Um ein Ticket als Kontext hinzuzufügen, tippe `@` im Eingabebereich oder verwende **Kontext hinzufügen** → **Ticket**; eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf.
 2. Wähle Anbieter, Gesprächsmodell und Denkintensität über das Anbieterlogo neben dem Mikrofon; beim Darüberfahren siehst du das aktuelle Modell. Diese Auswahl gilt für das Gespräch. Bietet das Modell keine Einstellung der Denkintensität, bleibt der Regler auf **Kein Reasoning**; bei einem Modell, das immer nachdenkt, nutzt **Kein Reasoning** dessen leichteste Stufe.
 3. Sende einen begrenzten Auftrag, etwa: „Lies dieses Ticket und schlage Abnahmekriterien vor. Ändere seinen Status nicht.“
-4. Lies die Antwort und öffne Ticket- oder Quellenlinks. Prüfe nach einer Änderung das betroffene Objekt.
+4. Lies die Antwort und öffne Ticket- oder Quellenlinks. Prüfe nach einer Änderung das betroffene Objekt. Tickets, Ziele, Projekte, Seiten und Mitglieder, die Numo gefunden hat, erscheinen in der Antwort als Erwähnungs-Chips: Ein Chip öffnet, worauf er verweist, und was du nicht sehen kannst, erscheint als **Nicht verfügbar**. Numo setzt diese Erwähnungen auch in das, was es schreibt, etwa Ticketbeschreibungen und Pläne, Zielbeschreibungen, Kommentare, Seiten und das Notizbuch, nur für Elemente, die es eindeutig ermittelt hat; ein dort erwähntes Mitglied wird wie bei jeder Erwähnung benachrichtigt.
 
 In einem neuen, leeren Gespräch schlagen vier Zeilen über dem Eingabefeld Aufträge vor, die zur aktuellen Seite passen, etwa **Dieses Ticket zusammenfassen** oder **Einen Umsetzungsplan schreiben**, wenn ein Ticket im Seitenpanel geöffnet ist. Eine Zeile füllt das Eingabefeld, ohne es abzusenden, sodass du den Auftrag zuerst anpassen kannst. Die Zeilen verschwinden, sobald das Eingabefeld Text enthält, und erscheinen wieder, wenn du es leerst. Sie werden im Desktop-Layout angezeigt, nicht auf einem Telefon. Das Eingabefeld unten auf der **Startseite** zeigt dieselben Zeilen, mit Vorschlägen wie **Den Fokus für heute wählen** oder **Überfälliges finden**; wenn du von dort sendest, öffnet sich das Panel im vergrößerten Layout.
+
+Auf der **Startseite** und im Numo-Panel, wenn es vergrößert ist oder den Fokus hat, kannst du lostippen, ohne ins Eingabefeld zu klicken: Eine schnelle Folge von Tasten außerhalb eines Textfelds landet im Eingabefeld, das den Fokus übernimmt. Eine einzelne Taste löst weiterhin ihr Tastenkürzel aus, etwa C für ein neues Ticket, auf diesen Bildschirmen rund 0,2 Sekunden später. G gefolgt von einer Taste bleibt eine Navigationsfolge; eine dritte Taste in der Folge macht daraus Text.
 
 Um Numo zu einer Textstelle zu fragen, markiere sie in einem Editor, etwa auf einer Seite oder in einer Ticketbeschreibung, und wähle am Computer **Numo fragen** in der Auswahlleiste. Das Panel öffnet sich, ohne etwas zu senden: Neben der Seite oder dem Ticket, aus dem sie stammt, erscheint die Textstelle als Kontext-Pill mit ihren ersten Wörtern; fährst du mit der Maus über die Pill, siehst du die ganze Stelle. Tippe deine Frage, etwa „Formuliere das knapper“ oder „Mach daraus Tickets“, und sende sie ab. Die Textstelle geht nur mit dieser Nachricht mit. Um sie wegzulassen, entferne ihre Pill mit dem Kreuz.
 

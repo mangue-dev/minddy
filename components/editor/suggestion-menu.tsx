@@ -11,6 +11,8 @@
 // is the index after the last item).
 
 import { useEffect, type ReactNode, type Ref } from "react";
+import { useMenuScrollFade, useMergedRef } from "@/components/ui/menu-scroll-fade";
+import { useEscapeLayer } from "@/lib/escape-layers";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { SuggestionSection } from "@/lib/suggestion-menu";
@@ -118,6 +120,11 @@ export function SuggestionMenu<T>({
   useEffect(() => {
     if (exhausted) onClose();
   }, [exhausted, onClose]);
+  // Escape in the menu closes the menu, not the dialog or panel around it.
+  useEscapeLayer(true, onClose);
+  // Rows hidden past an edge fade out there, under a chevron.
+  const fade = useMenuScrollFade<HTMLDivElement>();
+  const scrollRef = useMergedRef(listRef, fade.ref);
   let headers = 0;
   return (
     <div
@@ -127,10 +134,12 @@ export function SuggestionMenu<T>({
       className={cn("flex flex-col overflow-hidden", MENU_SURFACE_CLASS, "p-0", className)}
     >
       <div
-        ref={listRef}
+        ref={scrollRef}
         role="listbox"
+        onScroll={fade.onScroll}
         className={cn("scrollbar-quiet min-h-0 p-2", MENU_SCROLL_CLASS, listClassName)}
       >
+        {fade.start}
         {sections.map((section) => {
           const label = section.id === null ? null : sectionLabel(section.id);
           const first = headers === 0 && section.start === 0;
@@ -143,8 +152,9 @@ export function SuggestionMenu<T>({
           );
         })}
         {trailing}
+        {fade.end}
       </div>
-      <div className="shrink-0 border-t border-border-subtle p-2">
+      <div className="shrink-0 border-t border-menu-separator p-2">
         <SuggestionCloseRow active={closeActive} onPick={onClose} onHover={onCloseHover} quiet={quiet} />
       </div>
     </div>

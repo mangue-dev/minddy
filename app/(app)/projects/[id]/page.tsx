@@ -74,6 +74,10 @@ const CreateIssueDialog = dynamic(
   () => loadCreateIssueDialog().then((m) => m.CreateIssueDialog),
   { ssr: false },
 );
+const ObjectivesBoardSidebar = dynamic(
+  () => import("@/components/objectives/objectives-page").then((m) => m.ObjectivesBoardSidebar),
+  { ssr: false },
+);
 const IssueSidePanel = dynamic(
   () => loadIssueSidePanel().then((m) => m.IssueSidePanel),
   { ssr: false },
@@ -161,7 +165,7 @@ function ProjectBoard() {
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
   // picking work into your week from a project board must work too. The patch
   // mirrors the server side-effect: adding assigns to me, never a status bump.
-  const { currentCycle, nextCycle } = useMyCycleQuery();
+  const { currentCycle, nextCycle, cyclesEnabled } = useMyCycleQuery();
   const onSetIssueCycle = useCallback(
     (issue: Issue, cycleId: string | null) =>
       void updateIssue(
@@ -699,6 +703,11 @@ function ProjectBoard() {
 
   return (
     <div className="flex h-full flex-col">
+      {/* An objective's board stays in the objectives list: its bar takes
+          the sidebar's place, with this objective highlighted. */}
+      {objectiveParam && !activeFamily ? (
+        <ObjectivesBoardSidebar projectId={projectId} objectiveId={objectiveParam} />
+      ) : null}
       {issuesLoading ? (
         <BoardLoadingSkeleton position={boardScrollPosition} />
       ) : issues.length === 0 ? (
@@ -823,12 +832,13 @@ function ProjectBoard() {
               // The cycle is personal & cross-project: the tab exists on every
               // board but is canonical on /all only — here it just links out
               // (↗), it never scopes the cycle to this project (MIN-32).
-              cycleTab={{
+              // Hidden while the account has cycles off.
+              cycleTab={cyclesEnabled ? {
                 active: false,
                 external: true,
                 completionPercent: currentCycleCompletionPercent,
                 onSelect: () => router.push("/all?view=cycle"),
-              }}
+              } : undefined}
             />
           )}
           <div className="min-h-0 flex-1 pt-3">
@@ -850,6 +860,7 @@ function ProjectBoard() {
               onOpenIssue={handleOpenIssue}
               onOpenIssueById={openIssueById}
               onAddRelation={handleAddRelation}
+              onRemoveRelation={handleRemoveRelation}
               onOpenPlan={handleOpenPlan}
               onCreateIssue={openCreate}
               onAskNumo={handleAskNumoForIssues}
@@ -913,7 +924,6 @@ function ProjectBoard() {
           onUpdate={updateIssue}
           onDelete={deleteIssue}
           onSetCategories={setCategories}
-          onCreate={createIssue}
           onOpenIssue={(id) => {
             setOpenIssueId(id);
             setOpenIssueTab("description");

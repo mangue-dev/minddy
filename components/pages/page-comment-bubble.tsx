@@ -508,7 +508,7 @@ export function PageCommentBubble({
         {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
         className={cn(
           // The surface of the app's dropdown menus.
-          "flex w-64 flex-col rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10",
+          "flex w-64 flex-col rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border",
           // On the body, under a modal dialog that sets `pointer-events: none`
           // on it: the toolbar takes its clicks back, like the "/" and "@" menus.
           floating && "pointer-events-auto z-[70]",
@@ -547,7 +547,7 @@ export function PageCommentBubble({
                           data-floating-surface
                           {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
                           onMouseDown={(event) => event.preventDefault()}
-                          className="pointer-events-auto fixed z-[71] flex max-h-72 flex-col overflow-y-auto rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+                          className="pointer-events-auto fixed z-[71] flex max-h-72 flex-col overflow-y-auto rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border"
                           style={{ ...turnInto, width: TURN_INTO_WIDTH }}
                         >
                           {blocks.map(({ block, active: isCurrent }) => (

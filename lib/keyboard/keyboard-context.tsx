@@ -42,6 +42,13 @@ import { useSidebarVisibility } from "@/lib/sidebar-visibility-context";
 import { useScratchpad } from "@/lib/scratchpad-context";
 import { useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { eventKey } from "@/lib/keyboard/event-key";
+import {
+  TYPEAHEAD_WINDOW_MS,
+  continuesTypeahead,
+  startsTypeahead,
+  typeaheadTargetFor,
+  type TypeaheadTarget,
+} from "@/lib/keyboard/typeahead";
 import { matchesModShiftCombo, matchesModCombo } from "@/lib/keyboard/mod-combo";
 import { trackEvent } from "@/lib/analytics";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -214,7 +221,68 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Type-ahead (lib/keyboard/typeahead.ts): the keys held while a burst may
+    // still be text for a Numo composer, and the replays of keys that turned
+    // out to be shortcuts, which this listener lets through.
+    let held: { events: KeyboardEvent[]; target: TypeaheadTarget; timer: ReturnType<typeof setTimeout> } | null = null;
+    const replayed = new WeakSet<Event>();
+    const replayHeld = () => {
+      if (!held) return;
+      const { events, timer } = held;
+      clearTimeout(timer);
+      held = null;
+      for (const event of events) {
+        const replay = new KeyboardEvent("keydown", {
+          key: event.key,
+          code: event.code,
+          location: event.location,
+          shiftKey: event.shiftKey,
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+        });
+        replayed.add(replay);
+        const origin = event.target instanceof Node && event.target.isConnected ? event.target : document.body;
+        origin.dispatchEvent(replay);
+      }
+    };
+    /** Returns true when the keystroke was taken by the type-ahead. */
+    const typeahead = (e: KeyboardEvent): boolean => {
+      if (replayed.has(e) || e.key === "Shift" || e.key === "CapsLock") return false;
+      if (held) {
+        if (!continuesTypeahead(e)) {
+          // Escape, an arrow, a command: the held keys were shortcuts.
+          replayHeld();
+          return false;
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const keys = [...held.events.map((event) => event.key), e.key];
+        // `g` then one key is a navigation chord: it is text only once a
+        // third key follows within the window.
+        if (keys.length === 2 && eventKey(held.events[0]) === CHORD_PREFIX) {
+          clearTimeout(held.timer);
+          held.events.push(e);
+          held.timer = setTimeout(replayHeld, TYPEAHEAD_WINDOW_MS);
+          return true;
+        }
+        const { target, timer } = held;
+        clearTimeout(timer);
+        held = null;
+        target.type(keys.join(""));
+        return true;
+      }
+      if (!startsTypeahead(e) || armedRef.current || isTypingTarget(e.target) || isDialogOpen()) return false;
+      const target = typeaheadTargetFor(e.target);
+      if (!target) return false;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      held = { events: [e], target, timer: setTimeout(replayHeld, TYPEAHEAD_WINDOW_MS) };
+      return true;
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
+      if (typeahead(e)) return;
       const navigation = navigationShortcut(e);
       if (navigation) {
         // Arrow chords select words/paragraphs in editors. Keep those native
@@ -301,6 +369,8 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", onKeyDown, true);
     return () => {
       window.removeEventListener("keydown", onKeyDown, true);
+      if (held) clearTimeout(held.timer);
+      held = null;
       disarm();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

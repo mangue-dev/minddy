@@ -22,6 +22,7 @@ import {
   type SensorDescriptor,
   type SensorOptions,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
@@ -105,6 +106,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   onAskNumo,
   onSetCategories,
   onAddRelation,
+  onRemoveRelation,
   onMove,
   buildMenuActions,
   currentCycleId,
@@ -140,6 +142,8 @@ export const KanbanBoard = memo(function KanbanBoard({
     targetId: string,
     kinds?: RelationKinds,
   ) => void;
+  /** Removes a relation from a card's relation popover. */
+  onRemoveRelation?: (relationId: string) => void;
   onMove: (
     issueId: string,
     patch: { status?: IssueStatus; position: number },
@@ -526,6 +530,7 @@ export const KanbanBoard = memo(function KanbanBoard({
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
+            <DragCursor />
             <div className="flex h-full flex-col">
               <BulkIssueActionsPresence>
                 {canWrite && selectedIssues.length > 0 && (
@@ -593,6 +598,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                       onUpdateIssue={onUpdateIssue}
                       onSetCategories={onSetCategories}
                       onAddRelation={onAddRelation}
+                      onRemoveRelation={onRemoveRelation}
                       onDeleteIssue={onDeleteIssue}
                       buildMenuActions={buildMenuActions}
                       currentCycleId={currentCycleId}

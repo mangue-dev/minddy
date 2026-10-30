@@ -99,7 +99,7 @@ export function ColorInput({
   return (
     <div
       className={cn(
-        "group/color-input relative flex w-full items-center rounded-lg bg-control shadow-xs transition-[color,box-shadow] outline-none",
+        "group/color-input relative flex w-full items-center rounded-lg bg-control transition-[color,box-shadow] outline-none",
         "has-disabled:cursor-not-allowed has-disabled:opacity-50 has-disabled:bg-muted",
         heightClass,
         paddingClass,

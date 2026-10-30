@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AppIcon } from "@/components/icon";
 import { Cancel01Icon as X, CancelCircleIcon as CircleSlash, CheckIcon as Check } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";
+import { ExactTime } from "@/components/exact-time";
 import { cn } from "@/lib/utils";
 import { AuthorNames, AuthorStack } from "@/components/git/author-stack";
 import { GitLogin } from "@/components/git/git-login";
@@ -126,9 +127,11 @@ export function PrTimelineRow({ event }: { event: PrTimelineEvent }) {
       </span>
       </span>
       {when ? (
-        <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground/70">
-          {format.relativeTime(when, now)}
-        </span>
+        <ExactTime date={when}>
+          <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground/70">
+            {format.relativeTime(when, now)}
+          </span>
+        </ExactTime>
       ) : null}
     </div>
   );
@@ -254,7 +257,7 @@ export function PrTimelineReview({
         data-testid="pr-activity-review"
         // Same selectable surface as the thread messages: a review says
         // something a human may want to copy.
-        className="chat-selectable overflow-clip rounded-lg border border-border bg-card shadow-xs"
+        className="chat-selectable overflow-clip rounded-lg border border-border bg-card"
       >
         <div className="px-3.5 py-3">
           <header className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -268,9 +271,11 @@ export function PrTimelineReview({
               {t(state.label)}
             </span>
             {when ? (
-              <span className="ml-auto shrink-0 text-xs text-muted-foreground/80">
-                {format.relativeTime(when, now)}
-              </span>
+              <ExactTime date={when}>
+                <span className="ml-auto shrink-0 text-xs text-muted-foreground/80">
+                  {format.relativeTime(when, now)}
+                </span>
+              </ExactTime>
             ) : null}
           </header>
           {event.body ? (
@@ -358,7 +363,7 @@ export function ReviewConversationCard({
   }, [resolved]);
 
   return (
-    <article className="overflow-clip rounded-xl border border-border bg-card shadow-xs">
+    <article className="overflow-clip rounded-xl border border-border bg-card">
       <PrHunk
         path={comment.path}
         line={displayLineOf(comment)}

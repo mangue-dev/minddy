@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,13 +124,16 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -176,7 +179,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -193,7 +196,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -210,7 +213,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -227,7 +230,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +246,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -259,7 +262,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -276,7 +279,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -293,7 +296,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -310,7 +313,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -327,7 +330,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -360,7 +363,7 @@ Ein Ticket erfasst eine Arbeitseinheit im Projekt, von der ersten Anfrage bis zu
 
 Du musst Eigentümer oder Mitglied des Zielprojekts sein; Leser können Tickets öffnen, aber weder erstellen noch bearbeiten. Öffne das Projekt und seine Funktion zum Erstellen eines Tickets. Gib einen Titel ein, der die Arbeit benennt, und ergänze Kontext, erwartetes Ergebnis und Einschränkungen in der Beschreibung. Titel und Beschreibung verhalten sich wie ein einziger Text: Am Computer wechselt die Abwärtspfeiltaste in der letzten Zeile des Titels in die erste Zeile der Beschreibung, die Aufwärtspfeiltaste zurück, und der Cursor behält ungefähr seine Position in der Zeile. Umschalt+Eingabetaste im Titel wechselt zur Beschreibung; die Eingabetaste ebenfalls, außer du hast die Eingabetaste als Sendekürzel gewählt – dann erstellt sie das Ticket. Command/Strg+Eingabetaste erstellt es aus beiden Feldern. Dieselben Pfeiltasten und die Eingabetaste verbinden auch Titel und Beschreibung eines geöffneten Tickets, Ziels, einer Seite oder eines Feedbacks. Das Formular öffnet sich im aktuellen Projekt; wähle unter **Erstellen in** oben links im Formular (auf dem Telefon neben dem Titel **Neues Ticket**) ein anderes, besonders wenn du aus einer persönlichen oder projektübergreifenden Ansicht erstellst. Am Computer öffnet Command/Strg+Umschalt+P dieses Menü, auch während du Titel oder Beschreibung eingibst; sobald du ein Projekt wählst oder das Menü schließt, steht der Cursor wieder genau dort, wo er war. Die Schaltfläche zeigt dieses Kürzel an, das es nur gibt, wenn mehr als ein Projekt zur Wahl steht; auf dem Telefon wird kein Kürzel angezeigt. Ein Projektwechsel entfernt die für das vorherige Projekt gewählten Kategorien, das Ziel und die Beziehungen. Die Erstellen-Schaltfläche nennt die Kennung, die das Ticket erhält, etwa `MIN-42`, und berücksichtigt zwischenzeitlich erstellte Tickets; ihr Menü erstellt das Ticket und kopiert diese Kennung.
 
-Schalte für eine manuelle Erstellung Smart Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien, Ziel und Beziehungen selbst festlegen. Um nur einige dieser Eigenschaften festzulegen, lass Smart Fill eingeschaltet und öffne den Pfeil neben seiner Schaltfläche: Wähle eine Eigenschaft und dann ihren Wert. Außerhalb von Titel und Beschreibung öffnet die Taste der Eigenschaft ihre Auswahl direkt: P für Priorität, E für Aufwand, L für Kategorien oder O für Ziel. Der gewählte Wert bleibt im Formular sichtbar. Smart Fill ergänzt nur die Eigenschaften, die du leer gelassen hast. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig. Solange Smart Fill eingeschaltet ist, [verknüpft es das Ticket nach dem Speichern auch mit verwandten Tickets](#smart-fill-relations), deshalb ist die Beziehungsauswahl ausgeblendet; R öffnet sie trotzdem. Bereits gewählte Beziehungen bleiben über dem Titel sichtbar und werden mit dem Ticket angelegt.
+Schalte für eine manuelle Erstellung Smart Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien, Ziel und Beziehungen selbst festlegen. Um nur einige dieser Eigenschaften festzulegen, lass Smart Fill eingeschaltet und öffne den Pfeil neben seiner Schaltfläche: Wähle eine Eigenschaft und dann ihren Wert. **Beziehungen** listet dort die Beziehungsarten auf; wählst du eine, öffnet sich die Befehlspalette mit ihren möglichen Zielen. Außerhalb von Titel und Beschreibung öffnet die Taste der Eigenschaft ihre Auswahl direkt: P für Priorität, E für Aufwand, L für Kategorien oder O für Ziel. Der gewählte Wert bleibt im Formular sichtbar. Smart Fill ergänzt nur die Eigenschaften, die du leer gelassen hast. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig. Solange Smart Fill eingeschaltet ist, [verknüpft es das Ticket nach dem Speichern auch mit verwandten Tickets](#smart-fill-relations), deshalb ist die Beziehungsauswahl ausgeblendet; R öffnet sie trotzdem. Bereits gewählte Beziehungen bleiben als Chips in der Eigenschaftszeile sichtbar, zwischen der zuständigen Person und dem Fälligkeitsdatum, und werden mit dem Ticket angelegt.
 
 Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Aufwand, zuständige Person, Ziel, Kategorien, Fälligkeitsdatum und Wiederholung. Zuständig ist der Projekteigentümer oder ein Mitglied, nie ein Leser; ein Ziel bündelt Tickets zu einem Projektergebnis. Optionale Eigenschaften kannst du offenlassen, statt Werte zu erraten. Die Priorität ist **Nicht festgelegt** oder reicht von niedrig über mittel und hoch bis dringend; der Aufwand ist **Nicht festgelegt** oder verwendet XS, S, M, L und XL.
 
@@ -368,7 +371,7 @@ Ist Smart Assign im Projekt aktiviert, zeigt die Auswahl der zuständigen Person
 
 Bestätige die Erstellung und öffne das neue Ticket. Prüfe Kennung und Projekt. Öffne die Eigenschaftsauswahl erneut, um Werte zu ändern, sobald die Aufgabe klarer wird. Die Beschreibung erklärt die Arbeit; ein Umsetzungsplan wird gesondert im Plan-Tab gepflegt.
 
-Wenn du das Formular schließt, bleibt das Geschriebene erhalten: Öffne es wieder, um dort weiterzumachen, wo du aufgehört hast. Öffnest du es nicht innerhalb von zwei Minuten wieder, wird sein Inhalt als Entwurf gespeichert und das nächste Formular beginnt leer; bis dahin existiert er nur in diesem Fenster, und Neuladen oder Schließen des Fensters verwirft ihn. Wenn du einen Entwurf oder ein von anderer Stelle vorausgefülltes Formular öffnest, wird das Zurückgelassene zuerst als Entwurf gespeichert. Um selbst zu speichern, öffne das Menü neben der Erstellen-Schaltfläche und wähle **Als Entwurf speichern**. Gespeicherte Entwürfe von Tickets und Zielen sammeln sich unter **Entwürfe**, unten rechts im Fenster zwischen Numo und dem Aufgabennotizbuch; die Schaltfläche erscheint nur, solange du einen Entwurf hast, und zeigt deren Anzahl. Ihre Liste zeigt Titel und erste Beschreibungszeile jedes Entwurfs. Wähle einen Entwurf, um ihn in seinem Erstellungsformular wieder zu öffnen und fertigzustellen; das Erstellen des Tickets entfernt den Entwurf. Die Löschschaltfläche neben einem Entwurf fragt zuerst nach einer Bestätigung, und das Löschen lässt sich nicht rückgängig machen. Auf einem Telefon öffne die Befehlspalette und suche nach dem Titel des Entwurfs. Entwürfe bleiben 30 Tage auf diesem Gerät, höchstens zehn je Art; die Liste zeigt nur Entwürfe aus Projekten, in denen du noch Tickets erstellen kannst.
+Wenn du das Formular schließt, bleibt das Geschriebene erhalten: Öffne es wieder, um dort weiterzumachen, wo du aufgehört hast. Nur ein Titel, eine Beschreibung oder ein Anhang zählen: Ein Formular, das nur Eigenschaften oder Beziehungen enthält, beginnt wieder leer. Öffnest du es nicht innerhalb von zwei Minuten wieder, wird sein Inhalt als Entwurf gespeichert und das nächste Formular beginnt leer; bis dahin existiert er nur in diesem Fenster, und Neuladen oder Schließen des Fensters verwirft ihn. Wenn du einen Entwurf oder ein von anderer Stelle vorausgefülltes Formular öffnest, wird das Zurückgelassene zuerst als Entwurf gespeichert. Um selbst zu speichern, öffne das Menü neben der Erstellen-Schaltfläche und wähle **Als Entwurf speichern**. Gespeicherte Entwürfe von Tickets und Zielen sammeln sich unter **Entwürfe**, unten rechts im Fenster zwischen Numo und dem Aufgabennotizbuch; die Schaltfläche erscheint nur, solange du einen Entwurf hast, und zeigt deren Anzahl. Ihre Liste zeigt Titel und erste Beschreibungszeile jedes Entwurfs. Wähle einen Entwurf, um ihn in seinem Erstellungsformular wieder zu öffnen und fertigzustellen; das Erstellen des Tickets entfernt den Entwurf. Die Löschschaltfläche neben einem Entwurf fragt zuerst nach einer Bestätigung, und das Löschen lässt sich nicht rückgängig machen. Auf einem Telefon öffne die Befehlspalette und suche nach dem Titel des Entwurfs. Entwürfe bleiben 30 Tage auf diesem Gerät, höchstens zehn je Art; die Liste zeigt nur Entwürfe aus Projekten, in denen du noch Tickets erstellen kannst.
 
 
 ![Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.](/documentation/de/new-issue.png)
@@ -414,7 +417,7 @@ Ein so geschriebener Titel gehört Smart Fill, bis jemand ihn ändert. Mit einge
 
 Die Listenfilter grenzen eingehende Tickets nach Priorität, Aufwand, zugewiesener Person, Ziel, Kategorien oder Integration ein. **Nicht festgelegt** unter Priorität oder Aufwand behält die Tickets, die noch keinen Wert haben. Werte derselben Eigenschaft sind Alternativen, verschiedene Eigenschaften gelten gemeinsam. Setze die Filter zurück, um alle eingehenden Tickets wieder anzuzeigen.
 
-Wähle Akzeptieren und bestätige, um ein beibehaltenes Ticket ins Backlog zu verschieben. Wähle Ablehnen und bestätige, um es auf Abgebrochen zu setzen. Bei einem Duplikat wählst du mit der Duplikatauswahl das Ticket aus, das beibehalten werden soll. Das eingegangene Ticket erhält den Status Duplikat und verweist auf dieses Ticket. Beschreibst du die Anfrage im Suchfeld der Auswahl, listet sie nach den Textübereinstimmungen auch ähnliche Tickets unter **Inhaltlich verwandt** auf; siehe [Tickets inhaltlich suchen](/docs/navigation#search-by-meaning). Sobald ein Eintrag die Triage verlässt, wird der nächste ausgewählt. Prüfe den entstandenen Status oder den Duplikatlink direkt im Ticket. Der Wechsel zwischen Karten ohne eine dieser Aktionen schließt kein Ticket ab.
+Wähle Akzeptieren und bestätige, um ein beibehaltenes Ticket ins Backlog zu verschieben. Wähle Ablehnen und bestätige, um es auf Abgebrochen zu setzen. Bei einem Duplikat wählst du **Als Duplikat markieren…** und dann in der Befehlspalette das Ticket, das beibehalten werden soll. Das eingegangene Ticket erhält den Status Duplikat und verweist auf dieses Ticket. Beschreibst du die Anfrage im Suchfeld der Auswahl, listet sie nach den Textübereinstimmungen auch ähnliche Tickets unter **Inhaltlich verwandt** auf; siehe [Tickets inhaltlich suchen](/docs/navigation#search-by-meaning). Sobald ein Eintrag die Triage verlässt, wird der nächste ausgewählt. Prüfe den entstandenen Status oder den Duplikatlink direkt im Ticket. Der Wechsel zwischen Karten ohne eine dieser Aktionen schließt kein Ticket ab.
 
 ### Sortierung und Grenzen {#triage-order}
 
@@ -473,7 +476,7 @@ Prüfe nach dem Hochladen, ob die Ressource erscheint und sich öffnen lässt. S
 
 ## Abhängigkeiten und verwandte Tickets verknüpfen {#issue-dependencies}
 
-Öffne die Beziehungsfunktionen eines Tickets und suche das andere anhand von Titel oder Kennung. Außerhalb eines Textfelds öffnet R die Auswahl der Beziehungsart auf einer Karte unter dem Mauszeiger oder im Seitenbereich des Tickets. Ist die Art gewählt, wählst du das andere Ende in der [Befehlspalette](/docs/navigation#search-and-shortcuts), die nur Tickets und Ziele zeigt, die diese Beziehung annehmen können. Eine beschreibende Suchanfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets desselben Projekts unter **Inhaltlich verwandt** auf. Wähle eine blockierende Beziehung, wenn eine Aufgabe abgeschlossen sein muss, bevor eine andere weitergehen kann. Blockiert A das Ticket B, ist A die Voraussetzung und B wird von A blockiert. Eine verwandte Beziehung ergänzt Kontext ohne diese Reihenfolge vorzugeben.
+Öffne die Beziehungsfunktionen eines Tickets und suche das andere anhand von Titel oder Kennung. Außerhalb eines Textfelds öffnet R die Auswahl der Beziehungsart auf einer Karte unter dem Mauszeiger oder im Seitenbereich des Tickets. Ist die Art gewählt, wählst du das andere Ende in der [Befehlspalette](/docs/navigation#search-and-shortcuts), die nur Tickets und Ziele zeigt, die diese Beziehung annehmen können; erledigte und abgebrochene stehen ebenfalls darin, nach den offenen. Eine beschreibende Suchanfrage listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets desselben Projekts unter **Inhaltlich verwandt** auf. Wähle eine blockierende Beziehung, wenn eine Aufgabe abgeschlossen sein muss, bevor eine andere weitergehen kann. Blockiert A das Ticket B, ist A die Voraussetzung und B wird von A blockiert. Eine verwandte Beziehung ergänzt Kontext ohne diese Reihenfolge vorzugeben.
 
 Lies beide Kennungen und die angezeigte Richtung vor der Bestätigung. Beispielsweise blockiert „Endpunkt vorbereiten“ die Aufgabe „Client verbinden“, nicht umgekehrt. Eine Abhängigkeit macht keines der Tickets zu einem Unterticket. Eine Eltern-Kind-Beziehung ersetzt keine blockierende Beziehung.
 
@@ -485,7 +488,7 @@ Die Abschlusszustände Erledigt, Abgebrochen und Duplikat beenden die blockieren
 
 Ein offenes Ticket kann über sein offenes Ziel eine Blockade erben. Wenn A das Ziel B blockiert, zeigen offene Tickets in B den Eintrag A als geerbte Blockade, auch ohne direkte Beziehung von A zum Ticket. Die Anzeige nennt die tatsächliche Voraussetzung und das Ziel, über das die Blockade vererbt wird. Prüfe diese Zielbeziehung, bevor du versuchst, sie am Ticket zu entfernen. Wird A oder B geschlossen oder das Ticket aus B entfernt, entfällt die geerbte Blockade. Dieser Mechanismus folgt der Zielzuordnung und nicht der Hierarchie zwischen über- und untergeordneten Tickets.
 
-Entferne eine Beziehung über ihre Steuerelemente, wenn sie nicht mehr zutrifft; eine Bestätigung nennt das andere Ticket oder Ziel, und nur die Verknüpfung verschwindet. Prüfe anschließend sowohl die Beschriftung als auch die Blockadeanzeige. Das Markieren eines Duplikats beeinflusst den Lebenszyklus und verweist auf die beibehaltene Arbeit. Verwende es für doppelte Aufgaben, statt eine normale verwandte Beziehung anzulegen und anzunehmen, diese würde das Duplikat schließen.
+Entferne eine Beziehung über ihre Steuerelemente, wenn sie nicht mehr zutrifft; eine Bestätigung nennt das andere Ticket oder Ziel, und nur die Verknüpfung verschwindet. Auf einer Board-Karte öffnet der Chip eines Beziehungstyps die Liste dieser Beziehungen, jede mit einer Schaltfläche zum Entfernen (✕), die dieselbe Bestätigung verlangt; über ein Ziel geerbte Beziehungen haben dort keine. Prüfe anschließend sowohl die Beschriftung als auch die Blockadeanzeige. Das Markieren eines Duplikats beeinflusst den Lebenszyklus und verweist auf die beibehaltene Arbeit. Verwende es für doppelte Aufgaben, statt eine normale verwandte Beziehung anzulegen und anzunehmen, diese würde das Duplikat schließen.
 
 Findet die Beziehungsauswahl ein Ticket nicht, prüfe Projektzugriff und Kennung. Lege keine Inhalte eines anderen Projekts offen, indem du eine private Ticket-URL in eine öffentliche Feedback-Antwort kopierst.
 
@@ -501,7 +504,7 @@ Indexierung und Beziehungsentscheidungen nutzen KI. Sie zählen zum Anteil **Aut
 
 ## Ein Ticket in Untertickets aufteilen {#sub-issues}
 
-Öffne das übergeordnete Ticket und verwende seine Unterticket-Funktionen, um kleinere Arbeitsschritte zu erstellen. Gib jedem Unterticket ein eigenes Ergebnis. Prüfe nach der Erstellung sein Projekt, seine Eigenschaften und die Kennung des übergeordneten Tickets. Die Hierarchie soll die Nachverfolgung erleichtern, nicht die Beschreibung der Ergebnisse jedes Untertickets ersetzen.
+Wähle im Seitenpanel des übergeordneten Tickets **Unterticket erstellen**, um den Dialog zum Erstellen eines Tickets zu öffnen, in dem dieses Ticket bereits als übergeordnetes gesetzt ist. Der Pfeil daneben (**Weitere Unterticket-Optionen**) bietet **Numo bitten, das Ticket aufzuteilen**: Numo liest das Ticket mit seinem Plan und seinen Kommentaren und erstellt ein Unterticket pro unabhängigem Arbeitsschritt; prüfe die erstellten Untertickets. Ein Leser sieht diese Schaltfläche nicht. Gib jedem Unterticket ein eigenes Ergebnis. Prüfe nach der Erstellung sein Projekt, seine Eigenschaften und die Kennung des übergeordneten Tickets. Die Hierarchie soll die Nachverfolgung erleichtern, nicht die Beschreibung der Ergebnisse jedes Untertickets ersetzen.
 
 Um bestehende Tickets zuzuordnen, drücke R auf einer Karte unter dem Mauszeiger oder im Seitenbereich des Tickets, oder öffne **Beziehungen** über das Kontextmenü einer Karte. **Übergeordnet zu** listet die Tickets, die ein Unterticket dieses Tickets werden können; **Unterticket von** listet die Tickets der obersten Ebene, die sein übergeordnetes Ticket werden können. Jede Liste bietet nur an, was die Regel einer einzigen Ebene erlaubt: Ein Unterticket hat keinen Eintrag **Übergeordnet zu**, und ein Ticket mit Untertickets hat keinen Eintrag **Unterticket von**. Wählst du ein Ticket, das bereits ein anderes übergeordnetes Ticket hat, wird es unter das neue verschoben. Bei einer Auswahl von Karten ordnet **Unterticket von** jedes geeignete ausgewählte Ticket dem gewählten übergeordneten Ticket unter. Im Formular für ein neues Ticket bietet **Beziehungen** dieselben beiden Einträge: **Unterticket von** erstellt das Ticket unter dem gewählten übergeordneten Ticket, und **Übergeordnet zu** ordnet die gewählten Tickets nach dem Erstellen darunter ein. Ein neues Ticket erhält ein übergeordnetes Ticket oder Untertickets, nicht beides. Wenn du im Suchfeld des Kontextmenüs einer Karte oder des `…`-Menüs im Seitenbereich des Tickets tippst, findest du auch die Einträge seiner Untermenüs, jeweils mit ihrem Pfad, etwa **Beziehungen** › **Als blockiert durch… markieren**.
 
@@ -564,7 +567,7 @@ Eine Numo-Routine ist ein anderes Objekt: Sie plant ein Gespräch und kann das K
 
 Halte auf einem Board die Umschalttaste gedrückt und klicke auf jede Ticketkarte, um sie aus- oder abzuwählen. Mit einer Maus kannst du außerdem von einer freien Boardfläche aus ein Auswahlrechteck ziehen. Umschalt, Command oder Strg ergänzt dabei die bestehende Auswahl. Nahe einem Rand scrollt das Board, und die Karten, die das Rechteck überstrichen hat, bleiben ausgewählt, auch wenn sie aus dem sichtbaren Bereich scrollen. Das Auswahlrechteck ist kein Auswahlverfahren für Touchscreens. Prüfe die Anzahl und die sichtbaren Kennungen, bevor du die Sammelaktionen öffnest. Die Auswahl ist eine Arbeitsmenge für die Aktion, keine gespeicherte Ansicht und keine Berechtigungserteilung. Öffne sie mit **Aktionen** in der Auswahlleiste oder drücke Befehl+K unter macOS bzw. Strg+K unter Windows/Linux, während Tickets ausgewählt sind.
 
-Wähle Aktionen in der schwebenden Auswahlleiste, um die Befehlspalette zu öffnen. Wähle Status, Priorität, Aufwand oder zuständige Person, setze den Wert und bestätige das Inline-Formular. Die Zielaktion erscheint nur, wenn die Auswahl zu einem einzigen Projekt mit verfügbaren Zielen gehört. Andere Aktionen, etwa das Hinzufügen zu oder Entfernen aus einem Zyklus, das Verknüpfen zweier Tickets oder das Senden der Auswahl an Numo, erscheinen nur, wenn das aktuelle Board sie unterstützt. Mit der Maus kannst du auch auf eine ausgewählte Karte zeigen und S, P, E, A, L, D, O oder R drücken: Das geöffnete Menü gilt für alle ausgewählten Tickets, für zuständige Person, Ziel, Kategorien und Beziehungen für die ausgewählten Tickets aus dem Projekt dieser Karte. Klicke mit der rechten Maustaste auf eine ausgewählte Karte, um auf die ganze Auswahl zu wirken: **Kombinierten Prompt kopieren** bietet **Pläne erstellen** (**Pläne überprüfen**, wenn jedes ausgewählte Ticket einen hat, **Pläne erstellen oder überprüfen**, wenn nur einige einen haben), **Tickets umsetzen**, **Implementierungen überprüfen** und **Benutzerdefiniert…**; jeder Eintrag kopiert einen einzigen Prompt für alle ausgewählten Tickets. **Die 3 Kennungen kopieren** kopiert bei drei ausgewählten Tickets ihre Kennungen, durch Kommas getrennt und mit der kleinsten Nummer zuerst. **Beziehungen**, **Ziel verknüpfen** und **Fälligkeitsdatum hinzufügen** öffnen dieselben Menüs wie R, O und D. Prüfe anschließend die betroffenen Tickets. Auf einem reinen Touchgerät ohne unterstützte Mehrfachauswahl bearbeitest du jedes Ticket im Detailpanel.
+Wähle Aktionen in der schwebenden Auswahlleiste, um die Befehlspalette zu öffnen. Wähle Status, Priorität, Aufwand oder zuständige Person, setze den Wert und bestätige das Inline-Formular. Die Zielaktion erscheint nur, wenn die Auswahl zu einem einzigen Projekt mit verfügbaren Zielen gehört. Andere Aktionen, etwa das Hinzufügen zu oder Entfernen aus einem Zyklus, das Verknüpfen zweier Tickets oder das Senden der Auswahl an Numo, erscheinen nur, wenn das aktuelle Board sie unterstützt. Mit der Maus kannst du auch auf eine ausgewählte Karte zeigen und S, P, E, A, L, D, O oder R drücken: Das geöffnete Menü gilt für alle ausgewählten Tickets, für zuständige Person, Ziel, Kategorien und Beziehungen für die ausgewählten Tickets aus dem Projekt dieser Karte. Klicke mit der rechten Maustaste auf eine ausgewählte Karte, um auf die ganze Auswahl zu wirken: **Kombinierten Prompt kopieren** bietet **Pläne erstellen** (**Pläne überprüfen**, wenn jedes ausgewählte Ticket einen hat, **Pläne erstellen oder überprüfen**, wenn nur einige einen haben), **Tickets umsetzen**, **Implementierungen überprüfen** und **Benutzerdefiniert…**; jeder Eintrag kopiert einen einzigen Prompt für alle ausgewählten Tickets. **Die 3 Kennungen kopieren** kopiert bei drei ausgewählten Tickets ihre Kennungen, durch Kommas getrennt und mit der kleinsten Nummer zuerst. **Beziehungen**, **Ziel verknüpfen** und **Fälligkeitsdatum hinzufügen** öffnen dieselben Menüs wie R, O und D. **In den Papierkorb verschieben**, ganz unten, verschiebt die gesamte Auswahl nach derselben Bestätigung wie in der Auswahlleiste in den Papierkorb. Prüfe anschließend die betroffenen Tickets. Auf einem reinen Touchgerät ohne unterstützte Mehrfachauswahl bearbeitest du jedes Ticket im Detailpanel.
 
 ### Teilergebnisse und destruktive Aktionen {#bulk-results}
 

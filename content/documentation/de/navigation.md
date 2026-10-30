@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -68,13 +68,14 @@
       "lib/palette-picker.ts",
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
-      "components/mobile-nav-actions.tsx"
+      "components/mobile-nav-actions.tsx",
+      "lib/keyboard/typeahead.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
-    "language": "agent:claude-code (de new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -96,7 +97,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -136,7 +137,7 @@
 
 ## Persönliche Arbeit finden und Projekte wechseln {#navigation}
 
-Die Hauptnavigation führt zu deiner persönlichen Arbeit und deinen Projekten. Wähle ein Projekt, um dessen Tickets und weitere Bereiche zu sehen, darunter Triage, Ziele, Seiten und Projekteinstellungen. Die Zurück-Zeile führt eine Navigationsebene nach oben; dabei kann sich der Inhalt der Seitenleiste ändern, während die Hauptseite geöffnet bleibt. Wähle ein Ziel, um dorthin zu navigieren.
+Die Hauptnavigation führt zu deiner persönlichen Arbeit und deinen Projekten. Wähle ein Projekt, um dessen Tickets und weitere Bereiche zu sehen, darunter Triage, Ziele, Seiten und Projekteinstellungen. Die Zurück-Zeile führt eine Navigationsebene nach oben; dabei kann sich der Inhalt der Seitenleiste ändern, während die Hauptseite geöffnet bleibt. Wähle ein Ziel, um dorthin zu navigieren. In einer Liste wie Triage, Ziele, Feedback, Code-Review oder Routinen durchsucht das Filterfeld oben in der Seitenleiste alle Einträge, unabhängig von den Filtern, die die Liste eingrenzen; sein Platzhalter nennt ihre Gesamtzahl.
 
 Zähler und Warnungen begleiten dich zwischen den Ebenen. Das Element, das zur **Startseite** zurückführt, zeigt die Gesamtzahl der Elemente zur Triage in den Projekten, die die **Startseite** auflistet, einschließlich des aktuellen, sowie die Smart-Assign-Warnung, wenn einem deiner Projekte Regeln fehlen. Eine Zurück-Zeile zeigt den Zähler der Ebene, zu der sie zurückführt, als Badge auf ihrem Pfeil, orange, solange die Smart-Assign-Warnung gilt. Innerhalb eines Projekts behalten **Triage** und **Feedback** die Zähler dieses Projekts. Die Tabs der Desktop-App tragen dasselbe Badge wie ihr Eintrag in der Seitenleiste: die Warnung auf der **Startseite** und die Zähler auf **Posteingang**, **Code-Review** sowie **Triage** und **Feedback** eines Projekts, auch wenn der Tab im Hintergrund ist.
 
@@ -151,6 +152,9 @@ Klicke mit der rechten Maustaste auf eine Zeile der Seitenleiste, um auf das dar
 - Die Zeile **Alle Tickets** bietet **Neues Ticket**, und die Zeile **Routinen** bietet **Neue Routine**, wenn du Eigentümer eines Projekts bist.
 - Eine Projektzeile oder der Projektname oben im Panel des Projekts bietet **Neu** (ein Ticket, ein Ziel oder eine Seite in diesem Projekt) und **Projekteinstellungen**. Der Projekteigentümer sieht außerdem **In den Papierkorb verschieben**; dabei erscheint dieselbe Bestätigung wie in den Projekteinstellungen. Dasselbe Menü bietet außerdem **Projekt ausblenden** oder, für ein ausgeblendetes Projekt, **Projekt einblenden**; siehe [Ein Projekt für dich ausblenden](/docs/projects#hide-project).
 - Ein Projekt-Tab bietet seinen eigenen Erstellungseintrag: **Neues Ticket** unter Tickets, **Neues Ziel** unter Ziele, **Neue Seite** unter Seiten und **Neues Feedback** unter Feedback, das das interne Feedback-Formular öffnet.
+- Eine Triage-Zeile bietet **Akzeptieren**, **Ablehnen** und **Als Duplikat markieren…** mit derselben Bestätigung bzw. Auswahl wie im Triage-Bereich, danach **Priorität**, **Aufwand**, **Zuständig**, **Kategorien** und **Ziel**, das Kopieren ihrer Kennung und **In den Papierkorb verschieben**. Leser können nur die Kennung kopieren. Siehe [Eingehende Arbeit in der Triage prüfen](/docs/issues#triage-incoming-work).
+- Eine Zielzeile bietet **Status**, **Lead** und **Farbe**, **Neues Ticket** in diesem Ziel, **tickets anzeigen** auf dem Projektboard und **In den Papierkorb verschieben**. Leser sehen nur **tickets anzeigen**.
+- Eine Feedbackzeile bietet **Status**, sofern kein verknüpftes Ticket ihn bestimmt, **Ziel**, **Kategorien**, **Sichtbarkeit**, wenn das öffentliche Board aktiviert ist, **Veröffentlichen**, solange die KI-Überprüfung sie zurückhält, **Mit bestehendem Ticket verknüpfen**, **Zusammenführen in…**, wenn eine andere Anfrage sie aufnehmen kann, und **In den Papierkorb verschieben**. Eigenschaften änderst du direkt in der Zeile; die anderen Aktionen öffnen die Anfrage und fragen nach derselben Bestätigung wie ihr Bereich.
 - Eine Routinezeile bietet **Letzte Ausführung öffnen** und dem Projekteigentümer zusätzlich **Jetzt ausführen**, **Pausieren** oder **Fortsetzen**, **Bearbeiten** und **In den Papierkorb verschieben**. Siehe [Ausführungen verwalten und prüfen](/de/dokumentation/scheduled-routines#runs).
 - Eine Pull-Request-Zeile bietet die Statusänderungen, die ihr aktueller Status erlaubt, **Zusammenführen**, wenn sie bereit ist, und Korrekturaktionen, wenn etwas sie blockiert. Siehe [Review und Merge](/de/dokumentation/code-work#decision).
 
@@ -174,7 +178,7 @@ Sobald du tippst, findet die Palette auch Routinen, Pull Requests, Ansichten und
 
 Auch was du verknüpfst, wählst du in der Palette. Eine Beziehung hinzufügen, ein Ticket mit einem Pull Request oder einen Pull Request mit einem Ticket verknüpfen und eine Seite als Ressource anhängen öffnet sie nur mit den Elementen, die du wählen kannst, und ihr Suchfeld sagt, was du gerade auswählst. Bei einer Beziehung wählst du zuerst die Art im Menü; die Palette zeigt dann die Tickets und Ziele, die sie annehmen können. Ein gewähltes Element wird verknüpft; Escape schließt die Palette, ohne etwas zu verknüpfen.
 
-Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspalette zu öffnen; Command/Strg+P ist ein alternatives Anwendungskürzel. Außerhalb bearbeitbarer Texte öffnet ? die Kürzelhilfe und C die Ticketerstellung. Auf einer Ticketkarte unter dem Mauszeiger oder an den unterstützten Detailfunktionen öffnet S den Status, P die Priorität, E den Aufwand, A die zuständige Person, L die Kategorien, D das Fälligkeitsdatum und O das Ziel. R fügt an denselben Stellen, auf der Seite eines Ziels und im Formular für ein neues Ticket eine Beziehung hinzu: Wähle die Beziehungsart und dann das andere Ticket oder Ziel. Gehört die Karte zu einer Auswahl, ändern diese Tasten alle ausgewählten Tickets; zuständige Person, Ziel, Kategorien und Beziehungen gelten nur für die ausgewählten Tickets aus dem Projekt dieser Karte. Umschalt+C führt zu einem Kommentarfeld, bereit zur Eingabe, mit dem Verlauf bis zur neuesten Nachricht gescrollt: dem einer Ticketkarte unter dem Mauszeiger oder einer Zeile unter dem Mauszeiger in der Liste der Ziele, des Feedbacks, der Pull Requests, der Seiten oder der Triage, oder, wenn nichts unter dem Mauszeiger liegt, dem des angezeigten Tickets, Ziels, Feedbacks, Pull Requests oder der angezeigten Seite. Eine Seite öffnet dafür ihr Panel **Aktivität**. Umschalt+C wirkt nur auf dieses eine Element, auch wenn die Karte zu einer Auswahl gehört. Auf der Seite eines Ziels und im Formular für ein neues Ziel öffnet S seinen Status, A die verantwortliche Person, D sein Zieldatum und C seine Farbe; dort erstellt C kein Ticket. Diese Einzelbuchstaben unterbrechen keine Eingabe in einem Eingabefeld, Textbereich oder Inhaltseditor. Navigationsfolgen wie G, dann H (Startseite) und G, dann I (Posteingang) verwenden zwei nacheinander gedrückte Tasten. G, dann W führt nur innerhalb eines Projekts zu den Seiten.
+Drücke Command+K unter macOS oder Strg+K unter Windows/Linux, um die Befehlspalette zu öffnen; Command/Strg+P ist ein alternatives Anwendungskürzel. Außerhalb bearbeitbarer Texte öffnet ? die Kürzelhilfe und C die Ticketerstellung. Auf einer Ticketkarte unter dem Mauszeiger oder an den unterstützten Detailfunktionen öffnet S den Status, P die Priorität, E den Aufwand, A die zuständige Person, L die Kategorien, D das Fälligkeitsdatum und O das Ziel. R fügt an denselben Stellen, auf der Seite eines Ziels und im Formular für ein neues Ticket eine Beziehung hinzu: Wähle die Beziehungsart und dann das andere Ticket oder Ziel. Gehört die Karte zu einer Auswahl, ändern diese Tasten alle ausgewählten Tickets; zuständige Person, Ziel, Kategorien und Beziehungen gelten nur für die ausgewählten Tickets aus dem Projekt dieser Karte. Umschalt+C führt zu einem Kommentarfeld, bereit zur Eingabe, mit dem Verlauf bis zur neuesten Nachricht gescrollt: dem einer Ticketkarte unter dem Mauszeiger oder einer Zeile unter dem Mauszeiger in der Liste der Ziele, des Feedbacks, der Pull Requests, der Seiten oder der Triage, oder, wenn nichts unter dem Mauszeiger liegt, dem des angezeigten Tickets, Ziels, Feedbacks, Pull Requests oder der angezeigten Seite. Eine Seite öffnet dafür ihr Panel **Aktivität**. Umschalt+C wirkt nur auf dieses eine Element, auch wenn die Karte zu einer Auswahl gehört. Auf der Seite eines Ziels und im Formular für ein neues Ziel öffnet S seinen Status, A die verantwortliche Person, D sein Zieldatum und C seine Farbe; dort erstellt C kein Ticket. Diese Einzelbuchstaben unterbrechen keine Eingabe in einem Eingabefeld, Textbereich oder Inhaltseditor. Navigationsfolgen wie G, dann H (Startseite) und G, dann I (Posteingang) verwenden zwei nacheinander gedrückte Tasten. G, dann W führt nur innerhalb eines Projekts zu den Seiten. Auf der **Startseite** und im vergrößerten Numo-Panel landet eine schnelle Tastenfolge stattdessen im Eingabefeld von Numo, und eine einzelne Taste löst ihr Kürzel nach einer kurzen Pause aus ([an Numo schreiben](/docs/numo#work-with-numo)).
 
 Um eine Einstellung zu erreichen, gib ihren Namen in der Befehlspalette oder im Filterfeld oben in der Seitenleiste der Einstellungen ein. Beide finden jede Einstellungskarte und einzelne Einstellungen wie Sprache, Design, jede Palette, Transparenz und die beiden Schalter von **Ticket starten**. Ein gewähltes Ergebnis öffnet den passenden Einstellungstab, scrollt zur Karte oder Zeile und hebt sie hervor. Command+T unter macOS oder Strg+T unter Windows/Linux öffnet die Palette für einen neuen Tab; eine dort gewählte Einstellung öffnet sich in einem neuen App-Tab. In einem Projekt bietet sie außerdem **Neue Seite** an: Damit erstellst du eine Seite in diesem Projekt und öffnest sie in einem neuen Tab. Englische und französische Suchbegriffe funktionieren unabhängig von der Sprache der Oberfläche.
 

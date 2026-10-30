@@ -5,16 +5,14 @@
 // It is the gesture that everyone has learned elsewhere, and whose absence is
 // note before any other quality of the editor. It consists of three pieces:
 //
-// - `DragHandle` (@tiptap/extension-drag-handle-react) carries hover,
-// positioning and drag and drop, including children. She targets the blocks
-// FIRST LEVEL only (no `nested`), and it's a choice, not a
-// oversight: the register calls the list “block”, not the item; the leaflet,
-// not its content. `nested` added a SECOND handle as soon as we hovered
-// the text of a quote or an item — two handles with two x-coordinates
-// different for a single block in the sense of the product -, and on a list it
-// was positioned on the indentation of the item, therefore on top of the text. All
-// menu actions ⋯ already operate on the first level block
-// (`blocksIn`, block-actions.ts): the handle now says the same thing;
+// - `DragHandle` (@tiptap/extension-drag-handle-react) carries hover and
+// positioning. It targets first-level blocks, and inside a list each ITEM:
+// a list is a series of blocks, as the block selection already reads it
+// (arrows and ⇧-arrows step through items, block-selection.ts), so a task,
+// a numbered step or a bullet has its own handle, menu and drag. The list
+// wrapper itself is no target; selecting its items selects it. Quotes and
+// other containers keep one handle. An item's handle stands left of its list
+// rather than on its indentation, where it would cover the marker;
 // - `+` inserts an empty paragraph BELOW and opens the “/” menu inside
 // (`alt`-click: above). The `+` is not a “paragraph” button, it is
 // the catalog entry;
@@ -35,7 +33,7 @@
 import { onEditorDom } from "@/components/editor/editor-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, DragDropVerticalIcon, MessageAdd01Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
@@ -73,6 +71,27 @@ import {
 /** Frozen at the module level: the `DragHandle` component remounts its plugin as soon as
     that this object changes identity. */
 const POSITION = { placement: "left-start", strategy: "absolute" } as const;
+
+const LIST_ITEM_TYPES = new Set(["listItem", "taskItem"]);
+const LIST_TYPES = new Set(["bulletList", "orderedList", "taskList"]);
+
+/** Items of a list are blocks of their own (see the header); same freezing.
+    The targets are the first-level blocks and the items of a list — at any
+    depth, an item's own list included. Not `allowedContainers`: it only keeps
+    nodes INSIDE a list, and dropped every first-level block, the gutter with
+    them. Where a list item and its list both qualify, the deeper one wins. */
+const NESTED: NonNullable<Exclude<ComponentProps<typeof DragHandle>["nested"], boolean>> = {
+  edgeDetection: "none",
+  rules: [
+    {
+      id: "minddy-blocks-and-list-items",
+      evaluate: ({ node, depth, parent }) =>
+        depth === 1 || (LIST_ITEM_TYPES.has(node.type.name) && !!parent && LIST_TYPES.has(parent.type.name))
+          ? 0
+          : 1000,
+    },
+  ],
+};
 
 /** The handle and the smaller `+` beside it, side by side, in pixels. */
 const BUTTONS_WIDTH = 24 + BUTTON_SIZE;
@@ -324,11 +343,16 @@ export function BlockGutter({
           });
         }
       }
+      // A list item's buttons stand left of its list, past its marker: the
+      // indentation between the item and its list is shifted back.
+      const list = node && LIST_ITEM_TYPES.has(node.type.name) ? dom.parentElement : null;
+      const shift = list ? Math.max(0, dom.getBoundingClientRect().left - list.getBoundingClientRect().left) : 0;
+      element.style.transform = shift ? `translateX(${-Math.round(shift)}px)` : "";
       // The buttons stand a little away from the text, unless the pane is
       // too narrow on the left for that (a side panel): then they move
       // closer to the text rather than to the pane's edge.
       const room =
-        dom.getBoundingClientRect().left -
+        dom.getBoundingClientRect().left - shift -
         scrollPane(dom).getBoundingClientRect().left;
       const extra = Math.max(
         0,
@@ -408,6 +432,7 @@ export function BlockGutter({
       <DragHandle
         editor={editor}
         computePositionConfig={POSITION}
+        nested={NESTED}
         onNodeChange={onNodeChange}
         onElementDragStart={(event) => {
           // A block drag MOVES the block. Left unset, the drag allows every

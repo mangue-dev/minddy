@@ -3,7 +3,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import {
-  createObjectiveApi,
   deleteObjectiveApi,
   objectivesQueryFn,
   updateObjectiveApi,
@@ -12,6 +11,7 @@ import {
   objectiveWrites,
   patchObjectiveEverywhere,
 } from "./optimistic/issue-writes";
+import { createObjectiveOptimistic } from "./optimistic-objective";
 import { effortToPoints, statusCompletionCredit } from "./cycle";
 import { isClosedStatus } from "./issue-constants";
 import type { IssueEffort, IssueStatus } from "./issue-constants";
@@ -41,13 +41,12 @@ export function useObjectivesQuery(projectId: string | null) {
     }
   }, [queryClient, projectId]);
 
+  /** Optimistic (lib/optimistic-objective.ts): returns the row shown at once
+   *  and the promise of the server row. */
   const createObjective = useCallback(
-    async (input: CreateObjectiveInput) => {
-      const objective = await createObjectiveApi(projectId as string, input);
-      invalidate();
-      return objective;
-    },
-    [projectId, invalidate]
+    (input: CreateObjectiveInput) =>
+      createObjectiveOptimistic(queryClient, projectId as string, input),
+    [queryClient, projectId]
   );
 
   /**

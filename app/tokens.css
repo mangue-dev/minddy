@@ -138,7 +138,28 @@
   }
 }
 
+/* Elevation. Only what sits ABOVE the page casts a shadow: menus, popovers,
+   dialogs, sheets, toasts, a dragged item. Tailwind's defaults pair every
+   shadow with a tight 1-2px band right against the edge, which read as a thin
+   dark outline around each surface rather than as depth; these are wide and
+   soft, with no band at the edge. The small steps stay for the few raised
+   controls (a switch thumb) and are nearly flat. */
+@theme {
+  --shadow-2xs: 0 1px 2px rgb(0 0 0 / 0.03);
+  --shadow-xs: 0 1px 3px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 4px rgb(0 0 0 / 0.06), 0 2px 8px -4px rgb(0 0 0 / 0.04);
+  --shadow: 0 1px 4px rgb(0 0 0 / 0.06), 0 2px 8px -4px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 8px 24px -6px rgb(0 0 0 / 0.1), 0 2px 10px -4px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 14px 36px -10px rgb(0 0 0 / 0.14), 0 4px 14px -6px rgb(0 0 0 / 0.05);
+  --shadow-xl: 0 22px 48px -14px rgb(0 0 0 / 0.18), 0 6px 18px -8px rgb(0 0 0 / 0.06);
+  --shadow-2xl: 0 30px 70px -18px rgb(0 0 0 / 0.24);
+}
+
 @theme inline {
+  /* Menu separators: the general border, light enough to divide a list
+     without drawing a line across it. Its own name keeps menus apart should
+     the two ever differ again. */
+  --color-menu-separator: var(--border);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
@@ -190,6 +211,7 @@
   --color-foreground-hover: var(--foreground-hover);
   --color-destructive-surface: var(--destructive-surface);
   --color-destructive-surface-hover: var(--destructive-surface-hover);
+  --color-destructive-highlight: var(--destructive-highlight);
   --color-destructive-button: var(--destructive-button);
   --color-destructive-button-foreground: var(--destructive-button-foreground);
   --color-destructive-border: var(--destructive-border);
@@ -275,7 +297,10 @@
   --accent: oklch(0.945 0.010 268);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.58 0.22 27);
-  --border: oklch(0.895 0.012 268);
+  /* Borders are a light veil of the text color rather than a fixed gray, so
+     an edge reads the same on the page, a card or a menu: the weight of the
+     menus' separators, carried to every border (scratchpad, 2026-10-30). */
+  --border: color-mix(in oklab, var(--foreground) 6%, transparent);
   --input: oklch(0.910 0.012 268);
   --ring: #7059c4;
   /* Scrollbar thumb, read by `scrollbar-quiet`. Repeat that utility's rules on
@@ -308,6 +333,9 @@
   --destructive-button-foreground: oklch(0.985 0 0);
   --destructive-surface: oklch(0.925 0.040 27);
   --destructive-surface-hover: oklch(0.895 0.060 27);
+  /* A destructive menu row's highlight: a tint of the red over the menu's
+     own surface (translucent menus included), not an opaque pink block. */
+  --destructive-highlight: oklch(0.58 0.22 27 / 0.10);
   --destructive-border: oklch(0.820 0.080 27);
   --destructive-border-hover: oklch(0.750 0.100 27);
   --tabs-hover: var(--control-hover);
@@ -325,7 +353,7 @@
   --surface-type-clip: oklch(0.930 0.030 163);
   --surface-type-screenshot: oklch(0.930 0.030 230);
   --surface-type-locked: oklch(0.930 0.030 55);
-  --border-subtle: oklch(0.910 0.010 268);
+  --border-subtle: color-mix(in oklab, var(--foreground) 4%, transparent);
   --accent-glow: #7059c4;
   --accent-glow-foreground: #ffffff;
   --accent-glow-muted: oklch(0.541 0.160 289.9 / 10%);
@@ -366,7 +394,7 @@
   --accent: oklch(0.230 0.003 250);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 8%);
+  --border: oklch(1 0 0 / 6%);
   --input: oklch(1 0 0 / 12%);
   --ring: #b6a5f0;
   --scrollbar-thumb: oklch(1 0 0 / 16%);
@@ -395,6 +423,7 @@
   --destructive-button-foreground: oklch(0.985 0 0);
   --destructive-surface: oklch(0.250 0.050 22.216);
   --destructive-surface-hover: oklch(0.310 0.070 22.216);
+  --destructive-highlight: oklch(0.704 0.191 22.216 / 0.16);
   --destructive-border: oklch(0.360 0.080 22.216);
   --destructive-border-hover: oklch(0.420 0.100 22.216);
   --tabs-hover: var(--control-hover);
@@ -412,7 +441,7 @@
   --surface-type-clip: oklch(0.230 0.030 163);
   --surface-type-screenshot: oklch(0.230 0.030 230);
   --surface-type-locked: oklch(0.230 0.030 55);
-  --border-subtle: oklch(1 0 0 / 5%);
+  --border-subtle: oklch(1 0 0 / 4%);
   --accent-glow: #b6a5f0;
   --accent-glow-foreground: #1b1530;
   --accent-glow-muted: oklch(0.764 0.107 294.1 / 12%);
@@ -654,6 +683,12 @@ code,
    selection did nothing in every editor. Atomic pieces the editor marks
    non-editable (a mention pill, a task's checkbox) keep the reset. */
 [contenteditable="true"] :not([contenteditable="false"], [contenteditable="false"] *) {
+  user-select: text;
+}
+/* A READ-ONLY editor too — a reader's view of a description, a page or a
+   plan — so whoever cannot edit the text can still select and copy it. */
+.ProseMirror[contenteditable="false"],
+.ProseMirror[contenteditable="false"] * {
   user-select: text;
 }
 

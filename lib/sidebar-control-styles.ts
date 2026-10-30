@@ -16,3 +16,26 @@ export const SIDEBAR_ROW_ACTION_CLASS =
 
 /** Hover delay shared by primary-sidebar tooltips. */
 export const SIDEBAR_TOOLTIP_DELAY_MS = 600;
+
+/**
+ * A selected row, at every level of the sidebar (navigation, project menu,
+ * collections, page tree): one color, so the selection reads the same
+ * wherever it sits. `sidebar-row-active` lets the desktop window material
+ * restyle every level at once (app/globals.css).
+ */
+export const SIDEBAR_ROW_SELECTED_CLASS =
+  "sidebar-row-active bg-sidebar-accent text-sidebar-accent-foreground";
+
+/** The matching hover and keyboard focus of an unselected row. */
+export const SIDEBAR_ROW_HOVER_CLASS =
+  "hover:bg-sidebar-accent/60 focus-visible:bg-sidebar-accent/60";
+
+/**
+ * The hover of a row that holds several controls (a page with its chevron
+ * and actions, a project group header with its "+"): the whole line hovers
+ * while the pointer or the focus is anywhere in it. Such a row carries
+ * `data-sidebar-row`, which the desktop window material styles as one
+ * surface (app/globals.css).
+ */
+export const SIDEBAR_COMPOSITE_ROW_HOVER_CLASS =
+  "hover:bg-sidebar-accent/60 focus-within:bg-sidebar-accent/60";

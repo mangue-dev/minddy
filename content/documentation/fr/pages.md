@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -104,13 +104,14 @@
       "lib/selection-menu-visibility.test.ts",
       "lib/mention-menu.ts",
       "components/pages/block-menu.tsx",
-      "lib/action-menu-search.ts"
+      "lib/action-menu-search.ts",
+      "components/pages/block-drag.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (block menu search field reaching every action, block types and colors included, with submenu entries shown behind their path such as Turn into › Heading 1 (MIN-845), checked against components/pages/block-menu.tsx, components/issue-context-menu.tsx and lib/action-menu-search.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 21; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (list items as blocks with their own handle: handle left of the list, + adding an item of the same kind below or above with Alt/Option-click and the / menu open, dragging among lists of the same kind of item including nested lists, emptied lists removed, handle menu acting on the item or the selection; checked against components/pages/block-gutter.tsx, components/pages/block-actions.ts and components/pages/block-drag.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show list item handles)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -146,7 +147,7 @@
       "src": "/documentation/fr/page-create-menu.png",
       "alt": "Menu de création proposant Nouvelle page et Nouvelle base de données.",
       "caption": "Les contrôles des pages du projet permettent de choisir un document ou une base de données.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -162,7 +163,7 @@
       "src": "/documentation/fr/page-editor.png",
       "alt": "Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.",
       "caption": "Les titres, blocs de tâches et la mention AUR-2 structurent la page. Ce contenu est un exemple de démonstration.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -178,7 +179,7 @@
       "src": "/documentation/fr/page-comments.png",
       "alt": "Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.",
       "caption": "Lisez l’activité et rédigez un commentaire dans le champ. Aucun commentaire n’a été envoyé dans cet exemple.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -194,7 +195,7 @@
       "src": "/documentation/fr/page-file-states.png",
       "alt": "Page de démonstration avec un envoi inachevé et un fichier enregistré de 67 octets proposant Télécharger.",
       "caption": "Vérifiez l’état réel du fichier : la seconde pièce jointe est disponible, contrairement au premier envoi inachevé.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -210,7 +211,7 @@
       "src": "/documentation/fr/page-history-preview.png",
       "alt": "Onglet Versions avec un état antérieur déplié, son auteur, Restaurer et l’indication de conservation pendant 30 jours.",
       "caption": "Prévisualisez un état enregistré et comparez-le à la page actuelle avant de le restaurer.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -226,12 +227,12 @@
       "src": "/documentation/fr/page-publish.png",
       "alt": "Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.",
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
         496,
-        230
+        234
       ],
       "theme": "light",
       "padding": 24
@@ -242,7 +243,7 @@
       "src": "/documentation/fr/page-export.png",
       "alt": "Menu d’export du document avec Markdown (.md) et Imprimer / PDF.",
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -258,7 +259,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -331,6 +332,8 @@ Les pages, les descriptions, les commentaires et le carnet de tâches partagent 
 Maj+Entrée passe à la ligne dans le même bloc. Commande/Ctrl+Entrée n’insère pas de saut de ligne : dans un commentaire ou un autre champ de rédaction, il envoie, quel que soit le raccourci d’envoi choisi dans vos [préférences](/fr/documentation/accounts#preferences), et si vous avez choisi Entrée comme raccourci d’envoi, Entrée envoie aussi.
 
 Pour sélectionner des blocs entiers, faites glisser la souris d’un bloc à un autre, ou tracez un rectangle de sélection depuis l’extérieur du texte : appuyez dans la marge à côté de celui-ci ou dans l’espace vide sous la page, puis faites glisser sur les blocs. Chaque bloc touché par le rectangle est sélectionné ; un clic à cet endroit sans glisser place toujours le curseur sur la ligne, et Échap annule le rectangle. Chaque bloc atteint est surligné, aux coins arrondis, de la couleur du texte sélectionné. Lorsqu’un seul bloc est sélectionné, la barre de sélection s’ouvre au-dessus : ses actions (**Transformer en**, **Couleur**, **Gras** et les autres mises en forme, **Copier**, **Demander à Numo**, **Commenter**) s’appliquent au bloc, et après **Transformer en** il reste sélectionné pour enchaîner une autre action. Lorsque plusieurs blocs sont sélectionnés, la barre reste masquée : ouvrez le menu de la poignée d’un bloc sélectionné, qui agit sur tous. Maj+clic sur un autre bloc, ou Maj+flèche haut et Maj+flèche bas au bord d’un bloc, étendent la sélection par blocs entiers. Échap sélectionne le bloc dans lequel vous écrivez, et Échap à nouveau efface la sélection. Commande+A sur macOS ou Ctrl+A sur Windows/Linux sélectionne d’abord le texte du bloc où vous êtes, bloc de code compris, et, pressé à nouveau, tous les blocs. Lorsque des blocs sont sélectionnés, les flèches haut et bas sélectionnent le bloc au-dessus ou au-dessous, Maj+flèche haut et Maj+flèche bas ajoutent ou retirent des blocs, Retour arrière ou Suppr les supprime, Commande/Ctrl+C les copie, Commande/Ctrl+X les coupe, et Entrée sur un seul bloc place le curseur à sa fin ; la saisie n’a aucun effet. Le menu du bloc agit sur tous les blocs sélectionnés. Saisissez du texte dans le champ de recherche du menu du bloc pour atteindre n’importe laquelle de ses actions, types de bloc et couleurs compris : une entrée d’un sous-menu affiche son chemin, par exemple **Transformer en** › **Titre 1**. Les images, fichiers, blocs de code, équations, séparateurs, mentions et le code en ligne affichent le même surlignage lorsqu’ils sont sélectionnés, seuls ou dans une sélection. Lorsque vous rédigez ou modifiez un commentaire, Échap continue de le fermer ou de l’annuler. Sur un écran tactile, l’appui long sélectionne toujours du texte, et le glissement ne sélectionne pas de blocs.
+
+Dans une liste à puces, numérotée ou de tâches, chaque élément est un bloc avec sa propre poignée, affichée à gauche de sa liste quand vous survolez l’élément ; une liste n’a plus de poignée à elle : sélectionnez ses éléments pour agir sur tous, le menu de la poignée agissant sur l’élément ou sur tous les éléments sélectionnés. Le + de la poignée ajoute un élément du même type en dessous, ou au-dessus avec Alt/Option-clic, avec le menu `/` ouvert. Glisser la poignée déplace l’élément, ou les éléments sélectionnés, dans toute liste qui accepte ce type d’élément, listes imbriquées comprises : un élément à puce peut rejoindre une liste numérotée, une tâche seulement d’autres tâches, et une liste ainsi vidée est supprimée.
 
 Sur un téléphone, l’éditeur n’affiche ni poignées de bloc ni barre de sélection, et la saisie de `@` reste un simple caractère. Lorsqu’un éditeur a le focus, une barre flottante se place au-dessus du clavier et se masque quand le clavier se ferme : **Insérer un bloc** (+) liste les blocs de cet éditeur, dans les mêmes sections que le menu `/`, et insère celui choisi au curseur, comme `/` ; **Mentionner** (@) liste les personnes, tickets, objectifs et pages à mentionner, regroupés par type ; viennent ensuite **Gras**, **Italique**, **Barré**, **Code**, **Couleur** (une feuille pour la couleur du texte ou du fond), **Ajouter un lien**, **Diminuer le retrait** et **Augmenter le retrait** dans une liste, **Commenter** sur une page, et **Masquer le clavier**, qui reste fixé à son extrémité droite. Une feuille inférieure dans laquelle vous écrivez s’agrandit sur toute la hauteur de l’écran, et la ligne en cours de saisie reste au-dessus du clavier. Un appui long sélectionne du texte dans un éditeur, et la barre et ses feuilles fonctionnent aussi dans le carnet de tâches. La navigation inférieure se masque tant qu’un champ de texte a le focus, par exemple un titre de page ou un commentaire. Sur un écran tactile, **Ajouter une icône** reste toujours visible sur une page.
 

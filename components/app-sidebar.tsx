@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Book02Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, NewspaperIcon, Comment01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -20,7 +20,8 @@ import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
-import { useDisplayedPathname } from "@/lib/pending-navigation";
+import { useDisplayedPathname, useDisplayedSearchParam } from "@/lib/pending-navigation";
+import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { documentationPath } from "@/lib/documentation-core.mjs";
@@ -76,6 +77,7 @@ import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
+  SIDEBAR_ROW_SELECTED_CLASS,
   SIDEBAR_TOOLTIP_DELAY_MS,
 } from "@/lib/sidebar-control-styles";
 import {
@@ -86,6 +88,8 @@ import {
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Project } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { MinddyLogo } from "@/components/minddy-logo";
+import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { countLabel } from "@/components/nav-badge";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
@@ -188,7 +192,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
     ROW_PL,
     "pr-3",
     active
-      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+      ? SIDEBAR_ROW_SELECTED_CLASS
       : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
     item.disabled && "pointer-events-none opacity-50",
   );
@@ -297,14 +301,14 @@ function SidebarRow({ item }: { item: AppNavItem }) {
       open={hasTooltip ? undefined : false}
     >
       <TooltipTrigger asChild>{row}</TooltipTrigger>
-      <TooltipContent side="right" className="flex items-center gap-2">
-        <span>{item.tooltip ?? item.label}</span>
+      <TooltipContent side="right" className="flex items-center gap-2 [overflow-wrap:normal]">
+        <span className="min-w-0">{item.tooltip ?? item.label}</span>
         {item.shortcut && (
-          <>
+          <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
             <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
             <span>{tk("then")}</span>
             <Kbd size="sm">{item.shortcut}</Kbd>
-          </>
+          </span>
         )}
       </TooltipContent>
     </Tooltip>
@@ -464,18 +468,22 @@ export function ProjectContextRow({
               {homeItem.badge}
             </motion.button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="flex items-center gap-2">
-            <span>{homeItem.label}</span>
+          {/* The label and its shortcut hold one line; the badge's scope
+              wraps below them rather than squeezing both into a column. */}
+          <TooltipContent side="right" className="flex max-w-[260px] flex-col gap-1 [overflow-wrap:normal]">
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <span>{homeItem.label}</span>
+              {homeItem.shortcut ? (
+                <KbdSequence
+                  keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
+                  separator={tk("then")}
+                  size="sm"
+                />
+              ) : null}
+            </span>
             {/* Says the badge's scope: every project, not this one. */}
             {homeItem.tooltip ? (
               <span className="text-muted-foreground">{homeItem.tooltip}</span>
-            ) : null}
-            {homeItem.shortcut ? (
-              <KbdSequence
-                keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
-                separator={tk("then")}
-                size="sm"
-              />
             ) : null}
           </TooltipContent>
         </Tooltip>
@@ -821,7 +829,7 @@ function ChangelogButton({
         <MobileSheetScrollArea>
           <a href={documentationHref} target="_blank" rel="noopener noreferrer" onClick={() => handleMenuOpenChange(false)}
             className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
-            <AppIcon icon={HelpCircleIcon} className="size-[18px] shrink-0" />
+            <AppIcon icon={Book02Icon} className="size-[18px] shrink-0" />
             <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
             <AppIcon icon={ArrowUpRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
           </a>
@@ -834,18 +842,20 @@ function ChangelogButton({
               setDialogOpen(true);
             }}
           >
-            <AppIcon icon={HistoryIcon} className="size-[18px] shrink-0" />
+            <AppIcon icon={NewspaperIcon} className="size-[18px] shrink-0" />
             <span className="min-w-0 truncate">{t("changelog")}</span>
           </button>
           {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
             handleMenuOpenChange(false);
             if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
             else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");
-          }}><AppIcon icon={Megaphone01Icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{t("shareFeedback")}</span></button>}
-          <div className="space-y-2 px-3 pt-3 text-xs text-muted-foreground">
-            <p className="flex items-center justify-between gap-3"><span>{t("webVersion")}</span><span className="shrink-0 tabular-nums">{APP_VERSION}</span></p>
-            {desktopVersion && <p className="flex items-center justify-between gap-3"><span>{t("appVersion")}</span><span className="shrink-0 tabular-nums">{desktopVersion}</span></p>}
-          </div>
+          }}><AppIcon icon={Comment01Icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{t("shareFeedback")}</span></button>}
+          <AppVersions
+            className="px-3 pt-3"
+            web={t("webVersion")}
+            app={desktopVersion ? t("appVersion") : null}
+            desktopVersion={desktopVersion}
+          />
         </MobileSheetScrollArea>
       </DialogContent>
     </Dialog>
@@ -867,7 +877,7 @@ function ChangelogButton({
         >
           <DropdownMenuItem asChild>
             <a href={documentationHref} target="_blank" rel="noopener noreferrer">
-              <HugeiconsIcon icon={HelpCircleIcon} className="size-4 shrink-0 text-muted-foreground" />
+              <HugeiconsIcon icon={Book02Icon} className="size-4 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
               <HugeiconsIcon icon={ArrowUpRight01Icon} className="ml-auto size-4 shrink-0 text-muted-foreground" aria-hidden />
             </a>
@@ -880,7 +890,7 @@ function ChangelogButton({
             }}
             className="py-1.5 max-[1199px]:py-1.5"
           >
-            <HugeiconsIcon icon={HistoryIcon} className="size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={NewspaperIcon} className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
               {t("changelog")}
             </span>
@@ -904,7 +914,7 @@ function ChangelogButton({
                 }}
                 className="py-1.5 max-[1199px]:py-1.5"
               >
-                <HugeiconsIcon icon={Megaphone01Icon} className="size-4 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={Comment01Icon} className="size-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">
                   {t("shareFeedback")}
                 </span>
@@ -915,18 +925,12 @@ function ChangelogButton({
             </>
           ) : null}
           <DropdownMenuSeparator />
-          <div className="flex flex-col px-2.5 text-xs text-muted-foreground">
-            <p className="flex h-8 items-center justify-between gap-3">
-              <span>{t("webVersion")}</span>
-              <span className="tabular-nums">{APP_VERSION}</span>
-            </p>
-            {desktopVersion ? (
-              <p className="flex h-8 items-center justify-between gap-3">
-                <span>{t("appVersion")}</span>
-                <span className="tabular-nums">{desktopVersion}</span>
-              </p>
-            ) : null}
-          </div>
+          <AppVersions
+            className="px-2.5 py-1.5"
+            web={t("webVersion")}
+            app={desktopVersion ? t("appVersion") : null}
+            desktopVersion={desktopVersion}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
       {dialogMounted ? (
@@ -1021,6 +1025,38 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
 
 /** What waits on the level a back row returns to (MIN-695): its count, and
  an incomplete-setting alert (Smart Assign) that colors it. */
+/**
+ * The versions under the “What's new” menu: one small (14px) minddy mark, tinted
+ * with the environment's color as on the public site, at the start of the
+ * first line; the desktop version sits under the web one, aligned with its
+ * text rather than under the mark.
+ */
+function AppVersions({
+  web,
+  app,
+  desktopVersion,
+  className,
+}: {
+  web: string;
+  app: string | null;
+  desktopVersion: string | null | undefined;
+  className?: string;
+}) {
+  return (
+    <div className={cn("grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 text-xs text-muted-foreground", className)}>
+      <MinddyLogo className={cn("h-3.5 w-3.5 shrink-0 text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
+      <span className="truncate">{web}</span>
+      <span className="tabular-nums">{APP_VERSION}</span>
+      {app && desktopVersion ? (
+        <>
+          <span className="col-start-2 truncate">{app}</span>
+          <span className="tabular-nums">{desktopVersion}</span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export type SidebarBackBadge = { count: number; label: string; alert?: boolean };
 
 /** The secondary-level browse row uses the same geometry in both layouts. */
@@ -1069,8 +1105,13 @@ export function SidebarBackRow({ label, onBack, ariaLabel, badge }: {
  */
 export function secondaryNavBackTarget(
   pathname: string,
-  t: (key: MessageKey<"Nav">) => string
+  t: (key: MessageKey<"Nav">) => string,
+  /** The project board shows one objective's issues (`?objective=`): it sits
+      in the objectives list, whose bar the board mounts. */
+  objectiveBoard = false,
 ): { label: string; href: string } | null {
+  const board = objectiveBoard ? /^\/projects\/([^/]+)\/?$/.exec(pathname) : null;
+  if (board) return { label: t("objectives"), href: `/projects/${board[1]}` };
   const project = /\/projects\/([^/]+)\/(triage|feedback|objectives|pages|settings)(?:\/|$)/.exec(
     pathname,
   );
@@ -1144,7 +1185,13 @@ export function AppSidebar({
 
   // The active route names the base level; the back rows stack browse levels
   // on top of it without touching the URL.
-  const back = secondaryNavBackTarget(pathname, t);
+  // The query comes from the same place as the pathname: mixing the pending
+  // board's path with the objectives page's query dropped the objective for
+  // the time of the navigation, and the sidebar played a level swap there
+  // and back.
+  const displayedObjective = useDisplayedSearchParam("objective");
+  const objectiveBoard = objectiveIdFromBoardLocation(pathname, displayedObjective) !== null;
+  const back = secondaryNavBackTarget(pathname, t, objectiveBoard);
   const panel = sidebarPanelForRoute(
     back !== null,
     currentProject !== null,

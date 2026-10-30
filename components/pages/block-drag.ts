@@ -10,13 +10,15 @@
 // copy of the blocks follows it, a line shows where they will land, and the
 // pane scrolls when the pointer nears its top or bottom edge.
 //
-// The blocks move between FIRST-LEVEL blocks, like the handle that carries
-// them (the gutter targets first-level blocks only). The move is one
-// transaction — the blocks deleted, then inserted at the mapped target — so
-// undo, collaboration and autosave see an ordinary edit, and the blocks keep
-// their ids.
+// The blocks move at the level the handle carries them: first-level blocks
+// between first-level blocks, list items between the items of any list that
+// takes them (a bullet into a numbered list, a task among tasks), nested
+// lists included. The move is one transaction — the blocks deleted, then
+// inserted at the mapped target — so undo, collaboration and autosave see an
+// ordinary edit, and the blocks keep their ids.
 
 import type { Editor } from "@tiptap/core";
+import type { Node as PMNode } from "@tiptap/pm/model";
 import { blockRange, selectBlockFromHandle } from "@/components/pages/block-actions";
 import { BlockSelection } from "@/components/editor/block-selection";
 import { scrollPane } from "@/lib/scroll-pane";
@@ -31,14 +33,58 @@ const AUTOSCROLL_STEP = 14;
 export const BLOCK_DRAGGING_CLASS = "block-dragging";
 
 interface DropTarget {
-  /** Document position between two first-level blocks. */
+  /** Document position between two blocks of the dragged level. */
   pos: number;
   /** Where the drop line is drawn, in viewport coordinates. */
   y: number;
+  /** The drop line's left edge, for an item drawn at its list's indentation. */
+  left?: number;
 }
 
-/** The first-level boundary nearest the pointer's height. */
-function dropTarget(editor: Editor, y: number): DropTarget | null {
+/**
+ * The item boundary below the pointer, among the lists that take `itemType`.
+ * Every boundary, read in document order, carries the height that decides it:
+ * before an item, its first line's middle (a pointer over its nested items
+ * goes on past it); after a list's last item, the list's bottom. The first
+ * boundary whose height is below the pointer wins; these heights only grow
+ * in document order, nested lists included.
+ */
+function itemDropTarget(editor: Editor, itemType: string, y: number): DropTarget | null {
+  const { doc, schema } = editor.state;
+  const item = schema.nodes[itemType];
+  if (!item) return null;
+  const candidates: Array<DropTarget & { decide: number }> = [];
+  const visit = (node: PMNode, pos: number) => {
+    if (node.isTextblock || node.isAtom) return;
+    const list = node.childCount > 0 && node.firstChild?.type === item;
+    const listDom = list ? editor.view.nodeDOM(pos) : null;
+    let offset = pos + 1;
+    node.forEach((child) => {
+      if (list && child.type === item) {
+        const itemDom = editor.view.nodeDOM(offset);
+        if (itemDom instanceof HTMLElement) {
+          const line = (itemDom.firstElementChild as HTMLElement | null) ?? itemDom;
+          const box = line.getBoundingClientRect();
+          const rect = itemDom.getBoundingClientRect();
+          candidates.push({ pos: offset, y: rect.top, left: rect.left, decide: box.top + box.height / 2 });
+        }
+      }
+      visit(child, offset);
+      offset += child.nodeSize;
+    });
+    if (list && listDom instanceof HTMLElement) {
+      const rect = listDom.getBoundingClientRect();
+      candidates.push({ pos: pos + node.nodeSize - 1, y: rect.bottom, left: rect.left, decide: rect.bottom });
+    }
+  };
+  doc.forEach((node, offset) => visit(node, offset));
+  const found = candidates.find((candidate) => y < candidate.decide) ?? candidates.at(-1);
+  return found ? { pos: found.pos, y: found.y, left: found.left } : null;
+}
+
+/** The boundary of the dragged level nearest the pointer's height. */
+function dropTarget(editor: Editor, y: number, itemType: string | null): DropTarget | null {
+  if (itemType) return itemDropTarget(editor, itemType, y);
   const { doc } = editor.state;
   let target: DropTarget | null = null;
   let last: DOMRect | null = null;
@@ -73,6 +119,8 @@ export function trackBlockDrag(
   let ghost: HTMLElement | null = null;
   let line: HTMLElement | null = null;
   let target: DropTarget | null = null;
+  // Set when list items are dragged: they land among items of that type.
+  let itemType: string | null = null;
   let pointerY = startY;
   let scrollFrame = 0;
   // Dragging over its first pixels must not also start a click on the handle.
@@ -85,6 +133,9 @@ export function trackBlockDrag(
     if (!selectBlockFromHandle(editor, pos, false)) return false;
     range = blockRange(editor);
     if (!range) return false;
+    const level = editor.state.doc.resolve(range.from).parent;
+    const first = level.firstChild?.type.name;
+    itemType = level !== editor.state.doc && (first === "listItem" || first === "taskItem") ? first : null;
     dragging = true;
     suppressClick = true;
     document.documentElement.classList.add(BLOCK_DRAGGING_CLASS);
@@ -93,11 +144,11 @@ export function trackBlockDrag(
     // The copy that follows the pointer: the dragged blocks as they render.
     ghost = document.createElement("div");
     ghost.className = "block-drag-ghost";
-    const first = editor.view.nodeDOM(range.from);
-    const width = first instanceof HTMLElement ? first.getBoundingClientRect().width : 320;
+    const firstDom = editor.view.nodeDOM(range.from);
+    const width = firstDom instanceof HTMLElement ? firstDom.getBoundingClientRect().width : 320;
     ghost.style.width = `${Math.round(width)}px`;
     editor.state.doc.nodesBetween(range.from, range.to, (_node, at, parent) => {
-      if (parent !== editor.state.doc) return false;
+      if (parent !== level) return true;
       const dom = editor.view.nodeDOM(at);
       if (dom instanceof HTMLElement) ghost?.appendChild(dom.cloneNode(true));
       return false;
@@ -113,11 +164,11 @@ export function trackBlockDrag(
 
   const place = (x: number, y: number) => {
     if (ghost) ghost.style.transform = `translate(${Math.round(x + 12)}px, ${Math.round(y + 8)}px)`;
-    target = dropTarget(editor, y);
+    target = dropTarget(editor, y, itemType);
     if (!line || !target) return;
     const box = text();
     const style = getComputedStyle(editor.view.dom);
-    const left = box.left + (parseFloat(style.paddingLeft) || 0);
+    const left = target.left ?? box.left + (parseFloat(style.paddingLeft) || 0);
     const right = box.right - (parseFloat(style.paddingRight) || 0);
     line.style.transform = `translate(${Math.round(left)}px, ${Math.round(target.y - 1)}px)`;
     line.style.width = `${Math.round(right - left)}px`;
@@ -159,7 +210,8 @@ export function trackBlockDrag(
     if (target.pos >= from && target.pos <= to) return;
     const { state } = editor;
     const content = state.doc.slice(from, to).content;
-    const tr = state.tr.delete(from, to);
+    // Moving out every item of a list removes the list it leaves empty.
+    const tr = itemType ? state.tr.deleteRange(from, to) : state.tr.delete(from, to);
     const at = tr.mapping.map(target.pos);
     tr.insert(at, content);
     // The moved blocks stay selected as blocks, as after the handle's other

@@ -67,7 +67,8 @@ export function IssueResourcesSection({
           onLink={uploads.addLink}
           onPage={uploads.addPage}
           projectId={projectId}
-          className="-mr-1.5"
+          // Its icon centers on the relations link icon below (8px from the edge).
+          className="-mr-2"
         />
       </PropertyRow>
       {!empty && (

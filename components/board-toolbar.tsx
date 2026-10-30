@@ -18,6 +18,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE, DRAGGED_PILL_BG, HORIZONTAL_DRAG, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
 import {
   SortableContext,
   arrayMove,
@@ -53,7 +55,8 @@ import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
 import { ProgressRing } from "@/components/progress-ring";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { ShareViewDialog } from "@/components/share-view-dialog";
+import { ShareViewDialog, prefetchViewShare } from "@/components/share-view-dialog";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/form-dialog";
 import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import {
@@ -736,6 +739,7 @@ export function BoardToolbar({
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
   const [shareTarget, setShareTarget] = useState<View | null>(null);
+  const queryClient = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<View | null>(null);
   // Right click on a pill (MIN-135): the targeted view + the anchor point of the
   // menu. This is the CLICKED view, not the active one — the “⋯” menu remains on
@@ -782,10 +786,25 @@ export function BoardToolbar({
     [views, hasCycle]
   );
   const { order: storedOrder, setOrder } = useTabOrderQuery(tabOrderScope);
-  const tabKeys = useMemo(
+  const savedTabKeys = useMemo(
     () => mergeTabOrder(defaultTabKeys, storedOrder),
     [defaultTabKeys, storedOrder]
   );
+  // The order of the last drop, held until the saved order catches up: the
+  // cache notifies a tick after the drop, and the dragged pill showed (and
+  // its copy settled on) its old place in between.
+  const [dropOrder, setDropOrder] = useState<string[] | null>(null);
+  const savedTabOrder = savedTabKeys.join(",");
+  useEffect(() => {
+    if (!dropOrder) return;
+    if (dropOrder.length !== savedTabKeys.length || dropOrder.join(",") === savedTabOrder) {
+      setDropOrder(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setDropOrder(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [dropOrder, savedTabOrder, savedTabKeys.length]);
+  const tabKeys = dropOrder && dropOrder.length === savedTabKeys.length ? dropOrder : savedTabKeys;
   const tabAnnouncements = useDragAnnouncements((id) => {
     if (id === CYCLE_TAB_KEY) return t("cycleTab");
     const view = viewById.get(String(id));
@@ -794,7 +813,7 @@ export function BoardToolbar({
   const tabSensors = useSensors(
     // MouseSensor + a small distance so a plain click still selects the view;
     // only a >6px drag starts a reorder (same pattern as the issue cards).
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } })
   );
   // The pill currently being dragged — rendered in a fixed-size DragOverlay so
   // it never stretches/squishes to match the slot it hovers.
@@ -807,8 +826,11 @@ export function BoardToolbar({
     const from = tabKeys.indexOf(String(active.id));
     const to = tabKeys.indexOf(String(over.id));
     if (from === -1 || to === -1) return;
-    // Optimistic: setOrder patches the cache instantly, then persists.
-    void setOrder(arrayMove(tabKeys, from, to)).catch((err) => {
+    // Optimistic: shown in this very frame, then setOrder patches the cache
+    // and persists.
+    const next = arrayMove(tabKeys, from, to);
+    setDropOrder(next);
+    void setOrder(next).catch((err) => {
       console.error("[board-toolbar] tab order save failed", err);
       toast.error(tApi("tabOrderSaveFailed"));
     });
@@ -823,6 +845,8 @@ export function BoardToolbar({
   // menu that sometimes only appears reads like a bug.
   const openViewMenu = (view: View | null, e: React.MouseEvent) => {
     e.preventDefault();
+    // The menu offers Share: its dialog then opens on a loaded state.
+    if (withShare && view) prefetchViewShare(queryClient, view.id);
     setViewMenu({ view, x: e.clientX, y: e.clientY });
   };
   const viewMenuActions = useMemo<ContextMenuAction[]>(() => {
@@ -870,7 +894,10 @@ export function BoardToolbar({
 
   return (
     <>
-      <AppContentHeader contentClassName="gap-2">
+      {/* The view pills are 28px tall, not the header's 32px controls: 2px
+          more inset on the left keeps the first one concentric with the
+          pane's corner (globals.css, `--app-pane-radius`). */}
+      <AppContentHeader contentClassName="gap-2 pl-[calc(var(--app-content-header-pad-x)+2px)]">
         {/* Views bar — pills (views + Cycle) are drag-reorderable; the "+"
             stays fixed at the end. */}
         <div className="flex min-w-0 flex-1 items-center gap-1 app-desktop:hidden">
@@ -894,12 +921,15 @@ export function BoardToolbar({
             sensors={tabSensors}
             accessibility={{ announcements: tabAnnouncements }}
             collisionDetection={closestCenter}
+            // Along the strip only, like the app's tabs.
+            modifiers={HORIZONTAL_DRAG}
             onDragStart={(event: DragStartEvent) =>
               setActiveTabId(String(event.active.id))
             }
             onDragEnd={handleTabDragEnd}
             onDragCancel={() => setActiveTabId(null)}
           >
+            <DragCursor />
             <SortableContext
               items={tabKeys}
               strategy={horizontalListSortingStrategy}
@@ -932,11 +962,12 @@ export function BoardToolbar({
                 );
               })}
             </SortableContext>
-            {/* Fixed-size copy of the dragged pill (portaled). dropAnimation
-                null: the reorder is optimistic, the pill is already in place. */}
-            <DragOverlay dropAnimation={null}>
+            {/* Fixed-size copy of the dragged pill (portaled). The reorder is
+                optimistic: released, the copy settles onto the pill in its
+                new place, or back at its origin after a cancel. */}
+            <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION}>
               {activeTabId === CYCLE_TAB_KEY && cycleTab ? (
-                <div className={cn(PILL_CLASS, pillTone(cycleTab.active))}>
+                <div className={cn(PILL_CLASS, pillTone(cycleTab.active), !cycleTab.active && DRAGGED_PILL_BG, "shadow-md")}>
                   {cycleTab.completionPercent === null ||
                   cycleTab.completionPercent === undefined ? (
                     <AppIcon icon={CycleIcon} className="size-3 shrink-0" aria-hidden />
@@ -956,7 +987,9 @@ export function BoardToolbar({
                 <div
                   className={cn(
                     PILL_CLASS,
-                    pillTone(activeDragView.id === activeViewId)
+                    pillTone(activeDragView.id === activeViewId),
+                    activeDragView.id !== activeViewId && DRAGGED_PILL_BG,
+                    "shadow-md"
                   )}
                 >
                   {generatingViewIds.has(activeDragView.id) && (
@@ -1040,7 +1073,11 @@ export function BoardToolbar({
 
           {/* Active view actions — rename / share / delete (the system view
               only shares; without Share the menu would be empty → disabled) */}
-          <DropdownMenu>
+          <DropdownMenu
+            onOpenChange={(open) => {
+              if (open && withShare && activeView) prefetchViewShare(queryClient, activeView.id);
+            }}
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>

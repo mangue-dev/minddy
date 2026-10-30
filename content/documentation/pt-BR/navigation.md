@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -68,13 +68,14 @@
       "lib/palette-picker.ts",
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
-      "components/mobile-nav-actions.tsx"
+      "components/mobile-nav-actions.tsx",
+      "lib/keyboard/typeahead.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
-    "language": "agent:claude-code (pt-BR new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -96,7 +97,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -136,7 +137,7 @@ A navegação separa o trabalho pessoal do conteúdo de cada projeto. Pesquisa, 
 
 ## Encontrar trabalho pessoal e alternar projetos {#navigation}
 
-A navegação principal dá acesso ao seu trabalho pessoal e aos seus projetos. Selecione um projeto para ver seus tickets e destinos secundários, como triagem, objetivos, páginas e configurações do projeto. A linha de retorno sobe um nível de navegação; ela pode mudar o conteúdo da barra lateral enquanto a página principal permanece aberta. Selecione um destino para navegar até ele.
+A navegação principal dá acesso ao seu trabalho pessoal e aos seus projetos. Selecione um projeto para ver seus tickets e destinos secundários, como triagem, objetivos, páginas e configurações do projeto. A linha de retorno sobe um nível de navegação; ela pode mudar o conteúdo da barra lateral enquanto a página principal permanece aberta. Selecione um destino para navegar até ele. Em uma lista como triagem, objetivos, feedback, revisão de código ou rotinas, o campo de filtro no topo da barra lateral busca em todos os itens, quaisquer que sejam os filtros que restringem a lista; o texto de exemplo dele indica o total.
 
 Contadores e alertas acompanham você entre os níveis. O controle que volta para a **Página inicial** mostra o total para triagem nos projetos listados na **Página inicial**, incluindo o atual, e o alerta do Smart Assign quando um dos seus projetos não tem regras. Uma linha de retorno mostra o contador do nível para onde ela volta como selo sobre a seta, em âmbar enquanto o alerta do Smart Assign se aplica. Dentro de um projeto, **Triagem** e **Feedback** mantêm os contadores desse projeto. As abas do app para desktop exibem o mesmo selo da entrada correspondente na barra lateral: o alerta na **Página inicial** e os contadores em **Caixa de entrada**, **Revisão de código** e em **Triagem** e **Feedback** de um projeto, atualizados mesmo quando a aba está em segundo plano.
 
@@ -151,6 +152,9 @@ Clique com o botão direito em uma linha da barra lateral para agir sobre o que 
 - A linha **Todos os tickets** oferece **Novo ticket**, e a linha **Rotinas** oferece **Nova rotina** quando você é proprietário de um projeto.
 - Uma linha de projeto, ou o nome do projeto no topo do painel dele, oferece **Novo** (um ticket, objetivo ou página nesse projeto) e **Configurações do projeto**. O proprietário do projeto também vê **Mover para a lixeira**, que pede a mesma confirmação das configurações do projeto. O mesmo menu também oferece **Ocultar projeto**, ou **Mostrar projeto** para um projeto que você ocultou; consulte [Ocultar um projeto para você](/docs/projects#hide-project).
 - Uma aba de projeto oferece sua própria criação: **Novo ticket** em Tickets, **Novo objetivo** em Objetivos, **Nova página** em Páginas e **Novo feedback** em Feedback, que abre o formulário interno de feedback.
+- Uma linha de triagem oferece **Aceitar**, **Recusar** e **Marcar como duplicado…**, que pedem a mesma confirmação ou o mesmo seletor do painel de triagem, depois **Prioridade**, **Esforço**, **Responsável**, **Categorias** e **Objetivo**, a cópia do identificador e **Mover para a lixeira**. Um leitor só pode copiar o identificador. Veja [Analisar trabalho recebido na triagem](/docs/issues#triage-incoming-work).
+- Uma linha de objetivo oferece **Status**, **Responsável** e **Cor**, **Novo ticket** nesse objetivo, **Visualizar tickets** no quadro do projeto e **Mover para a lixeira**. Um leitor vê apenas **Visualizar tickets**.
+- Uma linha de feedback oferece **Status**, a menos que um ticket vinculado o defina, **Objetivo**, **Categorias**, **Visibilidade** quando o quadro público está ativado, **Publicar** enquanto a revisão da IA a retém, **Link para um ticket existente**, **Mesclar em…** quando outra solicitação pode recebê-la, e **Mover para a lixeira**. As propriedades mudam pela própria linha; as outras ações abrem a solicitação e pedem a mesma confirmação do painel dela.
 - Uma linha de rotina oferece **Abrir a última execução** e, ao proprietário do projeto, **Executar agora**, **Pausar** ou **Retomar**, **Editar** e **Mover para a lixeira**. Veja [Gerenciar e verificar execuções](/pt-br/documentacao/scheduled-routines#runs).
 - Uma linha de pull request oferece as mudanças que o estado atual permite, **Mesclar** quando ela está pronta e ações de correção quando algo a bloqueia. Veja [Revisão e mesclagem](/pt-br/documentacao/code-work#decision).
 
@@ -174,7 +178,7 @@ Assim que você digita, a paleta também encontra rotinas, pull requests, visual
 
 O que você vincula também é escolhido na paleta. Adicionar uma relação, vincular um ticket a um pull request ou um pull request a um ticket e anexar uma página como recurso a abrem apenas com os itens que você pode escolher, e o campo de busca diz o que você está escolhendo. Para uma relação, escolha primeiro o tipo no menu; a paleta lista depois os tickets e objetivos que podem recebê-la. Escolher um item o vincula; Esc fecha a paleta sem vincular nada.
 
-Pressione Command+K no macOS ou Ctrl+K no Windows/Linux para abrir a paleta de comandos; Command/Ctrl+P é um atalho alternativo do aplicativo. Fora de texto editável, ? abre a ajuda de atalhos e C abre a criação de tickets. Em um cartão de ticket sob o ponteiro ou nos controles de detalhe compatíveis, S abre o estado, P a prioridade, E o esforço, A o responsável, L as categorias, D o prazo e O o objetivo. R adiciona uma relação nos mesmos lugares, na página de um objetivo e no formulário de novo ticket: escolha o tipo de relação e depois o outro ticket ou objetivo. Se o cartão fizer parte de uma seleção, essas teclas alteram todos os tickets selecionados; responsável, objetivo, categorias e relações só se aplicam aos tickets selecionados do projeto desse cartão. Shift+C leva a um campo de comentário pronto para digitar, com a conversa rolada até a mensagem mais recente: o de um cartão de ticket sob o ponteiro ou de uma linha sob o ponteiro na lista de objetivos, feedback, pull requests, páginas ou triagem, ou, sem nada sob o ponteiro, o do ticket, objetivo, feedback, pull request ou página na tela. Uma página abre para isso o painel **Atividade**. Shift+C age só nesse item, mesmo que o cartão faça parte de uma seleção. Na página de um objetivo e no formulário de novo objetivo, S abre o estado, A o responsável, D a data prevista e C a cor; ali, C não cria um ticket. Essas ações de uma tecla não interceptam a digitação em campos, áreas de texto ou editores de conteúdo. Sequências de navegação como G e depois H (Início) ou G e depois I (Caixa de entrada) usam duas teclas sucessivas. G e depois W leva a Páginas apenas no contexto de um projeto.
+Pressione Command+K no macOS ou Ctrl+K no Windows/Linux para abrir a paleta de comandos; Command/Ctrl+P é um atalho alternativo do aplicativo. Fora de texto editável, ? abre a ajuda de atalhos e C abre a criação de tickets. Em um cartão de ticket sob o ponteiro ou nos controles de detalhe compatíveis, S abre o estado, P a prioridade, E o esforço, A o responsável, L as categorias, D o prazo e O o objetivo. R adiciona uma relação nos mesmos lugares, na página de um objetivo e no formulário de novo ticket: escolha o tipo de relação e depois o outro ticket ou objetivo. Se o cartão fizer parte de uma seleção, essas teclas alteram todos os tickets selecionados; responsável, objetivo, categorias e relações só se aplicam aos tickets selecionados do projeto desse cartão. Shift+C leva a um campo de comentário pronto para digitar, com a conversa rolada até a mensagem mais recente: o de um cartão de ticket sob o ponteiro ou de uma linha sob o ponteiro na lista de objetivos, feedback, pull requests, páginas ou triagem, ou, sem nada sob o ponteiro, o do ticket, objetivo, feedback, pull request ou página na tela. Uma página abre para isso o painel **Atividade**. Shift+C age só nesse item, mesmo que o cartão faça parte de uma seleção. Na página de um objetivo e no formulário de novo objetivo, S abre o estado, A o responsável, D a data prevista e C a cor; ali, C não cria um ticket. Essas ações de uma tecla não interceptam a digitação em campos, áreas de texto ou editores de conteúdo. Sequências de navegação como G e depois H (Início) ou G e depois I (Caixa de entrada) usam duas teclas sucessivas. G e depois W leva a Páginas apenas no contexto de um projeto. Na **Página inicial** e no painel do Numo ampliado, uma sequência rápida de teclas vai para o campo de mensagem do Numo, e uma tecla sozinha executa seu atalho após uma breve pausa ([escrever para o Numo](/docs/numo#work-with-numo)).
 
 Para chegar a uma configuração, digite o nome dela na paleta de comandos ou no campo de filtro no topo da barra lateral das configurações. Os dois encontram cada cartão de configurações e as configurações individuais, como o idioma, o tema, cada paleta, a transparência e os dois interruptores de **Iniciar um ticket**. Escolher um resultado abre a aba de configurações certa, rola até o cartão ou a linha e o destaca. Command+T no macOS ou Ctrl+T no Windows/Linux abre a paleta de nova aba; uma configuração escolhida nela abre em uma nova aba do app. Dentro de um projeto, ela também oferece **Nova página**, que cria uma página nesse projeto e a abre em uma nova aba. Palavras-chave em inglês e em francês funcionam qualquer que seja o idioma da interface.
 

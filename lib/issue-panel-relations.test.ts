@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import ts from "typescript-api";
 import { describe, expect, it, vi } from "vitest";
 import { isClosedStatus } from "./issue-constants";
-import { resolveDisplayRelationsByIssue } from "./relation-constants";
+import { closedObjectivesLast, resolveDisplayRelationsByIssue } from "./relation-constants";
 import type { ChipRelation } from "@/components/relation-chips";
 import { hierarchyCandidates, isHierarchyRelation } from "./issue-hierarchy";
 
@@ -104,7 +104,7 @@ describe("issue panel relation plumbing", () => {
 
 
 describe("sidebar menu relation targets", () => {
-  it("excludes self, closed objectives, and direct same-type links while keeping closed issues and inherited links", () => {
+  it("excludes self and direct same-type links while keeping closed issues, closed objectives last, and inherited links", () => {
     const issue = { id: "self", project_id: "project" };
     const candidate = (id: string, status = "todo", project_id = "project") => ({ id, status, project_id });
     const rows = [
@@ -115,7 +115,7 @@ describe("sidebar menu relation targets", () => {
     ];
     const scope = {
       useMemo: memo, issue, relationType: "related", resolvedRelations: rows, isClosedStatus,
-      isHierarchyRelation, hierarchyCandidates,
+      isHierarchyRelation, hierarchyCandidates, closedObjectivesLast,
       allIssues: [candidate("self"), candidate("linked"), candidate("inherited"), candidate("other-type"),
         candidate("done", "done"), candidate("canceled", "canceled"), candidate("duplicate", "duplicate"),
         candidate("foreign", "todo", "other-project")],
@@ -125,7 +125,7 @@ describe("sidebar menu relation targets", () => {
     const candidates = evaluate<Array<{ id: string }>>(initializer("components/issue-side-panel.tsx", "relationCandidates"), scope);
     expect(candidates.map((target) => target.id)).toEqual(["inherited", "other-type", "done", "canceled", "duplicate"]);
     const objectives = evaluate<Array<{ id: string }>>(initializer("components/issue-side-panel.tsx", "relationObjectiveCandidates"), scope);
-    expect(objectives.map((target) => target.id)).toEqual(["available"]);
+    expect(objectives.map((target) => target.id)).toEqual(["available", "done", "canceled"]);
   });
 
   it("forwards the selected relation endpoint kind from the menu picker", () => {

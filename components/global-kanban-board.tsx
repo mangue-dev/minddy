@@ -21,6 +21,7 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
@@ -109,6 +110,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
   onMove,
   onCreateIssue,
   onAddRelation,
+  onRemoveRelation,
   comparator,
   buildMenuActions,
   currentCycleId,
@@ -161,6 +163,8 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
     projectId: string,
     kinds?: RelationKinds,
   ) => void;
+  /** Removes a relation from a card's relation popover. */
+  onRemoveRelation?: (relationId: string, projectId: string) => void;
   /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
       same-column reordering is disabled; cross-column drag still moves status. */
   comparator?: (a: Issue, b: Issue) => number;
@@ -580,6 +584,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
+            <DragCursor />
             <BulkIssueActionsPresence>
               {selectedIssues.length > 0 && (
                 <BulkIssueActions
@@ -639,6 +644,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
                     onSetCategories={onSetCategories}
                     onCreateIssue={onCreateIssue}
                     onAddRelation={onAddRelation}
+                    onRemoveRelation={onRemoveRelation}
                     onDeleteIssue={onDeleteIssue}
                     buildMenuActions={buildMenuActions}
                     currentCycleId={currentCycleId}

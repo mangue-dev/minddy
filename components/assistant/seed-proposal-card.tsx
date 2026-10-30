@@ -48,7 +48,7 @@ export function SeedProposalCard({
   if (!seed.proposal) return null;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-3 text-sm shadow-sm">
+    <div className="rounded-2xl border border-border bg-card p-3 text-sm">
       <p className="mb-2 text-xs text-muted-foreground">{t("previewDesc")}</p>
       <BriefPreview
         proposal={seed.proposal}

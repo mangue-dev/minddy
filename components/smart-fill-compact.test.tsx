@@ -18,6 +18,7 @@ vi.mock("@/lib/use-ordered-objectives", () => ({ useOrderedObjectives: <T,>(obje
 vi.mock("@/components/objective-label", () => ({
   OBJECTIVE_PILL_TRIGGER: "", objectivePickerOption: () => ({}),
   ObjectivePill: ({ objective }: { objective: Objective }) => <span>{objective.name}</span>,
+  ObjectiveName: ({ objective }: { objective: Objective }) => <span>{objective.name}</span>,
 }));
 vi.mock("@/components/search-select", () => ({ SearchSelect: () => null, SearchMultiSelect: () => null }));
 vi.mock("@/components/date-time-picker", () => ({ DateTimePicker: () => null }));
@@ -27,7 +28,7 @@ import { SmartFillCompact, type SmartFillManualFields } from "@/components/issue
 
 const bug = { id: "cat-bug", name: "Bug", color: "red" } as Category;
 const ux = { id: "cat-ux", name: "UX", color: "blue" } as Category;
-const launch = { id: "obj-launch", name: "Launch", project_id: "p1" } as Objective;
+const launch = { id: "obj-launch", name: "Launch", project_id: "p1", status: "planned" } as Objective;
 
 let host: HTMLDivElement;
 let root: Root;
@@ -57,6 +58,11 @@ function menuItem(role: string, name: string): HTMLElement {
     .find((element) => element.textContent?.trim() === name);
   if (!item) throw new Error(`No ${role} named ${name}`);
   return item;
+}
+
+/** A chosen entry runs once the menu has closed, on the next frame. */
+async function settle() {
+  await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
 }
 
 /** Opens the chevron menu, then the submenu of one property, by keyboard. */
@@ -103,39 +109,55 @@ describe("SmartFillCompact split button (MIN-809)", () => {
     expect(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)).toBeNull();
   });
 
-  it("sets the priority from its submenu, without offering no priority", () => {
+  it("sets the priority from its submenu, without offering no priority", async () => {
     const fields = manualFields();
     render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
     openSubmenu(en.Field.priority);
-    expect(() => menuItem("menuitemradio", en.Priority.none)).toThrow();
-    const high = menuItem("menuitemradio", en.Priority.high);
+    expect(() => menuItem("menuitem", en.Priority.none)).toThrow();
+    const high = menuItem("menuitem", en.Priority.high);
     key(high, "Enter");
+    await settle();
     expect(fields.onPriorityChange).toHaveBeenCalledWith("high");
   });
 
-  it("names each effort once", () => {
+  it("names each effort once", async () => {
     const fields = manualFields();
     render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
     openSubmenu(en.Field.effort);
-    const m = menuItem("menuitemradio", "M");
+    const m = menuItem("menuitem", "M");
     key(m, "Enter");
+    await settle();
     expect(fields.onEffortChange).toHaveBeenCalledWith("m");
   });
 
-  it("adds a category and keeps the others", () => {
+  it("adds a category and keeps the others, with the menu still open", () => {
     const fields = manualFields({ categoryIds: [bug.id] });
     render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
     openSubmenu(en.Field.categories);
-    expect(menuItem("menuitemcheckbox", "Bug").getAttribute("aria-checked")).toBe("true");
-    key(menuItem("menuitemcheckbox", "UX"), "Enter");
+    expect(menuItem("menuitem", "Bug").hasAttribute("data-checked")).toBe(true);
+    key(menuItem("menuitem", "UX"), "Enter");
     expect(fields.onCategoryIdsChange).toHaveBeenCalledWith([bug.id, ux.id]);
+    expect(menuItem("menuitem", "Bug")).toBeTruthy();
   });
 
-  it("sets the objective and hides its submenu when the project has none", () => {
+  it("finds a value inside the submenus from the search field", () => {
+    render(<SmartFillCompact value onChange={vi.fn()} manual={manualFields()} />);
+    key(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!, "Enter");
+    const search = document.querySelector<HTMLInputElement>('[role="menu"] input')!;
+    act(() => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+      setter.call(search, "Launch");
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect([...document.querySelectorAll('[role="menuitem"]')].some((item) => item.textContent?.includes("Launch"))).toBe(true);
+  });
+
+  it("sets the objective and hides its submenu when the project has none", async () => {
     const fields = manualFields();
     render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
     openSubmenu(en.Field.objective);
-    key(menuItem("menuitemradio", "Launch"), "Enter");
+    key(menuItem("menuitem", "Launch"), "Enter");
+    await settle();
     expect(fields.onObjectiveChange).toHaveBeenCalledWith(launch.id);
 
     act(() => root.unmount());
@@ -160,10 +182,11 @@ describe("SmartFillCompact split button (MIN-809)", () => {
     render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
     key(chevron(), "Enter");
     key(menuItem("menuitem", en.Field.title), "Enter");
+    await settle();
     expect(fields.onTitleRequest).toHaveBeenCalledOnce();
     // The closing menu does not take the caret back to the chevron; Radix
     // restores focus on the task after the menu unmounts.
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    await settle();
     expect(document.activeElement).not.toBe(chevron());
     expect(onTitleFocus).toHaveBeenCalledOnce();
   });

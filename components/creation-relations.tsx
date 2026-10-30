@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { RelationIcon } from "@/components/issue-indicators";
+import { relationToneClass } from "@/components/relation-rows";
 import { useRelationPalettePicker } from "@/components/palette-picker-rows";
 import { SearchMenu } from "@/components/search-menu";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -13,7 +14,7 @@ import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { orderIssuesForSearch } from "@/lib/issue-search-order";
-import { RELATION_TYPES } from "@/lib/relation-constants";
+import { RELATION_TYPES, closedObjectivesLast } from "@/lib/relation-constants";
 import {
   HIERARCHY_RELATIONS,
   hierarchyCandidates,
@@ -41,7 +42,24 @@ type CreationRelationsCompactProps = CreationRelationsProps & {
   shortcutHint?: string;
   /** A new issue also offers Parent of / Sub-issue of (MIN-844). */
   hierarchy?: boolean;
+  /** Opens straight on this type's targets, skipping the type dropdown (a
+   *  type already chosen in Smart Fill's menu). */
+  startStep?: RelationMenuKind | null;
 };
+
+/**
+ * The relation types a creation form can still add: every relation, and with
+ * `hierarchy` the parent / sub-issue entries the one-level rule leaves
+ * (MIN-804) — one parent, or sub-issues, never both.
+ */
+export function creationRelationKinds(value: readonly PendingRelationInput[], hierarchy: boolean): RelationMenuKind[] {
+  const chosenParent = value.some((r) => r.type === "sub_issue_of");
+  const chosenChildren = value.some((r) => r.type === "parent_of");
+  const hierarchyTypes = hierarchy
+    ? HIERARCHY_RELATIONS.filter((kind) => (kind === "parent_of" ? !chosenParent : !chosenParent && !chosenChildren))
+    : [];
+  return [...RELATION_TYPES, ...hierarchyTypes];
+}
 
 /** Stands for the issue being created in the one-level nesting rules. */
 const NEW_ISSUE_ID = "new-issue";
@@ -58,6 +76,7 @@ export function CreationRelationsCompact({
   onOpenChange,
   shortcutHint,
   hierarchy = false,
+  startStep = null,
 }: CreationRelationsCompactProps) {
   const t = useTranslations("Relations");
   const [ownOpen, setOwnOpen] = useState(false);
@@ -68,7 +87,11 @@ export function CreationRelationsCompact({
     setOwnOpen(next);
     if (next !== openRef.current) onOpenChange?.(next);
   };
-  const [step, setStep] = useState<RelationMenuKind | null>(null);
+  const [step, setStep] = useState<RelationMenuKind | null>(() => (open ? startStep : null));
+  // A type chosen elsewhere opens its targets directly.
+  useEffect(() => {
+    if (open && startStep) setStep(startStep);
+  }, [open, startStep]);
   // The type chosen in the dropdown, handed to the palette once the dropdown
   // has closed: opened earlier, the palette would lose its focus to the
   // dropdown's exit.
@@ -104,13 +127,7 @@ export function CreationRelationsCompact({
     value.some((r) =>
       r.type === step && r.target_id === id && r.target_type === type,
     );
-  // The hierarchy entries the new issue may still take, under the one-level
-  // rule (MIN-804): it gets one parent, or sub-issues, never both.
-  const chosenParent = value.some((r) => r.type === "sub_issue_of");
-  const chosenChildren = value.some((r) => r.type === "parent_of");
-  const hierarchyTypes = hierarchy
-    ? HIERARCHY_RELATIONS.filter((kind) => (kind === "parent_of" ? !chosenParent : !chosenParent && !chosenChildren))
-    : [];
+  const kinds = creationRelationKinds(value, hierarchy);
   // Work under way first, triage last (MIN-726).
   const issueCandidates = useMemo(() => {
     const taken = new Set(value.filter((r) => r.type === step && r.target_type === "issue").map((r) => r.target_id));
@@ -122,10 +139,9 @@ export function CreationRelationsCompact({
   }, [issues, projectId, value, step]);
   const objectiveCandidates = useMemo(() => {
     const taken = new Set(value.filter((r) => r.type === step && r.target_type === "objective").map((r) => r.target_id));
-    return orderedObjectives.filter(
-      (o) => o.project_id === projectId && o.status !== "done" &&
-        o.status !== "canceled" && !taken.has(o.id),
-    );
+    return closedObjectivesLast(orderedObjectives.filter(
+      (o) => o.project_id === projectId && !taken.has(o.id),
+    ));
   }, [orderedObjectives, projectId, value, step]);
   const select = (
     target_id: string,
@@ -191,8 +207,8 @@ export function CreationRelationsCompact({
         </button>
       }
     >
-      <CommandGroup heading={t("relations")}>
-        {[...RELATION_TYPES, ...hierarchyTypes].map((type) => (
+      <CommandGroup>
+        {kinds.map((type) => (
           <CommandItem
             key={type}
             value={type}
@@ -208,7 +224,8 @@ export function CreationRelationsCompact({
   );
 }
 
-/** Removable context pills, positioned above the new entity's title. */
+/** The chosen relations as removable pills, in the creation form's property
+ *  row next to the picker that adds them. */
 export function CreationRelationPills({
   projectId,
   projectKey,
@@ -216,14 +233,15 @@ export function CreationRelationPills({
   value,
   onChange,
   disabled,
-}: CreationRelationsProps) {
+  className = "flex flex-wrap items-center gap-1.5",
+}: CreationRelationsProps & { className?: string }) {
   const t = useTranslations("Relations");
   const tCommon = useTranslations("Common");
   const { issues } = useIssuesQuery(active && value.length > 0 ? projectId : null);
   const { objectives } = useObjectivesQuery(active && value.length > 0 ? projectId : null);
   if (!value.length) return null;
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+    <div className={className}>
       {value.map((relation, index) => {
         const issue = relation.target_type === "issue"
           ? issues.find((i) => i.id === relation.target_id) : null;
@@ -240,17 +258,16 @@ export function CreationRelationPills({
             key={`${relation.type}:${relation.target_type}:${relation.target_id}`}
             aria-label={fullLabel}
             className={cn(
-              "inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-xs",
-              relation.type === "blocked_by"
-                ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                : relation.type === "blocks"
-                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                  : "text-muted-foreground",
+              // The property row's size: same text as its controls, and a
+              // remove button large enough to hit.
+              "inline-flex h-7 max-w-full items-center gap-1.5 rounded-md pr-1 pl-2 text-sm",
+              relationToneClass(relation.type),
+              relation.type !== "blocked_by" && relation.type !== "blocks" && "bg-muted",
             )}
           >
             <AppTooltip label={fullLabel}>
               <span className="flex min-w-0 items-center gap-1">
-                <RelationIcon relation={relation.type} className="size-3" />
+                <RelationIcon relation={relation.type} className="size-3.5" />
                 <span className="truncate">{label}</span>
               </span>
             </AppTooltip>
@@ -260,9 +277,9 @@ export function CreationRelationPills({
                   type="button"
                   aria-label={`${tCommon("remove")}: ${fullLabel}`}
                   onClick={() => onChange(value.filter((_, i) => i !== index))}
-                  className="flex size-4 shrink-0 items-center justify-center rounded-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex size-5 shrink-0 items-center justify-center rounded-sm hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <HugeiconsIcon icon={Cancel01Icon} className="size-3" />
+                  <HugeiconsIcon icon={Cancel01Icon} className="size-3.5" />
                 </button>
               </AppTooltip>
             )}

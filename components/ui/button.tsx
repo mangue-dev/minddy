@@ -7,18 +7,19 @@ import { SelfLabelTooltip } from "./app-tooltip"
 import { COARSE_BUTTON_HIT_AREA, COARSE_BUTTON_INSET_HIT_AREA, COARSE_BUTTON_PRESS, COARSE_BUTTON_TOUCH_ACTION } from "./touch-target"
 
 const buttonVariants = cva(
-  `${COARSE_BUTTON_TOUCH_ACTION} ${COARSE_BUTTON_HIT_AREA} ${COARSE_BUTTON_PRESS} group/button inline-flex shrink-0 items-center justify-center rounded-full in-data-[slot=button-group]:rounded-lg bg-clip-padding text-sm font-medium leading-tight whitespace-nowrap transition-all outline-none select-none focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:bg-control! disabled:text-muted-foreground! disabled:ring-0 aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+  `${COARSE_BUTTON_TOUCH_ACTION} ${COARSE_BUTTON_HIT_AREA} ${COARSE_BUTTON_PRESS} group/button inline-flex shrink-0 items-center justify-center rounded-full in-data-[slot=button-group]:rounded-lg bg-clip-padding text-sm font-medium leading-tight whitespace-nowrap transition-all outline-none select-none focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:text-muted-foreground! disabled:ring-0 aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-primary-hover aria-expanded:bg-primary-hover",
+          "bg-primary text-primary-foreground hover:bg-primary-hover aria-expanded:bg-primary-hover disabled:bg-control!",
         outline:
-          "bg-control hover:bg-control-hover hover:text-foreground aria-expanded:bg-control-hover aria-expanded:text-foreground",
+          "bg-control hover:bg-control-hover hover:text-foreground aria-expanded:bg-control-hover aria-expanded:text-foreground disabled:bg-control!",
+        // A disabled ghost or link keeps its surface: only its text and icon mute.
         ghost:
           "bg-background text-foreground hover:bg-control-hover aria-expanded:bg-control-hover",
         destructive:
-          "bg-destructive-button text-destructive-button-foreground hover:brightness-90 aria-expanded:brightness-90",
+          "bg-destructive-button text-destructive-button-foreground hover:brightness-90 aria-expanded:brightness-90 disabled:bg-control!",
         link:
           `bg-background text-primary underline-offset-4 hover:bg-control-hover hover:text-primary-hover hover:underline aria-expanded:bg-control-hover aria-expanded:text-primary-hover aria-expanded:underline ${COARSE_BUTTON_INSET_HIT_AREA}`,
       },

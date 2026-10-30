@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,13 +124,16 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -176,7 +179,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -192,7 +195,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -209,7 +212,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -225,7 +228,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -241,7 +244,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -257,7 +260,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -273,7 +276,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -289,7 +292,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -305,7 +308,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -322,7 +325,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -355,7 +358,7 @@ Un ticket suit un travail dans un projet, de son signalement à sa clôture. Com
 
 Vous devez être propriétaire ou Membre du projet destinataire ; les lecteurs peuvent ouvrir les tickets, mais ni les créer ni les modifier. Ouvrez le projet et sa commande de création de ticket. Saisissez un titre qui nomme le travail, puis décrivez contexte, résultat attendu et contraintes. Le titre et la description se comportent comme un seul texte : sur ordinateur, la flèche bas sur la dernière ligne du titre passe à la première ligne de la description, la flèche haut revient, et le curseur garde à peu près sa place sur la ligne. Maj+Entrée dans le titre passe à la description ; Entrée aussi, sauf si vous avez choisi Entrée comme raccourci d’envoi, auquel cas il crée le ticket. Commande/Ctrl+Entrée le crée depuis l’un ou l’autre champ. Les mêmes flèches et Entrée relient le titre et la description d’un ticket, d’un objectif, d’une page ou d’un retour ouverts. Le formulaire s’ouvre sur le projet courant ; choisissez-en un autre dans **Créer dans**, en haut à gauche du formulaire (à côté du titre **Nouveau ticket** sur téléphone), en particulier depuis une vue personnelle ou transversale. Sur ordinateur, Commande/Ctrl+Maj+P ouvre ce menu, même pendant la saisie du titre ou de la description ; une fois le projet choisi ou le menu fermé, le curseur revient exactement où il était. La pastille affiche ce raccourci, qui n’existe que si plusieurs projets peuvent être choisis ; sur téléphone, aucun raccourci n’est indiqué. Changer de projet efface les catégories, l’objectif et les relations choisis pour le précédent. Le bouton de création affiche l’identifiant que recevra le ticket, par exemple `MIN-42`, et suit les tickets créés entre-temps ; son menu crée le ticket et copie cet identifiant.
 
-Pour une création manuelle, désactivez Smart-fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories, d’objectif et de relations deviennent alors disponibles. Pour ne fixer que certaines de ces propriétés, laissez Smart-fill activé et ouvrez la flèche à côté de son bouton : choisissez une propriété, puis sa valeur. Hors du titre et de la description, la touche de la propriété ouvre directement son sélecteur : P pour la priorité, E pour l’effort, L pour les catégories ou O pour l’objectif. La valeur choisie reste affichée dans le formulaire. Smart-fill ne déduit que les propriétés laissées vides. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant de Smart Assign et des routines. Tant que Smart-fill est activé, il [relie aussi le ticket aux tickets liés](#smart-fill-relations) une fois celui-ci enregistré : le sélecteur de relations est donc masqué ; R l’ouvre quand même. Les relations déjà choisies restent visibles au-dessus du titre et sont créées avec le ticket.
+Pour une création manuelle, désactivez Smart-fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories, d’objectif et de relations deviennent alors disponibles. Pour ne fixer que certaines de ces propriétés, laissez Smart-fill activé et ouvrez la flèche à côté de son bouton : choisissez une propriété, puis sa valeur. **Relations** y liste les types de relation ; en choisir un ouvre la palette de commandes sur ses cibles possibles. Hors du titre et de la description, la touche de la propriété ouvre directement son sélecteur : P pour la priorité, E pour l’effort, L pour les catégories ou O pour l’objectif. La valeur choisie reste affichée dans le formulaire. Smart-fill ne déduit que les propriétés laissées vides. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant de Smart Assign et des routines. Tant que Smart-fill est activé, il [relie aussi le ticket aux tickets liés](#smart-fill-relations) une fois celui-ci enregistré : le sélecteur de relations est donc masqué ; R l’ouvre quand même. Les relations déjà choisies restent visibles sous forme de pastilles dans la ligne des propriétés, entre l’assigné et l’échéance, et sont créées avec le ticket.
 
 Définissez les propriétés utiles avant de confirmer : état, priorité, effort, responsable, objectif, catégories, échéance et récurrence. Le responsable est le propriétaire du projet ou un Membre, jamais un lecteur ; l’objectif regroupe des tickets autour d’un résultat du projet. Laissez une propriété optionnelle vide plutôt que de la deviner. La priorité est **Non définie** ou va de basse à urgente, en passant par moyenne et haute ; l’effort est **Non défini** ou utilise XS, S, M, L et XL.
 
@@ -363,7 +366,7 @@ Lorsque Smart Assign est activé dans le projet, le sélecteur de responsable af
 
 Confirmez la création et ouvrez le ticket. Vérifiez son identifiant et son projet. Modifiez ses propriétés à mesure que la tâche se précise. La description explique le travail ; le plan d’implémentation est séparé, dans l’onglet Plan.
 
-Fermer le formulaire conserve ce que vous avez écrit : rouvrez-le pour reprendre là où vous en étiez. Si vous ne le rouvrez pas dans les deux minutes, son contenu est enregistré comme brouillon et le formulaire suivant s’ouvre vide ; jusque-là, il n’existe que dans cette fenêtre, et recharger ou fermer la fenêtre le fait perdre. Ouvrir un brouillon ou un formulaire prérempli depuis un autre endroit enregistre d’abord ce que vous aviez laissé comme brouillon. Pour l’enregistrer vous-même, ouvrez le menu à côté du bouton de création et choisissez **Enregistrer en brouillon**. Les brouillons de tickets et d’objectifs enregistrés se retrouvent dans **Brouillons**, en bas à droite de la fenêtre, entre Numo et le carnet de tâches ; le bouton n’apparaît que si vous avez un brouillon et en indique le nombre. Sa liste donne le titre et la première ligne de description de chaque brouillon. Choisissez un brouillon pour le rouvrir dans son formulaire de création et le terminer ; créer le ticket supprime le brouillon. Le bouton de suppression à côté d’un brouillon demande d’abord une confirmation, et la suppression est irréversible. Sur un téléphone, ouvrez la palette de commandes et cherchez le titre du brouillon. Les brouillons sont conservés sur cet appareil pendant 30 jours, dix de chaque type au plus ; la liste ne montre que ceux des projets où vous pouvez encore créer des tickets.
+Fermer le formulaire conserve ce que vous avez écrit : rouvrez-le pour reprendre là où vous en étiez. Seuls un titre, une description ou une pièce jointe comptent : un formulaire qui ne contient que des propriétés ou des relations repart vide. Si vous ne le rouvrez pas dans les deux minutes, son contenu est enregistré comme brouillon et le formulaire suivant s’ouvre vide ; jusque-là, il n’existe que dans cette fenêtre, et recharger ou fermer la fenêtre le fait perdre. Ouvrir un brouillon ou un formulaire prérempli depuis un autre endroit enregistre d’abord ce que vous aviez laissé comme brouillon. Pour l’enregistrer vous-même, ouvrez le menu à côté du bouton de création et choisissez **Enregistrer en brouillon**. Les brouillons de tickets et d’objectifs enregistrés se retrouvent dans **Brouillons**, en bas à droite de la fenêtre, entre Numo et le carnet de tâches ; le bouton n’apparaît que si vous avez un brouillon et en indique le nombre. Sa liste donne le titre et la première ligne de description de chaque brouillon. Choisissez un brouillon pour le rouvrir dans son formulaire de création et le terminer ; créer le ticket supprime le brouillon. Le bouton de suppression à côté d’un brouillon demande d’abord une confirmation, et la suppression est irréversible. Sur un téléphone, ouvrez la palette de commandes et cherchez le titre du brouillon. Les brouillons sont conservés sur cet appareil pendant 30 jours, dix de chaque type au plus ; la liste ne montre que ceux des projets où vous pouvez encore créer des tickets.
 
 
 ![Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.](/documentation/fr/new-issue.png)
@@ -409,7 +412,7 @@ Ouvrez Triage dans le projet. Lisez le ticket et son contexte d’origine avant 
 
 Les filtres de la liste permettent de cibler les tickets entrants par priorité, effort, assigné, objectif, catégories ou intégration. **Non définie** sous la priorité et **Non défini** sous l’effort gardent les tickets qui n’ont pas encore de valeur. Les choix d’une même propriété sont des alternatives ; les différentes propriétés se cumulent. Réinitialisez les filtres pour retrouver tous les tickets entrants.
 
-Choisissez Accepter et confirmez pour déplacer un ticket retenu vers le backlog. Choisissez Refuser et confirmez pour le passer à l’état annulé. Pour un doublon, sélectionnez le ticket à conserver dans le sélecteur de doublon : le ticket entrant prend l’état doublon et pointe vers celui-ci. Décrire la demande dans la recherche du sélecteur liste aussi des tickets proches sous **Liés par le sens**, après les correspondances textuelles ; voir [Chercher des tickets par le sens](/docs/navigation#search-by-meaning). L’entrée suivante est sélectionnée quand un ticket quitte le triage. Vérifiez l’état ou le lien de doublon dans le ticket lui-même. Passer d’une carte à l’autre sans effectuer ces actions ne clôture pas le ticket.
+Choisissez Accepter et confirmez pour déplacer un ticket retenu vers le backlog. Choisissez Refuser et confirmez pour le passer à l’état annulé. Pour un doublon, choisissez **Marquer comme doublon…** et sélectionnez le ticket à conserver dans la palette de commandes : le ticket entrant prend l’état doublon et pointe vers celui-ci. Décrire la demande dans la recherche du sélecteur liste aussi des tickets proches sous **Liés par le sens**, après les correspondances textuelles ; voir [Chercher des tickets par le sens](/docs/navigation#search-by-meaning). L’entrée suivante est sélectionnée quand un ticket quitte le triage. Vérifiez l’état ou le lien de doublon dans le ticket lui-même. Passer d’une carte à l’autre sans effectuer ces actions ne clôture pas le ticket.
 
 ### Ordre et limites {#triage-order}
 
@@ -475,7 +478,7 @@ Après envoi, vérifiez que la ressource apparaît et s’ouvre. En cas d’éch
 
 ## Lier dépendances et tickets associés {#issue-dependencies}
 
-Ouvrez les relations du ticket et recherchez l’autre par titre ou identifiant. Hors d’un champ de texte, R ouvre le choix du type de relation depuis une carte survolée ou le panneau du ticket. Une fois le type choisi, l’autre extrémité se choisit dans la [palette de commandes](/docs/navigation#search-and-shortcuts), qui ne liste que les tickets et objectifs pouvant prendre cette relation. Une requête descriptive liste aussi, après les correspondances textuelles, des tickets du même projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**. Choisissez une relation de blocage lorsqu’une tâche doit finir avant qu’une autre puisse avancer. Si A bloque B, A est le préalable et B est bloqué par A. Une relation associée ajoute du contexte sans imposer cet ordre.
+Ouvrez les relations du ticket et recherchez l’autre par titre ou identifiant. Hors d’un champ de texte, R ouvre le choix du type de relation depuis une carte survolée ou le panneau du ticket. Une fois le type choisi, l’autre extrémité se choisit dans la [palette de commandes](/docs/navigation#search-and-shortcuts), qui ne liste que les tickets et objectifs pouvant prendre cette relation ; les terminés et les annulés y figurent aussi, après les ouverts. Une requête descriptive liste aussi, après les correspondances textuelles, des tickets du même projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**. Choisissez une relation de blocage lorsqu’une tâche doit finir avant qu’une autre puisse avancer. Si A bloque B, A est le préalable et B est bloqué par A. Une relation associée ajoute du contexte sans imposer cet ordre.
 
 Lisez les deux identifiants et le sens affiché avant de confirmer. Par exemple, « Préparer le point d’accès » bloque « Connecter le client », pas l’inverse. Une dépendance ne transforme pas un ticket en sous-ticket, et la relation parent-enfant ne remplace pas un blocage.
 
@@ -487,7 +490,7 @@ Les états terminaux terminé, annulé et doublon cessent de bloquer le travail.
 
 Un ticket ouvert peut hériter d’un blocage par son objectif ouvert. Si A bloque l’objectif B, les tickets ouverts rattachés à B affichent A comme blocage hérité, sans relation directe entre A et chaque ticket. L’affichage nomme le vrai blocage et l’objectif à l’origine de l’héritage. Inspectez cette relation d’objectif avant de chercher à la dissocier du ticket. Clôturer A, clôturer B ou retirer le ticket de B supprime ce blocage hérité. Le mécanisme suit l’appartenance à l’objectif, pas la hiérarchie parent/sous-ticket.
 
-Retirez une relation devenue inexacte depuis ses commandes ; une confirmation nomme l’autre ticket ou objectif, et seul le lien disparaît. Vérifiez ensuite son libellé et l’indicateur de blocage. Marquer un doublon modifie son cycle de vie et désigne le travail conservé ; une simple relation associée ne clôture pas le doublon.
+Retirez une relation devenue inexacte depuis ses commandes ; une confirmation nomme l’autre ticket ou objectif, et seul le lien disparaît. Sur une carte du board, la pastille d’un type de relation ouvre la liste de ces relations, chacune avec un bouton de retrait (✕) qui demande la même confirmation ; les relations héritées d’un objectif n’en ont pas. Vérifiez ensuite son libellé et l’indicateur de blocage. Marquer un doublon modifie son cycle de vie et désigne le travail conservé ; une simple relation associée ne clôture pas le doublon.
 
 Si le sélecteur ne trouve pas un ticket, vérifiez son identifiant et l’accès au projet. Ne révélez pas un autre projet en copiant son lien privé dans une réponse publique à un retour.
 
@@ -503,7 +506,7 @@ L’indexation et les décisions de relation utilisent l’IA. Elles comptent da
 
 ## Découper un ticket en sous-tickets {#sub-issues}
 
-Ouvrez le ticket parent et ses commandes de sous-tickets pour créer les parties du travail. Donnez à chaque enfant un résultat distinct. Après création, vérifiez projet, propriétés et identifiant du parent. La hiérarchie facilite le suivi ; elle ne remplace pas la description du résultat de chaque tâche.
+Dans le panneau latéral du ticket parent, choisissez **Créer un sous-ticket** pour ouvrir la fenêtre de création de ticket avec ce ticket déjà défini comme parent. Le chevron à côté (**Autres options de sous-ticket**) propose **Demander à Numo de découper le ticket**, qui demande à Numo de lire le ticket avec son plan et ses commentaires, puis de créer un sous-ticket par partie de travail indépendante ; relisez les sous-tickets créés. Un Lecteur ne voit pas ce bouton. Donnez à chaque enfant un résultat distinct. Après création, vérifiez projet, propriétés et identifiant du parent. La hiérarchie facilite le suivi ; elle ne remplace pas la description du résultat de chaque tâche.
 
 Pour rattacher des tickets existants, appuyez sur R sur une carte survolée ou dans le panneau du ticket, ou ouvrez **Relations** depuis le clic droit d’une carte. **Parent de** liste les tickets qui peuvent devenir un sous-ticket de celui-ci ; **Sous-ticket de** liste les tickets de premier niveau qui peuvent devenir son parent. Chaque liste ne propose que ce que permet la règle d’un seul niveau : un sous-ticket n’a pas d’entrée **Parent de**, et un ticket qui a déjà des sous-tickets n’a pas d’entrée **Sous-ticket de**. Choisir un ticket qui a déjà un autre parent le déplace sous le nouveau. Depuis une sélection de cartes, **Sous-ticket de** place chaque ticket sélectionné éligible sous le parent choisi. Dans le formulaire de nouveau ticket, **Relations** propose les deux mêmes entrées : **Sous-ticket de** crée le ticket sous le parent choisi, et **Parent de** place les tickets choisis sous lui une fois créé. Un nouveau ticket prend un parent ou des sous-tickets, pas les deux. La saisie dans le champ de recherche du clic droit d’une carte ou du menu `…` du panneau du ticket trouve aussi les entrées de ses sous-menus, chacune affichée avec son chemin, par exemple **Relations** › **Marquer comme bloqué par…**.
 
@@ -566,7 +569,7 @@ Une routine Numo est différente : elle planifie une conversation et peut consom
 
 Dans un tableau, maintenez Maj et cliquez sur chaque carte pour l’ajouter à la sélection ou l’en retirer. Avec une souris, vous pouvez aussi tracer un rectangle depuis une zone vide du tableau ; Maj, Commande ou Ctrl ajoute cette zone à la sélection existante. Près d’un bord, le tableau défile, et les cartes que le rectangle a parcourues restent sélectionnées une fois sorties de la vue. Le rectangle n’est pas un mode de sélection tactile. Vérifiez le nombre choisi et les identifiants visibles avant d’ouvrir les actions groupées. La sélection est l’ensemble ciblé par l’action, pas une vue enregistrée ni une autorisation supplémentaire. Ouvrez-les avec **Actions** dans la barre de sélection, ou appuyez sur Commande+K sur macOS ou Ctrl+K sur Windows/Linux pendant que des tickets sont sélectionnés.
 
-Choisissez Actions dans la barre flottante de sélection pour ouvrir la palette de commandes. Choisissez l’état, la priorité, l’effort ou le responsable, définissez la valeur et validez le formulaire intégré. L’action sur l’objectif apparaît seulement pour une sélection appartenant à un projet avec des objectifs disponibles. Les autres actions, comme ajouter ou retirer des tickets du cycle, lier deux tickets ou confier la sélection à Numo, apparaissent selon les capacités du tableau courant. À la souris, vous pouvez aussi pointer une carte sélectionnée et appuyer sur S, P, E, A, L, D, O ou R : le sélecteur qui s’ouvre s’applique à toute la sélection, et pour le responsable, l’objectif, les catégories et les relations aux tickets sélectionnés du projet de cette carte. Faites un clic droit sur une carte sélectionnée pour agir sur toute la sélection : **Copier le prompt combiné** propose **Générer les plans** (**Vérifier les plans** quand chaque ticket sélectionné en a un, **Générer ou vérifier les plans** quand seuls certains en ont), **Implémenter les tickets**, **Vérifier les implémentations** et **Personnalisé…**, chacun copiant un seul prompt pour tous les tickets sélectionnés. **Copier les 3 identifiants**, pour trois tickets sélectionnés, copie leurs identifiants séparés par des virgules, du plus petit numéro au plus grand. **Relations**, **Lier un objectif** et **Ajouter une échéance** ouvrent les mêmes sélecteurs que R, O et D. Inspectez ensuite les tickets concernés. Sur un appareil uniquement tactile sans geste de sélection multiple pris en charge, modifiez les tickets un par un dans leur panneau de détail.
+Choisissez Actions dans la barre flottante de sélection pour ouvrir la palette de commandes. Choisissez l’état, la priorité, l’effort ou le responsable, définissez la valeur et validez le formulaire intégré. L’action sur l’objectif apparaît seulement pour une sélection appartenant à un projet avec des objectifs disponibles. Les autres actions, comme ajouter ou retirer des tickets du cycle, lier deux tickets ou confier la sélection à Numo, apparaissent selon les capacités du tableau courant. À la souris, vous pouvez aussi pointer une carte sélectionnée et appuyer sur S, P, E, A, L, D, O ou R : le sélecteur qui s’ouvre s’applique à toute la sélection, et pour le responsable, l’objectif, les catégories et les relations aux tickets sélectionnés du projet de cette carte. Faites un clic droit sur une carte sélectionnée pour agir sur toute la sélection : **Copier le prompt combiné** propose **Générer les plans** (**Vérifier les plans** quand chaque ticket sélectionné en a un, **Générer ou vérifier les plans** quand seuls certains en ont), **Implémenter les tickets**, **Vérifier les implémentations** et **Personnalisé…**, chacun copiant un seul prompt pour tous les tickets sélectionnés. **Copier les 3 identifiants**, pour trois tickets sélectionnés, copie leurs identifiants séparés par des virgules, du plus petit numéro au plus grand. **Relations**, **Lier un objectif** et **Ajouter une échéance** ouvrent les mêmes sélecteurs que R, O et D. **Déplacer vers la corbeille**, en dernier, déplace toute la sélection vers la corbeille après la même confirmation que la barre de sélection. Inspectez ensuite les tickets concernés. Sur un appareil uniquement tactile sans geste de sélection multiple pris en charge, modifiez les tickets un par un dans leur panneau de détail.
 
 ### Résultats partiels et suppression {#bulk-results}
 

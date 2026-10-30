@@ -1,5 +1,6 @@
 "use client";
 
+import { takePullRequestMerge, usePrMergeIntentStore } from "@/lib/pr-merge-intent";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
@@ -64,7 +65,7 @@ import { usePublishCurrentView } from "@/lib/current-view-context";
 import { useProjects } from "@/lib/projects-context";
 import { issueIdentifier } from "@/lib/issue-constants";
 import { prIdentifier } from "@/lib/repo-providers";
-import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type {
   AgentRunPrResponse,
@@ -251,7 +252,7 @@ function PrRow({
       className={cn(
         "flex flex-col gap-1 rounded-lg py-2 pr-2 text-left outline-none transition-colors",
         PROJECT_GROUP_INDENT,
-        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60",
+        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS,
       )}
     >
       <div className="flex items-center gap-2">
@@ -476,7 +477,14 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // stops carrying `pr` and the lens decides who belongs to the list.
   const pin = useMemo(() => ({ pr: prParam }), [prParam]);
   const active = useAllPullRequestsQuery("open", limit, pin);
-  const completed = useCompletedPullRequestsQuery(sections.has("completed"));
+  // A search looks through every section, whatever the checked ones: they
+  // narrow the resting list, the query finds anything — completed PRs too.
+  const searching = query.trim().length > 0;
+  const lensSections = useMemo<ReadonlySet<string>>(
+    () => (searching ? new Set(PULL_REQUEST_SECTIONS) : sections),
+    [searching, sections],
+  );
+  const completed = useCompletedPullRequestsQuery(lensSections.has("completed"));
   const { hasMore, repoCount, anyPr, loading, readFailed } = active;
   const fetching = active.fetching || completed.isFetching;
   const completedTruncated = completed.data?.pages.some((page) => page.truncated) ?? false;
@@ -529,7 +537,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   }, [setSections]);
   const refetch = () => {
     void active.refetch();
-    if (sections.has("completed")) void completed.refetch();
+    if (lensSections.has("completed")) void completed.refetch();
   };
 
   // Tracks param changes (client navigation to another PR).
@@ -633,8 +641,8 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * it loses the row, and only the detail may keep it (see `selectedId`).
    */
   const filtered = useMemo(
-    () => pullRequests.filter((pr) => sections.has(pullRequestSection(pr))),
-    [pullRequests, sections],
+    () => pullRequests.filter((pr) => lensSections.has(pullRequestSection(pr))),
+    [pullRequests, lensSections],
   );
 
   /**
@@ -651,6 +659,12 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     remaining.delete("action");
     router.replace(`/pull-requests${remaining.size ? `?${remaining}` : ""}`, { scroll: false });
   }, [tabActive, actionParam, prParam, router, searchParams]);
+  // The same request from a board card (lib/pr-merge-intent.ts).
+  const boardMergePrId = usePrMergeIntentStore((state) => state.prId);
+  useEffect(() => {
+    if (!tabActive || !prParam || boardMergePrId !== prParam) return;
+    if (takePullRequestMerge(prParam)) setMergeIntentPrId(prParam);
+  }, [tabActive, prParam, boardMergePrId]);
   const prContext = usePrContextActions({
     pullRequests,
     onOptimisticStateChange: applyOptimisticState,
@@ -784,12 +798,12 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   );
 
   const groups = useMemo(
-    () => groupPullRequestsBySection(visible, sections),
-    [visible, sections],
+    () => groupPullRequestsBySection(visible, lensSections),
+    [visible, lensSections],
   );
   // A filter in progress UNFOLDS everything and lifts the cup of five: searching is
   // ask to see what fits, not to know where it is stored.
-  const filtering = query.trim().length > 0;
+  const filtering = searching;
 
   const readinessPrIds = useMemo(() => {
     const ids: string[] = [];
@@ -866,7 +880,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: visible.length }),
+          placeholder: t("filterPlaceholder", { count: pullRequests.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={

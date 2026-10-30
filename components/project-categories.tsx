@@ -13,6 +13,8 @@ import {
   type DragEndEvent,
   type Modifier,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE } from "@/lib/drag-feel";
 import {
   SortableContext,
   arrayMove,
@@ -98,7 +100,7 @@ function CategoryRow({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
         "group/category relative flex items-center gap-2 bg-card py-2",
-        isDragging && "z-10 shadow-sm"
+        isDragging && "z-10 shadow-md"
       )}
     >
       {sortable && (
@@ -235,7 +237,7 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
   const announcements = useDragAnnouncements((id) =>
     categories.find((category) => category.id === id)?.name);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -270,6 +272,7 @@ export function ProjectCategories({ projectId }: { projectId: string }) {
             modifiers={[verticalDrag]}
             onDragEnd={onDragEnd}
           >
+            <DragCursor />
             <ul className="flex flex-col divide-y divide-border">
               {adding && (
                 <NewCategoryRow onCreate={createCategory} onDone={() => setAdding(false)} />

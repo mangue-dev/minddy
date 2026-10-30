@@ -8,7 +8,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { MobileNavigation, type MobileMenuPanel } from "./mobile-navigation";
 
 const navigation = vi.hoisted(() => ({ visit: vi.fn(), mobile: true }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/projects/aurora" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/projects/aurora", useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/components/app-link", () => ({ default: ({ href, onClick, children, ...props }: {
   href: string; onClick?: () => void; children: ReactNode;
 }) => <a {...props} href={href} onClick={(event: MouseEvent) => { event.preventDefault(); onClick?.(); navigation.visit(href); }}>{children}</a> }));

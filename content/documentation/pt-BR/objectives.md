@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -55,13 +55,16 @@
       "components/objective-label.tsx",
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "app/(app)/projects/[id]/page.tsx",
+      "components/objectives/objectives-page.tsx",
+      "components/app-sidebar.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): objective relation picker checked against lib/palette-picker.ts, components/palette-picker-rows.tsx and components/objective-relations-section.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the picker)",
-    "language": "agent:claude-code (pt-BR changed passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -83,7 +86,7 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada no projeto Aurora com um nome de resultado de exemplo e o botão Criar objetivo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -115,7 +118,7 @@ Abra cada ticket relevante e escolha o objetivo nas propriedades, ou use os cont
 
 ### Ler o progresso antes de encerrar {#objective-progress}
 
-Revise tickets concluídos e ativos junto com o progresso do objetivo. Um indicador resume o trabalho vinculado; ele não determina se um resultado de produto é aceitável. Inspecione tarefas ausentes e trabalho cancelado ou duplicado antes de marcar o objetivo como concluído. O quadro do objetivo mostra primeiro o trabalho aberto: selecione **Concluído** e **Cancelado** no filtro **Status** dele para revisar ali os tickets fechados.
+Revise tickets concluídos e ativos junto com o progresso do objetivo. Um indicador resume o trabalho vinculado; ele não determina se um resultado de produto é aceitável. Inspecione tarefas ausentes e trabalho cancelado ou duplicado antes de marcar o objetivo como concluído. O quadro do objetivo mostra primeiro o trabalho aberto: selecione **Concluído** e **Cancelado** no filtro **Status** dele para revisar ali os tickets fechados. Em um computador, enquanto o quadro mostra os tickets de um objetivo, a barra lateral continua na lista de objetivos, sob a linha de voltar **Objetivos**, com esse objetivo destacado; escolha outro objetivo nessa lista para mudar o quadro para ele.
 
 Use o ciclo de vida do objetivo para distinguir resultados planejados, em andamento, concluídos e cancelados. Uma data-alvo é uma meta, enquanto uma previsão é uma estimativa baseada na atividade. Se o objetivo parecer vazio, confira a associação dos tickets e os filtros da visualização em vez de recriá-lo. A exclusão de um objetivo usa a lixeira recuperável e não é uma mudança de estado comum.
 
@@ -140,6 +143,6 @@ Histórico escasso ou mudança recente de escopo reduzem sua utilidade. A estima
 
 ## Escolher um objetivo para um feedback {#objective-feedback}
 
-Nas propriedades do objetivo, a contagem de feedbacks abre a seção Feedback do projeto filtrada por esse objetivo, incluindo solicitações resolvidas. O valor zero também é exibido. As solicitações continuam separadas do progresso dos tickets e do ritmo.
+Nas propriedades do objetivo, a contagem de feedbacks abre a seção Feedback do projeto filtrada por esse objetivo, incluindo solicitações resolvidas. A linha fica oculta enquanto nenhuma solicitação pertence ao objetivo. As solicitações continuam separadas do progresso dos tickets e do ritmo.
 
 Um feedback pode pertencer a um objetivo sem virar um ticket. Nos feedbacks do projeto, escolha o objetivo nas propriedades da solicitação. Elas não contribuem para o progresso ou o ritmo dos tickets. A conversão herda o objetivo e as categorias, respeitando as alterações no formulário de criação.

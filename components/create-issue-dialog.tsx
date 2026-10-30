@@ -6,7 +6,7 @@ import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 
 import { createUuid } from "@/lib/create-uuid";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -15,7 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AutoTextarea } from "@/components/auto-textarea";
-import { CreationRelationPills, CreationRelationsCompact } from "@/components/creation-relations";
+import { CreationRelationPills, CreationRelationsCompact, creationRelationKinds } from "@/components/creation-relations";
+import type { RelationMenuKind } from "@/lib/issue-hierarchy";
 // Deferred editor: keeps tiptap (~1.5 MB) out of every board route's graph —
 // see components/editor/document-editor-lazy.tsx. The chunk is warmed from idle time by the
 // hook below, so the first open waits on nothing.
@@ -122,6 +123,7 @@ export function CreateIssueDialog({
   initialStatus,
   initialObjectiveId,
   initialAssigneeId,
+  initialSubIssueOf = null,
   initialParentId,
   initialTitle,
   initialDescription,
@@ -157,6 +159,9 @@ export function CreateIssueDialog({
   /** Preset the assignee (when creating from an assignee-filtered board, so
       the new issue doesn't instantly vanish from it). */
   initialAssigneeId?: string | null;
+  /** Preset a visible "sub-issue of" relation (a parent's "Create a
+      sub-issue"), which the form shows and can remove. */
+  initialSubIssueOf?: { id: string; label: string } | null;
   /**
    * Starting content — the form opens already written. It's the promotion
    * of a return in ticket: everything that the return can say (its title, its
@@ -251,11 +256,28 @@ export function CreateIssueDialog({
   const [fields, setFields] = useState(DEFAULTS);
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [relations, setRelations] = useState<PendingRelationInput[]>([]);
+  // The relations a new form starts with: the parent's, when it opened from
+  // its "Create a sub-issue", in the parent's own project only.
+  const seededRelations = useCallback((): PendingRelationInput[] =>
+    initialSubIssueOf && activeProjectId === projectId
+      ? [{ type: "sub_issue_of", target_id: initialSubIssueOf.id, target_type: "issue", target_label: initialSubIssueOf.label }]
+      : [],
+  [initialSubIssueOf, activeProjectId, projectId]);
   // Relations and categories belong to one project: a new target starts empty.
   useEffect(() => {
     setRelations([]);
     setCategoryIds([]);
   }, [activeProjectId]);
+  // Each opening starts from the seed, and so does a change of target project
+  // (the seed only holds in the parent's). Keyed on the parent's id: its label
+  // settling later must not drop relations picked meanwhile.
+  const seededRelationsRef = useRef(seededRelations);
+  seededRelationsRef.current = seededRelations;
+  const subIssueOfId = initialSubIssueOf?.id ?? null;
+  useEffect(() => {
+    if (!open || resuming.current) return;
+    setRelations(seededRelationsRef.current());
+  }, [open, subIssueOfId, activeProjectId, resuming]);
   const [createMore, setCreateMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Which field picker a keyboard shortcut (S/P/E/A/L/D/O) has opened, if any.
@@ -499,7 +521,8 @@ export function CreateIssueDialog({
     setDraftDocument(null);
     setEditorKey((k) => k + 1);
     uploads.clear();
-    setRelations([]);
+    // "Create more" keeps the parent: the next issue is its sub-issue too.
+    setRelations(seededRelations());
   };
 
   const reset = () => {
@@ -521,14 +544,22 @@ export function CreateIssueDialog({
     onOpenChange(false);
   };
 
+  const showsRelationPicker = !(smartFill && smartFillLinksRelations) || openPicker === "relation";
+  // A type chosen in Smart Fill's menu opens its targets directly; any other
+  // way into the picker starts from the type dropdown.
+  const [relationStartStep, setRelationStartStep] = useState<RelationMenuKind | null>(null);
+  useEffect(() => {
+    if (openPicker !== "relation") setRelationStartStep(null);
+  }, [openPicker]);
+
   // Typed text or a finished upload is worth keeping — a pristine (or
-  // still-uploading-only) form is not.
+  // still-uploading-only) form is not. Relations, like the other pickers, are
+  // not content on their own: a sub-issue form opens with its parent set.
   const draftHasContent = () =>
     title.trim() !== "" ||
     description.trim() !== "" ||
     editorNonEmptyRef.current ||
-    uploads.inputs.length > 0 ||
-    relations.length > 0;
+    uploads.inputs.length > 0;
 
   // Snapshot the form as a draft (MIN-41) — reuses the active id so saving a
   // recovered draft again updates it in place instead of piling up copies.
@@ -861,14 +892,6 @@ export function CreateIssueDialog({
                 uploads={uploads}
                 className="mb-3"
               />
-              <CreationRelationPills
-                projectId={activeProjectId}
-                projectKey={activeProject?.key ?? ""}
-                active={open}
-                value={relations}
-                onChange={setRelations}
-                disabled={submitting}
-              />
               {showsTitle && (<>
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
@@ -995,6 +1018,41 @@ export function CreateIssueDialog({
                     shortcutHint={KEY_FOR_FIELD.assignee}
                   />
                 </CreationProperty>
+                {/* Relations sit between the assignee and the due date: the
+                    picker, then the chosen ones as pills. Smart Fill also links
+                    related issues after the save (MIN-717), so the picker leaves
+                    with the other inferred fields, unless the account turned
+                    relation linking off or R opened it; chosen pills stay. */}
+                {(showsRelationPicker || relations.length > 0) && (
+                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {showsRelationPicker && (
+                        <CreationRelationsCompact
+                          projectId={activeProjectId}
+                          projectKey={activeProject?.key ?? ""}
+                          active={open}
+                          value={relations}
+                          onChange={setRelations}
+                          disabled={submitting}
+                          open={openPicker === "relation"}
+                          onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
+                          shortcutHint={RELATION_SHORTCUT_HINT}
+                          hierarchy
+                          startStep={relationStartStep}
+                        />
+                      )}
+                      <CreationRelationPills
+                        projectId={activeProjectId}
+                        projectKey={activeProject?.key ?? ""}
+                        active={open}
+                        value={relations}
+                        onChange={setRelations}
+                        disabled={submitting}
+                        className="contents"
+                      />
+                    </div>
+                  </CreationProperty>
+                )}
                 <CreationProperty mobile={mobile} label={tField("dueDate")}>
                   <DueDateCompact
                     value={fields.due_date}
@@ -1023,26 +1081,6 @@ export function CreateIssueDialog({
                     />
                   </CreationProperty>
                 )}
-                {/* Smart Fill also links related issues after the save (MIN-717):
-                    the picker leaves with the other inferred fields, unless the
-                    account turned relation linking off or R opened it. Relations already
-                    chosen stay visible as pills above the title. */}
-                {(!(smartFill && smartFillLinksRelations) || openPicker === "relation") && (
-                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
-                    <CreationRelationsCompact
-                      projectId={activeProjectId}
-                      projectKey={activeProject?.key ?? ""}
-                      active={open}
-                      value={relations}
-                      onChange={setRelations}
-                      disabled={submitting}
-                      open={openPicker === "relation"}
-                      onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
-                      shortcutHint={RELATION_SHORTCUT_HINT}
-                      hierarchy
-                    />
-                  </CreationProperty>
-                )}
                 {smartFillAvailable && (
                   <SmartFillCompact
                       fullWidth={mobile}
@@ -1066,6 +1104,16 @@ export function CreateIssueDialog({
                         objectiveId: fields.objective_id,
                         onObjectiveChange: (objective_id) =>
                           setFields((f) => ({ ...f, objective_id })),
+                        // The relations Smart Fill would link, picked as R does.
+                        ...(!showsRelationPicker && {
+                          relations: {
+                            kinds: creationRelationKinds(relations, true),
+                            onRequest: (kind) => {
+                              setRelationStartStep(kind);
+                              setOpenPicker("relation");
+                            },
+                          },
+                        }),
                         // The title Smart Fill would write (MIN-813).
                         ...(writesTitle && {
                           onTitleRequest: () => setTitleRequested(true),

@@ -142,7 +142,9 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
       className={cn(
         // Concentric: the buttons fill the inner height (h-10 inside p-2.5), so
         // their round ends follow the pill's.
-        "flex items-center gap-2 rounded-full bg-popover p-2.5 text-popover-foreground shadow-lg ring-1 ring-border",
+        "flex items-center gap-2 rounded-full bg-popover p-2.5 text-popover-foreground ring-1 ring-border",
+        // Floating on desktop; already lifted by its bottom sheet on mobile.
+        !mobile && "shadow-lg",
         "transition-[width] duration-200 ease-out motion-reduce:transition-none",
         // The receipt: as wide as the pill is tall (h-10 + p-2.5), a circle.
         receipt

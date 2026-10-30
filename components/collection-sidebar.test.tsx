@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { CollectionSidebar } from "./secondary-sidebar";
 import { SecondarySidebarProvider, useSecondarySidebar } from "@/lib/secondary-sidebar-context";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/home" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/home", useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => true }));
 vi.mock("@/lib/use-media-query", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),

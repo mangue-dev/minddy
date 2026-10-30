@@ -134,14 +134,102 @@ export function PageTreeSkeleton({ rows = 7 }: { rows?: number }) {
         </div>
       </SecondarySidebar>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="mx-auto w-full max-w-3xl px-6 py-10 app-desktop:px-10">
-          <Skeleton className="size-12 rounded-lg" />
-          <Skeleton className="mt-2 h-10 w-2/3" />
-          <div className="mt-8 flex flex-col gap-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-11/12" />
-            <Skeleton className="h-4 w-4/5" />
-            <Skeleton className="h-4 w-2/3" />
+        <PageDocumentSkeleton />
+      </div>
+    </div>
+  );
+}
+
+/** The icon row's reserved place and the title block of a page header
+ *  (components/pages/page-header.tsx), as measured on a loaded page. */
+function PageTitleSkeleton({ titleWidth = "w-2/3" }: { titleWidth?: string }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div aria-hidden className="h-7 pointer-coarse:h-9" />
+      <div className="h-[2.875rem] pt-1 app-desktop:h-[3.1875rem] app-desktop:pt-[5px]">
+        <Skeleton className={cn("h-8 app-desktop:h-9", titleWidth)} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A page's document while it loads, on the page view's own geometry
+ * (components/pages/page-view.tsx, page-header.tsx), measured against a
+ * loaded page: the content header, then the document column — its insets,
+ * the icon row's reserved 28px, the title block (51px on desktop, its text
+ * centered 5px lower than the block's top edge would put it) and body lines
+ * every 26px. No breadcrumb or icon placeholder: a top-level page has no
+ * breadcrumb and a page without an icon shows nothing in that row. The route segment and the page view both show it, so the
+ * hand-off between them and to the page does not move. `panel`: the side
+ * page panel, which has its own header and narrower insets.
+ */
+export function PageDocumentSkeleton({ panel = false }: { panel?: boolean }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {!panel && <AppContentHeader contentClassName="gap-2"><span /></AppContentHeader>}
+      <div
+        className={cn(
+          "relative mx-auto w-full max-w-3xl px-6 py-10",
+          panel ? "app-desktop:px-16" : "app-desktop:pl-24 app-desktop:pr-10"
+        )}
+      >
+        <PageTitleSkeleton />
+        <div className="mt-6 flex flex-col">
+          {["w-full", "w-11/12", "w-4/5", "w-2/3"].map((width) => (
+            <div key={width} className="flex h-[1.625rem] items-center">
+              <Skeleton className={cn("h-4", width)} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A database page while it loads, on the measured geometry of a loaded one
+ * (components/pages/page-view.tsx, page-database-view.tsx): the page title,
+ * then 20px below it the views bar (the view pills on the left; filter, sort,
+ * search, settings and the New pill on the right), then the table 4px lower,
+ * reaching the pane's edges on desktop like the real one, with its 41px
+ * header and rows and the New entry line. `panel`: the side page panel.
+ */
+export function DatabaseSkeleton({ panel = false }: { panel?: boolean }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {!panel && <AppContentHeader contentClassName="gap-2"><span /></AppContentHeader>}
+      <div
+        className={cn(
+          "relative mx-auto w-full px-6 py-10",
+          panel ? "max-w-3xl app-desktop:pl-24 app-desktop:pr-16" : "max-w-none app-desktop:pl-24 app-desktop:pr-10"
+        )}
+      >
+        {/* A database spans the pane: a share of it would be far longer than
+            any title. */}
+        <PageTitleSkeleton titleWidth="w-72 max-w-2/3" />
+        <div className="mt-5 flex h-8 items-center gap-2">
+          <Skeleton className="h-7 w-14 rounded-full" />
+          <Skeleton className="size-5 rounded-md" />
+          <div className="ml-auto flex items-center gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="size-5 rounded-md" />
+            ))}
+            <Skeleton className="ml-1 h-8 w-12 rounded-full" />
+          </div>
+        </div>
+        <div className={cn("mt-1", panel ? "app-desktop:-mr-16 app-desktop:-ml-24" : "app-desktop:-mr-10 app-desktop:-ml-24")}>
+          <div className="flex h-[41px] items-center border-b border-border/50 pl-3 app-desktop:pl-[108px]">
+            <Skeleton className="h-3.5 w-12" />
+          </div>
+          {["w-40", "w-32", "w-36"].map((width) => (
+            <div key={width} className="flex h-[41px] items-center gap-2 border-b border-border/50 pl-2.5 app-desktop:pl-[106px]">
+              <Skeleton className="size-4 rounded-sm" />
+              <Skeleton className={cn("h-4", width)} />
+            </div>
+          ))}
+          <div className="flex h-10 items-center pl-3 app-desktop:pl-[108px]">
+            <Skeleton className="h-3.5 w-20" />
           </div>
         </div>
       </div>

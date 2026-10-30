@@ -105,6 +105,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ExactTime } from "@/components/exact-time";
 
 /**
  * The code excerpt of a review comment mirrored from a pull request (MIN-802),
@@ -432,9 +433,11 @@ function EventRow({
         {forgeLogin?.isBot ? <BotBadge className="ml-1" /> : null}{" "}
         <span className="text-muted-foreground">{summary}</span>
       </OneLine>
-      <span className="shrink-0 text-xs text-muted-foreground/80">
-        {timeAgo(item.event.created_at, now, t)}
-      </span>
+      <ExactTime date={item.event.created_at}>
+        <span className="shrink-0 text-xs text-muted-foreground/80">
+          {timeAgo(item.event.created_at, now, t)}
+        </span>
+      </ExactTime>
     </li>
   );
 }
@@ -608,9 +611,11 @@ export function CommentBlock({
             <TooltipContent side="top">{t("publicCommentHint")}</TooltipContent>
           </Tooltip>
         )}
-        <span className="shrink-0 text-xs text-muted-foreground/80">
-          {timeAgo(comment.created_at, now, t)}
-        </span>
+        <ExactTime date={comment.created_at}>
+          <span className="shrink-0 text-xs text-muted-foreground/80">
+            {timeAgo(comment.created_at, now, t)}
+          </span>
+        </ExactTime>
         {(comment.optimisticEdit || comment.delivery?.state === "sending") && <Spinner className="size-3" aria-label={tCommon("loading")} />}
         {edited && !viaNumo && !visitor && (
           <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
@@ -668,7 +673,7 @@ export function CommentBlock({
         ) : liveBody ? (
           <div className="flex flex-col gap-1.5">
             <Markdown
-              className="text-foreground"
+              className="comment-selectable text-foreground"
               members={ctx.members}
               mentionScan={scopedMentions?.scan}
               mentionLinks={scopedMentions?.links}
@@ -738,7 +743,7 @@ export function CommentBlock({
           />
           {codeExcerpt.body && (
             <Markdown
-              className="text-foreground"
+              className="comment-selectable text-foreground"
               members={ctx.members}
               mentionScan={scopedMentions?.scan}
               mentionLinks={scopedMentions?.links}
@@ -750,7 +755,7 @@ export function CommentBlock({
       ) : (
         comment.body && (
           <Markdown
-            className="text-foreground"
+            className="comment-selectable text-foreground"
             members={ctx.members}
             mentionScan={scopedMentions?.scan}
             mentionLinks={scopedMentions?.links}

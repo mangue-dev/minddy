@@ -36,7 +36,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
     return () => observer.disconnect();
   }, [label, tab.pinned]);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  return <div role="presentation" className={cn(
+  return <div role="presentation" data-active={active || undefined} className={cn(
     "app-tab group relative flex h-[34px] shrink-0 items-center rounded-md text-sm",
     tab.pinned ? (compositeIcon ? "w-[52px]" : "w-[34px]") : "w-[200px]",
     active
@@ -67,7 +67,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
           // mouse-focused tab would light one, and the active tab already
           // stands out on its own background — see the tabs rule in
           // globals.css for the panel tabs' side of the same call.
-          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none", tab.pinned ? "justify-center" : "pl-2.5 pr-6")}>
+          className={cn("flex h-full min-w-0 flex-1 items-center gap-2 rounded-md outline-none", tab.pinned ? "justify-center" : "pl-2.5 pr-7")}>
           {/* The badge sits ON the icon's top-right corner (half over the
               icon glyphs), so it works on the square pinned tabs too. Its
               backing is exactly the tab's own background, muted so only the
@@ -93,7 +93,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
       {(tab.pinned || truncated) && <TooltipContent side="bottom">{label}</TooltipContent>}
     </Tooltip>
     {!tab.pinned && <Tooltip delayDuration={500} disableHoverableContent><TooltipTrigger asChild><button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
-      tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-1 flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 touch:not-disabled:opacity-100 disabled:opacity-0">
+      tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-[7px] flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 touch:not-disabled:opacity-100 disabled:opacity-0">
       <HugeiconsIcon icon={Cancel01Icon} className="size-3" aria-hidden />
     </button></TooltipTrigger>{!last && <TooltipContent side="bottom">{t("close")}</TooltipContent>}</Tooltip>}
     <IssueContextMenu position={menu} searchable={false} onClose={() => { setMenu(null); ref.current?.focus(); }} actions={[

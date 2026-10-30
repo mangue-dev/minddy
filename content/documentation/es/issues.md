@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,13 +124,16 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -176,7 +179,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -193,7 +196,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -210,7 +213,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -227,7 +230,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +246,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -260,7 +263,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -277,7 +280,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -294,7 +297,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -310,7 +313,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -327,7 +330,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -360,7 +363,7 @@ Una incidencia registra una unidad de trabajo del proyecto, desde la solicitud i
 
 Debes ser el propietario o un Miembro del proyecto de destino; los lectores pueden abrir incidencias, pero no crearlas ni editarlas. Abre el proyecto y su control para crear una incidencia. Escribe un título que identifique el trabajo y añade contexto, resultado esperado y restricciones en la descripción. El título y la descripción funcionan como un solo texto: en un ordenador, la flecha abajo en la última línea del título pasa a la primera línea de la descripción, la flecha arriba vuelve, y el cursor conserva más o menos su posición en la línea. Mayús+Intro en el título pasa a la descripción; Intro también, salvo si elegiste Intro como atajo de envío, en cuyo caso crea la incidencia. Command/Ctrl+Intro la crea desde cualquiera de los dos campos. Las mismas flechas e Intro enlazan el título y la descripción de una incidencia, un objetivo, una página o una solicitud abiertos. El formulario se abre en el proyecto actual; elige otro en **Crear en**, arriba a la izquierda del formulario (junto al título **Nueva incidencia** en el teléfono), sobre todo cuando crees desde una vista personal o entre proyectos. En un ordenador, Command/Ctrl+Mayús+P abre ese menú incluso mientras escribes el título o la descripción; al elegir un proyecto o cerrar el menú, el cursor vuelve exactamente donde estaba. La píldora muestra este atajo, que solo existe cuando se puede elegir más de un proyecto; en el teléfono no se muestra ningún atajo. Cambiar de proyecto borra las categorías, el objetivo y las relaciones elegidos para el anterior. El botón de creación muestra el identificador que recibirá la incidencia, como `MIN-42`, y tiene en cuenta las incidencias creadas mientras tanto; su menú crea la incidencia y copia ese identificador.
 
-Para crear la incidencia manualmente, desactiva Smart Fill si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías, objetivo y relaciones para que los establezcas. Para fijar solo algunas de estas propiedades, deja Smart Fill activado y abre la flecha junto a su botón: elige una propiedad y luego su valor. Fuera del título y la descripción, la tecla de la propiedad abre directamente su selector: P para la prioridad, E para el esfuerzo, L para las categorías u O para el objetivo. El valor que elijas sigue visible en el formulario. Smart Fill solo deduce las propiedades que dejaste vacías. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de Smart Assign y las rutinas. Mientras Smart Fill está activado, también [vincula la incidencia con incidencias relacionadas](#smart-fill-relations) una vez guardada, por lo que el selector de relaciones queda oculto; R lo abre de todos modos. Las relaciones que ya elegiste siguen visibles encima del título y se crean con la incidencia.
+Para crear la incidencia manualmente, desactiva Smart Fill si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías, objetivo y relaciones para que los establezcas. Para fijar solo algunas de estas propiedades, deja Smart Fill activado y abre la flecha junto a su botón: elige una propiedad y luego su valor. Allí, **Relaciones** enumera los tipos de relación; elegir uno abre la paleta de comandos con sus destinos posibles. Fuera del título y la descripción, la tecla de la propiedad abre directamente su selector: P para la prioridad, E para el esfuerzo, L para las categorías u O para el objetivo. El valor que elijas sigue visible en el formulario. Smart Fill solo deduce las propiedades que dejaste vacías. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de Smart Assign y las rutinas. Mientras Smart Fill está activado, también [vincula la incidencia con incidencias relacionadas](#smart-fill-relations) una vez guardada, por lo que el selector de relaciones queda oculto; R lo abre de todos modos. Las relaciones que ya elegiste siguen visibles como píldoras en la fila de propiedades, entre el responsable y la fecha límite, y se crean con la incidencia.
 
 Configura las propiedades útiles antes de confirmar: estado, prioridad, esfuerzo, responsable, objetivo, categorías, fecha límite y recurrencia. La persona responsable es el propietario del proyecto o un Miembro, nunca un lector; un objetivo agrupa incidencias alrededor de un resultado del proyecto. Puedes dejar las propiedades opcionales sin valor en lugar de adivinar. La prioridad queda **Sin definir** o va de baja a urgente, pasando por media y alta; el esfuerzo queda **Sin definir** o utiliza XS, S, M, L y XL.
 
@@ -368,7 +371,7 @@ Cuando Smart Assign está activado en el proyecto, el selector de responsable mu
 
 Confirma la creación y abre la nueva incidencia. Comprueba su identificador y proyecto. Vuelve a abrir los selectores de propiedades para cambiar valores conforme la tarea quede más clara. La descripción explica el trabajo; el plan de implementación se mantiene por separado en la pestaña del plan.
 
-Al cerrar el formulario se conserva lo que escribiste: vuelve a abrirlo para seguir donde lo dejaste. Si no lo reabres en dos minutos, su contenido se guarda como borrador y el siguiente formulario empieza vacío; hasta entonces solo existe en esta ventana, así que recargar o cerrar la ventana lo pierde. Abrir un borrador o un formulario rellenado desde otro lugar guarda antes como borrador lo que habías dejado. Para guardarlo tú mismo, abre el menú junto al botón de crear y elige **Guardar como borrador**. Los borradores guardados de incidencias y objetivos se reúnen en **Borradores**, abajo a la derecha de la ventana, entre Numo y el cuaderno de tareas; el botón solo aparece mientras tienes un borrador e indica cuántos hay. Su lista muestra el título y la primera línea de la descripción de cada borrador. Elige un borrador para reabrirlo en su formulario de creación y terminarlo; crear la incidencia elimina el borrador. El botón de eliminar junto a un borrador pide confirmación antes, y la eliminación no se puede deshacer. En un teléfono, abre la paleta de comandos y busca el título del borrador. Los borradores se guardan en este dispositivo durante 30 días, diez de cada tipo como máximo; la lista solo muestra los de proyectos en los que todavía puedes crear incidencias.
+Al cerrar el formulario se conserva lo que escribiste: vuelve a abrirlo para seguir donde lo dejaste. Solo cuentan un título, una descripción o un adjunto: un formulario que solo contiene propiedades o relaciones vuelve a empezar vacío. Si no lo reabres en dos minutos, su contenido se guarda como borrador y el siguiente formulario empieza vacío; hasta entonces solo existe en esta ventana, así que recargar o cerrar la ventana lo pierde. Abrir un borrador o un formulario rellenado desde otro lugar guarda antes como borrador lo que habías dejado. Para guardarlo tú mismo, abre el menú junto al botón de crear y elige **Guardar como borrador**. Los borradores guardados de incidencias y objetivos se reúnen en **Borradores**, abajo a la derecha de la ventana, entre Numo y el cuaderno de tareas; el botón solo aparece mientras tienes un borrador e indica cuántos hay. Su lista muestra el título y la primera línea de la descripción de cada borrador. Elige un borrador para reabrirlo en su formulario de creación y terminarlo; crear la incidencia elimina el borrador. El botón de eliminar junto a un borrador pide confirmación antes, y la eliminación no se puede deshacer. En un teléfono, abre la paleta de comandos y busca el título del borrador. Los borradores se guardan en este dispositivo durante 30 días, diez de cada tipo como máximo; la lista solo muestra los de proyectos en los que todavía puedes crear incidencias.
 
 
 ![Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.](/documentation/es/new-issue.png)
@@ -414,7 +417,7 @@ Abre el destino Clasificación del proyecto. Lee la incidencia entrante y el con
 
 Los filtros de la lista permiten acotar las incidencias entrantes por prioridad, esfuerzo, responsable, objetivo, categorías o integración. **Sin definir** en prioridad o esfuerzo conserva las incidencias que aún no tienen valor. Los valores de una propiedad son alternativas; las distintas propiedades se combinan. Restablece los filtros para mostrar de nuevo todas las incidencias entrantes.
 
-Elige Aceptar y confirma para mover una incidencia que quieras conservar a Backlog. Para rechazarla, elige Rechazar y confirma: su estado pasa a Cancelada. Si es un duplicado, utiliza el selector de duplicados para elegir la incidencia que se conservará. La incidencia entrante pasa a Duplicada y queda enlazada a la elegida. Si describes la solicitud en la búsqueda del selector, también aparecen incidencias parecidas bajo **Relacionadas por significado**, después de las coincidencias de texto; consulta [Buscar incidencias por el sentido](/docs/navigation#search-by-meaning). Cuando un elemento sale de clasificación, se selecciona el siguiente. Comprueba el estado resultante o el enlace al duplicado en la propia incidencia. Pasar de una tarjeta a otra sin realizar una de estas acciones no cierra la incidencia.
+Elige Aceptar y confirma para mover una incidencia que quieras conservar a Backlog. Para rechazarla, elige Rechazar y confirma: su estado pasa a Cancelada. Si es un duplicado, elige **Marcar como duplicada…** y selecciona en la paleta de comandos la incidencia que se conservará. La incidencia entrante pasa a Duplicada y queda enlazada a la elegida. Si describes la solicitud en la búsqueda del selector, también aparecen incidencias parecidas bajo **Relacionadas por significado**, después de las coincidencias de texto; consulta [Buscar incidencias por el sentido](/docs/navigation#search-by-meaning). Cuando un elemento sale de clasificación, se selecciona el siguiente. Comprueba el estado resultante o el enlace al duplicado en la propia incidencia. Pasar de una tarjeta a otra sin realizar una de estas acciones no cierra la incidencia.
 
 ### Ordenación y límites {#triage-order}
 
@@ -473,7 +476,7 @@ Comprueba que un recurso cargado aparezca y pueda abrirse después de la operaci
 
 ## Enlazar dependencias e incidencias relacionadas {#issue-dependencies}
 
-Abre los controles de relaciones de una incidencia y busca la otra por título o identificador. Fuera de un campo de texto, R abre la elección del tipo de relación desde una tarjeta bajo el puntero o el panel de la incidencia. Una vez elegido el tipo, el otro extremo se elige en la [paleta de comandos](/docs/navigation#search-and-shortcuts), que solo muestra las incidencias y objetivos que admiten esa relación. Una búsqueda descriptiva también muestra, después de las coincidencias de texto, incidencias del mismo proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**. Elige una relación de bloqueo cuando una tarea deba terminar antes de que otra pueda avanzar. Si A bloquea B, A es el requisito previo y B está bloqueada por A. Una relación de vínculo añade contexto sin imponer ese orden.
+Abre los controles de relaciones de una incidencia y busca la otra por título o identificador. Fuera de un campo de texto, R abre la elección del tipo de relación desde una tarjeta bajo el puntero o el panel de la incidencia. Una vez elegido el tipo, el otro extremo se elige en la [paleta de comandos](/docs/navigation#search-and-shortcuts), que solo muestra las incidencias y objetivos que admiten esa relación; las hechas y las canceladas también aparecen, después de las abiertas. Una búsqueda descriptiva también muestra, después de las coincidencias de texto, incidencias del mismo proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**. Elige una relación de bloqueo cuando una tarea deba terminar antes de que otra pueda avanzar. Si A bloquea B, A es el requisito previo y B está bloqueada por A. Una relación de vínculo añade contexto sin imponer ese orden.
 
 Lee los dos identificadores y la dirección mostrada antes de confirmar. Por ejemplo, «Preparar el punto de acceso» bloquea «Conectar el cliente», y no al revés. Una dependencia no convierte ninguna de las incidencias en subincidencia; una relación de padre e hija no sustituye a una relación de bloqueo.
 
@@ -485,7 +488,7 @@ Los estados finales Hecha, Cancelada y Duplicada hacen que una incidencia deje d
 
 Una incidencia abierta puede heredar un bloqueo a través de su objetivo abierto. Si A bloquea el objetivo B, las incidencias abiertas vinculadas a B muestran A como bloqueo heredado, aunque no exista una relación directa de A a la incidencia. La interfaz identifica el requisito real y el objetivo que transmite el bloqueo. Examina esa relación del objetivo antes de intentar retirarla de la incidencia. Cerrar A, cerrar B o sacar la incidencia de B elimina el bloqueo heredado. Este mecanismo depende de la pertenencia al objetivo, no de la jerarquía entre incidencias principales y subincidencias.
 
-Retira una relación desde sus controles cuando ya no corresponda; una confirmación nombra la otra incidencia u objetivo, y solo desaparece el vínculo. Después verifica tanto la etiqueta como el indicador de bloqueo. Marcar una incidencia como duplicada afecta a su ciclo de vida y remite al trabajo conservado. Úsalo para tareas duplicadas en lugar de crear un vínculo ordinario y suponer que eso cierra el duplicado.
+Retira una relación desde sus controles cuando ya no corresponda; una confirmación nombra la otra incidencia u objetivo, y solo desaparece el vínculo. En una tarjeta del tablero, la etiqueta de un tipo de relación abre la lista de esas relaciones, cada una con un botón para quitarla (✕) que pide la misma confirmación; las relaciones heredadas de un objetivo no lo tienen. Después verifica tanto la etiqueta como el indicador de bloqueo. Marcar una incidencia como duplicada afecta a su ciclo de vida y remite al trabajo conservado. Úsalo para tareas duplicadas en lugar de crear un vínculo ordinario y suponer que eso cierra el duplicado.
 
 Si el selector no encuentra una incidencia, comprueba el acceso al proyecto y el identificador. No expongas contenido de otro proyecto pegando una URL privada de incidencia en una respuesta pública a una solicitud de feedback.
 
@@ -501,7 +504,7 @@ La indexación y las decisiones de relación usan IA. Cuentan en la parte **Auto
 
 ## Dividir una incidencia en subincidencias {#sub-issues}
 
-Abre la incidencia principal y usa sus controles de subincidencias para crear partes menores del trabajo. Asigna un resultado distinto a cada hija. Comprueba su proyecto, propiedades e identificador de la principal después de crearla; la jerarquía debe facilitar el seguimiento, no sustituir la descripción de lo que cada hija debe lograr.
+En el panel lateral de la incidencia principal, elige **Crear una subincidencia** para abrir el diálogo de creación de incidencias con esta incidencia ya definida como principal. La flecha de al lado (**Más opciones de subincidencia**) ofrece **Pedir a Numo que divida la incidencia**, que pide a Numo leer la incidencia con su plan y sus comentarios y crear una subincidencia por cada parte de trabajo independiente; revisa las subincidencias que crea. Un Lector no ve este botón. Asigna un resultado distinto a cada hija. Comprueba su proyecto, propiedades e identificador de la principal después de crearla; la jerarquía debe facilitar el seguimiento, no sustituir la descripción de lo que cada hija debe lograr.
 
 Para vincular incidencias que ya existen, pulsa R sobre una tarjeta bajo el puntero o en el panel de la incidencia, o abre **Relaciones** desde el clic derecho de una tarjeta. **Principal de** muestra las incidencias que pueden convertirse en subincidencia de esta; **Subincidencia de** muestra las incidencias de primer nivel que pueden convertirse en su principal. Cada lista solo ofrece lo que permite la regla de un único nivel: una subincidencia no tiene la entrada **Principal de**, y una incidencia que ya tiene subincidencias no tiene la entrada **Subincidencia de**. Elegir una incidencia que ya tiene otra principal la mueve bajo la nueva. Desde una selección de tarjetas, **Subincidencia de** coloca bajo la principal elegida cada incidencia seleccionada que cumpla la regla. En el formulario de nueva incidencia, **Relaciones** ofrece las mismas dos entradas: **Subincidencia de** crea la incidencia bajo la principal elegida, y **Principal de** coloca debajo las incidencias elegidas una vez creada. Una incidencia nueva tiene una principal o subincidencias, no ambas. Al escribir en el campo de búsqueda del clic derecho de una tarjeta o del menú `…` del panel de la incidencia también encuentras las entradas de sus submenús, cada una con su ruta, por ejemplo **Relaciones** › **Marcar como bloqueada por…**.
 
@@ -564,7 +567,7 @@ Una rutina de Numo es un objeto distinto: programa una conversación y puede uti
 
 En un tablero, mantén pulsada Mayús y haz clic en cada tarjeta para seleccionarla o quitarla de la selección. Con el ratón, también puedes arrastrar un rectángulo de selección desde un espacio vacío del tablero. Mayús, Command o Ctrl hacen que ese gesto amplíe la selección existente. Cerca de un borde el tablero se desplaza, y las tarjetas que el rectángulo ha recorrido siguen seleccionadas aunque salgan de la vista. El rectángulo no es un modo de selección para pantallas táctiles. Comprueba el número seleccionado y los identificadores visibles antes de abrir las acciones masivas. La selección es un conjunto de trabajo para la acción, no una vista guardada ni una concesión de permisos. Ábrelas con **Acciones** en la barra de selección, o pulsa Comando+K en macOS o Ctrl+K en Windows/Linux mientras haya incidencias seleccionadas.
 
-Elige Acciones en la barra flotante de selección para abrir la paleta de comandos. Elige estado, prioridad, esfuerzo o responsable, establece el valor y confirma el formulario integrado. La acción de objetivo solo aparece cuando la selección pertenece a un único proyecto con objetivos disponibles. Otras acciones, como añadir o quitar del ciclo, enlazar dos incidencias o enviar la selección a Numo, aparecen cuando el tablero actual las admite. Con el ratón, también puedes señalar una tarjeta seleccionada y pulsar S, P, E, A, L, D, O o R: el selector que se abre se aplica a toda la selección y, para el responsable, el objetivo, las categorías y las relaciones, a las incidencias seleccionadas del proyecto de esa tarjeta. Haz clic derecho en una tarjeta seleccionada para actuar sobre toda la selección: **Copiar el prompt combinado** ofrece **Generar los planes** (**Revisar los planes** cuando todas las incidencias seleccionadas tienen uno, **Generar o revisar los planes** cuando solo algunas lo tienen), **Implementar las incidencias**, **Verificar las implementaciones** y **Personalizado…**, y cada opción copia un único prompt para todas las incidencias seleccionadas. **Copiar los 3 identificadores**, con tres incidencias seleccionadas, copia sus identificadores separados por comas, del número más bajo al más alto. **Relaciones**, **Vincular un objetivo** y **Añadir una fecha límite** abren los mismos selectores que R, O y D. Revisa después las incidencias afectadas. En un dispositivo exclusivamente táctil sin un gesto de selección múltiple compatible, edita cada incidencia en su panel de detalle.
+Elige Acciones en la barra flotante de selección para abrir la paleta de comandos. Elige estado, prioridad, esfuerzo o responsable, establece el valor y confirma el formulario integrado. La acción de objetivo solo aparece cuando la selección pertenece a un único proyecto con objetivos disponibles. Otras acciones, como añadir o quitar del ciclo, enlazar dos incidencias o enviar la selección a Numo, aparecen cuando el tablero actual las admite. Con el ratón, también puedes señalar una tarjeta seleccionada y pulsar S, P, E, A, L, D, O o R: el selector que se abre se aplica a toda la selección y, para el responsable, el objetivo, las categorías y las relaciones, a las incidencias seleccionadas del proyecto de esa tarjeta. Haz clic derecho en una tarjeta seleccionada para actuar sobre toda la selección: **Copiar el prompt combinado** ofrece **Generar los planes** (**Revisar los planes** cuando todas las incidencias seleccionadas tienen uno, **Generar o revisar los planes** cuando solo algunas lo tienen), **Implementar las incidencias**, **Verificar las implementaciones** y **Personalizado…**, y cada opción copia un único prompt para todas las incidencias seleccionadas. **Copiar los 3 identificadores**, con tres incidencias seleccionadas, copia sus identificadores separados por comas, del número más bajo al más alto. **Relaciones**, **Vincular un objetivo** y **Añadir una fecha límite** abren los mismos selectores que R, O y D. **Mover a la papelera**, al final, mueve toda la selección a la papelera tras la misma confirmación que la barra de selección. Revisa después las incidencias afectadas. En un dispositivo exclusivamente táctil sin un gesto de selección múltiple compatible, edita cada incidencia en su panel de detalle.
 
 ### Resultados parciales y acciones destructivas {#bulk-results}
 

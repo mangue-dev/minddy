@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, ArrowRight01Icon, ArrowUp01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE } from "@/lib/drag-feel";
 import { SortableContext, arrayMove, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { CSS } from "@dnd-kit/utilities";
@@ -76,7 +78,6 @@ import {
   databasePropertyValue,
   type DatabaseProperty,
 } from "@/lib/page-databases";
-import { positionBetween } from "@/lib/pages";
 import type { PageSummary } from "@/lib/pages-api";
 import {
   DatabaseOptionsDialog,
@@ -95,13 +96,21 @@ const horizontalColumnDrag: Modifier = ({ transform }) => ({ ...transform, y: 0 
 const ROW_GUTTER_BUTTON =
   "flex size-6 shrink-0 items-center justify-center rounded-md p-0.5 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+// Where dragged entries will land: a line over the whole row, drawn by each
+// cell's `::after` above its content. An inset shadow sat UNDER the content,
+// so the hovered name cell's background and the sticky selection cell cut it.
+const ROW_DROP_LINE =
+  "[&>td:not(.sticky)]:relative [&>td]:after:pointer-events-none [&>td]:after:absolute [&>td]:after:inset-x-0 [&>td]:after:z-30 [&>td]:after:h-0.5 [&>td]:after:bg-primary [&>td]:after:content-['']";
+const ROW_DROP_LINE_ABOVE = `${ROW_DROP_LINE} [&>td]:after:top-0`;
+const ROW_DROP_LINE_BELOW = `${ROW_DROP_LINE} [&>td]:after:bottom-0`;
+
 function SortableDatabaseColumn({ projectId, database, property, disabled, onEdit }: {
   projectId: string; database: PageSummary; property: DatabaseProperty; disabled: boolean;
   onEdit: (property: DatabaseProperty) => void;
 }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: property.id, disabled });
   return <th ref={setNodeRef} scope="col" data-database-column={property.id}
-    className="relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-1 font-normal"
+    className={`relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-1 font-normal ${isDragging ? "shadow-md" : ""}`}
     // A translation only: dnd-kit's transform also scales the dragged header
     // to the width of the column under it, which stretched its text.
     style={{ transform: CSS.Translate.toString(transform), transition, zIndex: isDragging ? 1 : undefined }}>
@@ -154,7 +163,7 @@ function SortablePropertyRow({ property, sortable, children }: {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-sm" : ""}`}
+      className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-md" : ""}`}
     >
       <AppTooltip label={t("reorderColumnHint")}>
         <button
@@ -224,7 +233,7 @@ function PropertySettings({
   const [editBase, setEditBase] = useState(database);
   const [removeBase, setRemoveBase] = useState(database);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const announcements = useDragAnnouncements((id) =>
@@ -246,6 +255,7 @@ function PropertySettings({
               void saveSchema(database, arrayMove(schema, from, to));
             }}
           >
+          <DragCursor />
           <SortableContext items={schema.map((property) => property.id)} strategy={verticalListSortingStrategy}>
           <div className={sheet ? "max-h-[50dvh] space-y-1 overflow-y-auto" : "max-h-72 space-y-1 overflow-y-auto"}>
             {schema.map((property) => {
@@ -468,7 +478,7 @@ export function PageDatabaseView({
   );
   const { saveSchema, pending: schemaPending } = usePageDatabase(projectId);
   const columnBase = useRef<PageSummary | null>(null);
-  const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
   const mobile = useMobileLayout() === true;
@@ -632,19 +642,6 @@ export function PageDatabaseView({
       );
     });
   };
-  const move = (entry: PageSummary, direction: number) =>
-    void run(async () => {
-      const index = entries.findIndex((p) => p.id === entry.id);
-      const before =
-        direction < 0
-          ? entries[index - 2]?.position
-          : entries[index + 1]?.position;
-      const after =
-        direction < 0
-          ? entries[index - 1]?.position
-          : entries[index + 2]?.position;
-      await updatePage(entry.id, { position: positionBetween(before, after) });
-    });
   const visible = schema.filter((property) => !hidden.includes(property.id));
   const columnWidths = [
     240,
@@ -1033,6 +1030,7 @@ export function PageDatabaseView({
           const before = schema.findIndex((p) => p.id === active.id) > schema.findIndex((p) => p.id === over.id);
           void saveSchema(base, reorderDatabaseColumns(schema, String(active.id), String(over.id), before));
         }}>
+      <DragCursor />
       <SortableContext items={visible.map((property) => property.id)} strategy={horizontalListSortingStrategy}>
       <DatabaseTableScroll panel={compact}>
         <table
@@ -1120,7 +1118,7 @@ export function PageDatabaseView({
                   key={entry.id}
                   data-entry-id={entry.id}
                   aria-selected={checked}
-                  className={`group h-10 pointer-coarse:h-12 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:shadow-[inset_0_2px_0_var(--primary)]" : "[&>td]:shadow-[inset_0_-2px_0_var(--primary)]") : ""}`}
+                  className={`group h-10 pointer-coarse:h-12 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? ROW_DROP_LINE_ABOVE : ROW_DROP_LINE_BELOW) : ""}`}
                   onDragOver={(event) => {
                     if (
                       !manual ||
@@ -1170,7 +1168,8 @@ export function PageDatabaseView({
                               <button
                                 type="button"
                                 aria-label={t("entryActions")}
-                                className={cn(ROW_GUTTER_BUTTON, "size-7", isDragging && "cursor-grabbing")}
+                                // A handle: it shows the grab hand before the press.
+                                className={cn(ROW_GUTTER_BUTTON, "size-7", manual && "cursor-grab", isDragging && "cursor-grabbing")}
                                 onPointerDownCapture={(event) => {
                                   if (event.button === 0) event.stopPropagation();
                                 }}
@@ -1224,28 +1223,6 @@ export function PageDatabaseView({
                               <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                               {t("duplicate")}
                             </DropdownMenuItem>
-                            {targets.length === 1 && (
-                              <>
-                                <DropdownMenuItem
-                                  disabled={
-                                    !manual || entries[0]?.id === entry.id
-                                  }
-                                  onSelect={() => move(entry, -1)}
-                                >
-                                  <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
-                                  {t("moveUp")}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  disabled={
-                                    !manual || entries.at(-1)?.id === entry.id
-                                  }
-                                  onSelect={() => move(entry, 1)}
-                                >
-                                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
-                                  {t("moveDown")}
-                                </DropdownMenuItem>
-                              </>
-                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               variant="destructive"

@@ -12,6 +12,8 @@ import {
 } from "@/lib/assistant-panel-context";
 import { useResumableConversation } from "@/lib/assistant-chat-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import { useAppTabActive } from "@/lib/app-tab-route-context";
+import { useTypeaheadTarget } from "@/lib/keyboard/typeahead";
 
 /**
  * Compact "Ask Numo" composer for the home dashboard (MIN-38) — mirrors
@@ -65,6 +67,13 @@ export function HomeNumoComposer() {
   useSuppressAssistantFab(!resumable);
   const inputRef = useRef<ChatInputHandle>(null);
   const [empty, setEmpty] = useState(true);
+  // A burst typed anywhere on the home page goes to this composer; a single
+  // key stays a shortcut (lib/keyboard/typeahead.ts).
+  const tabActive = useAppTabActive();
+  useTypeaheadTarget(tabActive ? {
+    accepts: () => true,
+    type: (text) => inputRef.current?.append(text),
+  } : null);
 
   return (
     <>

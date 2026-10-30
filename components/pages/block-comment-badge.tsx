@@ -26,7 +26,7 @@ export function BlockCommentBadge({
   // one here the tooltip threw and the badge never rendered.
   return (
     <TooltipProvider>
-    <Tooltip delayDuration={400} disableHoverableContent>
+    <Tooltip delayDuration={600} disableHoverableContent>
       <TooltipTrigger asChild>
         <button
           type="button"

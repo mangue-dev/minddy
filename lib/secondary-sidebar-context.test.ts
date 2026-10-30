@@ -11,6 +11,12 @@ describe("routeHasSecondaryNav", () => {
     expect(routeHasSecondaryNav("/trash")).toBe(true);
   });
 
+  it("hosts the objectives bar on an objective's board, not on the plain board", () => {
+    expect(routeHasSecondaryNav("/projects/p", "o")).toBe(true);
+    expect(routeHasSecondaryNav("/projects/p")).toBe(false);
+    expect(routeHasSecondaryNav("/projects/p/pages/x", "o")).toBe(true);
+  });
+
   it("offers navigation actions for links and declared row destinations", () => {
     const sidebar = readFileSync("components/secondary-sidebar.tsx", "utf8");
     expect(sidebar).toContain('"a[href], [data-navigation-href]"');

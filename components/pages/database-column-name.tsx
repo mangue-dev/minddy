@@ -85,16 +85,19 @@ export function DatabaseColumnName({
   if (editing)
     return (
       <form
-        className="min-w-0 w-full px-2"
+        className="min-w-0 w-full"
         onSubmit={(event) => {
           event.preventDefault();
           void save();
         }}
       >
+        {/* The header button's own box (32px, 8px inset, small radius) at
+            every width: the shared input grows to 36px from `md`, which
+            pushed the header row down while renaming. */}
         <Input
           autoFocus
           aria-label={t("renameColumn", { name })}
-          className="h-7 min-w-0"
+          className="h-8 min-w-0 rounded-md px-2 md:h-8"
           maxLength={80}
           value={draft}
           disabled={pending}

@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-10-29",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -66,13 +66,19 @@
       "lib/server/assistant/markdown-pdf.ts",
       "components/assistant/generated-file-cards.tsx",
       "components/assistant/assistant-starter-list.tsx",
-      "components/home/home-numo-composer.tsx"
+      "components/home/home-numo-composer.tsx",
+      "lib/keyboard/typeahead.ts",
+      "lib/keyboard/keyboard-context.tsx",
+      "components/assistant/assistant-shell.tsx",
+      "components/assistant/chat-message.tsx",
+      "components/typed-mention-chip.tsx",
+      "lib/server/assistant/prompt.ts"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (Home composer showing the same suggestion rows as the empty panel, checked against components/home/home-numo-composer.tsx, components/assistant/assistant-starter-list.tsx, lib/assistant-starters.ts and the Assistant.starters.home catalog entries; not checked in the running app; no figure recaptured, existing figures do not show Home; earlier evidence retained in git history)",
-    "language": "agent:claude-code (it sentence added on the Home composer with catalog UI labels; informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 25,
+    "fact": "agent:claude-code (type-ahead from Home and the expanded or focused Numo panel into the composer, single keys still running their shortcut after the 200 ms window, checked against lib/keyboard/typeahead.ts, lib/keyboard/keyboard-context.tsx, components/home/home-numo-composer.tsx and components/assistant/assistant-shell.tsx; Numo citing issues, objectives, projects, pages and members as mention pills in replies and in what it writes (issue descriptions and plans, objective descriptions, comments, pages, notebook), checked against lib/server/assistant/prompt.ts, lib/server/assistant/tools.ts, components/assistant/chat-message.tsx and components/typed-mention-chip.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the conversation figure predates mention pills in answers)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -104,7 +110,7 @@
       "src": "/documentation/it/work-with-numo-workflow.png",
       "alt": "Conversazione dimostrativa Numo con contesto, cambio di priorità e risposta salvata.",
       "caption": "Conversazione dimostrativa esistente, tradotta per la visualizzazione. La risposta salvata cita AUR-11 e AUR-7; la cattura non attesta una nuova esecuzione.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -121,7 +127,7 @@
       "src": "/documentation/it/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matrice dei permessi Numo per azioni del progetto, connessioni personali e routine.",
       "caption": "Accesso al progetto e richieste esplicite limitano le azioni di Numo; i contenuti esterni non concedono permessi.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,7 +188,7 @@
       "src": "/documentation/it/numo-execution-model-flow.svg",
       "alt": "Schema: Persistire intento, messaggio e UUID. Acquisire turno, salvare tool e risultati. Attendere la tua risposta se serve un input. Riprodurre eventi e riconciliare scritture incerte.",
       "caption": "Segui le fasi in questo ordine. Persistire intento, messaggio e UUID. Acquisire turno, salvare tool e risultati. Attendere la tua risposta se serve un input. Riprodurre eventi e riconciliare scritture incerte.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -214,7 +220,7 @@
       "src": "/documentation/it/numo-mcp-connections-workflow.png",
       "alt": "Impostazioni MCP personali, elenco vuoto e pulsante per aggiungere un server.",
       "caption": "Le connessioni di Numo sono personali; le routine usano quelle del proprietario del progetto.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -231,7 +237,7 @@
       "src": "/documentation/it/numo-mcp-connections-config-workflow.png",
       "alt": "Procedura di collegamento a Notion con il metodo di accesso noto dal catalogo.",
       "caption": "Passaggio di accesso di un servizio del catalogo. Non sono state inserite credenziali né contattati server.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -262,9 +268,11 @@ Apri il ticket o il progetto interessato e usa il pulsante flottante di Numo. La
 1. Controlla il contesto nell’area di scrittura. Specifica il ticket quando sono coinvolti più elementi. Per aggiungere un ticket come contesto, digita `@` nell’area di scrittura o usa **Aggiungi contesto** → **Ticket**; una descrizione mostra anche ticket trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**.
 2. Scegli fornitore, modello e livello di ragionamento della conversazione con il logo del provider accanto al microfono; passandoci sopra vedi il modello attuale. Queste scelte valgono per la conversazione. Se il modello non offre il controllo del ragionamento, il cursore resta su **Nessun ragionamento**; su un modello che ragiona sempre, **Nessun ragionamento** usa il suo livello più leggero.
 3. Invia una richiesta circoscritta, per esempio: «Leggi questo ticket e proponi criteri di accettazione. Non modificarne lo stato».
-4. Leggi la risposta e apri i collegamenti ai ticket o alle fonti. Se hai chiesto una modifica, verifica l’oggetto aggiornato.
+4. Leggi la risposta e apri i collegamenti ai ticket o alle fonti. Se hai chiesto una modifica, verifica l’oggetto aggiornato. Ticket, obiettivi, progetti, pagine e membri trovati da Numo compaiono nella risposta come menzioni a pillola: ognuna apre il proprio elemento, e una che non puoi vedere appare come **Non disponibile**. Numo scrive queste menzioni anche in ciò che redige, come descrizioni e piani dei ticket, descrizioni degli obiettivi, commenti, pagine e taccuino, solo per gli elementi che ha identificato; un membro menzionato lì riceve una notifica come per qualsiasi menzione.
 
 In una conversazione nuova e vuota, quattro righe di suggerimenti sopra il campo di scrittura propongono richieste adatte alla pagina corrente, per esempio **Riassumere questo ticket** o **Scrivere un piano di implementazione** quando un ticket è aperto nel pannello laterale. Scegliere una riga compila il campo senza inviarlo, così puoi prima modificare la richiesta. Le righe scompaiono non appena il campo contiene del testo e tornano quando lo svuoti. Compaiono nel layout desktop, non su un telefono. Il campo di scrittura in fondo alla **Home** mostra le stesse righe, con suggerimenti come **Scegliere su cosa concentrarmi oggi** o **Trovare ciò che è in ritardo**; se invii da lì, il pannello si apre nel layout ingrandito.
+
+Nella **Home**, e nel pannello di Numo quando è ingrandito o ha il focus, puoi iniziare a scrivere senza fare clic sul campo di scrittura: una rapida raffica di tasti digitata fuori da un campo di testo finisce nel campo di scrittura, che prende il focus. Un singolo tasto esegue ancora la sua scorciatoia da tastiera, per esempio C per creare un ticket, circa 0,2 secondi dopo su quelle schermate. G seguito da un tasto resta una sequenza di navigazione; un terzo tasto nella raffica la trasforma in testo.
 
 Per chiedere a Numo di un passaggio, selezionalo in un editor, come una pagina o la descrizione di un ticket, poi scegli **Chiedi a Numo** nella barra degli strumenti di selezione, su computer. Il pannello si apre senza inviare nulla: accanto alla pagina o al ticket da cui proviene, il passaggio compare come una pillola di contesto con le sue prime parole, e passando il cursore sulla pillola vedi il passaggio intero. Scrivi la tua domanda, per esempio «Riscrivilo in modo più conciso» o «Crea dei ticket da questo», e inviala. Il passaggio accompagna solo quel messaggio. Per escluderlo, rimuovi la sua pillola con la sua croce.
 

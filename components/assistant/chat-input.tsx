@@ -1,5 +1,6 @@
 "use client";
 
+import { useEscapeLayer } from "@/lib/escape-layers";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { pastedMentionPieces } from "@/lib/mention-paste";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
@@ -366,6 +367,8 @@ export interface ChatInputProps {
 
 export interface ChatInputHandle {
   fill: (text: string) => void;
+  /** Append text after the content, pills kept, caret at the end (type-ahead). */
+  append: (text: string) => void;
   /** Put the caret at the end of the composer, leaving its text as it is. */
   focus: () => void;
 }
@@ -1022,6 +1025,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [slashQuery, commands, availableSkills],
     );
     const slashOpen = slashOptions.length > 0;
+    // Escape in an open menu closes that menu, never the panel around the
+    // composer (lib/escape-layers.ts).
+    useEscapeLayer(slashOpen, () => setSlashQuery(null));
+    useEscapeLayer(mentionOpen, closeMentionMenu);
 
     // The mention and "/" / "$" menus open where the text is typed, as in the
     // shared editor: just above the caret's line, starting at the caret,
@@ -1493,12 +1500,17 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     );
 
     // Dictated text is additive: appended after the existing content, caret at
-    // the end (same behavior as AutoKap's composer).
+    // the end (same behavior as AutoKap's composer). It joins as a text node:
+    // rewriting `textContent` would flatten the mention pills into their text.
     const appendDictated = useCallback((text: string) => {
       const el = editorRef.current;
       if (!el) return;
-      const current = (el.textContent ?? "").trim();
-      el.textContent = current ? `${current} ${text}` : text;
+      // The line break a contenteditable keeps at its end would push the
+      // dictation onto a new line.
+      if (el.lastChild instanceof HTMLBRElement) el.lastChild.remove();
+      const current = el.textContent ?? "";
+      const separator = current.trim() && !/\s$/.test(current) ? " " : "";
+      el.appendChild(document.createTextNode(`${separator}${text}`));
       setIsEmpty(false);
       el.focus();
       const sel = window.getSelection();
@@ -1535,8 +1547,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           const el = editorRef.current;
           if (el) focusContentEditableAtEnd(el);
         },
+        append: appendDictated,
       }),
-      [publishDraft]
+      [publishDraft, appendDictated]
     );
 
     useEffect(() => {

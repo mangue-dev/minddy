@@ -150,7 +150,7 @@ export async function PublishedPage({
           </nav>
         )}
 
-        <h1 className="flex items-start gap-3 text-4xl leading-tight font-bold tracking-tight">
+        <h1 className="content-selectable flex items-start gap-3 text-4xl leading-tight font-bold tracking-tight">
           {bundle.page.icon ? (
             <span aria-hidden className="shrink-0 leading-tight">
               {bundle.page.icon}

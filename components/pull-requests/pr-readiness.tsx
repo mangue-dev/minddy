@@ -214,18 +214,22 @@ export function PrReadinessBadge({
 export function PrReadinessIcon({
   readiness,
   unavailable = false,
+  autoMerge = false,
   className,
 }: {
   readiness: PullRequestReadiness | null;
   unavailable?: boolean;
+  /** Auto-merge is on: the tooltip says so after the state. */
+  autoMerge?: boolean;
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
-  const label = unavailable
+  const state = unavailable
     ? t("readinessUnavailable")
     : readiness
     ? t(STATE_KEYS[readiness.state])
     : t("readinessLoading");
+  const label = autoMerge ? `${state} · ${t("autoMergeWhenReady")}` : state;
   const tone = unavailable ? "blocked" : readinessTone(readiness?.state ?? null);
   const Icon = toneIcon(tone);
   return (

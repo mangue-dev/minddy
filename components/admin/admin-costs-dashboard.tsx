@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Globe02Icon, SparklesIcon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, FilterIcon, Globe02Icon, SparklesIcon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { FilterItem, FilterMenu, FilterSub, MenuToggleRow } from "@/components/filter-menu";
+import { AdminHeaderActions } from "@/components/admin/admin-header-slot";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
@@ -35,7 +38,6 @@ import {
   windowDays,
   type AdminCostGroupId,
   type CostFilters,
-  type KeyModeFilter,
 } from "@/lib/admin-costs";
 import { ADMIN_SECTIONS, adminSectionAnchor } from "@/lib/admin-sections";
 
@@ -191,6 +193,8 @@ function fmtInt(n: number | null | undefined): string {
 
 export function AdminCostsDashboard() {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const format = useFormatter();
   const [days, setDays] = useState<number>(30);
   const [filters, setFilters] = useState<CostFilters>(NO_FILTERS);
@@ -315,75 +319,80 @@ export function AdminCostsDashboard() {
   return (
     /* The width and margins come from the shell (`admin-dashboard`). */
     <div className="flex flex-col gap-5">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold">{t("costs.title")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t("costs.subtitle")}</p>
-          </div>
-          <Select value={String(days)} onValueChange={(value) => setDays(Number(value))}>
-            <SelectTrigger size="sm" className="w-44" aria-label={t("costs.periodLabel")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-              {PERIODS.map((period) => (
-                <SelectItem key={period} value={String(period)}>
-                  {t("costs.period", { days: period })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={filters.group} onValueChange={(group) => setFilters((prev) => ({ ...prev, group: group as CostFilters["group"] }))}>
-            <SelectTrigger size="sm" className="w-full sm:w-auto sm:min-w-48" aria-label={t("costs.filterFamily")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("costs.filterFamily")}</SelectItem>
-              {ADMIN_COST_GROUPS.map((group) => (
-                <SelectItem key={group} value={group}>
-                  <span className="flex items-center gap-2">
-                    <AppIcon icon={GROUP_UI[group].icon} className={cn("size-3.5", GROUP_UI[group].text)} strokeWidth={2} />
-                    {t(GROUP_UI[group].labelKey)}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filters.model} onValueChange={(model) => setFilters((prev) => ({ ...prev, model }))}>
-            <SelectTrigger size="sm" className="w-full sm:w-auto sm:min-w-56" aria-label={t("costs.filterModel")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("costs.filterModel")}</SelectItem>
-              {(view?.models ?? []).map((model) => (
-                <SelectItem key={model || "none"} value={model}>
-                  <span className="flex items-center gap-2">
-                    {model ? <ModelLogo model={model} size={14} /> : null}
-                    {modelLabel(model)}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filters.keyMode} onValueChange={(keyMode) => setFilters((prev) => ({ ...prev, keyMode: keyMode as KeyModeFilter }))}>
-            <SelectTrigger size="sm" className="w-full sm:w-auto sm:min-w-44" aria-label={t("costs.filterKey")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("costs.keyAll")}</SelectItem>
-              <SelectItem value="platform">{t("costs.keyPlatform")}</SelectItem>
-              <SelectItem value="byok">{t("costs.keyByok")}</SelectItem>
-            </SelectContent>
-          </Select>
-          {filtered ? (
-            <Button variant="ghost" size="sm" onClick={() => setFilters(NO_FILTERS)}>
-              {t("costs.clearFilters")}
-            </Button>
-          ) : null}
-        </div>
+      <header>
+        <h2 className="text-sm font-semibold">{t("costs.title")}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("costs.subtitle")}</p>
       </header>
+      {/* The filters and the period drive the whole tab: they sit in the
+          pane's header, the filters behind one button as on the board. */}
+      <AdminHeaderActions>
+        <FilterMenu
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          label={tCommon("filters")}
+          trigger={
+            <Button variant="ghost" size="icon-sm" aria-label={tCommon("filters")}>
+              <HugeiconsIcon icon={FilterIcon} className={cn("size-4", filtered && "text-primary")} />
+            </Button>
+          }
+        >
+          <FilterSub label={t("costs.facetFeature")} count={filters.group === "all" ? 0 : 1}>
+            {ADMIN_COST_GROUPS.map((group) => (
+              <MenuToggleRow
+                key={group}
+                active={filters.group === group}
+                onSelect={() => setFilters((prev) => ({ ...prev, group: prev.group === group ? "all" : group }))}
+              >
+                <AppIcon icon={GROUP_UI[group].icon} className={cn("size-3.5", GROUP_UI[group].text)} strokeWidth={2} />
+                <span className="truncate">{t(GROUP_UI[group].labelKey)}</span>
+              </MenuToggleRow>
+            ))}
+          </FilterSub>
+          {(view?.models.length ?? 0) > 0 && (
+            <FilterSub label={t("costs.facetModel")} count={filters.model === "all" ? 0 : 1}>
+              {(view?.models ?? []).map((model) => (
+                <MenuToggleRow
+                  key={model || "none"}
+                  active={filters.model === model}
+                  onSelect={() => setFilters((prev) => ({ ...prev, model: prev.model === model ? "all" : model }))}
+                >
+                  {model ? <ModelLogo model={model} size={14} /> : null}
+                  <span className="truncate">{modelLabel(model)}</span>
+                </MenuToggleRow>
+              ))}
+            </FilterSub>
+          )}
+          <FilterSub label={t("costs.filterKey")} count={filters.keyMode === "all" ? 0 : 1}>
+            {(["platform", "byok"] as const).map((keyMode) => (
+              <MenuToggleRow
+                key={keyMode}
+                active={filters.keyMode === keyMode}
+                onSelect={() => setFilters((prev) => ({ ...prev, keyMode: prev.keyMode === keyMode ? "all" : keyMode }))}
+              >
+                <span className="truncate">{t(keyMode === "platform" ? "costs.keyPlatform" : "costs.keyByok")}</span>
+              </MenuToggleRow>
+            ))}
+          </FilterSub>
+          <DropdownMenuSeparator />
+          <FilterItem disabled={!filtered} onSelect={() => setFilters(NO_FILTERS)}>
+            {t("costs.clearFilters")}
+          </FilterItem>
+        </FilterMenu>
+        <Select value={String(days)} onValueChange={(value) => setDays(Number(value))}>
+          {/* A pill like every control of the content header, so its ends stay
+              concentric with the pane's corner. */}
+          <SelectTrigger size="sm" className="w-auto rounded-full data-[size=sm]:rounded-full" aria-label={t("costs.periodLabel")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {PERIODS.map((period) => (
+              <SelectItem key={period} value={String(period)}>
+                {t("costs.period", { days: period })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </AdminHeaderActions>
 
       {error ? (
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">

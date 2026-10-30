@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,12 +124,15 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
@@ -176,7 +179,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -192,7 +195,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -209,7 +212,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -225,7 +228,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -241,7 +244,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -257,7 +260,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -273,7 +276,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -289,7 +292,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -305,7 +308,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -322,7 +325,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -355,7 +358,7 @@ An issue tracks a piece of work within a project, from its initial report to com
 
 You need to be the owner or a Member of the destination project; readers can open issues but not create or edit them. Open the project and its new-issue control. Enter a title that names the work, then add the context, expected result and constraints in the description. The title and description work as one text: on a computer, the Down arrow on the title's last line moves to the description's first line, the Up arrow comes back, and the cursor keeps about the same place across the line. Shift+Enter in the title moves to the description; Enter does too, unless you chose Enter as your send shortcut, in which case it creates the issue. Command/Ctrl+Enter creates it from either field. The same arrows and Enter link the title and description of an open issue, objective, page or feedback request. The form opens on the current project; choose another one in **Create in**, at the top left of the form (next to the **New issue** title on a phone), especially when creating from a personal or cross-project view. On a computer, Command/Ctrl+Shift+P opens that menu, even while you type the title or description; once you choose a project or close the menu, the cursor returns exactly where it was. The pill shows this shortcut, which exists only when more than one project can be chosen; a phone shows no shortcut hint. Changing it clears the categories, objective and relations picked for the previous project. The create button names the identifier the issue will receive, such as `MIN-42`, and follows issues created meanwhile; its menu creates the issue and copies that identifier.
 
-For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart-fill on and open the arrow next to its button: choose a property, then its value. Outside the title and description, the property's key opens its picker directly: P for priority, E for effort, L for categories or O for objective. The value you choose stays visible in the form. Smart-fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart-fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible above the title and are created with the issue.
+For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart-fill on and open the arrow next to its button: choose a property, then its value. **Relations** there lists the relation types; choosing one opens the command palette on its possible targets. Outside the title and description, the property's key opens its picker directly: P for priority, E for effort, L for categories or O for objective. The value you choose stays visible in the form. Smart-fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart-fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible as pills in the property row, between the assignee and the due date, and are created with the issue.
 
 Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is the project owner or a Member, never a reader; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority is **Not set** or ranges from low through medium and high to urgent; effort is **Not set** or uses XS, S, M, L and XL.
 
@@ -363,7 +366,7 @@ When the project's Smart Assign is on, the assignee picker shows **Smart Assign*
 
 Confirm creation and open the new issue. Check its identifier and project. Reopen its property pickers to change values as the task becomes clearer. The description explains the work; an implementation plan is maintained separately in the Plan tab.
 
-Closing the form keeps what you wrote: open it again to continue where you left off. If you do not reopen it within two minutes, its content is saved as a draft and the next form starts empty; until then it exists only in this window, so reloading or closing the window loses it. Opening a draft or a form prefilled from elsewhere first saves what you left as a draft. To save it yourself, open the menu beside the create button and choose **Save as draft**. Saved issue and objective drafts gather in **Drafts**, at the bottom right of the window between Numo and the task notebook; the button appears only while you have a draft and shows how many. Its list gives each draft's title and first description line. Choose a draft to reopen it in its creation form and finish it; creating the issue removes the draft. The delete button beside a draft asks for confirmation first, and the deletion cannot be undone. On a phone, open the command palette and search for the draft's title. Drafts are kept on this device for 30 days, ten of each kind at most; the list shows only drafts of projects where you can still create issues.
+Closing the form keeps what you wrote: open it again to continue where you left off. Only a title, a description or an attachment count: a form holding nothing but properties or relations starts empty again. If you do not reopen it within two minutes, its content is saved as a draft and the next form starts empty; until then it exists only in this window, so reloading or closing the window loses it. Opening a draft or a form prefilled from elsewhere first saves what you left as a draft. To save it yourself, open the menu beside the create button and choose **Save as draft**. Saved issue and objective drafts gather in **Drafts**, at the bottom right of the window between Numo and the task notebook; the button appears only while you have a draft and shows how many. Its list gives each draft's title and first description line. Choose a draft to reopen it in its creation form and finish it; creating the issue removes the draft. The delete button beside a draft asks for confirmation first, and the deletion cannot be undone. On a phone, open the command palette and search for the draft's title. Drafts are kept on this device for 30 days, ten of each kind at most; the list shows only drafts of projects where you can still create issues.
 
 
 ![Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.](/documentation/en/new-issue.png)
@@ -409,7 +412,7 @@ Open the project's Triage destination. Read the incoming issue and its source co
 
 Use the list filters to narrow incoming issues by priority, effort, assignee, objective, categories or integration. **Not set** under priority or effort keeps the issues that have no value yet. Choices within one property are alternatives; different properties are combined. Clear the filters to show all incoming issues again.
 
-Choose Accept and confirm to move a retained issue to backlog. Choose Decline and confirm to set it to canceled. For a duplicate, use the duplicate picker to select the retained issue; the incoming issue becomes duplicate and points to that issue. Describing the request in the picker's search also lists similar issues under **Related by meaning**, after the text matches; see [Search issues by meaning](/docs/navigation#search-by-meaning). After an item leaves triage, the next item is selected. Verify the resulting status or duplicate link in the issue itself. Moving between cards without taking one of these actions does not close the issue.
+Choose Accept and confirm to move a retained issue to backlog. Choose Decline and confirm to set it to canceled. For a duplicate, choose **Mark as duplicate…** and select the retained issue in the command palette; the incoming issue becomes duplicate and points to that issue. Describing the request in the picker's search also lists similar issues under **Related by meaning**, after the text matches; see [Search issues by meaning](/docs/navigation#search-by-meaning). After an item leaves triage, the next item is selected. Verify the resulting status or duplicate link in the issue itself. Moving between cards without taking one of these actions does not close the issue.
 
 ### Sorting and limits {#triage-order}
 
@@ -475,7 +478,7 @@ Check that an uploaded resource appears and can be opened after the operation. I
 
 ## Link dependencies and related issues {#issue-dependencies}
 
-Open an issue's relations controls and find the other issue by title or identifier. Outside a text field, R opens the relation type choice from a hovered card or the issue panel. Once the type is chosen, the other end is picked in the [command palette](/docs/navigation#search-and-shortcuts), which lists only the issues and objectives that can take that relation. A descriptive query also lists, after the text matches, issues of the same project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**. Choose a blocking relation when one task must finish before another can proceed. If A blocks B, A is the prerequisite and B is blocked by A. A related relation adds context without imposing that order.
+Open an issue's relations controls and find the other issue by title or identifier. Outside a text field, R opens the relation type choice from a hovered card or the issue panel. Once the type is chosen, the other end is picked in the [command palette](/docs/navigation#search-and-shortcuts), which lists only the issues and objectives that can take that relation; done and canceled ones are listed too, after the open ones. A descriptive query also lists, after the text matches, issues of the same project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**. Choose a blocking relation when one task must finish before another can proceed. If A blocks B, A is the prerequisite and B is blocked by A. A related relation adds context without imposing that order.
 
 Read both issue identifiers and the displayed direction before confirming. For example, “Prepare the endpoint” blocks “Connect the client”, rather than the reverse. A dependency does not make either issue a sub-issue, and a parent-child relation is not a substitute for a blocking relation.
 
@@ -487,7 +490,7 @@ Terminal statuses done, canceled and duplicate stop an issue from blocking work.
 
 An open issue can inherit a blocker through its open objective. If A blocks objective B, open issues attached to B show A as an inherited blocker, even without a direct A-to-issue relation. The display names the actual blocker and the objective responsible for inheritance. Inspect that objective relation before trying to unlink it from the issue. Closing A, closing B or moving the issue out of B removes that inherited blockage. This mechanism follows objective membership, not the parent/sub-issue hierarchy.
 
-Remove a relation from the relations controls when its meaning no longer applies; a confirmation names the other issue or objective, and only the link goes away. Then verify both the label and the blocked indicator. Marking an issue as a duplicate has lifecycle semantics and points to retained work; use it for duplicated tasks rather than creating an ordinary related link and assuming that closes the duplicate.
+Remove a relation from the relations controls when its meaning no longer applies; a confirmation names the other issue or objective, and only the link goes away. On a board card, a relation type's chip opens the list of those relations, each with a remove button (✕) that asks the same confirmation; relations inherited through an objective have none there. Then verify both the label and the blocked indicator. Marking an issue as a duplicate has lifecycle semantics and points to retained work; use it for duplicated tasks rather than creating an ordinary related link and assuming that closes the duplicate.
 
 If the relation picker cannot find an issue, check project access and the identifier. Do not expose another project's content by pasting a private issue URL into a public feedback reply.
 
@@ -503,7 +506,7 @@ Indexing and relation decisions use AI. They count toward the **Automations** sh
 
 ## Split an issue into sub-issues {#sub-issues}
 
-Open the parent issue and use its sub-issue controls to create smaller pieces of work. Give each child a distinct outcome. Inspect its project, properties and parent identifier after creation; a hierarchy should make the task easier to track, not replace the description of what each child must achieve.
+In the parent issue's side panel, choose **Create a sub-issue** to open the issue creation dialog with this issue already set as parent. The chevron beside it (**More sub-issue options**) offers **Ask Numo to split the issue**, which asks Numo to read the issue with its plan and comments and create one sub-issue per independent piece of work; review the sub-issues it creates. A Reader does not see this button. Give each child a distinct outcome. Inspect its project, properties and parent identifier after creation; a hierarchy should make the task easier to track, not replace the description of what each child must achieve.
 
 To attach issues that already exist, press R on a hovered card or in the issue panel, or open **Relations** from a card's right-click menu. **Parent of** lists the issues that can become a sub-issue of this one; **Sub-issue of** lists the top-level issues that can become its parent. Each list only offers what the one-level rule allows: a sub-issue has no **Parent of** entry, and an issue that already has sub-issues has no **Sub-issue of** entry. Choosing an issue that already has another parent moves it under the new one. From a selection of cards, **Sub-issue of** places every eligible selected issue under the chosen parent. In the new-issue form, **Relations** offers the same two entries: **Sub-issue of** creates the issue under the chosen parent, and **Parent of** places the chosen issues under it once it is created. A new issue takes one parent or sub-issues, not both. Typing in the search field of a card's right-click menu or of the issue panel's `…` menu also finds the entries of its submenus, each shown with its path, such as **Relations** › **Mark as blocked by…**.
 
@@ -566,7 +569,7 @@ A Numo routine is a different object: it schedules a conversation and can use th
 
 On a board, hold Shift and click each issue card to toggle its selection. With a mouse, you can also drag a selection rectangle from empty board space; Shift, Command or Ctrl makes that gesture additive. Near an edge the board scrolls, and the cards the rectangle passed over stay selected after they scroll out of view. The rectangle gesture is not a touch-screen selection mode. Check the selected count and visible identifiers before opening the bulk actions. Selection is a working set for the action, not a saved view and not a permission grant. Open them with **Actions** on the selection bar, or press Command+K on macOS or Ctrl+K on Windows/Linux while issues are selected.
 
-Choose Actions in the floating selection bar to open the command palette. Choose status, priority, effort or assignee, set the value and confirm the inline form. The objective action appears only for a selection in one project with available objectives. Other actions, such as adding to or removing from a cycle, linking two issues or sending the selection to Numo, appear when the current board supports them. With a mouse, you can also point at a selected card and press S, P, E, A, L, D, O or R: the picker that opens applies to the whole selection, and for assignee, objective, categories and relations to the selected issues of that card's project. Right-click a selected card to act on the whole selection: **Copy the combined prompt** offers **Generate the plans** (**Review the plans** when every selected issue has one, **Generate or review the plans** when only some do), **Implement the issues**, **Verify the implementations** and **Custom…**, each copying one prompt for every selected issue. **Copy the 3 identifiers**, for three selected issues, copies their identifiers separated by commas, lowest number first. **Relations**, **Link an objective** and **Add a due date** open the same pickers as R, O and D. Inspect the affected issues afterward. On a touch-only device without a supported multi-selection gesture, edit each issue through its detail panel.
+Choose Actions in the floating selection bar to open the command palette. Choose status, priority, effort or assignee, set the value and confirm the inline form. The objective action appears only for a selection in one project with available objectives. Other actions, such as adding to or removing from a cycle, linking two issues or sending the selection to Numo, appear when the current board supports them. With a mouse, you can also point at a selected card and press S, P, E, A, L, D, O or R: the picker that opens applies to the whole selection, and for assignee, objective, categories and relations to the selected issues of that card's project. Right-click a selected card to act on the whole selection: **Copy the combined prompt** offers **Generate the plans** (**Review the plans** when every selected issue has one, **Generate or review the plans** when only some do), **Implement the issues**, **Verify the implementations** and **Custom…**, each copying one prompt for every selected issue. **Copy the 3 identifiers**, for three selected issues, copies their identifiers separated by commas, lowest number first. **Relations**, **Link an objective** and **Add a due date** open the same pickers as R, O and D. **Move to trash**, last, moves the whole selection to the trash after the same confirmation as the selection bar. Inspect the affected issues afterward. On a touch-only device without a supported multi-selection gesture, edit each issue through its detail panel.
 
 ### Partial results and destructive actions {#bulk-results}
 

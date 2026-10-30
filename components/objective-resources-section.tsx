@@ -70,7 +70,8 @@ export function ObjectiveResourcesSection({
           onLink={uploads.addLink}
           onPage={uploads.addPage}
           projectId={projectId}
-          className="-mr-1.5"
+          // Its icon centers on the relations link icon below (8px from the edge).
+          className="-mr-2"
         />
       </PropertyRow>
       {/* The pellets pass UNDER the line, over the entire width: a file name does not fit in the right column, and truncating them where there is room to read them would only have served to keep the alignment. */}

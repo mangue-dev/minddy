@@ -1,5 +1,6 @@
 "use client";
 
+import { SIDEBAR_COMPOSITE_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArchiveArrowUpIcon, ArchiveIcon, Clock01Icon, Delete02Icon, LoaderCircleIcon, MoreHorizontalIcon, PinIcon, PinOffIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState, useCallback, useMemo, useRef, type CSSProperties, type Ref } from "react";
@@ -283,11 +284,12 @@ export function ConversationList({
     return (
       <div
         key={conversation.id}
+        data-sidebar-row
         className={cn(
           "group flex items-center rounded-lg text-foreground",
           activeConversationId === conversation.id
-            ? "bg-accent"
-            : "hover:bg-accent/50 focus-within:bg-accent/50",
+            ? SIDEBAR_ROW_SELECTED_CLASS
+            : SIDEBAR_COMPOSITE_ROW_HOVER_CLASS,
         )}
       >
         <button

@@ -16,6 +16,7 @@ import type { RelationKinds } from "./use-issue-relations-query";
 import { isClosedStatus } from "./issue-constants";
 import { hasDirectRelation } from "./issue-shortcut-targets";
 import { hierarchyCandidates, hierarchyPatches, isHierarchyRelation } from "./issue-hierarchy";
+import { closedObjectivesLast } from "./relation-constants";
 import en from "@/messages/en.json";
 
 vi.mock("@/components/issue-indicators", () => ({
@@ -106,7 +107,7 @@ function candidates(
   const objectives = [objective, { ...objective, id: "active", status: "in_progress" }, { ...objective, id: "done", status: "done" }, { ...objective, id: "canceled", status: "canceled" }, { ...objective, id: "foreign", project_id: "elsewhere" }];
   const scope = {
     useMemo, relationType, relations, issue, isClosedStatus, hasDirectRelation,
-    isHierarchyRelation, hierarchyCandidates,
+    isHierarchyRelation, hierarchyCandidates, closedObjectivesLast,
     relationTargets: () => targets,
     relationsOf: (id: string) => (id === issue.id ? relations : relationsById[id]),
     getCandidateIssues: () => issues,
@@ -155,7 +156,7 @@ function projectHandler(onAddRelation: ProjectAdd): CardAdd {
 function globalHandler(onAddRelation: GlobalAdd): CardAdd {
   const column = evaluate<GlobalColumnAdd>(prop("global-kanban-board.tsx", "GlobalKanbanColumn", "onAddRelation"), { onAddRelation });
   const bind = evaluate<(projectId: string) => { onAddRelation: CardAdd }>(initializer("global-kanban-column.tsx", "bindToProject"), {
-    useMemo, onAddRelation: column, getCandidateIssues: undefined,
+    useMemo, onAddRelation: column, onRemoveRelation: undefined, getCandidateIssues: undefined,
     onUpdateIssue: vi.fn(), onSetCategories: vi.fn(), onDeleteIssue: undefined,
   });
   const bound = bind(issue.project_id);
@@ -172,15 +173,15 @@ describe("card relation picker (MIN-844)", () => {
     expectTypeOf<Parameters<GlobalColumnAdd>[4]>().toEqualTypeOf<RelationKinds | undefined>();
   });
 
-  it.each(types)("filters project-only candidates, closed issues included, for %s without excluding other relation types", (type) => {
+  it.each(types)("filters project-only candidates, closed issues and objectives included, for %s without excluding other relation types", (type) => {
     const linked = (relation: IssueRelationType): ChipRelation[] => [
       { id: "issue-link", otherId: other.id, relation, otherType: "issue", resolved: false },
       { id: "objective-link", otherId: objective.id, relation, otherType: "objective", resolved: false },
     ];
     expect(candidates(type).issues.map((item) => item.id)).toEqual([other.id, "closed"]);
-    expect(candidates(type).objectives.map((item) => item.id)).toEqual([objective.id, "active"]);
+    expect(candidates(type).objectives.map((item) => item.id)).toEqual([objective.id, "active", "done", "canceled"]);
     expect(candidates(type, linked(type)).issues.map((item) => item.id)).toEqual(["closed"]);
-    expect(candidates(type, linked(type)).objectives.map((item) => item.id)).toEqual(["active"]);
+    expect(candidates(type, linked(type)).objectives.map((item) => item.id)).toEqual(["active", "done", "canceled"]);
     for (const otherType of types.filter((value) => value !== type)) {
       expect(candidates(type, linked(otherType))).toEqual(candidates(type));
     }

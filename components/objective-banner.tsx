@@ -12,7 +12,7 @@ import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProgressRing } from "@/components/progress-ring";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
-import { objectivePickerOption } from "@/components/objective-label";
+import { OBJECTIVE_TEXT, objectivePickerOption, objectiveTextStyle } from "@/components/objective-label";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
@@ -63,7 +63,7 @@ function ObjectiveSwitch({
           aria-label={t("switchObjective")}
           className="flex min-w-0 max-w-full -translate-x-1.5 items-center gap-1.5 rounded-md px-1.5 py-0.5 font-medium leading-tight outline-none transition-colors hover:bg-muted focus-visible:bg-muted"
         >
-          <span className="truncate">{objective.name}</span>
+          <span className={cn("truncate", OBJECTIVE_TEXT)} style={objectiveTextStyle(objective.color)}>{objective.name}</span>
           <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
         </button>
       }
@@ -123,14 +123,11 @@ export function ObjectiveBoardHeader({
         </Link>
       </Button>
 
-      {/* Identity: color dot, name, and status. It takes only its own width,
-          so the indicators follow the name instead of the header's far edge. */}
+      {/* Identity: status, then the name in the objective's color (MIN-785).
+          It takes only its own width, so the indicators follow the name
+          instead of the header's far edge. */}
       <div className="flex min-w-0 items-center gap-3">
-        <span
-          className="size-3 shrink-0 rounded-full"
-          style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
-          aria-hidden
-        />
+        <ObjectiveStatusIndicator status={status.value} className="size-4 shrink-0" />
         <div className="min-w-0">
           <ObjectiveSwitch
             objective={objective}
@@ -138,7 +135,6 @@ export function ObjectiveBoardHeader({
             projectId={projectId}
           />
           <div className="flex items-center gap-1.5">
-            <ObjectiveStatusIndicator status={status.value} className="size-3.5" />
             <span className="text-xs text-muted-foreground">{tStatus(status.value)}</span>
           </div>
         </div>

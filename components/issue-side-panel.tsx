@@ -69,8 +69,8 @@ import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
-import { RelationChips, type ChipRelation } from "@/components/relation-chips";
-import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
+import type { ChipRelation } from "@/components/relation-chips";
+import { resolveDisplayRelationsByIssue, closedObjectivesLast } from "@/lib/relation-constants";
 import {
   IssueShortcutMenu,
   RELATION_SHORTCUT_KEY,
@@ -115,7 +115,6 @@ import { useIssuePanelActions } from "@/lib/issue-panel-context";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import type {
   Category,
-  CreateIssueInput,
   Issue,
   IssueDraftPatch,
   IssueRelation,
@@ -139,7 +138,6 @@ export function IssueSidePanel({
   onUpdate,
   onDelete,
   onSetCategories,
-  onCreate,
   onOpenIssue,
   onAddRelation,
   onRemoveRelation,
@@ -158,7 +156,6 @@ export function IssueSidePanel({
   onUpdate: (issueId: string, updates: IssueUpdateInput) => Promise<unknown>;
   onDelete: (issueId: string) => Promise<void>;
   onSetCategories: (issueId: string, categoryIds: string[]) => Promise<void>;
-  onCreate: (input: CreateIssueInput) => Promise<unknown>;
   onOpenIssue: (id: string) => void;
   onAddRelation: (
     sourceId: string,
@@ -856,8 +853,8 @@ export function IssueSidePanel({
     const linked = new Set(resolvedRelations
       .filter((r) => !r.inheritedObjectiveId && r.relation === relationType && r.otherType === "objective")
       .map((r) => r.otherId));
-    return objectives.filter((target) => target.project_id === issue.project_id &&
-      !linked.has(target.id) && target.status !== "done" && target.status !== "canceled");
+    return closedObjectivesLast(objectives.filter((target) => target.project_id === issue.project_id &&
+      !linked.has(target.id)));
   }, [issue, relationType, resolvedRelations, objectives]);
 
   if (!issue) return null;
@@ -992,13 +989,6 @@ export function IssueSidePanel({
               </SidePanelClose>
             </div>
           </div>
-
-          {resolvedRelations.some((r) => !r.resolved) && (
-            <div className="flex flex-wrap items-center gap-2 px-6 pb-3 text-xs text-muted-foreground">
-              <RelationChips relations={resolvedRelations} projectKey={projectKey} onOpen={onOpenIssue}
-                onOpenObjective={(id) => router.push(`/projects/${issue.project_id}/objectives?open=${id}`)} />
-            </div>
-          )}
 
           <SidePanelBody className="flex flex-col gap-4 pt-0" {...containerProps}>
             <AutoTextarea
@@ -1293,7 +1283,6 @@ export function IssueSidePanel({
                     allIssues={allIssues}
                     projectKey={projectKey}
                     onOpenIssue={onOpenIssue}
-                    onCreate={onCreate}
                     readOnly={readOnly}
                   />
                 )}

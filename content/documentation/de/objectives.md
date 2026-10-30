@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -55,13 +55,16 @@
       "components/objective-label.tsx",
       "components/editor/mobile-editor-toolbar.tsx",
       "lib/palette-picker.ts",
-      "components/palette-picker-rows.tsx"
+      "components/palette-picker-rows.tsx",
+      "app/(app)/projects/[id]/page.tsx",
+      "components/objectives/objectives-page.tsx",
+      "components/app-sidebar.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (content pickers moved to the command palette (MIN-844): objective relation picker checked against lib/palette-picker.ts, components/palette-picker-rows.tsx and components/objective-relations-section.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the picker)",
-    "language": "agent:claude-code (de changed passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 23,
+    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -83,7 +86,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -115,7 +118,7 @@ Die Zielbeschreibung und ihre Kommentare verwenden denselben Editor wie Projekts
 
 ### Den Fortschritt vor dem Abschluss prüfen {#objective-progress}
 
-Prüfe abgeschlossene und aktive Tickets zusammen mit dem Fortschritt des Ziels. Eine Fortschrittsanzeige fasst zugeordnete Arbeit zusammen; sie kann nicht beurteilen, ob ein Produktergebnis akzeptabel ist. Prüfe fehlende Aufgaben sowie abgebrochene oder doppelte Arbeit, bevor du das Ziel abschließt. Das Board des Ziels zeigt zuerst offene Arbeit: Wähle **Erledigt** und **Abgebrochen** in seinem Filter **Status**, um dort geschlossene Tickets zu prüfen.
+Prüfe abgeschlossene und aktive Tickets zusammen mit dem Fortschritt des Ziels. Eine Fortschrittsanzeige fasst zugeordnete Arbeit zusammen; sie kann nicht beurteilen, ob ein Produktergebnis akzeptabel ist. Prüfe fehlende Aufgaben sowie abgebrochene oder doppelte Arbeit, bevor du das Ziel abschließt. Das Board des Ziels zeigt zuerst offene Arbeit: Wähle **Erledigt** und **Abgebrochen** in seinem Filter **Status**, um dort geschlossene Tickets zu prüfen. Auf einem Computer bleibt die Seitenleiste, solange das Board die Tickets eines Ziels zeigt, auf der Liste der Ziele, unter der Zurück-Zeile **Ziele**, mit diesem Ziel hervorgehoben; wähle dort ein anderes Ziel, um das Board darauf umzuschalten.
 
 Unterscheide im Lebenszyklus des Ziels geplante, laufende, abgeschlossene und abgebrochene Ergebnisse. Ein Zieldatum ist ein Vorhaben, eine Prognose eine Schätzung anhand von Aktivität. Erscheint das Ziel leer, prüfe Ticketzuordnung und Ansichtsfilter, statt es neu anzulegen. Das Löschen eines Ziels verwendet den wiederherstellbaren Papierkorb und ist kein gewöhnlicher Statuswechsel.
 
@@ -136,6 +139,6 @@ Ein geschätztes Abschlussdatum setzt mindestens zwei Abschlüsse, eine volle be
 
 ## Ein Ziel für Feedback wählen {#objective-feedback}
 
-In den Zieleigenschaften öffnet die Feedbackzahl den Feedbackbereich des Projekts mit einem Filter für dieses Ziel, einschließlich erledigter Anfragen. Auch null wird angezeigt. Feedback bleibt von Ticketfortschritt und Momentum getrennt.
+In den Zieleigenschaften öffnet die Feedbackzahl den Feedbackbereich des Projekts mit einem Filter für dieses Ziel, einschließlich erledigter Anfragen. Die Zeile ist ausgeblendet, solange keine Anfrage zum Ziel gehört. Feedback bleibt von Ticketfortschritt und Momentum getrennt.
 
 Feedback kann einem Ziel zugeordnet sein, ohne ein Ticket zu werden. Wähle das Ziel in den Eigenschaften einer Rückmeldung unter Feedback im Projekt. Diese Anfragen zählen weder zum Ticketfortschritt noch zur Dynamik. Bei der Umwandlung übernimmt das Ticket Ziel und Kategorien, sofern du sie im Erstellungsformular nicht änderst.

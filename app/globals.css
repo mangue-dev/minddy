@@ -634,18 +634,16 @@ button[data-variant="ghost"] {
    what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
    they all follow the same curve.
 
-   The radius is a tuned aesthetic value (MIN-584): round enough to echo the
-   pill-shaped header controls, low enough not to balloon the card corners.
-   Its floor is geometric — below ~16px the corner arc would cross a 32px
-   header pill (a 20px radius keeps a ~12px diagonal gap where the arc curves
-   away). The header pills are kept regular against it through the padding
-   token below.
+   The radius is concentric with the header controls: a 32px pill (16px
+   radius) inset by the header padding below (9px) curves along a 25px pane
+   corner, so the gap between the two arcs stays the same all the way round.
    `--app-pane-radius` is the single source of the pane's corner rounding: the
    content column and every pane-mirror modal (scratchpad notebook, wizard,
    what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
    they all follow the same curve. */
 :root {
-  --app-pane-radius: 20px;
+  /* 16px pill radius + the 9px header inset (`--app-content-header-pad-x`). */
+  --app-pane-radius: 25px;
   /* Half the 50px header strip minus the 16px radius of a 32px pill: the App
      Content Header's side inset. It matches the pills' vertical centering
      margin, so the visible margin from the pane edge is the same 10px on the
@@ -682,7 +680,7 @@ button[data-variant="ghost"] {
      descendant-watching invalidation sets to it and broaden every unrelated
      style change into a full-document recalculation. */
   .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
-    transition: margin-left 180ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition: margin-left 280ms cubic-bezier(0.32, 0.72, 0, 1);
   }
   .app-shell[data-sidebar-hidden="true"] > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     margin-left: 12px;
@@ -1410,9 +1408,22 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    `style="user-select:none"` INLINE on its content. An inline style beats all
    non-`!important` CSS rule (no matter how specific), hence the `!important` here:
    this is the only way to re-authorize the selection on the bubbles `.chat-selectable`
-   and their descendants. We keep the general reset intact everywhere else. */
+   and their descendants. We keep the general reset intact everywhere else.
+   `.comment-selectable` is the same exception for the comments of every
+   activity (issues, objectives, feedback, triage, pages, pull request
+   reviews, the public board): their text is read and quoted, by readers too.
+   `.content-selectable` extends it to the other text people write and read
+   rather than click: a feedback request and its original submission, a
+   published page's title, a file or skill opened for reading, the agent's
+   reasoning, earlier versions of a pull request comment. */
 .chat-selectable,
 .chat-selectable
+  *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code),
+.comment-selectable,
+.comment-selectable
+  *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code),
+.content-selectable,
+.content-selectable
   *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
   user-select: text !important;
   -webkit-user-select: text !important;
@@ -2990,9 +3001,77 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     & .app-workspace {
       --sidebar: transparent;
     }
+    /* A solid light-gray highlight vanishes on a light wallpaper behind the
+       veil. A light tint of the text color darkens whatever lies behind it by
+       the same step, so hovered rows keep their contrast on any desktop.
+       Dark mode already reads well against its denser veil. */
+    &:not(.dark) .app-workspace {
+      --sidebar-accent: color-mix(in oklab, var(--foreground) 6%, transparent);
+      /* The selected tab and the selected sidebar row read alike: the opaque
+         page white, set apart by the firmer tint of the unselected tabs.
+         No edge or lift around them: over the window material it drew a
+         dark outline that plain chrome never shows. */
+      --app-tab-background: color-mix(in oklab, var(--foreground) 7%, transparent);
+    }
+    /* The selected sidebar row wears the selected tab's own color, in both
+       themes, so the chrome shows one selection. */
+    & .app-workspace .sidebar-row-active {
+      background-color: var(--app-tab-active-background);
+    }
+    /* One hover for every control of the transparent chrome (tabs, the new
+       tab and window buttons, sidebar rows, Numo, the notebook): a share of
+       the selection's color, so hovering reads short of selecting yet stays
+       visible on the material. It replaces their own hover fills and the
+       tabs' brightness filter. A tab's own inner controls, a composite
+       row's (the row hovers), a control nested in another (which would double the
+       fill), a selected control and a filled button keep theirs. */
+    & .app-workspace {
+      --desktop-chrome-hover: color-mix(in oklab, var(--app-tab-active-background) 55%, transparent);
+      /* The sidebar's command band, filter, usage and what's-new controls
+         hover through an important utility (`hover:!bg-sidebar-accent`),
+         which a layered rule wins over any unlayered one: the token itself
+         takes the hover color in the chrome. */
+      & :is(.app-top-bar, aside[data-sidebar-navigation]) {
+        --sidebar-accent: var(--desktop-chrome-hover);
+      }
+      /* Pointer hovers only: a touch screen keeps no hover state. */
+      @media (hover: hover) and (pointer: fine) {
+        & .app-tab:not([data-active]):hover {
+          background-color: var(--desktop-chrome-hover);
+          filter: none;
+        }
+        & :is(.app-top-bar, aside[data-sidebar-navigation]) :is(button, a, [role="button"]):not(.app-tab *):not([data-sidebar-row] *):not(:is(button, a, [role="button"]) *):not(.sidebar-row-active):not([data-variant="default"]):not(:disabled):hover {
+          background-color: var(--desktop-chrome-hover) !important;
+        }
+        /* A row of several controls (a page with its chevron and actions, a
+           project group header, a Numo conversation) hovers as one line, not
+           its link alone (SIDEBAR_COMPOSITE_ROW_HOVER_CLASS). */
+        & [data-sidebar-row]:not(.sidebar-row-active):hover {
+          background-color: var(--desktop-chrome-hover);
+        }
+      }
+      & [data-sidebar-row]:not(.sidebar-row-active):focus-within {
+        background-color: var(--desktop-chrome-hover);
+      }
+    }
     & .sidebar-nav-panel[data-floating="true"] {
       background: var(--desktop-sidebar-solid);
-    }  }
+    }
+    /* Menus opened from the chrome sit over the transparent window: their
+       backdrop blur has no page behind it to frost, so the desktop showed
+       through as is. Their translucent share is composited over the solid
+       chrome color instead. Glass turned off keeps its plain --popover. */
+    &:not([data-transparency="off"]) :is(
+      [data-slot="popover-content"],
+      [data-slot="dropdown-menu-content"],
+      [data-slot="dropdown-menu-sub-content"],
+      [data-slot="select-content"],
+      [data-floating-surface],
+      [role="menu"]
+    ) {
+      background-color: color-mix(in oklab, var(--popover) 84%, var(--desktop-sidebar-solid));
+    }
+  }
 }
 
 .app-update-slot button { max-width: 100%; }
@@ -3707,4 +3786,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
    selection color, over its own background. */
 .mention-selected [style*="--mention-chip"] {
   background-image: linear-gradient(var(--selection-block), var(--selection-block));
+}
+
+/* A drag keeps its grabbing cursor over everything it crosses
+   (components/drag-cursor.tsx). */
+html[data-dragging],
+html[data-dragging] * {
+  cursor: grabbing !important;
 }

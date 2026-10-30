@@ -17,12 +17,14 @@ import { cx } from "@/lib/cx";
 import type { PlanTaskState } from "@/lib/plan";
 
 /**
- * The height of ONE line of text (`leading-relaxed` over `text-sm`): the checkbox
- * and the menu center on it, no matter what the text does next by moving to
- * the line. This is what keeps them on the BASELINE of the first line rather
- * than on the top of the block.
+ * The height of ONE line of the surrounding text (`1lh`): the checkbox and the
+ * menu center on it, no matter what the text does next by moving to the line.
+ * This is what keeps them on the first line rather than on the top of the
+ * block. The unit follows the editor's own scale — a fixed page-sized height
+ * left the box below the text of the compact surfaces (plans, descriptions,
+ * objectives), whose line is shorter.
  */
-export const TASK_LINE = "flex h-[1.625rem] shrink-0 items-center";
+export const TASK_LINE = "flex h-[1lh] shrink-0 items-center";
 
 /** Is the text of a task crossed out? Completed and canceled, not the others. */
 export function taskStruck(state: PlanTaskState): boolean {

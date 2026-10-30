@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -68,13 +68,14 @@
       "lib/palette-picker.ts",
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
-      "components/mobile-nav-actions.tsx"
+      "components/mobile-nav-actions.tsx",
+      "lib/keyboard/typeahead.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
-    "language": "agent:claude-code (fr new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -96,7 +97,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -112,7 +113,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -134,7 +135,7 @@ La navigation permet de choisir votre travail personnel ou un projet ; la palett
 
 ## Retrouver votre travail et changer de projet {#navigation}
 
-La navigation principale donne accès au travail personnel et aux projets. Sélectionnez un projet pour consulter ses tickets et ses destinations secondaires : triage, objectifs, pages et réglages du projet. La ligne de retour remonte d’un niveau de navigation ; elle peut modifier la barre latérale tout en laissant la page principale ouverte. Choisissez une destination pour y naviguer.
+La navigation principale donne accès au travail personnel et aux projets. Sélectionnez un projet pour consulter ses tickets et ses destinations secondaires : triage, objectifs, pages et réglages du projet. La ligne de retour remonte d’un niveau de navigation ; elle peut modifier la barre latérale tout en laissant la page principale ouverte. Choisissez une destination pour y naviguer. Dans une liste comme le triage, les objectifs, les retours, la revue de code ou les routines, le champ de filtre en haut de la barre latérale cherche dans tous les éléments, quels que soient les filtres qui restreignent la liste ; son texte indicatif en donne le total.
 
 Les compteurs et les alertes vous suivent d’un niveau à l’autre. Le contrôle qui ramène à l’**Accueil** affiche le total à trier dans les projets que liste l’**Accueil**, projet courant compris, ainsi que l’alerte Smart Assign quand l’un de vos projets manque de règles. Une ligne de retour affiche le compteur du niveau vers lequel elle remonte en pastille sur sa flèche, en orange tant que l’alerte Smart Assign s’applique. Dans un projet, **Triage** et **Retours** gardent les compteurs propres à ce projet. Les onglets de l’app de bureau portent le même badge que leur entrée de la barre latérale : l’alerte sur l’**Accueil**, et les compteurs sur **Inbox**, **Code review**, ainsi que **Triage** et **Retours** d’un projet, mis à jour même quand l’onglet est en arrière-plan.
 
@@ -149,6 +150,9 @@ Faites un clic droit sur une ligne de la barre latérale pour agir sur ce qu’e
 - La ligne **Tous les tickets** propose **Nouveau ticket**, et la ligne **Routines** propose **Nouvelle routine** si vous êtes propriétaire d’un projet.
 - Une ligne de projet, ou le nom du projet en haut de son panneau, propose **Nouveau** (un ticket, un objectif ou une page dans ce projet) et **Paramètres du projet**. Le propriétaire du projet voit aussi **Déplacer vers la corbeille**, qui demande la même confirmation que les paramètres du projet. Le même menu propose aussi **Masquer le projet**, ou **Réafficher le projet** pour un projet que vous avez masqué ; voir [Masquer un projet pour vous](/docs/projects#hide-project).
 - Un onglet de projet propose sa propre création : **Nouveau ticket** sur Tickets, **Nouvel objectif** sur Objectifs, **Nouvelle page** sur Pages et **Nouveau retour** sur Retours, qui ouvre le formulaire de retour interne.
+- Une ligne de triage propose **Accepter**, **Refuser** et **Marquer comme doublon…**, qui demandent la même confirmation ou le même sélecteur que le panneau de triage, puis **Priorité**, **Effort**, **Assigné**, **Catégories** et **Objectif**, la copie de son identifiant et **Déplacer vers la corbeille**. Un lecteur ne peut que copier l’identifiant. Voir [Examiner le travail entrant dans le triage](/docs/issues#triage-incoming-work).
+- Une ligne d’objectif propose **Statut**, **Responsable** et **Couleur**, **Nouveau ticket** dans cet objectif, **Voir les tickets** sur le tableau du projet et **Déplacer vers la corbeille**. Un lecteur ne voit que **Voir les tickets**.
+- Une ligne de retour propose **Statut**, sauf si un ticket lié le détermine, **Objectif**, **Catégories**, **Visibilité** lorsque le tableau public est activé, **Publier** tant que la revue par l’IA la retient, **Lier à un ticket existant**, **Fusionner dans…** lorsqu’une autre demande peut l’accueillir, et **Déplacer vers la corbeille**. Les propriétés se modifient depuis la ligne ; les autres actions ouvrent la demande et demandent la même confirmation que son panneau.
 - Une ligne de routine propose **Ouvrir la dernière exécution** et, pour le propriétaire du projet, **Lancer maintenant**, **Mettre en pause** ou **Réactiver**, **Modifier** et **Déplacer vers la corbeille**. Voir [Gérer et vérifier les exécutions](/fr/documentation/scheduled-routines#runs).
 - Une ligne de pull request propose les changements que son état actuel autorise, **Fusionner** lorsqu’elle est prête, et des actions de correction lorsqu’un problème la bloque. Voir [Revue et fusion](/fr/documentation/code-work#decision).
 
@@ -172,7 +176,7 @@ Dès que vous tapez, la palette trouve aussi les routines, les pull requests, le
 
 Le choix de ce que vous liez se fait aussi dans la palette. Ajouter une relation, lier un ticket à une pull request ou une pull request à un ticket, et joindre une page comme ressource l’ouvrent sur les seuls éléments que vous pouvez choisir, et son champ de recherche indique ce que vous cherchez. Pour une relation, choisissez d’abord son type dans le menu ; la palette liste ensuite les tickets et objectifs qui peuvent la prendre. Choisir un élément le lie ; Échap ferme la palette sans rien lier.
 
-Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Si la carte fait partie d’une sélection, ces touches modifient tous les tickets sélectionnés ; le responsable, l’objectif, les catégories et les relations ne s’appliquent qu’aux tickets sélectionnés du projet de cette carte. Maj+C mène à un champ de commentaire prêt pour la saisie, le fil défilé jusqu’à son dernier message : celui d’une carte de ticket survolée ou d’une ligne survolée dans la liste des objectifs, des retours, des pull requests, des pages ou du triage, ou, sans rien survoler, celui du ticket, de l’objectif, du retour, de la pull request ou de la page à l’écran. Une page ouvre pour cela son panneau **Activité**. Maj+C ne concerne que cet élément, même si la carte fait partie d’une sélection. Sur la page d’un objectif et dans le formulaire de nouvel objectif, S ouvre son état, A son responsable, D sa date cible et C sa couleur ; à ces endroits, C ne crée pas de ticket. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet.
+Utilisez Commande+K sur macOS ou Ctrl+K sur Windows/Linux pour ouvrir la palette ; Commande/Ctrl+P constitue une autre combinaison de l’application. Hors d’un champ de texte, ? ouvre l’aide des raccourcis et C la création de ticket. Sur une carte survolée ou les commandes de détail compatibles, S ouvre l’état, P la priorité, E l’effort, A le responsable, L les catégories, D l’échéance et O l’objectif. R ajoute une relation depuis les mêmes endroits, sur la page d’un objectif et dans le formulaire de nouveau ticket : choisissez le type de relation, puis l’autre ticket ou objectif. Si la carte fait partie d’une sélection, ces touches modifient tous les tickets sélectionnés ; le responsable, l’objectif, les catégories et les relations ne s’appliquent qu’aux tickets sélectionnés du projet de cette carte. Maj+C mène à un champ de commentaire prêt pour la saisie, le fil défilé jusqu’à son dernier message : celui d’une carte de ticket survolée ou d’une ligne survolée dans la liste des objectifs, des retours, des pull requests, des pages ou du triage, ou, sans rien survoler, celui du ticket, de l’objectif, du retour, de la pull request ou de la page à l’écran. Une page ouvre pour cela son panneau **Activité**. Maj+C ne concerne que cet élément, même si la carte fait partie d’une sélection. Sur la page d’un objectif et dans le formulaire de nouvel objectif, S ouvre son état, A son responsable, D sa date cible et C sa couleur ; à ces endroits, C ne crée pas de ticket. Ces touches seules n’interceptent pas la saisie dans un champ, une zone de texte ou un éditeur. Les séquences G puis H (Accueil) et G puis I (Boîte de réception) utilisent deux touches successives ; G puis W ouvre les pages uniquement dans le contexte d’un projet. Sur l’**Accueil** et dans le panneau Numo agrandi, une rafale rapide de touches s’écrit plutôt dans le champ de saisie de Numo, et une touche seule lance son raccourci après une courte pause ([écrire à Numo](/docs/numo#work-with-numo)).
 
 Pour atteindre un réglage, tapez son nom dans la palette de commandes ou dans le champ de filtre en haut de la barre latérale des paramètres. Les deux trouvent chaque carte de réglages et les réglages individuels, comme la langue, le thème, chaque palette, la transparence et les deux interrupteurs de **Démarrer un ticket**. Choisir un résultat ouvre le bon onglet des paramètres, fait défiler jusqu’à la carte ou la ligne et la met en évidence. Commande+T sur macOS ou Ctrl+T sur Windows/Linux ouvre la palette du nouvel onglet ; un réglage choisi depuis celle-ci s’ouvre dans un nouvel onglet de l’app. Dans un projet, elle propose aussi **Nouvelle page**, qui crée une page dans ce projet et l’ouvre dans un nouvel onglet. Les mots-clés anglais et français fonctionnent quelle que soit la langue de l’interface.
 

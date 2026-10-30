@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -53,13 +53,14 @@
       "lib/instance-variables.ts",
       "lib/server/instance-variables.ts",
       "app/api/admin/instance-variables/route.ts",
-      "components/admin/admin-instance-dashboard.tsx"
+      "components/admin/admin-instance-dashboard.tsx",
+      "components/agent/model-combobox.tsx"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (es MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
+    "revision": 13,
+    "fact": "agent:claude-code (per-task model pickers show the category's model by name instead of Default model when that model is in the catalog, and choosing it makes the task follow the category again; checked against components/agent/model-combobox.tsx and components/admin/admin-models-dashboard.tsx; not checked in the running app; no figure recaptured, the Models figure may show the former picker wording); agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -78,7 +79,7 @@
       "src": "/documentation/es/instance-administration-overview.png",
       "alt": "Pestaña Cuentas con el número de cuentas y la búsqueda de una cuenta por su correo exacto.",
       "caption": "Cuentas muestra el número de cuentas y la búsqueda de soporte; la captura procede de una instancia de demostración.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -95,7 +96,7 @@
       "src": "/documentation/es/instance-administration-models.png",
       "alt": "Pestaña Modelos con un modelo predeterminado por categoría y los modelos por tarea plegados.",
       "caption": "Modelos muestra un modelo predeterminado por categoría; los modelos por tarea quedan plegados. No se cambió ningún ajuste de modelo ni de proveedor para esta captura.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -112,7 +113,7 @@
       "src": "/documentation/es/instance-administration-instance.png",
       "alt": "Pestaña Instancia con el origen de cada variable, una clave de OpenRouter enmascarada definida aquí y las direcciones de administradores del archivo.",
       "caption": "Instancia muestra de dónde viene cada valor; los secretos solo muestran sus últimos caracteres. Esta captura procede de una instancia autoalojada local desechable.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -151,15 +152,15 @@ La consola tiene tres pestañas: **Cuentas**, **Costes**, **Modelos** y, donde s
 
 ## Seguir los costes de la instancia {#costs}
 
-**Costes** muestra lo que los proveedores de IA cuestan a la instancia, en dólares, como lo facturan, y se actualiza solo mientras sigue abierta. Elige el periodo en el menú de arriba y filtra todo por familia de funciones, modelo o clave usada (la clave de la instancia o las claves personales de los miembros). Siguen cuatro cifras, cada una con su tendencia y su cambio frente al periodo anterior: gasto total, solicitudes, tokens y coste por millón de tokens. Después vienen las funciones y los modelos más caros, luego el gasto por día por modelo y por familia de funciones, las solicitudes por día por modelo y las ejecuciones recientes, que se abren en sus llamadas. No se muestran ingresos, suscripciones ni márgenes: la facturación de Stripe se gestiona en Stripe. Las claves de OpenRouter por cuenta que ninguna cuenta usa ya se eliminan cada noche.
+**Costes** muestra lo que los proveedores de IA cuestan a la instancia, en dólares, como lo facturan, y se actualiza solo mientras sigue abierta. Elige el periodo en el menú de la esquina superior derecha del panel y filtra todo con el botón **Filtros** que tiene al lado, por función, modelo o clave usada (la clave de la instancia o las claves personales de los miembros). Siguen cuatro cifras, cada una con su tendencia y su cambio frente al periodo anterior: gasto total, solicitudes, tokens y coste por millón de tokens. Después vienen las funciones y los modelos más caros, luego el gasto por día por modelo y por familia de funciones, las solicitudes por día por modelo y las ejecuciones recientes, que se abren en sus llamadas. No se muestran ingresos, suscripciones ni márgenes: la facturación de Stripe se gestiona en Stripe. Las claves de OpenRouter por cuenta que ninguna cuenta usa ya se eliminan cada noche.
 
 ## Elegir los modelos por categoría {#models}
 
-Cada tarjeta de **Modelos** tiene un **Modelo predeterminado** para su categoría: **Asistente** (Numo, títulos de conversación, búsqueda web), **Automatizaciones** (Smart Fill y sus títulos, Smart Assign, decisiones de relación, asignación de importaciones CSV, división de briefs, mensajes de commit al fusionar), **Embeddings** (embeddings de incidencias y sugerencias) y **Sugerencias y sitio público** (análisis de sugerencias, cuadro de preguntas de la FAQ). Una tarea sigue el modelo predeterminado de su categoría hasta que le das su propio modelo en **Modelos por tarea**; elige **Modelo predeterminado** en su selector para que vuelva a seguir la categoría. Mientras el modelo predeterminado de una categoría no está definido, cada tarea conserva su propio valor integrado. **Nivel de razonamiento**, **Modelo de decisión** y los dos ajustes de **Voz** tienen su propia fila. Definir el modelo predeterminado de una categoría libera las tareas que aún tienen su valor integrado, como las que recibe una instancia nueva; una tarea configurada con otro modelo lo conserva. **Modelos recomendados** fija la lista corta con la que se abre cada selector de modelo. **Claves personales** está plegado al final: solo afecta a los miembros que usan su propia clave de proveedor.
+Cada tarjeta de **Modelos** tiene un **Modelo predeterminado** para su categoría: **Asistente** (Numo, títulos de conversación, búsqueda web), **Automatizaciones** (Smart Fill y sus títulos, Smart Assign, decisiones de relación, asignación de importaciones CSV, división de briefs, mensajes de commit al fusionar), **Embeddings** (embeddings de incidencias y sugerencias) y **Sugerencias y sitio público** (análisis de sugerencias, cuadro de preguntas de la FAQ). Una tarea sigue el modelo predeterminado de su categoría hasta que le das su propio modelo en **Modelos por tarea**; para que vuelva a seguir la categoría, elige en su selector el modelo de la categoría, que aparece con su propio nombre y marcado mientras la tarea lo sigue. **Modelo predeterminado** solo sigue siendo una opción cuando ese modelo no está en el catálogo. Mientras el modelo predeterminado de una categoría no está definido, cada tarea conserva su propio valor integrado. **Nivel de razonamiento**, **Modelo de decisión** y los dos ajustes de **Voz** tienen su propia fila. Definir el modelo predeterminado de una categoría libera las tareas que aún tienen su valor integrado, como las que recibe una instancia nueva; una tarea configurada con otro modelo lo conserva. **Modelos recomendados** fija la lista corta con la que se abre cada selector de modelo. **Claves personales** está plegado al final: solo afecta a los miembros que usan su propia clave de proveedor.
 
 ## Exportar e importar la configuración de modelos {#models-file}
 
-**Exportar** descarga la configuración de modelos en un archivo JSON versionado (formato `minddy.instance-models`): modelos predeterminados de las categorías, modelos de las tareas, atajos de enrutamiento, nivel de razonamiento, modelos recomendados y valores predeterminados de proveedor para las claves personales. No contiene claves de API ni cuentas. **Importar** lee un archivo así y lista cada cambio antes de escribir nada; **Aplicar** los escribe todos, o ninguno cuando se rechaza un valor, por ejemplo un modelo que no es un modelo de decisión. Una importación sustituye la configuración: los ajustes que el archivo no incluye vuelven a su valor predeterminado. Un archivo de una versión anterior de minddy se actualiza al formato actual; un archivo de una versión más reciente se rechaza hasta que se actualiza la instancia. Las entradas que esta versión no conoce se listan y se omiten.
+En la esquina superior derecha del panel **Modelos**, **Exportar** descarga la configuración de modelos en un archivo JSON versionado (formato `minddy.instance-models`): modelos predeterminados de las categorías, modelos de las tareas, atajos de enrutamiento, nivel de razonamiento, modelos recomendados y valores predeterminados de proveedor para las claves personales. No contiene claves de API ni cuentas. **Importar** lee un archivo así y lista cada cambio antes de escribir nada; **Aplicar** los escribe todos, o ninguno cuando se rechaza un valor, por ejemplo un modelo que no es un modelo de decisión. Una importación sustituye la configuración: los ajustes que el archivo no incluye vuelven a su valor predeterminado. Un archivo de una versión anterior de minddy se actualiza al formato actual; un archivo de una versión más reciente se rechaza hasta que se actualiza la instancia. Las entradas que esta versión no conoce se listan y se omiten.
 
 ## Administrar la instancia con Numo {#numo}
 

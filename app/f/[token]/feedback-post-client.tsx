@@ -106,7 +106,7 @@ export function FeedbackPostClient({
           <FeedbackPostedAt post={post} />
         </div>
         <div className="flex items-start justify-between gap-4">
-          <h2 className="min-w-0 text-xl font-semibold leading-snug">{post.title}</h2>
+          <h2 className="content-selectable min-w-0 text-xl font-semibold leading-snug">{post.title}</h2>
           {/* Its votes moved to the destination with the merge: there is
               nothing left to vote on here. */}
           {!mergedIntoUnreadable && (
@@ -116,7 +116,7 @@ export function FeedbackPostClient({
       </div>
 
       {post.body && (
-        <MessageResponse className="text-sm leading-relaxed text-foreground/90">
+        <MessageResponse className="content-selectable text-sm leading-relaxed text-foreground/90">
           {post.body}
         </MessageResponse>
       )}

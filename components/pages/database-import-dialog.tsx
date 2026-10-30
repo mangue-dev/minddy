@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useOpenUntilClosed } from "@/components/ui/overlay-freeze";
 import { toast } from "sonner";
 import {
   WizardDialog,
@@ -42,7 +43,7 @@ const TYPES: ImportColumnType[] = [
 export function DatabaseImportDialog({
   projectId,
   database,
-  onClose,
+  onClose: onClosed,
   onImported,
 }: {
   projectId: string;
@@ -50,6 +51,8 @@ export function DatabaseImportDialog({
   onClose: () => void;
   onImported: () => void;
 }) {
+  // Closes on screen first, then unmounts (components/ui/overlay-freeze.tsx).
+  const [open, onClose] = useOpenUntilClosed(onClosed);
   const t = useTranslations("PageDatabase");
   const cache = useQueryClient();
   const { members } = useMembersQuery(projectId, true);
@@ -416,7 +419,7 @@ export function DatabaseImportDialog({
   ];
   return (
     <WizardDialog
-      open
+      open={open}
       onOpenChange={(open) => {
         if (!open && !busy) onClose();
       }}

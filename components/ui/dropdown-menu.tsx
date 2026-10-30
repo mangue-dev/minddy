@@ -10,6 +10,8 @@ import { ChevronRightIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
 import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
+import { useMenuScrollFade, useMergedRef } from "@/components/ui/menu-scroll-fade"
+import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
 
 // Below 768px, side-opening flyout submenus can't fit on narrow screens (Radix
 // only flips them left/right and can't shift them horizontally to overlap the
@@ -45,19 +47,102 @@ function closingMenuGuards({ onPointerMove, onPointerLeave }: { onPointerMove?: 
   }
 }
 
+// A searchable menu keeps the caret in its search field while the pointer
+// moves over the options: Radix would focus each hovered option, then the
+// menu itself on leave. Inside this scope a leaf option skips both (the same
+// prevented event as above) and shows its hover with CSS instead; the arrow
+// keys still move the focus through the options. Submenu triggers keep
+// Radix's handling, which is what opens them on hover.
+const DropdownMenuSearchFocusContext = React.createContext(false)
+
+function DropdownMenuSearchScope({ children }: { children: React.ReactNode }) {
+  return <DropdownMenuSearchFocusContext.Provider value>{children}</DropdownMenuSearchFocusContext.Provider>
+}
+
+function keepSearchFocus(handler: React.PointerEventHandler<HTMLDivElement>): React.PointerEventHandler<HTMLDivElement> {
+  return (event) => {
+    handler(event)
+    if (event.pointerType !== "mouse") return
+    // An open submenu closes when a sibling option takes the focus: let Radix
+    // run that once, the next moves keep the search focus again.
+    const menu = event.currentTarget.closest('[role="menu"]')
+    if (menu?.querySelector(':scope [role="menuitem"][aria-expanded="true"]')) return
+    // A row already holds the focus (the arrow keys, or a submenu trigger the
+    // pointer left): the caret has left the search, so Radix moves the focus,
+    // and the highlight, to the row under the pointer. Kept on the old row,
+    // it hid the hover of every other one.
+    if (menu && document.activeElement instanceof Element && menu.contains(document.activeElement)
+      && document.activeElement.closest('[role="menuitem"]')) return
+    event.preventDefault()
+  }
+}
+
+// While a submenu is open, Radix ignores the rows the pointer crosses on its
+// way there (its grace corridor). A pointer that STOPS on such a row stayed
+// unhighlighted until it moved again. Past the corridor's delay, the row under
+// the pointer takes the highlight, as in a native menu.
+const SUBMENU_GRACE_MS = 350
+const settleTimers = new WeakMap<Element, number>()
+
+function settleAfterSubmenuGrace(handler: React.PointerEventHandler<HTMLDivElement>): React.PointerEventHandler<HTMLDivElement> {
+  return (event) => {
+    handler(event)
+    if (event.pointerType !== "mouse") return
+    const item = event.currentTarget
+    const menu = item.closest('[role="menu"]')
+    if (!menu?.querySelector(':scope [role="menuitem"][aria-expanded="true"]')) return
+    window.clearTimeout(settleTimers.get(menu))
+    settleTimers.set(menu, window.setTimeout(() => {
+      if (!item.isConnected || !item.matches(":hover") || item.hasAttribute("data-highlighted")) return
+      if (item.hasAttribute("data-disabled") || menu.getAttribute("data-state") === "closed") return
+      item.focus({ preventScroll: true })
+    }, SUBMENU_GRACE_MS))
+  }
+}
+
+function itemPointerGuards(props: { onPointerMove?: PointerHandler; onPointerLeave?: PointerHandler }, searchScope: boolean) {
+  const guards = closingMenuGuards(props)
+  if (!searchScope) return { ...guards, onPointerMove: settleAfterSubmenuGrace(guards.onPointerMove) }
+  return {
+    onPointerMove: settleAfterSubmenuGrace(keepSearchFocus(guards.onPointerMove)),
+    onPointerLeave: keepSearchFocus(guards.onPointerLeave),
+  }
+}
+
+/** The hover a search-scoped option shows without taking the focus. It only
+ * shows while no other row holds the highlight: a submenu trigger keeps it
+ * while the pointer crosses the rows on its way to the submenu, and the arrow
+ * keys put it on a row the pointer is not over — either way a CSS hover would
+ * light a second row. */
+// Written out in full: Tailwind only generates the classes it finds verbatim.
+const SEARCH_SCOPE_HOVER =
+  "[[role=menu]:not(:has([data-highlighted])):not(:has([aria-expanded=true]))_&]:pointer-fine:hover:bg-accent " +
+  "[[role=menu]:not(:has([data-highlighted])):not(:has([aria-expanded=true]))_&]:pointer-fine:hover:text-accent-foreground " +
+  "data-[variant=destructive]:[[role=menu]:not(:has([data-highlighted])):not(:has([aria-expanded=true]))_&]:pointer-fine:hover:bg-destructive-highlight " +
+  "data-[variant=destructive]:[[role=menu]:not(:has([data-highlighted])):not(:has([aria-expanded=true]))_&]:pointer-fine:hover:text-destructive"
+
 // `modal={false}` by default: the modal mode locks scroll on <body> and marks
 // the rest of the page aria-hidden / pointer-events-none, which breaks scrolling
 // behind the menu and layout (scrollbar-gone jump). Pass modal to opt back in.
 function DropdownMenu({
   modal = false,
+  open,
+  defaultOpen,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
   return (
-    <DropdownMenuPrimitive.Root
-      data-slot="dropdown-menu"
-      modal={modal}
-      {...props}
-    />
+    <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
+      <DropdownMenuPrimitive.Root
+        data-slot="dropdown-menu"
+        modal={modal}
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={tracked.onOpenChange}
+        {...props}
+      />
+    </OverlayOpenProvider>
   )
 }
 
@@ -85,8 +170,16 @@ function DropdownMenuContent({
   align = "start",
   sideOffset = 4,
   collisionPadding = OVERLAY_COLLISION_PADDING,
+  children,
+  ref,
+  onScroll,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  // Rows hidden past an edge fade out there (useMenuScrollFade).
+  const fade = useMenuScrollFade<HTMLDivElement>()
+  const mergedRef = useMergedRef(ref, fade.ref)
+  // A closing menu keeps its rows (components/ui/overlay-freeze.tsx).
+  const shown = useFrozenWhileClosed(children)
   return (
     <DropdownMenuPrimitive.Portal>
       <DropdownMenuPrimitive.Content
@@ -95,11 +188,20 @@ function DropdownMenuContent({
         align={align}
         collisionPadding={collisionPadding}
         className={cn(
-                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-max min-w-[max(var(--radix-dropdown-menu-trigger-width),12rem)] max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-2 p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-max min-w-[max(var(--radix-dropdown-menu-trigger-width),12rem)] max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-10 p-2 text-popover-foreground shadow-md ring-1 ring-border duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                                   className
                                 )}
+        ref={mergedRef}
+        onScroll={(event) => {
+          onScroll?.(event)
+          fade.onScroll()
+        }}
         {...props}
-      />
+      >
+        {fade.start}
+        {shown}
+        {fade.end}
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   )
 }
@@ -121,17 +223,19 @@ function DropdownMenuItem({
   inset?: boolean
   variant?: "default" | "destructive"
 }) {
+  const searchScope = React.useContext(DropdownMenuSearchFocusContext)
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-surface-hover data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
+        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-highlight data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
+        searchScope && SEARCH_SCOPE_HOVER,
         className
       )}
       {...props}
-      {...closingMenuGuards(props)}
+      {...itemPointerGuards(props, searchScope)}
     />
   )
 }
@@ -240,7 +344,8 @@ function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      // Edge to edge across the menu's padding.
+      className={cn("-mx-2 my-1 h-px bg-menu-separator", className)}
       {...props}
     />
   )
@@ -352,9 +457,13 @@ function DropdownMenuSubContent({
   className,
   children,
   collisionPadding = OVERLAY_COLLISION_PADDING,
+  ref,
+  onScroll,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
   const ctx = React.useContext(DropdownSubInlineContext)
+  const fade = useMenuScrollFade<HTMLDivElement>()
+  const mergedRef = useMergedRef(ref, fade.ref)
 
   // Inline (mobile): render the items in place, indented under the trigger,
   // only while expanded. No portal/flyout — so it can never spill off screen.
@@ -385,12 +494,19 @@ function DropdownMenuSubContent({
         sticky="always"
         collisionPadding={collisionPadding}
         className={cn(
-                          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-40 max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-2 p-2 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-40 max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-10 p-2 text-popover-foreground shadow-lg ring-1 ring-border duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                           className
                         )}
+        ref={mergedRef}
+        onScroll={(event) => {
+          onScroll?.(event)
+          fade.onScroll()
+        }}
         {...props}
       >
+        {fade.start}
         {children}
+        {fade.end}
       </DropdownMenuPrimitive.SubContent>
     </DropdownMenuPrimitive.Portal>
   )
@@ -399,6 +515,7 @@ function DropdownMenuSubContent({
 export {
   DropdownMenu,
   DropdownMenuPortal,
+  DropdownMenuSearchScope,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,

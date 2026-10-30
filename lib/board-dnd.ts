@@ -27,20 +27,22 @@ import {
   type ClientRect,
   type CollisionDetection,
   type DropAnimation,
+  type DropAnimationFunctionArguments,
   type Modifier,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { boardRowHeight } from "@/lib/board-windowing";
 import { STATUSES } from "@/lib/issue-constants";
+import { DRAG_ACTIVATION_DISTANCE } from "@/lib/drag-feel";
 
 const STATUS_IDS = new Set<string>(STATUSES.map((s) => s.value));
 
 /**
- * Preserve click-to-open while making the drag react to the first deliberate
- * mouse movement. The previous six-pixel dead zone made the overlay feel as if
- * it had missed its first frames.
+ * The app-wide resistance before a card drag starts (lib/drag-feel.ts):
+ * enough that a click on a card never turns into a one-pixel drag, short
+ * enough that the overlay follows a deliberate move from its first frames.
  */
-export const BOARD_MOUSE_ACTIVATION_DISTANCE = 1;
+export const BOARD_MOUSE_ACTIVATION_DISTANCE = DRAG_ACTIVATION_DISTANCE;
 
 const CARD_SELECTOR = "[data-issue-id]";
 const COLUMN_SCROLLER_SELECTOR = "[data-board-column-scroller]";
@@ -119,6 +121,9 @@ export function captureBoardDragPreview(activeId: string, root: ParentNode | nul
   stripInteractiveIdentity(preview);
   preview.classList.remove("opacity-40");
   preview.classList.add("pointer-events-none");
+  // The copy is taken at rest: it wears the held look (hover tint, light
+  // shadow) through this mark, as no pointer hovers it (issue-card.tsx).
+  preview.querySelector("[data-card-surface]")?.setAttribute("data-held", "");
   return preview.outerHTML;
 }
 
@@ -404,7 +409,9 @@ export function createBoardDropAnimation(
   }) => {
     const activeId = String(active.id);
     const entry = pending?.activeId === activeId ? pending : null;
-    if (!entry) return;
+    // A cancelled drag, or a drop that moves nothing: the card glides back
+    // to where it still stands, dimmed, instead of popping out of sight.
+    if (!entry) return returnToOrigin(active.node, dragOverlay.node, transform);
     entry.animationStarted = true;
     const hiddenNodes = new Map<HTMLElement, string>();
     const hide = (node: HTMLElement | undefined) => {
@@ -478,6 +485,40 @@ export function createBoardDropAnimation(
   };
 
   return { animation, cancel, layoutCommitted, prepare };
+}
+
+async function returnToOrigin(
+  origin: HTMLElement | null | undefined,
+  overlay: HTMLElement,
+  transform: DropAnimationFunctionArguments["transform"],
+) {
+  if (!origin || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const from = overlay.getBoundingClientRect();
+  const to = origin.getBoundingClientRect();
+  if (to.width === 0 && to.height === 0) return;
+  // The card regains its full opacity as the drag ends: hidden while the
+  // overlay flies back over it, it reappears as the overlay lands.
+  const visibility = origin.style.visibility;
+  origin.style.visibility = "hidden";
+  try {
+    await overlay.animate(
+      [
+        { transform: CSS.Transform.toString(transform) },
+        {
+          transform: CSS.Transform.toString({
+            ...transform,
+            x: transform.x + to.left - from.left,
+            y: transform.y + to.top - from.top,
+          }),
+        },
+      ],
+      { duration: 200, easing: "cubic-bezier(0.2, 0, 0, 1)", fill: "forwards" },
+    ).finished;
+  } catch {
+    // A new drag or an unmount cancels the animation.
+  } finally {
+    origin.style.visibility = visibility;
+  }
 }
 
 type RectBounds = Pick<ClientRect, "left" | "right" | "top" | "bottom">;

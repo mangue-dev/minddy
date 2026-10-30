@@ -107,7 +107,7 @@ export function ResourceThumbnail({
       loading="lazy"
       draggable={false}
       onError={() => setFailed(true)}
-      className="max-h-full max-w-full rounded-[3px] object-contain shadow-xs ring-1 ring-border"
+      className="max-h-full max-w-full rounded-[3px] object-contain ring-1 ring-border"
     />
   );
 }

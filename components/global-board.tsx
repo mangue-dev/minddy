@@ -128,7 +128,6 @@ function GlobalBoardInner() {
     moveIssue,
     setCategories,
     deleteIssue,
-    createIssue,
     setIssueCycle,
     addRelation,
     removeRelation,
@@ -455,6 +454,13 @@ function GlobalBoardInner() {
       ),
     [addRelation]
   );
+  const handleRemoveRelation = useCallback(
+    (relationId: string, projectId: string) =>
+      void removeRelation(projectId, relationId).catch((err) =>
+        toast.error((err as Error).message)
+      ),
+    [removeRelation]
+  );
 
   const openIssue = openIssueId
     ? scopedIssues.find((i) => i.id === openIssueId) ?? null
@@ -551,11 +557,13 @@ function GlobalBoardInner() {
           withNumo
           withShare={false}
           onAskAI={handleAskAI}
-          cycleTab={{
+          // No Cycle tab while cycles are off; `?view=cycle` still reaches
+          // their activation screen.
+          cycleTab={cyclesEnabled ? {
             active: cycleMode,
             completionPercent: currentCycleCompletionPercent,
             onSelect: () => switchCycleMode(true),
-          }}
+          } : undefined}
           rightControls={
             cycleMode ? (
               cyclesEnabled && selectedCycle ? (
@@ -609,6 +617,9 @@ function GlobalBoardInner() {
                 }
                 onAddRelation={
                   selectedPhase === "current" ? handleAddRelation : undefined
+                }
+                onRemoveRelation={
+                  selectedPhase === "current" ? handleRemoveRelation : undefined
                 }
                 // Cycle view: no tablet (everything is there), but a selection
                 // must be able to exit the cycle suddenly — only on the
@@ -683,6 +694,7 @@ function GlobalBoardInner() {
             onSetCycle={onSetIssueCycle}
             onCreateIssue={handleCreateIssue}
             onAddRelation={handleAddRelation}
+            onRemoveRelation={handleRemoveRelation}
             allIssues={scopedIssues}
             relations={relations}
             {...boardHandlers}
@@ -710,7 +722,6 @@ function GlobalBoardInner() {
         onUpdate={(id, patch) => updateIssue(id, patch, openPid)}
         onDelete={(id) => deleteIssue(id, openPid)}
         onSetCategories={(id, ids) => setCategories(id, ids, openPid)}
-        onCreate={(input) => createIssue(openPid, input)}
         onOpenIssue={(id) => {
           setOpenIssueId(id);
           setOpenIssueTab("description");

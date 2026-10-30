@@ -27,6 +27,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSearchScope,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuSub,
@@ -34,7 +35,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { anchorKey } from "@/components/ui/overlay-freeze";
 import { ChevronRightIcon } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CheckIcon } from "@hugeicons/core-free-icons";
 import { Kbd } from "@/components/ui/kbd";
 import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
 import { searchActionTree } from "@/lib/action-menu-search";
@@ -47,7 +51,7 @@ export interface ContextMenuAction {
   icon?: React.ReactNode;
   /** Corresponding shortcut key, displayed on the right (e.g. “⇧P”). */
   shortcut?: string;
-  /** Separates the entry from the previous group (ignored if it opens the list). */
+  /** Separates the entry from the previous group, in a submenu too (ignored if it opens the list). */
   separatorBefore?: boolean;
   /** `destructive` = red, for irreversible actions (delete). */
   variant?: "default" | "destructive";
@@ -59,6 +63,14 @@ export interface ContextMenuAction {
   children?: ContextMenuAction[];
   /** Selection opens another surface that takes focus instead of the trigger. */
   transfersFocus?: boolean;
+  /** The entry is the current value of a property submenu: a check on the right. */
+  checked?: boolean;
+  /** A toggle among several (categories): selecting it keeps the menu open,
+   *  which then closes on a click outside or Escape. */
+  keepOpen?: boolean;
+  /** Renders the label (e.g. an objective's name in its color); `label`
+   *  stays the searched and accessible text. */
+  labelNode?: React.ReactNode;
   onSelect?: () => void;
 }
 
@@ -132,6 +144,42 @@ export function useActionMenuSearch(open: boolean, searchable = true) {
     e.stopPropagation();
   };
 
+  // The caret stays in the search field (see DropdownMenuSearchScope for the
+  // hovered options). Radix still moves the focus in two cases: to the menu
+  // itself when the pointer leaves a submenu trigger, and to an option the
+  // arrow keys reached. The first goes straight back to the field; in the
+  // second, typing still searches instead of Radix's typeahead. Native
+  // capture listeners run before React's, for submenus (portaled) too.
+  React.useEffect(() => {
+    if (!open || !searchable) return;
+    const inThisMenu = (target: EventTarget | null) => {
+      const input = inputRef.current;
+      return !!input && target instanceof Element && !!target.closest('[role="menu"]') && target !== input;
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      const input = inputRef.current;
+      if (input && event.target === input.closest('[role="menu"]')) input.focus({ preventScroll: true });
+    };
+    const onKeyDownCapture = (event: KeyboardEvent) => {
+      const input = inputRef.current;
+      if (!input || !inThisMenu(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // Space still selects the focused option, as in any menu.
+      const typed = event.key.length === 1 && event.key !== " ";
+      if (!typed && event.key !== "Backspace") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setQuery((current) => (typed ? current + event.key : current.slice(0, -1)));
+      input.focus({ preventScroll: true });
+    };
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("keydown", onKeyDownCapture, true);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("keydown", onKeyDownCapture, true);
+    };
+  }, [open, searchable]);
+
   return { query: searchable ? query : "", setQuery, inputRef, onKeyDown };
 }
 
@@ -173,14 +221,23 @@ function LeafItem({
     <DropdownMenuItem
       variant={action.variant}
       disabled={disabled}
-      onSelect={() =>
-        onActionSelect ? onActionSelect(action) : action.onSelect?.()
-      }
+      data-checked={action.checked || undefined}
+      onSelect={(event) => {
+        // A toggle stays in its open menu, to set several in a row.
+        if (action.keepOpen) {
+          event.preventDefault();
+          action.onSelect?.();
+          return;
+        }
+        if (onActionSelect) onActionSelect(action);
+        else action.onSelect?.();
+      }}
     >
       {action.icon}
       {path.length > 0
-        ? <ActionPathLabel path={path} label={action.label} />
-        : <span className="truncate">{action.label}</span>}
+        ? <ActionPathLabel path={path} label={action.labelNode ?? action.label} />
+        : <span className="truncate">{action.labelNode ?? action.label}</span>}
+      {action.checked && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
       {action.shortcut && (
         <DropdownMenuShortcut>
           <Kbd size="sm">{action.shortcut}</Kbd>
@@ -212,12 +269,11 @@ function ActionNode({
           )}
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent>
-          {action.children.map((child) => (
-            <LeafItem
-              key={child.id}
-              action={child}
-              onActionSelect={onActionSelect}
-            />
+          {action.children.map((child, i) => (
+            <React.Fragment key={child.id}>
+              {child.separatorBefore && i > 0 && <DropdownMenuSeparator />}
+              <LeafItem action={child} onActionSelect={onActionSelect} />
+            </React.Fragment>
           ))}
         </DropdownMenuSubContent>
       </DropdownMenuSub>
@@ -242,8 +298,10 @@ function ActionMenuBody({
   const search = useActionMenuSearch(open, searchable);
   const visible = searchActionTree(actions, search.query);
 
+  // The options leave the caret in the search field (DropdownMenuSearchScope).
+  const Scope = searchable ? DropdownMenuSearchScope : React.Fragment;
   return (
-    <>
+    <Scope>
       {searchable && <ActionMenuSearchField search={search} />}
       {visible.length === 0 ? (
         <div className="px-2.5 py-1.5 text-sm text-muted-foreground">
@@ -262,7 +320,7 @@ function ActionMenuBody({
           </React.Fragment>
         ))
       )}
-    </>
+    </Scope>
   );
 }
 
@@ -278,7 +336,7 @@ function MobileActionMenu({ actions, onSelect, ...props }: {
       keywords={[action.label, parentLabel, ...(action.keywords ?? [])]}
       disabled={parentDisabled || action.disabled} onSelect={() => onSelect(action)}>
       <span className={action.variant === "destructive" ? "flex items-center gap-2 text-destructive [&_svg]:text-destructive" : "flex items-center gap-2"}>
-        {action.icon}<span>{action.label}</span>
+        {action.icon}<span>{action.labelNode ?? action.label}</span>
       </span>
     </CommandItem>);
   return <SearchMenu {...props}><CommandGroup>{rows(actions)}</CommandGroup></SearchMenu>;
@@ -309,7 +367,11 @@ export function IssueContextMenu({
   if (!mounted) return null;
   if (mobile) return <MobileActionMenu position={position} open={!!position}
     onOpenChange={(next) => { if (!next) onClose(); }} actions={actions}
-    onSelect={(action) => { onClose(); requestAnimationFrame(() => action.onSelect?.()); }} />;
+    onSelect={(action) => {
+      if (action.keepOpen) return void action.onSelect?.();
+      onClose();
+      requestAnimationFrame(() => action.onSelect?.());
+    }} />;
   // The whole menu — trigger included — is portaled to <body>. The invisible
   // trigger carries the anchor coordinates; inside any transformed or
   // clipped ancestor (drag-and-drop items, overflow-hidden strips) a `fixed`
@@ -317,7 +379,9 @@ export function IssueContextMenu({
   // then lands beside the tab or card instead of under it. Mounted at <body>,
   // the viewport coordinates hold in every container.
   return createPortal(
-    <DropdownMenu open={!!position} onOpenChange={(open) => !open && onClose()}>
+    // Re-opened at another point (a right click on another row of the same
+    // list), the menu mounts anew there instead of staying at the first one.
+    <DropdownMenu key={anchorKey(lastPosition.current)} open={!!position} onOpenChange={(open) => !open && onClose()}>
       <DropdownMenuTrigger asChild>
         <span
           aria-hidden
@@ -386,7 +450,11 @@ export function IssueActionsMenu({
   };
   if (mobile && searchable) return <MobileActionMenu trigger={trigger} open={open}
     onOpenChange={change} actions={actions}
-    onSelect={(action) => { change(false); requestAnimationFrame(() => action.onSelect?.()); }} />;
+    onSelect={(action) => {
+      if (action.keepOpen) return void action.onSelect?.();
+      change(false);
+      requestAnimationFrame(() => action.onSelect?.());
+    }} />;
   return (
     <DropdownMenu open={open} onOpenChange={change}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>

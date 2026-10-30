@@ -5,23 +5,37 @@ import { Copy01Icon, Share01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { MIN_SHARE_PASSWORD_LENGTH } from "@/lib/share-password";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { View, ViewShareLevel } from "@/lib/types";
+import type { View, ViewShare, ViewShareLevel } from "@/lib/types";
 import {
   deleteViewShareApi,
   fetchViewShareApi,
   updateViewShareApi,
 } from "@/lib/views-api";
 
+const viewShareKey = (viewId: string | null) => ["view-share", viewId] as const;
+
+/** Loads a view's share state ahead of the dialog, from the menu that offers
+    it, so the dialog opens on it rather than on a spinner. */
+export function prefetchViewShare(queryClient: QueryClient, viewId: string) {
+  void queryClient.prefetchQuery({
+    queryKey: viewShareKey(viewId),
+    queryFn: () => fetchViewShareApi(viewId),
+    staleTime: 30_000,
+  });
+}
+
 /** Share a view as a read-only public link (MIN-26): private (default) /
-    password / public, toggled per view from the pill's "more" menu. */
+    password / public, chosen per view from the pill's "more" menu. The dialog
+    shows its controls at once and applies each change on screen before the
+    server confirms it, rolling it back if the server refuses. */
 export function ShareViewDialog({
   view,
   open,
@@ -38,10 +52,13 @@ export function ShareViewDialog({
 
   const shareEnabled = open && viewId !== null;
   const { data: share, isPending } = useQuery({
-    queryKey: ["view-share", viewId],
+    queryKey: viewShareKey(viewId),
     queryFn: () => fetchViewShareApi(viewId as string),
     enabled: shareEnabled,
+    staleTime: 30_000,
   });
+  // First read only: the level is unknown, so it cannot be changed yet.
+  const loading = shareEnabled && isPending;
   const serverLevel: ViewShareLevel = share?.level ?? "private";
 
   const [level, setLevel] = useState<ViewShareLevel>("private");
@@ -60,24 +77,43 @@ export function ShareViewDialog({
   const update = useMutation({
     mutationFn: (input: { level: "password" | "public"; password?: string }) =>
       updateViewShareApi(viewId as string, input),
-    onSuccess: (next) => {
-      queryClient.setQueryData(["view-share", viewId], next);
+    // An existing link changes level on screen at once; a new one shows
+    // its address when the server has made it.
+    onMutate: (input) => {
+      const previous = queryClient.getQueryData<ViewShare | null>(viewShareKey(viewId));
+      if (previous) queryClient.setQueryData(viewShareKey(viewId), { ...previous, level: input.level });
       setPassword("");
+      return { previous };
     },
-    onError: (err) => toast.error((err as Error).message),
+    onSuccess: (next) => {
+      queryClient.setQueryData(viewShareKey(viewId), next);
+    },
+    onError: (err, _input, context) => {
+      queryClient.setQueryData(viewShareKey(viewId), context?.previous ?? null);
+      setLevel(context?.previous?.level ?? "private");
+      toast.error((err as Error).message);
+    },
   });
   const revoke = useMutation({
     mutationFn: () => deleteViewShareApi(viewId as string),
-    onSuccess: () => {
+    onMutate: () => {
+      const previous = queryClient.getQueryData<ViewShare | null>(viewShareKey(viewId));
       setLevel("private");
-      queryClient.setQueryData(["view-share", viewId], null);
+      queryClient.setQueryData(viewShareKey(viewId), null);
+      return { previous };
+    },
+    onSuccess: () => {
       toast.success(t("sharingDisabled"));
     },
-    onError: (err) => toast.error((err as Error).message),
+    onError: (err, _input, context) => {
+      queryClient.setQueryData(viewShareKey(viewId), context?.previous ?? null);
+      setLevel(context?.previous?.level ?? "private");
+      toast.error((err as Error).message);
+    },
   });
 
   const changeLevel = (next: ViewShareLevel) => {
-    if (update.isPending || revoke.isPending) return;
+    if (loading || revoke.isPending) return;
     if (next === "private" && share) {
       setConfirmRevoke(true);
       return;
@@ -129,79 +165,73 @@ export function ShareViewDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {shareEnabled && isPending ? (
-            <div className="flex justify-center py-6">
-              <Spinner />
+          <div className="flex flex-col gap-4">
+            <div className="space-y-1.5">
+              <Select value={level} onValueChange={(next) => changeLevel(next as ViewShareLevel)} disabled={loading}>
+                <SelectTrigger className="w-full" aria-label={t("title")}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">{t("levelPrivate")}</SelectItem>
+                  <SelectItem value="password">{t("levelPassword")}</SelectItem>
+                  <SelectItem value="public">{t("levelPublic")}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">{loading ? "\u00a0" : hint}</p>
             </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <div className="space-y-1.5">
-                <SegmentedControl
-                  options={[
-                    { value: "private", label: t("levelPrivate") },
-                    { value: "password", label: t("levelPassword") },
-                    { value: "public", label: t("levelPublic") },
-                  ]}
-                  value={level}
-                  onChange={changeLevel}
-                  ariaLabel={t("title")}
-                />
-                <p className="text-xs text-muted-foreground">{hint}</p>
-              </div>
 
-              {level === "password" && (
-                <form onSubmit={submitPassword} className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="password"
-                      autoComplete="new-password"
-                      minLength={MIN_SHARE_PASSWORD_LENGTH}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={
-                        serverLevel === "password"
-                          ? t("changePasswordPlaceholder")
-                          : t("passwordPlaceholder")
-                      }
-                    />
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      disabled={
-                        update.isPending ||
-                        password.trim().length < MIN_SHARE_PASSWORD_LENGTH
-                      }
-                    >
-                      {update.isPending && <Spinner />}
-                      {tc("save")}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{t("passwordMinHint")}</p>
-                </form>
-              )}
-
-              {share && shareUrl && (
+            {level === "password" && (
+              <form onSubmit={submitPassword} className="space-y-1.5">
                 <div className="flex items-center gap-2">
                   <Input
-                    readOnly
-                    value={shareUrl}
-                    onFocus={(e) => e.currentTarget.select()}
-                    className="font-mono text-xs"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={MIN_SHARE_PASSWORD_LENGTH}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={
+                      serverLevel === "password"
+                        ? t("changePasswordPlaceholder")
+                        : t("passwordPlaceholder")
+                    }
                   />
                   <Button
-                    type="button"
+                    type="submit"
                     variant="outline"
-                    className="shrink-0"
-                    onClick={copyLink}
+                    disabled={
+                      update.isPending ||
+                      password.trim().length < MIN_SHARE_PASSWORD_LENGTH
+                    }
                   >
-                    <HugeiconsIcon icon={Copy01Icon} />
-                    {t("copyLink")}
+                    {update.isPending && <Spinner />}
+                    {tc("save")}
                   </Button>
                 </div>
-              )}
+                <p className="text-xs text-muted-foreground">{t("passwordMinHint")}</p>
+              </form>
+            )}
 
-            </div>
-          )}
+            {share && shareUrl && (
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={shareUrl}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={copyLink}
+                >
+                  <HugeiconsIcon icon={Copy01Icon} />
+                  {t("copyLink")}
+                </Button>
+              </div>
+            )}
+
+          </div>
         </DialogContent>
       </Dialog>
       <ConfirmDeleteDialog

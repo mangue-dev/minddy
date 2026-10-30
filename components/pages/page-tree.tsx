@@ -9,13 +9,12 @@
 // must find the tree unfolded as we left it, otherwise we go back
 // time to reopen the same three branches.
 //
-// Drag and drop is native HTML rather than dnd-kit, on purpose: which
-// decides the gesture here is the VERTICAL position of the cursor IN the line
-// hovered over (top third / middle / bottom third → before / inside / after, cf.
-// lib/pages-move.ts), and the native event gives it exactly, line by
-// line. A sensor that only renders colliding rectangles would require
-// recalculate next.
+// Drag and drop is driven by the pointer (page-tree-drag.ts) rather than
+// dnd-kit: what decides the gesture here is the VERTICAL position of the
+// cursor IN the line hovered over (top third / middle / bottom third →
+// before / inside / after, cf. lib/pages-move.ts), read line by line.
 
+import { SIDEBAR_COMPOSITE_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowRight01Icon, DatabaseIcon, File02Icon, MoreHorizontalIcon, StarIcon } from "@hugeicons/core-free-icons";
 import {
@@ -23,7 +22,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type DragEvent,
 } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
@@ -32,7 +30,8 @@ import { cn } from "@/lib/utils";
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
 import { ancestorsOf, splitFavoritePageTree } from "@/lib/pages";
-import { dropModeAt, type PageDropMode } from "@/lib/pages-move";
+import type { PageDropMode } from "@/lib/pages-move";
+import { usePageTreeDrag } from "@/components/pages/page-tree-drag";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 import {
@@ -190,15 +189,7 @@ export function PageTree({
   );
 
   /* ── The deposit ────────────────────────────── ────────────────────────────── */
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [drop, setDrop] = useState<{ id: string; mode: PageDropMode } | null>(
-    null
-  );
-
-  const endDrag = useCallback(() => {
-    setDragId(null);
-    setDrop(null);
-  }, []);
+  const { dragId, drop, onPointerDown: dragFrom } = usePageTreeDrag({ enabled: canWrite, onMove });
 
   const createChild = useCallback(
     (parentId: string) => {
@@ -276,16 +267,7 @@ export function PageTree({
             onCreateChild={canWrite ? createChild : undefined}
             onOpen={onOpen}
             onPrefetch={onPrefetch}
-            onDragStart={canWrite ? () => setDragId(node.id) : undefined}
-            onDragOverRow={canWrite ? (mode) => {
-              if (!dragId || dragId === node.id) return;
-              setDrop({ id: node.id, mode });
-            } : undefined}
-            onDropRow={canWrite ? (mode) => {
-              if (dragId && dragId !== node.id) onMove(dragId, node.id, mode);
-              endDrag();
-            } : undefined}
-            onDragEnd={canWrite ? endDrag : undefined}
+            onDragPointerDown={canWrite ? dragFrom(node.id) : undefined}
           />
         );
         if (open) walk(node.children);
@@ -328,10 +310,7 @@ function PageRow({
   onCreateChild,
   onOpen,
   onPrefetch,
-  onDragStart,
-  onDragOverRow,
-  onDropRow,
-  onDragEnd,
+  onDragPointerDown,
 }: {
   page: PageSummary;
   depth: number;
@@ -351,10 +330,8 @@ function PageRow({
   onCreateChild?: (parentId: string) => void;
   onOpen: (pageId: string) => void;
   onPrefetch: (pageId: string) => void;
-  onDragStart?: () => void;
-  onDragOverRow?: (mode: PageDropMode) => void;
-  onDropRow?: (mode: PageDropMode) => void;
-  onDragEnd?: () => void;
+  /** Starts a drag of this row (page-tree-drag.ts); absent for readers. */
+  onDragPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
 }) {
   const t = useTranslations("Pages");
   const href = `/projects/${page.project_id}/pages/${page.id}`;
@@ -370,17 +347,12 @@ function PageRow({
   // active line remains excluded in principle — that's the one I'm reading.
   const present = usePresentOn(active ? null : page.id);
 
-  const modeFrom = (event: DragEvent<HTMLDivElement>): PageDropMode => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    return dropModeAt(event.clientY - rect.top, rect.height);
-  };
-
   return (
     <>
-    <div data-sidebar-page-row
+    <div data-sidebar-page-row data-sidebar-row
       className={cn(
         "group/page relative flex items-center rounded-md pr-1 transition-colors",
-        active ? "bg-muted" : "hover:bg-muted/60 focus-within:bg-muted/60",
+        active ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_COMPOSITE_ROW_HOVER_CLASS,
         dragging && "opacity-40",
         // “Inside” is said by the bottom of the target line, “before/after” by
         // a line on its edge: two different signals for two gestures
@@ -400,25 +372,11 @@ function PageRow({
         event.preventDefault();
         setMenuPosition({ x: event.clientX, y: event.clientY });
       }}
-      draggable={!!onDragStart}
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move";
-        // Firefox does not initiate a drag without data.
-        event.dataTransfer.setData("text/plain", page.id);
-        onDragStart?.();
-      }}
-      onDragOver={(event) => {
-        if (!onDragOverRow) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        onDragOverRow(modeFrom(event));
-      }}
-      onDrop={(event) => {
-        if (!onDropRow) return;
-        event.preventDefault();
-        onDropRow(modeFrom(event));
-      }}
-      onDragEnd={onDragEnd}
+      data-page-row-id={page.id}
+      onPointerDown={onDragPointerDown}
+      // The link and icons inside would start the browser's own drag, which
+      // takes the pointer away from ours.
+      onDragStart={(event) => event.preventDefault()}
     >
       {drop === "before" || drop === "after" ? (
         <div
@@ -553,11 +511,10 @@ function PageRow({
       )}
     </div>
 
-    {/* The SAME menu, anchored to the pointer. Out of line, and this is deliberate:
-        he places an invisible anchor in `position: fixed` at the coordinates of
-        click, and the line is `draggable` — an anchor left in would stretch the
-        rectangle that the browser photographs for the ghost of the slide
-        to the corner of the screen. Out of the flow, it costs nothing here. */}
+    {/* The SAME menu, anchored to the pointer. Out of the line on purpose: it
+        places an invisible anchor in `position: fixed` at the click, and the
+        drag copies the line (page-tree-drag.ts) — an anchor inside would be
+        copied along. Out of the flow, it costs nothing here. */}
     <IssueContextMenu
       position={menuPosition}
       onClose={() => setMenuPosition(null)}

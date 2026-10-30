@@ -12,8 +12,9 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
-  type Modifier,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE, HORIZONTAL_DRAG, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
 import {
   SortableContext,
   arrayMove,
@@ -62,9 +63,6 @@ const routeLabels: Record<string, MessageKey<"Nav">> = {
   "pull-requests": "pullRequests", trash: "trash", settings: "settings", billing: "billing",
   admin: "adminDashboard", pages: "pages", tickets: "tickets", objectives: "objectives", feedback: "feedback", triage: "triage",
 };
-
-const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
-const horizontalDragModifiers = [restrictToHorizontalAxis];
 
 /** Right padding of the strip's outer container (`pr-2`) — never tab room. */
 const RAIL_PAD_RIGHT = 8;
@@ -137,7 +135,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   };
 
   const strip = useRef<HTMLDivElement>(null);
-  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }));
   const [dragged, setDragged] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<AppTab | null>(null);
@@ -304,10 +302,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           else return;
           event.preventDefault(); controls[next]?.focus();
         }}>
-        <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={horizontalDragModifiers}
+        <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={HORIZONTAL_DRAG}
           accessibility={{ announcements: tabAnnouncements }}
           onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
+        <DragCursor />
         <SortableContext items={visible.map(({ tab }) => tab.id)} strategy={horizontalListSortingStrategy}>
         {visible.map(({ tab, view }) => {
           const { section, projectId, project, objectiveId, objective, pageIcon, composite, label } = view;
@@ -335,12 +334,12 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           </SortableAppTab>;
         })}
         </SortableContext>
-        <DragOverlay dropAnimation={null} modifiers={horizontalDragModifiers}>
+        <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION} modifiers={HORIZONTAL_DRAG}>
           {draggedTab && (() => {
             const { section, projectId, project, objectiveId, objective, composite, label } = describe(draggedTab);
             return <div className={draggedTab.pinned
-              ? `flex h-[34px] ${composite ? "w-[52px]" : "w-[34px]"} items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-lg`
-              : "flex h-[34px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}
+              ? `flex h-[34px] ${composite ? "w-[52px]" : "w-[34px]"} items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-md`
+              : "flex h-[34px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-md"}
               style={draggedTab.pinned ? undefined : { width: regularWidth }}>
               <AppTabIcon section={section} project={project} projectId={projectId}
                 objectiveColor={objectiveId ? objective?.color ?? null : undefined}
@@ -386,7 +385,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       ) : (
         <Tooltip><TooltipTrigger asChild><button type="button" aria-label={t("newTab")} disabled={busy || loading || loadError}
           onClick={onNewTab} onMouseEnter={onNewTabWarm} onFocus={onNewTabWarm}
-          className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/65 outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
           <HugeiconsIcon icon={Add01Icon} className="size-4" aria-hidden />
         </button></TooltipTrigger><TooltipContent side="bottom" className="flex items-center gap-2">
           <span>{t("newTab")}</span>

@@ -57,8 +57,9 @@ export function normalizeAppTabLocation(raw: unknown): string | null {
 export function appTabRoute(href: string): {
   section: string;
   projectId: string | null;
-  /** The `objective` selection param — an objective's tickets load in the
-   *  board URL, not on a dedicated page, so the tab names it. */
+  /** The objective the tab shows: the board's `objective` param (its
+   *  tickets), or the Objectives page's `open` selection (its details).
+   *  Either way the tab names it. */
   objectiveId: string | null;
   /** The `family` selection param — a board scoped to one parent and its
    *  direct children; the tab names the parent. */
@@ -85,7 +86,7 @@ export function appTabRoute(href: string): {
   return {
     section: parts[2] ?? "tickets",
     projectId: parts[1],
-    objectiveId: params.get("objective"),
+    objectiveId: params.get("objective") ?? (parts[2] === "objectives" ? params.get("open") : null),
     familyId: params.get("family"),
     view: params.get("view"),
     pageId: parts[2] === "pages" && parts[3] ? parts[3] : null,

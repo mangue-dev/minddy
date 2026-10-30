@@ -3,13 +3,13 @@
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
-import { semanticExtras } from "@/lib/issue-semantic-query";
-import { isExactIssueQuery, orderIssuesForSearch } from "@/lib/issue-search-order";
-import { useSemanticIssueSearch } from "@/lib/use-semantic-issue-search";
-import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
+import { usePalettePicker, type PalettePickerRequest } from "@/lib/palette-picker";
+import { IssuePalettePicker } from "@/components/issue-palette-picker";
+import { writeFeedbackPost } from "@/lib/optimistic/feedback-writes";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
@@ -55,10 +55,10 @@ import { SearchSelect } from "@/components/search-select";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/view-href";
-import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CategoryValue, ObjectiveValue, PropertyRow, TRIGGER } from "@/components/issue-property-fields";
-import { ObjectivePill } from "@/components/objective-label";
+import { ObjectivePill, ObjectiveName } from "@/components/objective-label";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
@@ -104,7 +104,8 @@ import {
   LazyDocumentEditor,
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
-import { StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
+import { Dot } from "@/components/ui/color-dot";
 import {
   FeedbackStatusBadge,
 } from "@/app/f/[token]/feedback-bits";
@@ -122,6 +123,7 @@ import {
   FEEDBACK_OPEN_STATUSES,
   FEEDBACK_TO_ISSUE_STATUS,
   type CommentVisibility,
+  type FeedbackPostStatus,
   type FeedbackReviewState,
 } from "@/lib/feedback/types";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -530,11 +532,12 @@ function FeedbackRow({
       data-sidebar-filter-result
       data-navigation-href={`/projects/${projectId}/feedback?post=${encodeURIComponent(post.id)}`}
       data-comment-target={commentTarget("feedback", post.id)}
+      data-feedback-post-id={post.id}
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
         "flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60"
+        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
       )}
     >
       <div className="flex items-center gap-2">
@@ -684,8 +687,13 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
   }, [toReviewCount, onlyToReview]);
 
-  const visiblePosts = useMemo(() => feedbackSelectionItems(posts, { state, sort, onlyToReview, properties }),
-    [posts, state, onlyToReview, sort, properties]);
+  // A search looks through every post, whatever the state, review and
+  // property filters: they narrow the resting list, the query finds anything.
+  const searching = query.trim() !== "";
+  const visiblePosts = useMemo(() => feedbackSelectionItems(posts, searching
+    ? { state: "all", sort }
+    : { state, sort, onlyToReview, properties }),
+  [posts, searching, state, onlyToReview, sort, properties]);
 
   /**
    * What the column DISPLAYS. One notch BELOW `visiblePosts`, which carries the
@@ -718,7 +726,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   // Side panel issue: the linked ticket opens HERE, without navigation — even
   // cabling as the board (issues + relationships + project collections).
-  const { issues, createIssue, updateIssue, deleteIssue, setCategories } =
+  const { issues, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
@@ -866,6 +874,176 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     void queryClient.invalidateQueries({ queryKey: ["feedback-count", projectId] });
   };
 
+  // A row menu's gesture, handed to the detail pane it selects.
+  const [detailIntent, setDetailIntent] = useState<{ postId: string; intent: FeedbackIntent } | null>(null);
+  const tPublic = useTranslations("PublicFeedback");
+  const tCommonList = useTranslations("Common");
+  const tFieldList = useTranslations("Field");
+  // Row menu writes are optimistic and survive late responses (feedbackWrites).
+  const writePost = (postId: string, updates: Partial<TeamFeedbackListItem>) => {
+    void writeFeedbackPost(queryClient, projectId, postId, updates, () =>
+      api(`/api/projects/${projectId}/feedback/${postId}`, {
+        method: "PATCH",
+        body: JSON.stringify(updates),
+      }),
+    ).catch((e: Error) => toast.error(e.message || t("errorGeneric")));
+  };
+  const writePostCategories = (postId: string, ids: string[]) => {
+    void writeFeedbackPost(queryClient, projectId, postId, { category_ids: ids }, () =>
+      api(`/api/projects/${projectId}/feedback/${postId}/categories`, {
+        method: "PUT",
+        body: JSON.stringify({ category_ids: ids }),
+      }),
+    ).catch((e: Error) => toast.error(e.message || t("errorGeneric")));
+  };
+  const runOnPost = (postId: string, intent: FeedbackIntent) => {
+    setSelectedId(postId);
+    setDetailIntent({ postId, intent });
+  };
+
+  /**
+   * The right-click menu of a feedback row, built from the row under the
+   * pointer: its status (unless a linked ticket drives it), its objective,
+   * categories, visibility and AI review, then linking to an issue, merging
+   * and the trash. Properties are written from the row; the other gestures
+   * open the post and run there, behind its own confirmations.
+   */
+  const itemContextActions = (target: Element): ContextMenuAction[] => {
+    // A browsed list has no detail pane to run the gesture in.
+    if (!canWrite || browse) return [];
+    const id = target.closest<HTMLElement>("[data-feedback-post-id]")?.dataset.feedbackPostId;
+    const post = id ? posts.find((p) => p.id === id) : undefined;
+    if (!post) return [];
+    const menu: ContextMenuAction[] = [];
+    if (!post.issue_id) {
+      menu.push({
+        id: "feedback-status",
+        label: tFieldList("status"),
+        icon: <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[post.status]} className="size-4" />,
+        children: FEEDBACK_POST_STATUSES.map((status) => ({
+          id: `feedback-status-${status}`,
+          label: tPublic(`status.${status}`),
+          icon: status === "spam"
+            ? <AppIcon icon={Ban} className="size-4" />
+            : <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[status]} className="size-4" />,
+          checked: status === post.status,
+          transfersFocus: status === "declined" || status === "spam",
+          // Declining and spam say no to someone: their confirmation lives
+          // in the post's pane. The other statuses are written from the row.
+          onSelect: () => (status === "declined" || status === "spam"
+            ? runOnPost(post.id, { action: "status", status })
+            : writePost(post.id, { status })),
+        })),
+      });
+    }
+    // Properties written from the row, as in the post's own table.
+    if (objectives.length > 0) {
+      menu.push({
+        id: "feedback-objective",
+        label: tFieldList("objective"),
+        icon: <HugeiconsIcon icon={Target01Icon} className="size-4" />,
+        children: [
+          {
+            id: "feedback-objective-none",
+            label: tCommonList("none"),
+            checked: post.objective_id === null,
+            onSelect: () => writePost(post.id, { objective_id: null }),
+          },
+          ...objectives.map((objective) => ({
+            id: `feedback-objective-${objective.id}`,
+            label: objective.name,
+            labelNode: <ObjectiveName objective={objective} />,
+            icon: <ObjectiveStatusIndicator status={objective.status} className="size-4" />,
+            checked: post.objective_id === objective.id,
+            onSelect: () => writePost(post.id, { objective_id: objective.id }),
+          })),
+        ],
+      });
+    }
+    if (categories.length > 0) {
+      menu.push({
+        id: "feedback-categories",
+        label: tFieldList("categories"),
+        icon: <HugeiconsIcon icon={Tag01Icon} className="size-4" />,
+        children: categories.map((category) => {
+          const on = post.category_ids.includes(category.id);
+          return {
+            id: `feedback-category-${category.id}`,
+            label: category.name,
+            icon: <Dot color={category.color} />,
+            checked: on,
+            keepOpen: true,
+            onSelect: () => writePostCategories(post.id, on
+              ? post.category_ids.filter((categoryId) => categoryId !== category.id)
+              : [...post.category_ids, category.id]),
+          };
+        }),
+      });
+    }
+    if (boardEnabled) {
+      menu.push({
+        id: "feedback-visibility",
+        label: t("visibility"),
+        icon: <HugeiconsIcon icon={post.is_public ? GlobeIcon : LockIcon} className="size-4" />,
+        children: [
+          {
+            id: "feedback-visibility-public",
+            label: t("public"),
+            icon: <HugeiconsIcon icon={GlobeIcon} className="size-4" />,
+            checked: post.is_public,
+            onSelect: () => writePost(post.id, { is_public: true }),
+          },
+          {
+            id: "feedback-visibility-private",
+            label: t("private"),
+            icon: <HugeiconsIcon icon={LockIcon} className="size-4" />,
+            checked: !post.is_public,
+            onSelect: () => writePost(post.id, { is_public: false }),
+          },
+        ],
+      });
+    }
+    if (post.review_state !== "published") {
+      menu.push({
+        id: "feedback-publish-review",
+        label: t("publishReview"),
+        icon: <HugeiconsIcon icon={SentIcon} className="size-4" />,
+        onSelect: () => writePost(post.id, { review_state: "published" }),
+      });
+    }
+    if (!post.issue_id) {
+      menu.push({
+        id: "feedback-link",
+        separatorBefore: true,
+        label: t("linkToIssue"),
+        icon: <HugeiconsIcon icon={Link02Icon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: () => runOnPost(post.id, { action: "link" }),
+      });
+    }
+    const mergeable = posts.some((p) => p.id !== post.id && !p.issue_id && p.status !== "spam" &&
+      (p.objective_id ?? null) === (post.objective_id ?? null));
+    if (mergeable) {
+      menu.push({
+        id: "feedback-merge",
+        label: t("mergeInto"),
+        icon: <HugeiconsIcon icon={GitMergeIcon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: () => runOnPost(post.id, { action: "merge" }),
+      });
+    }
+    menu.push({
+      id: "feedback-trash",
+      label: tCommonList("moveToTrash"),
+      icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+      variant: "destructive",
+      separatorBefore: true,
+      transfersFocus: true,
+      onSelect: () => runOnPost(post.id, { action: "delete" }),
+    });
+    return menu;
+  };
+
   const createDialog = (
     <InternalFeedbackDialog
       projectId={projectId}
@@ -897,11 +1075,12 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const sidebar = (
       <CollectionSidebar browse={browse}
         title={t("title")}
+        itemContextActions={itemContextActions}
         hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: listedPosts.length }),
+          placeholder: t("filterPlaceholder", { count: posts.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
@@ -1062,6 +1241,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             issues={issues}
             onChanged={refresh}
             onOpenIssue={setOpenIssueId}
+            intent={detailIntent?.postId === selectedId ? detailIntent.intent : null}
+            onIntentHandled={() => setDetailIntent(null)}
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -1148,7 +1329,6 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
           refresh();
         }}
         onSetCategories={setCategories}
-        onCreate={createIssue}
         onOpenIssue={setOpenIssueId}
         onAddRelation={handleAddRelation}
         onRemoveRelation={handleRemoveRelation}
@@ -1159,6 +1339,11 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 }
 
 // ── Detail ───────────────────────────────── ─────────────────────────────────
+
+/** A gesture a post's row menu hands to its detail pane. */
+type FeedbackIntent =
+  | { action: "link" | "merge" | "delete" }
+  | { action: "status"; status: FeedbackPostStatus };
 
 function FeedbackDetail({
   projectId,
@@ -1173,6 +1358,8 @@ function FeedbackDetail({
   issues,
   onChanged,
   onOpenIssue,
+  intent = null,
+  onIntentHandled,
 }: {
   projectId: string;
   /** The project itself — the promotion form needs it. */
@@ -1192,11 +1379,16 @@ function FeedbackDetail({
   onChanged: () => void;
   /** Opens the issue side panel directly (no navigation). */
   onOpenIssue: (issueId: string) => void;
+  /** A gesture chosen from the post's row menu, run once the post loads. */
+  intent?: FeedbackIntent | null;
+  onIntentHandled?: () => void;
 }) {
   const t = useTranslations("FeedbackBoard");
   const tStatus = useTranslations("PublicFeedback");
   const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
+  const tIssue = useTranslations("Issue");
+  const tPicker = useTranslations("Picker");
   const format = useFormatter();
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -1247,6 +1439,18 @@ function FeedbackDetail({
   const { data, isPending } = useQuery(feedbackDetailOptions(projectId, postId));
 
   const post = data?.post ?? null;
+  const linkableIssues = useMemo(
+    () => issues.filter((issue) => issue.status !== "canceled" && issue.status !== "duplicate"),
+    [issues],
+  );
+  // The posts this one can merge into: neither itself, nor a post already
+  // carried by a ticket, nor spam — absorbing a real post into a discarded
+  // one would bury it behind a tombstone the board no longer shows (same
+  // guard as the AI review).
+  const mergeCandidates = allPosts.filter(
+    (p) => p.id !== postId && !p.issue_id && p.status !== "spam" &&
+      (p.objective_id ?? null) === (post?.objective_id ?? null)
+  );
 
   // describeFeedbackEvent reads members (actors) + issues/projectKey (refs);
   // Objectives resolve objective-change events. `feedbackAuthor` names the
@@ -1340,6 +1544,20 @@ function FeedbackDetail({
     },
     onError: (e: Error) => toast.error(e.message || t("errorGeneric")),
   });
+
+  // A row menu's gesture (FeedbackIntent) opens the same dialog, picker or
+  // confirmation as this pane's own controls, once the post is loaded.
+  useEffect(() => {
+    if (!intent || !post) return;
+    onIntentHandled?.();
+    if (intent.action === "status") {
+      if (intent.status === "declined" || intent.status === "spam") askStatus(intent.status);
+      else patch.mutate({ status: intent.status });
+    } else if (intent.action === "link") setLinkOpen(true);
+    else if (intent.action === "merge") setMergeOpen(true);
+    else setDeleteOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per intent, when the post is there
+  }, [intent, post]);
 
   const saveCategories = useCallback((ids: string[]) =>
     api(`/api/projects/${projectId}/feedback/${postId}/categories`, {
@@ -1490,10 +1708,13 @@ function FeedbackDetail({
                   {t("publishReview")}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
-                <HugeiconsIcon icon={GitMergeIcon} className="size-4" />
-                {t("mergeInto")}
-              </DropdownMenuItem>
+              {/* Nothing to merge into (a lone post): no entry. */}
+              {mergeCandidates.length > 0 && (
+                <DropdownMenuItem onSelect={() => setMergeOpen(true)}>
+                  <HugeiconsIcon icon={GitMergeIcon} className="size-4" />
+                  {t("mergeInto")}
+                </DropdownMenuItem>
+              )}
               {/* Unlink followed the ticket in the file: it is done on the
                   line of the ticket itself, where you see it. */}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
@@ -1592,9 +1813,9 @@ function FeedbackDetail({
 
         {translation && showTranslated ? (
           <div className="flex flex-col gap-2">
-            <h2 className="text-2xl leading-tight font-semibold">{translation.title}</h2>
+            <h2 className="content-selectable text-2xl leading-tight font-semibold">{translation.title}</h2>
             {translation.body ? (
-              <Markdown className="text-sm">{translation.body}</Markdown>
+              <Markdown className="comment-selectable text-sm">{translation.body}</Markdown>
             ) : null}
             <p className="text-xs text-muted-foreground">{t("translatedReadOnly")}</p>
           </div>
@@ -1647,7 +1868,7 @@ function FeedbackDetail({
             </summary>
             {/* ml-1.5 + pl-3: the net falls in the axis of the rafter, and the
                 text takes exactly the margin of the wording above. */}
-            <div className="mt-2 ml-1.5 flex flex-col gap-1.5 border-l-2 border-border/60 pl-3 text-sm">
+            <div className="content-selectable mt-2 ml-1.5 flex flex-col gap-1.5 border-l-2 border-border/60 pl-3 text-sm">
               <p className="font-medium">{post.submitted_title}</p>
               {post.submitted_body ? (
                 <p className="whitespace-pre-wrap text-muted-foreground">
@@ -1953,29 +2174,33 @@ function FeedbackDetail({
       <MergeDialog
         open={mergeOpen}
         onOpenChange={setMergeOpen}
+        postId={postId}
         boardEnabled={boardEnabled}
-        // Neither this return, nor a return already carried by a ticket, nor spam:
-        // absorbing a real return in a discarded post would bury it behind a
-        // tombstone that the board no longer shows (same guard as the AI ​​review).
-        candidates={allPosts.filter(
-          (p) => p.id !== postId && !p.issue_id && p.status !== "spam" &&
-            (p.objective_id ?? null) === (post.objective_id ?? null)
-        )}
+        candidates={mergeCandidates}
         onMerge={(canonicalId) => {
           setMergeOpen(false);
           action.mutate({ path: `${postId}/merge`, body: { canonical_id: canonicalId } });
         }}
       />
-      <LinkIssueDialog
-        projectId={projectId}
-        projectKey={projectKey}
-        open={linkOpen}
-        onOpenChange={setLinkOpen}
-        onLink={(issueId) => {
-          setLinkOpen(false);
-          action.mutate({ path: `${postId}/link`, body: { issue_id: issueId } });
-        }}
-      />
+      {linkOpen && (
+        <IssuePalettePicker
+          scope={`feedback-link:${postId}`}
+          projectId={projectId}
+          projectKey={projectKey}
+          // Canceled and duplicate issues are closed for good: not a place
+          // for a post's public status to follow.
+          issues={linkableIssues}
+          placeholder={t("linkIssuePickerPlaceholder")}
+          category={tIssue("entityPlural")}
+          emptyLabel={tPicker("noResults")}
+          loadingLabel={tCommon("loading")}
+          onPick={(issueId) => {
+            setLinkOpen(false);
+            action.mutate({ path: `${postId}/link`, body: { issue_id: issueId } });
+          }}
+          onClose={() => setLinkOpen(false)}
+        />
+      )}
       {/* Promoting means opening the ticket creation form already
           filled by the return — not make a ticket behind whose back
           click. The return gives what it knows (title, text, categories);
@@ -2077,216 +2302,85 @@ function FeedbackDetail({
 /**
  * Merge this return INTO another.
  *
- * Two steps, and this is deliberate: we choose the parent return, then we confirm
- * while reading it. A merge moves votes and redirects a public URL;
+ * Two steps, and this is deliberate: we choose the parent return in the
+ * palette, then we confirm while reading it. A merge moves votes and redirects a public URL;
  * it unravels, but after the fact, and a click in a list of nearby titles
  * is not a place to be silently wrong.
  */
 function MergeDialog({
   open,
   onOpenChange,
+  postId,
   boardEnabled,
   candidates,
   onMerge,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  postId: string;
   boardEnabled: boolean;
   candidates: TeamFeedbackListItem[];
   onMerge: (canonicalId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
-  const [search, setSearch] = useState("");
+  const tNav = useTranslations("Nav");
   const [confirming, setConfirming] = useState<TeamFeedbackListItem | null>(null);
-  const filtered = candidates.filter((p) =>
-    p.title.toLowerCase().includes(search.trim().toLowerCase())
-  );
+  const handlers = useRef({ onOpenChange });
+  handlers.current = { onOpenChange };
 
-  const close = (next: boolean) => {
-    if (!next) {
-      setSearch("");
-      setConfirming(null);
-    }
-    onOpenChange(next);
-  };
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={close}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HugeiconsIcon icon={GitMergeIcon} className="size-4 text-brand" />
-              {t("mergeDialogTitle")}
-            </DialogTitle>
-            <DialogDescription>{t("mergeDialogDesc")}</DialogDescription>
-          </DialogHeader>
-          <Input
-            autoFocus={allowInputAutoFocus()}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("mergeSearchPlaceholder")}
-          />
-          <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-            {filtered.map((post) => (
-              <button
-                key={post.id}
-                type="button"
-                onClick={() => setConfirming(post)}
-                className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
-              >
-                <span className="min-w-0 truncate">{post.title}</span>
-                {boardEnabled ? (
-                  <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                    ▲ {post.vote_count}
-                  </span>
-                ) : null}
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!confirming} onOpenChange={(next) => !next && setConfirming(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("mergeConfirmTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("mergeConfirmDesc", { title: confirming?.title ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirming(null)}>
-              {tCommon("cancel")}
-            </Button>
-            <Button
-              onClick={() => {
-                const target = confirming;
-                setConfirming(null);
-                if (target) onMerge(target.id);
-              }}
-            >
-              <HugeiconsIcon icon={GitMergeIcon} className="size-4" />
-              {t("merge")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-/** Link to an existing issue: search by title or identifier, the
-    closed issues (canceled/duplicate) are excluded. */
-function LinkIssueDialog({
-  projectId,
-  projectKey,
-  open,
-  onOpenChange,
-  onLink,
-}: {
-  projectId: string;
-  projectKey: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onLink: (issueId: string) => void;
-}) {
-  const t = useTranslations("FeedbackBoard");
-  const { issues } = useIssuesQuery(open ? projectId : null);
-  const [search, setSearch] = useState("");
-
-  const needle = search.trim().toLowerCase();
-  const eligible = issues.filter((issue) => issue.status !== "canceled" && issue.status !== "duplicate");
-  // Work under way first, done and triage last; an exact identifier before
-  // all (MIN-726).
-  const candidates = orderIssuesForSearch(
-    eligible.filter(
-      (issue) =>
-        !needle ||
-        issue.title.toLowerCase().includes(needle) ||
-        issueIdentifier(projectKey, issue.number).toLowerCase().includes(needle)
-    ),
-    (issue) => issue.status,
-    (issue) => isExactIssueQuery(search, issueIdentifier(projectKey, issue.number), issue.number),
-  ).slice(0, 30);
-  // Issues found by meaning (MIN-718), after the text matches and among the
-  // same eligible issues: a feedback post rarely reuses the issue's words.
-  const { ids: semanticIds, pending: semanticPending, answered: semanticAnswered } = useSemanticIssueSearch(search, { projectId, enabled: open });
-  const semantic = orderIssuesForSearch(
-    semanticExtras(
-      semanticIds,
-      new Map(eligible.map((issue) => [issue.id, issue])),
-      new Set(candidates.map((issue) => issue.id)),
-    ),
-    (issue) => issue.status,
-  );
-  const tPicker = useTranslations("Picker");
+  // The parent post is picked in the ⌘K palette (MIN-844), then confirmed.
+  const request = useMemo<PalettePickerRequest | null>(() => {
+    if (!open) return null;
+    return {
+      key: `feedback-merge:${postId}`,
+      placeholder: t("mergePickerPlaceholder"),
+      categories: [{ id: "merge-feedback", label: tNav("feedback") }],
+      items: candidates.map((post) => ({
+        id: `feedback-${post.id}`,
+        title: post.title,
+        icon: <HugeiconsIcon icon={MessageMultiple01Icon} className="size-4" />,
+        contextLabel: boardEnabled ? `▲ ${post.vote_count}` : undefined,
+        filterCategory: "merge-feedback",
+        execute: () => {
+          setConfirming(post);
+          handlers.current.onOpenChange(false);
+        },
+      })),
+      onClose: () => handlers.current.onOpenChange(false),
+    };
+  }, [open, postId, candidates, boardEnabled, t, tNav]);
+  usePalettePicker(request);
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setSearch("");
-        onOpenChange(next);
-      }}
-    >
+    <Dialog open={!!confirming} onOpenChange={(next) => !next && setConfirming(null)}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <HugeiconsIcon icon={Link02Icon} className="size-4 text-brand" />
-            {t("linkToIssue")}
-          </DialogTitle>
-          <DialogDescription>{t("linkIssueDialogDesc")}</DialogDescription>
+          <DialogTitle>{t("mergeConfirmTitle")}</DialogTitle>
+          <DialogDescription>
+            {t("mergeConfirmDesc", { title: confirming?.title ?? "" })}
+          </DialogDescription>
         </DialogHeader>
-        <Input
-          autoFocus={allowInputAutoFocus()}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("linkIssueSearchPlaceholder")}
-        />
-        <div className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-          {candidates.map((issue) => (
-            <button
-              key={issue.id}
-              type="button"
-              onClick={() => onLink(issue.id)}
-              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
-            >
-              <StatusIndicator status={issue.status} className="size-4 shrink-0" />
-              <code className="shrink-0 font-mono text-xs text-muted-foreground">
-                {issueIdentifier(projectKey, issue.number)}
-              </code>
-              <span className="min-w-0 truncate">{issue.title}</span>
-            </button>
-          ))}
-          {semantic.length > 0 && (
-            <>
-              <p className="px-2 pt-2 text-xs font-medium text-muted-foreground">{tPicker("relatedByMeaning")}</p>
-              {semantic.map((issue) => (
-                <button
-                  key={issue.id}
-                  type="button"
-                  onClick={() => onLink(issue.id)}
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted"
-                >
-                  <StatusIndicator status={issue.status} className="size-4 shrink-0" />
-                  <code className="shrink-0 font-mono text-xs text-muted-foreground">
-                    {issueIdentifier(projectKey, issue.number)}
-                  </code>
-                  <span className="min-w-0 truncate">{issue.title}</span>
-                </button>
-              ))}
-            </>
-          )}
-          {semantic.length === 0 && (semanticPending || semanticAnswered) && (
-            <SemanticSearchingHint status={semanticPending ? "searching" : "none"} />
-          )}
-        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setConfirming(null)}>
+            {tCommon("cancel")}
+          </Button>
+          <Button
+            onClick={() => {
+              const target = confirming;
+              setConfirming(null);
+              if (target) onMerge(target.id);
+            }}
+          >
+            <HugeiconsIcon icon={GitMergeIcon} className="size-4" />
+            {t("merge")}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 
 // ── Saisie interne ───────────────────────────────────────────────────────────
 

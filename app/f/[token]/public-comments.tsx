@@ -443,7 +443,7 @@ function PublicCommentRow({
       </div>
       {/* The field accepts plain text, then the message is rendered in markdown.
  Pasted HTML remains text and never becomes an executable node. */}
-      <Markdown className="text-sm" allowRawHtml={false}>
+      <Markdown className="comment-selectable text-sm" allowRawHtml={false}>
         {comment.body}
       </Markdown>
       {onReply && (

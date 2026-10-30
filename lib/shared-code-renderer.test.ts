@@ -167,7 +167,9 @@ describe("PageCodeRenderer", () => {
       "utf8",
     );
 
-    expect(source).toMatch(/<MessageResponse components=\{PAGE_CODE_COMPONENTS\}>/);
+    // The answer's components extend the shared code renderer (mention links aside).
+    expect(source).toMatch(/const ASSISTANT_COMPONENTS = \{ \.\.\.PAGE_CODE_COMPONENTS,/);
+    expect(source).toMatch(/<MessageResponse components=\{ASSISTANT_COMPONENTS\}>/);
   });
 
   it("keeps inline code inline", () => {

@@ -17,8 +17,10 @@
    app/tokens.css untouched, pixel for pixel, with its lavender accent
    (MIN-840). An unknown id, such as the retired `violet-*`, falls back to it.
 
-   Only neutral surfaces, text, borders, focus rings and the primary action
-   move. Status, priority, destructive, project, mention and rich-text colors
+   Only neutral surfaces, text, focus rings and the primary action move.
+   Borders are not set here: app/tokens.css draws them as a light veil of
+   `--foreground`, so each palette tints them with its own text color at the
+   same weight. Only the high-contrast presets draw them heavier. Status, priority, destructive, project, mention and rich-text colors
    keep their meaning in every palette. Values are plain hexadecimal so
    `lib/theme-presets.test.ts` can measure each pair's WCAG contrast: normal
    text 4.5:1, focus ring 3:1, and 7:1 text with 3:1 borders for the
@@ -138,7 +140,6 @@ html:not(.dark)[data-theme-light="solarized-light"] {
   --muted-foreground: #4f646b;
   --accent: #e9e2cc;
   --accent-foreground: #073642;
-  --border: #e2dbc4;
   --input: #e2dbc4;
   --ring: #268bd2;
   --sidebar: #eee8d5;
@@ -173,7 +174,6 @@ html:not(.dark)[data-theme-light="catppuccin-latte"] {
   --muted-foreground: #5c5f77;
   --accent: #dce0e8;
   --accent-foreground: #4c4f69;
-  --border: #ccd0da;
   --input: #ccd0da;
   --ring: #1e66f5;
   --sidebar: #e6e9ef;
@@ -208,7 +208,6 @@ html:not(.dark)[data-theme-light="nord-light"] {
   --muted-foreground: #4c566a;
   --accent: #d8dee9;
   --accent-foreground: #2e3440;
-  --border: #d8dee9;
   --input: #d8dee9;
   --ring: #5e81ac;
   --sidebar: #e5e9f0;
@@ -280,7 +279,6 @@ html.dark[data-theme-dark="solarized-dark"] {
   --muted-foreground: #93a1a1;
   --accent: #0d4351;
   --accent-foreground: #eee8d5;
-  --border: #164651;
   --input: #1a4c58;
   --ring: #268bd2;
   --sidebar: #073642;
@@ -315,7 +313,6 @@ html.dark[data-theme-dark="catppuccin-mocha"] {
   --muted-foreground: #a6adc8;
   --accent: #313244;
   --accent-foreground: #cdd6f4;
-  --border: #313244;
   --input: #45475a;
   --ring: #b4befe;
   --sidebar: #181825;
@@ -350,7 +347,6 @@ html.dark[data-theme-dark="nord-dark"] {
   --muted-foreground: #b4bccb;
   --accent: #434c5e;
   --accent-foreground: #eceff4;
-  --border: #3b4252;
   --input: #434c5e;
   --ring: #88c0d0;
   --sidebar: #272c36;
@@ -550,12 +546,13 @@ html.dark[data-theme-dark="high-contrast-dark"] {
   background-color: rgb(0 0 0 / 55%);
 }
 
-/* Translucent borders (`border-border/60` on issue cards…) lose the contrast
-   the palette gives `--border`: draw them at full strength. */
+/* Translucent borders (`border-border/60`, an issue card's
+   `border-foreground/10`…) lose the contrast the palette gives `--border`:
+   draw them at full strength. */
 :is(
   html:not(.dark)[data-theme-light="high-contrast-light"],
   html.dark[data-theme-dark="high-contrast-dark"]
-) [class*="border-border/"] {
+) :is([class*="border-border/"], [data-card-surface]) {
   border-color: var(--border);
 }
 

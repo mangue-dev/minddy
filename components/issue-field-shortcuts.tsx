@@ -32,6 +32,7 @@ import { useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
 import { useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
 import { CommandAnchor } from "@/components/command-anchor";
+import { useMountedWhileClosing } from "@/components/ui/overlay-freeze";
 import { PickerCreateRow } from "@/components/search-select";
 import {
   useCategoryCreateOption,
@@ -311,8 +312,15 @@ export function IssueShortcutMenu({
     if (!state) setQuery("");
   }, [state]);
 
-  if (!state) return null;
-  const { field, position } = state;
+  // Closed, the picker stays on its last field and point for its exit
+  // animation (components/ui/overlay-freeze.tsx), then unmounts.
+  const lastState = React.useRef(state);
+  if (state) lastState.current = state;
+  const mounted = useMountedWhileClosing(state !== null);
+  const shown = state ?? lastState.current;
+  if (!mounted || !shown) return null;
+  const { field } = shown;
+  const position = state ? shown.position : null;
 
   const all = <T,>(read: (target: Issue) => T, value: T) =>
     checked(allTargetsMatch(writeTargets, read, value));
@@ -331,10 +339,10 @@ export function IssueShortcutMenu({
     return (
       <DateTimePicker
         variant="anchored"
-        open
+        open={state !== null}
         stopPropagation
         onOpenChange={(o) => !o && onClose()}
-        anchor={position}
+        anchor={shown.position}
         value={sharedValue(writeTargets, (target) => target.due_date)}
         onChange={(due_date) => onUpdate({ due_date })}
         recurrence={sharedValue(writeTargets, (target) => target.recurrence)}
@@ -543,11 +551,13 @@ export function RelationTypePicker({
 }) {
   const t = useTranslations("Relations");
   const tBulk = useTranslations("BulkActions");
-  if (!position) return null;
+  // No early return when closed: CommandAnchor keeps the menu through its exit.
   return (
     <CommandAnchor position={position} onClose={onClose}>
+      {/* No "Relations" eyebrow: the types name themselves. A selection
+          still says how many tickets the choice applies to. */}
       <CommandGroup
-        heading={targetCount > 1 ? tBulk("selected", { count: targetCount }) : t("relations")}
+        heading={targetCount > 1 ? tBulk("selected", { count: targetCount }) : undefined}
       >
         {[...RELATION_TYPES, ...hierarchy].map((type) => (
           <CommandItem

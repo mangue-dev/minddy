@@ -6,6 +6,7 @@ import {
   parseWindowMaterialFlag,
   parseWindowMaterialPreference,
   windowMaterialFlag,
+  windowMaterialForWindow,
   windowMaterialOptions,
 } from "./window-material";
 
@@ -63,5 +64,15 @@ describe("window material preference and flag", () => {
     expect(isDesktopWindowMaterialState({ supported: true, enabled: true, reducedTransparency: false, kind: "vibrancy" })).toBe(true);
     expect(isDesktopWindowMaterialState({ supported: true, enabled: true, reducedTransparency: false, kind: "mica" })).toBe(false);
     expect(isDesktopWindowMaterialState("vibrancy")).toBe(false);
+  });
+});
+
+describe("windowMaterialForWindow", () => {
+  it("keeps a full-screen window opaque and gives the material back once windowed", () => {
+    const state = desktopWindowMaterial("darwin", "25.0.0", on);
+    expect(windowMaterialForWindow(state, true)).toEqual({ ...state, kind: "none" });
+    expect(windowMaterialForWindow(state, false)).toBe(state);
+    const off = desktopWindowMaterial("darwin", "25.0.0", { enabled: false, reducedTransparency: false });
+    expect(windowMaterialForWindow(off, true)).toBe(off);
   });
 });

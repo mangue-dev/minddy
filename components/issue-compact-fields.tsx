@@ -7,11 +7,11 @@
 // issue-property-fields.tsx.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { useId, useRef } from "react";
+import { useId } from "react";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 import {
@@ -31,9 +31,13 @@ import {
   StatusIndicator,
   PriorityIndicator,
   EffortIndicator,
+  ObjectiveStatusIndicator,
+  RelationIcon,
 } from "@/components/issue-indicators";
+import type { RelationMenuKind } from "@/lib/issue-hierarchy";
+import { IssueActionsMenu, type ContextMenuAction } from "@/components/issue-context-menu";
 import { Dot } from "@/components/issue-property-fields";
-import { OBJECTIVE_PILL_TRIGGER, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
+import { OBJECTIVE_PILL_TRIGGER, ObjectiveName, objectivePickerOption, ObjectivePill } from "@/components/objective-label";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import {
   useCategoryCreateOption,
@@ -48,19 +52,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 
 // On the finger, the row of options is made of targets of 30 px, below the threshold of the
 // comfortable: under `sm` each trigger gains a few guard pixels.
@@ -444,127 +436,123 @@ export interface SmartFillManualFields {
    */
   onTitleRequest?: () => void;
   onTitleFocus?: () => void;
+  /**
+   * The relation types Smart Fill would otherwise link: choosing one opens
+   * the picker on its targets. Given only while Smart Fill links related
+   * issues; `onRequest` runs once the menu has closed, so the picker keeps
+   * the focus.
+   */
+  relations?: { kinds: readonly RelationMenuKind[]; onRequest: (kind: RelationMenuKind) => void };
 }
 
 /**
- * One submenu per property Smart Fill would fill. Only real values are
- * offered: "no priority", "not set" and "no objective" are exactly what Smart
- * Fill fills, so choosing them here would change nothing. Clearing a value
- * stays in the property's own picker once it is back in the row.
+ * One submenu per property Smart Fill would fill, as the actions of a
+ * searchable menu (the issue card's): typing finds a value inside the
+ * submenus. Only real values are offered: "no priority", "not set" and "no
+ * objective" are exactly what Smart Fill fills, so choosing them here would
+ * change nothing. Clearing a value stays in the property's own picker once it
+ * is back in the row.
  */
-function SmartFillManualMenu({
-  onTitleRequest,
-  priority,
-  onPriorityChange,
-  effort,
-  onEffortChange,
-  categories,
-  categoryIds,
-  onCategoryIdsChange,
-  objectives,
-  objectiveId,
-  onObjectiveChange,
-}: Omit<SmartFillManualFields, "onTitleFocus">) {
-  const t = useTranslations("IssueUI");
+function useSmartFillManualActions(manual: SmartFillManualFields | undefined): ContextMenuAction[] {
   const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
-  const orderedObjectives = useOrderedObjectives(objectives);
-  return (
-    <>
-      <DropdownMenuLabel>{t("smartFillManualLabel")}</DropdownMenuLabel>
-      {onTitleRequest && (
-        <DropdownMenuItem onSelect={onTitleRequest}>
-          <HugeiconsIcon icon={Heading01Icon} className="size-4 text-muted-foreground" />
-          {tField("title")}
-        </DropdownMenuItem>
-      )}
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <PriorityIndicator priority={priority} className="size-4" />
-          {tField("priority")}
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="w-48">
-          <DropdownMenuRadioGroup
-            value={priority}
-            onValueChange={(v) => onPriorityChange(v as IssuePriority)}
-          >
-            {PRIORITIES.filter((p) => p.value !== "none").map((p) => (
-              <DropdownMenuRadioItem key={p.value} value={p.value}>
-                <PriorityIndicator priority={p.value} className="size-4" />
-                {tPriority(p.value)}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
-          {tField("effort")}
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="w-48">
-          <DropdownMenuRadioGroup
-            value={effort ?? ""}
-            onValueChange={(v) => onEffortChange(v as IssueEffort)}
-          >
-            {EFFORTS.map((e) => (
-              <DropdownMenuRadioItem key={e.value} value={e.value}>
-                <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
-                {e.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <HugeiconsIcon icon={Tag01Icon} className="size-4 text-muted-foreground" />
-          {tField("categories")}
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="w-56">
-          {categories.length === 0 ? (
-            <DropdownMenuItem disabled>{t("noCategoriesHint")}</DropdownMenuItem>
-          ) : (
-            categories.map((c) => (
-              <DropdownMenuCheckboxItem
-                key={c.id}
-                checked={categoryIds.includes(c.id)}
-                // Several categories can apply: the menu stays open.
-                onSelect={(event) => event.preventDefault()}
-                onCheckedChange={(checked) =>
-                  onCategoryIdsChange(
-                    checked
-                      ? [...categoryIds, c.id]
-                      : categoryIds.filter((id) => id !== c.id),
-                  )
-                }
-              >
-                <Dot color={c.color} />
-                <span className="min-w-0 truncate">{c.name}</span>
-              </DropdownMenuCheckboxItem>
-            ))
-          )}
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-      {orderedObjectives.length > 0 && (
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={Target01Icon} className="size-4 text-muted-foreground" />
-            {tField("objective")}
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-64">
-            <DropdownMenuRadioGroup value={objectiveId ?? ""} onValueChange={onObjectiveChange}>
-              {orderedObjectives.map((o) => (
-                <DropdownMenuRadioItem key={o.id} value={o.id}>
-                  <ObjectivePill objective={o} />
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-      )}
-    </>
+  const tRelations = useTranslations("Relations");
+  const t = useTranslations("IssueUI");
+  const orderedObjectives = useOrderedObjectives(manual?.objectives ?? []);
+  if (!manual) return [];
+  const actions: ContextMenuAction[] = [];
+  if (manual.onTitleRequest) {
+    actions.push({
+      id: "smart-fill-title",
+      label: tField("title"),
+      icon: <HugeiconsIcon icon={Heading01Icon} className="size-4 text-muted-foreground" />,
+      // The menu has closed: the caret goes to the title field it brought back.
+      transfersFocus: true,
+      onSelect: () => {
+        manual.onTitleRequest?.();
+        requestAnimationFrame(() => manual.onTitleFocus?.());
+      },
+    });
+  }
+  actions.push(
+    {
+      id: "smart-fill-priority",
+      label: tField("priority"),
+      icon: <PriorityIndicator priority={manual.priority} className="size-4" />,
+      children: PRIORITIES.filter((p) => p.value !== "none").map((p) => ({
+        id: `smart-fill-priority-${p.value}`,
+        label: tPriority(p.value),
+        icon: <PriorityIndicator priority={p.value} className="size-4" />,
+        checked: manual.priority === p.value,
+        onSelect: () => manual.onPriorityChange(p.value),
+      })),
+    },
+    {
+      id: "smart-fill-effort",
+      label: tField("effort"),
+      icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
+      children: EFFORTS.map((e) => ({
+        id: `smart-fill-effort-${e.value}`,
+        label: e.label,
+        icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
+        checked: manual.effort === e.value,
+        onSelect: () => manual.onEffortChange(e.value),
+      })),
+    },
+    {
+      id: "smart-fill-categories",
+      label: tField("categories"),
+      icon: <HugeiconsIcon icon={Tag01Icon} className="size-4 text-muted-foreground" />,
+      children: manual.categories.length === 0
+        ? [{ id: "smart-fill-no-categories", label: t("noCategoriesHint"), disabled: true }]
+        : manual.categories.map((c) => {
+            const on = manual.categoryIds.includes(c.id);
+            return {
+              id: `smart-fill-category-${c.id}`,
+              label: c.name,
+              icon: <Dot color={c.color} />,
+              checked: on,
+              // Several categories can apply: the menu stays open.
+              keepOpen: true,
+              onSelect: () => manual.onCategoryIdsChange(on
+                ? manual.categoryIds.filter((id) => id !== c.id)
+                : [...manual.categoryIds, c.id]),
+            };
+          }),
+    },
   );
+  if (orderedObjectives.length > 0) {
+    actions.push({
+      id: "smart-fill-objective",
+      label: tField("objective"),
+      icon: <HugeiconsIcon icon={Target01Icon} className="size-4 text-muted-foreground" />,
+      children: orderedObjectives.map((o) => ({
+        id: `smart-fill-objective-${o.id}`,
+        label: o.name,
+        labelNode: <ObjectiveName objective={o} />,
+        icon: <ObjectiveStatusIndicator status={o.status} className="size-4" />,
+        checked: manual.objectiveId === o.id,
+        onSelect: () => manual.onObjectiveChange(o.id),
+      })),
+    });
+  }
+  const relations = manual.relations;
+  if (relations && relations.kinds.length > 0) {
+    actions.push({
+      id: "smart-fill-relations",
+      label: tRelations("relations"),
+      icon: <HugeiconsIcon icon={Link02Icon} className="size-4 text-muted-foreground" />,
+      children: relations.kinds.map((kind) => ({
+        id: `smart-fill-relation-${kind}`,
+        label: tRelations(kind),
+        icon: <RelationIcon relation={kind} className="size-4" />,
+        // The palette opens on this type's targets once the menu has closed.
+        transfersFocus: true,
+        onSelect: () => relations.onRequest(kind),
+      })),
+    });
+  }
+  return actions;
 }
 
 /**
@@ -589,44 +577,18 @@ export function SmartFillCompact({
 }) {
   const t = useTranslations("IssueUI");
   const id = useId();
-  /** Title was chosen: the closing menu hands the caret to the title field. */
-  const titleChosenRef = useRef(false);
-  const menu = manual && (
-    <DropdownMenuContent
-      align="end"
-      className="w-52"
-      onCloseAutoFocus={(event) => {
-        if (!titleChosenRef.current) return;
-        titleChosenRef.current = false;
-        event.preventDefault();
-        manual.onTitleFocus?.();
-      }}
-    >
-      <SmartFillManualMenu
-        {...manual}
-        onTitleRequest={
-          manual.onTitleRequest &&
-          (() => {
-            titleChosenRef.current = true;
-            manual.onTitleRequest?.();
-          })
-        }
-      />
-    </DropdownMenuContent>
+  const actions = useSmartFillManualActions(manual);
+  const menu = (trigger: React.ReactNode) => (
+    <IssueActionsMenu trigger={trigger} actions={actions} align="end" searchable />
   );
   if (fullWidth) return <div className="creation-smart-fill">
     <label htmlFor={id} className="flex min-w-0 flex-1 items-center gap-2 text-sm">
       <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />{t("smartFillChip")}
     </label>
-    {menu && (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button type="button" aria-label={t("smartFillManualAria")} className={BARE}>
-            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
-          </button>
-        </DropdownMenuTrigger>
-        {menu}
-      </DropdownMenu>
+    {manual && menu(
+      <button type="button" aria-label={t("smartFillManualAria")} className={BARE}>
+        <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
+      </button>,
     )}
     <Switch id={id} checked={value} onCheckedChange={onChange} />
   </div>;
@@ -641,7 +603,7 @@ export function SmartFillCompact({
           type="button"
           aria-pressed={value}
           onClick={() => onChange(!value)}
-          className={cn(SMART_FILL_PILL, tint, menu && "rounded-r-none pr-2")}
+          className={cn(SMART_FILL_PILL, tint, manual && "rounded-r-none pr-2")}
         >
           <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />
           <span>{t("smartFillChip")}</span>
@@ -654,27 +616,24 @@ export function SmartFillCompact({
       </TooltipContent>
     </Tooltip>
   );
-  if (!menu) return toggle;
+  if (!manual) return toggle;
   return (
     <div data-slot="smart-fill-split" className="inline-flex gap-px">
       {toggle}
-      <DropdownMenu>
-        <Tooltip>
+      <Tooltip>
+        {menu(
           <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("smartFillManualAria")}
-                className={cn(SMART_FILL_PILL, tint, "rounded-l-none px-2")}
-              >
-                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-          </TooltipTrigger>
-          <TooltipContent>{t("smartFillManualAria")}</TooltipContent>
-        </Tooltip>
-        {menu}
-      </DropdownMenu>
+            <button
+              type="button"
+              aria-label={t("smartFillManualAria")}
+              className={cn(SMART_FILL_PILL, tint, "rounded-l-none px-2")}
+            >
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+            </button>
+          </TooltipTrigger>,
+        )}
+        <TooltipContent>{t("smartFillManualAria")}</TooltipContent>
+      </Tooltip>
     </div>
   );
 }

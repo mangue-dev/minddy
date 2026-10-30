@@ -9,7 +9,10 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, CheckIcon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -57,7 +60,8 @@ import { CommentEditor, extractMentions } from "@/components/editor/comment-edit
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
-import { SearchSelect, type PickerOption } from "@/components/search-select";
+import { IssuePalettePicker } from "@/components/issue-palette-picker";
+import { useIssuePropertyMenuActions } from "@/components/issue-property-menu-actions";
 import { addCommentApi } from "@/lib/comments-api";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -72,7 +76,6 @@ import { resolveRelations } from "@/lib/relation-constants";
 import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import { issueIdentifier } from "@/lib/issue-constants";
-import { issueTierKeyword, orderIssuesForSearch } from "@/lib/issue-search-order";
 import {
   useAssistantContext,
   useAssistantPanelActions,
@@ -93,7 +96,12 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const t = useTranslations("Triage");
   const tField = useTranslations("Field");
   const tIssueUI = useTranslations("IssueUI");
+  const tAction = useTranslations("CommandPaletteActions");
+  const tPr = useTranslations("PullRequests");
+  const propertyActions = useIssuePropertyMenuActions();
   const tCommon = useTranslations("Common");
+  const tIssue = useTranslations("Issue");
+  const tPicker = useTranslations("Picker");
   const format = useFormatter();
   // Mounts with the page: warm the deferred editor chunk once painted.
   useIdleDocumentEditorPreload();
@@ -131,8 +139,11 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
    * once per letter — and we filter precisely to SEARCH for one.
    */
   const visibleIssues = useMemo(() => {
+    // A search looks through every triage ticket, whatever the property
+    // filters: they narrow the resting list, the query finds anything.
+    const searching = query.trim() !== "";
     return triageIssues.filter((i) =>
-      matchesCollectionFilters(i, properties, user?.id ?? null) && matchesFilter(query, [
+      (searching || matchesCollectionFilters(i, properties, user?.id ?? null)) && matchesFilter(query, [
         i.title,
         i.description,
         project ? issueIdentifier(project.key, i.number) : null,
@@ -357,24 +368,15 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // Memoized: the picker options used to be rebuilt for EVERY issue on EVERY
   // render (each title keystroke, each selection change), mapping the whole
   // project into JSX-bearing options with the picker closed.
-  const duplicateOptions: PickerOption[] = useMemo(() => {
-    if (!selected || !project) return [];
-    // Work under way first, triage and closed issues last (MIN-726).
-    return orderIssuesForSearch(
-      issues.filter((i) => i.id !== selected.id && i.status !== "duplicate"),
-      (i) => i.status,
-    )
-      .map((i) => ({
-        value: i.id,
-        label: i.title,
-        keywords: [issueIdentifier(project.key, i.number), issueTierKeyword(i.status)],
-        icon: (
-          <span className="font-mono text-xs text-muted-foreground">
-            {issueIdentifier(project.key, i.number)}
-          </span>
-        ),
-      }));
-  }, [selected, issues, project?.key]);
+  // "Mark as duplicate" picks the original in the ⌘K palette (MIN-844), for
+  // the open issue or for a row's right-click menu.
+  const [duplicateTarget, setDuplicateTarget] = useState<Issue | null>(null);
+  const duplicateCandidates = useMemo(
+    () => (duplicateTarget ? issues.filter((i) => i.id !== duplicateTarget.id && i.status !== "duplicate") : []),
+    [duplicateTarget, issues],
+  );
+  // The issue a row's right-click menu moves to the trash, once confirmed.
+  const [trashTarget, setTrashTarget] = useState<Issue | null>(null);
 
   if (projectsLoading && !project) {
     return (
@@ -455,14 +457,82 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // (MIN-548 review). No button: the sorting fills by itself, it's not a
   // place where you create.
 
+  /**
+   * The right-click menu of a triage row, built from the row under the
+   * pointer: the triage decisions (accept, decline, duplicate), the
+   * identifier, and the trash. Readers copy the identifier only.
+   */
+  const itemContextActions = (target: Element): ContextMenuAction[] => {
+    const id = target.closest<HTMLElement>("[data-triage-issue-id]")?.dataset.triageIssueId;
+    const issue = id ? triageIssues.find((i) => i.id === id) : undefined;
+    if (!issue) return [];
+    const identifier = issueIdentifier(project.key, issue.number);
+    const copy: ContextMenuAction = {
+      id: "triage-copy-identifier",
+      label: tAction("copyIdentifier", { identifier }),
+      icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+      onSelect: () => {
+        void navigator.clipboard.writeText(identifier).then(
+          () => toast.success(identifier),
+          () => toast.error(tPr("copyFailed")),
+        );
+      },
+    };
+    // A browsed list has no pane for the confirmations: identifier only.
+    if (readOnly || browse) return [copy];
+    return [
+      {
+        id: "triage-accept",
+        label: t("accept"),
+        icon: <HugeiconsIcon icon={CheckIcon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: () => openConfirm("accept", issue),
+      },
+      {
+        id: "triage-decline",
+        label: t("decline"),
+        icon: <HugeiconsIcon icon={Cancel01Icon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: () => openConfirm("decline", issue),
+      },
+      {
+        id: "triage-duplicate",
+        label: t("markDuplicate"),
+        icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+        transfersFocus: true,
+        onSelect: () => setDuplicateTarget(issue),
+      },
+      // The fields worth setting before the decision, written at once.
+      ...propertyActions({
+        issue,
+        members,
+        categories,
+        objectives,
+        onPatch: (updates) => void patch(issue, updates),
+        onSetCategories: (ids) => void setCategories(issue.id, ids),
+      }).map((action, index) => (index === 0 ? { ...action, separatorBefore: true } : action)),
+      { ...copy, separatorBefore: true },
+      {
+        id: "triage-trash",
+        label: tCommon("moveToTrash"),
+        icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+        variant: "destructive",
+        separatorBefore: true,
+        transfersFocus: true,
+        onSelect: () => setTrashTarget(issue),
+      },
+    ];
+  };
+
   const sidebar = (
       <CollectionSidebar browse={browse}
+        itemContextActions={itemContextActions}
         title={t("title")}
         hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: visibleIssues.length }),
+          placeholder: t("filterPlaceholder", { count: triageIssues.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={<CollectionFilterMenu filters={properties} onChange={setProperties} members={members}
@@ -542,24 +612,10 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
  — the gesture that advances the ticket is always on the right. */}
               {!readOnly && (
               <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                <SearchSelect
-                  value={null}
-                  onChange={(id) => {
-                    if (id) void markDuplicate(selected, id);
-                  }}
-                  options={duplicateOptions}
-                  semanticIssues={{
-                    projectId,
-                    statusOf: (id) => issues.find((candidate) => candidate.id === id)?.status,
-                  }}
-                  align="end"
-                  trigger={
-                    <Button variant="outline" size="sm">
-                      <HugeiconsIcon icon={Copy01Icon} className="text-muted-foreground" />
-                      {t("markDuplicate")}
-                    </Button>
-                  }
-                />
+                <Button variant="outline" size="sm" onClick={() => setDuplicateTarget(selected)}>
+                  <HugeiconsIcon icon={Copy01Icon} className="text-muted-foreground" />
+                  {t("markDuplicate")}
+                </Button>
                 <Button
                   variant="destructive"
                   size="sm"
@@ -755,6 +811,40 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
         )}
       </div>
 
+      {duplicateTarget && (
+        <IssuePalettePicker
+          scope={`triage-duplicate:${duplicateTarget.id}`}
+          projectId={projectId}
+          projectKey={project.key}
+          issues={duplicateCandidates}
+          placeholder={t("duplicatePickerPlaceholder")}
+          category={tIssue("entityPlural")}
+          emptyLabel={tPicker("noResults")}
+          loadingLabel={tCommon("loading")}
+          onPick={(id) => {
+            const target = duplicateTarget;
+            setDuplicateTarget(null);
+            void markDuplicate(target, id);
+          }}
+          onClose={() => setDuplicateTarget(null)}
+        />
+      )}
+      <ConfirmDeleteDialog
+        open={trashTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setTrashTarget(null);
+        }}
+        title={tIssueUI("deleteDialogTitle", { title: trashTarget?.title ?? "" })}
+        description={tIssueUI("deleteDialogDescription", { days: TRASH_RETENTION_DAYS })}
+        confirmLabel={tCommon("moveToTrash")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={async () => {
+          if (!trashTarget) return;
+          await deleteIssue(trashTarget.id);
+          toast.success(tIssueUI("issueDeletedToast"));
+        }}
+      />
+
       {/* Accept / decline confirmation, with an optional message posted as a comment */}
       <Dialog
         open={!!confirming}
@@ -880,6 +970,7 @@ function TriageRow({
       ref={askNumoRef}
       type="button"
       data-navigation-href={`/projects/${issue.project_id}/triage?issue=${encodeURIComponent(issue.id)}`}
+      data-triage-issue-id={issue.id}
       data-comment-target={commentTarget("issue", issue.id)}
       data-sidebar-filter-result
       aria-current={open ? "true" : undefined}

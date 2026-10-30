@@ -27,15 +27,16 @@ import { useMembersQuery } from "@/lib/use-members-query";
 import { useCategoriesQuery } from "@/lib/use-categories-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { createIssueApi } from "@/lib/issues-api";
-import { createObjectiveApi } from "@/lib/objectives-api";
+import { createObjectiveOptimistic } from "@/lib/optimistic-objective";
 import {
+  findCachedIssue,
   insertIssueEverywhere,
-  insertObjectiveEverywhere,
   issueWrites,
   mergeServerIssue,
   removeIssueEverywhere,
 } from "@/lib/optimistic/issue-writes";
 import { createIssueDeferred } from "@/lib/create-issue-deferred";
+import { issueIdentifier } from "@/lib/issue-constants";
 import { buildOptimisticIssue } from "@/lib/optimistic-issue";
 import { useUndoHistory } from "@/lib/undo/undo-context";
 import { snapshotIssue } from "@/lib/undo/undo-core";
@@ -78,6 +79,8 @@ interface OpenIssueOptions {
   status?: IssueStatus;
   objectiveId?: string | null;
   assigneeId?: string | null;
+  /** Prefills a "sub-issue of" relation to this issue, shown in the form. */
+  parentId?: string | null;
   /** Opens the already open microphone dialog (global shortcut ⌘⇧D). */
   dictate?: boolean;
   /** Reopens this saved draft of `projectId` in the form (drafts tray, MIN-753). */
@@ -179,7 +182,8 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     status?: IssueStatus;
     objectiveId: string | null;
     assigneeId: string | null;
-  }>({ objectiveId: null, assigneeId: null });
+    parentId: string | null;
+  }>({ objectiveId: null, assigneeId: null, parentId: null });
   const [objectiveOpen, setObjectiveOpen] = useState(false);
   const [objectiveMounted, setObjectiveMounted] = useState(false);
   // Pre-filled name + recipient of the created objective, set by quick addition
@@ -241,30 +245,31 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     [queryClient, user, record]
   );
 
+  // Optimistic: the objective is in the project cache and the cross-project
+  // board as soon as the dialog closes (lib/optimistic-objective.ts).
   const createObjectiveGlobal = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
-      const objective = await createObjectiveApi(projectId, input);
-      // Placed in the two caches that read it (project cache + board
-      // cross-project) before invalidating: a ticket linked to this objective in the
-      // stride displays its name and color immediately.
-      insertObjectiveEverywhere(queryClient, projectId, objective);
-      void queryClient.invalidateQueries({ queryKey: ["objectives", projectId] });
+      const { objective, persisted } = createObjectiveOptimistic(queryClient, projectId, input);
+      // A refusal is reported by the creation itself.
+      persisted.catch(() => undefined);
       return objective;
     },
     [queryClient]
   );
 
   /** Creation from the dialog, in the targeted project: this is what the quick addition
- * of a picker is waiting for to link the objective to his ticket. */
+ * of a picker is waiting for to link the objective to his ticket. The link
+ * waits for the server row, which the ticket's reference requires. */
   const createObjectiveForTarget = useCallback(
     async (projectId: string, input: CreateObjectiveInput) => {
-      const objective = await createObjectiveGlobal(projectId, input);
+      const { objective, persisted } = createObjectiveOptimistic(queryClient, projectId, input);
       const notify = objectiveCreatedRef.current;
       objectiveCreatedRef.current = null;
-      notify?.(objective);
+      if (notify) persisted.then(notify, () => undefined);
+      else persisted.catch(() => undefined);
       return objective;
     },
-    [createObjectiveGlobal]
+    [queryClient]
   );
 
   const resolveTarget = useCallback(
@@ -324,6 +329,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
         status: opts?.status,
         objectiveId,
         assigneeId: opts?.assigneeId ?? null,
+        parentId: opts?.parentId ?? null,
       });
       setIssueDictate(opts?.dictate === true);
       setIssueDraftId(opts?.draftId ?? null);
@@ -332,6 +338,14 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     },
     [resolveTarget]
   );
+
+  // The pill resolves the parent from the dialog's issues; this label only
+  // stands in while they load.
+  const parentRelationLabel = (projectId: string, issueId: string): string => {
+    const parent = findCachedIssue(queryClient, projectId, issueId);
+    const key = allProjectsRef.current.find((p) => p.id === projectId)?.key;
+    return parent ? `${key ? issueIdentifier(key, parent.number) : `#${parent.number}`} ${parent.title}` : "";
+  };
 
   const openCreateObjective = useCallback(
     (opts?: OpenObjectiveOptions) => {
@@ -445,6 +459,10 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           initialStatus={issuePresets.status}
           initialObjectiveId={issuePresets.objectiveId}
           initialAssigneeId={issuePresets.assigneeId}
+          initialSubIssueOf={issuePresets.parentId ? {
+            id: issuePresets.parentId,
+            label: parentRelationLabel(target, issuePresets.parentId),
+          } : null}
           autoDictate={issueDictate}
           initialDraftId={issueDraftId}
         />

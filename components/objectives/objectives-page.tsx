@@ -3,8 +3,15 @@
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, FilterIcon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Delete02Icon, FilterIcon, Target01Icon, TaskEdit01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
+import { useCreateOptional } from "@/lib/create-context";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { OBJECTIVE_TEXT, objectiveTextStyle } from "@/components/objective-label";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAppRouter } from "@/lib/use-app-router";
 import dynamic from "next/dynamic";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
@@ -42,7 +49,7 @@ import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/second
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
-import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
+import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
@@ -193,6 +200,15 @@ function ObjectiveFilterMenu({
   );
 }
 
+/** A color in a menu row: a dot centered in the 16px icon slot. */
+function ColorSwatch({ color }: { color: string }) {
+  return (
+    <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden>
+      <span className="size-3 rounded-full" style={{ backgroundColor: color }} />
+    </span>
+  );
+}
+
 /**
  * One row of the column — same template as sort, returns and pull
  * requests: a rounded pellet in an 8 px gutter. What the line
@@ -222,20 +238,18 @@ function ObjectiveRow({
       data-sidebar-filter-result
       data-navigation-href={`/projects/${projectId}/objectives?open=${encodeURIComponent(objective.id)}`}
       data-comment-target={commentTarget("objective", objective.id)}
+      data-objective-id={objective.id}
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
       className={cn(
         "flex w-full flex-col gap-1.5 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-        selected ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60"
+        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <span
-          className="size-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+      {/* Status, then the name in the objective's color (MIN-785). */}
+      <div className="flex min-w-0 items-center gap-2" style={objectiveTextStyle(objective.color)}>
+        <ObjectiveStatusIndicator status={status.value} className="size-4 shrink-0" />
+        <span className={cn("min-w-0 flex-1 truncate text-sm font-medium", OBJECTIVE_TEXT)}>
           {objective.name}
         </span>
         {lead && (
@@ -246,8 +260,7 @@ function ObjectiveRow({
           />
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <ObjectiveStatusIndicator status={status.value} className="size-3.5" />
+      <div className="flex items-center gap-2 pl-6">
         <span className="shrink-0 text-xs text-muted-foreground">
           {tStatus(status.value)}
         </span>
@@ -261,13 +274,21 @@ function ObjectiveRow({
   );
 }
 
-function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: string; browse?: SidebarBrowseTarget } = {}) {
+function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
+  projectId?: string;
+  browse?: SidebarBrowseTarget;
+  /** The project board of one objective mounts the list as its sidebar: the
+      board's objective is the highlighted row, and a row opens its board. */
+  board?: { objectiveId: string; onOpen: (objectiveId: string) => void };
+} = {}) {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
   const tSeed = useTranslations("Seed");
   const { projectId: routeProjectId, pathname: livePathname, searchParams } = useAppTabRoute();
   const projectId = browseProjectId ?? routeProjectId!;
-  const pathname = browse ? `/projects/${projectId}/objectives` : livePathname;
+  // The list alone (a mobile browse, a board's sidebar) owns no address.
+  const listOnly = !!browse || !!board;
+  const pathname = listOnly ? `/projects/${projectId}/objectives` : livePathname;
   const active = useAppTabActive();
   const navigation = useOptionalAppTabNavigation();
   const consumeSelection = useCallback(() => {
@@ -276,8 +297,8 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       window.history.replaceState(null, "", pathname);
     }
   }, [active, navigation, pathname]);
-  const newParam = browse ? null : searchParams.get("new");
-  const openParam = browse ? null : searchParams.get("open");
+  const newParam = listOnly ? null : searchParams.get("new");
+  const openParam = listOnly ? null : searchParams.get("open");
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -286,6 +307,115 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 
   const { objectives, loading, createObjective, updateObjective, deleteObjective } =
     useObjectivesQuery(projectId);
+  const tStatus = useTranslations("ObjectiveStatus");
+  const tIssue = useTranslations("Issue");
+  const tNav = useTranslations("Nav");
+  const tColors = useTranslations("Categories.colors");
+  const colorLabel = (hex: string) => {
+    const name = tColors(CATEGORY_COLOR_NAMES[hex]);
+    return name.charAt(0).toLocaleUpperCase() + name.slice(1);
+  };
+  const create = useCreateOptional();
+  const router = useAppRouter();
+  // The objective a row's right-click menu moves to the trash, once confirmed.
+  const [trashTarget, setTrashTarget] = useState<Objective | null>(null);
+
+  /**
+   * The right-click menu of an objective row, built from the row under the
+   * pointer: its status, its tickets on the board, and the trash. Readers get
+   * the board only.
+   */
+  const itemContextActions = (target: Element): ContextMenuAction[] => {
+    const id = target.closest<HTMLElement>("[data-objective-id]")?.dataset.objectiveId;
+    const objective = id ? objectives.find((o) => o.id === id) : undefined;
+    if (!objective) return [];
+    const viewIssues: ContextMenuAction = {
+      id: "objective-issues",
+      label: t("viewLinkedIssues", { issues: tIssue("entityPlural").toLowerCase() }),
+      icon: <HugeiconsIcon icon={TaskEdit01Icon} className="size-4" />,
+      onSelect: () => router.push(`/projects/${projectId}?objective=${encodeURIComponent(objective.id)}`),
+    };
+    if (!canWrite) return [viewIssues];
+    const lead = objective.lead_user_id ? memberMap.get(objective.lead_user_id) ?? null : null;
+    const update = (updates: Parameters<typeof updateObjective>[1]) =>
+      void updateObjective(objective.id, updates).catch((err: Error) => toast.error(err.message));
+    return [
+      {
+        id: "objective-status",
+        label: t("statusFieldLabel"),
+        icon: <ObjectiveStatusIndicator status={objective.status} className="size-4" />,
+        children: OBJECTIVE_STATUSES.map((s) => ({
+          id: `objective-status-${s.value}`,
+          label: tStatus(s.value),
+          icon: <ObjectiveStatusIndicator status={s.value} className="size-4" />,
+          checked: s.value === objective.status,
+          onSelect: () => update({ status: s.value }),
+        })),
+      },
+      {
+        id: "objective-lead",
+        label: t("leadFieldLabel"),
+        // The current lead's face, as in the row; the person icon when none.
+        icon: lead
+          ? <UserAvatar seed={lead.avatar_seed} title={displayName(lead)} className="size-4" />
+          : <HugeiconsIcon icon={UserCircleIcon} className="size-4" />,
+        // Only the owner or a Member can lead (MIN-693).
+        children: [
+          {
+            id: "objective-lead-none",
+            label: t("noLead"),
+            checked: objective.lead_user_id === null,
+            onSelect: () => update({ lead_user_id: null }),
+          },
+          ...members.filter((m) => m.role !== "reader").map((m) => ({
+            id: `objective-lead-${m.user_id}`,
+            label: displayName(m),
+            icon: <UserAvatar seed={m.avatar_seed} title={displayName(m)} className="size-4" />,
+            checked: objective.lead_user_id === m.user_id,
+            onSelect: () => update({ lead_user_id: m.user_id }),
+          })),
+        ],
+      },
+      {
+        id: "objective-color",
+        label: t("colorFieldLabel"),
+        icon: <ColorSwatch color={objective.color ?? "var(--muted-foreground)"} />,
+        children: [
+          {
+            id: "objective-color-none",
+            label: t("noColor"),
+            checked: objective.color === null,
+            onSelect: () => update({ color: null }),
+          },
+          ...CATEGORY_COLORS.map((hex) => ({
+            id: `objective-color-${hex}`,
+            label: colorLabel(hex),
+            icon: <ColorSwatch color={hex} />,
+            checked: objective.color?.toLowerCase() === hex,
+            onSelect: () => update({ color: hex }),
+          })),
+        ],
+      },
+      {
+        id: "objective-new-issue",
+        label: tNav("newIssue"),
+        icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />,
+        separatorBefore: true,
+        transfersFocus: true,
+        onSelect: () => create?.openCreateIssue({ projectId, objectiveId: objective.id }),
+      },
+      viewIssues,
+      {
+        id: "objective-trash",
+        label: tCommon("moveToTrash"),
+        icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+        variant: "destructive",
+        separatorBefore: true,
+        transfersFocus: true,
+        onSelect: () => setTrashTarget(objective),
+      },
+    ];
+  };
   const { issues } = useIssuesQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
   const { open: openAssistant } = useAssistantPanelActions();
@@ -312,10 +442,14 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
    * lives. A lens taken out of the filter (completed while looking at it) must
    * hand over to the next one, as if it had been deleted.
    */
-  const filtered = useMemo(
+  const stateFiltered = useMemo(
     () => objectives.filter((o) => matchesState(o, state)),
     [objectives, state]
   );
+  // A search looks through every objective, whatever the state filter: the
+  // filter narrows the resting list, the query finds anything.
+  const searching = query.trim() !== "";
+  const filtered = searching ? objectives : stateFiltered;
 
   const selected = filtered.find((o) => o.id === selectedId) ?? null;
 
@@ -355,7 +489,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
 
   // Publish the objective being viewed (else just the project) to Numo.
   useAssistantContext(
-    !browse && project
+    !listOnly && project
       ? selected
         ? {
             projectId,
@@ -443,7 +577,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   // overlay — it belongs to the screen's address. It leaves the URL as soon as
   // `?open=` is consumed above, hence this publication for the app tab;
   // `?open=` is also what restores it.
-  usePublishCurrentView(browse ? null : {
+  usePublishCurrentView(listOnly ? null : {
     href: buildViewHref(pathname, searchParams.toString(), {
       open: selected?.id ?? null,
     }),
@@ -485,8 +619,12 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       projectId={projectId}
       projectKey={project.key}
       onCreate={async (input) => {
-        const objective = await createObjective(input);
-        if (browse) browse.onSelect(`/projects/${projectId}/objectives?open=${encodeURIComponent(objective.id)}`);
+        const { objective, persisted } = createObjective(input);
+        // Its page opens once the server has the row it reads.
+        persisted.then(
+          (created) => browse?.onSelect(`/projects/${projectId}/objectives?open=${encodeURIComponent(created.id)}`),
+          () => undefined,
+        );
         return objective;
       }}
       onUpdate={updateObjective}
@@ -499,11 +637,12 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
   const sidebar = (
       <CollectionSidebar browse={browse}
         title={t("title")}
+        itemContextActions={itemContextActions}
         hiddenOnMobile
         filter={{
           value: query,
           onChange: setQuery,
-          placeholder: t("filterPlaceholder", { count: listed.length }),
+          placeholder: t("filterPlaceholder", { count: objectives.length }),
           clearLabel: tCommon("clearFilter"),
         }}
         actions={
@@ -578,14 +717,14 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
                 projectId={projectId}
                 key={objective.id}
                 objective={objective}
-                selected={objective.id === selectedId}
+                selected={objective.id === (board ? board.objectiveId : selectedId)}
                 progress={progressByObjectiveId.get(objective.id) ?? { done: 0, total: 0, percent: 0 }}
                 lead={
                   objective.lead_user_id
                     ? memberMap.get(objective.lead_user_id) ?? null
                     : null
                 }
-                onSelect={() => select(objective.id)}
+                onSelect={() => (board ? board.onOpen(objective.id) : select(objective.id))}
               />
             ))}
           </div>
@@ -593,7 +732,28 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       </CollectionSidebar>
   );
 
-  if (browse) return <>{sidebar}{createDialog}</>;
+  const trashDialog = (
+    <ConfirmDeleteDialog
+      open={trashTarget !== null}
+      onOpenChange={(open) => {
+        if (!open) setTrashTarget(null);
+      }}
+      title={t("deleteConfirmTitle", { name: trashTarget?.name ?? "" })}
+      description={t("deleteConfirmDescription", {
+        issues: tIssue("entityPlural").toLowerCase(),
+        days: TRASH_RETENTION_DAYS,
+      })}
+      confirmLabel={tCommon("moveToTrash")}
+      cancelLabel={tCommon("cancel")}
+      onConfirm={async () => {
+        if (!trashTarget) return;
+        await deleteObjective(trashTarget.id);
+        toast.success(t("deletedToast"));
+      }}
+    />
+  );
+
+  if (listOnly) return <>{sidebar}{createDialog}{trashDialog}</>;
 
   if (!loading && objectives.length === 0) {
     return (
@@ -673,12 +833,23 @@ function ObjectivesInner({ projectId: browseProjectId, browse }: { projectId?: s
       </div>
 
       {createDialog}
+      {trashDialog}
     </div>
   );
 }
 
 export function ObjectivesCollection(props: { projectId: string; browse: SidebarBrowseTarget }) {
   return <AppTabRouteBoundary><ObjectivesInner {...props} /></AppTabRouteBoundary>;
+}
+
+/** The objectives list as the sidebar of an objective's board. */
+export function ObjectivesBoardSidebar({ projectId, objectiveId }: { projectId: string; objectiveId: string }) {
+  const router = useAppRouter();
+  const board = useMemo(() => ({
+    objectiveId,
+    onOpen: (id: string) => router.push(`/projects/${projectId}?objective=${encodeURIComponent(id)}`),
+  }), [objectiveId, projectId, router]);
+  return <AppTabRouteBoundary><ObjectivesInner projectId={projectId} board={board} /></AppTabRouteBoundary>;
 }
 
 export default function ObjectivesPage() {

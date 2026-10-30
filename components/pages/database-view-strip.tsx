@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, Delete02Icon, Edit04Icon } from "@hugeicons/core-free-icons";
-import { DndContext, MouseSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
-import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { DndContext, DragOverlay, MouseSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE, DRAGGED_PILL_BG, HORIZONTAL_DRAG, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
+import { SortableContext, arrayMove, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -45,6 +47,7 @@ function ViewPill({ view, active, sortable, onSelect, onContextMenu }: {
       style={{ transform: CSS.Translate.toString(transform), transition }}
       {...attributes} {...listeners} onClick={onSelect} onContextMenu={onContextMenu}
       aria-pressed={active}
+      // The moving copy is the drag overlay; this pill marks the slot.
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}>
       <span className="truncate">{view.name}</span>
     </button>
@@ -115,7 +118,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   const [renameTarget, setRenameTarget] = useState<SavedDatabaseView | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SavedDatabaseView | null>(null);
   // A plain click selects; only a drag of more than 6px reorders.
-  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }));
   const announcements = useDragAnnouncements((id) => views.find((view) => view.id === id)?.name);
   const active = views.find((view) => view.id === activeId) ?? null;
   const name = active?.name ?? t("defaultView");
@@ -123,6 +126,24 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   // `view: null` is the default view of a database that has no saved one yet.
   const [menu, setMenu] = useState<{ view: SavedDatabaseView | null; x: number; y: number } | null>(null);
   const [renameDefault, setRenameDefault] = useState(false);
+  // The order of the last drop, shown until the saved views come back in it
+  // (or after a short while, should the save never land).
+  const [dropOrder, setDropOrder] = useState<string[] | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const draggedView = draggedId ? views.find((view) => view.id === draggedId) ?? null : null;
+  const savedOrder = views.map((view) => view.id).join(",");
+  useEffect(() => {
+    if (!dropOrder) return;
+    if (dropOrder.length !== views.length || dropOrder.join(",") === savedOrder) {
+      setDropOrder(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setDropOrder(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [dropOrder, savedOrder, views.length]);
+  const orderedViews = dropOrder && dropOrder.length === views.length
+    ? dropOrder.flatMap((id) => views.filter((view) => view.id === id))
+    : views;
   const menuActions: ContextMenuAction[] = menu ? [
     {
       id: "rename",
@@ -216,12 +237,23 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   return (
     <div role="group" aria-label={t("views")} className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
       {views.length ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements }}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements }} modifiers={HORIZONTAL_DRAG}
+          onDragStart={({ active: dragged }) => setDraggedId(String(dragged.id))}
+          onDragCancel={() => setDraggedId(null)}
           onDragEnd={({ active: dragged, over }) => {
-            if (over && dragged.id !== over.id) onMove(String(dragged.id), String(over.id));
+            setDraggedId(null);
+            if (!over || dragged.id === over.id) return;
+            const ids = orderedViews.map((view) => view.id);
+            const from = ids.indexOf(String(dragged.id));
+            const to = ids.indexOf(String(over.id));
+            // In the same frame as the drop: the saved order reaches the
+            // strip a tick later, and the pill showed its old place meanwhile.
+            if (from >= 0 && to >= 0) setDropOrder(arrayMove(ids, from, to));
+            onMove(String(dragged.id), String(over.id));
           }}>
-          <SortableContext items={views.map((view) => view.id)} strategy={horizontalListSortingStrategy}>
-            {views.map((view) => (
+          <DragCursor />
+          <SortableContext items={orderedViews.map((view) => view.id)} strategy={horizontalListSortingStrategy}>
+            {orderedViews.map((view) => (
               <ViewPill key={view.id} view={view} active={view.id === activeId}
                 sortable={canWrite && views.length > 1} onSelect={() => onSelect(view.id)}
                 onContextMenu={canWrite ? (event) => {
@@ -230,6 +262,15 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
                 } : undefined} />
             ))}
           </SortableContext>
+          {/* The dragged pill's copy, opaque and lifted. Released, it settles
+              on the pill in its new place, or glides back after a cancel. */}
+          <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION}>
+            {draggedView ? (
+              <span className={cn(PILL_CLASS, pillTone(draggedView.id === activeId), draggedView.id !== activeId && DRAGGED_PILL_BG, "shadow-md")}>
+                <span className="truncate">{draggedView.name}</span>
+              </span>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       ) : (
         // The default view: renaming it saves it under that name, with the

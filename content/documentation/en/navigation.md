@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -68,13 +68,14 @@
       "lib/palette-picker.ts",
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
-      "components/mobile-nav-actions.tsx"
+      "components/mobile-nav-actions.tsx",
+      "lib/keyboard/typeahead.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
-    "language": "agent:claude-code (en new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 22,
+    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -96,7 +97,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -112,7 +113,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -134,7 +135,7 @@ Use navigation to choose your personal work or a project, and the command palett
 
 ## Find personal work and switch projects {#navigation}
 
-The main navigation gives access to personal work and your projects. Select a project to see its own issues and secondary destinations, including triage, objectives, pages and project settings. The back row moves up one navigation level; it can change the sidebar's contents while the main page remains open. Select a destination to navigate there.
+The main navigation gives access to personal work and your projects. Select a project to see its own issues and secondary destinations, including triage, objectives, pages and project settings. The back row moves up one navigation level; it can change the sidebar's contents while the main page remains open. Select a destination to navigate there. In a list such as triage, objectives, feedback, code review or routines, the filter field at the top searches every item, whatever the filters narrowing the list; its placeholder gives their total.
 
 Counters and warnings follow you between levels. The control that leads back to **Home** shows the total waiting to be triaged across the projects **Home** lists, the current one included, and the Smart Assign warning when one of your projects needs rules. A back row shows the counter of the level it returns to as a badge on its arrow, amber while the Smart Assign warning applies. Inside a project, **Triage** and **Feedback** keep that project's own counts. Desktop tabs carry the same badge as their sidebar entry: the warning on **Home**, and the counts on **Inbox**, **Code review** and a project's **Triage** and **Feedback**, updated even when the tab is in the background.
 
@@ -149,6 +150,9 @@ Right-click a row in the sidebar to act on what it represents without opening it
 - The **All issues** row offers **New issue**, and the **Routines** row offers **New routine** when you own a project.
 - A project row, or the project name at the top of its panel, offers **New** (an issue, objective or page in that project) and **Project settings**. The project owner also sees **Move to trash**, which asks for the same confirmation as the project settings. The same menu also offers **Hide project**, or **Show project** for a project you hid; see [Hide a project for yourself](/docs/projects#hide-project).
 - A project tab offers its own creation entry: **New issue** on Issues, **New objective** on Objectives, **New page** on Pages and **New feedback** on Feedback, which opens the internal feedback composer.
+- A triage row offers **Accept**, **Decline** and **Mark as duplicate…**, which ask for the same confirmation or picker as the triage pane, then its **Priority**, **Effort**, **Assignee**, **Categories** and **Objective**, the copy of its identifier and **Move to trash**. A reader can copy the identifier only. See [Review incoming work in triage](/docs/issues#triage-incoming-work).
+- An objective row offers **Status**, **Lead** and **Color**, **New issue** in that objective, **View issues** on the project board and **Move to trash**. A reader sees **View issues** only.
+- A feedback row offers **Status**, unless a linked issue sets it, **Objective**, **Categories**, **Visibility** when the public board is on, **Publish** while the AI review holds it, **Link to an existing issue**, **Merge into…** when another request can take it, and **Move to trash**. Properties change from the row; the other actions open the request and ask for the same confirmation as its pane.
 - A routine row offers **Open latest run** and, to the project owner, **Run now**, **Pause** or **Resume**, **Edit** and **Move to trash**. See [Manage and verify runs](/docs/scheduled-routines#runs).
 - A pull request row offers the state changes its current state allows, **Merge** when it is ready, and fix actions when something blocks it. See [Review and merge](/docs/code-work#decision).
 
@@ -172,7 +176,7 @@ Once you type, the palette also finds routines, pull requests, views and inbox n
 
 Choosing what to link also happens in the palette. Adding a relation, linking an issue to a pull request or a pull request to an issue, and attaching a page as a resource open it on the items you can choose only, and its search field says what you are picking. For a relation, choose its type in the menu first; the palette then lists the issues and objectives that can take it. Choosing an item links it; Escape closes the palette without linking anything.
 
-Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. R adds a relation from the same places, on an objective page and in the new-issue form: choose the relation type, then the other issue or objective. When the card is part of a selection, these keys change every selected issue; assignee, objective, categories and relations only reach the selected issues of that card's project. Shift+C goes to a comment field, ready for typing, with the thread scrolled to its latest message: that of a hovered issue card or of a hovered row in the objectives, feedback, pull requests, pages or triage list, or, with nothing hovered, that of the issue, objective, feedback, pull request or page on screen. A page opens its **Activity** panel for it. Shift+C acts on that one item, even when the card is part of a selection. On an objective page and in the new-objective form, S opens its status, A its lead, D its target date and C its color; there, C does not create an issue. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context.
+Press Command+K on macOS or Ctrl+K on Windows/Linux to open the command palette; Command/Ctrl+P is an alternative application binding. Outside editable text, ? opens shortcut help and C opens issue creation. On a hovered issue card or its supported detail controls, S opens status, P priority, E effort, A assignee, L categories, D due date and O objective. R adds a relation from the same places, on an objective page and in the new-issue form: choose the relation type, then the other issue or objective. When the card is part of a selection, these keys change every selected issue; assignee, objective, categories and relations only reach the selected issues of that card's project. Shift+C goes to a comment field, ready for typing, with the thread scrolled to its latest message: that of a hovered issue card or of a hovered row in the objectives, feedback, pull requests, pages or triage list, or, with nothing hovered, that of the issue, objective, feedback, pull request or page on screen. A page opens its **Activity** panel for it. Shift+C acts on that one item, even when the card is part of a selection. On an objective page and in the new-objective form, S opens its status, A its lead, D its target date and C its color; there, C does not create an issue. These single-key actions do not intercept typing in an input, textarea or content editor. Navigation sequences such as G then H (Home) and G then I (Inbox) use two successive keys; G then W reaches Pages only in a project context. On **Home** and in the expanded Numo panel, a quick burst of keys is typed into Numo's composer instead, and a single key runs its shortcut after a short pause ([type into Numo](/docs/numo#work-with-numo)).
 
 To reach a setting, type its name in the command palette or in the filter field at the top of the settings sidebar. Both find every settings card and individual settings such as the language, the theme, each palette, transparency and the two **Starting an issue** switches. Choosing a result opens the right settings tab, scrolls to the card or row and highlights it. Command+T on macOS or Ctrl+T on Windows/Linux opens the new-tab palette; a setting chosen there opens in a new app tab. Inside a project, it also offers **New page**, which creates a page in that project and opens it in a new tab. English and French keywords work whatever the interface language.
 

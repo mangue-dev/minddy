@@ -604,6 +604,7 @@ export async function prReadinessBatchResponse(
 ): Promise<NextResponse> {
   const readNotBefore = performance.now();
   const readiness: Record<string, PullRequestReadiness> = {};
+  const mergeFlow: Record<string, { active: boolean; autoMergeAllowed: boolean | null; canWrite: boolean }> = {};
   const unavailablePrIds: string[] = [];
   let nextIndex = 0;
   let quota: { error: unknown; status: 403 | 429; until: number } | undefined;
@@ -643,6 +644,11 @@ export async function prReadinessBatchResponse(
         const result = await readPullRequestReadiness(scope, forgePr, batch);
         if (rowQuota) throw rowQuota;
         readiness[prId] = result.readiness;
+        mergeFlow[prId] = {
+          active: !!forgePr.mergeFlowActive,
+          autoMergeAllowed: result.mergePolicy.autoMergeAllowed,
+          canWrite: result.viewer.capability === "write",
+        };
       } catch (error) {
         observeQuota(error);
         console.error("[pr-actions] readiness_unavailable", prId);
@@ -660,7 +666,7 @@ export async function prReadinessBatchResponse(
 
   unavailablePrIds.push(...prIds.slice(nextIndex));
   // Completed rows remain usable; unavailable rows never acquire readiness.
-  return NextResponse.json({ readiness, unavailablePrIds, ...(quota ? { retryStatus: quota.status } : {}) },
+  return NextResponse.json({ readiness, mergeFlow, unavailablePrIds, ...(quota ? { retryStatus: quota.status } : {}) },
     quota ? { headers: { "Retry-After": String(Math.max(0, Math.ceil((quota.until - Date.now()) / 1000))) } } : undefined);
 }
 

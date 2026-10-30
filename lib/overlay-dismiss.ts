@@ -78,3 +78,61 @@ export function releasePoppersBelow(event: Event) {
   if (!visibleMatches(OPEN_POPPER).some((popper) => !isAbove(popper, overlay))) return;
   overlay.focus({ preventScroll: true });
 }
+
+// Where a click on another layer does not close a popover: a layer opened
+// above it (a nested picker, a dialog it opened) or a toast.
+const LAYER = [
+  POPPER_CONTENT,
+  '[data-slot="dialog-content"]',
+  '[data-slot="side-panel-content"]',
+  '[data-slot="sheet-content"]',
+  '[data-slot="alert-dialog-content"]',
+  "[data-sonner-toaster]",
+].join(",");
+
+/** Is the element, or one of its ancestors, the trigger of the given id? */
+function controls(element: Element, id: string): boolean {
+  for (let node = element.closest("[aria-controls]"); node; node = node.parentElement?.closest("[aria-controls]") ?? null) {
+    if (node.getAttribute("aria-controls") === id) return true;
+  }
+  return false;
+}
+
+/**
+ * A popover closes on a click outside it, always (MIN-770).
+ *
+ * Radix defers a popover's outside-pointer dismissal to the `click` that
+ * follows the `pointerdown`, and ignores focus moving out meanwhile. When that
+ * click opens something on its way — a board card opening its side panel on
+ * mouseup — the deferred dismissal is lost, and the popover stayed open over
+ * the panel. A pointerdown stopped inside the popover (pickers stop it so a
+ * card under them does not start a drag) also left Radix believing the next
+ * outside press came from inside. This listener sees every click first, in
+ * the capture phase, and asks `onOutside` to close the popover unless the
+ * click lands in it, on its own trigger, or in a layer stacked above it.
+ */
+export function listenOutsideClick(content: HTMLElement, onOutside: (event: MouseEvent) => void): () => void {
+  // Only a press that STARTED while the popover was open: the click ending
+  // the press that opened it (a surface opening on pointerdown) is not one.
+  let pressed = false;
+  const onPointerDown = () => {
+    pressed = true;
+  };
+  const onClick = (event: MouseEvent) => {
+    if (!pressed) return;
+    pressed = false;
+    const target = event.target;
+    if (!(target instanceof Element) || !target.isConnected || content.contains(target)) return;
+    if (content.id && controls(target, content.id)) return;
+    const layer = target.closest(LAYER);
+    // A dialog holding the popover precedes it: a click elsewhere in it closes it.
+    if (layer && isAbove(layer, content)) return;
+    onOutside(event);
+  };
+  window.addEventListener("pointerdown", onPointerDown, true);
+  window.addEventListener("click", onClick, true);
+  return () => {
+    window.removeEventListener("pointerdown", onPointerDown, true);
+    window.removeEventListener("click", onClick, true);
+  };
+}

@@ -35,7 +35,7 @@ export function PrIssuePanel({
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId) ?? null;
 
-  const { issues, createIssue, updateIssue, deleteIssue, setCategories } =
+  const { issues, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
   const { members } = useMembersQuery(projectId, !!project);
@@ -85,7 +85,6 @@ export function PrIssuePanel({
         onClose();
       }}
       onSetCategories={setCategories}
-      onCreate={createIssue}
       onOpenIssue={setOpenId}
       onAddRelation={handleAddRelation}
       onRemoveRelation={handleRemoveRelation}

@@ -7,6 +7,9 @@ import { toast } from "sonner";
 import { ALL_PULL_REQUESTS_QUERY_KEY } from "./pull-request-list-cache";
 import { linkPullRequestIssueApi, unlinkPullRequestIssueApi, type IssuePr } from "./agent-api";
 import type { IssuePrPayload } from "./issue-pr-store";
+import { issueStatusForPrState } from "./pr-issue-status";
+import { GLOBAL_BOARD_KEY, patchIssueEverywhere } from "./optimistic/issue-writes";
+import type { GlobalBoardResponse, Issue } from "./types";
 
 /** The pull request a board action links issues to. */
 export interface LinkTargetPullRequest {
@@ -50,6 +53,30 @@ export function optimisticIssuePrs(
     }
   }
   return { ...payload, pullRequests, linkedPullRequestIds };
+}
+
+/** The project of a cached issue row, from a project board or the global board. */
+function cachedIssueProject(queryClient: QueryClient, issueId: string): string | null {
+  for (const [, data] of queryClient.getQueriesData<unknown>({ queryKey: ["issues"] })) {
+    const row = Array.isArray(data) ? (data as Issue[]).find((issue) => issue?.id === issueId) : undefined;
+    if (row) return row.project_id;
+  }
+  const board = queryClient.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY);
+  return board?.issues.find((issue) => issue.id === issueId)?.project_id ?? null;
+}
+
+/**
+ * Linking moves each issue to the status its pull request implies (the
+ * server's `syncIssueStatusFromPr`): the cards change column with their chip
+ * instead of after the refetch, which corrects any refused link.
+ */
+function applyLinkedStatus(queryClient: QueryClient, issueIds: readonly string[], pr: LinkTargetPullRequest) {
+  const status = issueStatusForPrState(issuePrState(pr.state));
+  if (!status) return;
+  for (const issueId of issueIds) {
+    const projectId = cachedIssueProject(queryClient, issueId);
+    if (projectId) patchIssueEverywhere(queryClient, projectId, issueId, { status });
+  }
 }
 
 /**
@@ -114,8 +141,16 @@ export function useLinkIssuesToPullRequest() {
       await queryClient.cancelQueries({ queryKey: ISSUE_PRS_PREFIX });
       queryClient.setQueriesData<IssuePrPayload>({ queryKey: ISSUE_PRS_PREFIX },
         (data) => optimisticIssuePrs(data, { link: pr, issueIds }));
+      applyLinkedStatus(queryClient, issueIds, pr);
       const outcome = await linkIssuesToPullRequest(issueIds, pr);
       await refreshPullRequestCaches(queryClient, [pr.prId], outcome.linked);
+      if (outcome.failed.length > 0) {
+        // A refused link must not leave its card in the column it moved to.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["issues"] }),
+          queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY }),
+        ]);
+      }
       if (outcome.linked.length > 0) {
         toast.success(t("linkedToPullRequest", { count: outcome.linked.length, number: pr.prNumber }));
       }

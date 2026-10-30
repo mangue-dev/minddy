@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 21,
+  "revision": 24,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -68,13 +68,14 @@
       "lib/palette-picker.ts",
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
-      "components/mobile-nav-actions.tsx"
+      "components/mobile-nav-actions.tsx",
+      "lib/keyboard/typeahead.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (mobile bottom bar reordered (MIN-837): new sentence on the bar order and Home in the drawer checked against components/mobile-navigation.tsx, components/mobile-nav-actions.tsx and the drawer sections of components/app-shell-chrome.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures show the desktop layout)",
-    "language": "agent:claude-code (it new sentence with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 24,
+    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -96,7 +97,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -136,7 +137,7 @@ La navigazione distingue lavoro personale e contenuti di ogni progetto. Ricerca,
 
 ## Trovare il lavoro personale e cambiare progetto {#navigation}
 
-La navigazione principale permette di raggiungere il lavoro personale e i tuoi progetti. Seleziona un progetto per vedere i suoi ticket e le destinazioni secondarie, tra cui triage, obiettivi, pagine e impostazioni del progetto. La riga per tornare indietro sale di un livello nella navigazione; può cambiare il contenuto della barra laterale mentre la pagina principale resta aperta. Seleziona una destinazione per aprirla.
+La navigazione principale permette di raggiungere il lavoro personale e i tuoi progetti. Seleziona un progetto per vedere i suoi ticket e le destinazioni secondarie, tra cui triage, obiettivi, pagine e impostazioni del progetto. La riga per tornare indietro sale di un livello nella navigazione; può cambiare il contenuto della barra laterale mentre la pagina principale resta aperta. Seleziona una destinazione per aprirla. In un elenco come triage, obiettivi, feedback, revisione del codice o routine, il campo di filtro in cima alla barra laterale cerca in tutti gli elementi, qualunque siano i filtri che restringono l’elenco; il suo testo segnaposto ne indica il totale.
 
 Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta come badge sulla sua freccia, in ambra finché vale l’avviso di Smart Assign. All’interno di un progetto, **Triage** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Posta in arrivo**, **Revisione del codice** e su **Triage** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
 
@@ -151,6 +152,9 @@ Fai clic con il tasto destro su una riga della barra laterale per agire su ciò 
 - La riga **Tutti i ticket** offre **Nuovo ticket** e la riga **Routine** offre **Nuova routine** se sei proprietario di un progetto.
 - Una riga di progetto, o il nome del progetto in cima al suo pannello, offre **Nuovo** (un ticket, un obiettivo o una pagina in quel progetto) e **Impostazioni del progetto**. Il proprietario del progetto vede anche **Sposta nel cestino**, che chiede la stessa conferma delle impostazioni del progetto. Lo stesso menu offre anche **Nascondi progetto**, oppure **Mostra progetto** per un progetto che hai nascosto; vedi [Nascondere un progetto per te](/docs/projects#hide-project).
 - Una scheda di progetto offre la propria creazione: **Nuovo ticket** su Ticket, **Nuovo obiettivo** su Obiettivi, **Nuova pagina** su Pagine e **Nuovo feedback** su Feedback, che apre il modulo interno per i feedback.
+- Una riga di triage offre **Accetta**, **Rifiuta** e **Segna come duplicato…**, che chiedono la stessa conferma o lo stesso selettore del pannello di triage, poi **Priorità**, **Impegno**, **Assegnatario**, **Categorie** e **Obiettivo**, la copia del suo identificativo e **Sposta nel cestino**. Un lettore può solo copiare l’identificativo. Vedi [Valutare il lavoro in arrivo nel triage](/docs/issues#triage-incoming-work).
+- Una riga di obiettivo offre **Stato**, **Responsabile** e **Colore**, **Nuovo ticket** in quell’obiettivo, **Visualizza ticket** sulla bacheca del progetto e **Sposta nel cestino**. Un lettore vede solo **Visualizza ticket**.
+- Una riga di feedback offre **Stato**, a meno che non lo determini un ticket collegato, **Obiettivo**, **Categorie**, **Visibilità** quando la bacheca pubblica è attiva, **Pubblica** finché la revisione dell’IA la trattiene, **Collega a un ticket esistente**, **Unisci a…** quando un’altra richiesta può accoglierla, e **Sposta nel cestino**. Le proprietà si modificano dalla riga; le altre azioni aprono la richiesta e chiedono la stessa conferma del suo pannello.
 - Una riga di routine offre **Apri l’ultima esecuzione** e, al proprietario del progetto, **Esegui ora**, **Metti in pausa** o **Riattiva**, **Modifica** e **Sposta nel cestino**. Vedi [Gestire e verificare le esecuzioni](/it/documentazione/scheduled-routines#runs).
 - Una riga di pull request offre i cambi consentiti dal suo stato attuale, **Unisci** quando è pronta e azioni di correzione quando qualcosa la blocca. Vedi [Revisione e unione](/it/documentazione/code-work#decision).
 
@@ -174,7 +178,7 @@ Appena digiti, la palette trova anche routine, pull request, viste e notifiche d
 
 Anche ciò che colleghi si sceglie nella palette. Aggiungere una relazione, collegare un ticket a una pull request o una pull request a un ticket e allegare una pagina come risorsa la aprono solo sugli elementi che puoi scegliere, e il suo campo di ricerca indica cosa stai scegliendo. Per una relazione, scegli prima il tipo nel menu; la palette mostra poi i ticket e gli obiettivi che possono riceverla. Scegliere un elemento lo collega; Esc chiude la palette senza collegare nulla.
 
-Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Se la scheda fa parte di una selezione, questi tasti modificano tutti i ticket selezionati; assegnatario, obiettivo, categorie e relazioni valgono solo per i ticket selezionati del progetto di quella scheda. Maiusc+C porta a un campo del commento pronto per scrivere, con la conversazione scorsa fino all’ultimo messaggio: quello di una scheda di ticket sotto il puntatore o di una riga sotto il puntatore nell’elenco di obiettivi, feedback, pull request, pagine o triage, oppure, se non c’è nulla sotto il puntatore, quello del ticket, dell’obiettivo, del feedback, della pull request o della pagina sullo schermo. Una pagina apre per questo il suo pannello **Attività**. Maiusc+C agisce solo su quell’elemento, anche se la scheda fa parte di una selezione. Nella pagina di un obiettivo e nel modulo di nuovo obiettivo, S apre il suo stato, A il responsabile, D la data limite e C il colore; lì, C non crea un ticket. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto.
+Premi Command+K su macOS o Ctrl+K su Windows/Linux per aprire la palette dei comandi; Command/Ctrl+P è una scorciatoia alternativa dell’applicazione. Fuori dal testo modificabile, ? apre la guida delle scorciatoie e C la creazione di ticket. Su una scheda di ticket sotto il puntatore o nei suoi controlli di dettaglio supportati, S apre lo stato, P la priorità, E l’impegno, A l’assegnatario, L le categorie, D la scadenza e O l’obiettivo. R aggiunge una relazione dagli stessi punti, nella pagina di un obiettivo e nel modulo di nuovo ticket: scegli il tipo di relazione, poi l’altro ticket o obiettivo. Se la scheda fa parte di una selezione, questi tasti modificano tutti i ticket selezionati; assegnatario, obiettivo, categorie e relazioni valgono solo per i ticket selezionati del progetto di quella scheda. Maiusc+C porta a un campo del commento pronto per scrivere, con la conversazione scorsa fino all’ultimo messaggio: quello di una scheda di ticket sotto il puntatore o di una riga sotto il puntatore nell’elenco di obiettivi, feedback, pull request, pagine o triage, oppure, se non c’è nulla sotto il puntatore, quello del ticket, dell’obiettivo, del feedback, della pull request o della pagina sullo schermo. Una pagina apre per questo il suo pannello **Attività**. Maiusc+C agisce solo su quell’elemento, anche se la scheda fa parte di una selezione. Nella pagina di un obiettivo e nel modulo di nuovo obiettivo, S apre il suo stato, A il responsabile, D la data limite e C il colore; lì, C non crea un ticket. Queste azioni con un solo tasto non intercettano la scrittura in campi, aree di testo o editor di contenuti. Le sequenze di navigazione come G e poi H (Home) o G e poi I (Posta in arrivo) usano due tasti successivi. G e poi W porta a Pagine solo nel contesto di un progetto. Nella **Home** e nel pannello di Numo ingrandito, una rapida raffica di tasti viene invece scritta nel campo di Numo, e un singolo tasto esegue la sua scorciatoia dopo una breve pausa ([scrivere a Numo](/docs/numo#work-with-numo)).
 
 Per raggiungere un’impostazione, digitane il nome nella palette dei comandi o nel campo di filtro in cima alla barra laterale delle impostazioni. Entrambi trovano ogni riquadro di impostazioni e le singole impostazioni, come la lingua, il tema, ogni palette, la trasparenza e i due interruttori di **Avviare un ticket**. Scegliendo un risultato si apre la scheda di impostazioni giusta, la pagina scorre fino al riquadro o alla riga e lo evidenzia. Comando+T su macOS o Ctrl+T su Windows/Linux apre la palette della nuova scheda; un’impostazione scelta lì si apre in una nuova scheda dell’app. Dentro un progetto offre anche **Nuova pagina**, che crea una pagina in quel progetto e la apre in una nuova scheda. Le parole chiave in inglese e in francese funzionano qualunque sia la lingua dell’interfaccia.
 
@@ -190,7 +194,7 @@ Ogni ricerca di ticket elenca i ticket nello stesso ordine: la palette, le menzi
 
 ### Cercare i ticket per significato {#search-by-meaning}
 
-Quando una ricerca descrive il lavoro invece di nominarlo, la ricerca dei ticket trova anche ticket di significato vicino, anche se usano altre parole. Per esempio, «l’accesso non riesce dopo il ripristino della password» può trovare un ticket intitolato «Sessione persa al cambio della password». Vale per la palette dei comandi, le menzioni `@` nelle descrizioni, nelle pagine, nei commenti e nel compositore di Numo, i selettori delle relazioni, **Segna come duplicato...** nel triage, **Collega un ticket** su una pull request, il menu **Aggiungi contesto** → **Ticket** di Numo e **Collega a un ticket esistente** sui feedback.
+Quando una ricerca descrive il lavoro invece di nominarlo, la ricerca dei ticket trova anche ticket di significato vicino, anche se usano altre parole. Per esempio, «l’accesso non riesce dopo il ripristino della password» può trovare un ticket intitolato «Sessione persa al cambio della password». Vale per la palette dei comandi, le menzioni `@` nelle descrizioni, nelle pagine, nei commenti e nel compositore di Numo, i selettori delle relazioni, **Segna come duplicato…** nel triage, **Collega un ticket** su una pull request, il menu **Aggiungi contesto** → **Ticket** di Numo e **Collega a un ticket esistente** sui feedback.
 
 Le corrispondenze testuali e gli identificativi esatti vengono sempre per primi e mantengono il loro ordine. Poco dopo che hai smesso di scrivere, al massimo cinque ticket trovati per significato si aggiungono dopo di essi sotto **Correlati per significato**. Finché non arrivano, una riga **Ricerca per significato…** indica che la ricerca è ancora in corso (nella palette dei comandi, solo quando nessun risultato testuale corrisponde). Se non ne trova nessuno, indica **Nessun ticket correlato per significato**; un menu `@` senza corrispondenze testuali si chiude invece. Un ticket già mostrato non viene ripetuto e la riga evidenziata non si sposta. Ogni selettore mantiene le proprie regole, quindi compaiono solo ticket che poteva già proporre: un selettore delle relazioni, per esempio, continua a proporre solo ticket dello stesso progetto non ancora collegati. La palette dei comandi cerca nei progetti che puoi leggere, fino ai 25 aggiornati più di recente; le sue azioni di selezione multipla non usano la ricerca per significato.
 

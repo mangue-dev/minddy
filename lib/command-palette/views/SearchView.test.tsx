@@ -192,3 +192,27 @@ describe("search-only rows (MIN-725)", () => {
     expect(resultIds()).toEqual(["task-1"]);
   });
 });
+
+describe("highlight across late rows", () => {
+  async function renderItems(list: PaletteItem[]) {
+    const registry = createActionRegistry();
+    await act(() => root.render(
+      <PaletteConfigProvider value={{ t: translate, locale: "en", categories, categoryOrder: buildCategoryOrder(categories), registry, shortcuts: { actionsKey: ";" } }}>
+        <SearchView items={list} actionContext={context} onClose={vi.fn()} />
+      </PaletteConfigProvider>
+    ));
+  }
+
+  it("keeps the highlighted row when rows load above it", async () => {
+    const issues: PaletteItem[] = [
+      { id: "issue-a", title: "Alpha", filterCategory: "issues" },
+      { id: "issue-b", title: "Beta", filterCategory: "issues" },
+    ];
+    await renderItems(issues);
+    await act(() => usePaletteStore.getState().setActiveIndex(1));
+    // A group that ranks first arrives late.
+    await renderItems([{ id: "command-a", title: "Gamma", filterCategory: "commands" }, ...issues]);
+    const ids = resultIds();
+    expect(ids[usePaletteStore.getState().activeIndex]).toBe("issue-b");
+  });
+});

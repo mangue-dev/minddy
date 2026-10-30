@@ -63,7 +63,7 @@ function TextAttachmentPreview({ src, markdown }: { src: string; markdown: boole
     // Absolutely placed in the reader's bounded body: it scrolls inside the
     // reader while the filename and the actions stay in view.
     <div className="absolute inset-0 overflow-y-auto overscroll-contain bg-background p-6 sm:p-8">
-      {markdown ? <Markdown breaks={false} className="mx-auto max-w-4xl">{content}</Markdown>
+      {markdown ? <Markdown breaks={false} className="content-selectable mx-auto max-w-4xl">{content}</Markdown>
         : <pre className="whitespace-pre-wrap break-words font-mono text-sm">{content}</pre>}
     </div>
   );
@@ -254,7 +254,7 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
       // Focus moving to the trigger is its own toggle: closing here first made
       // that click reopen the menu instead of closing it.
       onBlur={event => { if (event.relatedTarget && !container.current?.contains(event.relatedTarget)) setExpanded(false); }}
-      className="absolute right-0 bottom-full z-10 mb-2 min-w-48 outline-none rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10">
+      className="absolute right-0 bottom-full z-10 mb-2 min-w-48 outline-none rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border">
       <a role="menuitem" tabIndex={-1} href={downloadHref} download={fileName} aria-disabled={downloading} onClick={download}
         className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent focus:bg-accent focus:outline-none">
         <HugeiconsIcon icon={Download01Icon} className="size-4" aria-hidden />{t("download")}
@@ -266,7 +266,7 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
         onClick={() => { close(); onRename(); }}>
         <HugeiconsIcon icon={Edit04Icon} className="size-4" aria-hidden />{t("rename")}
       </button>}
-      {onRemove && <div role="separator" className="-mx-2 my-1 h-px bg-border" />}
+      {onRemove && <div role="separator" className="-mx-2 my-1 h-px bg-menu-separator" />}
       {onRemove && <button type="button" role="menuitem" tabIndex={-1}
         className="flex min-h-10 w-full items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-destructive-surface-hover focus:bg-destructive-surface-hover focus:outline-none"
         onClick={() => { close(); onRemove(); }}>

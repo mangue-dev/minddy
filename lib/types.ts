@@ -509,6 +509,8 @@ export interface IssueEvent {
 }
 
 export interface CreateObjectiveInput {
+  /** Client-chosen row id, set by the optimistic creation. */
+  id?: string;
   name: string;
   description?: string | null;
   /** The dialog's editor document (MIN-728); the server derives `description`. */

@@ -72,6 +72,17 @@ const PAGE_FILES_DESCRIPTION =
   "rewrite a body: dropping one detaches the file from the page. You cannot " +
   "upload a file yourself, and you must never invent one of those urls.";
 
+/**
+ * Numo cites what it writes about as typed mentions (MIN-734), in every
+ * Markdown it stores, not only in its replies: the app renders each as a live
+ * pill and a mentioned member is notified.
+ */
+const MENTIONS_IN_MARKDOWN =
+  " Cite every issue, objective, project, page or member whose id you resolved as a typed mention " +
+  "'[@Label](mention:<type>/<id>)' (type issue, objective, project, page or member; an issue's label " +
+  "is its identifier, a member's id is their user_id); never invent an id, leave what you did not " +
+  "resolve as plain text.";
+
 const PAGE_BODY_DESCRIPTION =
   "The page BODY in markdown. Supported: headings (## and ###, since a single " +
   "'# ' is the page title), bold/italic/inline code, links, bullet and numbered " +
@@ -81,7 +92,7 @@ const PAGE_BODY_DESCRIPTION =
   "line), and " +
   "page mentions '[@Title](mention:page/<page_id>)' to link another page (inline: text " +
   "can follow it; '[[page:<page_id>]]' is read as the same mention). Anything " +
-  "else degrades to plain text. " +
+  "else degrades to plain text." + MENTIONS_IN_MARKDOWN + " " +
   PAGE_FILES_DESCRIPTION;
 
 const ISSUE_FIELD_PROPERTIES = {
@@ -89,12 +100,12 @@ const ISSUE_FIELD_PROPERTIES = {
   description: {
     type: "string",
     description:
-      "Issue description, markdown. Replaces it whole — to fix one sentence of a long description, edit_issue_text patches it in place instead.",
+      "Issue description, markdown. Replaces it whole — to fix one sentence of a long description, edit_issue_text patches it in place instead." + MENTIONS_IN_MARKDOWN,
   },
   plan: {
     type: ["string", "null"],
     description:
-      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets. On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to reword a passage use edit_issue_text, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan.",
+      "Implementation plan, markdown, separate from the description. Ground every line in what you actually know (the issue, its comments, this conversation): you cannot see the repository, so never invent file paths, function or component names, or code snippets. On an issue that already HAS a plan, this field replaces it whole: to add a precision or an extra task use append_to_plan, to reword a passage use edit_issue_text, to tick a task off use update_plan_tasks, and rewrite only when the user explicitly asked for it — then read the current plan with get_issue first and send it back COMPLETE (task state changes are diffed and logged server-side). Tasks are checkbox lines: '- [ ]' pending, '- [~]' in progress, '- [x]' completed, '- [-]' cancelled; prose is allowed between task blocks. null clears the plan." + MENTIONS_IN_MARKDOWN,
   },
   status: {
     type: "string",
@@ -650,7 +661,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           markdown: {
             type: "string",
             description:
-              "The block to ADD, markdown: checkbox task lines ('- [ ] …') and/or a short paragraph. Only what is new — everything already in the plan is kept as-is, so never repeat it here.",
+              "The block to ADD, markdown: checkbox task lines ('- [ ] …') and/or a short paragraph. Only what is new — everything already in the plan is kept as-is, so never repeat it here." + MENTIONS_IN_MARKDOWN,
           },
           section: {
             type: "string",
@@ -937,7 +948,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           markdown: {
             type: "string",
             description:
-              "The block to ADD, in markdown. Only what is new — everything already on the page is kept as-is, so never repeat it here.",
+              "The block to ADD, in markdown. Only what is new — everything already on the page is kept as-is, so never repeat it here." + MENTIONS_IN_MARKDOWN,
           },
         },
         required: ["page_id", "markdown"],
@@ -1029,7 +1040,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         type: "object",
         properties: {
           issue_id: { type: "string", description: "Issue id." },
-          body: { type: "string", description: "Comment body, markdown." },
+          body: { type: "string", description: "Comment body, markdown." + MENTIONS_IN_MARKDOWN },
         },
         required: ["issue_id", "body"],
       },
@@ -1044,7 +1055,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         type: "object",
         properties: {
           objective_id: { type: "string", description: "Objective UUID, from list_objectives." },
-          body: { type: "string", description: "Comment body, markdown." },
+          body: { type: "string", description: "Comment body, markdown." + MENTIONS_IN_MARKDOWN },
         },
         required: ["objective_id", "body"],
       },
@@ -1139,7 +1150,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         type: "object",
         properties: {
           name: { type: "string", description: "Objective name." },
-          description: { type: "string", description: "Markdown." },
+          description: { type: "string", description: "Markdown." + MENTIONS_IN_MARKDOWN },
           status: {
             type: "string",
             enum: [...OBJECTIVE_STATUS_VALUES],
@@ -1169,7 +1180,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         properties: {
           objective_id: { type: "string", description: "Objective id." },
           name: { type: "string" },
-          description: { type: "string", description: "The WHOLE new description; replaces the current one." },
+          description: { type: "string", description: "The WHOLE new description; replaces the current one." + MENTIONS_IN_MARKDOWN },
           description_edits: {
             ...TEXT_EDITS_PROPERTY,
             description:

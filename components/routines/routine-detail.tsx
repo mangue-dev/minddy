@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { AssistantShell } from "@/components/assistant/assistant-shell";
+import { AssistantChatProvider } from "@/lib/assistant-chat-context";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { EmptyScene } from "@/components/empty-scene";
 import { ProjectOrb } from "@/components/project-orb";
@@ -234,11 +235,15 @@ export function RoutineDetail({
           {headerTitle}
         </AppContentHeader>
         <div className="min-h-0 flex-1">
-          <AssistantShell
-            projectId={routine.project_id}
-            compact
-            embeddedConversationId={openRun.numo_conversation_id}
-          />
+          {/* Its own chat state: the run's conversation never becomes the
+              Numo panel's current one, during the visit or after it. */}
+          <AssistantChatProvider>
+            <AssistantShell
+              projectId={routine.project_id}
+              compact
+              embeddedConversationId={openRun.numo_conversation_id}
+            />
+          </AssistantChatProvider>
         </div>
       </div>
     );

@@ -148,7 +148,7 @@ export function AssistantFab() {
                   transition={transitions.snappy}
                   className="absolute -top-1.5 -right-1.5"
                 >
-                  <Kbd size="sm" className="shadow-sm ring-1 ring-border">
+                  <Kbd size="sm" className="ring-1 ring-border">
                     A
                   </Kbd>
                 </motion.span>

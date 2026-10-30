@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 42,
-  "sourceRevision": 42,
+  "revision": 44,
+  "sourceRevision": 44,
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-29",
   "compatibility": {
@@ -124,13 +124,16 @@
       "lib/creation-relations.ts",
       "lib/action-menu-search.ts",
       "components/use-issue-menu-actions.tsx",
-      "lib/use-bulk-selection-actions.ts"
+      "lib/use-bulk-selection-actions.ts",
+      "components/relation-chips.tsx",
+      "components/sub-issues-section.tsx",
+      "lib/create-context.tsx"
     ]
   },
   "review": {
-    "revision": 42,
-    "fact": "agent:claude-code (right-clicking a card of a multi-issue selection acts on the selection: combined plan, implement, verify and custom prompts, the identifier list sorted by number, and the relation, objective and due-date pickers (MIN-833), checked against components/use-issue-menu-actions.tsx, components/issue-card.tsx, lib/use-bulk-selection-actions.ts and lib/issue-prompt.ts; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 42; self-reviewed; agent review, not human acceptance)",
+    "revision": 44,
+    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-29"
   },
   "related": [
@@ -177,7 +180,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-21.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -194,7 +197,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -211,7 +214,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -228,7 +231,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -244,7 +247,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "A paleta de comandos lista os tickets que podem bloquear este, com a pergunta da relação no campo de busca.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -260,7 +263,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Campo de criação de um subticket em um ticket pai de demonstração.",
       "caption": "O campo cria um filho deste ticket; cada filho mantém seu próprio status e discussão.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -277,7 +280,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -294,7 +297,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -311,7 +314,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -328,7 +331,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 42,
+      "revision": 44,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -361,7 +364,7 @@ Um ticket descreve uma atividade do projeto, desde a triagem até a verificaçã
 
 Você precisa ser o proprietário ou um Membro do projeto de destino; os leitores podem abrir tickets, mas não criá-los nem editá-los. Abra o projeto e o controle para criar um ticket. Informe um título que identifique o trabalho, depois acrescente contexto, resultado esperado e restrições na descrição. O título e a descrição funcionam como um único texto: no computador, a seta para baixo na última linha do título passa para a primeira linha da descrição, a seta para cima volta, e o cursor mantém mais ou menos sua posição na linha. Shift+Enter no título passa para a descrição; Enter também, a menos que você tenha escolhido Enter como atalho de envio, caso em que ele cria o ticket. Command/Ctrl+Enter o cria a partir de qualquer um dos campos. As mesmas setas e Enter ligam o título e a descrição de um ticket, um objetivo, uma página ou um feedback abertos. O formulário abre no projeto atual; escolha outro em **Criar em**, no canto superior esquerdo do formulário (ao lado do título **Novo ticket** no celular), principalmente ao criar em uma visualização pessoal ou entre projetos. No computador, Command/Ctrl+Shift+P abre esse menu mesmo enquanto você digita o título ou a descrição; ao escolher um projeto ou fechar o menu, o cursor volta exatamente para onde estava. A pílula mostra esse atalho, que só existe quando mais de um projeto pode ser escolhido; no celular, nenhum atalho é indicado. Trocar de projeto remove as categorias, o objetivo e as relações escolhidos para o anterior. O botão de criação mostra o identificador que o ticket receberá, como `MIN-42`, e acompanha os tickets criados nesse meio-tempo; seu menu cria o ticket e copia esse identificador.
 
-Para criar o ticket manualmente, desative Preenchimento inteligente se o botão estiver visível e ativado. Isso mostra os controles de prioridade, esforço, categorias, objetivo e relações para que você os defina. Para definir apenas algumas dessas propriedades, mantenha o Preenchimento inteligente ativado e abra a seta ao lado do botão dele: escolha uma propriedade e depois o valor. Fora do título e da descrição, a tecla da propriedade abre o seletor dela diretamente: P para prioridade, E para esforço, L para categorias ou O para objetivo. O valor escolhido continua visível no formulário. O Preenchimento inteligente só deduz as propriedades que você deixou vazias. A escolha vale para esse ticket; ao reabrir o formulário de criação, a preferência da conta é restaurada. Ela é independente dos controles de automação e Smart Assign do projeto. Enquanto o Preenchimento inteligente está ativado, ele também [vincula o ticket a tickets relacionados](#smart-fill-relations) depois que ele é salvo, por isso o seletor de relações fica oculto; R o abre mesmo assim. As relações que você já escolheu continuam visíveis acima do título e são criadas com o ticket.
+Para criar o ticket manualmente, desative Preenchimento inteligente se o botão estiver visível e ativado. Isso mostra os controles de prioridade, esforço, categorias, objetivo e relações para que você os defina. Para definir apenas algumas dessas propriedades, mantenha o Preenchimento inteligente ativado e abra a seta ao lado do botão dele: escolha uma propriedade e depois o valor. Ali, **Relações** lista os tipos de relação; escolher um abre a paleta de comandos com os destinos possíveis. Fora do título e da descrição, a tecla da propriedade abre o seletor dela diretamente: P para prioridade, E para esforço, L para categorias ou O para objetivo. O valor escolhido continua visível no formulário. O Preenchimento inteligente só deduz as propriedades que você deixou vazias. A escolha vale para esse ticket; ao reabrir o formulário de criação, a preferência da conta é restaurada. Ela é independente dos controles de automação e Smart Assign do projeto. Enquanto o Preenchimento inteligente está ativado, ele também [vincula o ticket a tickets relacionados](#smart-fill-relations) depois que ele é salvo, por isso o seletor de relações fica oculto; R o abre mesmo assim. As relações que você já escolheu continuam visíveis como pílulas na linha de propriedades, entre o responsável e a data de vencimento, e são criadas com o ticket.
 
 Defina as propriedades úteis antes de confirmar: estado, prioridade, esforço, responsável, objetivo, categorias, prazo e recorrência. O responsável é o proprietário do projeto ou um Membro, nunca um leitor; um objetivo agrupa tickets em torno de um resultado do projeto. Você pode deixar propriedades opcionais sem valor em vez de adivinhar. A prioridade fica **Não definida** ou vai de baixa a urgente, passando por média e alta; o esforço fica **Não definido** ou usa XS, S, M, L e XL.
 
@@ -369,7 +372,7 @@ Quando o Smart Assign está ativado no projeto, o seletor de responsável mostra
 
 Confirme a criação e abra o novo ticket. Confira seu identificador e projeto. Abra novamente os seletores de propriedades para mudar valores conforme o ticket ficar mais claro. A descrição explica o trabalho; o plano de implementação é mantido separadamente na aba do plano.
 
-Fechar o formulário mantém o que você escreveu: abra-o de novo para continuar de onde parou. Se você não o reabrir em dois minutos, o conteúdo é salvo como rascunho e o próximo formulário começa vazio; até lá ele existe só nesta janela, então recarregar ou fechar a janela faz perdê-lo. Abrir um rascunho ou um formulário preenchido a partir de outro lugar salva antes como rascunho o que você havia deixado. Para salvá-lo você mesmo, abra o menu ao lado do botão de criar e escolha **Salvar como rascunho**. Os rascunhos salvos de tickets e objetivos ficam em **Rascunhos**, no canto inferior direito da janela, entre Numo e o caderno de tarefas; o botão só aparece enquanto você tem um rascunho e mostra quantos são. A lista mostra o título e a primeira linha da descrição de cada rascunho. Escolha um rascunho para reabri-lo no formulário de criação e terminá-lo; criar o ticket remove o rascunho. O botão de excluir ao lado de um rascunho pede confirmação antes, e a exclusão não pode ser desfeita. Em um telefone, abra a paleta de comandos e pesquise o título do rascunho. Os rascunhos ficam neste dispositivo por 30 dias, no máximo dez de cada tipo; a lista mostra apenas os de projetos em que você ainda pode criar tickets.
+Fechar o formulário mantém o que você escreveu: abra-o de novo para continuar de onde parou. Só contam um título, uma descrição ou um anexo: um formulário que só tem propriedades ou relações começa vazio de novo. Se você não o reabrir em dois minutos, o conteúdo é salvo como rascunho e o próximo formulário começa vazio; até lá ele existe só nesta janela, então recarregar ou fechar a janela faz perdê-lo. Abrir um rascunho ou um formulário preenchido a partir de outro lugar salva antes como rascunho o que você havia deixado. Para salvá-lo você mesmo, abra o menu ao lado do botão de criar e escolha **Salvar como rascunho**. Os rascunhos salvos de tickets e objetivos ficam em **Rascunhos**, no canto inferior direito da janela, entre Numo e o caderno de tarefas; o botão só aparece enquanto você tem um rascunho e mostra quantos são. A lista mostra o título e a primeira linha da descrição de cada rascunho. Escolha um rascunho para reabri-lo no formulário de criação e terminá-lo; criar o ticket remove o rascunho. O botão de excluir ao lado de um rascunho pede confirmação antes, e a exclusão não pode ser desfeita. Em um telefone, abra a paleta de comandos e pesquise o título do rascunho. Os rascunhos ficam neste dispositivo por 30 dias, no máximo dez de cada tipo; a lista mostra apenas os de projetos em que você ainda pode criar tickets.
 
 
 ![Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-21.](/documentation/pt-BR/new-issue.png)
@@ -415,7 +418,7 @@ Abra o destino Triagem do projeto. Leia o ticket recebido e o contexto de origem
 
 Os filtros da lista permitem restringir os tickets recebidos por prioridade, esforço, responsável, objetivo, categorias ou integração. **Não definida** na prioridade e **Não definido** no esforço mantêm os tickets que ainda não têm valor. Valores da mesma propriedade são alternativas; propriedades diferentes são combinadas. Redefina os filtros para mostrar todos os tickets recebidos novamente.
 
-Escolha Aceitar e confirme para mover ao Backlog um ticket que pretende manter. Escolha Recusar e confirme para definir o estado Cancelado. Se for uma duplicata, use o seletor de duplicatas para escolher o ticket que será mantido. O ticket recebido assume o estado Duplicado e aponta para o escolhido. Descrever a solicitação na busca do seletor também lista tickets parecidos em **Relacionados pelo sentido**, depois das correspondências de texto; veja [Buscar tickets pelo sentido](/docs/navigation#search-by-meaning). Quando um item sai da triagem, o seguinte é selecionado. Confira o estado resultante ou o link da duplicata no próprio ticket. Passar de um cartão para outro sem realizar uma dessas ações não encerra o ticket.
+Escolha Aceitar e confirme para mover ao Backlog um ticket que pretende manter. Escolha Recusar e confirme para definir o estado Cancelado. Se for uma duplicata, escolha **Marcar como duplicado…** e selecione na paleta de comandos o ticket que será mantido. O ticket recebido assume o estado Duplicado e aponta para o escolhido. Descrever a solicitação na busca do seletor também lista tickets parecidos em **Relacionados pelo sentido**, depois das correspondências de texto; veja [Buscar tickets pelo sentido](/docs/navigation#search-by-meaning). Quando um item sai da triagem, o seguinte é selecionado. Confira o estado resultante ou o link da duplicata no próprio ticket. Passar de um cartão para outro sem realizar uma dessas ações não encerra o ticket.
 
 ### Ordenação e limites {#triage-order}
 
@@ -478,7 +481,7 @@ Depois da operação, confira se o recurso enviado aparece e pode ser aberto. Se
 
 ## Vincular dependências e tickets relacionados {#issue-dependencies}
 
-Abra os controles de relações de um ticket e encontre o outro pelo título ou identificador. Fora de um campo de texto, R abre a escolha do tipo de relação a partir de um cartão sob o ponteiro ou do painel do ticket. Escolhido o tipo, a outra ponta é escolhida na [paleta de comandos](/docs/navigation#search-and-shortcuts), que lista apenas os tickets e objetivos que podem receber essa relação. Uma busca descritiva também lista, depois das correspondências de texto, tickets do mesmo projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**. Escolha uma relação de bloqueio quando um ticket precisar terminar antes que outro possa avançar. Se A bloqueia B, A é o pré-requisito e B é bloqueado por A. Uma relação de vínculo acrescenta contexto sem impor essa ordem.
+Abra os controles de relações de um ticket e encontre o outro pelo título ou identificador. Fora de um campo de texto, R abre a escolha do tipo de relação a partir de um cartão sob o ponteiro ou do painel do ticket. Escolhido o tipo, a outra ponta é escolhida na [paleta de comandos](/docs/navigation#search-and-shortcuts), que lista apenas os tickets e objetivos que podem receber essa relação; os concluídos e os cancelados também aparecem, depois dos abertos. Uma busca descritiva também lista, depois das correspondências de texto, tickets do mesmo projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**. Escolha uma relação de bloqueio quando um ticket precisar terminar antes que outro possa avançar. Se A bloqueia B, A é o pré-requisito e B é bloqueado por A. Uma relação de vínculo acrescenta contexto sem impor essa ordem.
 
 Leia os dois identificadores e a direção exibida antes de confirmar. Por exemplo, “Preparar o endpoint” bloqueia “Conectar o cliente”, e não o contrário. Uma dependência não transforma nenhum ticket em subticket, e uma relação de pai e filho não substitui uma relação de bloqueio.
 
@@ -490,7 +493,7 @@ Os estados finais Concluído, Cancelado e Duplicado fazem um ticket deixar de bl
 
 Um ticket aberto pode herdar um bloqueio pelo seu objetivo aberto. Se A bloqueia o objetivo B, os tickets abertos vinculados a B mostram A como bloqueio herdado, mesmo sem uma relação direta de A ao ticket. A interface identifica o pré-requisito real e o objetivo que transmite o bloqueio. Examine essa relação do objetivo antes de tentar removê-la do ticket. Encerrar A, encerrar B ou retirar o ticket de B elimina o bloqueio herdado. Esse mecanismo segue a participação no objetivo, não a hierarquia entre ticket pai e subtickets.
 
-Remova uma relação pelos seus controles quando ela deixar de fazer sentido; uma confirmação nomeia o outro ticket ou objetivo, e só o vínculo é removido. Depois verifique tanto o rótulo quanto o indicador de bloqueio. Marcar um ticket como duplicata tem efeitos no ciclo de vida e aponta para o trabalho mantido. Use essa ação para tickets duplicados, em vez de criar uma relação comum e supor que isso encerra a duplicata.
+Remova uma relação pelos seus controles quando ela deixar de fazer sentido; uma confirmação nomeia o outro ticket ou objetivo, e só o vínculo é removido. Em um cartão do quadro, o chip de um tipo de relação abre a lista dessas relações, cada uma com um botão de remover (✕) que pede a mesma confirmação; relações herdadas de um objetivo não têm esse botão. Depois verifique tanto o rótulo quanto o indicador de bloqueio. Marcar um ticket como duplicata tem efeitos no ciclo de vida e aponta para o trabalho mantido. Use essa ação para tickets duplicados, em vez de criar uma relação comum e supor que isso encerra a duplicata.
 
 Se o seletor de relações não encontrar um ticket, confira o acesso ao projeto e o identificador. Não exponha conteúdo de outro projeto colando a URL de um ticket privado em uma resposta pública de feedback.
 
@@ -506,7 +509,7 @@ A indexação e as decisões de relação usam IA. Elas contam na parcela **Auto
 
 ## Dividir um ticket em subtickets {#sub-issues}
 
-Abra o ticket pai e use os controles de subtickets para criar partes menores do trabalho. Dê a cada filho um resultado distinto. Depois da criação, confira projeto, propriedades e identificador do pai; uma hierarquia deve facilitar o acompanhamento, não substituir a descrição do que cada filho precisa alcançar.
+No painel lateral do ticket pai, escolha **Criar um subticket** para abrir a janela de criação de ticket com este ticket já definido como pai. A seta ao lado (**Mais opções de subticket**) oferece **Pedir ao Numo para dividir o ticket**, que pede ao Numo para ler o ticket com o plano e os comentários e criar um subticket para cada parte de trabalho independente; revise os subtickets criados. Um Leitor não vê esse botão. Dê a cada filho um resultado distinto. Depois da criação, confira projeto, propriedades e identificador do pai; uma hierarquia deve facilitar o acompanhamento, não substituir a descrição do que cada filho precisa alcançar.
 
 Para vincular tickets que já existem, pressione R em um cartão sob o ponteiro ou no painel do ticket, ou abra **Relações** pelo clique direito de um cartão. **Pai de** lista os tickets que podem virar subticket deste; **Subticket de** lista os tickets de primeiro nível que podem virar seu pai. Cada lista só oferece o que a regra de um único nível permite: um subticket não tem a opção **Pai de**, e um ticket que já tem subtickets não tem a opção **Subticket de**. Escolher um ticket que já tem outro pai o move para o novo. A partir de uma seleção de cartões, **Subticket de** coloca cada ticket selecionado elegível sob o pai escolhido. No formulário de novo ticket, **Relações** oferece as mesmas duas entradas: **Subticket de** cria o ticket sob o pai escolhido, e **Pai de** coloca os tickets escolhidos sob ele depois de criado. Um novo ticket tem um pai ou subtickets, não os dois. Ao digitar no campo de busca do clique direito de um cartão ou do menu `…` do painel do ticket, você também encontra as entradas dos submenus, cada uma com o caminho, por exemplo **Relações** › **Marcar como bloqueado por…**.
 
@@ -569,7 +572,7 @@ Uma rotina do Numo é um objeto diferente: ela agenda uma conversa e pode usar o
 
 No quadro, mantenha Shift pressionado e clique em cada cartão para adicioná-lo à seleção ou removê-lo dela. Com o mouse, você também pode arrastar um retângulo de seleção a partir de um espaço vazio do quadro. Shift, Command ou Ctrl fazem esse gesto ampliar a seleção existente. Perto de uma borda o quadro rola, e os cartões que o retângulo percorreu continuam selecionados mesmo depois de saírem da vista. O retângulo não é um modo de seleção para telas sensíveis ao toque. Confira a quantidade selecionada e os identificadores visíveis antes de abrir as ações em lote. A seleção é um conjunto de trabalho para a ação, não uma visualização salva nem uma concessão de permissão. Abra-as com **Ações** na barra de seleção ou pressione Command+K no macOS ou Ctrl+K no Windows/Linux enquanto houver tickets selecionados.
 
-Escolha Ações na barra flutuante de seleção para abrir a paleta de comandos. Escolha estado, prioridade, esforço ou responsável, defina o valor e confirme o formulário integrado. A ação de objetivo aparece somente quando a seleção pertence a um único projeto com objetivos disponíveis. Outras ações, como adicionar ou remover do ciclo, vincular dois tickets ou enviar a seleção ao Numo, aparecem quando o quadro atual oferece suporte a elas. Com o mouse, você também pode apontar para um cartão selecionado e pressionar S, P, E, A, L, D, O ou R: o seletor que abre se aplica a toda a seleção e, para responsável, objetivo, categorias e relações, aos tickets selecionados do projeto desse cartão. Clique com o botão direito em um cartão selecionado para agir sobre toda a seleção: **Copiar o prompt combinado** oferece **Gerar os planos** (**Revisar os planos** quando todos os tickets selecionados têm um, **Gerar ou revisar os planos** quando só alguns têm), **Implementar os tickets**, **Verificar as implementações** e **Personalizado…**, e cada opção copia um único prompt para todos os tickets selecionados. **Copiar os 3 identificadores**, com três tickets selecionados, copia os identificadores deles separados por vírgulas, do menor número para o maior. **Relações**, **Vincular um objetivo** e **Adicionar uma data de vencimento** abrem os mesmos seletores que R, O e D. Confira os tickets afetados depois. Em um dispositivo somente de toque sem um gesto de seleção múltipla compatível, edite cada ticket pelo painel de detalhes.
+Escolha Ações na barra flutuante de seleção para abrir a paleta de comandos. Escolha estado, prioridade, esforço ou responsável, defina o valor e confirme o formulário integrado. A ação de objetivo aparece somente quando a seleção pertence a um único projeto com objetivos disponíveis. Outras ações, como adicionar ou remover do ciclo, vincular dois tickets ou enviar a seleção ao Numo, aparecem quando o quadro atual oferece suporte a elas. Com o mouse, você também pode apontar para um cartão selecionado e pressionar S, P, E, A, L, D, O ou R: o seletor que abre se aplica a toda a seleção e, para responsável, objetivo, categorias e relações, aos tickets selecionados do projeto desse cartão. Clique com o botão direito em um cartão selecionado para agir sobre toda a seleção: **Copiar o prompt combinado** oferece **Gerar os planos** (**Revisar os planos** quando todos os tickets selecionados têm um, **Gerar ou revisar os planos** quando só alguns têm), **Implementar os tickets**, **Verificar as implementações** e **Personalizado…**, e cada opção copia um único prompt para todos os tickets selecionados. **Copiar os 3 identificadores**, com três tickets selecionados, copia os identificadores deles separados por vírgulas, do menor número para o maior. **Relações**, **Vincular um objetivo** e **Adicionar uma data de vencimento** abrem os mesmos seletores que R, O e D. **Mover para a lixeira**, por último, move toda a seleção para a lixeira após a mesma confirmação da barra de seleção. Confira os tickets afetados depois. Em um dispositivo somente de toque sem um gesto de seleção múltipla compatível, edite cada ticket pelo painel de detalhes.
 
 ### Resultados parciais e ações destrutivas {#bulk-results}
 

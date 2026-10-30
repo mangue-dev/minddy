@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { ResponsivePopover, ResponsivePopoverAnchor, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { Kbd } from "@/components/ui/kbd";
 import { PointerAnchor } from "@/components/pointer-anchor";
+import { anchorKey, useMountedWhileClosing } from "@/components/ui/overlay-freeze";
 import {
   Tooltip,
   TooltipContent,
@@ -123,6 +124,12 @@ export function SearchMenu({
     ? (e: React.SyntheticEvent) => e.stopPropagation()
     : undefined;
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  // Closed menus stay mounted through their exit animation: at their last
+  // point in pointer mode, until it ends in deferred-trigger mode.
+  const lastPointer = React.useRef(position ?? null);
+  if (position) lastPointer.current = position;
+  const pointerMounted = useMountedWhileClosing(open && !!position);
+  const deferredMounted = useMountedWhileClosing(open);
   const lastFocusKey = React.useRef(focusKey);
   React.useEffect(() => {
     if (lastFocusKey.current === focusKey) return;
@@ -163,12 +170,14 @@ export function SearchMenu({
     </ResponsivePopoverContent>
   );
 
-  // Pointer-anchored mode: a virtual anchor at the viewport point.
+  // Pointer-anchored mode: a virtual anchor at the viewport point. Closed
+  // (`null`), the menu stays at its last point for its exit animation.
   if (position !== undefined) {
-    if (!position) return null;
+    const anchor = position ?? lastPointer.current;
+    if (!pointerMounted || !anchor) return null;
     return (
-      <ResponsivePopover open={open} onOpenChange={onOpenChange} modal={modal}>
-        <PointerAnchor position={position} />
+      <ResponsivePopover key={anchorKey(anchor)} open={open && !!position} onOpenChange={onOpenChange} modal={modal}>
+        <PointerAnchor position={anchor} />
         {content}
       </ResponsivePopover>
     );
@@ -198,7 +207,7 @@ export function SearchMenu({
           }
         },
       })}</TooltipTrigger>
-      {open && <ResponsivePopover open onOpenChange={onOpenChange} modal={modal}>
+      {deferredMounted && <ResponsivePopover open={open} onOpenChange={onOpenChange} modal={modal}>
         <ResponsivePopoverAnchor virtualRef={virtualAnchor} />
         {content}
       </ResponsivePopover>}
