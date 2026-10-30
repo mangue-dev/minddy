@@ -114,7 +114,7 @@ import {
 import { isCollabRemoteTransaction } from "@/lib/page-collaboration-origin";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { EDITABLE_CHANGED_META } from "@/components/editor/use-editor-editable";
-import { MobileEditorToolbar } from "@/components/editor/mobile-editor-toolbar";
+import { MobileEditorToolbar, revealSelection } from "@/components/editor/mobile-editor-toolbar";
 import { useMarginCaret } from "@/components/editor/margin-caret";
 import { isMobileLayout } from "@/lib/app-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
@@ -201,6 +201,13 @@ function editorPropsFor(size: RichEditorSize) {
     // components/editor-node-link.ts.
     handleClick: (view: EditorView, pos: number, event: MouseEvent) =>
       handleNodeLinkClick(event) || handleMarkdownLinkClick(view, pos, event),
+    // On a phone the caret is kept above the keyboard's strip by one smooth
+    // scroll, not ProseMirror's instant one followed by the strip's (MIN-870).
+    handleScrollToSelection: (view: EditorView) => {
+      if (!isMobileLayout()) return false;
+      revealSelection(view);
+      return true;
+    },
     // Writing expires the pointer: as long as you have not moved the mouse again, the
     // task that it hovers no longer takes ⇧P (see hover-keys.ts). “Typing wins
     // as long as you write” is the only thing that separates the shortcut from

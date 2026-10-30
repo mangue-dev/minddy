@@ -3098,6 +3098,16 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .review-logo-shimmer { animation: none; }
 }
 
+/* vaul's bottom drawers (<Dialog> and <SidePanel> below 480px) sit above the
+   software keyboard like every other sheet. vaul's own `repositionInputs`
+   measured the keyboard as `innerHeight - visualViewport.height`, which iOS
+   Safari now reports as 0, so it is off and the drawers read the same
+   tokens as the sheets below (MIN-870). */
+[data-vaul-drawer][data-vaul-drawer-direction="bottom"] {
+  bottom: var(--mobile-keyboard-room, 0px);
+  max-height: min(92dvh, var(--mobile-sheet-room, 92dvh));
+}
+
 /* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
    (boards, tables, code and diffs) retain their own intentional scroll areas.
 
@@ -3108,11 +3118,51 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      that gap is taken;
    - `--mobile-sheet-safe-bottom`, the inset a sheet's own padding must clear.
      A glued sheet runs under the home indicator, so its content steps back;
-     a floating one already sits above it. */
+     a floating one already sits above it.
+
+   The software keyboard is two more, the only ones a surface reads to make
+   room for it (MIN-870). lib/use-mobile-layout.ts publishes the keyboard,
+   components/editor/mobile-editor-toolbar.tsx the strip it adds on top:
+   - `--mobile-keyboard-room`, what the keyboard and that strip cover at the
+     bottom: the `bottom` of anything anchored there;
+   - `--mobile-visible-height`, the height they leave: the cap of anything
+     that measures the screen. */
 :root[data-app-layout="mobile"] {
+  --mobile-keyboard-duration: 380ms;
+  --mobile-keyboard-ease: cubic-bezier(0.25, 0.8, 0.25, 1);
+  @media (prefers-reduced-motion: reduce) {
+    --mobile-keyboard-duration: 0ms;
+  }
+  /* The editor's strip only counts above an open keyboard: a strip left
+     behind by a keyboard Safari closed must not hold the sheets up. */
+  --mobile-keyboard-strip: 0px;
+  --mobile-keyboard-room: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-keyboard-strip));
+  --mobile-visible-height: calc(var(--mobile-viewport-height, 100dvh) - var(--mobile-keyboard-strip));
   --mobile-sheet-float: 0px;
   --mobile-sheet-safe-bottom: env(safe-area-inset-bottom);
-  --mobile-sheet-room: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)) - var(--mobile-sheet-float));
+  /* A sheet's own bottom padding: clear of the home indicator, and tight
+     above an open keyboard, where the field typed in sits right on it. */
+  --mobile-sheet-bottom: max(1rem, var(--mobile-sheet-safe-bottom));
+  --mobile-sheet-room: calc(var(--mobile-visible-height) - max(1rem, env(safe-area-inset-top)) - var(--mobile-sheet-float));
+}
+/* The keyboard covers the home indicator: nothing steps back from it. */
+:root[data-app-layout="mobile"][data-mobile-keyboard] {
+  --mobile-sheet-safe-bottom: 0px;
+  --mobile-sheet-bottom: 0.5rem;
+  --mobile-keyboard-strip: var(--mobile-editor-toolbar, 0px);
+}
+/* No keyboard, no keyboard strip: the editor keeps the focus when Safari
+   closes the keyboard some ways, and the strip stayed on screen alone. */
+:root[data-app-layout="mobile"]:not([data-mobile-keyboard]) [data-mobile-editor-toolbar] {
+  display: none;
+}
+/* The strip appears with the keyboard: from under the screen's edge, so it
+   rises with the keys instead of waiting for them at its place. `!important`
+   beats its inline `bottom` for that first frame only. */
+@starting-style {
+  :root[data-app-layout="mobile"] [data-mobile-editor-toolbar] {
+    bottom: -64px !important;
+  }
 }
 
 :root[data-app-layout="mobile"] {
@@ -3125,7 +3175,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet[data-slot="sheet-content"],
   .mobile-assistant-sheet[data-slot="sheet-content"],
   [data-slot="alert-dialog-content"] {
-    inset: auto 0 calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-sheet-float));
+    inset: auto 0 calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float));
     width: 100%;
     max-width: none;
     max-height: var(--mobile-sheet-room);
@@ -3137,24 +3187,18 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-bottom: max(1rem, var(--mobile-sheet-safe-bottom));
+    padding-bottom: var(--mobile-sheet-bottom);
   }
 
   /* Writing in a sheet: it takes the whole height above the keyboard, so the
-     text being typed has room, and it clears the editor's keyboard toolbar
-     (components/editor/mobile-editor-toolbar.tsx). */
+     text being typed has room. Its anchor and cap already clear the editor's
+     keyboard strip through the keyboard tokens. */
   /* `:focus-within`, not the editor's own focus: tapping the sheet's send
      button moves the focus to it, and the sheet must not shrink under the
      finger before the tap lands. */
   .mobile-bottom-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
   [data-slot="alert-dialog-content"]:has(.ProseMirror):focus-within {
-    height: calc(var(--mobile-sheet-room) - var(--mobile-editor-toolbar, 0px));
-    bottom: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-editor-toolbar, 0px) + var(--mobile-sheet-float));
-  }
-  .mobile-assistant-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
-  .mobile-side-panel-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
-  .creation-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within {
-    padding-bottom: var(--mobile-editor-toolbar, 0px);
+    height: var(--mobile-sheet-room);
   }
 
   .mobile-bottom-sheet[data-slot="sheet-content"] {
@@ -3221,6 +3265,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   :is(.app-content-header, .mobile-bottom-sheet) :is([data-size="icon-sm"], [data-size="icon"]) > svg {
     width: 20px;
     height: 20px;
+  }
+  /* A split button's chevron is one of those icon buttons: its action grows
+     with it, or the chevron stood taller than the button it opens. */
+  :is(.app-content-header, .mobile-bottom-sheet) [data-slot="split-button"] > * {
+    min-height: 40px;
   }
   .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
   .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
@@ -3364,9 +3413,9 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     background: linear-gradient(to bottom, transparent, var(--card));
   }
   .mobile-picker-sheet[data-slot="sheet-content"] {
-    max-height: min(75dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
+    max-height: min(75dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
     overflow: hidden;
-    padding: 52px 16px max(16px, var(--mobile-sheet-safe-bottom));
+    padding: 52px 16px var(--mobile-sheet-bottom);
   }
   .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"])[data-slot="sheet-content"] {
     padding-top: 8px;
@@ -3408,7 +3457,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-picker-sheet [cmdk-list] {
     min-height: 0;
-    max-height: min(50dvh, calc(var(--mobile-viewport-height, 100dvh) - 7rem - var(--mobile-sheet-float)));
+    max-height: min(50dvh, calc(var(--mobile-visible-height) - 7rem - var(--mobile-sheet-float)));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -3426,14 +3475,67 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-assistant-sheet [data-mobile-sheet-close]:not([data-slot="sheet-close"]) { display: none; }
   .mobile-command-palette[data-slot="sheet-content"] {
-    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
-    padding: 8px 0 max(1rem, var(--mobile-sheet-safe-bottom));
+    height: min(85dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
+    padding: 8px 0 var(--mobile-sheet-bottom);
     gap: 0;
     overflow: hidden;
     --cp-bg: var(--card);
   }
   [data-mobile-navigation] {
     bottom: var(--mobile-keyboard-inset, 0px);
+  }
+  /* Typing in the workspace itself (a composer, a page): the shell shrinks to
+     the visible height, so what sits at its bottom rises above the keyboard
+     without the document scrolling (lib/use-mobile-layout.ts pins it). A field
+     in a sheet leaves the shell alone: the background stays still behind it
+     (MIN-870). */
+  &[data-mobile-keyboard="shell"] :is(.app-workspace, .app-workspace .app-shell) {
+    height: var(--mobile-visible-height);
+  }
+  /* What makes room for the keyboard moves with it: the hook announces the
+     keyboard as soon as a field takes the focus, and these follow it over
+     its animation instead of jumping once Safari reports it. Only while it
+     opens or closes: a keyboard changing size while open (a suggestion bar)
+     is followed at once, not over 380 ms. */
+  &[data-mobile-keyboard-moving] :is(
+    .app-workspace,
+    :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"],
+    [data-slot="alert-dialog-content"],
+    [data-mobile-editor-toolbar]
+  ),
+  &[data-mobile-keyboard-moving] body::after {
+    transition-property: bottom, height, max-height;
+    transition-duration: var(--mobile-keyboard-duration);
+    transition-timing-function: var(--mobile-keyboard-ease);
+  }
+  /* A docked comment composer gives its room to the field being typed in,
+     and comes back with the keyboard down. */
+  &[data-mobile-keyboard] [data-keyboard-dock]:not(:focus-within) {
+    display: none;
+  }
+  /* The one in use sits right above the keyboard: no home indicator to clear. */
+  &[data-mobile-keyboard] [data-keyboard-dock] {
+    padding-bottom: 0.5rem;
+  }
+  /* The navigation pill hides while typing (components/mobile-navigation.tsx):
+     its reserve under the content goes back to the field. */
+  &[data-mobile-keyboard="shell"] {
+    --mobile-nav-clearance: 0px;
+  }
+  /* Between a sheet and the keyboard, iOS leaves its form bar floating on
+     a transparent band, and the editor's strip floats with margins: show the
+     sheet there, not the page behind it. Above every sheet and its overlay,
+     under the strip (z-80). For as long as a sheet is open, not only while
+     one of its fields types: the keyboard closing or reopening under it
+     uncovered the page too. */
+  &[data-mobile-surface] body::after {
+    content: "";
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 79;
+    height: var(--mobile-keyboard-room);
+    background: var(--card);
+    pointer-events: none;
   }
   /* Writing brings the keyboard up: the bottom navigation steps aside for the
      text (components/mobile-navigation.tsx tracks the focused field), and for
@@ -3462,8 +3564,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 :root[data-app-layout="mobile"] {
   .mobile-inbox-sheet[data-slot="sheet-content"] {
-    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
-    max-height: calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float));
+    height: min(85dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
+    max-height: calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float));
     padding-top: 3rem;
   }
   .mobile-inbox-sheet .divide-y > :not(:last-child) { border-bottom-width: 0; }
@@ -3474,8 +3576,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 :root[data-app-layout="mobile"] {
   .creation-sheet[data-slot="sheet-content"] {
-    height: min(92dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
-    padding: 8px 1rem max(1rem, var(--mobile-sheet-safe-bottom));
+    height: min(92dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
+    padding: 8px 1rem var(--mobile-sheet-bottom);
     gap: 1rem;
     overflow: hidden;
   }
@@ -3632,7 +3734,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 
 :root[data-app-layout="mobile"] .documentation-numo-sheet[data-slot="sheet-content"] {
-  height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
+  height: min(85dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
   overflow: hidden;
   padding: 0;
 }

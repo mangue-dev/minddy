@@ -685,7 +685,7 @@ export function ObjectiveDetail({
       </div>
 
       {canComment && (
-      <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
+      <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
         <div className="mx-auto max-w-3xl">
           <CommentComposer
             members={members}

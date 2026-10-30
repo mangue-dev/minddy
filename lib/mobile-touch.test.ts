@@ -120,9 +120,10 @@ describe("bottom sheets on wide screens (MIN-841)", () => {
   it("sizes every mobile sheet through the shared budget", () => {
     // A sheet that measured the viewport or the home indicator itself would
     // overflow the top, or pad twice, once it floats.
-    expect(sheetSection).toContain("inset: auto 0 calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-sheet-float));");
+    expect(sheetSection).toContain("inset: auto 0 calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float));");
     const rules = sheetSection.slice(sheetSection.indexOf(":root[data-app-layout=\"mobile\"] {\n  .app-workspace"));
-    const viewportCaps = css.split("\n").filter((line) => line.includes("var(--mobile-viewport-height, 100dvh) -"));
+    // Caps measure what the keyboard and the editor's strip leave (MIN-870).
+    const viewportCaps = css.split("\n").filter((line) => line.includes("var(--mobile-visible-height) -"));
     expect(viewportCaps.length).toBeGreaterThan(5);
     for (const line of viewportCaps) expect(line).toContain("var(--mobile-sheet-float)");
     const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
@@ -432,5 +433,47 @@ describe("other touch pitfalls", () => {
     expect(tokens).toContain("--background: oklch(0.135 0.003 250);"); // dark
     expect(THEME_PRESETS["minddy-light"].chromeColor).toBe("#f5f7fb");
     expect(THEME_PRESETS["minddy-dark"].chromeColor).toBe("#070809");
+  });
+});
+
+describe("software keyboard (MIN-870)", () => {
+  it("anchors vaul's drawers on the shared keyboard inset, with vaul's own handling off", () => {
+    // vaul measured the keyboard as `innerHeight - visualViewport.height`,
+    // which iOS Safari reports as 0: its drawers stayed under the keyboard.
+    for (const name of ["dialog", "side-panel"]) {
+      expect(read(UI(name))).toContain("repositionInputs: false");
+    }
+    const css = read(GLOBALS);
+    const drawer = css.slice(css.indexOf('[data-vaul-drawer][data-vaul-drawer-direction="bottom"] {'));
+    expect(drawer.slice(0, drawer.indexOf("}"))).toContain("bottom: var(--mobile-keyboard-room, 0px);");
+  });
+
+  it("lifts a workspace field by shrinking the shell, not by scrolling the document", () => {
+    const css = read(GLOBALS);
+    expect(css).toContain('&[data-mobile-keyboard="shell"] :is(.app-workspace, .app-workspace .app-shell) {');
+    expect(read(join(REPO, "components/app-shell-chrome.tsx"))).toContain("useMobileViewport({ pinDocument: true });");
+  });
+
+  it("counts the editor's strip once, in the shared keyboard tokens", () => {
+    const css = read(GLOBALS);
+    expect(css).toContain("--mobile-keyboard-room: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-keyboard-strip));");
+    expect(css).toContain("--mobile-visible-height: calc(var(--mobile-viewport-height, 100dvh) - var(--mobile-keyboard-strip));");
+    // Only the strip token reads the editor's reserve, and only above an open
+    // keyboard: a sheet that also padded or raised itself for it left the
+    // strip's height empty twice.
+    const uses = css.split("\n").filter((line) => line.includes("var(--mobile-editor-toolbar"));
+    expect(uses.map((line) => line.trim())).toEqual(["--mobile-keyboard-strip: var(--mobile-editor-toolbar, 0px);"]);
+    expect(css).toContain(':root[data-app-layout="mobile"]:not([data-mobile-keyboard]) [data-mobile-editor-toolbar] {');
+  });
+
+  it("gives the keyboard's room to the field being typed in", () => {
+    const css = read(GLOBALS);
+    // A docked comment composer steps aside while another field is focused.
+    expect(css).toContain("&[data-mobile-keyboard] [data-keyboard-dock]:not(:focus-within) {");
+    for (const path of ["components/triage/triage-page.tsx", "components/issue-side-panel.tsx", "components/objective-detail.tsx", "components/feedback/feedback-team-page.tsx"]) {
+      expect(read(join(REPO, path))).toContain("data-keyboard-dock");
+    }
+    // Under iOS's floating form bar, the sheet continues instead of the page.
+    expect(css).toContain("&[data-mobile-surface] body::after {");
   });
 });

@@ -73,7 +73,7 @@ export default function HomePage() {
 
       <div className="flex-1" aria-hidden />
 
-      <div className={cn(COMPOSER_COLUMN, "min-w-0 pb-4 pt-8")}>
+      <div data-keyboard-dock className={cn(COMPOSER_COLUMN, "min-w-0 pb-4 pt-8")}>
         <HomeNumoComposer />
       </div>
     </section>

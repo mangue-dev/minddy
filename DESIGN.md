@@ -101,6 +101,24 @@ where `lib/theme-presets.test.ts` measures their contrast.
   corners. Size a custom sheet with `--mobile-sheet-room`,
   `--mobile-sheet-float` and `--mobile-sheet-safe-bottom`, never with the raw
   viewport height or bottom inset.
+- **The keyboard.** In the app shell the document never scrolls, even when iOS
+  Safari would scroll it to reveal a focused field: `useMobileViewport` in
+  `lib/use-mobile-layout.ts` prevents it, announces the keyboard as soon as a
+  field takes the focus (at the height measured last time) and publishes
+  everything a surface needs to make room. Never measure the keyboard from
+  `window.innerHeight`, which iOS shrinks with it. To adapt a field:
+  - a surface anchored at the bottom uses `bottom: var(--mobile-keyboard-room)`
+    (the keyboard plus the editor's strip) and caps its height with
+    `--mobile-visible-height` or `--mobile-sheet-room`, and pads its bottom
+    with `--mobile-sheet-bottom` (or `--mobile-sheet-safe-bottom`), never the
+    raw `env(safe-area-inset-bottom)`, which the keyboard covers; mobile
+    sheets, `AlertDialog`, the drawers and the palette's actions already do;
+  - a composer docked at the foot of a page or panel carries
+    `data-keyboard-dock`: it hides while another field holds the keyboard and
+    drops its home-indicator padding while it holds it;
+  - a field in the workspace itself needs nothing: the shell shrinks to the
+    visible height while it is focused, and the field is scrolled into view
+    inside its own scroll area.
 - **Touch.** Under a coarse pointer, controls get a 44px hit area through the
   helpers in `components/ui/touch-target.ts` without changing how they look.
   Rows use `COARSE_ROW`. Hover effects belong to a fine pointer: `hover:`

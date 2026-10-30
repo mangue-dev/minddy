@@ -19,6 +19,9 @@ import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context
 import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { SplitButton } from "@/components/ui/split-button";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -94,6 +97,7 @@ export default function TriageRoute() {
 
 export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const t = useTranslations("Triage");
+  const mobile = useMobileLayout() === true;
   const tField = useTranslations("Field");
   const tIssueUI = useTranslations("IssueUI");
   const tAction = useTranslations("CommandPaletteActions");
@@ -604,13 +608,39 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
  it caps (same part as the pull request and the
  agent conversation). */}
             <AppContentHeader contentClassName="gap-2">
-              <span className={`font-mono text-sm text-muted-foreground ${APP_CONTENT_HEADER_LEADING_INSET}`}>
+              <span className={`shrink-0 whitespace-nowrap font-mono text-sm text-muted-foreground ${APP_CONTENT_HEADER_LEADING_INSET}`}>
                 {issueIdentifier(project.key, selected.number)}
               </span>
               {/* Same order as the actions of a pull request (pr-detail):
  the neutral action, then the refusal, then the acceptance last
  — the gesture that advances the ticket is always on the right. */}
-              {!readOnly && (
+              {!readOnly && mobile && (
+              // Three labeled buttons overflow a phone's header: the
+              // duplicate, the rarest outcome, moves under the refusal's
+              // chevron, as spam does on the feedback page.
+              <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                <SplitButton
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => openConfirm("decline", selected)}
+                  menuLabel={t("markDuplicate")}
+                  menu={
+                    <DropdownMenuItem onSelect={() => setDuplicateTarget(selected)}>
+                      <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+                      {t("markDuplicate")}
+                    </DropdownMenuItem>
+                  }
+                >
+                  {t("decline")}
+                </SplitButton>
+                {/* As tall as the split button, which a phone's header grows to 40px. */}
+                <Button size="sm" className="min-h-10" onClick={() => openConfirm("accept", selected)}>
+                  <HugeiconsIcon icon={CheckIcon} />
+                  {t("accept")}
+                </Button>
+              </div>
+              )}
+              {!readOnly && !mobile && (
               <div className="ml-auto flex shrink-0 items-center gap-1.5">
                 <Button variant="outline" size="sm" onClick={() => setDuplicateTarget(selected)}>
                   <HugeiconsIcon icon={Copy01Icon} className="text-muted-foreground" />
@@ -780,7 +810,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
             </div>
 
             {canComment && (
-            <div className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
+            <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
               <div className="mx-auto max-w-3xl">
                 <CommentComposer
                   members={members}

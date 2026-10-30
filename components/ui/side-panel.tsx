@@ -53,10 +53,13 @@ function ModalSidePanel({
   const drawer = useMediaQuery("(max-width: 479px)")
   const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
   const Root = (drawer ? Drawer.Root : DialogPrimitive.Root) as React.ElementType
+  // vaul's keyboard handling misreads iOS Safari; app/globals.css anchors the
+  // drawer above the keyboard instead (MIN-870).
+  const drawerProps = drawer ? { repositionInputs: false } : {}
   return (
     <SidePanelModeContext.Provider value={{ drawer, onOpenChange: tracked.onOpenChange }}>
       <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
-        <Root data-slot="side-panel" open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
+        <Root data-slot="side-panel" {...drawerProps} open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
       </OverlayOpenProvider>
     </SidePanelModeContext.Provider>
   )
@@ -252,7 +255,7 @@ function SidePanelFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="side-panel-footer"
       className={cn(
-        "flex shrink-0 flex-col-reverse gap-2 border-t border-border px-6 py-5 sm:flex-row sm:justify-end max-[479px]:pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+        "flex shrink-0 flex-col-reverse gap-2 border-t border-border px-6 py-5 sm:flex-row sm:justify-end max-[479px]:pb-[max(1.25rem,var(--mobile-sheet-safe-bottom,env(safe-area-inset-bottom)))]",
         className
       )}
       {...props}

@@ -38,6 +38,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
+import type { EditorView } from "@tiptap/pm/view";
 import { useEditorState } from "@tiptap/react";
 import { AppIcon } from "@/components/icon";
 import { Input } from "@/components/ui/input";
@@ -75,8 +76,6 @@ const TOOLBAR_HEIGHT = 44;
 const TOOLBAR_GAP = 8;
 /** What the sheets above the keyboard reserve for it (app/globals.css). */
 const TOOLBAR_RESERVE = TOOLBAR_HEIGHT + TOOLBAR_GAP * 2;
-/** A visual viewport this much shorter than the window has a keyboard under it. */
-const KEYBOARD_MIN_HEIGHT = 120;
 /** The room kept between the caret's line and the toolbar. */
 const CARET_ROOM = 48;
 
@@ -90,24 +89,51 @@ function scrollParent(node: HTMLElement | null): HTMLElement | null {
   return null;
 }
 
-/** Scroll the caret's line above the toolbar, with room to read what is typed. */
-export function revealCaret(editor: Editor) {
-  if (editor.isDestroyed || !editor.isFocused) return;
-  const { view } = editor;
+/**
+ * The band of the screen the keyboard leaves. From the keyboard tokens of
+ * lib/use-mobile-layout.ts when the document is pinned: they already know
+ * where the keyboard is going while Safari still reports where it was.
+ */
+function visibleBand() {
+  const root = document.documentElement;
+  const viewport = window.visualViewport;
+  const inset = Number.parseFloat(getComputedStyle(root).getPropertyValue("--mobile-keyboard-inset"));
+  if (!Number.isNaN(inset) && (!viewport || viewport.offsetTop === 0)) return { top: 0, bottom: root.clientHeight - inset };
+  return viewport
+    ? { top: viewport.offsetTop, bottom: viewport.offsetTop + viewport.height }
+    : { top: 0, bottom: window.innerHeight };
+}
+
+/**
+ * Scroll the caret's line above the toolbar, with room to read what is typed.
+ * The one scroll of the selection on mobile: ProseMirror hands its own over
+ * (components/editor/rich-editor.tsx), so typing at the foot of the notebook
+ * no longer jumped twice (MIN-870). Smooth, towards an absolute position: the
+ * caret and the scroll move together, so a call made while an earlier scroll
+ * is still running aims at the same place instead of adding to it.
+ */
+export function revealSelection(view: EditorView) {
   let caret: { top: number; bottom: number };
   try {
     caret = view.coordsAtPos(view.state.selection.head);
   } catch {
     return;
   }
-  const viewport = window.visualViewport;
-  const top = viewport ? viewport.offsetTop : 0;
-  const bottom = (viewport ? viewport.offsetTop + viewport.height : window.innerHeight) - TOOLBAR_RESERVE - CARET_ROOM;
-  const delta = caret.bottom > bottom ? caret.bottom - bottom : caret.top < top + 8 ? caret.top - top - 8 : 0;
+  const band = visibleBand();
+  const bottom = band.bottom - TOOLBAR_RESERVE - CARET_ROOM;
+  const delta = caret.bottom > bottom ? caret.bottom - bottom : caret.top < band.top + 8 ? caret.top - band.top - 8 : 0;
   if (!delta) return;
+  // Never the document: the app shell pins it, and a scrolled document is
+  // what slid the whole app under the status bar.
   const parent = scrollParent(view.dom as HTMLElement);
-  if (parent) parent.scrollBy({ top: delta });
-  else window.scrollBy({ top: delta });
+  if (!parent) return;
+  const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  parent.scrollTo({ top: parent.scrollTop + delta, behavior: smooth ? "smooth" : "auto" });
+}
+
+export function revealCaret(editor: Editor) {
+  if (editor.isDestroyed || !editor.isFocused) return;
+  revealSelection(editor.view);
 }
 
 /** A section's header in a sheet, as in the “/” and “@” menus. */
@@ -236,44 +262,12 @@ export function MobileEditorToolbar({
     };
   }, [visible]);
 
-  // Where the strip sits: the bottom edge of the VISUAL viewport, the part of
-  // the page the keyboard leaves. A `bottom` anchored to the layout viewport
-  // drifted while the page scrolled under an open keyboard; following the
-  // visual viewport frame by frame keeps the strip glued above the keys.
-  const [top, setTop] = useState<number | null>(null);
-  useEffect(() => {
-    if (!visible) return;
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    let frame = 0;
-    // The keyboard as the viewport shows it. Closing it from the OS's own key
-    // only shrinks nothing back: the editor keeps the focus, and the strip
-    // would stay over the page. Seen open, then closed: the editing is over.
-    let keyboardSeen = false;
-    const place = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const keyboard = window.innerHeight - viewport.height - viewport.offsetTop > KEYBOARD_MIN_HEIGHT;
-        if (keyboard) keyboardSeen = true;
-        else if (keyboardSeen && !pressing.current) {
-          keyboardSeen = false;
-          if (!editor.isDestroyed) editor.commands.blur();
-          return;
-        }
-        setTop(Math.round(viewport.offsetTop + viewport.height - TOOLBAR_HEIGHT - TOOLBAR_GAP));
-      });
-    };
-    place();
-    viewport.addEventListener("resize", place);
-    viewport.addEventListener("scroll", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      cancelAnimationFrame(frame);
-      viewport.removeEventListener("resize", place);
-      viewport.removeEventListener("scroll", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [visible, editor]);
+  // Where the strip sits: right above the keyboard, through the keyboard
+  // tokens lib/use-mobile-layout.ts publishes. It reads them like the sheets
+  // do, so it rises with them when the keyboard opens instead of popping in
+  // at its final place, and app/globals.css hides it once no keyboard is up
+  // (MIN-870). Measuring the visual viewport here read `innerHeight`, which
+  // iOS Safari shrinks with the keyboard.
 
   const active = useEditorState({
     editor,
@@ -369,12 +363,7 @@ export function MobileEditorToolbar({
           // right. `pointer-events-auto`: on the body, under a modal sheet (the
           // notebook) that sets `pointer-events: none` on everything else.
           className="pointer-events-auto fixed inset-x-2 z-[80] flex items-center overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-lg"
-          style={{
-            height: TOOLBAR_HEIGHT,
-            ...(top === null
-              ? { bottom: `calc(var(--mobile-keyboard-inset, 0px) + ${TOOLBAR_GAP}px)` }
-              : { top }),
-          }}
+          style={{ height: TOOLBAR_HEIGHT, bottom: `calc(var(--mobile-keyboard-inset, 0px) + ${TOOLBAR_GAP}px)` }}
         >
           <div className="no-scrollbar flex h-full min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-none px-1"
             style={{ touchAction: "pan-x" }}>

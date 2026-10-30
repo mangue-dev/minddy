@@ -90,7 +90,7 @@ export function DocumentationNumo({ open, onClose, articleId, sections, locale, 
       </div>
       <ScrollFadeEdges edges={edges} from={mobile ? "from-card" : "from-background"} />
     </div>
-    <form className="shrink-0 space-y-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]" onSubmit={event => { event.preventDefault(); submit(); }}>
+    <form data-keyboard-dock className="shrink-0 space-y-2 p-4 pb-[max(1rem,var(--mobile-sheet-safe-bottom,env(safe-area-inset-bottom)))]" onSubmit={event => { event.preventDefault(); submit(); }}>
       {!authenticated && <div id="documentation-numo-sign-in" role="status" className="rounded-md bg-muted p-3 text-sm">
         <p>{t("numoSignInRequired")}</p>
         <a href={`/login?redirect=${encodeURIComponent(documentationPath(articleId, locale))}`} onClick={preserveDocumentationPosition} className="mt-1 inline-flex min-h-11 items-center rounded font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring">{auth("signIn")}</a>

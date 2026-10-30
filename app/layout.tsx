@@ -82,7 +82,13 @@ const instrumentSerif = Instrument_Serif({
    request, agent session), the same ones that `.dock-above-nav` already goes back to
    above the moving bar in app/globals.css. `resizes-content` shrinks
    the layout viewport: `h-dvh` of the shell follows, and the composer goes up
-   with the keyboard instead of disappearing underneath. */
+   with the keyboard instead of disappearing underneath.
+
+   Only Chromium (Android) honors it. iOS Safari ignores the key and scrolls the
+   whole document to reveal a focused field; `useMobileViewport` in
+   lib/use-mobile-layout.ts cancels that scroll and makes room itself (MIN-870).
+   `overlays-content` with the VirtualKeyboard API would only trade Android's
+   native resize for the same manual work, so it stays `resizes-content`. */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
