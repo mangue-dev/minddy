@@ -1,5 +1,6 @@
 "use client";
 
+import { pullRequestHref } from "@/lib/app-urls";
 import { useCallback } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
@@ -85,7 +86,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
 
   // A pull request opens in its own tab, or in the tab already showing it.
   const openPullRequest = useCallback((prId: string) => {
-    const href = `/pull-requests?pr=${prId}`;
+    const href = pullRequestHref(prId);
     if (!appTabs) navigate(href);
     else if (!appTabs.reuseDestination(href)) void appTabs.create(href);
   }, [appTabs, navigate]);

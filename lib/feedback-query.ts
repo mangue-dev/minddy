@@ -1,3 +1,4 @@
+import { expandParam } from "./ref-registry";
 import type { QueryClient } from "@tanstack/react-query";
 import { feedbackWrites } from "@/lib/optimistic/feedback-writes";
 import { matchesFeedbackFilters, collectionFilterParams } from "./collection-filters";
@@ -40,7 +41,7 @@ export function feedbackNormalFiltersForDestination(href: string): FeedbackListF
  * full list. It only chooses an existing reader and never writes either key.
  */
 export function feedbackFiltersForDestination(client: QueryClient, projectId: string, href: string): FeedbackListFilters {
-  const post = new URL(href, "https://minddy.example").searchParams.get("post");
+  const post = expandParam(new URL(href, "https://minddy.example").searchParams.get("post"));
   return feedbackFiltersForRequestedPost(client, projectId, post, feedbackNormalFiltersForDestination(href));
 }
 

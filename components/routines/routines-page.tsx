@@ -1,5 +1,7 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
+import { routineHref } from "@/lib/app-urls";
 import { useEffect, useState } from "react";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
@@ -17,7 +19,7 @@ function RoutinesPageInner() {
   const { pathname, searchParams } = useAppTabRoute();
   const active = useAppTabActive();
   const navigation = useOptionalAppTabNavigation();
-  const routineParam = searchParams.get("routine");
+  const routineParam = expandParam(searchParams.get("routine"));
   const actionParam = searchParams.get("action");
   const [selectedId, setSelectedId] = useState<string | null>(routineParam);
   // `?action=` comes from the sidebar menu (MIN-685) and targets the routine
@@ -48,7 +50,7 @@ function RoutinesPageInner() {
     // An asynchronous callback from a hidden tab must not change another tab's URL.
     if (active && window.location.pathname === pathname &&
         (!navigation || navigation.session.getSnapshot().activeId === navigation.activeId)) {
-      window.history.replaceState(null, "", id ? `/routines?routine=${encodeURIComponent(id)}` : "/routines");
+      window.history.replaceState(null, "", id ? routineHref(id) : "/routines");
     }
   };
   const selectRoutine = (id: string | null) => {
@@ -68,7 +70,7 @@ function RoutinesPageInner() {
 
   usePublishCurrentView({
     href: selectedId
-      ? `/routines?routine=${encodeURIComponent(selectedId)}`
+      ? routineHref(selectedId)
       : "/routines",
   });
 

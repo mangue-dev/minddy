@@ -4,6 +4,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
 import { appTabRoute } from "./app-tab-location";
+import { useRefRegistryVersion } from "./use-ref-registry-version";
 import { APP_TAB_METADATA_BATCH_SIZE, appTabMetadataLocations, type AppTabMetadata } from "./app-tab-metadata";
 import { createPullRequestTabLabels } from "./pull-request-tab-labels";
 import { fetchRoutinesApi } from "./routines-api";
@@ -44,7 +45,10 @@ export function useAppTabMetadata(hrefs: string[]) {
     staleTime: 30_000,
     gcTime: 60_000,
   });
-  const routes = useMemo(() => locations.map(appTabRoute), [locations]);
+  // Short codes expand as records load, the metadata response included.
+  const registryVersion = useRefRegistryVersion();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- The registry version is the input that changes the expansion.
+  const routes = useMemo(() => locations.map((href) => appTabRoute(href)), [locations, registryVersion]);
   const pageProjects = useMemo(() => [...new Set(routes.filter((route) => route.pageId).map((route) => route.projectId!))], [routes]);
   const objectiveProjects = useMemo(() => [...new Set(routes.filter((route) => route.objectiveId).map((route) => route.projectId!))], [routes]);
   const prIds = useMemo(() => [...new Set(routes.map((route) => route.prId).filter((id): id is string => !!id))], [routes]);

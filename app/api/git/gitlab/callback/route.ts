@@ -1,3 +1,4 @@
+import { projectPath } from "@/lib/app-urls";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyGitLinkState, ACCOUNT_CONNECT_PROJECT } from "@/lib/server/git/link-state";
 import {
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       ? "/pull-requests?connected=git"
       : isAccount
         ? "/settings?tab=git"
-        : `/projects/${state.projectId}/settings?tab=git`;
+        : `${projectPath(state.projectId, "settings")}?tab=git`;
 
   // Before exchanging the `code`: no need to burn the victim's.
   if (!sessionMatchesState(sessionUserId, state.userId)) {

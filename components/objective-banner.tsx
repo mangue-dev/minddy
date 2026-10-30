@@ -1,5 +1,6 @@
 "use client";
 
+import { objectiveHref } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { startTransition } from "react";
@@ -116,7 +117,7 @@ export function ObjectiveBoardHeader({
     <AppContentHeader contentClassName="w-full gap-3 sm:gap-5">
       <Button asChild variant="ghost" size="icon-sm" tooltip={t("backToObjective")}>
         <Link
-          href={`/projects/${projectId}/objectives?open=${objective.id}`}
+          href={objectiveHref(projectId, objective.id)}
           aria-label={t("backToObjective")}
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} />

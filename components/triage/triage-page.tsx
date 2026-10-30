@@ -1,5 +1,6 @@
 "use client";
 
+import { issueHref, projectPath, resolveIssueRef } from "@/lib/app-urls";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { CollectionFilterMenu } from "@/components/collection-filter-items";
 import { matchesCollectionFilters } from "@/lib/collection-filters";
@@ -112,7 +113,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const router = useRouter();
-  const issueParam = searchParams.get("issue");
+  const rawIssueParam = searchParams.get("issue");
   const { user } = useAuth();
 
   const { projects, loading: projectsLoading } = useProjects();
@@ -135,7 +136,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const triageIssues = useMemo(() => triageSelectionItems(issues), [issues]);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [query, setQuery] = useMobileCollectionState(`/projects/${projectId}/triage`, "query", "");
+  const [query, setQuery] = useMobileCollectionState(projectPath(projectId, "triage"), "query", "");
 
   /**
    * What the column DISPLAYS. The filter does not affect `triageIssues`, whose
@@ -351,6 +352,10 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // ?issue=<id> selects THIS ticket rather than the first one in the list, then
   // purges the parameter so that a background refetch does not bring back the selection
   // here (same idiom as ?post= for feedback and ?open= for objectives).
+  // The link names the issue `MIN-42` or by short code.
+  const issueParam = rawIssueParam
+    ? resolveIssueRef(rawIssueParam, triageIssues)?.id ?? rawIssueParam
+    : null;
   useEffect(() => {
     if (!issueParam) return;
     // We wait until the ticket is really in the list: purge the parameter
@@ -999,7 +1004,7 @@ function TriageRow({
     <button
       ref={askNumoRef}
       type="button"
-      data-navigation-href={`/projects/${issue.project_id}/triage?issue=${encodeURIComponent(issue.id)}`}
+      data-navigation-href={issueHref(issue.project_id, issue, "triage")}
       data-triage-issue-id={issue.id}
       data-comment-target={commentTarget("issue", issue.id)}
       data-sidebar-filter-result

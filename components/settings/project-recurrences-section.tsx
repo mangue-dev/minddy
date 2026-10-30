@@ -1,5 +1,6 @@
 "use client";
 
+import { issueHref } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, CancelCircleIcon as CircleSlash, RepeatIcon, UserIcon } from "@hugeicons/core-free-icons";
@@ -155,7 +156,7 @@ export function ProjectRecurrencesSection({
               }
               title={
                 <Link
-                  href={`/projects/${projectId}?issue=${row.id}`}
+                  href={issueHref(projectId, { ...row, project_id: projectId })}
                   className="hover:underline"
                 >
                   {row.title}

@@ -1,5 +1,7 @@
 "use client";
 
+import { expandProjectSegment, expandRef } from "@/lib/ref-registry";
+import { projectSegmentFromPath } from "@/lib/project-id-from-path";
 import { Activity, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
@@ -105,7 +107,7 @@ const RetainedBoard = memo(function RetainedBoard({ view, active, roots }: { vie
   </div>;
 });
 
-const HOME_ROUTE: RetainedAppView["route"] = { pathname: "/home", search: "", projectId: null };
+const HOME_ROUTE: RetainedAppView["route"] = { pathname: "/home", search: "", projectSegment: null };
 
 // Shell and tab-list renders reach Home only through its own subscriptions:
 // stable props and route identity keep the composer out of those renders.
@@ -215,7 +217,7 @@ function DesktopTabViews({ homeWeight, route: { pathname, search }, ahead }: {
     if (!pendingActivation) {
       if (tabId && state.tabId !== tabId) visits = [...visits, tabId].slice(-32);
       const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
-      views = retainAppView(views, { pathname, search, projectId: pathname.match(/^\/projects\/([^/]+)/)?.[1] ?? null }, tabId, new Set(tabs.map((tab) => tab.id)), {
+      views = retainAppView(views, { pathname, search, projectSegment: projectSegmentFromPath(pathname) }, tabId, new Set(tabs.map((tab) => tab.id)), {
         budget: Math.max(1, retainedAppViewBudget(memory) - homeWeight), limit: RETAINED_APP_VIEW_LIMIT - homeWeight, visits,
         href: tabs.find((tab) => tab.id === tabId)?.href,
         cost: (view) => {
@@ -225,7 +227,7 @@ function DesktopTabViews({ homeWeight, route: { pathname, search }, ahead }: {
             // frequent destinations for files an Activity tab has not mounted.
             const root = roots.get(view.key);
             if (root && !root.querySelector('[data-testid="pr-diff-view"]')) return 1;
-            const pr = new URLSearchParams(view.route.search).get("pr");
+            const pr = expandRef(new URLSearchParams(view.route.search).get("pr"));
             return Math.max(1, Math.ceil((client.getQueryData<{ files: unknown[] }>(["pull-request", pr])?.files.length ?? 400) / 200));
           }
           if (view.kind === "pages") {
@@ -233,7 +235,7 @@ function DesktopTabViews({ homeWeight, route: { pathname, search }, ahead }: {
             const previous = [...root?.querySelectorAll<HTMLElement>('[data-retained-page-document]') ?? []]
               .map((node) => node.dataset.retainedPageDocument!);
             const selected = view.route.pathname.match(/^\/projects\/[^/]+\/pages\/([^/]+)$/)?.[1];
-            const active = selected && selected !== "trash" ? selected : null;
+            const active = selected && selected !== "trash" ? expandRef(selected) : null;
             if (!previous.length && !active) return 2;
             const eligible = new Set(previous.filter((id) => {
               const state = client.getQueryState(["page", id]);
@@ -251,7 +253,7 @@ function DesktopTabViews({ homeWeight, route: { pathname, search }, ahead }: {
           }
           const data = view.kind === "global-board"
             ? client.getQueryData<{ issues: unknown[] }>(["me", "board"])?.issues
-            : client.getQueryData<unknown[]>(["issues", view.route.projectId]);
+            : client.getQueryData<unknown[]>(["issues", expandProjectSegment(view.route.projectSegment)]);
           return Math.max(1, Math.ceil((data?.length ?? (view.kind === "global-board" ? 600 : 200)) / 200));
         },
       });

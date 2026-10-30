@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, FileUploadIcon, Mail01Icon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
@@ -867,9 +868,9 @@ export function CreateProjectWizard({
     // CSV imports continue on the board; a brief only creates its page.
     if (seed?.kind === "import" && csvFile) {
       putSeedHandoff({ kind: "import", file: csvFile });
-      router.push(`/projects/${created.id}?setup=import`);
+      router.push(`${projectPath(created)}?setup=import`);
     } else {
-      router.push(`/projects/${created.id}`);
+      router.push(projectPath(created));
     }
   };
 

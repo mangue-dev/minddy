@@ -1,10 +1,11 @@
+import { expandProjectSegment } from "./ref-registry";
 import { notifyManager, type QueryClient, type QueryObserverOptions } from "@tanstack/react-query";
 import { isDefinitiveReadError } from "./backend-availability";
 import type { RetainedAppView } from "./retained-app-views";
 
 export function retainedBoardKeys(view: RetainedAppView): readonly (readonly unknown[])[] {
   if (view.kind === "global-board") return [["me", "board"], ["views", "global"], ["projects"]];
-  return ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"].map((prefix) => [prefix, view.route.projectId]);
+  return ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"].map((prefix) => [prefix, expandProjectSegment(view.route.projectSegment)]);
 }
 
 /** Query observers can emit cache events during render; defer React notifications. */

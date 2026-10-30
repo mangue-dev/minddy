@@ -97,8 +97,8 @@ describe("buildPushPayload", () => {
       title: "MIN-42 · Réparer le sélecteur de cycle",
       body: fr.Inbox.lineComment.replace("{actor}", "Alice"),
       lang: "fr-FR",
-      url: `/projects/${PROJECT}?issue=${ISSUE}`,
-      tag: `/projects/${PROJECT}?issue=${ISSUE}`,
+      url: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
+      tag: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
     });
   });
 
@@ -157,8 +157,8 @@ describe("buildPushPayload", () => {
       title: "Décisions produit",
       body: fr.Inbox.linePageMention.replace("{actor}", "Numo"),
       lang: "fr-FR",
-      url: `/projects/${PROJECT}/pages/pg#b2`,
-      tag: `/projects/${PROJECT}/pages/pg#b2`,
+      url: `/projects/${PROJECT.slice(0, 8)}/pages/pg#b2`,
+      tag: `/projects/${PROJECT.slice(0, 8)}/pages/pg#b2`,
     });
 
     // Through the MCP, we know his NAME: it is he who is displayed, not “Numo”.
@@ -189,7 +189,7 @@ describe("buildPushPayload", () => {
     );
     expect(objective).toMatchObject({
       title: "Refonte de l'inbox",
-      url: `/projects/${PROJECT}/objectives?open=obj`,
+      url: `/projects/${PROJECT.slice(0, 8)}/objectives?open=obj`,
     });
 
     const feedback = buildPushPayload(
@@ -199,7 +199,7 @@ describe("buildPushPayload", () => {
     );
     expect(feedback).toMatchObject({
       title: "Mode sombre s'il vous plaît",
-      url: `/projects/${PROJECT}/feedback?post=fp`,
+      url: `/projects/${PROJECT.slice(0, 8)}/feedback?post=fp`,
     });
     ctx.feedbackPosts.set("fp", { projectId: "foreign-project", title: "Foreign feedback" });
     expect(buildPushPayload(ctx,

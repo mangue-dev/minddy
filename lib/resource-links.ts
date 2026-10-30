@@ -2,9 +2,11 @@
 // by the resource chips (components/resources.tsx) and resource mentions
 // (lib/use-resource-mentions.ts).
 
+import { pagePath } from "./app-urls";
+
 /** The address of a page in the app — the same as that of the wiki tree. */
 export function pageResourceHref(projectId: string, pageId: string): string {
-  return `/projects/${projectId}/pages/${pageId}`;
+  return pagePath(projectId, pageId);
 }
 
 /** The same-origin proxy for the private attachment bucket. */

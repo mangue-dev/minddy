@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
@@ -108,7 +109,7 @@ export function HomeProjectSignals() {
       {shown.map((signal) => (
         <li key={`${signal.projectId}-${signal.kind}`}>
           <Link
-            href={`/projects/${signal.projectId}/${signal.kind}`}
+            href={`${projectPath(signal.projectId)}/${signal.kind}`}
             className="group flex items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm text-muted-foreground outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             <ProjectOrb

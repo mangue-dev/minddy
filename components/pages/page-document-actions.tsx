@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Copy01Icon, Delete02Icon, Download01Icon, File02Icon, FileDownloadIcon, GlobeIcon, Link01Icon, PrinterIcon, StarIcon, StarOffIcon, TextAlignLeftIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
@@ -105,7 +106,7 @@ export function usePageDocumentMenu({
       // what to do (see the route header). The path is his, and
       // the other never existed — he opened a 404.
       window.open(
-        `/projects/${projectId}/pages-print/${pageId}${branch ? "?scope=branch" : ""}`,
+        `${projectPath(projectId)}/pages-print/${pageId}${branch ? "?scope=branch" : ""}`,
         "_blank",
         "noopener"
       );

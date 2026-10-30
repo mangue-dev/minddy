@@ -32,7 +32,7 @@ afterEach(async () => { await act(() => root.unmount()); host.remove(); vi.unstu
 const session = { getSnapshot: () => ({ activeId: activeTab }) } as unknown as AppTabsSession;
 async function render(active = true, search = "routine=one") {
   await act(() => root.render(<NavigationContext.Provider value={{ session, activeId: "routines" }}>
-    <Activity mode={active ? "visible" : "hidden"}><AppTabRouteProvider active={active} route={{ pathname: "/routines", search, projectId: null }}>
+    <Activity mode={active ? "visible" : "hidden"}><AppTabRouteProvider active={active} route={{ pathname: "/routines", search, projectSegment: null }}>
       <RoutinesRoute />
     </AppTabRouteProvider></Activity>
   </NavigationContext.Provider>));

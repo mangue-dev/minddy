@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { GitBranchIcon, LinkOffIcon as Link2Off } from "@hugeicons/core-free-icons";
@@ -174,7 +175,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
         // URL from its own poll, never from the query string.
         const params = new URLSearchParams({
           code: res.code,
-          return: `/projects/${projectId}/settings?tab=git`,
+          return: `${projectPath(projectId)}/settings?tab=git`,
         });
         window.location.href = `/connect/github?${params.toString()}`;
       } else {

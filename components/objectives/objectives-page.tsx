@@ -1,5 +1,7 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
+import { objectiveBoardHref, objectiveHref, projectPath } from "@/lib/app-urls";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -236,7 +238,7 @@ function ObjectiveRow({
     <button
       type="button"
       data-sidebar-filter-result
-      data-navigation-href={`/projects/${projectId}/objectives?open=${encodeURIComponent(objective.id)}`}
+      data-navigation-href={objectiveHref(projectId, objective.id)}
       data-comment-target={commentTarget("objective", objective.id)}
       data-objective-id={objective.id}
       onClick={onSelect}
@@ -288,7 +290,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
   const projectId = browseProjectId ?? routeProjectId!;
   // The list alone (a mobile browse, a board's sidebar) owns no address.
   const listOnly = !!browse || !!board;
-  const pathname = listOnly ? `/projects/${projectId}/objectives` : livePathname;
+  const pathname = listOnly ? projectPath(projectId, "objectives") : livePathname;
   const active = useAppTabActive();
   const navigation = useOptionalAppTabNavigation();
   const consumeSelection = useCallback(() => {
@@ -298,7 +300,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
     }
   }, [active, navigation, pathname]);
   const newParam = listOnly ? null : searchParams.get("new");
-  const openParam = listOnly ? null : searchParams.get("open");
+  const openParam = listOnly ? null : expandParam(searchParams.get("open"));
 
   const { projects, loading: projectsLoading } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -333,7 +335,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
       id: "objective-issues",
       label: t("viewLinkedIssues", { issues: tIssue("entityPlural").toLowerCase() }),
       icon: <HugeiconsIcon icon={TaskEdit01Icon} className="size-4" />,
-      onSelect: () => router.push(`/projects/${projectId}?objective=${encodeURIComponent(objective.id)}`),
+      onSelect: () => router.push(objectiveBoardHref(projectId, objective.id)),
     };
     if (!canWrite) return [viewIssues];
     const lead = objective.lead_user_id ? memberMap.get(objective.lead_user_id) ?? null : null;
@@ -423,12 +425,12 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMounted, setDialogMounted] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [query, setQuery] = useMobileCollectionState(`/projects/${projectId}/objectives`, "query", "");
+  const [query, setQuery] = useMobileCollectionState(projectPath(projectId, "objectives"), "query", "");
   /**
    * The state shown by the column. Default “Assets”: an objectives page
    * which piles up two years of completed projects no longer says where we are.
    */
-  const [state, setState] = useMobileCollectionState<ObjectiveStateFilter>(`/projects/${projectId}/objectives`, "state", "active");
+  const [state, setState] = useMobileCollectionState<ObjectiveStateFilter>(projectPath(projectId, "objectives"), "state", "active");
   /** In-flight dictation in detail — see `ObjectiveDetail.onBusyChange`. */
   const [dictationBusy, setDictationBusy] = useState(false);
 
@@ -622,7 +624,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
         const { objective, persisted } = createObjective(input);
         // Its page opens once the server has the row it reads.
         persisted.then(
-          (created) => browse?.onSelect(`/projects/${projectId}/objectives?open=${encodeURIComponent(created.id)}`),
+          (created) => browse?.onSelect(objectiveHref(projectId, created.id)),
           () => undefined,
         );
         return objective;
@@ -847,7 +849,7 @@ export function ObjectivesBoardSidebar({ projectId, objectiveId }: { projectId: 
   const router = useAppRouter();
   const board = useMemo(() => ({
     objectiveId,
-    onOpen: (id: string) => router.push(`/projects/${projectId}?objective=${encodeURIComponent(id)}`),
+    onOpen: (id: string) => router.push(objectiveBoardHref(projectId, id)),
   }), [objectiveId, projectId, router]);
   return <AppTabRouteBoundary><ObjectivesInner projectId={projectId} board={board} /></AppTabRouteBoundary>;
 }

@@ -1,3 +1,4 @@
+import { projectPath, recordRef } from "@/lib/app-urls";
 import type {
   Project,
   SearchIndexIssue,
@@ -157,7 +158,7 @@ export function createMinddyEntityActionsProvider(
       if (item.entityType === "project") {
         const project = item.data as Project | undefined;
         if (!project) return actions;
-        const base = `/projects/${project.id}`;
+        const base = projectPath(project.id);
         actions.push(
           create("project.new-issue", labels.newIssue, ListTodo, () => dependencies.openCreateIssue(project.id), 50),
           create("project.new-objective", labels.newObjective, Target, () => dependencies.openCreateObjective(project.id), 40),
@@ -174,9 +175,9 @@ export function createMinddyEntityActionsProvider(
       if (item.entityType === "objective") {
         const objective = item.data as SearchIndexObjective | undefined;
         if (!objective) return actions;
-        const base = `/projects/${objective.project_id}`;
+        const base = projectPath(objective.project_id);
         actions.push(
-          go("objective.issues", labels.viewObjectiveIssues, ListTodo, `${base}?objective=${objective.id}`, 100),
+          go("objective.issues", labels.viewObjectiveIssues, ListTodo, `${base}?objective=${recordRef(objective.id)}`, 100),
           create(
             "objective.new-issue",
             labels.newIssueForObjective,
@@ -195,7 +196,7 @@ export function createMinddyEntityActionsProvider(
       if (item.entityType === "page") {
         const page = item.data as SearchIndexPage | undefined;
         if (!page) return actions;
-        const base = `/projects/${page.project_id}`;
+        const base = projectPath(page.project_id);
         actions.push(
           create("page.new-issue", labels.newIssueInProject, ListTodo, () => dependencies.openCreateIssue(page.project_id), 40),
           copy("page.copy-title", labels.copyPageTitle, item.title, 20),
@@ -207,7 +208,7 @@ export function createMinddyEntityActionsProvider(
 
       const issue = item.data as SearchIndexIssue | undefined;
       if (!issue) return actions;
-      const base = `/projects/${issue.project_id}`;
+      const base = projectPath(issue.project_id);
       actions.push(
         create("issue.new-issue", labels.newIssueInProject, ListTodo, () => dependencies.openCreateIssue(issue.project_id), 20),
         copy("issue.copy-title", labels.copyIssueTitle, item.title, 10),
@@ -215,8 +216,8 @@ export function createMinddyEntityActionsProvider(
       );
       if (issue.objective_id) {
         actions.push(
-          go("issue.objective-issues", labels.viewObjectiveIssues, ListTodo, `${base}?objective=${issue.objective_id}`, 60),
-          go("issue.open-objective", labels.openLinkedObjective, Target, `${base}/objectives?open=${issue.objective_id}`, 70)
+          go("issue.objective-issues", labels.viewObjectiveIssues, ListTodo, `${base}?objective=${recordRef(issue.objective_id)}`, 60),
+          go("issue.open-objective", labels.openLinkedObjective, Target, `${base}/objectives?open=${recordRef(issue.objective_id)}`, 70)
         );
       }
       return actions;

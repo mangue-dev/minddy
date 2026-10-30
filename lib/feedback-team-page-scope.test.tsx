@@ -212,7 +212,7 @@ function Host({ hidden = false }: { hidden?: boolean }) {
   const [search, setSearch] = useState(initialSearch);
   useLayoutEffect(() => { state.setSearch = setSearch; }, []);
   return createElement(QueryClientProvider, { client }, createElement(CurrentViewProvider, null,
-    createElement(AppTabRouteProvider, { route: { projectId, pathname, search }, active: !hidden,
+    createElement(AppTabRouteProvider, { route: { projectSegment: projectId, pathname, search }, active: !hidden,
       children: createElement(Activity, { mode: hidden ? "hidden" : "visible", children: [
         createElement(FeedbackTeamPage, { key: "feedback" }), createElement(Publication, { key: "publication" }),
       ] }) })));

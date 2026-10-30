@@ -1,5 +1,6 @@
 "use client";
 
+import { routineHref } from "@/lib/app-urls";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -301,7 +302,7 @@ export function RoutinesPanel({
 
   const openIntent = (routine: Routine, action: RoutineDetailIntent) => {
     if (onIntent) onIntent(routine.id, action);
-    else browse?.onSelect(`/routines?routine=${encodeURIComponent(routine.id)}&action=${action}`);
+    else browse?.onSelect(`${routineHref(routine.id)}&action=${action}`);
   };
 
   /**
@@ -647,7 +648,7 @@ function RoutineRow({
       type="button"
       data-sidebar-filter-result
       aria-current={selected ? "true" : undefined}
-      data-navigation-href={`/routines?routine=${encodeURIComponent(routine.id)}`}
+      data-navigation-href={routineHref(routine.id)}
       data-routine-id={routine.id}
       onClick={onSelect}
       className={cn(

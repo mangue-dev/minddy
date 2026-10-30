@@ -9,18 +9,18 @@ describe("notificationTargetPath", () => {
   it("ouvre l'objectif quand la ligne en porte un", () => {
     expect(
       notificationTargetPath({ project_id: P, issue_id: null, objective_id: "obj" })
-    ).toBe(`/projects/${P}/objectives?open=obj`);
+    ).toBe(`/projects/${P.slice(0, 8)}/objectives?open=obj`);
   });
 
   it("ouvre le retour du board quand la ligne en porte un", () => {
     expect(
       notificationTargetPath({ project_id: P, issue_id: null, feedback_post_id: "fp" })
-    ).toBe(`/projects/${P}/feedback?post=fp`);
+    ).toBe(`/projects/${P.slice(0, 8)}/feedback?post=fp`);
   });
 
   it("opens the ticket in its board", () => {
     expect(notificationTargetPath({ project_id: P, issue_id: "iss" })).toBe(
-      `/projects/${P}?issue=iss`
+      `/projects/${P.slice(0, 8)}?issue=iss`
     );
   });
 
@@ -34,10 +34,10 @@ describe("notificationTargetPath", () => {
         objective_id: "obj",
         feedback_post_id: "fp",
       })
-    ).toBe(`/projects/${P}/objectives?open=obj`);
+    ).toBe(`/projects/${P.slice(0, 8)}/objectives?open=obj`);
     expect(
       notificationTargetPath({ project_id: P, issue_id: "iss", feedback_post_id: "fp" })
-    ).toBe(`/projects/${P}/feedback?post=fp`);
+    ).toBe(`/projects/${P.slice(0, 8)}/feedback?post=fp`);
   });
 
   // MIN-278: the page has its own route, and its BLOCK is a fragment — it does not
@@ -46,7 +46,7 @@ describe("notificationTargetPath", () => {
   // screens at the top, on a quote placed in the middle.
   it("opens the page and its block when the mention identifies one", () => {
     expect(notificationTargetPath({ project_id: P, issue_id: null, page_id: "pg" })).toBe(
-      `/projects/${P}/pages/pg`
+      `/projects/${P.slice(0, 8)}/pages/pg`
     );
     expect(
       notificationTargetPath({
@@ -55,7 +55,7 @@ describe("notificationTargetPath", () => {
         page_id: "pg",
         block_id: "b2",
       })
-    ).toBe(`/projects/${P}/pages/pg#b2`);
+    ).toBe(`/projects/${P.slice(0, 8)}/pages/pg#b2`);
   });
 
   it("goes nowhere without a project or target", () => {

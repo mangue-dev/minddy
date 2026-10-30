@@ -3,9 +3,9 @@ import { expect, it, vi } from "vitest";
 import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "./retained-board-read-state";
 import type { RetainedAppView } from "./retained-app-views";
 import { HttpResponseError } from "./backend-availability";
-const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } };
+const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectSegment: null } };
 
-it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("defers $kind notifications while keeping activation snapshots current and ignoring unrelated queries", async (board) => {
+it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectSegment: "p", search: "" } }])("defers $kind notifications while keeping activation snapshots current and ignoring unrelated queries", async (board) => {
   vi.useFakeTimers();
   const now = vi.spyOn(Date, "now").mockReturnValue(1000);
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000 } } });
@@ -55,7 +55,7 @@ it("drops notifications queued before unsubscribe", async () => {
   } finally { stop(); client.clear(); vi.useRealTimers(); }
 });
 
-it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectId: "p", search: "" } }])("waits for every prerequisite of a $kind, including absent queries", (board) => {
+it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectSegment: "p", search: "" } }])("waits for every prerequisite of a $kind, including absent queries", (board) => {
   const client = new QueryClient();
   expect(retainedBoardReadState(client, board)).toBe("loading");
   for (const key of retainedBoardKeys(board).slice(0, -1)) client.setQueryData(key, []);

@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import {
   Suspense,
   useCallback,
@@ -378,7 +379,7 @@ function SettingsTabs({
             value={activeTab}
             onValueChange={setActiveTab}
             hrefForValue={(value) => {
-              const base = projectId ? `/projects/${projectId}/settings` : "/settings";
+              const base = projectId ? projectPath(projectId, "settings") : "/settings";
               return value === defaultTab ? base : `${base}?tab=${encodeURIComponent(value)}`;
             }}
           />

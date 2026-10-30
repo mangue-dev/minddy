@@ -1,3 +1,4 @@
+import { projectPath } from "@/lib/app-urls";
 import { after, NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -338,7 +339,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       const state = signRelayGitlabState({
         userId: auth.user.id,
         callbackOrigin: canonicalAppOrigin(),
-        returnPath: `/projects/${id}/settings?tab=git`,
+        returnPath: `${projectPath(id, "settings")}?tab=git`,
         privateKey: config.secret,
       });
       const url = `${config.url.replace(/\/$/, "")}/api/relay/gitlab/authorize?instance=${encodeURIComponent(config.instanceId)}&state=${encodeURIComponent(state)}`;

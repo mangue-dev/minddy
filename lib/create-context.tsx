@@ -1,5 +1,6 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import {
@@ -117,7 +118,7 @@ const CreateContext = createContext<CreateContextValue | null>(null);
  *  issue") inherits it without threading state through every trigger. */
 function activeObjectiveIdFromUrl(): string | null {
   if (typeof window === "undefined") return null;
-  return new URLSearchParams(window.location.search).get("objective") || null;
+  return expandParam(new URLSearchParams(window.location.search).get("objective"));
 }
 
 /**

@@ -10,6 +10,8 @@
 // This module is intentionally pure so every mention surface can share and
 // test the same decision without mounting React.
 
+import { issueHref, objectiveHref, pagePath, projectPath } from "./app-urls";
+
 /** What a mention can designate (see components/mention-chip.tsx). */
 export type MentionTargetType =
   | "member"
@@ -40,15 +42,15 @@ export function mentionTargetPath(
 ): string | null {
   // A project designates itself: its id IS that of its destination, it
   // there is nothing to resolve.
-  if (type === "project") return id ? `/projects/${id}` : null;
+  if (type === "project") return id ? projectPath(id) : null;
   if (!id || !projectId) return null;
   switch (type) {
     case "issue":
-      return `/projects/${projectId}?issue=${id}`;
+      return issueHref(projectId, { id, project_id: projectId });
     case "objective":
-      return `/projects/${projectId}/objectives?open=${id}`;
+      return objectiveHref(projectId, id);
     case "page":
-      return `/projects/${projectId}/pages/${id}`;
+      return pagePath(projectId, id);
     default:
       // member, numo, forge: no one has a screen to open. A resource opens
       // from its surface (lib/use-resource-mentions.ts), not from a route.

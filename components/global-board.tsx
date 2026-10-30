@@ -1,5 +1,7 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
+import { resolveIssueRef } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FolderAddIcon } from "@hugeicons/core-free-icons";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -106,7 +108,7 @@ function GlobalBoardInner() {
   const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const router = useRouter();
   const { pathname, searchParams } = useAppTabRoute();
-  const rawViewParam = searchParams.get("view");
+  const rawViewParam = expandParam(searchParams.get("view"));
   // "cycle" is OUR one-shot instruction (the project boards' ↗ tab lands
   // here with it) — never let useBoardViews consume it, or the remembered
   // view restore would be skipped.
@@ -462,8 +464,9 @@ function GlobalBoardInner() {
     [removeRelation]
   );
 
+  // A deep link names the issue `MIN-42` or by short code; panels set its id.
   const openIssue = openIssueId
-    ? scopedIssues.find((i) => i.id === openIssueId) ?? null
+    ? resolveIssueRef(openIssueId, scopedIssues) ?? null
     : null;
   const openPid = openIssue?.project_id ?? "";
   const openProject = openIssue ? projectMap.get(openPid) : undefined;

@@ -11,6 +11,7 @@
 // then the target in the ⌘K palette (MIN-844), among the project's open
 // issues and other objectives.
 
+import { issueHref, objectiveHref } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -247,12 +248,12 @@ export function ObjectiveRelationsSection({
                         setBoardOpen(false);
                         if (isObjective)
                           router.push(
-                            `/projects/${projectId}/objectives?open=${r.otherId}`,
+                            objectiveHref(projectId, r.otherId),
                           );
                         else if (onOpenIssue) onOpenIssue(r.otherId);
                         else
                           router.push(
-                            `/projects/${projectId}?issue=${r.otherId}`,
+                            issueHref(projectId, { id: r.otherId, project_id: projectId }),
                           );
                       }}
                       action={canWrite ? (

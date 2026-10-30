@@ -1,5 +1,6 @@
 "use client";
 
+import { projectHref, recordRef } from "@/lib/app-urls";
 import { objectiveFeedbackCountOptions } from "@/lib/secondary-view-queries";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -21,7 +22,7 @@ export function ObjectiveFeedbackSection({ projectId, objectiveId }: {
   return (
     <PropertyRow label={t("linkedFeedback")}>
       {error ? <span role="alert" className="text-sm text-destructive">{te("databaseError")}</span>
-        : <Link href={`/projects/${projectId}/feedback?objective=${encodeURIComponent(objectiveId)}`}
+        : <Link href={projectHref(projectId, "feedback", { objective: recordRef(objectiveId) })}
             // The rows' "+" and link buttons are 28px wide: a 10px right
             // padding centers the count's last digit on their icons.
             className={cn(TRIGGER, "pr-2.5 app-mobile:min-h-11 app-mobile:min-w-11 app-mobile:justify-end tabular-nums")}>{data?.count}</Link>}

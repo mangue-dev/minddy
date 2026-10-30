@@ -1,5 +1,6 @@
 "use client";
 
+import { objectiveHref, pullRequestHref } from "@/lib/app-urls";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -1197,10 +1198,10 @@ const IssueCardContent = memo(function IssueCardContent({
     [onOpenPlan, issue],
   );
   const openObjective = useCallback((id: string) => {
-    onNavigate(`/projects/${issue.project_id}/objectives?open=${id}`);
+    onNavigate(objectiveHref(issue.project_id, id));
   }, [onNavigate, issue.project_id]);
   const openPr = useMemo(
-    () => pr ? () => onNavigate(`/pull-requests?pr=${pr.prId}`) : undefined,
+    () => pr ? () => onNavigate(pullRequestHref(pr.prId)) : undefined,
     [pr, onNavigate],
   );
 

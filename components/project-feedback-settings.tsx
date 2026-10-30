@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Cancel01Icon, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, MoreHorizontalIcon, Refresh01Icon, CheckIcon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
@@ -272,7 +273,7 @@ function ManageKeysButton({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
   return (
     <Button variant="outline" size="sm" asChild>
-      <Link href={`/projects/${projectId}/settings?tab=integrations`}>
+      <Link href={`${projectPath(projectId)}/settings?tab=integrations`}>
         {t("feedbackApiManageKeys")}
       </Link>
     </Button>

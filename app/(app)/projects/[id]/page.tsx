@@ -2,6 +2,8 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Layout3ColumnIcon, FileUploadIcon } from "@hugeicons/core-free-icons";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
+import { resolveIssueRef } from "@/lib/app-urls";
+import { expandParam } from "@/lib/ref-registry";
 import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -124,11 +126,12 @@ function ProjectBoard() {
   const projectId = routeProjectId!;
   const router = useAppRouter();
   const openDestination = useAppNavigation();
-  const objectiveParam = searchParams.get("objective");
-  const familyParam = searchParams.get("family");
+  // Record parameters carry short codes; they expand as their lists load.
+  const objectiveParam = expandParam(searchParams.get("objective"));
+  const familyParam = expandParam(searchParams.get("family"));
   const issueParam = searchParams.get("issue");
   const newParam = searchParams.get("new");
-  const viewParam = searchParams.get("view");
+  const viewParam = expandParam(searchParams.get("view"));
   const setupParam = searchParams.get("setup");
   const boardScrollPosition = useRef(0);
 
@@ -555,8 +558,9 @@ function ProjectBoard() {
     });
   };
 
+  // A deep link names the issue `MIN-42` or by short code; panels set its id.
   const openIssue = openIssueId
-    ? issues.find((i) => i.id === openIssueId) ?? null
+    ? resolveIssueRef(openIssueId, issues) ?? null
     : null;
 
   // The active view of a board lives in localStorage, not in the address —

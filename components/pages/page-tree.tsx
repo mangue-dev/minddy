@@ -14,6 +14,7 @@
 // cursor IN the line hovered over (top third / middle / bottom third →
 // before / inside / after, cf. lib/pages-move.ts), read line by line.
 
+import { pagePath } from "@/lib/app-urls";
 import { SIDEBAR_COMPOSITE_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowRight01Icon, DatabaseIcon, File02Icon, MoreHorizontalIcon, StarIcon } from "@hugeicons/core-free-icons";
@@ -334,7 +335,7 @@ function PageRow({
   onDragPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
 }) {
   const t = useTranslations("Pages");
-  const href = `/projects/${page.project_id}/pages/${page.id}`;
+  const href = pagePath(page.project_id, page.id);
   const navigationActions = useNavigationContextActions(href);
   const [menuOpen, setMenuOpen] = useState(false);
   // Right click: the position of the pointer, or `null` when the menu is closed.

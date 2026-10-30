@@ -63,6 +63,6 @@ describe("primary sidebar project context", () => {
   });
 
   it("keeps the current project tab when building switch destinations", () => {
-    expect(sidebar).toContain("projectTabHref(pathname, project.id)");
+    expect(sidebar).toContain("projectTabHref(pathname, project)");
   });
 });

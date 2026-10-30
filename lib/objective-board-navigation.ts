@@ -1,9 +1,11 @@
+import { objectiveBoardHref as objectiveBoardHrefFor } from "./app-urls";
+
 /** Build the canonical client-side URL for an objective-filtered board. */
 export function objectiveBoardHref(
   projectId: string,
   objectiveId: string,
 ): string {
-  return `/projects/${encodeURIComponent(projectId)}?objective=${encodeURIComponent(objectiveId)}`;
+  return objectiveBoardHrefFor(projectId, objectiveId);
 }
 
 /**

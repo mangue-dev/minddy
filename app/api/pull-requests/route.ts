@@ -2,9 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { isUuid } from "@/lib/app-urls";
 import { type RepoProviderId } from "@/lib/repo-providers";
 import {
   findPullRequest,
+  findPullRequestsByShortCode,
   loadPullRequestIssues,
   listPullRequestsForUser,
   listVisibleRepos,
@@ -12,6 +14,7 @@ import {
   readRepoSyncStates,
   repoSyncKey,
   rowProvider,
+  type PullRequestRow,
   type PullRequestState,
   type PullRequestWithIssue,
   type VisibleRepo,
@@ -92,13 +95,17 @@ async function pinnedRow(
   const prId = params.get("pr");
   if (!prId) return null;
 
-  const pr = await findPullRequest(prId);
-  if (!pr) return null;
-  const found = pr;
-  if (page.some((row) => row.id === found.id)) return null;
-
   const visible = new Set(repos.map((r) => repoSyncKey(r.provider, r.repoFullName)));
-  if (!visible.has(repoSyncKey(rowProvider(found), found.repo_full_name))) return null;
+  const isVisible = (row: PullRequestRow) =>
+    visible.has(repoSyncKey(rowProvider(row), row.repo_full_name));
+  // Readable links carry the PR's short code; legacy links its full id.
+  const candidates = isUuid(prId)
+    ? [await findPullRequest(prId)].filter((row) => row !== null)
+    : (await findPullRequestsByShortCode(prId)).filter(isVisible);
+  if (candidates.length !== 1) return null;
+  const found = candidates[0];
+  if (page.some((row) => row.id === found.id)) return null;
+  if (!isVisible(found)) return null;
 
   const linked = await loadPullRequestIssues(supabase, [found.id]);
   const issues = linked.get(found.id) ?? [];

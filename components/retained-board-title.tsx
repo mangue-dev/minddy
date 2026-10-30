@@ -1,5 +1,6 @@
 "use client";
 
+import { expandProjectSegment } from "@/lib/ref-registry";
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -16,7 +17,7 @@ export function RetainedBoardTitle({ view }: { view: RetainedAppView }) {
   const subscribe = useCallback((notify: () => void) => client.getQueryCache().subscribe((event) => {
     if (event.query.queryKey.length === 1 && event.query.queryKey[0] === "projects") notify();
   }), [client]);
-  const read = useCallback(() => client.getQueryData<{ id: string; name: string }[]>(["projects"])?.find((project) => project.id === view.route.projectId)?.name ?? null, [client, view.route.projectId]);
+  const read = useCallback(() => client.getQueryData<{ id: string; name: string }[]>(["projects"])?.find((project) => project.id === expandProjectSegment(view.route.projectSegment))?.name ?? null, [client, view.route.projectSegment]);
   const name = useSyncExternalStore(subscribe, read, () => null);
   const label = view.kind === "global-board" ? t("all") : view.kind === "project-board" ? name ?? t("project")
     : view.kind === "pull-requests" ? t("pullRequests") : t(view.kind);

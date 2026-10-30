@@ -1,5 +1,7 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
+import { feedbackPostHref, projectPath } from "@/lib/app-urls";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
@@ -530,7 +532,7 @@ function FeedbackRow({
       ref={askNumoRef}
       type="button"
       data-sidebar-filter-result
-      data-navigation-href={`/projects/${projectId}/feedback?post=${encodeURIComponent(post.id)}`}
+      data-navigation-href={feedbackPostHref(projectId, post.id)}
       data-comment-target={commentTarget("feedback", post.id)}
       data-feedback-post-id={post.id}
       onClick={onSelect}
@@ -625,7 +627,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   useIdleDocumentEditorPreload();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
-  const postParam = searchParams.get("post");
+  const postParam = expandParam(searchParams.get("post"));
   const router = useRouter();
   const { projects } = useProjects();
   const project = projects.find((p) => p.id === projectId);
@@ -638,8 +640,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [setupOpen, setSetupOpen] = useState(false);
 
   const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
-  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(`/projects/${projectId}/feedback`, "state", searchParams.has("objective") ? "all" : "unresolved");
-  const [onlyToReview, setOnlyToReview] = useMobileCollectionState(`/projects/${projectId}/feedback`, "onlyToReview", false);
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(projectPath(projectId, "feedback"), "state", searchParams.has("objective") ? "all" : "unresolved");
+  const [onlyToReview, setOnlyToReview] = useMobileCollectionState(projectPath(projectId, "feedback"), "onlyToReview", false);
   const normalListFilters = { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
   const listFilters = feedbackFiltersForRequestedPost(queryClient, projectId, postParam, normalListFilters, onlyToReview);
   const { data: listData, isPending } = useQuery({
@@ -661,7 +663,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [query, setQuery] = useMobileCollectionState(`/projects/${projectId}/feedback`, "query", "");
+  const [query, setQuery] = useMobileCollectionState(projectPath(projectId, "feedback"), "query", "");
   // `?new=1` (the sidebar's "New feedback" entry) opens the composer once.
   // Only the active route consumes it: a retained tab or a browsed sidebar
   // list must not open a dialog meant for another tab. The other parameters
@@ -681,7 +683,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // archives which buried them.
   const objectiveParam = searchParams.getAll("objective").join(",");
   useEffect(() => { if (objectiveParam) setState("all"); }, [objectiveParam, setState]);
-  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(`/projects/${projectId}/feedback`, "sort", "top");
+  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(projectPath(projectId, "feedback"), "sort", "top");
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
@@ -1053,7 +1055,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       onOpenChange={setCreateOpen}
       onCreated={(postId) => {
         refresh();
-        if (browse) browse.onSelect(`/projects/${projectId}/feedback?post=${encodeURIComponent(postId)}`);
+        if (browse) browse.onSelect(feedbackPostHref(projectId, postId));
         // A return just entered is opened: it falls into the filter by
         // default. But if the column is elsewhere, open it without bringing it back there
         // would select a post that the list does not show.
@@ -1276,7 +1278,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                     </Button>
                   ) : (
                     <Button variant="outline" asChild>
-                      <Link href={`/projects/${projectId}/settings?tab=feedback`}>
+                      <Link href={`${projectPath(projectId)}/settings?tab=feedback`}>
                         <HugeiconsIcon icon={GlobeIcon} />
                         {t("emptyConfigure")}
                       </Link>
