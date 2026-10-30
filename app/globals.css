@@ -1281,7 +1281,15 @@ button[data-variant="ghost"] {
      One rule rather than three fixes: it also applies to the next one
      handwritten field, which will otherwise start again. We ONLY aim for what is
      enters — a checkbox or slider has no text, and a button
-     `<input type="submit">` does not have to grow. */
+     `<input type="submit">` does not have to grow.
+
+     Editable hosts count too (MIN-841): iOS zooms into ANY focused element
+     under 16 px, not only form fields. The home “Ask Numo” composer
+     (components/assistant/chat-input.tsx) and the compact rich editor of
+     descriptions and comments are `contenteditable` hosts in `text-sm`, so
+     the page zoomed although every `<input>` was already at 16 px. The size
+     goes on the host only: the mention chips inside it are
+     `contenteditable="false"`, and headings and code keep their own sizes. */
   input:not(
       [type="checkbox"],
       [type="radio"],
@@ -1295,7 +1303,8 @@ button[data-variant="ghost"] {
     ),
   /* Title fields are larger than the floor: it would only shrink them. */
   textarea:not(.title-field),
-  select {
+  select,
+  [contenteditable]:not([contenteditable="false"], .title-field) {
     font-size: 16px;
   }
 }
@@ -3090,7 +3099,22 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 
 /* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
-   (boards, tables, code and diffs) retain their own intentional scroll areas. */
+   (boards, tables, code and diffs) retain their own intentional scroll areas.
+
+   The budget is three tokens, so every sheet below sizes itself the same way
+   whether it is glued to the bottom edge or floats above it:
+   - `--mobile-sheet-float`, the gap between the sheet and the bottom edge;
+   - `--mobile-sheet-room`, the height left to a sheet under the notch, once
+     that gap is taken;
+   - `--mobile-sheet-safe-bottom`, the inset a sheet's own padding must clear.
+     A glued sheet runs under the home indicator, so its content steps back;
+     a floating one already sits above it. */
+:root[data-app-layout="mobile"] {
+  --mobile-sheet-float: 0px;
+  --mobile-sheet-safe-bottom: env(safe-area-inset-bottom);
+  --mobile-sheet-room: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)) - var(--mobile-sheet-float));
+}
+
 :root[data-app-layout="mobile"] {
   .app-workspace, .app-shell main, #app-tab-content {
     min-width: 0;
@@ -3101,10 +3125,10 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet[data-slot="sheet-content"],
   .mobile-assistant-sheet[data-slot="sheet-content"],
   [data-slot="alert-dialog-content"] {
-    inset: auto 0 var(--mobile-keyboard-inset, 0px);
+    inset: auto 0 calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-sheet-float));
     width: 100%;
     max-width: none;
-    max-height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    max-height: var(--mobile-sheet-room);
     height: auto;
     margin: 0;
     translate: none;
@@ -3113,7 +3137,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-bottom: max(1rem, var(--mobile-sheet-safe-bottom));
   }
 
   /* Writing in a sheet: it takes the whole height above the keyboard, so the
@@ -3124,8 +3148,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      finger before the tap lands. */
   .mobile-bottom-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
   [data-slot="alert-dialog-content"]:has(.ProseMirror):focus-within {
-    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)) - var(--mobile-editor-toolbar, 0px));
-    bottom: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-editor-toolbar, 0px));
+    height: calc(var(--mobile-sheet-room) - var(--mobile-editor-toolbar, 0px));
+    bottom: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-editor-toolbar, 0px) + var(--mobile-sheet-float));
   }
   .mobile-assistant-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
   .mobile-side-panel-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
@@ -3232,7 +3256,12 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     position: absolute;
     inset: 0 auto auto 0;
     height: var(--mobile-viewport-height, 100dvh);
+    /* The sidebar is glued to the left edge: in landscape the notch (or the
+       rounded corner of an unfolded screen) sits there and covered the start
+       of every row, the New issue button among them (MIN-841). The footer
+       clears the bottom inset itself. */
     padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
     z-index: 0;
     touch-action: pan-y;
     overflow: hidden;
@@ -3335,9 +3364,9 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     background: linear-gradient(to bottom, transparent, var(--card));
   }
   .mobile-picker-sheet[data-slot="sheet-content"] {
-    max-height: min(75dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+    max-height: min(75dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
     overflow: hidden;
-    padding: 52px 16px max(16px, env(safe-area-inset-bottom));
+    padding: 52px 16px max(16px, var(--mobile-sheet-safe-bottom));
   }
   .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"])[data-slot="sheet-content"] {
     padding-top: 8px;
@@ -3379,7 +3408,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-picker-sheet [cmdk-list] {
     min-height: 0;
-    max-height: min(50dvh, calc(var(--mobile-viewport-height, 100dvh) - 7rem));
+    max-height: min(50dvh, calc(var(--mobile-viewport-height, 100dvh) - 7rem - var(--mobile-sheet-float)));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -3387,7 +3416,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     min-height: 44px;
   }
   .mobile-assistant-sheet[data-slot="sheet-content"] {
-    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    height: var(--mobile-sheet-room);
     overflow: hidden;
     transition: none;
     border: 0;
@@ -3397,8 +3426,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-assistant-sheet [data-mobile-sheet-close]:not([data-slot="sheet-close"]) { display: none; }
   .mobile-command-palette[data-slot="sheet-content"] {
-    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
-    padding: 8px 0 max(1rem, env(safe-area-inset-bottom));
+    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
+    padding: 8px 0 max(1rem, var(--mobile-sheet-safe-bottom));
     gap: 0;
     overflow: hidden;
     --cp-bg: var(--card);
@@ -3421,9 +3450,9 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 :root[data-app-layout="mobile"] {
   .mobile-side-panel-sheet[data-slot="sheet-content"] {
-    height: calc(var(--mobile-viewport-height, 100dvh) - max(1rem, env(safe-area-inset-top)));
+    height: var(--mobile-sheet-room);
     overflow: hidden;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: var(--mobile-sheet-safe-bottom);
   }
   .mobile-side-panel-sheet [data-slot="side-panel-body"] {
     min-height: 0;
@@ -3433,8 +3462,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 :root[data-app-layout="mobile"] {
   .mobile-inbox-sheet[data-slot="sheet-content"] {
-    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
-    max-height: calc(var(--mobile-viewport-height, 100dvh) - 1rem);
+    height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float));
     padding-top: 3rem;
   }
   .mobile-inbox-sheet .divide-y > :not(:last-child) { border-bottom-width: 0; }
@@ -3445,8 +3474,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 :root[data-app-layout="mobile"] {
   .creation-sheet[data-slot="sheet-content"] {
-    height: min(92dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
-    padding: 8px 1rem max(1rem, env(safe-area-inset-bottom));
+    height: min(92dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
+    padding: 8px 1rem max(1rem, var(--mobile-sheet-safe-bottom));
     gap: 1rem;
     overflow: hidden;
   }
@@ -3548,6 +3577,33 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
 }
 
+/* A bottom sheet on a wide screen (MIN-841). The mobile layout also serves an
+   unfolded phone, a tablet in portrait and a phone in landscape
+   (lib/app-layout.ts), where a sheet spanning the whole width reads as a slab.
+   Like the sheets of iPadOS, it stays a bottom sheet — anchored at the
+   bottom, sliding up, never a centered dialog — but floats: a width that
+   follows the screen up to a reading measure, side gutters that also clear
+   the landscape notch, a gap above the home indicator and four rounded
+   corners. Below 640 px, a phone in portrait keeps its full-width sheet.
+
+   One rule for every bottom sheet: they all go through `MobileSheetContent`
+   (components/ui/mobile-sheet.tsx) or carry one of the two other selectors.
+   The vaul drawers of components/ui/dialog.tsx and side-panel.tsx only exist
+   under 480 px, so they never reach this width. */
+@media (min-width: 640px) {
+  :root[data-app-layout="mobile"] {
+    --mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));
+    --mobile-sheet-safe-bottom: 0px;
+
+    :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"],
+    [data-slot="alert-dialog-content"] {
+      width: min(100% - 2 * max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)), 40rem);
+      margin-inline: auto;
+      border-radius: 24px;
+    }
+  }
+}
+
 /* Single-column boards use persistent pagination instead of a scrollbar. */
 @media (width < 640px) {
   .mobile-kanban-scroller { scrollbar-width: none; }
@@ -3576,7 +3632,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 
 :root[data-app-layout="mobile"] .documentation-numo-sheet[data-slot="sheet-content"] {
-  height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem));
+  height: min(85dvh, calc(var(--mobile-viewport-height, 100dvh) - 1rem - var(--mobile-sheet-float)));
   overflow: hidden;
   padding: 0;
 }

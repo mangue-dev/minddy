@@ -79,6 +79,59 @@ describe("safe areas", () => {
       /\.app-shell \{\s*padding-top: env\(safe-area-inset-top\);/,
     );
   });
+
+  it("clears the notch on the side the mobile sidebar is glued to", () => {
+    // In landscape the notch sits on the left edge, where the sidebar opens:
+    // without this inset it covered the start of every row (MIN-841).
+    const reveal = read(GLOBALS).split("  .mobile-sidebar-reveal {")[1].split("}")[0];
+    expect(reveal).toContain("padding-top: env(safe-area-inset-top);");
+    expect(reveal).toContain("padding-left: env(safe-area-inset-left);");
+  });
+});
+
+describe("bottom sheets on wide screens (MIN-841)", () => {
+  const css = read(GLOBALS);
+  const sheetSection = css.slice(
+    css.indexOf("/* Mobile sheets share one breakpoint and viewport budget."),
+    css.indexOf("/* Single-column boards use persistent pagination"),
+  );
+  const wide = sheetSection.slice(sheetSection.indexOf("@media (min-width: 640px) {"));
+
+  it("floats every bottom sheet above the bottom edge from 640 px", () => {
+    // Anchored at the bottom with a gap, a width that follows the screen up
+    // to a reading measure, side gutters that clear a landscape notch, and four
+    // rounded corners: a floating bottom sheet, never a centered dialog.
+    expect(wide).toContain("--mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));");
+    expect(wide).toContain("--mobile-sheet-safe-bottom: 0px;");
+    expect(wide).toContain(":is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot=\"sheet-content\"]");
+    expect(wide).toContain("[data-slot=\"alert-dialog-content\"]");
+    expect(wide).toMatch(/width: min\(100% - 2 \* max\(1rem, env\(safe-area-inset-left\), env\(safe-area-inset-right\)\), 40rem\);/);
+    expect(wide).toContain("margin-inline: auto;");
+    expect(wide).toContain("border-radius: 24px;");
+    expect(wide).not.toMatch(/\btop:|translate/);
+  });
+
+  it("overrides the full-width sheet rule rather than losing the cascade to it", () => {
+    // Same specificity as the base rule: the wide one must come after it.
+    expect(sheetSection.indexOf("@media (min-width: 640px) {"))
+      .toBeGreaterThan(sheetSection.indexOf("border-radius: 24px 24px 0 0;"));
+  });
+
+  it("sizes every mobile sheet through the shared budget", () => {
+    // A sheet that measured the viewport or the home indicator itself would
+    // overflow the top, or pad twice, once it floats.
+    expect(sheetSection).toContain("inset: auto 0 calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-sheet-float));");
+    const rules = sheetSection.slice(sheetSection.indexOf(":root[data-app-layout=\"mobile\"] {\n  .app-workspace"));
+    const viewportCaps = css.split("\n").filter((line) => line.includes("var(--mobile-viewport-height, 100dvh) -"));
+    expect(viewportCaps.length).toBeGreaterThan(5);
+    for (const line of viewportCaps) expect(line).toContain("var(--mobile-sheet-float)");
+    const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
+    // Only the sidebar footer and the float gap itself read the raw inset.
+    expect(bottomInsets.map((line) => line.trim())).toEqual([
+      "padding-bottom: max(10px, env(safe-area-inset-bottom));",
+      "--mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));",
+    ]);
+  });
 });
 
 describe("touch targets", () => {
@@ -230,7 +283,11 @@ describe("other touch pitfalls", () => {
     expect(read(UI("input"))).toContain("text-base");
     expect(read(UI("input"))).toContain("md:text-sm");
     const css = read(GLOBALS);
-    expect(css).toMatch(/textarea:not\(\.title-field\),\s*select \{\s*font-size: 16px;/);
+    expect(css).toMatch(/textarea:not\(\.title-field\),\s*select,\s*\[contenteditable\]:not\(\[contenteditable="false"\], \.title-field\) \{\s*font-size: 16px;/);
+    // iOS zooms into any focused editable element, not only form fields: the
+    // home Numo composer and the compact rich editor are `text-sm` hosts
+    // (MIN-841).
+    expect(read(join(REPO, "components/assistant/chat-input.tsx"))).toContain("contentEditable={!disabled}");
     // Anything that has no text to enter stays out.
     for (const type of ["checkbox", "radio", "range", "submit"]) {
       expect(css).toContain(`[type="${type}"]`);
