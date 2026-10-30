@@ -30,11 +30,7 @@ import {
   isPlanLimitError,
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
-import {
-  beginNumoTurn,
-  executeNumoTurn,
-  NumoBudgetReservationError,
-} from "./turns";
+import { beginNumoTurn, executeNumoTurn } from "./turns";
 
 export class NumoIntentStartError extends Error {
   constructor(
@@ -95,12 +91,6 @@ export async function numoIntentErrorResponse(
       { status: error.status },
     );
   }
-  if (error instanceof NumoBudgetReservationError) {
-    return NextResponse.json(
-      { error: "usage_budget_exceeded", code: "usage_budget_exceeded" },
-      { status: 402 },
-    );
-  }
   if (error instanceof ManagedAiUnavailableError) {
     return NextResponse.json(
       { error: error.message, code: "ai_provider_unavailable" },
@@ -148,7 +138,7 @@ export async function startNumoIntent(
   }
   const projectId = validated.context?.projectId ?? input.projectId ?? null;
 
-  const admittedUsage = await ensureUsageBudget(input.userId, "assistant", "assistant_model");
+  await ensureUsageBudget(input.userId, "assistant", "assistant_model");
   const configuration = await resolveNumoTurnConfiguration({
     userId: input.userId,
   });
@@ -229,16 +219,6 @@ export async function startNumoIntent(
           ? { attachments: input.attachments }
           : {}),
       },
-      ...(configuration.runtime.mode === "platform"
-        ? {
-            managedBudget: {
-              periodStart: admittedUsage.period.start,
-              accountCapUsd: admittedUsage.billing.plan.includedUsageUsd,
-              requestedUsd:
-                input.routine?.budgetUsd ?? admittedUsage.billing.plan.includedUsageUsd,
-            },
-          }
-        : {}),
     });
   } catch (error) {
     if (createdConversation) {

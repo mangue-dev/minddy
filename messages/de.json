@@ -155,7 +155,6 @@
     "memberLimitReached": "Dein Plan erlaubt bis zu {limit} Gäste pro Projekt. Führe ein Upgrade durch, um weitere Personen einzuladen.",
     "agentsNotInPlan": "Numo-Arbeit ist für dieses Konto nicht verfügbar.",
     "usageBudgetExceeded": "Dein KI-Nutzungsbudget ist aufgebraucht. Es wird im nächsten Zeitraum zurückgesetzt. Du kannst auch ein Upgrade durchführen.",
-    "usageBudgetReserved": "Dein verbleibendes KI-Budget ist vorübergehend laufenden Aufgaben zugeteilt. Versuche es erneut, wenn sie fertig sind, oder stoppe diese Aufgaben.",
     "aiProviderUnavailable": "Für dieses Konto ist kein KI-Anbieter konfiguriert.",
     "modelAbovePlan": "Dieses Modell verbraucht ×{multiplier} so viel wie das Standardmodell von minddy; dein {plan}-Plan unterstützt bis zu ×{limit}.",
     "nameRequired": "Name ist erforderlich.",

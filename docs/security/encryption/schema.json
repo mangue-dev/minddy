@@ -6190,11 +6190,6 @@
         "nullable": true,
         "generated": false
       },
-      "managed_budget_usd": {
-        "type": "numeric(12,6)",
-        "nullable": true,
-        "generated": false
-      },
       "tool_checkpoint_checked_at": {
         "type": "timestamp with time zone",
         "nullable": true,

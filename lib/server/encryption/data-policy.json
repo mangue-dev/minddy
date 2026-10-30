@@ -1978,8 +1978,7 @@
     "clear": {
       "bounded_metadata": [
         "attempts",
-        "cost_usd",
-        "managed_budget_usd"
+        "cost_usd"
       ],
       "operational_configuration": [
         "model",

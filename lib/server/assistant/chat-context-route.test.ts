@@ -8,7 +8,7 @@ const h = vi.hoisted(() => ({
   loadSkills: vi.fn(),
   claimError: false,
   managed: false,
-  reservation: null as null | { spent_usd: number; reserved_usd: number },
+  rpcNames: [] as string[],
 }));
 vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: async () => ({ ok: true, user: { id: "user", user_metadata: {} }, supabase: h.db }) }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => h.db }));
@@ -76,10 +76,8 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
     return query;
   };
   const rpc = async (name: string, args: Record<string, unknown>) => {
-    if (name === "begin_numo_turn_with_budget" && h.reservation) {
-      return { data: { turn: null, ...h.reservation }, error: null };
-    }
-    if (name === "begin_numo_turn" || name === "begin_numo_turn_with_budget") {
+    h.rpcNames.push(name);
+    if (name === "begin_numo_turn") {
       if (status === "generating") return { data: null, error: { message: "conversation_busy" } };
       turn = {
         id: "turn",
@@ -102,7 +100,7 @@ function database({ owner = "user", status = "idle", visible = new Set(["a", "b"
         context: args.p_context,
         metadata: args.p_metadata,
       });
-      return { data: name === "begin_numo_turn_with_budget" ? { turn } : turn, error: null };
+      return { data: turn, error: null };
     }
     if (name === "claim_numo_turn") {
       if (h.claimError) return { data: null, error: { message: "database unavailable" } };
@@ -128,7 +126,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.claimError = false;
   h.managed = false;
-  h.reservation = null;
+  h.rpcNames = [];
   h.process.mockResolvedValue({ generations: [], fullContent: "Done" });
   h.loadSkills.mockImplementation(async (_project: string, paths: string[]) => paths.map((path) => ({ path, name: "review", description: "Review", source: ".agents/skills", content: "Review this repository." })));
 });
@@ -204,19 +202,15 @@ describe("conversation identity across project contexts", () => {
     expect(await send({ pageContext: { documentation } })).toBe(400);
     expect(h.process).not.toHaveBeenCalled();
   });
-  it.each([
-    { spent: 0.1, reserved: 9.9, status: 409, code: "usage_budget_reserved", copy: "usageBudgetReserved" },
-    { spent: 10, reserved: 0, status: 403, code: "usage_budget_exceeded", copy: "usageBudgetExceeded" },
-  ])("reports the atomic admission cause $code even when the preflight usage is stale", async ({ spent, reserved, status, code, copy }) => {
+  // MIN-869: the account's capped OpenRouter key bounds concurrent turns, so
+  // a managed turn is admitted without reserving part of the budget.
+  it("admits a managed turn without a budget reservation", async () => {
     database();
     h.managed = true;
-    h.reservation = { spent_usd: spent, reserved_usd: reserved };
-    const response = await POST(new Request("http://localhost/api/assistant/chat", {
-      method: "POST", body: JSON.stringify({ message: "Hello", conversationId: "conversation" }),
-    }) as never);
-    expect(response.status).toBe(status);
-    expect(await response.json()).toMatchObject({ code, error: copy, params: { used: spent, included: 10 } });
-    expect(h.process).not.toHaveBeenCalled();
+    expect(await send({ conversationId: "conversation" })).toBe(200);
+    expect(h.rpcNames).toContain("begin_numo_turn");
+    expect(h.rpcNames).not.toContain("begin_numo_turn_with_budget");
+    expect(h.process).toHaveBeenCalled();
   });
 
   it("continues the same conversation through A, B and a page without a project", async () => {

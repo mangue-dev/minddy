@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-30",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -76,10 +76,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (type-ahead from Home and the expanded or focused Numo panel into the composer, single keys still running their shortcut after the 200 ms window, checked against lib/keyboard/typeahead.ts, lib/keyboard/keyboard-context.tsx, components/home/home-numo-composer.tsx and components/assistant/assistant-shell.tsx; Numo citing issues, objectives, projects, pages and members as mention pills in replies and in what it writes (issue descriptions and plans, objective descriptions, comments, pages, notebook), checked against lib/server/assistant/prompt.ts, lib/server/assistant/tools.ts, components/assistant/chat-message.tsx and components/typed-mention-chip.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the conversation figure predates mention pills in answers)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 26,
+    "fact": "agent:claude-code (recovery section: no per-operation allocation card any more and concurrent conversations share the account budget, checked against lib/server/numo/turns.ts, app/api/assistant/chat/route.ts and supabase/migrations/20270109200096_numo_turns_without_budget_reservation.sql; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (it changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-30"
   },
   "related": [
     "code-work",
@@ -110,7 +110,7 @@
       "src": "/documentation/it/work-with-numo-workflow.png",
       "alt": "Conversazione dimostrativa Numo con contesto, cambio di priorità e risposta salvata.",
       "caption": "Conversazione dimostrativa esistente, tradotta per la visualizzazione. La risposta salvata cita AUR-11 e AUR-7; la cattura non attesta una nuova esecuzione.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -127,7 +127,7 @@
       "src": "/documentation/it/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matrice dei permessi Numo per azioni del progetto, connessioni personali e routine.",
       "caption": "Accesso al progetto e richieste esplicite limitano le azioni di Numo; i contenuti esterni non concedono permessi.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -188,7 +188,7 @@
       "src": "/documentation/it/numo-execution-model-flow.svg",
       "alt": "Schema: Persistire intento, messaggio e UUID. Acquisire turno, salvare tool e risultati. Attendere la tua risposta se serve un input. Riprodurre eventi e riconciliare scritture incerte.",
       "caption": "Segui le fasi in questo ordine. Persistire intento, messaggio e UUID. Acquisire turno, salvare tool e risultati. Attendere la tua risposta se serve un input. Riprodurre eventi e riconciliare scritture incerte.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -220,7 +220,7 @@
       "src": "/documentation/it/numo-mcp-connections-workflow.png",
       "alt": "Impostazioni MCP personali, elenco vuoto e pulsante per aggiungere un server.",
       "caption": "Le connessioni di Numo sono personali; le routine usano quelle del proprietario del progetto.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -237,7 +237,7 @@
       "src": "/documentation/it/numo-mcp-connections-config-workflow.png",
       "alt": "Procedura di collegamento a Notion con il metodo di accesso noto dal catalogo.",
       "caption": "Passaggio di accesso di un servizio del catalogo. Non sono state inserite credenziali né contattati server.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -342,13 +342,13 @@ Disabilitare blocca nuove chiamate, non quelle inviate. Limiti: 30 secondi, 1 Mi
 
 ## Riprendere il lavoro Numo interrotto o in attesa {#recover-numo-work}
 
-Torna alla conversazione esistente e leggi gli ultimi messaggi e le schede. Distingui richieste di informazioni, limite dell’account, tetto della routine, allocazione dell’operazione esaurita ed errore tecnico. Chiudere il pannello non dimostra che il lavoro si sia fermato.
+Torna alla conversazione esistente e leggi gli ultimi messaggi e le schede. Distingui richieste di informazioni, limite dell’account, tetto della routine ed errore tecnico. Chiudere il pannello non dimostra che il lavoro si sia fermato.
 
 In una scheda attiva, rispondi a tutte le domande richieste e invia il gruppo. Le schede precedenti sono registrazioni senza possibilità di inviare una nuova risposta. Saltare non fornisce le informazioni mancanti né autorizza modifiche dipendenti.
 
 ### Budget ed errori {#recovery}
 
-La scheda del limite dell’account mostra la data di ripristino del limite, quando è nota, e può proporre piano o chiave personale. Quella della routine apre la gestione: verifica il tetto per esecuzione. L’allocazione riguarda quella singola operazione. Ripetere la richiesta non elimina il limite.
+La scheda del limite dell’account mostra la data di ripristino del limite, quando è nota, e può proporre piano o chiave personale. Quella della routine apre la gestione: verifica il tetto per esecuzione. Più conversazioni possono essere eseguite contemporaneamente e condividono il budget dell’account. Ripetere la richiesta non elimina il limite.
 
 La ripresa da checkpoint è possibile solo se questo è stato conservato. Verifica modifiche ai ticket, pagine e servizi esterni prima di ripetere: una scrittura può riuscire anche se la risposta si perde. Descrivi ciò che resta e chiedi di continuare. Senza checkpoint recuperabile, passa lo stato verificato a una nuova richiesta. Segnala errori persistenti indicando la conversazione, senza credenziali.
 

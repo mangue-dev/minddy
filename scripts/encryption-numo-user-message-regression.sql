@@ -14,7 +14,6 @@ DECLARE
   cipher text := '{"format":3,"keyVersion":2}';
   old_turn public.numo_assistant_turns;
   new_turn public.numo_assistant_turns;
-  budget jsonb;
 BEGIN
   INSERT INTO auth.users(id) VALUES(actor);
   INSERT INTO public.conversations(id,user_id) VALUES
@@ -29,15 +28,11 @@ BEGIN
     tool_calls='["Private call"]'::jsonb,
     tool_call_id='Private call id',tool_name='Private tool'
     WHERE id=legacy_message;
-  SELECT public.begin_numo_turn_with_budget(
+  -- Protected and ordinary turns share one admission RPC; the protected turn
+  -- feeds the plaintext checks below.
+  SELECT * INTO new_turn FROM public.begin_numo_turn(
     protected_conversation,actor,protected_request,gen_random_uuid(),'{}'::jsonb,
-    'test-model','medium',protected_message,2,cipher,NULL,'{}'::jsonb,
-    now() - interval '1 day',100,1) INTO budget;
-  SELECT * INTO new_turn FROM public.numo_assistant_turns
-    WHERE conversation_id=protected_conversation AND request_id=protected_request;
-  IF new_turn.id IS NULL OR budget->'turn'->>'id' IS DISTINCT FROM new_turn.id::text THEN
-    RAISE EXCEPTION 'Budget admission did not persist the turn';
-  END IF;
+    'test-model','medium',protected_message,2,cipher,NULL,'{}'::jsonb);
   SELECT * INTO new_turn FROM public.begin_numo_turn(
     ordinary_conversation,actor,ordinary_request,gen_random_uuid(),'{}'::jsonb,
     'test-model','medium',ordinary_message,2,cipher,NULL,'{}'::jsonb);

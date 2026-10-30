@@ -304,5 +304,6 @@
   "20270109200092_page_database_views_realtime.sql": "783d41eeed32b974be3d2ce65e2ade7bf7112af267f805d5324b1e78ce56cdb7",
   "20270109200093_ai_cost_breakdown.sql": "c5c3b48af5c9e30b9affe23ed187975f23d6cd22b8dda704154630ad1e072cde",
   "20270109200094_instance_config_notification.sql": "500ac773eecb65f714260a8f4815a69894b7173ce437bfe43ec9469400e495eb",
-  "20270109200095_role_admin_accounts.sql": "9763a63f61fa2dfaf621a56956eee31196868d845781e03c9df0992c22a8ba5d"
+  "20270109200095_role_admin_accounts.sql": "9763a63f61fa2dfaf621a56956eee31196868d845781e03c9df0992c22a8ba5d",
+  "20270109200096_numo_turns_without_budget_reservation.sql": "7fe9c249c116d9dc2af46af7107913cf1545e2495be8ae5ea9685d10def20c99"
 }
