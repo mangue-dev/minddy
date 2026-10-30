@@ -81,7 +81,7 @@ function itemPointerGuards(props: { onPointerMove?: PointerHandler; onPointerLea
 
 /** The hover a search-scoped option shows without taking the focus. */
 const SEARCH_SCOPE_HOVER =
-  "pointer-fine:hover:bg-accent pointer-fine:hover:text-accent-foreground data-[variant=destructive]:pointer-fine:hover:bg-destructive-surface-hover data-[variant=destructive]:pointer-fine:hover:text-destructive"
+  "pointer-fine:hover:bg-accent pointer-fine:hover:text-accent-foreground data-[variant=destructive]:pointer-fine:hover:bg-destructive-highlight data-[variant=destructive]:pointer-fine:hover:text-destructive"
 
 // `modal={false}` by default: the modal mode locks scroll on <body> and marks
 // the rest of the page aria-hidden / pointer-events-none, which breaks scrolling
@@ -181,7 +181,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-surface-hover data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
+        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-highlight data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
         searchScope && SEARCH_SCOPE_HOVER,
         className
       )}

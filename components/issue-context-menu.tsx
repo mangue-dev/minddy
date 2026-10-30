@@ -220,6 +220,7 @@ function LeafItem({
     <DropdownMenuItem
       variant={action.variant}
       disabled={disabled}
+      data-checked={action.checked || undefined}
       onSelect={(event) => {
         // A toggle stays in its open menu, to set several in a row.
         if (action.keepOpen) {

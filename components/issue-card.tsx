@@ -550,7 +550,16 @@ function ObjectiveIndicator({ objective, onEdit }: {
 }) {
   const tField = useTranslations("Field");
   const t = useTranslations("IssueUI");
-  const badge = <ObjectiveBadge objective={objective} tooltip={tField("objectiveLinked")} />;
+  // The card's compact line keeps its small text, at the avatar's height,
+  // and names the objective alone: no status glyph there.
+  const badge = (
+    <ObjectiveBadge
+      objective={{ name: objective.name, color: objective.color }}
+      size="sm"
+      className="h-6"
+      tooltip={tField("objectiveLinked")}
+    />
+  );
   if (!onEdit) return badge;
   return (
     <button
@@ -876,9 +885,12 @@ export const IssueCardBody = memo(function IssueCardBody({
     <div
       className={cn(
         // Cards sit flat on the column, outlined by their border alone; only
-        // the drag overlay lifts. Concentric corners: 24px radius around 12px
-        // of padding wrap the 24px avatar and objective pill (12px radius).
-        "flex flex-col gap-2 rounded-2xl border border-border/60 p-3 text-left shadow-none dark:border-border",
+        // the drag overlay lifts. Concentric corners: the 24px radius sits
+        // 12px around the 24px avatar (12px radius) in the top-right corner.
+        // Text in the other corners is centered in 24px lines, so it sits
+        // 18px from the top and bottom edges: an 18px side inset puts it as
+        // far from the left edge, on the same arc.
+        "flex flex-col gap-2 rounded-2xl border border-border/60 px-[18px] py-3 text-left shadow-none dark:border-border",
         // Bulk selection (MIN-75): blue-tinted background instead of an outline.
         selected ? "bg-primary/10" : "bg-card",
         dragging && "cursor-grabbing shadow-lg",
@@ -886,7 +898,7 @@ export const IssueCardBody = memo(function IssueCardBody({
     >
       {/* Cross-project boards only: the issue's origin project (orb + name). */}
       {project && (
-        <div className="-mb-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <div className="-mb-0.5 flex h-6 items-center gap-1.5 text-[11px] text-muted-foreground">
           <ProjectOrb
             seed={projectOrbSeed(project)}
             iconUrl={project.icon_url}
@@ -958,13 +970,16 @@ export const IssueCardBody = memo(function IssueCardBody({
           ) : plan.total > 0 ? (
             <PlanPick progress={plan} onOpen={onOpenPlan} />
           ) : null}
-          <AssigneePick
-            assignee={assignee}
-            members={memberList}
-            onChange={setAssignee}
-            projectId={issue.project_id}
-            status={issue.status}
-          />
+          {/* Back in the corner, 12px from both edges: concentric with it. */}
+          <span className="-mr-1.5 flex">
+            <AssigneePick
+              assignee={assignee}
+              members={memberList}
+              onChange={setAssignee}
+              projectId={issue.project_id}
+              status={issue.status}
+            />
+          </span>
         </span>
       </div>
 
@@ -982,7 +997,9 @@ export const IssueCardBody = memo(function IssueCardBody({
       </div>
 
       {/* Indicators — spread edge-to-edge: status · priority · effort · category */}
-      <div className="flex items-center justify-between pt-0.5">
+      {/* Last line of a card without objective or due date: 4px more keeps
+          its icons as far from the bottom edge as from the left one. */}
+      <div className="flex items-center justify-between pt-0.5 last:pb-1">
         <StatusPick value={issue.status} onChange={setStatus} />
         <PriorityPick value={issue.priority} onChange={setPriority} />
         <EffortPick value={issue.effort} onChange={setEffort} />

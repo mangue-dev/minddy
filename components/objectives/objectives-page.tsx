@@ -7,6 +7,7 @@ import { Add01Icon, Delete02Icon, FilterIcon, Target01Icon, TaskEdit01Icon, User
 import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
 import { useCreateOptional } from "@/lib/create-context";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { OBJECTIVE_TEXT, objectiveTextStyle } from "@/components/objective-label";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -245,13 +246,10 @@ function ObjectiveRow({
         selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <span
-          className="size-2.5 shrink-0 rounded-full"
-          style={{ backgroundColor: objective.color ?? "var(--muted-foreground)" }}
-          aria-hidden
-        />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">
+      {/* Status, then the name in the objective's color (MIN-785). */}
+      <div className="flex min-w-0 items-center gap-2" style={objectiveTextStyle(objective.color)}>
+        <ObjectiveStatusIndicator status={status.value} className="size-4 shrink-0" />
+        <span className={cn("min-w-0 flex-1 truncate text-sm font-medium", OBJECTIVE_TEXT)}>
           {objective.name}
         </span>
         {lead && (
@@ -262,8 +260,7 @@ function ObjectiveRow({
           />
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <ObjectiveStatusIndicator status={status.value} className="size-3.5" />
+      <div className="flex items-center gap-2 pl-6">
         <span className="shrink-0 text-xs text-muted-foreground">
           {tStatus(status.value)}
         </span>

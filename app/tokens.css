@@ -190,6 +190,7 @@
   --color-foreground-hover: var(--foreground-hover);
   --color-destructive-surface: var(--destructive-surface);
   --color-destructive-surface-hover: var(--destructive-surface-hover);
+  --color-destructive-highlight: var(--destructive-highlight);
   --color-destructive-button: var(--destructive-button);
   --color-destructive-button-foreground: var(--destructive-button-foreground);
   --color-destructive-border: var(--destructive-border);
@@ -308,6 +309,9 @@
   --destructive-button-foreground: oklch(0.985 0 0);
   --destructive-surface: oklch(0.925 0.040 27);
   --destructive-surface-hover: oklch(0.895 0.060 27);
+  /* A destructive menu row's highlight: a tint of the red over the menu's
+     own surface (translucent menus included), not an opaque pink block. */
+  --destructive-highlight: oklch(0.58 0.22 27 / 0.10);
   --destructive-border: oklch(0.820 0.080 27);
   --destructive-border-hover: oklch(0.750 0.100 27);
   --tabs-hover: var(--control-hover);
@@ -395,6 +399,7 @@
   --destructive-button-foreground: oklch(0.985 0 0);
   --destructive-surface: oklch(0.250 0.050 22.216);
   --destructive-surface-hover: oklch(0.310 0.070 22.216);
+  --destructive-highlight: oklch(0.704 0.191 22.216 / 0.16);
   --destructive-border: oklch(0.360 0.080 22.216);
   --destructive-border-hover: oklch(0.420 0.100 22.216);
   --tabs-hover: var(--control-hover);
