@@ -40,6 +40,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuSearchScope,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -489,6 +490,7 @@ export function BlockMenu({
           focusBlockRange(editor, blockRange(editor));
         }}
       >
+        <DropdownMenuSearchScope>
         <ActionMenuSearchField search={search} />
 
         {count > 1 && (
@@ -529,6 +531,7 @@ export function BlockMenu({
             {deleteNode}
           </>
         )}
+        </DropdownMenuSearchScope>
       </DropdownMenuContent>
     </DropdownMenu>
 

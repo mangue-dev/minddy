@@ -137,7 +137,7 @@ import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
 import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { commentTarget, requestCommentFocus } from "@/lib/comment-focus";
 import { PlainPreview } from "@/components/typed-mention-chip";
-import { ObjectiveBadge } from "@/components/objective-label";
+import { OBJECTIVE_PILL_TRIGGER, ObjectiveBadge } from "@/components/objective-label";
 import {
   Tooltip,
   TooltipContent,
@@ -540,12 +540,34 @@ function DueDatePick({
   );
 }
 
-/** Read-only objective on the card's bottom line: the objective pill at its
-    small size (MIN-785). */
+/** The objective on the card's bottom line: the objective pill at its small
+    size (MIN-785). With `onEdit`, a click opens the objective picker, as O
+    does; without it the pill is read-only. */
 // The pill is as tall as the avatar, so it is concentric with the card corner too.
-function ObjectiveIndicator({ objective }: { objective: IssueCardObjective }) {
+function ObjectiveIndicator({ objective, onEdit }: {
+  objective: IssueCardObjective;
+  onEdit?: (at: { x: number; y: number }) => void;
+}) {
   const tField = useTranslations("Field");
-  return <ObjectiveBadge objective={objective} tooltip={tField("objectiveLinked")} />;
+  const t = useTranslations("IssueUI");
+  const badge = <ObjectiveBadge objective={objective} tooltip={tField("objectiveLinked")} />;
+  if (!onEdit) return badge;
+  return (
+    <button
+      type="button"
+      aria-label={t("changeObjectiveAria")}
+      className={OBJECTIVE_PILL_TRIGGER}
+      onClick={(event) => {
+        event.stopPropagation();
+        // The picker opens under the pill, where the click landed.
+        const rect = event.currentTarget.getBoundingClientRect();
+        onEdit({ x: rect.left, y: rect.bottom + 4 });
+      }}
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      {badge}
+    </button>
+  );
 }
 
 /** Compact plan progress on the card header: checklist icon + "done/total".
@@ -741,6 +763,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   prReadiness,
   onOpenPr,
   onOpenObjective,
+  onEditObjective,
   commentFollowUp,
   onCopyCommentsPrompt,
 }: {
@@ -766,6 +789,8 @@ export const IssueCardBody = memo(function IssueCardBody({
   onOpenParent?: () => void;
   /** Opens a related objective through the owning board's navigation action. */
   onOpenObjective?: (objectiveId: string) => void;
+  /** Opens the objective picker at a point (clicking the objective pill). */
+  onEditObjective?: (at: { x: number; y: number }) => void;
   /** Opens a related issue's side panel (clicking a relation chip). */
   onOpenRelated?: (issueId: string) => void;
   /** Removes a relation from the relation popover (absent → no remove button). */
@@ -973,7 +998,7 @@ export const IssueCardBody = memo(function IssueCardBody({
       {(objective || issue.due_date) && (
         <div className="flex items-center justify-between gap-2 pt-0.5">
           <div className="flex min-w-0 flex-1 items-center">
-            {objective && <ObjectiveIndicator objective={objective} />}
+            {objective && <ObjectiveIndicator objective={objective} onEdit={onEditObjective} />}
           </div>
           {issue.due_date && (
             <div className="shrink-0">
@@ -1429,6 +1454,7 @@ const IssueCardContent = memo(function IssueCardContent({
         : {}),
     });
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
+  const editObjectiveStable = useStableCallback((at: { x: number; y: number }) => openField("objective", at));
   const shortcutMenuTargets = menuState ? targetsFor(menuState.field) : [issue];
   const interactionOpen = !!(menuPosition || relationTypeAt || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
   useLayoutEffect(() => {
@@ -1615,6 +1641,7 @@ const IssueCardContent = memo(function IssueCardContent({
             onOpenRelated={onOpenRelated}
             onRemoveRelation={canWrite ? onRemoveRelation : undefined}
             onOpenObjective={onOpenRelated ? openObjective : undefined}
+            onEditObjective={canWrite ? editObjectiveStable : undefined}
             onOpenPlan={openPlan}
             pr={pr}
             prReadiness={prReadiness}

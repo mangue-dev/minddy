@@ -3,14 +3,13 @@
 // One shape for a relation everywhere it is listed — the issue side panel,
 // the objective panel and board popover, the card's relation popover: a group
 // header per type, then rows on one grid. Every row starts with the other
-// end's status, then what names it (the issue identifier, or the objective's
-// target glyph in its color), then its title, the "resolved" tag and the row
-// action. Issues and objectives align column for column.
+// end's status, then an issue's identifier and title, or an objective's name
+// in its color, then the "resolved" tag and the row action.
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Target01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { TruncatedText } from "@/components/ui/truncated-text";
@@ -87,15 +86,20 @@ export function RelationRow({ target, via, resolved, onOpen, action }: {
             </span>
           )
         ) : (
-          <span className={cn("flex shrink-0 items-center", OBJECTIVE_TEXT)} style={objectiveTextStyle(target.objective?.color)}>
-            <span className="sr-only">{t("objectives")}: </span>
-            <HugeiconsIcon icon={Target01Icon} className="size-3.5" aria-hidden />
-          </span>
+          <span className="sr-only">{t("objectives")}: </span>
         )}
-        <span className="min-w-0 flex-1">
+        <span
+          className="min-w-0 flex-1"
+          style={target.kind === "objective" ? objectiveTextStyle(target.objective?.color) : undefined}
+        >
           <TruncatedText
             text={title}
-            className={cn("block truncate text-sm", done && "text-muted-foreground line-through")}
+            className={cn(
+              "block truncate text-sm",
+              // An objective reads by its name in its color (MIN-785).
+              target.kind === "objective" && OBJECTIVE_TEXT,
+              done && "text-muted-foreground line-through",
+            )}
           />
           {via && (
             <span className="block truncate text-xs text-muted-foreground">

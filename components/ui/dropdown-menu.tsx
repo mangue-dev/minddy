@@ -46,6 +46,43 @@ function closingMenuGuards({ onPointerMove, onPointerLeave }: { onPointerMove?: 
   }
 }
 
+// A searchable menu keeps the caret in its search field while the pointer
+// moves over the options: Radix would focus each hovered option, then the
+// menu itself on leave. Inside this scope a leaf option skips both (the same
+// prevented event as above) and shows its hover with CSS instead; the arrow
+// keys still move the focus through the options. Submenu triggers keep
+// Radix's handling, which is what opens them on hover.
+const DropdownMenuSearchFocusContext = React.createContext(false)
+
+function DropdownMenuSearchScope({ children }: { children: React.ReactNode }) {
+  return <DropdownMenuSearchFocusContext.Provider value>{children}</DropdownMenuSearchFocusContext.Provider>
+}
+
+function keepSearchFocus(handler: React.PointerEventHandler<HTMLDivElement>): React.PointerEventHandler<HTMLDivElement> {
+  return (event) => {
+    handler(event)
+    if (event.pointerType !== "mouse") return
+    // An open submenu closes when a sibling option takes the focus: let Radix
+    // run that once, the next moves keep the search focus again.
+    const menu = event.currentTarget.closest('[role="menu"]')
+    if (menu?.querySelector(':scope [role="menuitem"][aria-expanded="true"]')) return
+    event.preventDefault()
+  }
+}
+
+function itemPointerGuards(props: { onPointerMove?: PointerHandler; onPointerLeave?: PointerHandler }, searchScope: boolean) {
+  const guards = closingMenuGuards(props)
+  if (!searchScope) return guards
+  return {
+    onPointerMove: keepSearchFocus(guards.onPointerMove),
+    onPointerLeave: keepSearchFocus(guards.onPointerLeave),
+  }
+}
+
+/** The hover a search-scoped option shows without taking the focus. */
+const SEARCH_SCOPE_HOVER =
+  "pointer-fine:hover:bg-accent pointer-fine:hover:text-accent-foreground data-[variant=destructive]:pointer-fine:hover:bg-destructive-surface-hover data-[variant=destructive]:pointer-fine:hover:text-destructive"
+
 // `modal={false}` by default: the modal mode locks scroll on <body> and marks
 // the rest of the page aria-hidden / pointer-events-none, which breaks scrolling
 // behind the menu and layout (scrollbar-gone jump). Pass modal to opt back in.
@@ -137,6 +174,7 @@ function DropdownMenuItem({
   inset?: boolean
   variant?: "default" | "destructive"
 }) {
+  const searchScope = React.useContext(DropdownMenuSearchFocusContext)
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -144,10 +182,11 @@ function DropdownMenuItem({
       data-variant={variant}
       className={cn(
         `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-surface-hover data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
+        searchScope && SEARCH_SCOPE_HOVER,
         className
       )}
       {...props}
-      {...closingMenuGuards(props)}
+      {...itemPointerGuards(props, searchScope)}
     />
   )
 }
@@ -426,6 +465,7 @@ function DropdownMenuSubContent({
 export {
   DropdownMenu,
   DropdownMenuPortal,
+  DropdownMenuSearchScope,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,

@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSearchScope, DropdownMenuTrigger } from "./dropdown-menu";
 
 let root: ReturnType<typeof createRoot>;
 let container: HTMLDivElement;
@@ -80,5 +80,28 @@ describe("DropdownMenu focus while closing", () => {
     picker.focus();
     await pointer(item, type);
     expect(document.activeElement).toBe(picker);
+  });
+});
+
+describe("DropdownMenuSearchScope", () => {
+  it.each(["pointermove", "pointerout"] as const)("leaves the search field focused on %s over an option", async (type) => {
+    let search!: HTMLInputElement;
+    await act(async () => {
+      root.render(
+        <DropdownMenu open>
+          <DropdownMenuTrigger>Actions</DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuSearchScope>
+              <input ref={(node) => { if (node) search = node; }} aria-label="Search" />
+              <DropdownMenuItem>Link an objective</DropdownMenuItem>
+            </DropdownMenuSearchScope>
+          </DropdownMenuContent>
+        </DropdownMenu>,
+      );
+    });
+    const item = document.querySelector<HTMLElement>('[role="menuitem"]')!;
+    search.focus();
+    await pointer(item, type);
+    expect(document.activeElement).toBe(search);
   });
 });

@@ -8,7 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useDisplayedPathname } from "./pending-navigation";
+import { useDisplayedPathname, useDisplayedSearchParam } from "./pending-navigation";
+import { objectiveIdFromBoardLocation } from "./objective-board-route";
 import { MobileCollectionStateProvider } from "@/lib/mobile-collection-state";
 
 /**
@@ -107,6 +108,7 @@ export function SecondarySidebarProvider({
 }) {
   // A pending destination (MIN-843) sets the sidebar level before it commits.
   const pathname = useDisplayedPathname();
+  const displayedObjective = useDisplayedSearchParam("objective");
   const [mobileHost, setMobileHost] = useState<MobileSidebarHost | null>(null);
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -141,7 +143,7 @@ export function SecondarySidebarProvider({
     setBack((prev) => (prev.count === 0 ? prev : { ...prev, count: 0 }));
   }, []);
 
-  const hosting = routeHasSecondaryNav(pathname) && backLevel === 0;
+  const hosting = routeHasSecondaryNav(pathname, displayedObjective) && backLevel === 0;
 
   const value = useMemo<SecondarySidebar>(
     () => ({
@@ -199,7 +201,9 @@ export function sidebarPanelForRoute(
  * for the application to be fair: a route forgotten here costs one level miss
  * on the first display, not a bug.
  */
-export function routeHasSecondaryNav(pathname: string): boolean {
+export function routeHasSecondaryNav(pathname: string, objectiveParam: string | null = null): boolean {
+  // An objective's board mounts the objectives list as its bar.
+  if (objectiveIdFromBoardLocation(pathname, objectiveParam)) return true;
   if (pathname.startsWith("/trash")) return true;
   if (pathname.startsWith("/pull-requests")) return true;
   if (pathname.startsWith("/routines")) return true;

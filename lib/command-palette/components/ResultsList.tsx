@@ -342,12 +342,16 @@ export function ResultsList({
 
     const itemOffset = rowOffsets[rowIndex] ?? 0;
     const itemHeight = getRowHeight(rowIndex);
+    // The first option of a group brings its category header along, as the
+    // editor's "/" and "@" menus do: reaching the top row reveals its label.
+    const headerAbove = rows[rowIndex - 1]?.type === "header";
+    const revealTop = headerAbove ? rowOffsets[rowIndex - 1] ?? itemOffset : itemOffset;
     const containerHeight = scrollContainer.clientHeight;
     if (containerHeight <= 0) return;
     const currentScroll = scrollContainer.scrollTop;
 
     const targetScroll = getScrollTarget({
-      itemTop: itemOffset,
+      itemTop: revealTop,
       itemBottom: itemOffset + itemHeight,
       scrollTop: currentScroll,
       viewportHeight: containerHeight,

@@ -27,6 +27,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSearchScope,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuSub,
@@ -131,6 +132,42 @@ export function useActionMenuSearch(open: boolean, searchable = true) {
     // Radix typeahead: only the search field receives it.
     e.stopPropagation();
   };
+
+  // The caret stays in the search field (see DropdownMenuSearchScope for the
+  // hovered options). Radix still moves the focus in two cases: to the menu
+  // itself when the pointer leaves a submenu trigger, and to an option the
+  // arrow keys reached. The first goes straight back to the field; in the
+  // second, typing still searches instead of Radix's typeahead. Native
+  // capture listeners run before React's, for submenus (portaled) too.
+  React.useEffect(() => {
+    if (!open || !searchable) return;
+    const inThisMenu = (target: EventTarget | null) => {
+      const input = inputRef.current;
+      return !!input && target instanceof Element && !!target.closest('[role="menu"]') && target !== input;
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      const input = inputRef.current;
+      if (input && event.target === input.closest('[role="menu"]')) input.focus({ preventScroll: true });
+    };
+    const onKeyDownCapture = (event: KeyboardEvent) => {
+      const input = inputRef.current;
+      if (!input || !inThisMenu(event.target)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      // Space still selects the focused option, as in any menu.
+      const typed = event.key.length === 1 && event.key !== " ";
+      if (!typed && event.key !== "Backspace") return;
+      event.preventDefault();
+      event.stopPropagation();
+      setQuery((current) => (typed ? current + event.key : current.slice(0, -1)));
+      input.focus({ preventScroll: true });
+    };
+    document.addEventListener("focusin", onFocusIn, true);
+    document.addEventListener("keydown", onKeyDownCapture, true);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn, true);
+      document.removeEventListener("keydown", onKeyDownCapture, true);
+    };
+  }, [open, searchable]);
 
   return { query: searchable ? query : "", setQuery, inputRef, onKeyDown };
 }
@@ -241,8 +278,10 @@ function ActionMenuBody({
   const search = useActionMenuSearch(open, searchable);
   const visible = searchActionTree(actions, search.query);
 
+  // The options leave the caret in the search field (DropdownMenuSearchScope).
+  const Scope = searchable ? DropdownMenuSearchScope : React.Fragment;
   return (
-    <>
+    <Scope>
       {searchable && <ActionMenuSearchField search={search} />}
       {visible.length === 0 ? (
         <div className="px-2.5 py-1.5 text-sm text-muted-foreground">
@@ -261,7 +300,7 @@ function ActionMenuBody({
           </React.Fragment>
         ))
       )}
-    </>
+    </Scope>
   );
 }
 
