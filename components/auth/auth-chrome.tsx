@@ -32,11 +32,12 @@ export type { OAuthProvider } from "@/lib/auth-context";
 
 /**
  * The main button of every auth screen (MIN-781): taller than the fields so it
- * reads as the step's single action, with a soft shadow that lifts on hover.
- * Shared so sign-in, sign-up, password and 2FA screens keep one button.
+ * reads as the step's single action. No shadow: like every button, it sits on
+ * the page rather than above it. Shared so sign-in, sign-up, password and 2FA
+ * screens keep one button.
  */
 export const AUTH_SUBMIT_CLASS =
-  "group/submit h-12 w-full justify-center gap-2 rounded-full text-[15px] font-semibold tracking-tight shadow-md shadow-black/10 transition-[transform,box-shadow,background-color] hover:-translate-y-px hover:shadow-lg active:translate-y-0 disabled:shadow-none dark:shadow-black/40";
+  "group/submit h-12 w-full justify-center gap-2 rounded-full text-[15px] font-semibold tracking-tight";
 
 /** The arrow after a submit label; it nudges forward on hover. */
 export function SubmitArrow() {

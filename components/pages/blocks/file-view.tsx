@@ -2,6 +2,7 @@
 
 import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useMountedWhileClosing } from "@/components/ui/overlay-freeze";
 import { Download01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
@@ -46,7 +47,10 @@ export function FileView({ node, editor, deleteNode, updateAttributes }: NodeVie
   // Removing and renaming from the viewer ask first (MIN-742), like every
   // attachment surface.
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Mounted on demand, and kept for the exit animation.
+  const removeMounted = useMountedWhileClosing(confirmRemove);
   const [renaming, setRenaming] = useState(false);
+  const renameMounted = useMountedWhileClosing(renaming);
   const locale = useLocale();
   const uploads = usePageUploadsContext();
 
@@ -182,8 +186,8 @@ export function FileView({ node, editor, deleteNode, updateAttributes }: NodeVie
         onRemove={editable ? () => setConfirmRemove(true) : undefined}
         onRename={editable ? () => setRenaming(true) : undefined} />}
       {/* Mounted on demand: a page can hold many blocks. */}
-      {confirmRemove && <ConfirmDeleteDialog
-        open
+      {removeMounted && <ConfirmDeleteDialog
+        open={confirmRemove}
         onOpenChange={setConfirmRemove}
         title={tResources("removeConfirmTitle", { name })}
         description={tResources("removeBlockConfirmDescription")}
@@ -191,8 +195,8 @@ export function FileView({ node, editor, deleteNode, updateAttributes }: NodeVie
         cancelLabel={tCommon("cancel")}
         onConfirm={() => deleteNode()}
       />}
-      {renaming && <RenameResourceDialog
-        resource={renamedResource}
+      {renameMounted && <RenameResourceDialog
+        resource={renaming ? renamedResource : null}
         onOpenChange={setRenaming}
         // The block's name is the document's own attribute: renaming is an
         // ordinary, undoable edit of the page.

@@ -96,7 +96,7 @@ function TrashRow({
   const actorName = displayName(item.deleted_by, t("someone"));
 
   return (
-    <li className="rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
+    <li className="rounded-xl border border-border bg-card p-4 text-card-foreground">
       <div className="flex items-start gap-3">
         {item.type === "project" ? (
           <ProjectOrb

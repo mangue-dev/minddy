@@ -2,6 +2,7 @@
 
 import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useMountedWhileClosing } from "@/components/ui/overlay-freeze";
 import { ImageNotFound01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useId, useRef, useState } from "react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
@@ -52,6 +53,8 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
   const tResources = useTranslations("Resources");
   const tCommon = useTranslations("Common");
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // Mounted on demand, and kept for the exit animation.
+  const removeMounted = useMountedWhileClosing(confirmRemove);
   const uploads = usePageUploadsContext();
   const src = (node.attrs.src as string | null) ?? null;
   const alt = (node.attrs.alt as string | null) ?? "";
@@ -276,8 +279,8 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
       />}
       {/* Removing from the viewer asks first (MIN-742). */}
       {/* Mounted on demand: a page can hold many blocks. */}
-      {confirmRemove && <ConfirmDeleteDialog
-        open
+      {removeMounted && <ConfirmDeleteDialog
+        open={confirmRemove}
         onOpenChange={setConfirmRemove}
         title={tResources("removeConfirmTitle", { name: alt || upload?.file.name || t("blockImage") })}
         description={tResources("removeBlockConfirmDescription")}

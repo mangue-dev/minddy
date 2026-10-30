@@ -6,6 +6,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
 import { ThreadComment } from "@/components/pull-requests/pr-detail";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { updatePullRequestCommentApi } from "./agent-api";
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
@@ -58,8 +59,8 @@ async function mount(commentId: number, updatedAt = "2026-10-04T12:00:00Z") {
   const root = createRoot(container);
   await act(() => root.render(createElement(QueryClientProvider, { client },
     createElement(NextIntlClientProvider, { locale: "en", timeZone: "UTC", messages,
-      children: createElement(ThreadComment, { endpoint: "/api/pull-requests/pr", commentId,
-        body: "Current body", createdAt: "2026-10-04T10:00:00Z", updatedAt, user: null }) }))));
+      children: createElement(TooltipProvider, null, createElement(ThreadComment, { endpoint: "/api/pull-requests/pr", commentId,
+        body: "Current body", createdAt: "2026-10-04T10:00:00Z", updatedAt, user: null })) }))));
   return { container, client, close: async () => { await act(() => root.unmount()); client.clear(); container.remove(); } };
 }
 

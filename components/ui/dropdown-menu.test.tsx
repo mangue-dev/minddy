@@ -105,3 +105,26 @@ describe("DropdownMenuSearchScope", () => {
     expect(document.activeElement).toBe(search);
   });
 });
+
+describe("DropdownMenuSearchScope with a row focused", () => {
+  it("moves the focus to the row under the pointer once the caret left the search", async () => {
+    await act(async () => {
+      root.render(
+        <DropdownMenu open>
+          <DropdownMenuTrigger>Actions</DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuSearchScope>
+              <input aria-label="Search" />
+              <DropdownMenuItem>Copy</DropdownMenuItem>
+              <DropdownMenuItem>Rename</DropdownMenuItem>
+            </DropdownMenuSearchScope>
+          </DropdownMenuContent>
+        </DropdownMenu>,
+      );
+    });
+    const [copy, rename] = document.querySelectorAll<HTMLElement>('[role="menuitem"]');
+    await act(async () => copy.focus());
+    await pointer(rename, "pointermove");
+    expect(document.activeElement).toBe(rename);
+  });
+});

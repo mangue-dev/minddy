@@ -72,12 +72,26 @@ import {
     that this object changes identity. */
 const POSITION = { placement: "left-start", strategy: "absolute" } as const;
 
-/** Items of a list are blocks of their own (see the header); same freezing. */
-const NESTED: NonNullable<Exclude<ComponentProps<typeof DragHandle>["nested"], boolean>> = {
-  allowedContainers: ["bulletList", "orderedList", "taskList"],
-  edgeDetection: "none",
-};
 const LIST_ITEM_TYPES = new Set(["listItem", "taskItem"]);
+const LIST_TYPES = new Set(["bulletList", "orderedList", "taskList"]);
+
+/** Items of a list are blocks of their own (see the header); same freezing.
+    The targets are the first-level blocks and the items of a list — at any
+    depth, an item's own list included. Not `allowedContainers`: it only keeps
+    nodes INSIDE a list, and dropped every first-level block, the gutter with
+    them. Where a list item and its list both qualify, the deeper one wins. */
+const NESTED: NonNullable<Exclude<ComponentProps<typeof DragHandle>["nested"], boolean>> = {
+  edgeDetection: "none",
+  rules: [
+    {
+      id: "minddy-blocks-and-list-items",
+      evaluate: ({ node, depth, parent }) =>
+        depth === 1 || (LIST_ITEM_TYPES.has(node.type.name) && !!parent && LIST_TYPES.has(parent.type.name))
+          ? 0
+          : 1000,
+    },
+  ],
+};
 
 /** The handle and the smaller `+` beside it, side by side, in pixels. */
 const BUTTONS_WIDTH = 24 + BUTTON_SIZE;

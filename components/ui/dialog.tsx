@@ -15,6 +15,7 @@ import { COARSE_INSET_HIT_AREA } from "./touch-target"
 import { Sheet, SheetClose, SheetDescription, SheetTitle, SheetTrigger } from "./sheet"
 import { MobileSheetContent } from "./mobile-sheet"
 import { useMobileLayout } from "@/lib/use-mobile-layout"
+import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
 
 /**
  * Minddy's dialog. Two layers live in this one file:
@@ -42,14 +43,19 @@ function useDialogMode() {
 }
 
 function ModalDialog({
+  open,
+  defaultOpen,
   onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   const drawer = useMediaQuery("(max-width: 479px)")
+  const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
   const Root = (drawer ? Drawer.Root : DialogPrimitive.Root) as React.ElementType
   return (
-    <DialogModeContext.Provider value={{ drawer, onOpenChange }}>
-      <Root data-slot="dialog" onOpenChange={onOpenChange} {...props} />
+    <DialogModeContext.Provider value={{ drawer, onOpenChange: tracked.onOpenChange }}>
+      <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
+        <Root data-slot="dialog" open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
+      </OverlayOpenProvider>
     </DialogModeContext.Provider>
   )
 }
@@ -141,6 +147,8 @@ function ModalDialogContent({
     onOpenAutoFocus?.(event)
     releasePoppersBelow(event)
   }
+  // A closing dialog keeps what it showed (components/ui/overlay-freeze.tsx).
+  const shown = useFrozenWhileClosed(children)
 
   if (drawer) {
     return (
@@ -157,7 +165,7 @@ function ModalDialogContent({
             }
           }}
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 mt-24 flex flex-col rounded-t-2xl border-t border-border bg-card text-sm outline-none ring-1 ring-foreground/10",
+            "fixed inset-x-0 bottom-0 z-50 mt-24 flex flex-col rounded-t-2xl border-t border-border bg-card text-sm outline-none ring-1 ring-border",
             className,
             // Override any width/height the call site set for the centered
             // dialog (max-w-*, h-[…]) — a bottom sheet is always full-width and
@@ -168,7 +176,7 @@ function ModalDialogContent({
           {/* Drag handle */}
           <div className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25" />
           <div className="flex flex-col gap-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            {children}
+            {shown}
           </div>
         </Drawer.Content>
       </ModalDialogPortal>
@@ -182,13 +190,13 @@ function ModalDialogContent({
         data-slot="dialog-content"
         onOpenAutoFocus={handleOpenAutoFocus}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[2rem] bg-card p-6 text-sm ring-1 ring-foreground/10 duration-200 ease-out outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98] data-closed:duration-150 data-closed:ease-in",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[2rem] bg-card p-6 text-sm ring-1 ring-border duration-200 ease-out outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98] data-closed:duration-150 data-closed:ease-in",
           className
         )}
         {...props}
         onEscapeKeyDown={escapeClosesMenusFirst(props.onEscapeKeyDown)}
       >
-        {children}
+        {shown}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>
             <CloseButton

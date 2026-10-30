@@ -3,6 +3,7 @@ import { act, createElement, type ComponentProps } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
 import { IssueActivity } from "@/components/issue-timeline";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useFormatter: () => ({}), useNow: () => new Date() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => ({}) }));
@@ -34,7 +35,7 @@ it("preserves loaded activity and empty results during refreshes while retaining
   const container = document.body.appendChild(document.createElement("div"));
   const root = createRoot(container);
   const render = (phase: NonNullable<typeof props.readState>["phase"], items = props.items) =>
-    act(() => root.render(createElement(IssueActivity, { ...props, items, readState: { phase } })));
+    act(() => root.render(createElement(TooltipProvider, null, createElement(IssueActivity, { ...props, items, readState: { phase } }))));
   try {
     await render("loading");
     expect(container.querySelector("[data-skeleton]")).not.toBeNull();

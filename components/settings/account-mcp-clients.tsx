@@ -2,11 +2,12 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Alert01Icon, CheckIcon, CheckmarkCircle02Icon, Delete02Icon, FlashIcon, Globe02Icon, Key01Icon, Login03Icon, MoreHorizontalIcon, PencilEdit02Icon, RefreshIcon, ToggleOffIcon, ToggleOnIcon } from "@hugeicons/core-free-icons";
-import {useCallback, useEffect, useId, useState} from "react";
+import {useCallback, useEffect, useId, useRef, useState} from "react";
 import {useQueryClient} from "@tanstack/react-query";
 import {useSearchParams} from "next/navigation";
 import {useTranslations} from "next-intl";
 import { Button } from "@/components/ui/button";
+import { useMountedWhileClosing } from "@/components/ui/overlay-freeze";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -93,6 +94,11 @@ export function AccountMcpClients() {
   const searchParams = useSearchParams();
   const { data, isPending, isError, refetch } = useMcpConnections(user?.id);
   const [editing, setEditing] = useState<McpConnection | "new" | null>(null);
+  // The wizard stays mounted, on the connection it showed, for its exit.
+  const wizardMounted = useMountedWhileClosing(editing !== null);
+  const lastEditing = useRef(editing);
+  if (editing) lastEditing.current = editing;
+  const shownEditing = editing ?? lastEditing.current;
   // Removal is destructive, so the menu only opens a confirmation (DESIGN.md).
   const [toRemove, setToRemove] = useState<McpConnection | null>(null);
   const [name, setName] = useState("");
@@ -782,18 +788,18 @@ export function AccountMcpClients() {
     },
   };
 
-  const wizard = editing && (
+  const wizard = wizardMounted && shownEditing && (
     <WizardDialog
-      open
+      open={editing !== null}
       onOpenChange={(open) => {
         if (!open && !busy) closeDialog();
       }}
       label={
-        editing === "new"
+        shownEditing === "new"
           ? preset
             ? t("connectService", { name: preset.name })
             : t("custom")
-          : t("editService", { name: editing.name })
+          : t("editService", { name: shownEditing.name })
       }
       steps={stepIds.map((step) => stepDefs[step])}
       stepIndex={stepIndex}

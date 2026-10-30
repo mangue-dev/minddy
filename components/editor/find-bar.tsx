@@ -382,7 +382,7 @@ export function FindBar({ editor, editable }: { editor: Editor; editable: boolea
       className={cn(
         // The surface of the app's menus, over the document and above the
         // dialog that may hold it (the notebook), whose body ignores the pointer.
-        "pointer-events-auto fixed z-[70] flex flex-col gap-1 rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-foreground/10",
+        "pointer-events-auto fixed z-[70] flex flex-col gap-1 rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border",
         mobile ? "" : "w-[26rem]",
         !place && "invisible"
       )}

@@ -154,7 +154,7 @@ export function SuggestionMenu<T>({
         {trailing}
         {fade.end}
       </div>
-      <div className="shrink-0 border-t border-border-subtle p-2">
+      <div className="shrink-0 border-t border-menu-separator p-2">
         <SuggestionCloseRow active={closeActive} onPick={onClose} onHover={onCloseHover} quiet={quiet} />
       </div>
     </div>

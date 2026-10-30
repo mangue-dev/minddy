@@ -96,7 +96,7 @@ export function ProjectCard({ project }: { project: Project }) {
           open();
         }
       }}
-      className="group flex h-full min-h-[160px] flex-col gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground outline-none transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.12)] focus-visible:ring-2 focus-visible:ring-ring/50"
+      className="group flex h-full min-h-[160px] flex-col gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground outline-none transition-colors hover:border-foreground/20 focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       {/* Top row: orb + name + more-options menu */}
       <div className="flex items-start justify-between gap-2">

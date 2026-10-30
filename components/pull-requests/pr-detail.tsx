@@ -13,6 +13,7 @@ import {
   useCommentSurface,
 } from "@/lib/comment-focus";
 import { useFormatter, useTranslations } from "next-intl";
+import { ExactTime } from "@/components/exact-time";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -440,7 +441,7 @@ export function ThreadComment({
       // chat-selectable: the global reset of app/tokens.css kills text selection;
       // the message card must read like a text surface, copyable like on the
       // forge.
-      className={cn("chat-selectable group min-w-0", !isDescription && "overflow-clip rounded-lg border border-border bg-card shadow-xs")}
+      className={cn("chat-selectable group min-w-0", !isDescription && "overflow-clip rounded-lg border border-border bg-card")}
     >
       <div className={cn("flex flex-col gap-2", !isDescription && "px-3.5 py-3")}>
         {!isDescription ? (
@@ -455,9 +456,11 @@ export function ThreadComment({
               className="text-sm font-medium text-foreground"
             />
             {when ? (
-              <span className="shrink-0 text-xs text-muted-foreground/80">
-                {format.relativeTime(when, now)}
-              </span>
+              <ExactTime date={when}>
+                <span className="shrink-0 text-xs text-muted-foreground/80">
+                  {format.relativeTime(when, now)}
+                </span>
+              </ExactTime>
             ) : null}
             {edited ? (
               <span className="shrink-0 text-xs text-muted-foreground/60">{t("edited")}</span>
@@ -533,7 +536,11 @@ export function ThreadComment({
                           login={edit.edited_by}
                           className="font-medium text-foreground"
                         />
-                        {editedWhen ? format.relativeTime(editedWhen, now) : null}
+                        {editedWhen ? (
+                          <ExactTime date={editedWhen}>
+                            <span>{format.relativeTime(editedWhen, now)}</span>
+                          </ExactTime>
+                        ) : null}
                         {index === edits.length - 1 ? (
                           <span className="text-muted-foreground/60">
                             {t("previousVersionsLast")}

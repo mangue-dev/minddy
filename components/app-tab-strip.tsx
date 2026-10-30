@@ -14,6 +14,8 @@ import {
   type DragStartEvent,
   type Modifier,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
 import {
   SortableContext,
   arrayMove,
@@ -137,7 +139,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   };
 
   const strip = useRef<HTMLDivElement>(null);
-  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }));
   const [dragged, setDragged] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<AppTab | null>(null);
@@ -308,6 +310,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           accessibility={{ announcements: tabAnnouncements }}
           onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
+        <DragCursor />
         <SortableContext items={visible.map(({ tab }) => tab.id)} strategy={horizontalListSortingStrategy}>
         {visible.map(({ tab, view }) => {
           const { section, projectId, project, objectiveId, objective, pageIcon, composite, label } = view;
@@ -335,12 +338,12 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           </SortableAppTab>;
         })}
         </SortableContext>
-        <DragOverlay dropAnimation={null} modifiers={horizontalDragModifiers}>
+        <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION} modifiers={horizontalDragModifiers}>
           {draggedTab && (() => {
             const { section, projectId, project, objectiveId, objective, composite, label } = describe(draggedTab);
             return <div className={draggedTab.pinned
-              ? `flex h-[34px] ${composite ? "w-[52px]" : "w-[34px]"} items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-lg`
-              : "flex h-[34px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-lg"}
+              ? `flex h-[34px] ${composite ? "w-[52px]" : "w-[34px]"} items-center justify-center rounded-md bg-sidebar-accent text-sidebar-foreground shadow-md`
+              : "flex h-[34px] items-center gap-2 rounded-md bg-sidebar-accent px-2.5 text-sm text-sidebar-foreground shadow-md"}
               style={draggedTab.pinned ? undefined : { width: regularWidth }}>
               <AppTabIcon section={section} project={project} projectId={projectId}
                 objectiveColor={objectiveId ? objective?.color ?? null : undefined}

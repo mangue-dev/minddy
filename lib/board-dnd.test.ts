@@ -102,8 +102,9 @@ describe("board pointer collision", () => {
     expect(collide({ x: 150, y: 420 }, rect(10, 370, 280, 100))).toEqual([]);
   });
 
-  it("activates after the first deliberate mouse movement", () => {
-    expect(BOARD_MOUSE_ACTIVATION_DISTANCE).toBe(1);
+  it("resists a few pixels before a card drag starts", () => {
+    expect(BOARD_MOUSE_ACTIVATION_DISTANCE).toBeGreaterThanOrEqual(3);
+    expect(BOARD_MOUSE_ACTIVATION_DISTANCE).toBeLessThanOrEqual(5);
   });
 });
 

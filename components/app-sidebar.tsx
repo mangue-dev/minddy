@@ -88,6 +88,8 @@ import {
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Project } from "@/lib/types";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { MinddyLogo } from "@/components/minddy-logo";
+import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { countLabel } from "@/components/nav-badge";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
@@ -299,14 +301,14 @@ function SidebarRow({ item }: { item: AppNavItem }) {
       open={hasTooltip ? undefined : false}
     >
       <TooltipTrigger asChild>{row}</TooltipTrigger>
-      <TooltipContent side="right" className="flex items-center gap-2">
-        <span>{item.tooltip ?? item.label}</span>
+      <TooltipContent side="right" className="flex items-center gap-2 [overflow-wrap:normal]">
+        <span className="min-w-0">{item.tooltip ?? item.label}</span>
         {item.shortcut && (
-          <>
+          <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
             <Kbd size="sm">{CHORD_PREFIX.toUpperCase()}</Kbd>
             <span>{tk("then")}</span>
             <Kbd size="sm">{item.shortcut}</Kbd>
-          </>
+          </span>
         )}
       </TooltipContent>
     </Tooltip>
@@ -466,18 +468,22 @@ export function ProjectContextRow({
               {homeItem.badge}
             </motion.button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="flex items-center gap-2">
-            <span>{homeItem.label}</span>
+          {/* The label and its shortcut hold one line; the badge's scope
+              wraps below them rather than squeezing both into a column. */}
+          <TooltipContent side="right" className="flex max-w-[260px] flex-col gap-1 [overflow-wrap:normal]">
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              <span>{homeItem.label}</span>
+              {homeItem.shortcut ? (
+                <KbdSequence
+                  keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
+                  separator={tk("then")}
+                  size="sm"
+                />
+              ) : null}
+            </span>
             {/* Says the badge's scope: every project, not this one. */}
             {homeItem.tooltip ? (
               <span className="text-muted-foreground">{homeItem.tooltip}</span>
-            ) : null}
-            {homeItem.shortcut ? (
-              <KbdSequence
-                keys={[[CHORD_PREFIX.toUpperCase()], [homeItem.shortcut]]}
-                separator={tk("then")}
-                size="sm"
-              />
             ) : null}
           </TooltipContent>
         </Tooltip>
@@ -844,10 +850,12 @@ function ChangelogButton({
             if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
             else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");
           }}><AppIcon icon={Megaphone01Icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{t("shareFeedback")}</span></button>}
-          <div className="space-y-2 px-3 pt-3 text-xs text-muted-foreground">
-            <p className="flex items-center justify-between gap-3"><span>{t("webVersion")}</span><span className="shrink-0 tabular-nums">{APP_VERSION}</span></p>
-            {desktopVersion && <p className="flex items-center justify-between gap-3"><span>{t("appVersion")}</span><span className="shrink-0 tabular-nums">{desktopVersion}</span></p>}
-          </div>
+          <AppVersions
+            className="px-3 pt-3"
+            web={t("webVersion")}
+            app={desktopVersion ? t("appVersion") : null}
+            desktopVersion={desktopVersion}
+          />
         </MobileSheetScrollArea>
       </DialogContent>
     </Dialog>
@@ -917,18 +925,12 @@ function ChangelogButton({
             </>
           ) : null}
           <DropdownMenuSeparator />
-          <div className="flex flex-col px-2.5 text-xs text-muted-foreground">
-            <p className="flex h-8 items-center justify-between gap-3">
-              <span>{t("webVersion")}</span>
-              <span className="tabular-nums">{APP_VERSION}</span>
-            </p>
-            {desktopVersion ? (
-              <p className="flex h-8 items-center justify-between gap-3">
-                <span>{t("appVersion")}</span>
-                <span className="tabular-nums">{desktopVersion}</span>
-              </p>
-            ) : null}
-          </div>
+          <AppVersions
+            className="px-2.5 py-1.5"
+            web={t("webVersion")}
+            app={desktopVersion ? t("appVersion") : null}
+            desktopVersion={desktopVersion}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
       {dialogMounted ? (
@@ -1023,6 +1025,38 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
 
 /** What waits on the level a back row returns to (MIN-695): its count, and
  an incomplete-setting alert (Smart Assign) that colors it. */
+/**
+ * The versions under the “What's new” menu: one small (14px) minddy mark, tinted
+ * with the environment's color as on the public site, at the start of the
+ * first line; the desktop version sits under the web one, aligned with its
+ * text rather than under the mark.
+ */
+function AppVersions({
+  web,
+  app,
+  desktopVersion,
+  className,
+}: {
+  web: string;
+  app: string | null;
+  desktopVersion: string | null | undefined;
+  className?: string;
+}) {
+  return (
+    <div className={cn("grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 text-xs text-muted-foreground", className)}>
+      <MinddyLogo className={cn("h-3.5 w-3.5 shrink-0 text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
+      <span className="truncate">{web}</span>
+      <span className="tabular-nums">{APP_VERSION}</span>
+      {app && desktopVersion ? (
+        <>
+          <span className="col-start-2 truncate">{app}</span>
+          <span className="tabular-nums">{desktopVersion}</span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 export type SidebarBackBadge = { count: number; label: string; alert?: boolean };
 
 /** The secondary-level browse row uses the same geometry in both layouts. */

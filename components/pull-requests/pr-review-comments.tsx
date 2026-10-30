@@ -5,6 +5,7 @@ import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { ExactTime } from "@/components/exact-time";
 import { useTimeAgo } from "@/lib/use-live-now";
 import { Button } from "@/components/ui/button";
 import {
@@ -379,9 +380,11 @@ function CommentBody({
           login={comment.user?.login}
           className="text-sm font-medium text-foreground"
         />
-        <span className="shrink-0 text-xs text-muted-foreground/80">
-          {timeAgo(comment.created_at)}
-        </span>
+        <ExactTime date={comment.created_at}>
+          <span className="shrink-0 text-xs text-muted-foreground/80">
+            {timeAgo(comment.created_at)}
+          </span>
+        </ExactTime>
       </div>
       <div data-testid="review-comment-body" className="pl-7">
         <Markdown

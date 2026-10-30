@@ -167,6 +167,19 @@ const TRIGGER_CLASS_LG =
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
+/** The look of a hovered card. The drag overlay is a copy of the card taken
+ * at rest (lib/board-dnd.ts), so the same look, plus a light lift, comes from
+ * the `data-held` mark the copy carries rather than from `:hover`. */
+// The tint also stays while one of the card's menus or pickers is open
+// (`data-menu-open`, or a pill whose picker is open), pointer on it or not:
+// the card reads as the one the open surface acts on.
+const CARD_HOVER =
+  "pointer-fine:hover:border-border pointer-fine:hover:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:pointer-fine:hover:border-foreground/25 " +
+  "data-menu-open:border-border data-menu-open:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:data-menu-open:border-foreground/25 " +
+  "has-[[aria-expanded=true]]:border-border has-[[aria-expanded=true]]:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:has-[[aria-expanded=true]]:border-foreground/25";
+const CARD_HELD =
+  "data-held:cursor-grabbing data-held:border-border data-held:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] data-held:shadow-md dark:data-held:border-foreground/25";
+
 /** Closed menu: stable identity, so a new array is not created on every render. */
 const NO_ACTIONS: ContextMenuAction[] = [];
 
@@ -766,8 +779,8 @@ export const IssueCardBody = memo(function IssueCardBody({
   onUpdate,
   onSetCategories,
   inCurrentCycle,
-  dragging,
   selected,
+  menuOpen,
   pr,
   prReadiness,
   onOpenPr,
@@ -831,6 +844,8 @@ export const IssueCardBody = memo(function IssueCardBody({
   inCurrentCycle?: boolean;
   selected?: boolean;
   dragging?: boolean;
+  /** A menu or picker of this card is open: the card keeps its hover tint. */
+  menuOpen?: boolean;
 }) {
   const t = useTranslations("IssueUI");
   const tCycles = useTranslations("Cycles");
@@ -883,6 +898,8 @@ export const IssueCardBody = memo(function IssueCardBody({
 
   return (
     <div
+      data-card-surface=""
+      data-menu-open={menuOpen ? "" : undefined}
       className={cn(
         // Cards sit flat on the column, outlined by their border alone; only
         // the drag overlay lifts. Concentric corners: the 24px radius sits
@@ -890,10 +907,14 @@ export const IssueCardBody = memo(function IssueCardBody({
         // Text in the other corners is centered in 24px lines, so it sits
         // 18px from the top and bottom edges: an 18px side inset puts it as
         // far from the left edge, on the same arc.
-        "flex flex-col gap-2 rounded-2xl border border-border/60 px-[18px] py-3 text-left shadow-none dark:border-border",
+        "flex flex-col gap-2 rounded-2xl border border-border/60 px-[18px] py-3 text-left transition-colors duration-150 dark:border-border",
         // Bulk selection (MIN-75): blue-tinted background instead of an outline.
         selected ? "bg-primary/10" : "bg-card",
-        dragging && "cursor-grabbing shadow-lg",
+        // Hovered, and held while it is dragged, the card firms up its edge
+        // and takes a faint tint: the drag overlay keeps the hovered look.
+        CARD_HOVER,
+        CARD_HELD,
+        selected && "pointer-fine:hover:bg-primary/15 data-menu-open:bg-primary/15 has-[[aria-expanded=true]]:bg-primary/15 data-held:bg-primary/15",
       )}
     >
       {/* Cross-project boards only: the issue's origin project (orb + name). */}
@@ -1473,7 +1494,8 @@ const IssueCardContent = memo(function IssueCardContent({
   const { ref: shortcutsRef, ...hoverProps } = containerProps;
   const editObjectiveStable = useStableCallback((at: { x: number; y: number }) => openField("objective", at));
   const shortcutMenuTargets = menuState ? targetsFor(menuState.field) : [issue];
-  const interactionOpen = !!(menuPosition || relationTypeAt || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState || uploads.pending.length);
+  const menuOpen = !!(menuPosition || relationTypeAt || relationType || linkPrOpen || confirmDelete || customPromptOpen || menuState);
+  const interactionOpen = menuOpen || uploads.pending.length > 0;
   useLayoutEffect(() => {
     onInteractionChange?.(issue.id, interactionOpen);
     // Activity disconnects effects while retaining dialog state and its owner.
@@ -1669,6 +1691,7 @@ const IssueCardContent = memo(function IssueCardContent({
             onSetCategories={canWrite ? setCardCategories : undefined}
             inCurrentCycle={inCurrentCycle}
             selected={selected}
+            menuOpen={menuOpen}
           />
         );
         return body;

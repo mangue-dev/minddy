@@ -43,6 +43,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { DndContext, PointerSensor, KeyboardSensor, closestCenter, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE } from "@/lib/drag-feel";
 import { SortableContext, arrayMove, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { CSS } from "@dnd-kit/utilities";
@@ -100,7 +102,7 @@ function SortableDatabaseColumn({ projectId, database, property, disabled, onEdi
 }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: property.id, disabled });
   return <th ref={setNodeRef} scope="col" data-database-column={property.id}
-    className="relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-1 font-normal"
+    className={`relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-1 font-normal ${isDragging ? "shadow-md" : ""}`}
     // A translation only: dnd-kit's transform also scales the dragged header
     // to the width of the column under it, which stretched its text.
     style={{ transform: CSS.Translate.toString(transform), transition, zIndex: isDragging ? 1 : undefined }}>
@@ -153,7 +155,7 @@ function SortablePropertyRow({ property, sortable, children }: {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-sm" : ""}`}
+      className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-md" : ""}`}
     >
       <AppTooltip label={t("reorderColumnHint")}>
         <button
@@ -223,7 +225,7 @@ function PropertySettings({
   const [editBase, setEditBase] = useState(database);
   const [removeBase, setRemoveBase] = useState(database);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const announcements = useDragAnnouncements((id) =>
@@ -245,6 +247,7 @@ function PropertySettings({
               void saveSchema(database, arrayMove(schema, from, to));
             }}
           >
+          <DragCursor />
           <SortableContext items={schema.map((property) => property.id)} strategy={verticalListSortingStrategy}>
           <div className={sheet ? "max-h-[50dvh] space-y-1 overflow-y-auto" : "max-h-72 space-y-1 overflow-y-auto"}>
             {schema.map((property) => {
@@ -467,7 +470,7 @@ export function PageDatabaseView({
   );
   const { saveSchema, pending: schemaPending } = usePageDatabase(projectId);
   const columnBase = useRef<PageSummary | null>(null);
-  const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
   const mobile = useMobileLayout() === true;
@@ -1019,6 +1022,7 @@ export function PageDatabaseView({
           const before = schema.findIndex((p) => p.id === active.id) > schema.findIndex((p) => p.id === over.id);
           void saveSchema(base, reorderDatabaseColumns(schema, String(active.id), String(over.id), before));
         }}>
+      <DragCursor />
       <SortableContext items={visible.map((property) => property.id)} strategy={horizontalListSortingStrategy}>
       <DatabaseTableScroll panel={compact}>
         <table

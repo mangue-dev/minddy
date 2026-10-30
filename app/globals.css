@@ -634,18 +634,16 @@ button[data-variant="ghost"] {
    what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
    they all follow the same curve.
 
-   The radius is a tuned aesthetic value (MIN-584): round enough to echo the
-   pill-shaped header controls, low enough not to balloon the card corners.
-   Its floor is geometric — below ~16px the corner arc would cross a 32px
-   header pill (a 20px radius keeps a ~12px diagonal gap where the arc curves
-   away). The header pills are kept regular against it through the padding
-   token below.
+   The radius is concentric with the header controls: a 32px pill (16px
+   radius) inset by the header padding below (9px) curves along a 25px pane
+   corner, so the gap between the two arcs stays the same all the way round.
    `--app-pane-radius` is the single source of the pane's corner rounding: the
    content column and every pane-mirror modal (scratchpad notebook, wizard,
    what's-new, skill preview, Numo/agent shells in expanded mode) read it, so
    they all follow the same curve. */
 :root {
-  --app-pane-radius: 20px;
+  /* 16px pill radius + the 9px header inset (`--app-content-header-pad-x`). */
+  --app-pane-radius: 25px;
   /* Half the 50px header strip minus the 16px radius of a 32px pill: the App
      Content Header's side inset. It matches the pills' vertical centering
      margin, so the visible margin from the pane edge is the same 10px on the
@@ -2997,14 +2995,10 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     &:not(.dark) .app-workspace {
       --sidebar-accent: color-mix(in oklab, var(--foreground) 6%, transparent);
       /* The selected tab and the selected sidebar row read alike: the opaque
-         page white, which hardly differs from a light veil on its own, with
-         an edge and a slight lift; unselected tabs take a firmer tint. */
+         page white, set apart by the firmer tint of the unselected tabs.
+         No edge or lift around them: over the window material it drew a
+         dark outline that plain chrome never shows. */
       --app-tab-background: color-mix(in oklab, var(--foreground) 7%, transparent);
-      & :is(.app-tab[data-active], .sidebar-row-active) {
-        box-shadow:
-          0 0 0 1px color-mix(in oklab, var(--foreground) 12%, transparent),
-          0 1px 3px color-mix(in oklab, var(--foreground) 10%, transparent);
-      }
     }
     /* The selected sidebar row wears the selected tab's own color, in both
        themes, so the chrome shows one selection. */
@@ -3779,4 +3773,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
    selection color, over its own background. */
 .mention-selected [style*="--mention-chip"] {
   background-image: linear-gradient(var(--selection-block), var(--selection-block));
+}
+
+/* A drag keeps its grabbing cursor over everything it crosses
+   (components/drag-cursor.tsx). */
+html[data-dragging],
+html[data-dragging] * {
+  cursor: grabbing !important;
 }

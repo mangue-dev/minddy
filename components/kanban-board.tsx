@@ -22,6 +22,7 @@ import {
   type SensorDescriptor,
   type SensorOptions,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
@@ -529,6 +530,7 @@ export const KanbanBoard = memo(function KanbanBoard({
             onDragEnd={handleDragEnd}
             onDragCancel={handleDragCancel}
           >
+            <DragCursor />
             <div className="flex h-full flex-col">
               <BulkIssueActionsPresence>
                 {canWrite && selectedIssues.length > 0 && (

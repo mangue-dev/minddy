@@ -246,7 +246,7 @@ neither of the two layers having to reorganize itself. */}
           // popovers, menus and selects. `layer="local"` opts out of the
           // global z-index elevation: the table lives inside the page
           // panel, it is not a short-lived portaled overlay.
-          "rounded-xl bg-popover p-2 shadow-md ring-1 ring-foreground/10",
+          "rounded-xl bg-popover p-2 shadow-md ring-1 ring-border",
           "pointer-events-none translate-x-1 opacity-0",
           "transition-[opacity,transform] duration-200 ease-out",
           "group-hover/toc:pointer-events-auto group-hover/toc:translate-x-0 group-hover/toc:opacity-100",

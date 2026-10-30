@@ -57,7 +57,8 @@ export function BoardLoadingSkeleton({
     >
       <AppContentHeader
         data-board-skeleton-header
-        contentClassName="gap-2"
+        // The same inset as the board's 28px view pills (board-toolbar.tsx).
+        contentClassName="gap-2 pl-[calc(var(--app-content-header-pad-x)+2px)]"
       >
         <div className="flex shrink-0 items-center gap-1">
           {VIEW_WIDTHS.map((width, index) => (

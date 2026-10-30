@@ -141,7 +141,7 @@ export function PlanSection() {
     const expiresAt = adminOverride.expiresAt;
 
     return (
-      <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/8 to-card p-5 shadow-sm">
+      <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/8 to-card p-5">
         <div className="flex items-start gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
             <HugeiconsIcon icon={GiftIcon} className="size-4" aria-hidden="true" />

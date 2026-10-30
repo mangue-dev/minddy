@@ -137,7 +137,7 @@ export function AdaptiveContextRow({
                 <button
                   type="button"
                   aria-label={t("contextMore", { count: hiddenCount })}
-                  className="inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-foreground/15 hover:bg-accent hover:text-foreground"
+                  className="inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/15 hover:bg-accent hover:text-foreground"
                 >
                   +{hiddenCount}
                 </button>

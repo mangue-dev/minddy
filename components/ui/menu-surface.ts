@@ -9,7 +9,7 @@
 export const OVERLAY_COLLISION_PADDING = 10;
 
 /** Surface: radius, padding, elevation and edge. */
-export const MENU_SURFACE_CLASS = "rounded-xl bg-popover p-2 shadow-md ring-1 ring-foreground/10";
+export const MENU_SURFACE_CLASS = "rounded-xl bg-popover p-2 shadow-md ring-1 ring-border";
 
 /** A scrolling menu: a row the keyboard brings into view stops 40px from the
     edge, clear of the 32px fade and its chevron (menu-scroll-fade.tsx). The

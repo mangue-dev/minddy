@@ -7,9 +7,21 @@ import { cn } from "@/lib/utils"
 import { escapeClosesMenusFirst } from "@/lib/escape-layers"
 import { releasePoppersBelow } from "@/lib/overlay-dismiss"
 import { CloseButton } from "./close-button"
+import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />
+function Sheet({ open, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
+  return (
+    <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
+      <SheetPrimitive.Root
+        data-slot="sheet"
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={tracked.onOpenChange}
+        {...props}
+      />
+    </OverlayOpenProvider>
+  )
 }
 
 function SheetTrigger({
@@ -75,6 +87,8 @@ function SheetContent({
     onOpenAutoFocus?.(event)
     releasePoppersBelow(event)
   }
+  // A closing sheet keeps what it showed (components/ui/overlay-freeze.tsx).
+  const shown = useFrozenWhileClosed(children)
 
   return (
     <SheetPortal>
@@ -90,7 +104,7 @@ function SheetContent({
         {...props}
         onEscapeKeyDown={escapeClosesMenusFirst(props.onEscapeKeyDown)}
       >
-        {children}
+        {shown}
         {showCloseButton && (
           <SheetPrimitive.Close data-slot="sheet-close" asChild>
             <CloseButton className="absolute top-3 right-3" />

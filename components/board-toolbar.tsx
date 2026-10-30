@@ -18,6 +18,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
 import {
   SortableContext,
   arrayMove,
@@ -794,7 +796,7 @@ export function BoardToolbar({
   const tabSensors = useSensors(
     // MouseSensor + a small distance so a plain click still selects the view;
     // only a >6px drag starts a reorder (same pattern as the issue cards).
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } })
+    useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } })
   );
   // The pill currently being dragged — rendered in a fixed-size DragOverlay so
   // it never stretches/squishes to match the slot it hovers.
@@ -870,7 +872,10 @@ export function BoardToolbar({
 
   return (
     <>
-      <AppContentHeader contentClassName="gap-2">
+      {/* The view pills are 28px tall, not the header's 32px controls: 2px
+          more inset on the left keeps the first one concentric with the
+          pane's corner (globals.css, `--app-pane-radius`). */}
+      <AppContentHeader contentClassName="gap-2 pl-[calc(var(--app-content-header-pad-x)+2px)]">
         {/* Views bar — pills (views + Cycle) are drag-reorderable; the "+"
             stays fixed at the end. */}
         <div className="flex min-w-0 flex-1 items-center gap-1 app-desktop:hidden">
@@ -900,6 +905,7 @@ export function BoardToolbar({
             onDragEnd={handleTabDragEnd}
             onDragCancel={() => setActiveTabId(null)}
           >
+            <DragCursor />
             <SortableContext
               items={tabKeys}
               strategy={horizontalListSortingStrategy}
@@ -932,11 +938,12 @@ export function BoardToolbar({
                 );
               })}
             </SortableContext>
-            {/* Fixed-size copy of the dragged pill (portaled). dropAnimation
-                null: the reorder is optimistic, the pill is already in place. */}
-            <DragOverlay dropAnimation={null}>
+            {/* Fixed-size copy of the dragged pill (portaled). The reorder is
+                optimistic: released, the copy settles onto the pill in its
+                new place, or back at its origin after a cancel. */}
+            <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION}>
               {activeTabId === CYCLE_TAB_KEY && cycleTab ? (
-                <div className={cn(PILL_CLASS, pillTone(cycleTab.active))}>
+                <div className={cn(PILL_CLASS, pillTone(cycleTab.active), "shadow-md")}>
                   {cycleTab.completionPercent === null ||
                   cycleTab.completionPercent === undefined ? (
                     <AppIcon icon={CycleIcon} className="size-3 shrink-0" aria-hidden />
@@ -956,7 +963,8 @@ export function BoardToolbar({
                 <div
                   className={cn(
                     PILL_CLASS,
-                    pillTone(activeDragView.id === activeViewId)
+                    pillTone(activeDragView.id === activeViewId),
+                    "shadow-md"
                   )}
                 >
                   {generatingViewIds.has(activeDragView.id) && (

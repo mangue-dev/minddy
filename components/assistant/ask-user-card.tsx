@@ -292,7 +292,7 @@ export function AskUserCard({ questions, onAnswer, onSkip }: AskUserCardProps) {
     // hence the `defaultPrevented` guard: without it, in “Enter send” mode,
     // the same strike would advance AND send.
     <div
-      className="relative rounded-2xl border border-border bg-card px-3.5 py-3 text-sm shadow-sm"
+      className="relative rounded-2xl border border-border bg-card px-3.5 py-3 text-sm"
       onKeyDown={(e) => {
         if (e.defaultPrevented) return;
         if (!isSend(e) || !live || !allAnswered) return;

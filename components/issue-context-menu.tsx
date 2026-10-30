@@ -35,6 +35,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { anchorKey } from "@/components/ui/overlay-freeze";
 import { ChevronRightIcon } from "lucide-react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckIcon } from "@hugeicons/core-free-icons";
@@ -378,7 +379,9 @@ export function IssueContextMenu({
   // then lands beside the tab or card instead of under it. Mounted at <body>,
   // the viewport coordinates hold in every container.
   return createPortal(
-    <DropdownMenu open={!!position} onOpenChange={(open) => !open && onClose()}>
+    // Re-opened at another point (a right click on another row of the same
+    // list), the menu mounts anew there instead of staying at the first one.
+    <DropdownMenu key={anchorKey(lastPosition.current)} open={!!position} onOpenChange={(open) => !open && onClose()}>
       <DropdownMenuTrigger asChild>
         <span
           aria-hidden

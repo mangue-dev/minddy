@@ -12,6 +12,7 @@ import { CloseButton } from "./close-button"
 import { Sheet } from "./sheet"
 import { MobileSheetContent, MobileSheetScrollArea } from "./mobile-sheet"
 import { useMobileLayout } from "@/lib/use-mobile-layout"
+import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
 
 /**
  * Minddy's side panel. The modal primitive (`ModalSidePanel*`) docks a panel to
@@ -44,14 +45,19 @@ function useSidePanelMode() {
 }
 
 function ModalSidePanel({
+  open,
+  defaultOpen,
   onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   const drawer = useMediaQuery("(max-width: 479px)")
+  const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
   const Root = (drawer ? Drawer.Root : DialogPrimitive.Root) as React.ElementType
   return (
-    <SidePanelModeContext.Provider value={{ drawer, onOpenChange }}>
-      <Root data-slot="side-panel" onOpenChange={onOpenChange} {...props} />
+    <SidePanelModeContext.Provider value={{ drawer, onOpenChange: tracked.onOpenChange }}>
+      <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
+        <Root data-slot="side-panel" open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
+      </OverlayOpenProvider>
     </SidePanelModeContext.Provider>
   )
 }
@@ -154,6 +160,8 @@ function ModalSidePanelContent({
     onOpenAutoFocus?.(event)
     releasePoppersBelow(event)
   }
+  // A closing panel keeps what it showed (components/ui/overlay-freeze.tsx).
+  const shown = useFrozenWhileClosed(children)
 
   if (drawer) {
     return (
@@ -168,14 +176,14 @@ function ModalSidePanelContent({
             }
           }}
           className={cn(
-            "fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[92dvh] flex-col rounded-t-2xl border-t border-border bg-card text-sm shadow-lg ring-1 ring-foreground/10 outline-none",
+            "fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[92dvh] flex-col rounded-t-2xl border-t border-border bg-card text-sm shadow-lg ring-1 ring-border outline-none",
             className
           )}
           {...props}
         >
           {/* Drag handle */}
           <div className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25" />
-          {children}
+          {shown}
         </Drawer.Content>
       </SidePanelPortal>
     )
@@ -198,7 +206,7 @@ function ModalSidePanelContent({
         {...props}
         onEscapeKeyDown={escapeClosesMenusFirst(props.onEscapeKeyDown)}
       >
-        {children}
+        {shown}
       </DialogPrimitive.Content>
     </SidePanelPortal>
   )

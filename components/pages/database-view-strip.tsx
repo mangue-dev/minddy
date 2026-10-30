@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, Delete02Icon, Edit04Icon } from "@hugeicons/core-free-icons";
 import { DndContext, MouseSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE } from "@/lib/drag-feel";
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
@@ -45,7 +47,7 @@ function ViewPill({ view, active, sortable, onSelect, onContextMenu }: {
       style={{ transform: CSS.Translate.toString(transform), transition }}
       {...attributes} {...listeners} onClick={onSelect} onContextMenu={onContextMenu}
       aria-pressed={active}
-      className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}>
+      className={cn(PILL_CLASS, pillTone(active), isDragging && "relative z-10 shadow-md")}>
       <span className="truncate">{view.name}</span>
     </button>
   );
@@ -115,7 +117,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   const [renameTarget, setRenameTarget] = useState<SavedDatabaseView | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SavedDatabaseView | null>(null);
   // A plain click selects; only a drag of more than 6px reorders.
-  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }));
   const announcements = useDragAnnouncements((id) => views.find((view) => view.id === id)?.name);
   const active = views.find((view) => view.id === activeId) ?? null;
   const name = active?.name ?? t("defaultView");
@@ -220,6 +222,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
           onDragEnd={({ active: dragged, over }) => {
             if (over && dragged.id !== over.id) onMove(String(dragged.id), String(over.id));
           }}>
+          <DragCursor />
           <SortableContext items={views.map((view) => view.id)} strategy={horizontalListSortingStrategy}>
             {views.map((view) => (
               <ViewPill key={view.id} view={view} active={view.id === activeId}

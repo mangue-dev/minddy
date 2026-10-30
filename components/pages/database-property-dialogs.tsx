@@ -23,6 +23,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { FormDialog } from "@/components/form-dialog";
+import { useOpenUntilClosed } from "@/components/ui/overlay-freeze";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SearchSelect, PICKER_FIELD_TRIGGER } from "@/components/search-select";
 import { pickFreeCategoryColor } from "@/lib/category-colors";
@@ -45,13 +46,15 @@ export function DatabaseOptionsDialog({
   database,
   property,
   projectId,
-  onClose,
+  onClose: onClosed,
 }: {
   database: PageSummary;
   property: DatabaseProperty;
   projectId: string;
   onClose: () => void;
 }) {
+  // Closes on screen first, then unmounts (components/ui/overlay-freeze.tsx).
+  const [open, onClose] = useOpenUntilClosed(onClosed);
   const t = useTranslations("PageDatabase");
   const tObjectives = useTranslations("Objectives");
   const locale = useLocale();
@@ -77,7 +80,7 @@ export function DatabaseOptionsDialog({
   return (
     <>
     <FormDialog
-      open
+      open={open}
       onOpenChange={(next) => {
         if (!next) close();
       }}
@@ -189,7 +192,7 @@ export function DatabaseOptionsDialog({
       )}
     </FormDialog>
     <ConfirmDeleteDialog
-      open={confirmRemoved !== null}
+      open={open && confirmRemoved !== null}
       onOpenChange={(open) => {
         if (!open) setConfirmRemoved(null);
       }}
@@ -228,8 +231,10 @@ function DatabaseColumnDialog({
   database,
   property,
   projectId,
-  onClose,
+  onClose: onClosed,
 }: ColumnDialogProps & { property?: DatabaseProperty }) {
+  // Closes on screen first, then unmounts (components/ui/overlay-freeze.tsx).
+  const [open, onClose] = useOpenUntilClosed(onClosed);
   const t = useTranslations("PageDatabase");
   const { saveSchema, previewConversion, convertColumn, pending } =
     usePageDatabase(projectId);
@@ -265,7 +270,7 @@ function DatabaseColumnDialog({
     <>
       {!warning && (
         <FormDialog
-          open
+          open={open}
           onOpenChange={(next) => {
             if (!next && !busy && !warning) onClose();
           }}
@@ -367,7 +372,7 @@ function DatabaseColumnDialog({
         </FormDialog>
       )}
       <AlertDialog
-        open={!!warning}
+        open={open && !!warning}
         onOpenChange={(next) => {
           if (!next && !busy) setWarning(null);
         }}
