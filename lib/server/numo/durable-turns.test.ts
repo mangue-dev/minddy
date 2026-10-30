@@ -16,7 +16,6 @@ const h = vi.hoisted(() => ({
   failActivity: false,
   managedAi: false,
   operationSpent: 0,
-  platformOperationSpent: 0 as number | null,
   userUsage: {
     usedUsd: 0,
     period: { start: "2026-09-01T00:00:00.000Z", end: "2026-10-01T00:00:00.000Z" },
@@ -164,7 +163,6 @@ vi.mock("@/lib/server/assistant/sanitize", () => ({ sanitizeAssistantMessageCont
 vi.mock("@/lib/server/ai-usage", () => ({
   recordAiUsage: (...args: unknown[]) => h.recordAiUsage(...args),
   spentFromNumoOperation: vi.fn(async () => h.operationSpent),
-  spentFromNumoOperationPlatform: vi.fn(async () => h.platformOperationSpent),
 }));
 vi.mock("@/lib/server/usage", () => ({
   getUserUsage: vi.fn(async () => h.userUsage),
@@ -236,7 +234,6 @@ beforeEach(() => {
   h.failActivity = false;
   h.managedAi = false;
   h.operationSpent = 0;
-  h.platformOperationSpent = 0;
   h.userUsage = {
     usedUsd: 0,
     period: { start: "2026-09-01T00:00:00.000Z", end: "2026-10-01T00:00:00.000Z" },
@@ -455,38 +452,19 @@ describe("durable Numo execution", () => {
     expect(h.checkpoints.at(-1)).toMatchObject({ p_status: "completed" });
   });
 
-  it.each(["platform", "byok"] as const)("enforces only platform-funded allocation on %s without claiming monthly exhaustion", async (mode) => {
+  // MIN-869: a turn holds no allocation of its own; only the account
+  // allowance (and a routine's cap) stops a managed operation.
+  it("lets a managed operation keep generating while the account has budget", async () => {
     h.managedAi = true;
-    h.userUsage.usedUsd = 0.15;
-    h.platformOperationSpent = 0.2;
-    h.turn = { ...h.turn, managed_budget_usd: 0.2 };
+    h.userUsage.usedUsd = 0.6;
+    h.operationSpent = 0.5;
     let generated = false;
     h.processChat.mockImplementation(async (...args: unknown[]) => {
       await (args[3] as { beforeGeneration: () => Promise<void> }).beforeGeneration();
       generated = true;
       return { generations: [], fullContent: "Done" };
     });
-    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: { ...runtime, mode } });
-    expect(generated).toBe(mode === "byok");
-    if (mode === "platform") {
-      expect(h.messages).toContainEqual(expect.objectContaining({ metadata: {
-        usage_exhausted: expect.objectContaining({ cause: "operation_allocation", nextPlanId: null, resetsAt: null }),
-      } }));
-    }
-  });
-
-  it("does not deduct BYOK charges from a managed operation allocation", async () => {
-    h.managedAi = true;
-    h.operationSpent = 10;
-    h.platformOperationSpent = 0.01;
-    h.turn = { ...h.turn, managed_budget_usd: 0.2 };
-    let generated = false;
-    h.processChat.mockImplementation(async (...args: unknown[]) => {
-      await (args[3] as { beforeGeneration: () => Promise<void> }).beforeGeneration();
-      generated = true;
-      return { generations: [], fullContent: "Done" };
-    });
-    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: runtime });
+    await executeNumoTurn({ turnId: h.turn?.id as string, readClient: service, aiRuntime: runtime });
     expect(generated).toBe(true);
   });
 

@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { getBillingPlan, type BillingPlanId } from "@/lib/billing-plans";
 
 export interface NumoUsageExhaustedDetails {
+  // Turns no longer hold a budget of their own (MIN-869); the
+  // "operation_allocation" cause only survives in earlier messages.
   cause: "account" | "routine_cap" | "operation_allocation";
   percent: number;
   resetsAt: string | null;

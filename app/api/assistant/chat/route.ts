@@ -8,7 +8,6 @@ import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { ensureUsageBudget, type UserUsage } from "@/lib/server/usage";
 import {
   isPlanLimitError,
-  PlanLimitError,
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
 import type {
@@ -44,11 +43,7 @@ import { validateMessageContext } from "@/lib/server/assistant/message-context";
 import { MAX_SELECTED_SKILL_BYTES } from "@/lib/repository-skills";
 import type { RepositorySkill } from "@/lib/repository-skills";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
-import {
-  beginNumoTurn,
-  executeNumoTurn,
-  NumoBudgetReservationError,
-} from "@/lib/server/numo/turns";
+import { beginNumoTurn, executeNumoTurn } from "@/lib/server/numo/turns";
 import { routineContinuationForConversation } from "@/lib/server/routine-occurrences";
 import { ensureNumoRequestConversation } from "@/lib/server/numo/request-conversation";
 
@@ -535,7 +530,6 @@ export async function POST(request: NextRequest) {
   let titleDone: Promise<void> | null = null;
   const titleController = new AbortController();
   let pendingTitle: { conversationId: string; fallback: string } | null = null;
-  let createdConversationId: string | null = null;
   if (!convId) {
     const reservedConversationId = newConversationId ?? randomUUID();
     const title = fallbackShortTitle(sanitizedUserMessage);
@@ -556,7 +550,6 @@ export async function POST(request: NextRequest) {
       );
     }
     convId = reservedConversationId;
-    createdConversationId = created ? reservedConversationId : null;
     if (created) pendingTitle = { conversationId: reservedConversationId, fallback: title };
   }
   const timezone =
@@ -605,49 +598,9 @@ export async function POST(request: NextRequest) {
         ...(selectedSkills.length > 0 ? { skills: selectedSkills } : {}),
         ...(numoIntent ? { intent: numoIntent } : {}),
       },
-      ...(configuration.runtime.mode === "platform"
-        ? {
-            managedBudget: {
-              periodStart: admittedUsage.period.start,
-              accountCapUsd: admittedUsage.billing.plan.includedUsageUsd,
-              requestedUsd: routineContinuation?.remainingBudgetUsd == null
-                ? admittedUsage.billing.plan.includedUsageUsd
-                : Math.max(routineContinuation.remainingBudgetUsd, 0.000001),
-            },
-          }
-        : {}),
     });
     timing("admitted");
   } catch (error) {
-    if (error instanceof NumoBudgetReservationError) {
-      // The turn was not admitted, so a conversation created for this request
-      // has no messages or durable work to preserve.
-      if (createdConversationId) {
-        const { error: cleanupError } = await service
-          .from("conversations")
-          .delete()
-          .eq("id", createdConversationId)
-          .eq("user_id", user.id);
-        if (cleanupError) {
-          console.error("Failed to remove unadmitted Numo conversation:", cleanupError.message);
-        }
-      }
-      const used = error.spentUsd ?? admittedUsage.usedUsd;
-      const included = admittedUsage.billing.plan.includedUsageUsd;
-      console.info("[numo-chat] budget admission refused", {
-        requestId, conversationId: finalConvId,
-        periodStart: admittedUsage.period.start, usedUsd: used,
-        reservedUsd: error.reservedUsd, includedUsd: included,
-        cause: used >= included ? "account" : "reservations",
-      });
-      if (used >= included) {
-        return planLimitResponse(new PlanLimitError("usage_budget_exceeded", { used, included }));
-      }
-      return Response.json({
-        error: tApi("usageBudgetReserved"), code: "usage_budget_reserved",
-        params: { used, included, reserved: error.reservedUsd },
-      }, { status: 409 });
-    }
     const message = error instanceof Error ? error.message : "";
     if (message.includes("conversation_busy")) {
       return Response.json(

@@ -155,7 +155,6 @@
     "memberLimitReached": "Seu plano permite até {limit} convidados por projeto. Faça upgrade para convidar mais pessoas.",
     "agentsNotInPlan": "O trabalho com o Numo não está disponível nesta conta.",
     "usageBudgetExceeded": "Seu orçamento de uso de IA acabou. Ele é renovado no próximo período. Você também pode fazer upgrade.",
-    "usageBudgetReserved": "Seu orçamento de IA restante está temporariamente alocado a tarefas em andamento. Tente novamente quando terminarem ou interrompa essas tarefas.",
     "aiProviderUnavailable": "Nenhum provedor de IA está configurado para esta conta.",
     "modelAbovePlan": "Esse modelo consome ×{multiplier} em relação ao modelo padrão do minddy; seu plano {plan} permite até ×{limit}.",
     "nameRequired": "O nome é obrigatório.",

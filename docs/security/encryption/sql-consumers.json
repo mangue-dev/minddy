@@ -4021,19 +4021,6 @@
         "guard_project_actor"
       ]
     },
-    "get_numo_operation_platform_spend(uuid)": {
-      "sha256": "4283bca4554f13dd1604d7d0b4352b0177df5f54a1e5c60952e2ddfcda66e231",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=public"
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "ai_usage"
-      ],
-      "protectedRelations": [],
-      "functionReferences": []
-    },
     "guard_github_comment_url_parent_scope()": {
       "sha256": "929239e36fd13dc3e9ba67742e19ba490b6788ba7d676ee0f4e30b6cc02319d4",
       "securityDefiner": true,
@@ -5225,17 +5212,6 @@
       "functionReferences": [
         "rekey_forge_mention_counter"
       ]
-    },
-    "concurrent_managed_budget_grant(numeric,numeric)": {
-      "sha256": "19bf943706fa2ca4aa5ce05395a58bde02211db154546b9b4bd3f4e2b49ac179",
-      "securityDefiner": false,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [],
-      "protectedRelations": [],
-      "functionReferences": []
     },
     "forge_relay_user_delivery_envelope_version(text)": {
       "sha256": "2ba578d425524fc3c4220401a7a39a52798721bb756a6f926ef37ea952a6e809",
@@ -7350,26 +7326,6 @@
       "protectedRelations": [
         "numo_assistant_turns",
         "numo_tool_operations"
-      ],
-      "functionReferences": []
-    },
-    "begin_numo_turn_with_budget(uuid,uuid,uuid,uuid,jsonb,text,text,uuid,integer,text,jsonb,jsonb,timestamp with time zone,numeric,numeric)": {
-      "sha256": "45cc62700ad466dec53d1391a8a30ce56edceecc8ddb4739da715eb7623a8eb4",
-      "securityDefiner": true,
-      "configuration": [
-        "search_path=\"\""
-      ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
-      "relations": [
-        "ai_usage",
-        "conversations",
-        "assistant_messages",
-        "numo_assistant_turns"
-      ],
-      "protectedRelations": [
-        "conversations",
-        "assistant_messages",
-        "numo_assistant_turns"
       ],
       "functionReferences": []
     },

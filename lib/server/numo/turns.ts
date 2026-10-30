@@ -23,11 +23,7 @@ import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { resolveAiRuntime, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
-import {
-  recordAiUsage,
-  spentFromNumoOperation,
-  spentFromNumoOperationPlatform,
-} from "@/lib/server/ai-usage";
+import { recordAiUsage, spentFromNumoOperation } from "@/lib/server/ai-usage";
 import { getUserUsage } from "@/lib/server/usage";
 import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { nextBillingPlanId, type BillingPlanId } from "@/lib/billing-plans";
@@ -153,7 +149,6 @@ export interface NumoTurn {
   cost_usd: number;
   outcome: string | null;
   error_message: string | null;
-  managed_budget_usd?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -169,11 +164,6 @@ export interface BeginNumoTurnInput {
   content: string | null;
   context: AssistantPageContext | null;
   metadata: Record<string, unknown>;
-  managedBudget?: {
-    periodStart: string;
-    accountCapUsd: number;
-    requestedUsd: number;
-  };
 }
 
 export type ExecuteNumoTurnResult =
@@ -187,18 +177,8 @@ class NumoClaimLostError extends Error {
   }
 }
 
-export class NumoBudgetReservationError extends Error {
-  constructor(
-    readonly spentUsd: number | null = null,
-    readonly reservedUsd: number | null = null,
-  ) {
-    super("No managed AI budget remains for this Numo operation");
-    this.name = "NumoBudgetReservationError";
-  }
-}
-
 interface NumoUsageExhaustedDetails {
-  cause: "account" | "routine_cap" | "operation_allocation";
+  cause: "account" | "routine_cap";
   percent: number;
   resetsAt: string | null;
   nextPlanId: BillingPlanId | null;
@@ -275,29 +255,12 @@ export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn
     p_context: protectedMessage ? null : input.context,
     p_metadata: protectedMessage ? {} : input.metadata,
   };
-  const { data, error } = input.managedBudget
-    ? await service.rpc("begin_numo_turn_with_budget", {
-        ...params,
-        p_usage_since: input.managedBudget.periodStart,
-        p_budget_cap: input.managedBudget.accountCapUsd,
-        p_requested_budget: input.managedBudget.requestedUsd,
-      })
-    : await service.rpc("begin_numo_turn", params);
+  // A turn holds no budget of its own (MIN-869): the account's OpenRouter key
+  // caps what concurrent conversations spend together, and the pre-flight
+  // refuses a turn once the monthly allowance is used.
+  const { data, error } = await service.rpc("begin_numo_turn", params);
   if (error) throw new Error(error.message);
-  const turn = input.managedBudget
-    ? ((data as { turn?: NumoTurn | null } | null)?.turn ?? null)
-    : compositeRow<NumoTurn>(data);
-  if (!turn && input.managedBudget) {
-    const reservation = data as { spent_usd?: unknown; reserved_usd?: unknown } | null;
-    const amount = (value: unknown): number | null => {
-      if (typeof value !== "number" && typeof value !== "string") return null;
-      const parsed = Number(value);
-      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-    };
-    throw new NumoBudgetReservationError(
-      amount(reservation?.spent_usd), amount(reservation?.reserved_usd),
-    );
-  }
+  const turn = compositeRow<NumoTurn>(data);
   if (!turn) throw new Error("Numo turn was not created");
   return hydrateNumoTurn(turn, input.userId);
 }
@@ -879,19 +842,7 @@ async function ensureNumoOperationBudget(
   const operationCap = turn.intent.operationBudgetUsd;
   const spent = operationCap == null ? null : await spentFromNumoOperation(turn.id);
   // Ledger reads fail open, like the existing account budget checks.
-  if (operationCap == null || spent == null || spent < operationCap) {
-    if (runtime.mode === "platform" && turn.managed_budget_usd != null) {
-      const platformSpent = await spentFromNumoOperationPlatform(turn.id);
-      if (platformSpent == null) throw new Error("Numo reservation usage could not be read");
-      if (platformSpent >= Number(turn.managed_budget_usd)) {
-        throw new NumoUsageExhaustedError({
-          cause: "operation_allocation", percent: 0, resetsAt: null,
-          nextPlanId: null, byok: false, routineId: turn.intent.routineId ?? null,
-        });
-      }
-    }
-    return;
-  }
+  if (operationCap == null || spent == null || spent < operationCap) return;
   usage ??= await getUserUsage(turn.user_id);
   const derivedPercent = usage.billing.plan.includedUsageUsd > 0
     ? Math.round((operationCap / usage.billing.plan.includedUsageUsd) * 100)

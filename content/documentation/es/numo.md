@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-30",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -76,10 +76,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (type-ahead from Home and the expanded or focused Numo panel into the composer, single keys still running their shortcut after the 200 ms window, checked against lib/keyboard/typeahead.ts, lib/keyboard/keyboard-context.tsx, components/home/home-numo-composer.tsx and components/assistant/assistant-shell.tsx; Numo citing issues, objectives, projects, pages and members as mention pills in replies and in what it writes (issue descriptions and plans, objective descriptions, comments, pages, notebook), checked against lib/server/assistant/prompt.ts, lib/server/assistant/tools.ts, components/assistant/chat-message.tsx and components/typed-mention-chip.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the conversation figure predates mention pills in answers)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 26,
+    "fact": "agent:claude-code (recovery section: no per-operation allocation card any more and concurrent conversations share the account budget, checked against lib/server/numo/turns.ts, app/api/assistant/chat/route.ts and supabase/migrations/20270109200096_numo_turns_without_budget_reservation.sql; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (es changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-30"
   },
   "related": [
     "code-work",
@@ -109,7 +109,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -126,7 +126,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -187,7 +187,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Sigue las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -219,7 +219,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -236,7 +236,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
       "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -341,13 +341,13 @@ Desactivar bloquea llamadas nuevas, no enviadas. Límites: 30 segundos, 1 MiB de
 
 ## Recuperar trabajo de Numo detenido o pendiente {#recover-numo-work}
 
-Vuelve a la conversación existente y lee los últimos mensajes y tarjetas. Distingue preguntas pendientes, límite de cuenta, tope de rutina, asignación de operación agotada y fallo técnico. Cerrar el panel no demuestra que el trabajo se haya detenido.
+Vuelve a la conversación existente y lee los últimos mensajes y tarjetas. Distingue preguntas pendientes, límite de cuenta, tope de rutina y fallo técnico. Cerrar el panel no demuestra que el trabajo se haya detenido.
 
 En una tarjeta activa, responde todas las preguntas requeridas y envía el conjunto. Las tarjetas anteriores son registros y no admiten una nueva respuesta. Omitir no aporta los datos ausentes ni autoriza cambios dependientes.
 
 ### Presupuesto y errores {#recovery}
 
-La tarjeta de límite de cuenta muestra la fecha de reinicio si se conoce y puede ofrecer un plan o clave personal. La de rutina lleva a su gestión: revisa el tope por ejecución. La asignación de operación corresponde a esa operación. Repetir la petición no elimina el límite.
+La tarjeta de límite de cuenta muestra la fecha de reinicio si se conoce y puede ofrecer un plan o clave personal. La de rutina lleva a su gestión: revisa el tope por ejecución. Varias conversaciones pueden ejecutarse a la vez; comparten el presupuesto de la cuenta. Repetir la petición no elimina el límite.
 
 Solo puede retomarse desde un punto de control si se conservó. Comprueba incidencias, páginas y servicios externos antes de repetir: una escritura puede haber tenido éxito aunque se perdiera la respuesta. Indica qué queda y solicita continuar. Sin punto recuperable, aporta el estado verificado en una nueva petición. Al informar de fallos persistentes, identifica la conversación sin incluir credenciales.
 

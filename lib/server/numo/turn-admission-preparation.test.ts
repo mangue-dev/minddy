@@ -23,7 +23,7 @@ vi.mock("./turn-intent-content", () => ({
   decodeNumoTurnIntent: async () => ({}),
 }));
 
-const { beginNumoTurn, NumoBudgetReservationError } = await import("./turns");
+const { beginNumoTurn } = await import("./turns");
 const input: BeginNumoTurnInput = {
   conversationId: "conversation", userId: "user", requestId: "request", runId: "run",
   content: "List projects", context: null, metadata: {}, model: "z-ai/glm-5.3-flash", reasoningLevel: "low",
@@ -36,30 +36,18 @@ beforeEach(() => {
   h.protectIntent.mockResolvedValue(true);
   h.encodeUserMessage.mockResolvedValue({ content: "sealed-user-message", user_payload_version: 1 });
   h.encodeIntent.mockResolvedValue({ encrypted_intent: "sealed-intent", encryption_version: 1 });
-  h.rpc.mockImplementation(async (name: string, params: Record<string, unknown>) => {
+  h.rpc.mockImplementation(async (_name: string, params: Record<string, unknown>) => {
     const turn = { id: "turn", user_id: input.userId, conversation_id: input.conversationId,
       request_id: input.requestId, intent: params.p_intent, checkpoint: {}, outcome: null, error_message: null };
-    return { data: name === "begin_numo_turn_with_budget" ? { turn } : [turn], error: null };
+    return { data: [turn], error: null };
   });
 });
 
 describe("Numo admission preparation", () => {
-  it("retains authoritative reservation diagnostics from the atomic refusal", async () => {
-    h.rpc.mockResolvedValueOnce({ data: { turn: null, spent_usd: "0.15", reserved_usd: "14.85" }, error: null });
-    const pending = beginNumoTurn({ ...input, managedBudget: {
-      periodStart: "2026-10-01T00:00:00Z", accountCapUsd: 15, requestedUsd: 15,
-    } });
-    await expect(pending).rejects.toBeInstanceOf(NumoBudgetReservationError);
-    await expect(pending).rejects.toMatchObject({ spentUsd: 0.15, reservedUsd: 14.85 });
-  });
-
-  it.each([false, true])("prepares both protected payloads concurrently before admission (managed budget: %s)", async (managedBudget) => {
+  it("prepares both protected payloads concurrently before admission", async () => {
     let releaseUserMessage!: (value: { content: string; user_payload_version: number }) => void;
     h.encodeUserMessage.mockImplementationOnce(() => new Promise((resolve) => { releaseUserMessage = resolve; }));
-    const admissionInput = managedBudget ? { ...input, managedBudget: {
-      periodStart: "2026-10-01T00:00:00Z", accountCapUsd: 5, requestedUsd: 5,
-    } } : input;
-    const pending = beginNumoTurn(admissionInput);
+    const pending = beginNumoTurn(input);
     try {
       await vi.waitFor(() => expect(h.encodeIntent).toHaveBeenCalledOnce(), { timeout: 100 });
       expect(h.encodeUserMessage).toHaveBeenCalledOnce();
@@ -68,7 +56,7 @@ describe("Numo admission preparation", () => {
       releaseUserMessage?.({ content: "sealed-user-message", user_payload_version: 1 });
     }
     await pending;
-    expect(h.rpc).toHaveBeenCalledWith(managedBudget ? "begin_numo_turn_with_budget" : "begin_numo_turn", expect.objectContaining({
+    expect(h.rpc).toHaveBeenCalledWith("begin_numo_turn", expect.objectContaining({
       p_content: "sealed-user-message", p_user_payload_version: 1,
       p_context: null, p_metadata: {}, p_intent: { encrypted_intent: "sealed-intent", encryption_version: 1 },
     }));

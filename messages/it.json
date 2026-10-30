@@ -155,7 +155,6 @@
     "memberLimitReached": "Il tuo piano consente fino a {limit} ospiti per progetto. Esegui l'upgrade per invitarne altri.",
     "agentsNotInPlan": "Il lavoro con Numo non è disponibile per questo account.",
     "usageBudgetExceeded": "Il budget di utilizzo dell'IA è esaurito. Verrà ripristinato nel prossimo periodo. Puoi anche eseguire l'upgrade.",
-    "usageBudgetReserved": "Il budget IA rimanente è temporaneamente assegnato ad attività in corso. Riprova quando saranno terminate, oppure interrompi queste attività.",
     "aiProviderUnavailable": "Nessun provider di IA è configurato per questo account.",
     "modelAbovePlan": "Questo modello consuma ×{multiplier} rispetto al modello predefinito di minddy; il tuo piano {plan} consente fino a ×{limit}.",
     "nameRequired": "Il nome è obbligatorio.",

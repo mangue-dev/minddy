@@ -155,7 +155,6 @@
     "memberLimitReached": "Your plan allows up to {limit} guests per project. Upgrade to invite more.",
     "agentsNotInPlan": "Numo work is unavailable on this account.",
     "usageBudgetExceeded": "Your AI usage budget is used up. It resets next period. You can also upgrade.",
-    "usageBudgetReserved": "Your remaining AI budget is temporarily allocated to ongoing work. Try again when it finishes, or stop that work.",
     "aiProviderUnavailable": "No AI provider is configured for this account.",
     "modelAbovePlan": "That model costs ×{multiplier} the usage of minddy's default model; your {plan} plan goes up to ×{limit}.",
     "nameRequired": "Name is required.",

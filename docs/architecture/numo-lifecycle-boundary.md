@@ -35,9 +35,11 @@ event. Existing worker journals, PR links, attachments, artifacts, pin/read
 state (retained after MIN-721), private/project visibility, and routine provenance remain unchanged.
 
 Durable turn recovery reclaims stale orchestration leases and reconciles
-ambiguous mutations. Included usage and routine caps are reserved at the
-operation boundary, preventing a continuation from charging the same operation
-twice.
+ambiguous mutations. A turn reserves no budget of its own (MIN-869): the
+account's capped OpenRouter key bounds what concurrent conversations spend
+together, the pre-flight refuses a turn once the included usage is spent, and a
+routine's cap is checked against the whole operation's spend, so a continuation
+never charges the same operation twice.
 
 Migrations are forward-only. During rollout, old application code must not be
 pointed at the new schema unless the release compatibility notes allow it. A

@@ -8,7 +8,6 @@ DECLARE
   next_request uuid := '61000000-0000-4000-8000-000000000004';
   receipt public.numo_assistant_turns;
   admitted public.numo_assistant_turns;
-  budget_result jsonb;
 BEGIN
   INSERT INTO auth.users(id) VALUES(owner_id);
   INSERT INTO public.conversations(id,user_id,status) VALUES(conversation_id,owner_id,'idle');
@@ -25,14 +24,6 @@ BEGIN
   END IF;
   IF EXISTS(SELECT 1 FROM public.claim_numo_turn(receipt.id,gen_random_uuid(),false)) THEN
     RAISE EXCEPTION 'A stopped request must never acquire execution authority';
-  END IF;
-
-  budget_result := public.begin_numo_turn_with_budget(conversation_id,owner_id,old_request,
-    gen_random_uuid(),'{}'::jsonb,'z-ai/glm-5.3-flash','low',gen_random_uuid(),0,
-    'Canceled message',NULL,'{}'::jsonb,now(),1,1);
-  IF budget_result->'turn'->>'id' <> receipt.id::text
-      OR budget_result->'turn'->>'status' <> 'stopped' THEN
-    RAISE EXCEPTION 'Managed admission must honor the receipt before reading or reserving budget';
   END IF;
 
   admitted := public.begin_numo_turn(conversation_id,owner_id,next_request,gen_random_uuid(),
