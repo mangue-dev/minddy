@@ -2809,7 +2809,9 @@ and exports. The editor's ProseMirror document is stored next to it in
 anon and authenticated grants revoked.
 
 - One row per parent and kind: `issue_id` for a description (`issue`) and a
-  plan (`plan`), `objective_id`, or `user_id` for the notebook. A description
+  plan (`plan`), `objective_id`, `routine_id` for a routine's instruction
+  (`routine`, MIN-832, whose Markdown is `agent_routines.prompt`), or
+  `user_id` for the notebook. A description
   and the notebook use their parent's id as the row id; a plan's row id is a
   name-based UUID derived from its issue's id. Rows cascade with the parent,
   the project and the account. A trashed issue or objective keeps its document; the read route
@@ -2865,3 +2867,6 @@ the guard and the purge to plans, and adds the plan caret topic.
 marks, `pending_since`) move on a clear document under an encrypted parent
 while still refusing clear content, and restricts sending carets to members
 who may write the project.
+`20270109200097` adds the `routine` kind: a `routine_id` column cascading with
+its routine, and the guard and purge read the routine's `encryption_version`
+like the other parents'. It adds no caret topic.

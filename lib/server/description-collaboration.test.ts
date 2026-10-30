@@ -22,14 +22,26 @@ const h = vi.hoisted(() => ({
   claimed: false,
   deferred: 0,
   updateIssueFields: vi.fn(),
-  access: { canWrite: true } as { canWrite: boolean } | null,
+  updateRoutine: vi.fn(),
+  routine: null as null | { prompt: string; prompt_mentions: unknown[] },
+  access: { canWrite: true, isOwner: true } as { canWrite: boolean; isOwner: boolean } | null,
   /** Called before each commit, to simulate typing landing first. */
   beforeCommit: null as null | (() => void),
 }));
 
 const fingerprint = (id: string, markdown: string) => `fp:${id}:${markdown.trim()}`;
 
-vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
+vi.mock("@/lib/supabase-service", () => ({
+  getServiceClient: () => ({
+    // The routine parent (MIN-832): `agent_routines`, read whole.
+    from: () => ({ select: () => ({ eq: () => ({ is: () => ({ maybeSingle: async () => ({
+      data: h.routine && { id: "routine-1", project_id: "project-1", ...h.routine },
+      error: null,
+    }) }) }) }) }),
+  }),
+}));
+vi.mock("@/lib/server/routine-content", () => ({ decodeRoutine: async (row: unknown) => row }));
+vi.mock("@/lib/server/routines", () => ({ updateRoutine: h.updateRoutine }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: () => {} }));
 vi.mock("@/lib/server/project-access", () => ({ hasProjectAccess: async () => h.access }));
 vi.mock("@/lib/server/issue-store", () => ({
@@ -104,6 +116,7 @@ vi.mock("@/lib/server/rich-documents", async () => {
 });
 
 const authority = await import("./description-collaboration");
+const { mentionMarkdown } = await import("@/lib/mention-link");
 const { documentIdOf } = await vi.importActual<typeof import("./rich-documents")>("./rich-documents");
 const { pageCollaborationServer, descriptionMarkdownServer } = await import("./pages-projection");
 
@@ -136,8 +149,9 @@ beforeEach(() => {
   };
   h.claimed = false;
   h.deferred = 0;
-  h.access = { canWrite: true };
+  h.access = { canWrite: true, isOwner: true };
   h.beforeCommit = null;
+  h.routine = null;
   h.plan = "";
   h.parentMissing = false;
   h.updateIssueFields.mockReset().mockImplementation(async ({ input }) => {
@@ -181,7 +195,7 @@ describe("live description batches", () => {
     expect(await authority.submitDescriptionBatch("issue", "issue-1", submission(3, steps), "user-1"))
       .toMatchObject({ ok: true, result: { status: "refused", reason: "content-refused" } });
 
-    h.access = { canWrite: false };
+    h.access = { canWrite: false, isOwner: false };
     expect(await authority.submitDescriptionBatch("issue", "issue-1",
       submission(3, stepsBetween(h.row!.content, doc(paragraph("x", "a")))), "user-1"))
       .toEqual({ ok: false, status: 403 });
@@ -416,5 +430,93 @@ describe("live plans", () => {
       markdown: "## Steps\n\n- [x] Write the migration\n- [ ] Ship it", authorId: "agent" });
     expect(await markdownOf(h.row!.content))
       .toBe("## Steps, being renamed\n\n- [x] Write the migration\n- [ ] Ship it");
+  });
+});
+
+describe("live routine instructions (MIN-832)", () => {
+  const owner = { kind: "routine" as const, id: "routine-1", projectId: "project-1" };
+  const instruction = "Summarize the week\n\nPost it in the inbox";
+
+  beforeEach(async () => {
+    h.routine = { prompt: instruction, prompt_mentions: [] };
+    const content = (await descriptionMarkdownServer()).fromMarkdown(instruction);
+    h.row = {
+      revision: 0, materializedRevision: 0,
+      materializedHash: fingerprint("routine-1", instruction),
+      content: pageCollaborationServer().canonicalBodyJSON(content) as JSONContent, batches: [],
+    };
+    h.updateRoutine.mockReset().mockImplementation(async ({ prompt }) => {
+      h.routine!.prompt = prompt;
+      return { ok: true, routine: {} };
+    });
+  });
+
+  const typeInstruction = async (markdown: string, actor = "owner-1") => {
+    const projection = await descriptionMarkdownServer();
+    const typed = projection.reconcile(h.row!.content, projection.fromMarkdown(markdown))!;
+    return authority.submitDescriptionBatch("routine", "routine-1",
+      submission(h.row!.revision, stepsBetween(h.row!.content, typed)), actor);
+  };
+
+  it("lets the project owner type, and a member who may write the project only read", async () => {
+    expect(await typeInstruction("Summarize the month\n\nPost it in the inbox"))
+      .toMatchObject({ ok: true, result: { status: "accepted" } });
+
+    h.access = { canWrite: true, isOwner: false };
+    const snapshot = await authority.readDescriptionSnapshot("routine", "routine-1", "member-1");
+    expect(snapshot).toMatchObject({ ok: true, snapshot: { kind: "routine", documentId: "routine-1", canWrite: false } });
+    expect(await typeInstruction("Something else", "member-1")).toEqual({ ok: false, status: 403 });
+  });
+
+  it("writes the typed instruction through the routine writer, without renaming on every pause", async () => {
+    await typeInstruction("Summarize the month\n\nPost it in the inbox");
+    expect(await authority.materializeDescription(owner, null)).toBe("materialized");
+    expect(h.updateRoutine).toHaveBeenCalledWith({
+      routineId: "routine-1", actorId: "owner-1",
+      prompt: "Summarize the month\n\nPost it in the inbox", promptMentions: [],
+      promptFromDocument: true,
+    });
+    expect(h.updateIssueFields).not.toHaveBeenCalled();
+    expect(h.row!.materializedRevision).toBe(h.row!.revision);
+  });
+
+  it("stores typed mentions without their labels, like every other text", async () => {
+    await typeInstruction(`Ask ${mentionMarkdown("member", "11111111-1111-4111-8111-111111111111", "Camille")} to review`);
+    await authority.materializeDescription(owner, null);
+    expect(h.routine!.prompt).toContain("](mention:member/11111111-1111-4111-8111-111111111111");
+    expect(h.routine!.prompt).not.toContain("Camille");
+    // The stored form is what the next reader compares: nothing is folded back.
+    const before = h.row!.revision;
+    await authority.readDescriptionSnapshot("routine", "routine-1", "owner-1");
+    expect(h.row!.revision).toBe(before);
+  });
+
+  it("reads an instruction saved with \"@Label\" identities as typed mentions", async () => {
+    h.row = null;
+    h.routine = {
+      prompt: "Ask @Camille to review",
+      prompt_mentions: [{ type: "member", id: "11111111-1111-4111-8111-111111111111", label: "Camille", occurrence: 0 }],
+    };
+    const snapshot = await authority.readDescriptionSnapshot("routine", "routine-1", "owner-1");
+    if (!snapshot.ok) throw new Error("expected a snapshot");
+    expect(JSON.stringify(snapshot.snapshot.doc)).toContain("11111111-1111-4111-8111-111111111111");
+  });
+
+  it("never writes an emptied instruction, and returns to the saved one", async () => {
+    await typeInstruction("");
+    expect(await authority.materializeDescription(owner, null)).toBe("unchanged");
+    expect(h.updateRoutine).not.toHaveBeenCalled();
+    expect(await markdownOf(h.row!.content)).toBe(instruction);
+  });
+
+  it("sends a rewrite by Numo to the open editors as steps", async () => {
+    await authority.syncDescriptionWrite({ ...owner,
+      markdown: "Summarize the week\n\nPost it in the team page", authorId: "owner-1" });
+    expect(await markdownOf(h.row!.content)).toBe("Summarize the week\n\nPost it in the team page");
+  });
+
+  it("refuses an instruction longer than the routine writer keeps", async () => {
+    expect(await typeInstruction("x".repeat(20_001)))
+      .toMatchObject({ ok: true, result: { status: "refused", reason: "too-large" } });
   });
 });

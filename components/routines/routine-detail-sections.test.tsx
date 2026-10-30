@@ -5,7 +5,11 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { RoutineTrigger } from "@/lib/routine-triggers";
 import type { Routine } from "@/lib/routines-api";
 
-const state = vi.hoisted(() => ({ next: null as RoutineTrigger | null }));
+const state = vi.hoisted(() => ({
+  next: null as RoutineTrigger | null,
+  live: { status: "unavailable" } as { status: "loading" | "ready" | "unavailable" },
+  liveInput: null as null | Record<string, unknown>,
+}));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "en" }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 // The trigger fields report the trigger the test sets, and expose the highlight.
@@ -16,6 +20,26 @@ vi.mock("@/components/routines/routine-trigger-fields", () => ({
   ),
 }));
 vi.mock("@/components/routines/routine-schedule-fields", () => ({ RoutineScheduleFields: () => null }));
+// The instruction field shows which session it got, and types on demand.
+vi.mock("@/components/routines/routine-prompt-field", () => ({
+  RoutinePromptField: ({ onChange, live }: { onChange: (value: string, mentions: never[]) => void; live?: { status: string } | null }) => (
+    <textarea data-live={live?.status ?? "none"} onChange={(event) => onChange(event.target.value, [])} />
+  ),
+}));
+vi.mock("@/lib/use-description-collaboration", () => ({
+  useDescriptionCollaboration: (input: Record<string, unknown>) => {
+    state.liveInput = input;
+    return state.live;
+  },
+}));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) }));
+vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
+vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TooltipContent: () => null,
+}));
 vi.mock("@/components/routines/spend-cap-select", () => ({ SpendCapSelect: () => null }));
 vi.mock("@/components/ui/collapsible", () => ({
   Collapsible: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -23,7 +47,7 @@ vi.mock("@/components/ui/collapsible", () => ({
   CollapsibleContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-import { RoutineSettings } from "@/components/routines/routine-detail-sections";
+import { RoutineInstruction, RoutineSettings } from "@/components/routines/routine-detail-sections";
 
 const routine = {
   id: "routine", project_id: "project", title: "Routine", prompt: "Check", enabled: true,
@@ -57,4 +81,37 @@ it("waits for a complete trigger before saving, and outlines what is missing mea
   await act(() => vi.advanceTimersByTimeAsync(1_000));
   expect(save).toHaveBeenCalledWith(expect.objectContaining({ trigger: state.next }));
   expect(host.textContent).not.toContain("triggerIncompleteHint");
+});
+
+/** Types into the instruction field, then moves the focus out of it. */
+async function typeAndLeave(text: string) {
+  const field = host.querySelector("textarea")!;
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!;
+    setter.call(field, text);
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    field.dispatchEvent(new FocusEvent("focusout", { bubbles: true, relatedTarget: null }));
+  });
+}
+
+it("edits the instruction in its live session, which saves it without a blur save", async () => {
+  state.live = { status: "ready" };
+  const save = vi.fn().mockResolvedValue(undefined);
+  await act(() => root.render(<RoutineInstruction routine={routine} isOwner onSave={save} />));
+  expect(state.liveInput).toMatchObject({ kind: "routine", id: "routine", userId: "owner", enabled: true });
+  expect(host.querySelector("textarea")?.getAttribute("data-live")).toBe("ready");
+
+  await typeAndLeave("Check twice");
+  expect(save).not.toHaveBeenCalled();
+});
+
+it("saves the instruction when the focus leaves it without a live session", async () => {
+  state.live = { status: "unavailable" };
+  const save = vi.fn().mockResolvedValue(undefined);
+  await act(() => root.render(<RoutineInstruction routine={routine} isOwner onSave={save} />));
+
+  await typeAndLeave("Check twice");
+  expect(save).toHaveBeenCalledWith({ prompt: "Check twice", promptMentions: [] });
 });

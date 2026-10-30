@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, InformationCircleIcon, PauseCircleIcon, PlayCircleIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -13,6 +14,9 @@ import { RoutinePromptField } from "@/components/routines/routine-prompt-field";
 import { RoutineScheduleFields } from "@/components/routines/routine-schedule-fields";
 import { RoutineTriggerFields, RoutineTriggerSummary } from "@/components/routines/routine-trigger-fields";
 import type { AssistantMention } from "@/lib/assistant-types";
+import { useAuth } from "@/lib/auth-context";
+import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
+import { useMembersQuery } from "@/lib/use-members-query";
 import { DEFAULT_MAX_SPEND_PERCENT } from "@/lib/routine-budget";
 import { SpendCapSelect } from "@/components/routines/spend-cap-select";
 import { parseRoutineTrigger, type RoutineTrigger } from "@/lib/routine-triggers";
@@ -28,8 +32,12 @@ const TRIGGER_SAVE_DELAY_MS = 700;
 
 /**
  * The instruction, written in place (no Edit button): the routines' own
- * variant of the shared editor, saved when the focus leaves it. An emptied
- * instruction is not saved, and the editor gets the saved one back.
+ * variant of the shared editor. It is a live document (MIN-832), like an
+ * issue's plan: the owner's tabs and devices, and Numo rewriting it, converge
+ * without overwriting typing, and the server writes the text once typing
+ * rests. Without a live session (an older server, a failed read) it is saved
+ * when the focus leaves it. Either way, an emptied instruction is not saved,
+ * and the editor gets the saved one back.
  */
 export function RoutineInstruction({
   routine,
@@ -41,6 +49,18 @@ export function RoutineInstruction({
   onSave: (patch: RoutinePatch) => Promise<void>;
 }) {
   const t = useTranslations("Routines");
+  const tPages = useTranslations("Pages");
+  const { user } = useAuth();
+  const { members } = useMembersQuery(routine.project_id, true);
+  const live = useDescriptionCollaboration({
+    kind: "routine",
+    id: routine.id,
+    userId: user?.id ?? null,
+    enabled: true,
+    members,
+    onRefused: () => toast.error(tPages("liveEditRefused")),
+    onFatal: () => toast.error(tPages("saveFailed")),
+  });
   const saved = { prompt: routine.prompt, mentions: routine.prompt_mentions ?? [] };
   // Local typing wins until it is saved; without any, the saved instruction
   // shows, rewrites from another device or from Numo included. The page keys
@@ -54,7 +74,7 @@ export function RoutineInstruction({
   }, [routine.prompt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const commit = () => {
-    if (!draft) return;
+    if (!draft || live.status !== "unavailable") return;
     const prompt = draft.prompt.trim();
     if (!prompt || (prompt === routine.prompt.trim() && JSON.stringify(draft.mentions) === JSON.stringify(saved.mentions))) {
       setDraft(null);
@@ -99,6 +119,7 @@ export function RoutineInstruction({
           mentions={shown.mentions}
           onChange={(prompt, mentions) => setDraft({ prompt, mentions })}
           disabled={!isOwner}
+          live={live}
         />
       </div>
     </section>

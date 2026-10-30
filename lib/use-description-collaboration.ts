@@ -1,6 +1,7 @@
 "use client";
 
-// The LIVE SESSION of an open issue or objective description (MIN-728): one
+// The LIVE SESSION of an open issue or objective description, issue plan or
+// routine instruction (MIN-728, MIN-832): one
 // step stream, its wake-ups and the collaborators' carets — the page session
 // (lib/use-page-collaboration.ts) without the title stream.
 //
@@ -389,9 +390,10 @@ export function useDescriptionCollaboration({
     };
   }, [session, kind, id]);
 
-  // Carets, while the description is shown.
+  // Carets, while the description is shown. A routine's instruction has a
+  // single writer and no caret topic.
   useEffect(() => {
-    if (!session || !id || !userId) return;
+    if (!session || !id || !userId || kind === "routine") return;
     const presence = openPageCollaborationPresence({
       pageId: id,
       topic: descriptionCollaborationTopic(kind, id),

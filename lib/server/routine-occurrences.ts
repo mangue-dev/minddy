@@ -29,6 +29,21 @@ import {
 } from "@/lib/server/routines";
 import { decodeRoutine, shouldProtectRoutines } from
   "@/lib/server/routine-content";
+import { materializePendingDescription } from "@/lib/server/description-collaboration";
+
+/**
+ * The routine with the instruction its owner last typed: typing still
+ * pending on the live instruction (MIN-832) is written first, so an
+ * occurrence never runs the text from before the last pause.
+ */
+async function withLatestInstruction(routine: Routine): Promise<Routine> {
+  if (await materializePendingDescription("routine", routine.id, routine.project_id) !== "materialized") {
+    return routine;
+  }
+  const { data } = await getServiceClient().from("agent_routines").select("*")
+    .eq("id", routine.id).maybeSingle();
+  return data ? { ...routine, ...await decodeRoutine(data) as unknown as Routine } : routine;
+}
 
 async function requireProtectedRoutineCopies(service: SupabaseClient) {
   if (!await shouldProtectRoutines(service)) return;
@@ -150,6 +165,7 @@ export async function startRoutineOccurrence(input: {
       input.routine.owner_id), turn: await hydrateNumoTurn(existing as NumoTurn) };
   }
 
+  const routine = await withLatestInstruction(input.routine);
   let turnCreated = false;
   try {
     const identity = await ownerIdentity(input.routine.owner_id);
@@ -159,7 +175,7 @@ export async function startRoutineOccurrence(input: {
       userId: input.routine.owner_id,
       userMetadata: identity.metadata,
       projectId: input.routine.project_id,
-      prompt: input.routine.prompt,
+      prompt: routine.prompt,
       locale: identity.locale,
       timezone: input.routine.timezone,
       source: "routine",
@@ -167,10 +183,10 @@ export async function startRoutineOccurrence(input: {
       context: {
         projectId: input.routine.project_id,
         routineId: input.routine.id,
-        routineTitle: input.routine.title,
+        routineTitle: routine.title,
         ...(input.provenance?.subjectType === "issue" ? { issueId: input.provenance.subjectId } : {}),
       },
-      mentions: input.routine.prompt_mentions,
+      mentions: routine.prompt_mentions,
       conversationId: occurrence.conversation_id,
       conversationUserId: input.routine.owner_id,
       requestId: occurrence.request_id,

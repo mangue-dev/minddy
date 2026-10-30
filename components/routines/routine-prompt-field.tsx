@@ -7,6 +7,7 @@ import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionLinksProvider } from "@/components/mention-links";
 import { DeferredDocumentEditor } from "@/components/editor/document-editor-lazy";
 import type { AssistantMention } from "@/lib/assistant-types";
+import type { DescriptionCollaborationSession } from "@/lib/use-description-collaboration";
 import { promptFromMarkdown, promptToMarkdown, type PromptSkill } from "@/lib/prompt-document";
 import { skillMentionId } from "@/lib/use-feature-mentions";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
@@ -27,7 +28,10 @@ const MAX_PROMPT_LENGTH = 20000;
  *
  * In the wizard the field is framed, capped at about ten lines and carries
  * dictation (`pb-12` keeps its corner free). `bare` is the instruction written
- * in place on the routine's page: no frame, no cap, no microphone.
+ * in place on the routine's page: no frame, no cap, no microphone. There, a
+ * `live` session (MIN-832) makes the editor the instruction's live document:
+ * its typing travels as steps and the server writes the text, so `onChange`
+ * is not called; without one, the field reports its text as before.
  */
 export function RoutinePromptField({
   projectId,
@@ -38,6 +42,7 @@ export function RoutinePromptField({
   disabled,
   autoFocus,
   bare = false,
+  live = null,
 }: {
   projectId: string;
   baseBranch?: string | null;
@@ -49,6 +54,8 @@ export function RoutinePromptField({
   autoFocus?: boolean;
   /** Written in place on the routine's page: no frame, no cap, no dictation. */
   bare?: boolean;
+  /** The instruction's live session (lib/use-description-collaboration.ts). */
+  live?: DescriptionCollaborationSession | null;
 }) {
   const t = useTranslations("Routines");
   const { members } = useMembersQuery(projectId || null, !!projectId);
@@ -98,19 +105,44 @@ export function RoutinePromptField({
             ? "min-h-16"
             : "max-h-64 min-h-36 overflow-y-auto rounded-lg border border-input px-3 pt-2 pb-12 transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50"}
         >
-          <DeferredDocumentEditor
-            key={editorKey}
-            value={markdown}
-            mentions={mentionSupport}
-            onChange={(next) => {
-              const parsed = promptFromMarkdown(next);
-              update(parsed.text, parsed.mentions);
-            }}
-            readOnly={disabled}
-            autoFocus={autoFocus}
-            ariaLabel={t("promptLabel")}
-            className="text-sm"
-          />
+          {live?.status === "loading" ? (
+            // The instruction, formatted, while its live session loads: the
+            // live editor then takes its place in the same frame.
+            <DeferredDocumentEditor
+              key="preview"
+              value={markdown}
+              mentions={mentionSupport}
+              readOnly
+              ariaLabel={t("promptLabel")}
+              className="text-sm"
+            />
+          ) : live?.status === "ready" && live.collaboration ? (
+            <DeferredDocumentEditor
+              key="live"
+              value={markdown}
+              document={live.doc}
+              collaboration={live.collaboration}
+              mentions={mentionSupport}
+              readOnly={disabled}
+              autoFocus={autoFocus}
+              ariaLabel={t("promptLabel")}
+              className="text-sm"
+            />
+          ) : (
+            <DeferredDocumentEditor
+              key={editorKey}
+              value={markdown}
+              mentions={mentionSupport}
+              onChange={(next) => {
+                const parsed = promptFromMarkdown(next);
+                update(parsed.text, parsed.mentions);
+              }}
+              readOnly={disabled}
+              autoFocus={autoFocus}
+              ariaLabel={t("promptLabel")}
+              className="text-sm"
+            />
+          )}
         </div>
         {/* Dictation appends to the existing instruction. */}
         {bare ? null : <DictateButton
