@@ -1,3 +1,4 @@
+import { projectPath } from "@/lib/app-urls";
 import { type NextRequest, NextResponse } from "next/server";
 import { verifyGitLinkState, ACCOUNT_CONNECT_PROJECT } from "@/lib/server/git/link-state";
 import {
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
     ? "/home?setup=git"
     : isAccount
       ? "/settings?tab=git"
-      : `/projects/${state.projectId}/settings?tab=git`;
+      : `${projectPath(state.projectId, "settings")}?tab=git`;
 
   // A valid `state` is not an identity: its bearer may have minted it
   // from another account. Without a corresponding session, nothing is written.

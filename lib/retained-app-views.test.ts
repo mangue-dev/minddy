@@ -325,12 +325,12 @@ describe("bounded retained board views", () => {
 
   it("reuses the Pages shell within a tab while keeping other projects isolated", () => {
     const open = new Set(["pages"]);
-    const first = retainAppView([], { pathname: "/projects/p/pages/a", search: "", projectId: "p" }, "pages", open);
-    const next = retainAppView(first, { pathname: "/projects/p/pages/b", search: "", projectId: "p" }, "pages", open);
+    const first = retainAppView([], { pathname: "/projects/p/pages/a", search: "", projectSegment: "p" }, "pages", open);
+    const next = retainAppView(first, { pathname: "/projects/p/pages/b", search: "", projectSegment: "p" }, "pages", open);
     expect(next).toHaveLength(1); expect(next[0].key).toBe(first[0].key);
     expect(next[0].route.pathname).toBe("/projects/p/pages/b");
-    const other = retainAppView(next, { pathname: "/projects/q/pages/a", search: "", projectId: "q" }, "pages", open);
-    expect(other).toHaveLength(2); expect(other[0].route.projectId).toBe("p");
+    const other = retainAppView(next, { pathname: "/projects/q/pages/a", search: "", projectSegment: "q" }, "pages", open);
+    expect(other).toHaveLength(2); expect(other[0].route.projectSegment).toBe("p");
   });
 
   it("updates document metadata on retained returns and reads project names from the owner cache", async () => {
@@ -565,7 +565,7 @@ describe("bounded retained board views", () => {
   });
 
   it("adopts the startup board after account-tab restoration without another key", () => {
-    const route = { pathname: "/all", search: "", projectId: null };
+    const route = { pathname: "/all", search: "", projectSegment: null };
     const startup = retainAppView([], route, null, new Set());
     const restored = retainAppView(startup, route, "board", new Set(["board"]));
     expect(restored).toHaveLength(1);
@@ -574,7 +574,7 @@ describe("bounded retained board views", () => {
   });
 
   it("qualifies only the exact retained tab and repeatable selection for local navigation", () => {
-    const route = { pathname: "/all", search: "view=first", projectId: null };
+    const route = { pathname: "/all", search: "view=first", projectSegment: null };
     const views = retainAppView([], route, "board", new Set(["board"]));
     expect(isRetainedDestination(views, "board", "/all?view=first")).toBe(true);
     expect(isRetainedDestination(views, "other", "/all?view=first")).toBe(false);
@@ -588,7 +588,7 @@ describe("bounded retained board views", () => {
 
   it("measures each view once per recomputation and keeps an unchanged result", () => {
     const open = new Set(["a", "b", "c", "d", "e"]);
-    const route = (id: string) => ({ pathname: `/projects/${id}`, search: "", projectId: id });
+    const route = (id: string) => ({ pathname: `/projects/${id}`, search: "", projectSegment: id });
     const visits: string[] = [];
     let views: ReturnType<typeof retainAppView> = [];
     for (const id of ["a", "b", "c", "d", "e", "c"]) {
@@ -604,7 +604,7 @@ describe("bounded retained board views", () => {
     const same = retainAppView(next, route("c"), "c", open, { budget: 4, limit: 6, visits, cost });
     expect(same).toBe(next);
     expect(cost.mock.calls.length).toBeLessThanOrEqual(next.length);
-    expect(retainAppView(next, { pathname: "/settings", search: "", projectId: null }, "c", open)).toBe(next);
+    expect(retainAppView(next, { pathname: "/settings", search: "", projectSegment: null }, "c", open)).toBe(next);
   });
 
   it("measures retained views without searching the document", async () => {
@@ -626,7 +626,7 @@ describe("bounded retained board views", () => {
     let misses = 0;
     for (const index of sequence) {
       const tabId = `t${index}`;
-      const route = { pathname: `/projects/p${index}`, search: "", projectId: `p${index}` };
+      const route = { pathname: `/projects/p${index}`, search: "", projectSegment: `p${index}` };
       if (!views.some((view) => view.tabId === tabId)) misses++;
       visits = [...visits, tabId].slice(-32);
       views = retainAppView(views, route, tabId, open, { budget, limit: 6, visits, cost: () => 1 });
@@ -644,7 +644,7 @@ describe("bounded retained board views", () => {
     for (let i = 0; i < 40; i++) {
       const tabId = `t${i % 3}`;
       visits = [...visits, tabId].slice(-32);
-      views = retainAppView(views, { pathname: `/projects/p${i % 3}`, search: "", projectId: `p${i % 3}` }, tabId, open, { budget, limit: 6, visits, cost: () => 1 });
+      views = retainAppView(views, { pathname: `/projects/p${i % 3}`, search: "", projectSegment: `p${i % 3}` }, tabId, open, { budget, limit: 6, visits, cost: () => 1 });
     }
     // An unused spare slot may retain one older view; neither old favourite can
     // displace the three newly frequent destinations when the budget fits them.

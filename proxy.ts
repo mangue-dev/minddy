@@ -14,6 +14,7 @@ import {
   routeByPath,
 } from "@/lib/public-routes";
 import { isProtectedPath } from "@/lib/protected-prefixes";
+import { shortenLegacyAppUrl } from "@/lib/app-urls";
 import { decodeJwtPayload, needsMfaChallenge } from "@/lib/mfa";
 import {
   ACCOUNT_THEME_HEADER,
@@ -324,6 +325,16 @@ async function routeRequest(request: NextRequest) {
       status: 404,
       headers: { "Cache-Control": "private, no-store", "X-Robots-Tag": "noindex" },
     });
+  }
+
+  // App URLs carry short codes since readable URLs (lib/app-urls.ts): a
+  // bookmark, email or pushed notification written with full ids moves to
+  // the short form. Pure string work, before any session read.
+  if (isProtectedPath(pathname) && (request.method === "GET" || request.method === "HEAD")) {
+    const readable = shortenLegacyAppUrl(pathname, request.nextUrl.search);
+    if (readable) {
+      return NextResponse.redirect(new URL(readable, request.nextUrl.origin), 308);
+    }
   }
 
   const supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL;

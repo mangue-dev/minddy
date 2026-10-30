@@ -1,3 +1,4 @@
+import { projectHref, pullRequestHref, recordRef, routineHref, withQuery } from "./app-urls";
 import { GitMergeIcon, GitPullRequestIcon, InboxIcon } from "@hugeicons/core-free-icons";
 import { BOARD_ICON, ROUTINE_ICON } from "@/components/feature-icons";
 import type { PaletteGroup, PaletteItem } from "@/components/header-search-pill";
@@ -57,17 +58,11 @@ function projectKeywords(project: PaletteProject | null): string[] {
   return project ? [project.name, project.key] : [];
 }
 
-export function routineHref(routineId: string): string {
-  return `/routines?routine=${encodeURIComponent(routineId)}`;
-}
-
-export function pullRequestHref(prId: string): string {
-  return `/pull-requests?pr=${encodeURIComponent(prId)}`;
-}
+export { pullRequestHref, routineHref };
 
 export function viewHref(view: Pick<View, "id" | "project_id">): string {
-  const param = `view=${encodeURIComponent(view.id)}`;
-  return view.project_id ? `/projects/${view.project_id}?${param}` : `/all?${param}`;
+  const query = { view: recordRef(view.id) };
+  return view.project_id ? projectHref(view.project_id, undefined, query) : withQuery("/all", query);
 }
 
 export function buildWorkspaceGroups(input: WorkspaceGroupInput): PaletteGroup[] {

@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { decodeProjectName } from "@/lib/server/project-content";
+import { resolveProjectSegment } from "@/lib/server/route-refs";
 
 /**
  * Name of a project, for page titles (MIN-95).
@@ -13,8 +14,11 @@ import { decodeProjectName } from "@/lib/server/project-content";
  * Returns `null` rather than throwing away: a title is an ornament, a page does not have to fall because the RLS refused the reading or the project does not exist
  * not — the caller falls back on the translated generic wording.
  */
-export const projectName = cache(async (id: string): Promise<string | null> => {
+export const projectName = cache(async (segment: string): Promise<string | null> => {
   try {
+    // The route segment is readable (`min-3f2a9c81`) or a legacy id.
+    const id = await resolveProjectSegment(segment);
+    if (!id) return null;
     const supabase = await createServerSupabase();
     const { data } = await supabase
       .from("projects")

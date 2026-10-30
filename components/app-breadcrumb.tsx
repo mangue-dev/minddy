@@ -1,5 +1,6 @@
 "use client";
 
+import { objectiveHref, projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, ArrowUpDownIcon, Home01Icon } from "@hugeicons/core-free-icons";
 import Link from "@/components/app-link";
@@ -58,7 +59,7 @@ function ProjectSwitcher({ project }: { project: Project }) {
   if (projects.length <= 1) {
     return (
       <Link
-        href={`/projects/${project.id}`}
+        href={projectPath(project.id)}
         className="flex items-center gap-2 text-sm font-medium shrink-0 transition-colors hover:text-muted-foreground"
       >
         <ProjectChip project={project} />
@@ -70,7 +71,7 @@ function ProjectSwitcher({ project }: { project: Project }) {
   return (
     <div className="flex h-8 shrink-0 items-center overflow-hidden rounded-lg border border-border">
       <Link
-        href={`/projects/${project.id}`}
+        href={projectPath(project.id)}
         className="flex items-center gap-2 self-stretch pl-2 pr-2 transition-colors hover:bg-accent/50"
       >
         <ProjectChip project={project} className="size-[18px]" />
@@ -90,7 +91,7 @@ function ProjectSwitcher({ project }: { project: Project }) {
         </AppTooltip>
         <DropdownMenuContent align="start" className="w-56">
           {projects.map((p) => (
-            <DropdownMenuItem key={p.id} onSelect={() => router.push(`/projects/${p.id}`)}>
+            <DropdownMenuItem key={p.id} onSelect={() => router.push(projectPath(p.id))}>
               <ProjectChip project={p} className="size-4" />
               <span className="truncate">{p.name}</span>
             </DropdownMenuItem>
@@ -229,7 +230,7 @@ function MobileBreadcrumb({
     // go back up to Home. Nested sections go back to the project root.
     const atRoot = !section || sectionKey === "tickets";
     if (objective && atRoot) {
-      backHref = `/projects/${project.id}/objectives?open=${objective.id}`;
+      backHref = objectiveHref(project.id, objective.id);
       backIcon = (
         <span className="max-w-[10ch] truncate text-xs font-medium">
           {objectiveBreadcrumbLabel(objective.name)}
@@ -241,7 +242,7 @@ function MobileBreadcrumb({
       backIcon = homeIcon;
       current = <ProjectSwitcher project={project} />;
     } else {
-      backHref = `/projects/${project.id}`;
+      backHref = projectPath(project.id);
       backIcon = <ProjectChip project={project} className="size-[18px]" />;
       current = <CurrentLabel>{section}</CurrentLabel>;
     }
@@ -388,7 +389,7 @@ export function AppBreadcrumb({
           {project && objective ? (
             <AppTooltip label={objective.name}>
               <Link
-                href={`/projects/${project.id}/objectives?open=${objective.id}`}
+                href={objectiveHref(project.id, objective.id)}
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 {objectiveBreadcrumbLabel(objective.name)}

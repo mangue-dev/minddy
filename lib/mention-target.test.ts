@@ -6,20 +6,20 @@ const P = "11111111-1111-1111-1111-111111111111";
 describe("mentionTargetPath", () => {
   it("mène un ticket, un objectif et une page sur les mêmes écrans qu'une notification", () => {
     // Same URLs as lib/notification-target.ts: two entries, one screen.
-    expect(mentionTargetPath("issue", "i1", P)).toBe(`/projects/${P}?issue=i1`);
+    expect(mentionTargetPath("issue", "i1", P)).toBe(`/projects/${P.slice(0, 8)}?issue=i1`);
     expect(mentionTargetPath("objective", "o1", P)).toBe(
-      `/projects/${P}/objectives?open=o1`,
+      `/projects/${P.slice(0, 8)}/objectives?open=o1`,
     );
     expect(mentionTargetPath("page", "pg1", P)).toBe(
-      `/projects/${P}/pages/pg1`,
+      `/projects/${P.slice(0, 8)}/pages/pg1`,
     );
   });
 
   it("mène un projet sur lui-même, sans rien à résoudre", () => {
-    expect(mentionTargetPath("project", P)).toBe(`/projects/${P}`);
+    expect(mentionTargetPath("project", P)).toBe(`/projects/${P.slice(0, 8)}`);
     // And even if the caller gives him a draft context: it's his own id
     // qui fait l'adresse.
-    expect(mentionTargetPath("project", P, "autre")).toBe(`/projects/${P}`);
+    expect(mentionTargetPath("project", P, "autre")).toBe(`/projects/${P.slice(0, 8)}`);
   });
 
   it("ne mène nulle part pour une personne, Numo ou un compte de forge", () => {

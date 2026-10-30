@@ -1,3 +1,4 @@
+import { projectPath } from "./app-urls";
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
 import { Mic01Icon, AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
@@ -170,7 +171,7 @@ export function settingsSectionHref(
   const base =
     section.scope === "account"
       ? "/settings"
-      : `/projects/${projectId}/settings`;
+      : projectPath(projectId ?? "", "settings");
   const defaultTab =
     section.scope === "account"
       ? ACCOUNT_SETTINGS_DEFAULT_TAB

@@ -1,4 +1,5 @@
 "use client";
+import { pullRequestHref } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
@@ -406,7 +407,7 @@ export function IssueSidePanel({
 
   // `?pr=`: the link works for any PR, including a hand-attached one (MIN-163).
   const openPr = useCallback(() => {
-    if (pullRequest) router.push(`/pull-requests?pr=${pullRequest.prId}`);
+    if (pullRequest) router.push(pullRequestHref(pullRequest.prId));
   }, [pullRequest, router]);
 
   // Context shared by the two copyable prompts (work on the ticket,

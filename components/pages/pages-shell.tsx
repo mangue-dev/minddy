@@ -1,5 +1,7 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
+import { recordRef } from "@/lib/app-urls";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 // The persistent page tree and document surfaces for the project.
@@ -60,14 +62,13 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const registerPreviewFlush = useCallback((flush: () => Promise<boolean>) => { previewFlush.current = flush; }, []);
 
   const base = pagesHref(projectId);
-  const activePageId = useMemo(() => {
-    const rest = pathname.startsWith(`${base}/`) ? pathname.slice(base.length + 1) : "";
-    const segment = rest.split("/")[0];
-    return segment && segment !== "trash" ? segment : null;
-  }, [pathname, base]);
-
   const { pages, tree, byId, loading, createPage, prefetchPage, updatePage, trashPage } =
     usePagesQuery(projectId);
+  // The path carries the page's short code (or a legacy id); it expands once
+  // the tree is loaded, which also re-renders this shell.
+  const activeSegment = pathname.match(/^\/projects\/[^/]+\/pages\/([^/]+)/)?.[1] ?? null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- The tree is the input that makes the code expandable.
+  const activePageId = useMemo(() => activeSegment && activeSegment !== "trash" ? expandParam(activeSegment) : null, [activeSegment, pages]);
   const eligible = new Set(pages.filter((page) => {
     const state = client.getQueryState(pageKey(page.id));
     return state?.status === "success" && !isDraftPage(page.id) &&
@@ -75,7 +76,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   }).map((page) => page.id));
   const [query, setQuery] = useMobileCollectionState(base, "query", "");
 
-  const previewId = searchParams.get("entry");
+  const previewId = expandParam(searchParams.get("entry"));
   const preview = previewId ? byId.get(previewId) : undefined;
   const validPreview = preview?.parent_id === activePageId && byId.get(activePageId ?? "")?.database_schema != null ? preview : undefined;
   // The entry stays in the panel while it slides out (MIN-774).
@@ -84,7 +85,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     const page = byId.get(pageId);
     const parent = databaseId ? byId.get(databaseId) : page?.parent_id ? byId.get(page.parent_id) : undefined;
     const href = parent?.database_schema != null
-      ? `${pageHref(projectId, parent.id)}?entry=${pageId}`
+      ? `${pageHref(projectId, parent.id)}?entry=${recordRef(pageId)}`
       : pageHref(projectId, pageId);
     const open = () => browse ? browse.onSelect(href) : openDestination(href, () => pushPagesHistory(href));
     if (validPreview) void previewFlush.current().then((saved) => { if (saved) open(); });
@@ -128,7 +129,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
         // is not saving it.
         if (!database && !(parentId && byId.get(parentId)?.database_schema)) markDraftPage(page.id);
         if (parentId && byId.get(parentId)?.database_schema) {
-          const href = `${pageHref(projectId, parentId)}?entry=${page.id}`;
+          const href = `${pageHref(projectId, parentId)}?entry=${recordRef(page.id)}`;
           if (browse) browse.onSelect(href); else pushPagesHistory(href);
         } else openPage(page.id);
         void page.settled.catch((err: unknown) => {

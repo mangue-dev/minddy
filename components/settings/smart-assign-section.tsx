@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {useEffect, useState, type SVGProps} from "react";
@@ -160,7 +161,7 @@ export function SmartAssignSection({
           >
             {isOwner && (
               <Button asChild size="sm">
-                <Link href={`/projects/${project.id}/settings?tab=members`}>
+                <Link href={`${projectPath(project.id)}/settings?tab=members`}>
                   {tm("inviteByEmail")}
                 </Link>
               </Button>

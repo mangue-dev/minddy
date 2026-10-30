@@ -1,3 +1,4 @@
+import { expandProjectSegment } from "./ref-registry";
 import { QueryObserver, type Query, type QueryClient } from "@tanstack/react-query";
 import type { RetainedAppView } from "./retained-app-views";
 
@@ -5,7 +6,7 @@ const PROJECT_PREFIXES = ["issues", "members", "categories", "objectives", "inte
 
 function retainedScope(views: readonly RetainedAppView[]) {
   const ids = (kinds: readonly RetainedAppView["kind"][]) =>
-    [...new Set(views.filter((view) => kinds.includes(view.kind)).map((view) => view.route.projectId))].sort();
+    [...new Set(views.filter((view) => kinds.includes(view.kind)).map((view) => expandProjectSegment(view.route.projectSegment)))].sort();
   const projects = ids(["project-board", "triage"]);
   const pageProjects = ids(["pages"]);
   const feedbackProjects = ids(["feedback"]);

@@ -1,5 +1,7 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
+import { pullRequestHref } from "@/lib/app-urls";
 import { takePullRequestMerge, usePrMergeIntentStore } from "@/lib/pr-merge-intent";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
@@ -239,7 +241,7 @@ function PrRow({
       }}
       onPointerLeave={cancelIntent}
       data-sidebar-filter-result
-      data-navigation-href={`/pull-requests?pr=${encodeURIComponent(pr.prId)}`}
+      data-navigation-href={pullRequestHref(pr.prId)}
       data-comment-target={commentTarget("pr", pr.prId)}
       data-pr-id={pr.prId}
       onClick={onSelect}
@@ -421,7 +423,9 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // section is enabled once when the target resolves; completed PRs require
   // an explicit filter choice.
   const { searchParams } = useAppTabRoute();
-  const prParam = searchParams.get("pr");
+  // The written value pins the PR server-side; its expansion selects it here.
+  const rawPrParam = searchParams.get("pr");
+  const prParam = expandParam(rawPrParam);
   const deepLink = prParam;
 
   /**
@@ -475,7 +479,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // link would fall to the first in the list — the PR of another ticket.
   // The pin lives only as long as the link does: once consumed, the address
   // stops carrying `pr` and the lens decides who belongs to the list.
-  const pin = useMemo(() => ({ pr: prParam }), [prParam]);
+  const pin = useMemo(() => ({ pr: rawPrParam }), [rawPrParam]);
   const active = useAllPullRequestsQuery("open", limit, pin);
   // A search looks through every section, whatever the checked ones: they
   // narrow the resting list, the query finds anything — completed PRs too.
@@ -672,7 +676,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     onRefetchList: () => void refetch(),
     onMerge: (prId) => {
       if (browse) {
-        browse.onSelect(`/pull-requests?pr=${encodeURIComponent(prId)}&action=merge`);
+        browse.onSelect(`${pullRequestHref(prId)}&action=merge`);
         return;
       }
       selectPr(prId);
@@ -770,7 +774,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // The open PR is a selection of the page, derived rather than pushed into
   // the address — `?pr=` is precisely what restores it in an app tab (and the pin on the server side, even if it's six months old).
   usePublishCurrentView(browse ? null : {
-    href: selected ? `/pull-requests?pr=${encodeURIComponent(selected.prId)}` : "/pull-requests",
+    href: selected ? pullRequestHref(selected.prId) : "/pull-requests",
   });
 
   // Publish the selected PR to Numo even when it has no linked issue. The PR id

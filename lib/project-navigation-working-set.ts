@@ -1,3 +1,4 @@
+import { projectPath } from "./app-urls";
 import type { QueryClient } from "@tanstack/react-query";
 import { appTabRoute } from "./app-tab-location";
 
@@ -11,5 +12,5 @@ export function adjacentProjectDestination(client: QueryClient, active: string, 
   if (!current?.projectId) return;
   const index = ids.indexOf(current.projectId);
   const next = ids[index + 1] ?? ids[index - 1];
-  if (next) return `/projects/${next}`;
+  if (next) return projectPath(next);
 }

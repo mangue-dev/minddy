@@ -102,7 +102,7 @@ async function render(active = true) {
     <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="en" messages={en} timeZone="UTC">
         <Activity mode={active ? "visible" : "hidden"}>
-          <AppTabRouteProvider route={{ pathname: "/pull-requests", search, projectId: null }} active={active} activationSequence={activation}>
+          <AppTabRouteProvider route={{ pathname: "/pull-requests", search, projectSegment: null }} active={active} activationSequence={activation}>
             <PullRequestsPage />
           </AppTabRouteProvider>
         </Activity>

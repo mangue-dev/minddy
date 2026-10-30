@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Book02Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, NewspaperIcon, Comment01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
@@ -405,7 +406,7 @@ export function ProjectContextRow({
   // The project trigger answers a right click with the project's own menu
   // (MIN-685), the same one its row offers in the home panel. A left click
   // still opens the project switcher.
-  const projectNavigationActions = useNavigationContextActions(`/projects/${currentProject.id}`);
+  const projectNavigationActions = useNavigationContextActions(projectPath(currentProject.id));
   const projectObjectActions = useProjectRowActions(currentProject);
   const projectActions = composeSidebarContextActions(projectObjectActions, projectNavigationActions);
   const [projectMenuPosition, setProjectMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -523,7 +524,7 @@ export function ProjectContextRow({
             the menu holds nothing but projects. */}
       <DropdownMenuContent data-project-picker-menu side="right" align="start" sideOffset={6} className="w-60 data-[state=closed]:pointer-events-none">
         {projects.map((project) => {
-          const href = projectTabHref(pathname, project.id);
+          const href = projectTabHref(pathname, project);
           const current = project.id === currentProject.id;
           return (
             <DropdownMenuItem key={project.id} asChild>
@@ -1111,7 +1112,7 @@ export function secondaryNavBackTarget(
   objectiveBoard = false,
 ): { label: string; href: string } | null {
   const board = objectiveBoard ? /^\/projects\/([^/]+)\/?$/.exec(pathname) : null;
-  if (board) return { label: t("objectives"), href: `/projects/${board[1]}` };
+  if (board) return { label: t("objectives"), href: projectPath(board[1]) };
   const project = /\/projects\/([^/]+)\/(triage|feedback|objectives|pages|settings)(?:\/|$)/.exec(
     pathname,
   );
@@ -1123,7 +1124,7 @@ export function secondaryNavBackTarget(
       pages: "pages",
       settings: "projectSettings",
     };
-    return { label: t(labels[project[2]]), href: `/projects/${project[1]}` };
+    return { label: t(labels[project[2]]), href: projectPath(project[1]) };
   }
   if (pathname.startsWith("/trash")) return { label: t("trash"), href: "/home" };
   if (pathname.startsWith("/pull-requests")) return { label: t("pullRequests"), href: "/home" };

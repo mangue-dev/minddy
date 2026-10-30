@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(() => root.unmount()); host.remove(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 async function render({ active = true, project = "p", search = "open=done", browse = false }: { active?: boolean; project?: string; search?: string; browse?: boolean } = {}) {
-  await act(() => root.render(<Activity mode={active ? "visible" : "hidden"}><AppTabRouteProvider active={active} route={{ pathname: `/projects/${project}/objectives`, search, projectId: project }}>
+  await act(() => root.render(<Activity mode={active ? "visible" : "hidden"}><AppTabRouteProvider active={active} route={{ pathname: `/projects/${project}/objectives`, search, projectSegment: project }}>
     {browse ? <ObjectivesCollection projectId="q" browse={{ onSelect: vi.fn() } as never} /> : <ObjectivesPage />}
   </AppTabRouteProvider></Activity>));
 }

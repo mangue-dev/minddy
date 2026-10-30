@@ -1,3 +1,4 @@
+import { projectPath, recordRef } from "./app-urls";
 import type { Issue } from "@/lib/types";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
 import { statusColumns } from "@/lib/view-filter";
@@ -39,8 +40,8 @@ export function issueFamilyBoardHref(
   params.delete("issue");
   params.delete("new");
   params.delete("setup");
-  params.set(ISSUE_FAMILY_PARAM, parentId);
-  return `/projects/${encodeURIComponent(projectId)}?${params.toString()}`;
+  params.set(ISSUE_FAMILY_PARAM, recordRef(parentId));
+  return `${projectPath(projectId)}?${params.toString()}`;
 }
 
 /** Remove only the family scope so the current board view remains selected. */
@@ -51,7 +52,7 @@ export function issueFamilyBoardExitHref(
   const params = boardParams(search);
   params.delete(ISSUE_FAMILY_PARAM);
   const query = params.toString();
-  const pathname = `/projects/${encodeURIComponent(projectId)}`;
+  const pathname = projectPath(projectId);
   return query ? `${pathname}?${query}` : pathname;
 }
 

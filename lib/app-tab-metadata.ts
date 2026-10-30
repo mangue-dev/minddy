@@ -1,4 +1,4 @@
-import { appTabRoute, normalizeAppTabLocation } from "./app-tab-location";
+import { normalizeAppTabLocation, rawAppTabRoute } from "./app-tab-location";
 import type { ObjectiveStatus } from "./objective-validation";
 
 export const APP_TAB_METADATA_BATCH_SIZE = 100;
@@ -14,7 +14,8 @@ export interface AppTabMetadata {
 export function appTabMetadataLocations(hrefs: string[]): string[] {
   return [...new Set(hrefs.map(normalizeAppTabLocation).filter((href): href is string => {
     if (!href) return false;
-    const route = appTabRoute(href);
+    // As written: a short code the client has not loaded yet still names a record.
+    const route = rawAppTabRoute(href);
     return !!(route.pageId || route.objectiveId || route.prId || route.routineId || route.familyId);
   }))].sort();
 }

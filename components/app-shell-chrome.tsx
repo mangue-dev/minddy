@@ -1,5 +1,8 @@
 "use client";
 
+import { expandParam } from "@/lib/ref-registry";
+import { useCanonicalProjectUrl } from "@/lib/use-canonical-project-url";
+import { issueHref, objectiveHref, pagePath, projectPath } from "@/lib/app-urls";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { ADMIN_SECTION_PARAM, useAdminSections } from "@/lib/admin-sections";
 import { visibleAdminTabs, type AdminTabId } from "@/lib/admin-tabs";
@@ -273,6 +276,7 @@ function AppTabChangeEffect({ onChange }: { onChange: () => void }) {
 
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   useMobileViewport({ pinDocument: true });
+  useCanonicalProjectUrl();
   // A root marker keeps application typography scoped without repeatedly
   // matching relational :has() selectors against the entire workspace DOM.
   useLayoutEffect(() => {
@@ -452,7 +456,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // instant.
   const objectiveBoardId = objectiveIdFromBoardLocation(
     pathname,
-    searchParams.get("objective"),
+    expandParam(searchParams.get("objective")),
   );
   const objectivesProjectId =
     currentProjectId && (paletteOpen || !!objectiveBoardId)
@@ -912,15 +916,15 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           entityType: "project",
           contextId: p.id,
           data: p,
-          href: `/projects/${p.id}`,
-          onSelect: () => router.push(`/projects/${p.id}`),
+          href: projectPath(p.id),
+          onSelect: () => router.push(projectPath(p.id)),
         })),
       });
 
       // ── Pages (per-project navigation) ──────────────────────────────
       const pageItems: PaletteItem[] = [];
       for (const p of switcherProjects) {
-        const base = `/projects/${p.id}`;
+        const base = projectPath(p.id);
         const chip = projectChip(p);
         const metaText = p.name;
         const kw = [p.name, p.key];
@@ -1129,7 +1133,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         entityType: "page",
         contextId: page.project_id,
         data: page,
-        href: `/projects/${page.project_id}/pages/${page.id}`,
+        href: pagePath(page.project_id, page.id),
         onSelect: () => navigateToWikiPage(page.project_id, page.id),
       };
     },
@@ -1173,7 +1177,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 entityType: "issue",
                 contextId: i.project_id,
                 data: i,
-                href: `/projects/${i.project_id}?issue=${i.id}`,
+                href: issueHref(i.project_id, i),
                 onSelect: () => openIssuePanel(i.project_id, i.id),
               },
             ];
@@ -1202,9 +1206,9 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
                 entityType: "objective",
                 contextId: o.project_id,
                 data: o,
-                href: `/projects/${o.project_id}/objectives?open=${o.id}`,
+                href: objectiveHref(o.project_id, o.id),
                 onSelect: () =>
-                  router.push(`/projects/${o.project_id}/objectives?open=${o.id}`),
+                  router.push(objectiveHref(o.project_id, o.id)),
               },
             ];
           }),
@@ -1413,7 +1417,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
               key: `project-${p.id}`,
               label: p.name,
               icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
-              href: `/projects/${p.id}`,
+              href: projectPath(p.id),
               // Entering a project swaps the whole sidebar the same way a
               // level-2 page does: the row says so with its chevron.
               descends: true,
@@ -1460,7 +1464,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   const sections = useMemo<AppNavSection[]>(() => {
     if (!currentProject) return homeSections;
-    const base = `/projects/${currentProject.id}`;
+    const base = projectPath(currentProject.id);
     return [
         {
           // Project mode keeps ONLY the project context: back home, the
@@ -1604,14 +1608,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const settingsPanel = (project?: Project): MobileMenuPanel => ({
       key: `settings-${project?.id ?? "account"}`,
       title: project ? t("projectSettings") : t("accountSettings"),
-      sidebarRoute: project ? `/projects/${project.id}/settings` : "/settings",
+      sidebarRoute: project ? projectPath(project.id, "settings") : "/settings",
       render: (navigation: MobileMenuNavigation) => <MobileSettingsMenu {...navigation} projectId={project?.id} />,
       // Back from a project's settings returns to its panel, else to Home.
       backBadge: project ? projectBackBadge(project.id) : homeBackBadge,
     });
     const panels = new Map<string, MobileMenuPanel>();
     projects.forEach((project) => {
-      const base = `/projects/${project.id}`;
+      const base = projectPath(project.id);
       const resource = (kind: "objectives" | "pages" | "triage" | "feedback"): MobileMenuPanel => ({ key: `${project.id}-${kind}`, title: t(kind), sidebarRoute: kind === "pages" && pathname.startsWith(`${base}/pages`) ? pathname : `${base}/${kind}`,
         render: (navigation: MobileMenuNavigation) => <MobileProjectMenu {...navigation} projectId={project.id} kind={kind} />,
         backBadge: projectBackBadge(project.id) });

@@ -1,5 +1,6 @@
 "use client";
 
+import { installRefRegistry } from "./ref-registry";
 import { QueryClient, QueryClientProvider, type Query } from "@tanstack/react-query";
 import { persistQueryClientRestore, type PersistedClient } from "@tanstack/react-query-persist-client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -202,6 +203,7 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
       });
       observePageReadFailures(client);
       configurePayloadRetention(client);
+      installRefRegistry(client);
       return client;
     }
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { objectiveBoardHref } from "@/lib/app-urls";
 import type { JSONContent } from "@tiptap/core";
 import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
@@ -285,7 +286,7 @@ export function ObjectiveDetail({
   const dictateRef = useRef<DictateButtonHandle>(null);
   const mod = useModKey();
   /** The project board, filtered on this objective — the button and ⌘O lead there. */
-  const issuesHref = `/projects/${projectId}?objective=${objective.id}`;
+  const issuesHref = objectiveBoardHref(projectId, objective.id);
 
   const { items, addComment, updateComment, deleteComment, deleteAttachment, renameAttachment } =
     useObjectiveTimeline(objective.id);

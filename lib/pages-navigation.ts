@@ -1,9 +1,11 @@
+import { pagePath, projectPath } from "./app-urls";
+
 export function pagesHref(projectId: string): string {
-  return `/projects/${encodeURIComponent(projectId)}/pages`;
+  return projectPath(projectId, "pages");
 }
 
 export function pageHref(projectId: string, pageId: string): string {
-  return `${pagesHref(projectId)}/${encodeURIComponent(pageId)}`;
+  return pagePath(projectId, pageId);
 }
 
 /**

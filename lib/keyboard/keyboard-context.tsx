@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { openInbox } from "@/lib/inbox-launcher";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
@@ -196,7 +197,7 @@ export function KeyboardProvider({ children }: { children: ReactNode }) {
           break;
       }
       if (!projectId) return false;
-      const base = `/projects/${projectId}`;
+      const base = projectPath(projectId);
       switch (key) {
         case "p":
           go(base);

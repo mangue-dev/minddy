@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ViewIcon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
@@ -55,7 +56,7 @@ export function AccountHiddenProjectsSection() {
             action={
               <>
                 <Button asChild variant="ghost" size="sm">
-                  <Link href={`/projects/${project.id}`}>{t("hiddenProjectsOpen")}</Link>
+                  <Link href={projectPath(project.id)}>{t("hiddenProjectsOpen")}</Link>
                 </Button>
                 <Button
                   type="button"

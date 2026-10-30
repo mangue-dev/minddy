@@ -32,17 +32,29 @@
  * donc sans import.
  */
 
+import { expandParam, expandProjectSegment } from "@/lib/ref-registry";
 import { NOTIFICATION_TARGET_PARAMS } from "@/lib/notification-target";
 
 /** False base: the two URLs are relative paths, the origin is only used to
  * `new URL` and disappears from the comparison. */
 const BASE = "http://minddy.invalid";
 
-/** `/inbox/` and `/inbox` are the same page. */
+/**
+ * `/inbox/` and `/inbox` are the same page, and so are the readable and the
+ * bare or legacy forms of a record reference (lib/app-urls.ts): a pushed path
+ * is built server-side without the project key.
+ */
 function normalizePath(pathname: string): string {
-  return pathname.length > 1 && pathname.endsWith("/")
+  const trimmed = pathname.length > 1 && pathname.endsWith("/")
     ? pathname.slice(0, -1)
     : pathname;
+  return trimmed
+    .split("/")
+    .map((segment, index, segments) =>
+      segments[index - 1] === "projects" && index === 2
+        ? expandProjectSegment(segment) ?? segment
+        : expandParam(segment) ?? segment)
+    .join("/");
 }
 
 /**
@@ -70,7 +82,7 @@ export function showsNotificationTarget(
   for (const param of NOTIFICATION_TARGET_PARAMS) {
     const wanted = target.searchParams.get(param);
     if (wanted === null) continue;
-    if (current.searchParams.get(param) !== wanted) return false;
+    if (expandParam(current.searchParams.get(param)) !== expandParam(wanted)) return false;
   }
   return true;
 }

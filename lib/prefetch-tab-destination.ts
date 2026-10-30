@@ -1,3 +1,5 @@
+import { expandParam } from "./ref-registry";
+import { resolveIssueRef } from "./app-urls";
 import { prepareAppTabSurface, isAppTabSurfaceReady } from "./app-tab-surfaces";
 import { feedbackDestinationSourceKeys, feedbackFiltersForDestination, feedbackQueryOptions } from "./feedback-query";
 import { fetchPagesApi } from "./pages-api";
@@ -203,7 +205,12 @@ function selectedTriageIssue(client: QueryClient, href: string): string | null {
   const route = appTabRoute(href);
   if (!route.projectId || route.section !== "triage") return null;
   const rows = triageSelectionItems(selectionRows<Issue>(client, ["issues", route.projectId], route.projectId));
-  return secondarySelectionId(rows, new URL(href, "https://minddy.invalid").searchParams.get("issue"));
+  return secondarySelectionId(rows, issueParamId(rows, new URL(href, "https://minddy.invalid").searchParams.get("issue")));
+}
+
+/** `?issue=` names the issue `MIN-42` or by short code. */
+function issueParamId(rows: readonly { id: string; number?: number | null; project_id?: string | null }[], ref: string | null): string | null {
+  return ref ? resolveIssueRef(ref, rows)?.id ?? ref : null;
 }
 
 const compareIds = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
@@ -226,14 +233,15 @@ function predictedSelectionReads(client: QueryClient, href: string): FetchQueryO
   const params = new URL(href, "https://minddy.invalid").searchParams;
   if (route.section === "triage") {
     const issues = Array.isArray(board.data.issues) ? board.data.issues.filter((issue) => issue?.project_id === projectId) : [];
-    const id = secondarySelectionId(triageSelectionItems(issues), params.get("issue"));
+    const items = triageSelectionItems(issues);
+    const id = secondarySelectionId(items, issueParamId(items, params.get("issue")));
     return id && !issueWrites.hasUnsettledInsert(id) ? [preparationRead(issueCommentsOptions(client, id)), preparationRead(issueEventsOptions(id))] : [];
   }
   const objectives = board.data.objectives?.[projectId];
   // The project reader's order: creation time, then id.
   const rows = Array.isArray(objectives) ? objectives.filter((row) => row?.project_id === projectId)
     .sort((a, b) => compareIds(a.created_at, b.created_at) || compareIds(a.id, b.id)) : [];
-  const id = secondarySelectionId(rows.filter((row) => matchesObjectiveState(row, "active")), params.get("open"), null, rows);
+  const id = secondarySelectionId(rows.filter((row) => matchesObjectiveState(row, "active")), expandParam(params.get("open")), null, rows);
   return id ? [preparationRead(objectiveCommentsOptions(id)), preparationRead(objectiveEventsOptions(id)),
     preparationRead(objectiveResourcesOptions(id)), preparationRead(objectiveFeedbackCountOptions(projectId, id))] : [];
 }
@@ -261,7 +269,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
   if (route.projectId && route.section === "objectives") {
     const queries = [...projectPreparationQueries(client, route.projectId).filter((option) => ["objectives", "issues", "members", "issue-relations"].includes(String(option.queryKey[0]))), tree!];
     const rows = selectionRows<Objective>(client, ["objectives", route.projectId], route.projectId);
-    const id = secondarySelectionId(rows.filter((row) => matchesObjectiveState(row, "active")), params.get("open"), null, rows);
+    const id = secondarySelectionId(rows.filter((row) => matchesObjectiveState(row, "active")), expandParam(params.get("open")), null, rows);
     if (id) queries.push(preparationRead(objectiveCommentsOptions(id)), preparationRead(objectiveEventsOptions(id)),
       preparationRead(objectiveResourcesOptions(id)), preparationRead(objectiveFeedbackCountOptions(route.projectId, id)));
     return queries;
@@ -275,7 +283,7 @@ export function appTabPreparationQueries(client: QueryClient, href: string): Fet
     const posts = state?.status === "success" && !state.isInvalidated && Array.isArray(state.data?.posts)
       ? state.data.posts.filter((post) => post.project_id === route.projectId) : [];
     const visible = feedbackSelectionItems(posts, { state: params.has("objective") ? "all" : "unresolved", properties: filters });
-    const id = secondarySelectionId(visible, params.get("post"), null, posts);
+    const id = secondarySelectionId(visible, expandParam(params.get("post")), null, posts);
     if (id) queries.push(preparationRead(feedbackDetailOptions(route.projectId, id)), preparationRead(feedbackCommentsOptions(route.projectId, id)), preparationRead(feedbackEventsOptions(route.projectId, id)));
     return queries;
   }

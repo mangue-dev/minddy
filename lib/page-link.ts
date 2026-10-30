@@ -7,6 +7,8 @@ export interface PageLinkTarget {
   pageId: string;
 }
 
+import { expandParam, expandProjectSegment } from "./ref-registry";
+
 const PAGE_PATH = /^\/projects\/([^/?#]+)\/pages\/([^/?#]+)\/?$/;
 
 /**
@@ -38,7 +40,11 @@ export function pageLinkTarget(
     const projectId = decodeURIComponent(match[1]);
     const pageId = decodeURIComponent(match[2]);
     if (pageId === "trash") return null;
-    return { projectId, pageId };
+    // Readable links carry short codes; they expand once the records are loaded.
+    return {
+      projectId: expandProjectSegment(projectId) ?? projectId,
+      pageId: expandParam(pageId) ?? pageId,
+    };
   } catch {
     return null;
   }

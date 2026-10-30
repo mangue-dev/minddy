@@ -67,7 +67,7 @@ export function retainAppView(
   const retained = previous.filter((view) => view.tabId === null || openTabs.has(view.tabId));
   const kind = retainedAppViewKind(route.pathname);
   if (!kind) return retained.length === previous.length ? previous : retained;
-  const existing = retained.find((view) => (view.route.pathname === route.pathname || (kind === "pages" && view.kind === kind && view.route.projectId === route.projectId)) && (view.tabId === tabId || view.tabId === null));
+  const existing = retained.find((view) => (view.route.pathname === route.pathname || (kind === "pages" && view.kind === kind && view.route.projectSegment === route.projectSegment)) && (view.tabId === tabId || view.tabId === null));
   const activeRoute = existing && existing.route.pathname === route.pathname && existing.route.search === route.search ? existing.route : route;
   // An unchanged active view keeps its identity, so memoized hosts and
   // view-keyed effects do not replay for an unrelated recomputation.

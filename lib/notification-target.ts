@@ -9,6 +9,7 @@
 // PUR module (no `server-only`, no React): the page reads it, makes it
 // de charge utile aussi.
 
+import { feedbackPostHref, issueHref, objectiveHref, pagePath, pullRequestHref, routineHref } from "./app-urls";
 import type { NotificationType } from "./types";
 import type { MessageKey } from "./i18n-keys";
 
@@ -48,25 +49,25 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   // The routine passes BEFORE the project test: its screen is global (the view
   // routines, all projects combined), so it leads somewhere even if the
   // line has no project.
-  if (n.routine_id) return `/routines?routine=${n.routine_id}`;
+  if (n.routine_id) return routineHref(n.routine_id);
   // The pull request too: its page is global, and a PR without a ticket has nothing
   // else to open — this is even the normal case of a human RA.
-  if (n.pull_request_id) return `/pull-requests?pr=${n.pull_request_id}`;
+  if (n.pull_request_id) return pullRequestHref(n.pull_request_id);
   if (!n.project_id) return null;
   if (n.objective_id) {
-    return `/projects/${n.project_id}/objectives?open=${n.objective_id}`;
+    return objectiveHref(n.project_id, n.objective_id);
   }
   if (n.feedback_post_id) {
-    return `/projects/${n.project_id}/feedback?post=${n.feedback_post_id}`;
+    return feedbackPostHref(n.project_id, n.feedback_post_id);
   }
   // A PAGE (MIN-278): it has its own route, not a parameter on the board.
   // The block is added as a FRAGMENT — it does not go to the server, does not break anything
   // route, and this is already the form of block links (`blockLink`).
   if (n.page_id) {
-    const path = `/projects/${n.project_id}/pages/${n.page_id}`;
+    const path = pagePath(n.project_id, n.page_id);
     return n.block_id ? `${path}#${n.block_id}` : path;
   }
-  if (n.issue_id) return `/projects/${n.project_id}?issue=${n.issue_id}`;
+  if (n.issue_id) return issueHref(n.project_id, { id: n.issue_id });
   return null;
 }
 

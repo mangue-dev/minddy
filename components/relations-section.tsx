@@ -14,6 +14,7 @@
 // (The board's card shortcut, its right-click menu and the MCP tool are the
 // other entry points.)
 
+import { feedbackPostHref, objectiveHref } from "@/lib/app-urls";
 import {
   Tooltip,
   TooltipContent,
@@ -292,7 +293,7 @@ export function RelationsSection({
                       onOpen={() =>
                         isObjective
                           ? router.push(
-                              `/projects/${issue.project_id}/objectives?open=${r.otherId}`,
+                              objectiveHref(issue.project_id, r.otherId),
                             )
                           : onOpenIssue(r.otherId)
                       }
@@ -304,7 +305,7 @@ export function RelationsSection({
                               className="mr-1 flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
                               onClick={() =>
                                 router.push(
-                                  `/projects/${issue.project_id}/objectives?open=${r.inheritedObjectiveId}`,
+                                  objectiveHref(issue.project_id, r.inheritedObjectiveId ?? ""),
                                 )
                               }
                               aria-label={t("viaObjective", {
@@ -365,7 +366,7 @@ export function RelationsSection({
                   // panel: this is where his thread, his moderation and his
                   // promotion. The sign says it exists and leads to it.
                   router.push(
-                    `/projects/${issue.project_id}/feedback?post=${post.id}`,
+                    feedbackPostHref(issue.project_id, post.id),
                   )
                 }
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"

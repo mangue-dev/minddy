@@ -47,6 +47,21 @@ describe("application tab metadata", () => {
     expect(result.pages).toEqual(returned.pages);
   });
 
+  it("resolves readable short codes by an id range under RLS", async () => {
+    const filters: string[] = [];
+    const from = () => ({ select: () => ({ or: async (filter: string) => {
+      filters.push(filter);
+      return { data: [{ id: page, project_id: project, title: "Page", icon: null }], error: null };
+    } }) });
+    const result = await readAppTabMetadata({ from } as unknown as SupabaseClient, [
+      `/projects/min-${project.slice(0, 8)}/pages/${page.slice(0, 8)}`,
+    ]);
+    expect(filters).toEqual([
+      "and(id.gte.20000000-0000-0000-0000-000000000000,id.lte.20000000-ffff-ffff-ffff-ffffffffffff)",
+    ]);
+    expect(result.pages).toEqual([{ id: page, project_id: project, title: "Page", icon: null }]);
+  });
+
   it("does not query ordinary routes or non-UUID selections", async () => {
     const from = vi.fn();
     expect(await readAppTabMetadata({ from } as unknown as SupabaseClient, ["/all", "/home", "/pull-requests?pr=bad"]))

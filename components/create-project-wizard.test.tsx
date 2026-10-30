@@ -174,7 +174,7 @@ async function submit() {
 }
 
 function expectNormalNavigation() {
-  expect(mocks.push).toHaveBeenCalledExactlyOnceWith(`/projects/${draft.id}`);
+  expect(mocks.push).toHaveBeenCalledExactlyOnceWith(`/projects/${draft.id.slice(0, 8)}`);
   expect(takeSeedHandoff()).toBeNull();
 }
 
@@ -326,7 +326,7 @@ describe("initial project brief", () => {
     await submit();
     expect(mocks.createPage).not.toHaveBeenCalled();
     expect(takeSeedHandoff()).toEqual({ kind: "import", file });
-    expect(mocks.push).toHaveBeenCalledExactlyOnceWith(`/projects/${draft.id}?setup=import`);
+    expect(mocks.push).toHaveBeenCalledExactlyOnceWith(`/projects/${draft.id.slice(0, 8)}?setup=import`);
   });
 });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -149,7 +150,7 @@ export function useProjectContextActions({
         icon: icon(MessageMultiple01Icon),
         // The composer lives on the feedback page, which owns its members
         // and board settings; `?new=1` asks that page to open it once.
-        onSelect: () => router.push(`/projects/${project.id}/feedback?new=1`),
+        onSelect: () => router.push(`${projectPath(project.id)}/feedback?new=1`),
       },
     }),
     [createProjectPage, openCreateIssue, openCreateObjective, router, t, tFeedback, tPages],
@@ -173,7 +174,7 @@ export function useProjectContextActions({
           id: "project-settings",
           label: t("projectSettings"),
           icon: icon(Settings01Icon),
-          onSelect: () => router.push(`/projects/${project.id}/settings`),
+          onSelect: () => router.push(projectPath(project.id, "settings")),
         },
         // A personal preference (MIN-692), open to every member. Hiding takes
         // the project out of my navigation, so it asks first and reads as
@@ -220,7 +221,7 @@ export function useProjectContextActions({
   const onTrashed = useCallback(
     (projectId: string) => {
       // Leave only a screen that belongs to the trashed project.
-      const base = `/projects/${projectId}`;
+      const base = projectPath(projectId);
       if (pathname === base || pathname.startsWith(`${base}/`)) router.replace("/home");
     },
     [pathname, router],

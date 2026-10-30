@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { createRetainedBoardData, observeRetainedBoardData } from "./retained-board-data";
 import type { RetainedAppView } from "./retained-app-views";
 
-const global: RetainedAppView = { key: "global", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } };
-const project: RetainedAppView = { key: "project", tabId: "p", kind: "project-board", route: { pathname: "/projects/p", search: "", projectId: "p" } };
+const global: RetainedAppView = { key: "global", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectSegment: null } };
+const project: RetainedAppView = { key: "project", tabId: "p", kind: "project-board", route: { pathname: "/projects/p", search: "", projectSegment: "p" } };
 
 describe("retained board data ownership", () => {
   it("keeps loaded Pages and Feedback lists current without starting hidden PR polling", async () => {
@@ -66,7 +66,7 @@ describe("retained board data ownership", () => {
     client.setQueryData(["issues", "p"], ["old"]);
     client.setQueryData(["issues", "q"], ["q"]);
     const observers = (id: string) => client.getQueryCache().find({ queryKey: ["issues", id] })!.getObserversCount();
-    const other: RetainedAppView = { ...project, key: "other", tabId: "q", route: { pathname: "/projects/q", search: "", projectId: "q" } };
+    const other: RetainedAppView = { ...project, key: "other", tabId: "q", route: { pathname: "/projects/q", search: "", projectSegment: "q" } };
     const data = createRetainedBoardData(client);
     data.update([global, project]);
     const read = client.invalidateQueries({ queryKey: ["issues", "p"] });

@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, CheckIcon, CircleDotDashedIcon, CircleIcon, MessageMultiple01Icon, MoreHorizontalIcon, Settings01Icon, Target01Icon } from "@hugeicons/core-free-icons";
@@ -77,7 +78,7 @@ export function ProjectCard({ project }: { project: Project }) {
   ).length;
   const doneCount = issues.filter((i) => !isOpen(i.status)).length;
 
-  const open = () => router.push(`/projects/${project.id}`);
+  const open = () => router.push(projectPath(project.id));
   // Preload the board caches from the navigation intention (MIN-89): the
   // by the time the click arrives, the requests are already gone.
   const prefetch = usePrefetchProject();
@@ -127,32 +128,32 @@ export function ProjectCard({ project }: { project: Project }) {
             onPointerDown={(e) => e.stopPropagation()}
           >
             <DropdownMenuItem
-              onSelect={() => router.push(`/projects/${project.id}`)}
+              onSelect={() => router.push(projectPath(project.id))}
             >
               <HugeiconsIcon icon={BOARD_ICON} />
               {t("tickets")}
             </DropdownMenuItem>
             <DropdownMenuItem
-              onSelect={() => router.push(`/projects/${project.id}/triage`)}
+              onSelect={() => router.push(projectPath(project.id, "triage"))}
             >
               <AppIcon icon={CircleDotDashedIcon} />
               {t("triage")}
             </DropdownMenuItem>
             <DropdownMenuItem
-              onSelect={() => router.push(`/projects/${project.id}/feedback`)}
+              onSelect={() => router.push(projectPath(project.id, "feedback"))}
             >
               <HugeiconsIcon icon={MessageMultiple01Icon} />
               {t("feedback")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onSelect={() => router.push(`/projects/${project.id}/objectives`)}
+              onSelect={() => router.push(projectPath(project.id, "objectives"))}
             >
               <HugeiconsIcon icon={Target01Icon} />
               {t("objectives")}
             </DropdownMenuItem>
             <DropdownMenuItem
-              onSelect={() => router.push(`/projects/${project.id}/settings`)}
+              onSelect={() => router.push(projectPath(project.id, "settings"))}
             >
               <HugeiconsIcon icon={Settings01Icon} />
               {t("settings")}

@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { useMemo, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
@@ -106,7 +107,7 @@ export function OnboardingImportDialog({
       }
       sourceFooter={
         <Link
-          href={`/projects/${target.id}/settings?tab=import`}
+          href={`${projectPath(target.id)}/settings?tab=import`}
           className="self-start text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
           {t("importOpenSettings")}

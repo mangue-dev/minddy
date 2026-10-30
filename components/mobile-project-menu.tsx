@@ -1,5 +1,7 @@
 "use client";
 
+import { projectPath, routineHref } from "@/lib/app-urls";
+import { projectSegmentFromPath } from "@/lib/project-id-from-path";
 import { useCallback, useMemo, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -35,7 +37,7 @@ function BrowseCollection({ href, navigation, children }: {
     open(destination, () => { onNavigate(); router.push(destination); });
   }, [open, onNavigate, router]);
   const browse = useMemo(() => ({ headerHost, onSelect: select }), [headerHost, select]);
-  const route = useMemo(() => ({ pathname: href, search: "", projectId: href.match(/^\/projects\/([^/]+)/)?.[1] ?? null }), [href]);
+  const route = useMemo(() => ({ pathname: href, search: "", projectSegment: projectSegmentFromPath(href) }), [href]);
   return <AppTabRouteProvider route={route} active={false}>{children(browse)}</AppTabRouteProvider>;
 }
 
@@ -44,14 +46,14 @@ export function MobilePullRequestsMenu(navigation: MobileMenuNavigation) {
 }
 
 export function MobileRoutinesMenu(navigation: MobileMenuNavigation) {
-  return <BrowseCollection href="/routines" navigation={navigation}>{(browse) => <AgentsPlanGate><Routines browse={browse} selectedId={null} onSelect={(id) => browse.onSelect(id ? `/routines?routine=${encodeURIComponent(id)}` : "/routines")} /></AgentsPlanGate>}</BrowseCollection>;
+  return <BrowseCollection href="/routines" navigation={navigation}>{(browse) => <AgentsPlanGate><Routines browse={browse} selectedId={null} onSelect={(id) => browse.onSelect(id ? routineHref(id) : "/routines")} /></AgentsPlanGate>}</BrowseCollection>;
 }
 
 export function MobileProjectMenu({ projectId, kind, ...navigation }: {
   projectId: string;
   kind: "objectives" | "pages" | "triage" | "feedback";
 } & MobileMenuNavigation) {
-  return <BrowseCollection href={`/projects/${projectId}/${kind}`} navigation={navigation}>{(browse) =>
+  return <BrowseCollection href={`${projectPath(projectId)}/${kind}`} navigation={navigation}>{(browse) =>
     kind === "objectives" ? <Objectives projectId={projectId} browse={browse} /> :
     kind === "pages" ? <Pages browse={browse} /> :
     kind === "triage" ? <Triage browse={browse} /> : <Feedback browse={browse} />
@@ -59,7 +61,7 @@ export function MobileProjectMenu({ projectId, kind, ...navigation }: {
 }
 
 export function MobileSettingsMenu({ projectId, ...navigation }: { projectId?: string } & MobileMenuNavigation) {
-  return <BrowseCollection href={projectId ? `/projects/${projectId}/settings` : "/settings"} navigation={navigation}>{(browse) =>
+  return <BrowseCollection href={projectId ? projectPath(projectId, "settings") : "/settings"} navigation={navigation}>{(browse) =>
     projectId ? <ProjectSettings projectId={projectId} browse={browse} /> : <AccountSettings browse={browse} />
   }</BrowseCollection>;
 }

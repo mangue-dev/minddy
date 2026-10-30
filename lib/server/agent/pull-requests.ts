@@ -1,3 +1,4 @@
+import { shortCodeRange } from "@/lib/app-urls";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -232,6 +233,25 @@ export async function findPullRequest(
     .eq("id", prId)
     .maybeSingle();
   return data ? decodeStoredPr(data as unknown as PullRequestRow) : null;
+}
+
+/**
+ * Pull requests whose id a URL short code prefixes (lib/app-urls.ts). Read in
+ * service key: the caller keeps only those its user may see.
+ */
+export async function findPullRequestsByShortCode(
+  code: string,
+): Promise<PullRequestRow[]> {
+  const range = shortCodeRange(code);
+  if (!range) return [];
+  const service = getServiceClient();
+  const { data } = await service
+    .from("pull_requests")
+    .select(PR_COLUMNS)
+    .gte("id", range.from)
+    .lte("id", range.to)
+    .limit(5);
+  return Promise.all(((data ?? []) as unknown as PullRequestRow[]).map((row) => decodeStoredPr(row)));
 }
 
 /** Pull request by its natural key — the resolution run → PR of the facades. */

@@ -45,15 +45,15 @@ beforeEach(() => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] }));
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); navigation.dialogKey = null; });
 
 const boards: RetainedAppView[] = [
-  { key: "global", tabId: "/all", kind: "global-board", route: { pathname: "/all", search: "", projectId: null } },
-  { key: "project", tabId: "/projects/p", kind: "project-board", route: { pathname: "/projects/p", search: "", projectId: "p" } },
+  { key: "global", tabId: "/all", kind: "global-board", route: { pathname: "/all", search: "", projectSegment: null } },
+  { key: "project", tabId: "/projects/p", kind: "project-board", route: { pathname: "/projects/p", search: "", projectSegment: "p" } },
 ];
 
 it.each(boards)("keeps $kind cards interactive during resume and activation refreshes, then applies new rows", async (view) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: 300_000, retry: false } } });
   navigation.pathname = navigation.boardPathname = view.route.pathname;
-  navigation.projectId = view.route.projectId;
+  navigation.projectId = view.route.projectSegment;
   let refreshing = false;
   const pending: (() => void)[] = [];
   const read = vi.fn(() => refreshing ? new Promise<string[]>((resolve) => pending.push(() => resolve(["Existing card", "New card"]))) : Promise.resolve(["Existing card"]));
@@ -104,7 +104,7 @@ it.each(boards)("keeps $kind cards interactive during resume and activation refr
 it.each(boards)("retains the $kind initial skeleton, keeps rows through transient failures and conceals them after withdrawn access or paused reads", async (view) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   navigation.pathname = navigation.boardPathname = view.route.pathname;
-  navigation.projectId = view.route.projectId;
+  navigation.projectId = view.route.projectSegment;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const container = document.body.appendChild(document.createElement("div"));
   const root = createRoot(container);
@@ -144,7 +144,7 @@ it.each(boards)("retains the $kind initial skeleton, keeps rows through transien
 it.each(boards)("opens a query-backed dialog in a $kind without updating RetainedBoard during render", async (view) => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   navigation.pathname = navigation.boardPathname = view.route.pathname;
-  navigation.projectId = view.route.projectId;
+  navigation.projectId = view.route.projectSegment;
   const keys = retainedBoardKeys(view);
   navigation.dialogKey = keys.at(-1)!;
   const client = new QueryClient();

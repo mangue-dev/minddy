@@ -92,7 +92,7 @@ it.each(["later millisecond", "same millisecond", "clock rollback"])("requires a
   }
   const render = (active: boolean, activationSequence: number) => act(() => root.render(
     createElement(QueryClientProvider, { client }, createElement(Activity, { mode: active ? "visible" : "hidden",
-      children: createElement(AppTabRouteProvider, { route: { pathname: "/pull-requests", search: "pr=pr", projectId: null }, active, activationSequence, children: createElement(Detail) }),
+      children: createElement(AppTabRouteProvider, { route: { pathname: "/pull-requests", search: "pr=pr", projectSegment: null }, active, activationSequence, children: createElement(Detail) }),
     })),
   ));
   try {

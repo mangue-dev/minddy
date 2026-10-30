@@ -1,5 +1,6 @@
 "use client";
 
+import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import Link from "@/components/app-link";
@@ -69,7 +70,7 @@ export function HomeSmartAssignWarning() {
           return (
             <li key={warning.projectId}>
               <Link
-                href={`/projects/${warning.projectId}/settings?tab=smart-assign`}
+                href={`${projectPath(warning.projectId)}/settings?tab=smart-assign`}
                 className="group flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-xs outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 <ProjectOrb

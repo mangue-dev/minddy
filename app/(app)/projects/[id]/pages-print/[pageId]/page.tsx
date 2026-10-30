@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { PagePrintView } from "@/components/pages/page-print-view";
+import { resolveProjectSegment, resolveRouteRef } from "@/lib/server/route-refs";
 
 /**
  * The PRINT view of a page (MIN-283) — what makes the PDF.
@@ -23,5 +25,11 @@ export default async function PagePrintRoute({
   searchParams: Promise<{ scope?: string }>;
 }) {
   const [{ id, pageId }, { scope }] = await Promise.all([params, searchParams]);
-  return <PagePrintView projectId={id} pageId={pageId} branch={scope === "branch"} />;
+  // The URL carries short codes (lib/app-urls.ts); the view reads by id.
+  const [projectId, resolvedPageId] = await Promise.all([
+    resolveProjectSegment(id),
+    resolveRouteRef("pages", pageId),
+  ]);
+  if (!projectId || !resolvedPageId) notFound();
+  return <PagePrintView projectId={projectId} pageId={resolvedPageId} branch={scope === "branch"} />;
 }

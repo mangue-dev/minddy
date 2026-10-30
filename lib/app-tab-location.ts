@@ -1,3 +1,5 @@
+import { expandProjectSegment, expandRef } from "./ref-registry";
+
 /** Persist only authenticated destinations and repeatable selection state. */
 const ROUTES = new Set([
   "home", "all", "inbox", "routines", "pull-requests",
@@ -54,7 +56,23 @@ export function normalizeAppTabLocation(raw: unknown): string | null {
   return path + (params.size ? `?${params}` : "") + hash;
 }
 
-export function appTabRoute(href: string): {
+type RefExpander = (ref: string | null) => string | null;
+const rawRef: RefExpander = (ref) => ref;
+
+/**
+ * The route with its record references expanded to ids: a short code becomes
+ * the id this client has loaded for it, and null until then.
+ */
+export function appTabRoute(href: string): AppTabRoute {
+  return parseAppTabRoute(href, expandRef);
+}
+
+/** The route as written, for the server, which resolves short codes itself. */
+export function rawAppTabRoute(href: string): AppTabRoute {
+  return parseAppTabRoute(href, rawRef);
+}
+
+export interface AppTabRoute {
   section: string;
   projectId: string | null;
   /** The objective the tab shows: the board's `objective` param (its
@@ -75,23 +93,26 @@ export function appTabRoute(href: string): {
   routineId: string | null;
   /** `admin?tab=` — the admin dashboard tab the app tab is on. */
   adminTab: string | null;
-} {
+}
+
+function parseAppTabRoute(href: string, expand: RefExpander): AppTabRoute {
   const normalized = normalizeAppTabLocation(href) ?? "/home";
   const [path, query] = normalized.split(/[?#]/);
   const parts = path.slice(1).split("/");
   const params = new URLSearchParams(query);
   if (parts[0] !== "projects") {
-    return { section: parts[0], projectId: null, objectiveId: null, familyId: null, view: params.get("view"), pageId: null, prId: params.get("pr"), routineId: params.get("routine"), adminTab: parts[0] === "admin" ? params.get("tab") : null };
+    return { section: parts[0], projectId: null, objectiveId: null, familyId: null, view: expand(params.get("view")), pageId: null, prId: expand(params.get("pr")), routineId: expand(params.get("routine")), adminTab: parts[0] === "admin" ? params.get("tab") : null };
   }
   return {
     section: parts[2] ?? "tickets",
-    projectId: parts[1],
-    objectiveId: params.get("objective") ?? (parts[2] === "objectives" ? params.get("open") : null),
-    familyId: params.get("family"),
-    view: params.get("view"),
-    pageId: parts[2] === "pages" && parts[3] ? parts[3] : null,
-    prId: params.get("pr"),
-    routineId: params.get("routine"),
+    projectId: expand === rawRef ? parts[1] : expandProjectSegment(parts[1]),
+    objectiveId: expand(params.get("objective") ?? (parts[2] === "objectives" ? params.get("open") : null)),
+    familyId: expand(params.get("family")),
+    view: expand(params.get("view")),
+    // `trash` is the wiki's own section, not a page reference.
+    pageId: parts[2] === "pages" && parts[3] ? (parts[3] === "trash" ? parts[3] : expand(parts[3])) : null,
+    prId: expand(params.get("pr")),
+    routineId: expand(params.get("routine")),
     adminTab: null,
   };
 }

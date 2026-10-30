@@ -17,6 +17,7 @@ optional Electron shell has a separate package and build under `desktop/`.
 | HTTP APIs and public capabilities | `app/api/`, `app/f/`, `app/p/` |
 | UI primitives and design tokens | `components/ui/`, `app/tokens.css` |
 | Reusable UI and client behavior | `components/`, `lib/` |
+| Application URLs (short codes, never titles) | `lib/app-urls.ts`, `lib/ref-registry.ts` |
 | Rich text editor engine (every surface) and its block catalog | `components/editor/`, `components/pages/blocks/` |
 | Server business logic | `lib/server/` |
 | Browser, session, and privileged database clients | `lib/supabase.ts`, `lib/supabase-server.ts`, `lib/supabase-service.ts` |
@@ -26,6 +27,12 @@ optional Electron shell has a separate package and build under `desktop/`.
 | Database schema and policies | `supabase/migrations/` |
 | Locale catalogs and configuration | `messages/`, `i18n/config.ts` |
 | Release and maintenance tooling | `scripts/`, `.github/workflows/` |
+
+Build every in-app link with `lib/app-urls.ts`: URLs address records by an
+eight-character short code (`/projects/min-3f2a9c81`, `?issue=MIN-42`), never
+by a title, because names are encrypted at rest and paths reach logs and
+analytics. Read URL references back through `lib/ref-registry.ts` on the client
+or `lib/server/route-refs.ts` on the server; both still accept full ids.
 
 Server-only modules use the `server-only` import guard. Keep authorization at
 server boundaries; a privileged database client does not replace membership or
