@@ -36,7 +36,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
 import type { EditorView } from "@tiptap/pm/view";
 import { useEditorState } from "@tiptap/react";
@@ -56,6 +56,7 @@ import {
 import { mentionAttrsFromOption } from "@/lib/mention-attributes";
 import { isMentionLinkType } from "@/lib/mention-link";
 import { primeMentionLabel } from "@/lib/mention-resolution";
+import { dateMentionOptions, datesFirst, requestDatePicker } from "@/lib/mention-date";
 import {
   PAGE_COLORS,
   activePageColor,
@@ -201,6 +202,7 @@ export function MobileEditorToolbar({
   /** Comment on the block under the caret (pages). */
   onComment?: () => void;
 }) {
+  const locale = useLocale();
   const t = useTranslations("Pages");
   const tPicker = useTranslations("Picker");
   const colorName = useTranslations("Categories.colors");
@@ -299,8 +301,13 @@ export function MobileEditorToolbar({
     [sheet, slashItems, query],
   );
   const mentionSections = useMemo(
-    () => sectionedMentions(sheet === "mentions" && mentionItems ? filterMentions(mentionItems(), query) : []).sections,
-    [sheet, mentionItems, query],
+    () => {
+      if (sheet !== "mentions" || !mentionItems) return sectionedMentions([]).sections;
+      const found = filterMentions(mentionItems(), query);
+      const dates = dateMentionOptions(query, locale, new Date(), tPicker("mentionPickDate"));
+      return sectionedMentions(datesFirst(query, locale) ? [...dates, ...found] : [...found, ...dates]).sections;
+    },
+    [sheet, mentionItems, query, locale, tPicker],
   );
   const mentionSectionLabel = useMentionSectionLabel();
 
@@ -314,8 +321,9 @@ export function MobileEditorToolbar({
   const pickMention = (option: MentionOption) => {
     close();
     if (isMentionLinkType(option.type)) {
-      primeMentionLabel(option.type, option.id, option.label, option.objectiveStatus);
+      primeMentionLabel(option.type, option.id, option.label, option.objectiveStatus, option.meta);
     }
+    if (option.openPicker) requestDatePicker();
     editor
       .chain()
       .focus(at())

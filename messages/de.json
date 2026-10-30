@@ -1456,6 +1456,11 @@
   },
   "Common": {
     "mentionUnavailable": "Nicht verfügbar",
+    "mentionScratchpad": "Aufgabennotizbuch",
+    "mentionCycle": "Zyklus",
+    "mentionCurrentCycle": "Aktueller Zyklus",
+    "mentionUpcomingCycle": "Kommender Zyklus",
+    "mentionDateEdit": "Datum ändern",
     "cancel": "Abbrechen",
     "readSessionEnded": "Deine Sitzung ist abgelaufen. Melde dich erneut an, um fortzufahren.",
     "readSecondFactor": "Bestätige deine Zwei-Faktor-Authentifizierung, um fortzufahren.",
@@ -2670,7 +2675,14 @@
     "mentionSectionIssues": "Tickets",
     "mentionSectionObjectives": "Ziele",
     "mentionSectionPages": "Seiten",
-    "mentionSectionResources": "Ressourcen"
+    "mentionSectionResources": "Ressourcen",
+    "mentionSectionDates": "Daten",
+    "mentionPickDate": "Datum auswählen…",
+    "mentionSectionPullRequests": "Pull Requests",
+    "mentionSectionRoutines": "Routinen",
+    "mentionSectionSkills": "Skills",
+    "mentionSectionMcp": "MCP-Server",
+    "mentionSectionPlanning": "Planung"
   },
   "Plan": {
     "tabDescription": "Beschreibung",

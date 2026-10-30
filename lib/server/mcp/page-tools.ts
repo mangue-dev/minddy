@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { readTextEdits, TEXT_EDIT_FIELDS } from "./text-edit-input";
+import { MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
 import { DATABASE_ENTRY_VALUES, DATABASE_TOOL_SCHEMA, databaseToolDescription } from "@/lib/server/database-tool-schema";
 import type { McpServer } from "@modelcontextprotocol/server";
 import {
@@ -95,7 +96,7 @@ const BODY = z
       "and page mentions '[@Title](mention:page/<page_id>)' to link " +
       "another page (inline: text can follow it; '[[page:<page_id>]]' is read as " +
       "the same mention). Anything else degrades to plain text. Never send " +
-      "ProseMirror JSON — markdown is the contract. " +
+      "ProseMirror JSON — markdown is the contract." + MCP_MENTIONS_IN_MARKDOWN + " " +
       IMAGES_AND_FILES
   );
 

@@ -13,7 +13,14 @@ const h = vi.hoisted(() => {
     { id: "issue-9", project_id: "h", number: 9, title: "Archived work", status: "todo" },
   ];
   const objectives = [{ id: "objective-9", project_id: "h", name: "Old launch", color: "blue" }];
+  const features = {
+    options: [],
+    label: () => null,
+    detail: () => null,
+    arm: () => {},
+  };
   return {
+    features,
     pages: [] as PageRow[],
     index: { issues, objectives, pages: [] },
     projects: [
@@ -39,6 +46,10 @@ vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: () => ({ obje
 vi.mock("@/lib/use-pages-query", () => ({ usePagesQuery: () => ({ pages: h.pages, loading: false }) }));
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => h.router, useAppNavigation: () => h.navigation }));
 vi.mock("@/lib/issue-panel-context", () => ({ useIssuePanelActions: () => h.panel }));
+// The MIN-872 sources load at the first "@" and have their own tests.
+vi.mock("@/lib/use-feature-mentions", () => ({
+  useFeatureMentions: () => h.features,
+}));
 vi.mock("@/lib/use-hidden-projects", () => ({ useHiddenProjects: () => ({ hiddenProjectIds: h.hidden }) }));
 
 afterEach(() => { vi.unstubAllGlobals(); document.body.innerHTML = ""; h.hidden = new Set(); h.exactLoading = false; });

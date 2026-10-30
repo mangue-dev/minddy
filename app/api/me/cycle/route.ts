@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     (auth.user.user_metadata ?? null) as Record<string, unknown> | null
   );
   if (!prefs.enabled) {
-    return NextResponse.json({ enabled: false, current: null, next: null });
+    return NextResponse.json({ enabled: false, current: null, next: null, upcoming: [] });
   }
 
   const ensured = await ensureCycles({
@@ -35,5 +35,8 @@ export async function GET(request: NextRequest) {
     enabled: true,
     current: ensured.current ? toCycleInfo(ensured.current) : null,
     next: next ? toCycleInfo(next) : null,
+    // Every window created ahead, as many as the reader's settings ask: what
+    // the "@" menu offers to mention (MIN-872).
+    upcoming: ensured.upcoming.map(toCycleInfo),
   });
 }

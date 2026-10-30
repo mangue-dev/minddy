@@ -2,16 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayersIcon } from "@hugeicons/core-free-icons";
 
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { MentionLinksProvider } from "@/components/mention-links";
 import { DeferredDocumentEditor } from "@/components/editor/document-editor-lazy";
-import type { PageSlashItem } from "@/components/pages/page-slash-command";
-import { RoutineSkillCommand } from "@/components/routines/routine-skill-command";
 import type { AssistantMention } from "@/lib/assistant-types";
-import { promptFromMarkdown, promptToMarkdown } from "@/lib/prompt-document";
-import type { RepositorySkillSummary } from "@/lib/repository-skills";
+import { promptFromMarkdown, promptToMarkdown, type PromptSkill } from "@/lib/prompt-document";
+import { skillMentionId } from "@/lib/use-feature-mentions";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
@@ -23,9 +20,10 @@ const MAX_PROMPT_LENGTH = 20000;
  * The INSTRUCTION field of a routine — the same at creation (`job` step of the
  * wizard) and on the routine's page. It is the shared document editor (ticket
  * descriptions, plans, pages): same blocks, same "/" menu, same "@" mentions.
- * The one addition is "$", which inserts a repository skill as the
- * `$name` token Numo reads. The instruction is still stored as text with
- * "@Label" tokens and their identities (lib/prompt-document.ts).
+ * A repository skill is one of those mentions (MIN-872). The instruction is
+ * stored as the editor's Markdown, typed mentions included; one saved before
+ * reads back from its "@Label" tokens and identities, and its `$name` skills
+ * as pills (lib/prompt-document.ts).
  *
  * In the wizard the field is framed, capped at about ten lines and carries
  * dictation (`pb-12` keeps its corner free). `bare` is the instruction written
@@ -53,9 +51,6 @@ export function RoutinePromptField({
   bare?: boolean;
 }) {
   const t = useTranslations("Routines");
-  const tPicker = useTranslations("Picker");
-  const tPickerRef = useRef(tPicker);
-  tPickerRef.current = tPicker;
   const { members } = useMembersQuery(projectId || null, !!projectId);
   const mentionSupport = useDescriptionMentions(projectId || null, members);
   const repositorySkills = useRepositorySkills(
@@ -64,26 +59,22 @@ export function RoutinePromptField({
     "routine-prompt",
     baseBranch?.trim() || null,
   );
-  const skillsRef = useRef<readonly RepositorySkillSummary[] | undefined>(repositorySkills.skills);
-  skillsRef.current = repositorySkills.skills;
-  // Built once (the editor's extensions must keep their identity); the skills
-  // are read at each "$", so they can arrive after the editor.
-  const extensions = useMemo(() => [RoutineSkillCommand.configure({
-    items: (): PageSlashItem[] => (skillsRef.current ?? []).map((skill) => ({
-      key: `skill:${skill.path}`,
-      label: skill.name,
-      icon: LayersIcon,
-      keywords: [skill.description, skill.path],
-      run: (editor, range) => {
-        editor.chain().focus().deleteRange(range).insertContent(`$${skill.name} `).run();
-      },
-    })),
-    placeholder: () => tPickerRef.current("typeToSearch"),
-  })], []);
+  // The skills a `$name` of the instruction may designate.
+  const skills = useMemo<PromptSkill[]>(
+    () => (repositorySkills.skills ?? []).flatMap((skill) => {
+      const id = skillMentionId(skill.path);
+      return id ? [{ id, name: skill.name }] : [];
+    }),
+    [repositorySkills.skills],
+  );
+  const promptSkills = useMemo(
+    () => (projectId && skills.length ? { projectId, skills } : null),
+    [projectId, skills],
+  );
 
   // The editor owns its text: only a change from outside (dictation, a
   // rewrite saved elsewhere) remounts it with the new instruction.
-  const markdown = useMemo(() => promptToMarkdown(value, mentions), [value, mentions]);
+  const markdown = useMemo(() => promptToMarkdown(value, mentions, promptSkills), [value, mentions, promptSkills]);
   const emitted = useRef(markdown);
   const [editorKey, setEditorKey] = useState(0);
   useEffect(() => {
@@ -95,7 +86,7 @@ export function RoutinePromptField({
   const update = (text: string, resolvedMentions: AssistantMention[]) => {
     const nextText = text.slice(0, MAX_PROMPT_LENGTH);
     const nextMentions = text === nextText ? resolvedMentions : [];
-    emitted.current = promptToMarkdown(nextText, nextMentions);
+    emitted.current = promptToMarkdown(nextText, nextMentions, promptSkills);
     onChange(nextText, nextMentions);
   };
 
@@ -111,9 +102,8 @@ export function RoutinePromptField({
             key={editorKey}
             value={markdown}
             mentions={mentionSupport}
-            extensions={extensions}
             onChange={(next) => {
-              const parsed = promptFromMarkdown(next, mentions);
+              const parsed = promptFromMarkdown(next);
               update(parsed.text, parsed.mentions);
             }}
             readOnly={disabled}

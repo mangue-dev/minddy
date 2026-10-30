@@ -1,29 +1,46 @@
 # Mentions
 
-MIN-734. A mention is a typed reference to a person, an issue, an objective, a
-project, a page or, since MIN-742, a resource (an attachment) of the surface
-being written. This document is the contract between the editors, the
-renderers, the server and the agents.
+MIN-734, MIN-872. A mention is a typed reference to a target: a person, an
+issue, an objective, a project, a page, a resource (an attachment) of the
+surface being written (MIN-742), and since MIN-872 a pull request, a routine,
+the task notebook, a cycle, a repository skill, a connected MCP server or a
+date. This document is the contract between the editors, the renderers, the
+server and the agents.
 
 ## Stored format
 
-A mention is stored in Markdown as a standard link:
+A mention is stored in Markdown as a standard link that holds no name:
 
 ```markdown
-Fix [@MIN-42](mention:issue/9f1c2a3b-…) with [@Jean Dupont](mention:member/5ad9b962-…).
+Fix [@](mention:issue/9f1c2a3b-…) with [@](mention:member/5ad9b962-…) by [@](mention:date/2026-11-02?time=09:30).
 ```
 
 | Part | Meaning |
 | --- | --- |
-| `@Label` | The label the author saw when mentioning. Readers of the raw Markdown (agents, webhooks, GitHub) see this text. |
-| `mention:<type>/<id>` | The target: `member`, `issue`, `objective`, `project`, `page` or `resource`, and its stable id. |
+| `@` | Empty link text. The name is resolved for each reader from the id, so a rename never breaks a mention and a reader who may not see the target learns nothing from the Markdown. |
+| `mention:<type>/<id>` | The target's type (`MENTION_TYPES`) and its stable id. |
+| `?key=value&…` | Metadata the target needs besides its id, at most four entries of `[A-Za-z0-9_.:-]`: a date's `time` (`HH:MM`) and `end` (`YYYY-MM-DD`), a skill's `project`. |
+
+| Type | Id | Metadata |
+| --- | --- | --- |
+| `member`, `issue`, `objective`, `project`, `page`, `resource`, `pull_request`, `routine`, `cycle`, `mcp` | the row's UUID (`mcp`: the connection's) | none |
+| `scratchpad` | always `notebook`: the feature, never one of its tasks | none |
+| `skill` | the folder holding the skill's `SKILL.md` | `project` |
+| `date` | a local calendar day, `YYYY-MM-DD` | `time`, `end` |
+
+Mentions written between MIN-734 and MIN-872 carry the label their author
+saw (`[@MIN-42](mention:issue/…)`). They still parse, their label is never
+shown, and it stays stored until the mention is picked again: an editor node
+keeps it in `mentionLabel` and writes it back unchanged, because rewriting a
+live document on a mere read is refused by the collaboration server. There is
+no backfill.
 
 `lib/mention-link.ts` builds, parses and rewrites the format
 (`mentionMarkdown`, `parseMentionHref`, `mentionLinks`, `mentionedIds`,
-`relabelMentions`, `splitMentionLinks`, `restoreStoredMentions`). Link text
-escapes every Markdown punctuation (`[ ] \ * _ \` ~ < > & | ! #`), so a label
-reads back unchanged, and is capped at 256 characters; the parsers are linear
-on any text.
+`relabelMentions`, `splitMentionLinks`, `restoreStoredMentions`,
+`withoutMentionLabels`, `mentionTargetKey`). Link text escapes every Markdown
+punctuation (`[ ] \ * _ \` ~ < > & | ! #`), so a label reads back unchanged,
+and is capped at 256 characters; the parsers are linear on any text.
 
 Two mentions are not typed links, on purpose:
 
@@ -33,11 +50,15 @@ Two mentions are not typed links, on purpose:
 ## Editors
 
 The mention node (`components/mention-node.ts`) carries `mentionType`,
-`mentionId` and `mentionLabel`.
+`mentionId`, `mentionLabel` (the stored label: empty for every new mention)
+and `meta` (the metadata as `key=value&…`).
 
-- A mention picked from the `@` menu is written as a typed link. It parses
-  back from Markdown (markdown-it renders an anchor, which the node reads ahead
-  of the link mark) and from copied HTML (the node renders an anchor).
+- A mention picked from the `@` menu is written as a typed link without a
+  label (`mentionAttrsFromOption`). It parses back from Markdown (markdown-it
+  renders an anchor, which the node reads ahead of the link mark) and from
+  copied HTML (the node renders an anchor). A pasted pill drops whatever
+  label its copy carried (`transformPasted` in
+  `components/markdown-mention.tsx`).
 - A pill rebuilt from older `@Label` text (`hydrateMentions`, attribute
   `legacy`) is written back as that text. It was found by its label, not
   picked: writing it as a typed link would turn a label match into an
@@ -47,6 +68,52 @@ The mention node (`components/mention-node.ts`) carries `mentionType`,
   again becomes typed.
 - Tasks, plans and the notebook keep their formats: a typed mention is an
   inline link, so `lib/plan.ts` still reads its lines.
+
+## The `@` menu
+
+`lib/use-mention-sources.ts` lists people, projects, issues, objectives and
+pages; `lib/use-feature-mentions.ts` adds, once the reader types `@`, the
+task notebook, the reader's current and upcoming cycles (as many as their
+settings create, and none while cycles are off, from `GET /api/me/cycle`),
+their routines, the surface project's repository skills (only on a surface
+with a project), their enabled MCP connections and pull requests, the open
+ones first and the completed ones after (`GET /api/pull-requests`). None of
+them loads before the first `@`.
+
+Dates come from the query itself (`lib/mention-date.ts`). `parseDateQuery`
+first asks [chrono-node](https://github.com/wanasit/chrono) to read the whole
+query in the reader's language, then in the five others; a reading counts only
+when it covers the whole query, so `day after tomorrow` never comes back
+as `tomorrow`. Our own layer adds what chrono misses: a day two days away in every
+language, a weekday some weeks ahead (`thursday in 2 weeks`), the end of
+the month, the weekend, a bare day of the month (`the 15th`), small numbers
+written out, and keywords while they are being typed (`tom`). Accents,
+hyphens and apostrophes are optional, and a trailing time reads in each
+language's forms (`9h30`, `9 o'clock`, `9pm`, and their translations), and
+a time said in words first becomes that form (`spokenTimes`: half past,
+quarter past and to, three quarters, noon and midnight, in each language). The
+query is first corrected word by word (`correctTypos`): an unknown word one
+typo away from a word the parser reads takes its place, with one typo allowed
+from four letters and two from eight, counted as Damerau-Levenshtein edits, as
+search engines do by default. A word still being typed is never corrected. The
+menu lists the readings under **Dates**, after the other matches (first when
+the query clearly is a date, `datesFirst`, so Enter picks it), and stays
+open while the query may still become a date (`isDatePrefix`).
+
+`@date` (and its translations) is a stable entry: it inserts now and opens
+the date picker on the new pill (`requestDatePicker`).
+
+The Numo composer and routine instructions use the same mentions as every
+other text. The composer writes each pill as its typed link
+(`composerText` in `components/assistant/chat-input.tsx`) and offers the same
+targets and dates; its skills stay the attached skill pills a message carries,
+picked with `@` or `/` (there is no `$` menu any more). A routine instruction
+is stored as the editor's Markdown (`promptFromMarkdown`); an older
+instruction, saved as `@Label` tokens with identities and `$name` skills,
+reads back as pills and is stored in the new form at its next save. Numo
+reads a user message named for its user (`markdownForReader` in
+`lib/server/numo/turns.ts`), and conversation and routine titles are made from
+that named text, never from the raw links.
 
 ## What a reader sees
 
@@ -75,6 +142,26 @@ Access rules:
 | project | the reader has access to it |
 | member | the reader shares a project with them (as a member or its owner), or is them |
 | resource | the server: the reader has access to its project. The app: it is attached to the surface being read (see Resources) |
+| pull request | the reader has access to a project linking its repository |
+| routine | the reader has access to its project, and it is not trashed |
+| skill | the reader has access to the project its `project` metadata names |
+| cycle, mcp | the reader owns it |
+| scratchpad | always: it names the feature, and opens the reader's own notebook |
+| date | always: it is its own value, never sent to the server |
+
+A cycle pill reads "Cycle" and its window, a pull request `#12` and its title,
+a date "Today", "Tomorrow" or "Yesterday" while it is that close and the full
+date otherwise (`formatMentionDate`; the server render, which does not know
+the reader's day, always shows the full date). Hovering a date pill that shows
+a full date tells how far it is from now (`relativeMentionDate`: "in 3
+weeks"), and one with a time that close, in hours or minutes. In an editor, a click on a
+date opens the date and time picker and writes the new day into the node
+(`components/date-mention-chip.tsx`). minddy schedules nothing from a date.
+
+A pull request opens the Pull requests screen, a routine its detail, a cycle
+the global board's cycle view, an MCP server its settings card, and the
+notebook opens in place (`lib/mention-target.ts`). A skill leads nowhere; its
+pill shows its description on hover where the surface knows it.
 
 In an editor, the pills a selection covers are marked `mention-selected` and
 painted in the selection color: an atom is not painted as selected text by
@@ -143,6 +230,18 @@ it is returned: each typed mention carries the target's current label, or
 in chunks; deeper than the walk goes, mentions read as unavailable. The
 reference itself is kept.
 
+Numo's rules (`buildSharedRules` in `lib/server/assistant/prompt.ts`) list
+every type with where its id comes from and when to use it: a date for every
+specific day it states, the notebook whenever it reads or changes it, a
+routine it creates, changes or reports on, the MCP connection it used, the
+skill it followed, a pull request it read. The tools hand it those ids:
+`read_pull_request` returns minddy's `id` of the pull request, and each
+selected skill comes with its ready-made mention. The descriptions of the
+Markdown fields it writes repeat the same list (`MENTIONS_IN_MARKDOWN`).
+
+Every Numo and MCP tool input first goes through `withoutMentionLabels`:
+whatever label an agent writes, a mention is stored without one.
+
 What an agent writes back is restored (`restoreStoredMentions`): a mention
 of a target the stored text already names takes its stored link again, in
 passage edits (`editTextPassage`), in whole rewrites of a description, plan
@@ -171,18 +270,36 @@ the author's label.
   link-form text, and each mention the composer knows becomes a pill with its
   id. Any other mention is pasted as its `@Label` text.
 
+A reply posted to a forge (`forgeMarkdownFor` in
+`lib/server/agent/pr-comment-reply.ts`) names each mention as its author sees
+it before writing the plain `@Label` the forge reads.
+
 ## Limits
 
-- The stored label is the author's text. The UI and agents never show it in
-  place of a resolution, but it is part of the Markdown the server stores and
-  returns to members of the document's own project.
+- A mention written between MIN-734 and MIN-872 keeps its author's label in
+  the stored Markdown until it is picked again. The UI and agents never show
+  it in place of a resolution.
 - Mentions written before MIN-734 stay label-scanned until someone picks them
   again from the menu; there is no backfill.
+- Routine instructions and Numo messages saved before MIN-872 keep their
+  `@Label` text and identities until they are edited; messages are never
+  rewritten.
+- A date mention has no range editor yet: an `end` is read and shown, but
+  only the day and time are edited from the pill.
 
 ## Tests
 
-- `lib/mention-link.test.ts`: format, escaping, relabeling, and the round trip
-  through the page projection and the plan parser.
+- `lib/mention-link.test.ts`: format, metadata, escaping, relabeling, agent
+  input normalization, and the round trip through the page projection and the
+  plan parser.
+- `lib/mention-date.test.ts`: the date parser in six languages and the
+  phrasings people type, the relative label and tooltip, `@date`, and the
+  stored metadata.
+- `lib/prompt-document.test.ts`: routine instructions stored as typed
+  Markdown, and older ones read back as pills.
+- `lib/chat-input-mention-node.test.ts`: the composer's typed links.
+- `lib/server/numo/durable-turns.test.ts`: what the model reads of a typed
+  mention.
 - `lib/server/mention-access.test.ts`: resolution per type and access, and
   relabeling of what agents read.
 - `components/typed-mention-chip.test.tsx`: the rendered pill shows the live

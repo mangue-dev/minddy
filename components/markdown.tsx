@@ -122,7 +122,7 @@ function rehypeMentions(scan: MentionScan) {
 }
 
 /** react-markdown's URL rules, with typed mention links kept. */
-function keepMentionUrls(url: string): string {
+export function keepMentionUrls(url: string): string {
   return parseMentionHref(url) ? url : defaultUrlTransform(url);
 }
 
@@ -134,7 +134,7 @@ function isMentionAnchor(node: HastNode): boolean {
 
 /** The sanitizer's schema, with `mention:` links kept: they are references,
     rendered by the app, never followed by the browser. */
-const SANITIZE_SCHEMA = {
+export const SANITIZE_SCHEMA = {
   ...defaultSchema,
   protocols: {
     ...defaultSchema.protocols,
@@ -409,7 +409,7 @@ function MarkdownRenderer({
           p: styled("p", "my-3"),
           a: (props) => {
             const target = parseMentionHref(typeof props.href === "string" ? props.href : null);
-            if (target) return <TypedMentionChip type={target.type} id={target.id} />;
+            if (target) return <TypedMentionChip type={target.type} id={target.id} meta={target.meta} />;
             const LinkRenderer =
               linkVariant === "plain" ? PlainMarkdownLink : MarkdownLink;
             return <LinkRenderer {...props} target="_blank" rel="noreferrer" />;

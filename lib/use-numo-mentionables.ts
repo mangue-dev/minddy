@@ -19,6 +19,8 @@ import {
   useMentionSources,
 } from "@/lib/use-mention-sources";
 import type { MentionLinks } from "@/components/mention-links";
+import { useFeatureMentions } from "@/lib/use-feature-mentions";
+import { useOfferedProject } from "@/lib/use-offered-projects";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { AssistantMention } from "@/lib/assistant-types";
 import type { GlobalBoardResponse, Member } from "@/lib/types";
@@ -90,7 +92,15 @@ export function useNumoMentionables(
     wanted,
   );
 
-  const links = useMentionLinksFor({ issues, objectives, pages, references });
+  const entityLinks = useMentionLinksFor({ issues, objectives, pages, references });
+  // Pull requests, routines, the notebook, cycles and MCP servers (MIN-872),
+  // loaded at the first "@". Skills are the composer's own pills.
+  const features = useFeatureMentions(scopeProjectId, useOfferedProject(scopeProjectId));
+  const links = useMemo<MentionLinks>(() => ({
+    ...entityLinks,
+    label: (type, id, meta) => entityLinks.label?.(type, id, meta) ?? features.label(type, id, meta),
+    detail: features.detail,
+  }), [entityLinks, features]);
   const scan = useMemo(
     () =>
       contentMentionScanner({
@@ -153,8 +163,9 @@ export function useNumoMentionables(
           label: p.title,
           icon: p.icon,
         })),
+      ...features.options.filter((option) => option.type !== "skill"),
     ],
-    [members, offered, pages],
+    [members, offered, pages, features.options],
   );
 
   const onMentionQuery = useCallback(
@@ -162,8 +173,9 @@ export function useNumoMentionables(
       if (!active) return;
       setWanted(true);
       armNow();
+      features.arm();
     },
-    [armNow],
+    [armNow, features],
   );
 
   return { mentionables, links, scan, onMentionQuery };

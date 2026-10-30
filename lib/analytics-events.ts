@@ -314,7 +314,7 @@ export interface AnalyticsEventProps {
   cycles_enabled: { enabled: boolean };
 
   // ── Notes rapides (scratchpad) ──
-  scratchpad_opened: { source: "shortcut" | "sidebar" | "palette" | "home" | "click" };
+  scratchpad_opened: { source: "shortcut" | "sidebar" | "palette" | "home" | "click" | "mention" };
   scratchpad_task_added: NoProps;
   scratchpad_task_completed: NoProps;
   scratchpad_task_promoted: NoProps;

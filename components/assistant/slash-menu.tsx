@@ -88,7 +88,7 @@ export function SlashMenu({
   style,
 }: {
   options: SlashMenuOption[];
-  prefix?: "/" | "$";
+  prefix?: "/";
   activeIndex: number;
   onPick: (option: SlashMenuOption) => void;
   onHover: (index: number) => void;

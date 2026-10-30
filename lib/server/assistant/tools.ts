@@ -78,10 +78,12 @@ const PAGE_FILES_DESCRIPTION =
  * pill and a mentioned member is notified.
  */
 const MENTIONS_IN_MARKDOWN =
-  " Cite every issue, objective, project, page or member whose id you resolved as a typed mention " +
-  "'[@Label](mention:<type>/<id>)' (type issue, objective, project, page or member; an issue's label " +
-  "is its identifier, a member's id is their user_id); never invent an id, leave what you did not " +
-  "resolve as plain text.";
+  " Cite every target whose id you resolved as a typed mention '[@Label](mention:<type>/<id>)' " +
+  "(type issue, objective, project, page, member, pull_request, routine, cycle, mcp or skill; an " +
+  "issue's label is its identifier, a member's id is their user_id; the notebook is " +
+  "'[@Task notebook](mention:scratchpad/notebook)'), and every specific day as a date mention " +
+  "'[@](mention:date/YYYY-MM-DD)' ('?time=HH:MM' for a time); never invent an id, leave what you " +
+  "did not resolve as plain text.";
 
 const PAGE_BODY_DESCRIPTION =
   "The page BODY in markdown. Supported: headings (## and ###, since a single " +
@@ -2472,7 +2474,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "read_pull_request",
       description:
-        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR.",
+        "Read a selected pull request, or the pull request attached to an issue: its title, description, state, branch, CI checks, per-file diffs (patches, capped), and review comments anchored to code — grouped into conversations, each carrying the root comment `id` that resolve_pull_request_threads targets. Use pull_request_id when the conversation carries a PR directly, including a human PR with no issue. Otherwise use issue_id to resolve the issue's live or most recently updated PR. Its top-level `id` is minddy's id of the pull request: cite it as '[@#<number>](mention:pull_request/<id>)'.",
       parameters: {
         type: "object",
         properties: {

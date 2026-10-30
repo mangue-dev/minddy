@@ -59,7 +59,8 @@ import { stepSuggestion } from "@/lib/suggestion-menu";
 import type { MentionScan } from "@/lib/mention-scan";
 import { MentionNodeBase } from "@/components/mention-node";
 import { TypedMentionChip } from "@/components/typed-mention-chip";
-import { isMentionLinkType } from "@/lib/mention-link";
+import { isMentionLinkType, mentionMetaFromAttr, mentionMetaToAttr } from "@/lib/mention-link";
+import { isDatePrefix, mentionDateMeta, requestDatePicker } from "@/lib/mention-date";
 import { primeMentionLabel, shownMentionLabel } from "@/lib/mention-resolution";
 import { Fragment, Slice, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import {
@@ -111,6 +112,23 @@ export const MentionNode = MentionNodeBase.extend({
             };
             return new Slice(relabel(slice.content), slice.openStart, slice.openEnd);
           },
+          // A pasted typed pill stores no label (MIN-872), whatever label its
+          // copy carried: it is resolved from its id, like a picked one.
+          transformPasted: (slice) => {
+            const unlabel = (fragment: Fragment): Fragment => {
+              const children: ProseMirrorNode[] = [];
+              fragment.forEach((child) => {
+                const attrs = child.attrs as Record<string, unknown>;
+                if (child.type.name === name && !attrs.legacy && isMentionLinkType(attrs.mentionType)) {
+                  children.push(attrs.mentionLabel ? child.type.create({ ...attrs, mentionLabel: "" }) : child);
+                } else {
+                  children.push(child.isLeaf ? child : child.copy(unlabel(child.content)));
+                }
+              });
+              return Fragment.fromArray(children);
+            };
+            return new Slice(unlabel(slice.content), slice.openStart, slice.openEnd);
+          },
           decorations: ({ doc, selection }) => {
             if (selection.empty) return null;
             const decorations: Decoration[] = [];
@@ -128,7 +146,7 @@ export const MentionNode = MentionNodeBase.extend({
   },
 });
 
-function MentionNodeView({ node }: NodeViewProps) {
+function MentionNodeView({ node, editor, updateAttributes }: NodeViewProps) {
   const type = node.attrs.mentionType as MentionOption["type"] | "numo";
   const id = (node.attrs.mentionId as string | null) ?? NUMO_MENTION_ID;
   // Where does this pill lead: the surface knows it (lib/use-mention-sources), the
@@ -146,7 +164,13 @@ function MentionNodeView({ node }: NodeViewProps) {
         <TypedMentionChip
           type={type}
           id={id}
+          meta={mentionMetaFromAttr(node.attrs.meta)}
           appearance={{ seed: node.attrs.seed, color: node.attrs.color, icon: node.attrs.icon }}
+          // A date is edited where it stands (MIN-872): the node takes the
+          // new day as its id and the time and end as its metadata.
+          onChangeDate={type === "date" && editor.isEditable
+            ? (next) => updateAttributes({ mentionId: next.date, mentionLabel: "", meta: mentionMetaToAttr(mentionDateMeta(next)) })
+            : undefined}
         />
       </NodeViewWrapper>
     );
@@ -322,11 +346,14 @@ const MentionMenu = forwardRef<MentionMenuRef, MentionProps>(function MentionMen
       closeActive={selected === count}
       onClose={props.close}
       onCloseHover={() => setSelected(count)}
-      closeWhenEmpty={props.query !== "" && !props.loading && semanticStatus !== "searching"}
+      // A query that may still become a date (`@d` on its way to `@demain`)
+      // keeps the menu open (MIN-872).
+      closeWhenEmpty={props.query !== "" && !props.loading && semanticStatus !== "searching" &&
+        !isDatePrefix(props.query)}
       trailing={semanticStatus && <SemanticSearchingHint status={semanticStatus} />}
       renderItem={(option, index) => (
         <MentionOptionRow
-          key={`${option.type}:${option.id}`}
+          key={`${option.type}:${option.id}:${option.meta ? JSON.stringify(option.meta) : ""}`}
           option={option}
           active={index === selected}
           onPick={() => choose(index)}
@@ -425,6 +452,11 @@ export interface MentionSuggestOptions {
   /** The first “@” typed — enough to request the list at that moment rather
  than when opening the page. Called without guarantee of uniqueness. */
   onQuery?: () => void;
+  /** The dates the query reads as (MIN-872), listed after the other options:
+      they come from the query itself, not from a list. */
+  dates?: (query: string) => MentionOption[];
+  /** Whether those dates come first for this query (`datesFirst`). */
+  datesFirst?: (query: string) => boolean;
   /** The muted “Type to search” after an empty “@”, read at each state. */
   placeholder?: () => string;
 }
@@ -463,14 +495,19 @@ export const MentionSuggest = Extension.create<MentionSuggestOptions>({
         decorationEmptyClass: SUGGESTION_CHIP_EMPTY_CLASS,
         items: ({ query }) => {
           options.onQuery?.();
-          return filterMentions(options.items(), query);
+          const found = filterMentions(options.items(), query);
+          const dates = options.dates?.(query) ?? [];
+          // A query that clearly is a date (`@date`, `@demain`) lists its dates
+          // first, so Enter picks one rather than a page that happens to match.
+          return options.datesFirst?.(query) ? [...dates, ...found] : [...found, ...dates];
         },
         command: ({ editor, range, props }) => {
           // The reader just picked it, so they can see it: its pill shows at
           // once, without waiting for the server (MIN-734).
           if (isMentionLinkType(props.type)) {
-            primeMentionLabel(props.type, props.id, props.label, props.objectiveStatus);
+            primeMentionLabel(props.type, props.id, props.label, props.objectiveStatus, props.meta);
           }
+          if (props.openPicker) requestDatePicker();
           editor
             .chain()
             .focus()

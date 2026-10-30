@@ -1,5 +1,5 @@
-// Typed mentions as a reader may see them (MIN-734): the current label of a
-// target they can open, and nothing of one they cannot.
+// Typed mentions as a reader may see them (MIN-734, MIN-872): the current
+// label of a target they can open, and nothing of one they cannot.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -25,6 +25,10 @@ function query(table: string) {
     select: () => q,
     in: (column: string, values: string[]) => {
       rows = rows.filter((row) => values.includes(String(row[column])));
+      return q;
+    },
+    eq: (column: string, value: string) => {
+      rows = rows.filter((row) => String(row[column]) === value);
       return q;
     },
     then: (resolve: (value: { data: unknown; error: null }) => unknown) => resolve({ data: rows, error: null }),
@@ -55,6 +59,28 @@ vi.mock("@/lib/server/auth-users", () => ({
   toNamed: (user: { user_metadata: { display_name: string } }) => ({ full_name: user.user_metadata.display_name }),
 }));
 
+const PR_OK = "88888888-8888-4888-8888-888888888881";
+const PR_HIDDEN = "88888888-8888-4888-8888-888888888882";
+const ROUTINE_OK = "99999999-9999-4999-8999-999999999991";
+const CYCLE_MINE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1";
+const CYCLE_OTHER = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2";
+const MCP_MINE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1";
+const MCP_OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2";
+
+vi.mock("@/lib/server/agent/pull-requests", () => ({
+  findPullRequestsWithProjects: async (ids: string[]) => [
+    { pullRequest: { id: PR_OK, number: 12, title: "Fix login" }, projectIds: [HIDDEN, ALLOWED] },
+    { pullRequest: { id: PR_HIDDEN, number: 13, title: "Secret branch" }, projectIds: [HIDDEN] },
+  ].filter((row) => ids.includes(row.pullRequest.id)),
+}));
+vi.mock("@/lib/server/routine-content", () => ({
+  decodeRoutineTitle: async (row: { title: string }) => row.title,
+}));
+vi.mock("@/lib/server/mcp-client", () => ({
+  getMcpConnection: async (userId: string, id: string) =>
+    userId === "reader" && id === MCP_MINE ? { id, name: "Linear" } : null,
+}));
+
 const { markdownForReader, readResultForReader, resolveMentionTargets } = await import("./mention-access");
 
 beforeEach(() => {
@@ -79,6 +105,11 @@ beforeEach(() => {
     project_members: [
       { project_id: ALLOWED, user_id: MEMBER },
       { project_id: HIDDEN, user_id: STRANGER },
+    ],
+    agent_routines: [{ id: ROUTINE_OK, project_id: ALLOWED, title: "Weekly triage", deleted_at: null }],
+    cycles: [
+      { id: CYCLE_MINE, user_id: "reader", start_date: "2026-10-26", end_date: "2026-11-08" },
+      { id: CYCLE_OTHER, user_id: STRANGER, start_date: "2026-10-26", end_date: "2026-11-08" },
     ],
   };
 });
@@ -134,6 +165,45 @@ describe("resolving mention targets", () => {
     const read = await readResultForReader("reader", { issue: { description: markdown }, count: 1 });
     expect(JSON.stringify(read)).not.toContain("Secret roadmap");
     expect(read.count).toBe(1);
+  });
+
+  it("resolves the MIN-872 types under their own access rules", async () => {
+    const resolution = await resolveMentionTargets("reader", [
+      { type: "pull_request", id: PR_OK },
+      { type: "pull_request", id: PR_HIDDEN },
+      { type: "routine", id: ROUTINE_OK },
+      { type: "cycle", id: CYCLE_MINE },
+      { type: "cycle", id: CYCLE_OTHER },
+      { type: "mcp", id: MCP_MINE },
+      { type: "mcp", id: MCP_OTHER },
+      { type: "skill", id: "release", meta: { project: ALLOWED } },
+      { type: "skill", id: "release", meta: { project: HIDDEN } },
+      { type: "skill", id: "release" },
+      { type: "scratchpad", id: "notebook" },
+      { type: "date", id: "2026-11-02", meta: { time: "09:30" } },
+      { type: "date", id: "2026-02-31" },
+    ]);
+    expect(Object.fromEntries(resolution)).toEqual({
+      [`pull_request:${PR_OK}`]: "#12 Fix login",
+      [`pull_request:${PR_HIDDEN}`]: null,
+      [`routine:${ROUTINE_OK}`]: "Weekly triage",
+      [`cycle:${CYCLE_MINE}`]: "Cycle 2026-10-26 → 2026-11-08",
+      [`cycle:${CYCLE_OTHER}`]: null,
+      [`mcp:${MCP_MINE}`]: "Linear",
+      [`mcp:${MCP_OTHER}`]: null,
+      [`skill:${ALLOWED}/release`]: "release",
+      [`skill:${HIDDEN}/release`]: null,
+      "skill:release": null,
+      "scratchpad:notebook": "Task notebook",
+      "date:2026-11-02": "2026-11-02 09:30",
+      "date:2026-02-31": null,
+    });
+  });
+
+  it("names label-less mentions for agents, and never an inaccessible one", async () => {
+    const markdown = `Ship [@](mention:pull_request/${PR_OK}) after [@](mention:pull_request/${PR_HIDDEN}) on [@](mention:date/2026-11-02).`;
+    expect(await markdownForReader("reader", markdown, service)).toBe(
+      `Ship [@\\#12 Fix login](mention:pull_request/${PR_OK}) after [@unavailable](mention:pull_request/${PR_HIDDEN}) on [@2026-11-02](mention:date/2026-11-02).`);
   });
 
   it("keeps nothing of a mention a list's truncation cut", async () => {

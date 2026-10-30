@@ -3,6 +3,14 @@
 import { useEscapeLayer } from "@/lib/escape-layers";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { pastedMentionPieces } from "@/lib/mention-paste";
+import {
+  isMentionLinkType,
+  MENTION_TYPES as LINK_MENTION_TYPES,
+  mentionMarkdown,
+  mentionMetaFromAttr,
+  mentionMetaToAttr,
+} from "@/lib/mention-link";
+import { knownMentionLabel } from "@/lib/mention-resolution";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -20,7 +28,8 @@ import {
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { dateMentionOptions, datesFirst } from "@/lib/mention-date";
 import { Button } from "@/components/ui/button";
 import {
   CommandGroup,
@@ -127,14 +136,9 @@ const COMMAND_PILL_CLASS =
   "mx-0.5 inline-block whitespace-nowrap rounded-[5px] bg-(--mention-chip) px-1.5 py-px align-baseline text-[0.95em] font-medium leading-4 text-primary";
 
 /** What an envelope can say about itself: enough to return it without anything
- other than the DOM (a ⌘Z cancellation can return it well after the fact). */
-const MENTION_TYPES: ReadonlySet<string> = new Set([
-  "member",
-  "project",
-  "issue",
-  "objective",
-  "page",
-]);
+ other than the DOM (a ⌘Z cancellation can return it well after the fact).
+ Every typed target can be mentioned here, as in any editor (MIN-872). */
+const MENTION_TYPES: ReadonlySet<string> = new Set(LINK_MENTION_TYPES);
 
 type ActiveSlashQuery = ActiveComposerMenuQuery & {
   node: Text;
@@ -162,6 +166,7 @@ export function mentionFromNode(node: HTMLElement): MentionOption | null {
         : { iconUrl: node.dataset.mentionIcon }
       : {}),
     ...(node.dataset.mentionColor ? { color: node.dataset.mentionColor } : {}),
+    ...(mentionMetaFromAttr(node.dataset.mentionMeta) ? { meta: mentionMetaFromAttr(node.dataset.mentionMeta) } : {}),
     ...(node.dataset.mentionStatus
       ? { status: node.dataset.mentionStatus as MentionOption["status"] }
       : {}),
@@ -171,6 +176,68 @@ export function mentionFromNode(node: HTMLElement): MentionOption | null {
       ? { objectiveStatus: node.dataset.mentionObjectiveStatus as MentionOption["objectiveStatus"] }
       : {}),
   };
+}
+
+/**
+ * The message a composer's content sends (exported for tests): its text, a
+ * typed mention as its link without a name (MIN-872), Numo and a forge login
+ * as "@Name", a command and a skill as "/name".
+ */
+export function composerText(root: HTMLElement): string {
+  const parts: string[] = [];
+
+  function walk(node: Node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      parts.push(node.textContent || "");
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as HTMLElement;
+
+      // A typed mention is written as its link, without a name (MIN-872):
+      // the bubble renders the live pill, and Numo reads it named for its
+      // user. Numo and a forge login stay the "@Name" they are.
+      const mentionType = element.dataset.mentionType;
+      if (isMentionLinkType(mentionType) && element.dataset.mentionId) {
+        parts.push(mentionMarkdown(mentionType, element.dataset.mentionId, "",
+          mentionMetaFromAttr(element.dataset.mentionMeta)));
+        return;
+      }
+      if (element.dataset.mentionLabel) {
+        parts.push(`@${element.dataset.mentionLabel}`);
+        return;
+      }
+
+      // A command is written “/label” — the text that the pill shows
+      // already, but read from its data: the rendering can evolve without changing
+      // what goes into the message.
+      if (element.dataset.commandLabel) {
+        parts.push(`/${element.dataset.commandLabel}`);
+        return;
+      }
+
+      if (element.dataset.skillName) {
+        parts.push(`/${element.dataset.skillName}`);
+        return;
+      }
+
+      if (element.tagName === "BR") {
+        parts.push("\n");
+        return;
+      }
+
+      if (element.tagName === "DIV" || element.tagName === "P") {
+        if (parts.length > 0 && parts[parts.length - 1] !== "\n") {
+          parts.push("\n");
+        }
+        for (const child of element.childNodes) walk(child);
+        return;
+      }
+
+      for (const child of element.childNodes) walk(child);
+    }
+  }
+
+  for (const child of root.childNodes) walk(child);
+  return parts.join("").trim();
 }
 
 /** The composer pill an option becomes (exported for tests). */
@@ -187,6 +254,8 @@ export function createMentionNode(option: MentionOption): HTMLSpanElement {
   if (option.color) pill.dataset.mentionColor = option.color;
   if (option.status) pill.dataset.mentionStatus = option.status;
   if (option.objectiveStatus) pill.dataset.mentionObjectiveStatus = option.objectiveStatus;
+  const meta = mentionMetaToAttr(option.meta);
+  if (meta) pill.dataset.mentionMeta = meta;
   pill.className = MENTION_SLOT_CLASS;
   return pill;
 }
@@ -412,6 +481,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const modKey = useModKey();
     const tAttach = useTranslations("Resources");
     const tPicker = useTranslations("Picker");
+    const locale = useLocale();
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     // A long message scrolls inside the field: its hidden lines fade at the
@@ -553,59 +623,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       [canAttach, disabled, userId],
     );
 
-    const serializeContent = useCallback((): string => {
-      const el = editorRef.current;
-      if (!el) return "";
-
-      const parts: string[] = [];
-
-      function walk(node: Node) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          parts.push(node.textContent || "");
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const element = node as HTMLElement;
-
-          // A mention is written “@Name” in the message even if the pill does not
-          // shows that the name: on the model side, it is the at sign which indicates it (and
-          // it is on it that the bubble re-places the pill on rereading).
-          if (element.dataset.mentionLabel) {
-            parts.push(`@${element.dataset.mentionLabel}`);
-            return;
-          }
-
-          // A command is written “/label” — the text that the pill shows
-          // already, but read from its data: the rendering can evolve without changing
-          // what goes into the message.
-          if (element.dataset.commandLabel) {
-            parts.push(`/${element.dataset.commandLabel}`);
-            return;
-          }
-
-          if (element.dataset.skillName) {
-            parts.push(`/${element.dataset.skillName}`);
-            return;
-          }
-
-          if (element.tagName === "BR") {
-            parts.push("\n");
-            return;
-          }
-
-          if (element.tagName === "DIV" || element.tagName === "P") {
-            if (parts.length > 0 && parts[parts.length - 1] !== "\n") {
-              parts.push("\n");
-            }
-            for (const child of element.childNodes) walk(child);
-            return;
-          }
-
-          for (const child of element.childNodes) walk(child);
-        }
-      }
-
-      for (const child of el.childNodes) walk(child);
-      return parts.join("").trim();
-    }, []);
+    const serializeContent = useCallback(
+      (): string => (editorRef.current ? composerText(editorRef.current) : ""),
+      [],
+    );
 
     const clearEditor = useCallback(() => {
       if (editorRef.current) {
@@ -632,6 +653,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [mentionSlots, setMentionSlots] = useState<
       Array<{ el: HTMLElement; option: MentionOption }>
     >([]);
+    // `insertMention` precedes `placeSkill`: it reaches it through this ref.
+    const placeSkillRef = useRef<
+      ((skill: RepositorySkillSummary, at?: Pick<ActiveSlashQuery, "node" | "start" | "end">) => void) | null
+    >(null);
     const [skillSlots, setSkillSlots] = useState<
       Array<{ el: HTMLElement; skill: RepositorySkillSummary }>
     >([]);
@@ -696,12 +721,33 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       };
     }, []);
 
+    // The repository's skills are mentioned with "@" (MIN-872), as on every
+    // other surface; a picked one becomes the skill pill the message carries.
+    const skillMentionables = useMemo<MentionOption[]>(() => {
+      if (skillSlots.length >= MAX_SELECTED_SKILLS) return [];
+      const selected = new Set(skillSlots.map((slot) => repositorySkillKey(slot.skill)));
+      return (skills ?? [])
+        .filter((skill) => !selected.has(repositorySkillKey(skill)))
+        .map((skill) => ({
+          type: "skill" as const,
+          id: repositorySkillKey(skill),
+          label: skill.name,
+          detail: skill.description,
+          keywords: [skill.path],
+        }));
+    }, [skills, skillSlots]);
     const mentionTextOptions = useMemo(
       () =>
-        mentionQuery === null || !mentionables?.length
+        mentionQuery === null || (!mentionables?.length && !skillMentionables.length)
           ? []
-          : filterMentions(mentionables, mentionQuery),
-      [mentionQuery, mentionables],
+          : (() => {
+            const found = filterMentions([...(mentionables ?? []), ...skillMentionables], mentionQuery);
+            // Dates come from the query itself, as in every editor (MIN-872),
+            // first when the query clearly is one.
+            const dates = dateMentionOptions(mentionQuery, locale);
+            return datesFirst(mentionQuery, locale) ? [...dates, ...found] : [...found, ...dates];
+          })(),
+      [mentionQuery, mentionables, skillMentionables, locale],
     );
     // Issues found by meaning (MIN-718): appended last, and the highlight
     // resets on the query only, so a late answer never moves it.
@@ -758,6 +804,14 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         const found = readMention();
         const el = editorRef.current;
         if (!found || !el) return;
+        if (option.type === "skill") {
+          const skill = skills?.find((candidate) => repositorySkillKey(candidate) === option.id);
+          if (skill) placeSkillRef.current?.(skill, found);
+          setMentionQuery(null);
+          mentionActiveRef.current = false;
+          onMentionQuery?.(false);
+          return;
+        }
         const range = document.createRange();
         range.setStart(found.node, found.start);
         range.setEnd(found.node, found.end);
@@ -913,41 +967,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       },
       [publishDraft, syncSkillSlots],
     );
+    placeSkillRef.current = placeSkill;
 
-    /** The mentions actually made in the text, duplicated. */
-    const collectMentions = useCallback((): AssistantMention[] => {
-      const el = editorRef.current;
-      if (!el) return [];
-      const seen = new Set<string>();
-      const out: AssistantMention[] = [];
-      for (const node of el.querySelectorAll<HTMLElement>("[data-mention-id]")) {
-        const option = mentionFromNode(node);
-        if (!option) continue;
-        // A forge account or Numo quotes a WRITER, not an entity the
-        // conversation carries: they never serialize as context.
-        // An attachment mention belongs to the surface that holds it
-        // (MIN-742); the Numo composer offers none.
-        if (option.type === "forge" || option.type === "numo" || option.type === "resource") continue;
-        const key = `${option.type}:${option.id}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        out.push({
-          type: option.type,
-          id: option.id,
-          label: option.label,
-          ...(option.projectId ? { projectId: option.projectId } : {}),
-          ...(option.avatarSeed ? { avatarSeed: option.avatarSeed } : {}),
-          ...(option.color ? { color: option.color } : {}),
-          ...(option.icon ? { icon: option.icon } : {}),
-          ...(option.status ? { status: option.status } : {}),
-          // An objective keeps the issue state its status borrows (MIN-785).
-          ...(option.objectiveStatus
-            ? { status: OBJECTIVE_STATUS_MAP[option.objectiveStatus].issueStatus }
-            : {}),
-        });
-      }
-      return out;
-    }, []);
 
     const collectSkills = useCallback((): RepositorySkillSummary[] => {
       const el = editorRef.current;
@@ -963,7 +984,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       return selected;
     }, []);
 
-    // ── Commands “/” and inline skills “/” or “$” ───────────────────
+    // ── Commands and inline skills “/” ──────────────────────────────
     // Skills follow the mention contract: read the query in the text node under
     // the caret and replace only that fragment. Commands remain start-only.
     const [slashQuery, setSlashQuery] = useState<ActiveSlashQuery | null>(null);
@@ -1030,7 +1051,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     useEscapeLayer(slashOpen, () => setSlashQuery(null));
     useEscapeLayer(mentionOpen, closeMentionMenu);
 
-    // The mention and "/" / "$" menus open where the text is typed, as in the
+    // The mention and "/" menus open where the text is typed, as in the
     // shared editor: just above the caret's line, starting at the caret,
     // kept inside the composer. Measured whenever the query changes, since
     // the caret moves with it. No caret box (a fresh empty line): the menus
@@ -1242,7 +1263,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       const accepted = onSend(
         value,
         uploads.inputs,
-        collectMentions(),
+        // Mentions travel in the text as typed links (MIN-872).
+        [],
         collectCommand(),
         collectSkills(),
       );
@@ -1262,7 +1284,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       sendDisabled,
       clearEditor,
       uploads,
-      collectMentions,
       collectCommand,
       collectSkills,
     ]);
@@ -1493,7 +1514,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           }
           const option = known.get(`${piece.type}:${piece.id}`);
           if (option) insertPill(option);
-          else insertPlainText(`@${piece.label}`);
+          // A mention stores no name since MIN-872: the pasted text takes
+          // the one its pill showed, if any.
+          else insertPlainText(`@${piece.label || knownMentionLabel(piece.type, piece.id, piece.meta) || "…"}`);
         }
       },
       [canAttach, insertPill, insertPlainText, mentionables, uploads, userId],

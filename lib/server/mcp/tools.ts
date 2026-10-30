@@ -191,6 +191,8 @@ import {
   type ToolExtra,
   type ToolResult,
 } from "@/lib/server/mcp/tool-helpers";
+import { withoutMentionLabels } from "@/lib/mention-link";
+import { MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
 import { registerPageTools } from "@/lib/server/mcp/page-tools";
 import { captureServerEvent } from "@/lib/server/posthog";
 import { durationBucket } from "@/lib/analytics-sanitize";
@@ -400,7 +402,7 @@ const PLAN_FIELD = z
       "a block, minddy_edit_issue_text rewrites a passage (old_string → " +
       "new_string), minddy_update_plan_task flips a task's state. All three cost " +
       "a few tokens instead of the whole document, and leave what you did not " +
-      "touch exactly as it was.",
+      "touch exactly as it was." + MCP_MENTIONS_IN_MARKDOWN,
   );
 
 const PROJECT_ID = z
@@ -1044,8 +1046,10 @@ function withToolCapabilities(server: McpServer): McpServer {
       );
     }
     const scoped = async (...args: unknown[]) => {
+      // What the agent writes stores its mentions without a label (MIN-872).
+      const [input, ...rest] = args;
       const result = await runWithToolCapability(capability, () =>
-        (handler as (...a: unknown[]) => unknown)(...args),
+        (handler as (...a: unknown[]) => unknown)(withoutMentionLabels(input), ...rest),
       );
       // Typed mentions in what the agent reads carry the target's current
       // label, or a neutral one when the caller may not see it (MIN-734).
@@ -2106,7 +2110,7 @@ export function registerMinddyTools(
           .string()
           .optional()
           .describe(
-            "Markdown. WHAT and WHY — write one on every issue you create.",
+            "Markdown. WHAT and WHY — write one on every issue you create." + MCP_MENTIONS_IN_MARKDOWN,
           ),
         plan: PLAN_FIELD.optional(),
         status: z.enum(ISSUE_STATUSES).optional().describe("Default: backlog."),
@@ -2647,7 +2651,7 @@ export function registerMinddyTools(
           .describe(
             "The block to ADD, markdown: checkbox task lines ('- [ ] …') and/or a " +
               "short paragraph. ONLY what is new — everything already in the plan " +
-              "is kept as-is, so never repeat it here.",
+              "is kept as-is, so never repeat it here." + MCP_MENTIONS_IN_MARKDOWN,
           ),
         section: z
           .string()
@@ -2827,7 +2831,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
-              "at most, no headings.",
+              "at most, no headings." + MCP_MENTIONS_IN_MARKDOWN,
           ),
         parent_comment_id: z
           .string()
@@ -3562,7 +3566,7 @@ export function registerMinddyTools(
           .optional()
           .describe(
             "Markdown. The goal, what counts as done, what is out of scope — " +
-              "write one on every objective you create.",
+              "write one on every objective you create." + MCP_MENTIONS_IN_MARKDOWN,
           ),
         status: z
           .enum(OBJECTIVE_STATUS_VALUES)
@@ -3626,7 +3630,7 @@ export function registerMinddyTools(
           .describe(
             "A markdown block to ADD at the end of the current description " +
               "(after description_edits when both are sent), instead of " +
-              "resending it. Only what is new.",
+              "resending it. Only what is new." + MCP_MENTIONS_IN_MARKDOWN,
           ),
         status: z.enum(OBJECTIVE_STATUS_VALUES).optional(),
         lead_user_id: z.string().nullable().optional(),
@@ -3727,7 +3731,7 @@ export function registerMinddyTools(
           .min(1)
           .describe(
             "Markdown, SHORT: a few sentences or short bullets, 1000 characters " +
-              "at most, no headings.",
+              "at most, no headings." + MCP_MENTIONS_IN_MARKDOWN,
           ),
       }),
       annotations: WRITE,
@@ -3830,7 +3834,7 @@ export function registerMinddyTools(
           .string()
           .max(MAX_SCRATCHPAD_LENGTH)
           .describe(
-            "The full new scratchpad markdown (replaces everything currently there).",
+            "The full new scratchpad markdown (replaces everything currently there)." + MCP_MENTIONS_IN_MARKDOWN,
           ),
         expected_rev: z
           .number()

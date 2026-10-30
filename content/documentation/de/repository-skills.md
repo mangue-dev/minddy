@@ -79,7 +79,7 @@ Committe und pushe die Dateien in den Standardbranch des verknüpften GitHub- od
 
 ## Auswählen und prüfen {#selection}
 
-Nutze `/`, `$` oder das `+`-Menü und prüfe die Vorschau vor dem Senden. Bis zu fünf Skills sind auswählbar; grüne Abzeichen zeigen die Auswahl. `$` enthält nur Repository-Skills, `/` außerdem weitere Befehle. In der Anweisung einer Routine fügst du mit `$` einen Skill ein; `/` öffnet das Blockmenü des Editors.
+Nutze `/`, `@` oder das `+`-Menü und prüfe die Vorschau vor dem Senden. Bis zu fünf Skills sind auswählbar; grüne Abzeichen zeigen die Auswahl. `@` zeigt die Skills unter **Skills**, neben allem anderen, das du erwähnen kannst, `/` außerdem weitere Befehle. In der Anweisung einer Routine tippst du `@` und wählst einen Skill unter **Skills**: In der Anweisung bleibt er eine Skill-Erwähnung, die Numo unter ihrem Namen liest. `/` öffnet das Blockmenü des Editors. Ein Skill lässt sich in jedem Text seines Projekts erwähnen, etwa in einer Ticketbeschreibung oder auf einer Seite, und nirgends sonst.
 
 Die Auswahl gilt für diesen Benutzerbeitrag. Bei Routinen gilt sie für jeden Durchlauf. Skills sind Repository-Dateien, keine globalen Kontoinstallationen, und überschreiben keine System- oder Sicherheitsanweisungen. Zum Erstellen oder Ändern bearbeitest du die Repository-Dateien selbst oder mit deinem eigenen Coding-Agenten. Pushe vor Auswahl der neuen Version.
 

@@ -69,6 +69,10 @@ export function findActiveTriggerQuery(
  * way first, closed and triage tickets last, and the ticket whose identifier
  * is the query before all.
  */
+/** The targets MIN-872 added, listed after the issues: people, projects,
+    objectives, pages and issues stay what a mention is most often for. */
+const FEATURE_TYPES: ReadonlySet<string> = new Set(["scratchpad", "cycle", "routine", "skill", "mcp", "pull_request"]);
+
 export function orderMentionItems<T extends MentionSearchItem>(
   items: readonly T[],
   query = "",
@@ -76,15 +80,19 @@ export function orderMentionItems<T extends MentionSearchItem>(
   const numo: T[] = [];
   const other: T[] = [];
   const issues: T[] = [];
+  const features: T[] = [];
   for (const item of items) {
-    (item.type === "numo" ? numo : item.type === "issue" ? issues : other).push(item);
+    (item.type === "numo" ? numo
+      : item.type === "issue" ? issues
+      : FEATURE_TYPES.has(item.type) ? features
+      : other).push(item);
   }
   const orderedIssues = orderIssuesForSearch(
     issues,
     (item) => item.status,
     (item) => isExactIssueQuery(query, item.label),
   );
-  return [...numo, ...other, ...orderedIssues];
+  return [...numo, ...other, ...orderedIssues, ...features];
 }
 
 /** Matches a mention query without imposing an artificial result limit. */

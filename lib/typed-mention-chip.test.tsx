@@ -5,7 +5,7 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "en" }));
 vi.mock("@/components/mention-chip", () => ({
   MentionChip: ({ type, label, status }: { type: string; label: string; status?: string }) =>
     createElement("span", { "data-type": type, "data-status": status ?? "" }, label),

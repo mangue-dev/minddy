@@ -1456,6 +1456,11 @@
   },
   "Common": {
     "mentionUnavailable": "Unavailable",
+    "mentionScratchpad": "Task notebook",
+    "mentionCycle": "Cycle",
+    "mentionCurrentCycle": "Current cycle",
+    "mentionUpcomingCycle": "Upcoming cycle",
+    "mentionDateEdit": "Change the date",
     "cancel": "Cancel",
     "readSessionEnded": "Your session has ended. Sign in again to continue.",
     "readSecondFactor": "Confirm your two-factor authentication to continue.",
@@ -2670,7 +2675,14 @@
     "mentionSectionIssues": "Issues",
     "mentionSectionObjectives": "Objectives",
     "mentionSectionPages": "Pages",
-    "mentionSectionResources": "Resources"
+    "mentionSectionResources": "Resources",
+    "mentionSectionDates": "Dates",
+    "mentionPickDate": "Pick a date…",
+    "mentionSectionPullRequests": "Pull requests",
+    "mentionSectionRoutines": "Routines",
+    "mentionSectionSkills": "Skills",
+    "mentionSectionMcp": "MCP servers",
+    "mentionSectionPlanning": "Planning"
   },
   "Plan": {
     "tabDescription": "Description",

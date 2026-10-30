@@ -5,7 +5,9 @@ export interface SlashSearchOption {
 }
 
 export interface ComposerMenuTrigger {
-  prefix: "/" | "$";
+  /** "/" alone: skills are also mentioned with "@" since MIN-872, and the
+      former "$" menu is gone. */
+  prefix: "/";
   query: string;
 }
 
@@ -16,7 +18,7 @@ export interface ActiveComposerMenuQuery extends ComposerMenuTrigger {
   end: number;
 }
 
-const ACTIVE_COMPOSER_MENU = /(^|[\t \u00a0\r\n])([/$])([^/$\r\n]*)$/;
+const ACTIVE_COMPOSER_MENU = /(^|[\t \u00a0\r\n])(\/)([^/\r\n]*)$/;
 /** The exit gestures of lib/mention-menu.ts: a space after the bare prefix,
     or two spaces (macOS: a period and a space) once a query is typed. */
 const QUERY_EXIT = /^[ \u00a0]|[ \u00a0]{2}|\.[ \u00a0]$/;
@@ -24,7 +26,7 @@ const QUERY_EXIT = /^[ \u00a0]|[ \u00a0]{2}|\.[ \u00a0]$/;
 /** Read a command or skill picker trigger from a single-line composer value. */
 export function composerMenuTrigger(text: string): ComposerMenuTrigger | null {
   const prefix = text[0];
-  if ((prefix !== "/" && prefix !== "$") || /[\r\n]/.test(text)) return null;
+  if (prefix !== "/" || /[\r\n]/.test(text)) return null;
   return { prefix, query: text.slice(1) };
 }
 
@@ -38,7 +40,7 @@ export function findActiveComposerMenuQuery(
   const prefix = match[2];
   if (
     query === undefined ||
-    (prefix !== "/" && prefix !== "$") ||
+    prefix !== "/" ||
     QUERY_EXIT.test(query)
   ) {
     return null;

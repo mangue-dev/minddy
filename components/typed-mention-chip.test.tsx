@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
-// A typed mention renders what the reader may see (MIN-734): the target's
-// current label, or a neutral pill — never the label stored with it.
+// A typed mention renders what the reader may see (MIN-734, MIN-872): the
+// target's current label, or a neutral pill — never a label stored with it.
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -9,7 +9,7 @@ import { Markdown } from "@/components/markdown";
 import { MentionLinksProvider, type MentionLinks } from "@/components/mention-links";
 import { primeMentionLabel, resetMentionResolution } from "@/lib/mention-resolution";
 
-vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "en" }));
 vi.mock("@/lib/pr-endpoint-context", () => ({ usePrEndpoint: () => null }));
 vi.mock("@/components/mention-chip", () => ({
   NUMO_MENTION_ID: "__numo__",
@@ -101,4 +101,23 @@ it("passes a render's own links to its pills", async () => {
     }));
   });
   expect(host.querySelector("[data-chip=resource]")?.textContent).toBe("notes.md");
+});
+
+it("renders label-less mentions of the MIN-872 types without leaking anything", async () => {
+  const pr = "9f1c2a3b-0000-4000-8000-000000000003";
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+    mentions: [{ type: "pull_request", id: pr, label: null }],
+  })));
+  vi.stubGlobal("fetch", fetchMock);
+  await render(
+    `On [@](mention:date/2031-05-06?time=09:30), open [@](mention:scratchpad/notebook) and [@](mention:pull_request/${pr}).`,
+    links({}),
+  );
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+  // A date never asks the server, and the notebook is a feature anyone sees.
+  expect(host.querySelector("[data-chip=date]")?.textContent).toBe("May 6, 2031 09:30 AM");
+  expect(host.querySelector("[data-chip=scratchpad]")?.textContent).toBe("mentionScratchpad");
+  expect(host.querySelector("[data-chip=unavailable]")?.textContent).toBe("mentionUnavailable");
+  const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+  expect(JSON.parse(String(init.body))).toEqual({ refs: [{ type: "pull_request", id: pr }] });
 });

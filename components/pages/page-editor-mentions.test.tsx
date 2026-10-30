@@ -9,7 +9,7 @@ import { PageEditor, type PageEditorMentions } from "./page-editor";
 // One translator, as next-intl returns for a stable locale: the extensions memo
 // depends on it through the slash menu and placeholder labels.
 const translate = vi.hoisted(() => (key: string) => key);
-vi.mock("next-intl", () => ({ useTranslations: () => translate }));
+vi.mock("next-intl", () => ({ useTranslations: () => translate, useLocale: () => "en" }));
 vi.mock("@/components/pages/block-gutter", () => ({ BlockGutter: () => null }));
 vi.mock("@/components/pages/page-comment-bubble", () => ({ PageCommentBubble: () => null }));
 vi.mock("@/components/markdown-link-menu", () => ({ MarkdownLinkMenu: () => null }));

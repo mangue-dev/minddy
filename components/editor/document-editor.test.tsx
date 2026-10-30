@@ -9,7 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { DocumentEditor, type DocumentEditorApi } from "./document-editor";
 
 const translate = vi.hoisted(() => (key: string) => key);
-vi.mock("next-intl", () => ({ useTranslations: () => translate }));
+vi.mock("next-intl", () => ({ useTranslations: () => translate, useLocale: () => "en" }));
 vi.mock("@/components/pages/block-gutter", () => ({
   BlockGutter: () => createElement("div", { "data-testid": "gutter" }),
 }));

@@ -14,7 +14,7 @@ import { trackEvent } from "./analytics";
 
 /** Where the opening comes from — the dimension of `scratchpad_opened`. Each caller
  names it: the header button, the palette, or the global shortcut. */
-type ScratchpadSource = "click" | "palette" | "shortcut" | "sidebar" | "home";
+type ScratchpadSource = "click" | "palette" | "shortcut" | "sidebar" | "home" | "mention";
 
 /** Open state of the personal Notes modal, lifted so the header button, the
     command palette and the Mod+Shift+K keyboard shortcut can all open it. */
@@ -53,6 +53,12 @@ export function ScratchpadProvider({ children }: { children: ReactNode }) {
       {children}
     </ScratchpadContext.Provider>
   );
+}
+
+/** The notebook's controls where a provider exists, `null` elsewhere (a
+    mention pill rendered outside the app shell). */
+export function useOptionalScratchpad(): ScratchpadContextValue | null {
+  return useContext(ScratchpadContext);
 }
 
 export function useScratchpad(): ScratchpadContextValue {

@@ -1,4 +1,6 @@
 import "server-only";
+import { mentionPlainText } from "@/lib/mention-link";
+import { markdownForReader } from "@/lib/server/mention-access";
 
 import { randomUUID } from "node:crypto";
 import { after, NextResponse } from "next/server";
@@ -158,7 +160,8 @@ export async function startNumoIntent(
     conversation = data as { id: string };
   } else {
     const conversationId = randomUUID();
-    const title = fallbackShortTitle(prompt);
+    // A title is read as text: each typed mention as the name its user sees.
+    const title = fallbackShortTitle(mentionPlainText(await markdownForReader(input.userId, prompt)));
     const storedTitle = await shouldProtectConversationTitle(service)
       ? await encodeConversationTitle(input.userId, conversationId, title)
       : title;
