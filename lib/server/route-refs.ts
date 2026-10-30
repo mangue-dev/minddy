@@ -15,8 +15,9 @@ export const resolveRouteRef = cache(
     const range = shortCodeRange(ref);
     if (!range) return null;
     const supabase = await createServerSupabase();
-    const { data, error } = await supabase
-      .from(table)
+    // Literal table names: only the id is read, never encrypted content.
+    const rows = table === "projects" ? supabase.from("projects") : supabase.from("pages");
+    const { data, error } = await rows
       .select("id")
       .gte("id", range.from)
       .lte("id", range.to)
