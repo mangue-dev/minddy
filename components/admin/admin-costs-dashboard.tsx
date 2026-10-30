@@ -314,7 +314,7 @@ export function AdminCostsDashboard() {
     [format],
   );
 
-  const filtered = filters.group !== "all" || filters.model !== "all" || filters.keyMode !== "all";
+  const filtered = filters.group !== "all" || filters.model !== "all";
 
   return (
     /* The width and margins come from the shell (`admin-dashboard`). */
@@ -362,17 +362,6 @@ export function AdminCostsDashboard() {
               ))}
             </FilterSub>
           )}
-          <FilterSub label={t("costs.filterKey")} count={filters.keyMode === "all" ? 0 : 1}>
-            {(["platform", "byok"] as const).map((keyMode) => (
-              <MenuToggleRow
-                key={keyMode}
-                active={filters.keyMode === keyMode}
-                onSelect={() => setFilters((prev) => ({ ...prev, keyMode: prev.keyMode === keyMode ? "all" : keyMode }))}
-              >
-                <span className="truncate">{t(keyMode === "platform" ? "costs.keyPlatform" : "costs.keyByok")}</span>
-              </MenuToggleRow>
-            ))}
-          </FilterSub>
           <DropdownMenuSeparator />
           <FilterItem disabled={!filtered} onSelect={() => setFilters(NO_FILTERS)}>
             {t("costs.clearFilters")}

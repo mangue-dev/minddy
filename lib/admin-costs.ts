@@ -45,22 +45,18 @@ export function costGroupOf(feature: string): AdminCostGroupId {
   return segment?.id ?? EXTRA_GROUPS[feature] ?? "other";
 }
 
-export type KeyModeFilter = "all" | "platform" | "byok";
-
 export interface CostFilters {
   group: AdminCostGroupId | "all";
   model: string | "all";
-  keyMode: KeyModeFilter;
 }
 
-export const NO_FILTERS: CostFilters = { group: "all", model: "all", keyMode: "all" };
+export const NO_FILTERS: CostFilters = { group: "all", model: "all" };
 
 export function filterCostRows(rows: AdminCostRow[], filters: CostFilters): AdminCostRow[] {
   return rows.filter(
     (row) =>
       (filters.group === "all" || costGroupOf(row.feature) === filters.group) &&
-      (filters.model === "all" || row.model === filters.model) &&
-      (filters.keyMode === "all" || row.keyMode === filters.keyMode),
+      (filters.model === "all" || row.model === filters.model),
   );
 }
 

@@ -19,7 +19,6 @@ function row(partial: Partial<AdminCostRow>): AdminCostRow {
     day: "2026-10-28",
     feature: "numo_chat",
     model: "deepseek/deepseek-v4-flash",
-    keyMode: "platform",
     costUsd: 1,
     calls: 1,
     promptTokens: 100,
@@ -38,15 +37,14 @@ describe("admin costs arithmetic (MIN-829)", () => {
     expect(costGroupOf("pr_review")).toBe("other");
   });
 
-  it("filters by family, model and key mode together", () => {
+  it("filters by family and model together", () => {
     const rows = [
       row({ feature: "numo_chat" }),
       row({ feature: "smart_fill" }),
-      row({ feature: "numo_chat", keyMode: "byok" }),
       row({ feature: "numo_chat", model: "openai/gpt-5" }),
     ];
-    expect(filterCostRows(rows, NO_FILTERS)).toHaveLength(4);
-    expect(filterCostRows(rows, { group: "numo", model: "deepseek/deepseek-v4-flash", keyMode: "platform" })).toEqual([rows[0]]);
+    expect(filterCostRows(rows, NO_FILTERS)).toHaveLength(3);
+    expect(filterCostRows(rows, { group: "numo", model: "deepseek/deepseek-v4-flash" })).toEqual([rows[0]]);
   });
 
   it("totals spend, calls, tokens, cache hits and the price of a million tokens", () => {
