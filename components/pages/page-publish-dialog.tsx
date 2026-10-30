@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -19,7 +19,7 @@ import {
   fetchPageShareApi,
   updatePageShareApi,
 } from "@/lib/pages-api";
-import type { ViewShareLevel } from "@/lib/types";
+import type { PageShare, ViewShareLevel } from "@/lib/types";
 
 /**
  * PUBLISH a page for reading (MIN-283).
@@ -62,7 +62,11 @@ export function PagePublishDialog({
     queryKey: pageShareKey(pageId),
     queryFn: () => fetchPageShareApi(projectId, pageId),
     enabled: open,
+    staleTime: 30_000,
   });
+  // The controls show at once (MIN-283 follow-up); only the very first read
+  // keeps the level from changing, since it is not known yet.
+  const loading = open && isPending;
   const serverLevel: ViewShareLevel = share?.level ?? "private";
 
   const [level, setLevel] = useState<ViewShareLevel>("private");
@@ -84,24 +88,49 @@ export function PagePublishDialog({
       password?: string;
       include_children?: boolean;
     }) => updatePageShareApi(projectId, pageId, input),
+    // Applied on screen before the server answers, rolled back if it
+    // refuses; a new link shows its address once the server has made it.
+    onMutate: (input) => {
+      const previous = queryClient.getQueryData<PageShare | null>(pageShareKey(pageId));
+      if (previous) {
+        queryClient.setQueryData(pageShareKey(pageId), {
+          ...previous,
+          level: input.level,
+          ...(input.include_children === undefined ? {} : { include_children: input.include_children }),
+        });
+      }
+      setPassword("");
+      return { previous };
+    },
     onSuccess: (next) => {
       queryClient.setQueryData(pageShareKey(pageId), next);
-      setPassword("");
     },
-    onError: (err) => toast.error((err as Error).message),
+    onError: (err, _input, context) => {
+      queryClient.setQueryData(pageShareKey(pageId), context?.previous ?? null);
+      setLevel(context?.previous?.level ?? "private");
+      toast.error((err as Error).message);
+    },
   });
   const revoke = useMutation({
     mutationFn: () => deletePageShareApi(projectId, pageId),
-    onSuccess: () => {
+    onMutate: () => {
+      const previous = queryClient.getQueryData<PageShare | null>(pageShareKey(pageId));
       setLevel("private");
       queryClient.setQueryData(pageShareKey(pageId), null);
+      return { previous };
+    },
+    onSuccess: () => {
       toast.success(t("unpublished"));
     },
-    onError: (err) => toast.error((err as Error).message),
+    onError: (err, _input, context) => {
+      queryClient.setQueryData(pageShareKey(pageId), context?.previous ?? null);
+      setLevel(context?.previous?.level ?? "private");
+      toast.error((err as Error).message);
+    },
   });
 
   const changeLevel = (next: ViewShareLevel) => {
-    if (update.isPending || revoke.isPending) return;
+    if (loading || revoke.isPending) return;
     if (next === "private" && share) {
       setConfirmRevoke(true);
       return;
@@ -149,109 +178,103 @@ export function PagePublishDialog({
           <DialogDescription>{t("description", { name: title })}</DialogDescription>
         </DialogHeader>
 
-        {open && isPending ? (
-          <div className="flex justify-center py-6">
-            <Spinner />
+        <div className="flex flex-col gap-4">
+          <div className="space-y-1.5">
+            <Select value={level} onValueChange={(next) => changeLevel(next as ViewShareLevel)} disabled={loading}>
+              <SelectTrigger className="w-full" aria-label={t("title")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="private">{t("levelPrivate")}</SelectItem>
+                <SelectItem value="password">{t("levelPassword")}</SelectItem>
+                <SelectItem value="public">{t("levelPublic")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{loading ? "\u00a0" : hint}</p>
           </div>
-        ) : (
-          <div className="flex flex-col gap-4">
-            <div className="space-y-1.5">
-              <SegmentedControl
-                options={[
-                  { value: "private", label: t("levelPrivate") },
-                  { value: "password", label: t("levelPassword") },
-                  { value: "public", label: t("levelPublic") },
-                ]}
-                value={level}
-                onChange={changeLevel}
-                ariaLabel={t("title")}
-              />
-              <p className="text-xs text-muted-foreground">{hint}</p>
-            </div>
 
-            {level === "password" && (
-              <form onSubmit={submitPassword} className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="password"
-                    autoComplete="new-password"
-                    minLength={MIN_SHARE_PASSWORD_LENGTH}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={
-                      serverLevel === "password"
-                        ? t("changePasswordPlaceholder")
-                        : t("passwordPlaceholder")
+          {level === "password" && (
+            <form onSubmit={submitPassword} className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={MIN_SHARE_PASSWORD_LENGTH}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={
+                    serverLevel === "password"
+                      ? t("changePasswordPlaceholder")
+                      : t("passwordPlaceholder")
+                  }
+                />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  disabled={
+                    update.isPending ||
+                    password.trim().length < MIN_SHARE_PASSWORD_LENGTH
+                  }
+                >
+                  {update.isPending && <Spinner />}
+                  {tc("save")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("passwordMinHint")}</p>
+            </form>
+          )}
+
+          {share && shareUrl && (
+            <>
+              <div className="flex items-center gap-2">
+                <Input
+                  readOnly
+                  value={shareUrl}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="font-mono text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={copyLink}
+                >
+                  <HugeiconsIcon icon={Copy01Icon} />
+                  {t("copyLink")}
+                </Button>
+              </div>
+
+              <div data-sheet-section className="flex flex-col gap-3 border-t pt-3">
+                <label className="flex items-start gap-2.5">
+                  <Checkbox
+                    checked={share.include_children}
+                    disabled={descendantCount === 0}
+                    onCheckedChange={(checked) =>
+                      update.mutate({
+                        level: share.level,
+                        include_children: checked === true,
+                      })
                     }
+                    className="mt-0.5"
                   />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    disabled={
-                      update.isPending ||
-                      password.trim().length < MIN_SHARE_PASSWORD_LENGTH
-                    }
-                  >
-                    {update.isPending && <Spinner />}
-                    {tc("save")}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">{t("passwordMinHint")}</p>
-              </form>
-            )}
-
-            {share && shareUrl && (
-              <>
-                <div className="flex items-center gap-2">
-                  <Input
-                    readOnly
-                    value={shareUrl}
-                    onFocus={(e) => e.currentTarget.select()}
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={copyLink}
-                  >
-                    <HugeiconsIcon icon={Copy01Icon} />
-                    {t("copyLink")}
-                  </Button>
-                </div>
-
-                <div data-sheet-section className="flex flex-col gap-3 border-t pt-3">
-                  <label className="flex items-start gap-2.5">
-                    <Checkbox
-                      checked={share.include_children}
-                      disabled={descendantCount === 0 || update.isPending}
-                      onCheckedChange={(checked) =>
-                        update.mutate({
-                          level: share.level,
-                          include_children: checked === true,
-                        })
-                      }
-                      className="mt-0.5"
-                    />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-sm">{t("includeChildren")}</span>
-                      {/* An ACCOUNT, never a blank box: this is the only
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-sm">{t("includeChildren")}</span>
+                    {/* An ACCOUNT, never a blank box: this is the only
  way to know what we are really sending. */}
-                      <span className="text-xs text-muted-foreground">
-                        {descendantCount === 0
-                          ? t("noChildren")
-                          : share.include_children
-                            ? t("childrenIncluded", { count: descendantCount })
-                            : t("childrenExcluded", { count: descendantCount })}
-                      </span>
+                    <span className="text-xs text-muted-foreground">
+                      {descendantCount === 0
+                        ? t("noChildren")
+                        : share.include_children
+                          ? t("childrenIncluded", { count: descendantCount })
+                          : t("childrenExcluded", { count: descendantCount })}
                     </span>
-                  </label>
+                  </span>
+                </label>
 
-                </div>
-              </>
-            )}
-          </div>
-        )}
+              </div>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
       <ConfirmDeleteDialog

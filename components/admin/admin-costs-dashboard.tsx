@@ -379,7 +379,9 @@ export function AdminCostsDashboard() {
           </FilterItem>
         </FilterMenu>
         <Select value={String(days)} onValueChange={(value) => setDays(Number(value))}>
-          <SelectTrigger size="sm" className="w-auto" aria-label={t("costs.periodLabel")}>
+          {/* A pill like every control of the content header, so its ends stay
+              concentric with the pane's corner. */}
+          <SelectTrigger size="sm" className="w-auto rounded-full data-[size=sm]:rounded-full" aria-label={t("costs.periodLabel")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="end">

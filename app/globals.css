@@ -680,7 +680,7 @@ button[data-variant="ghost"] {
      descendant-watching invalidation sets to it and broaden every unrelated
      style change into a full-document recalculation. */
   .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
-    transition: margin-left 180ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition: margin-left 280ms cubic-bezier(0.32, 0.72, 0, 1);
   }
   .app-shell[data-sidebar-hidden="true"] > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     margin-left: 12px;
@@ -1408,9 +1408,22 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    `style="user-select:none"` INLINE on its content. An inline style beats all
    non-`!important` CSS rule (no matter how specific), hence the `!important` here:
    this is the only way to re-authorize the selection on the bubbles `.chat-selectable`
-   and their descendants. We keep the general reset intact everywhere else. */
+   and their descendants. We keep the general reset intact everywhere else.
+   `.comment-selectable` is the same exception for the comments of every
+   activity (issues, objectives, feedback, triage, pages, pull request
+   reviews, the public board): their text is read and quoted, by readers too.
+   `.content-selectable` extends it to the other text people write and read
+   rather than click: a feedback request and its original submission, a
+   published page's title, a file or skill opened for reading, the agent's
+   reasoning, earlier versions of a pull request comment. */
 .chat-selectable,
 .chat-selectable
+  *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code),
+.comment-selectable,
+.comment-selectable
+  *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code),
+.content-selectable,
+.content-selectable
   *:not(input):not(textarea):not([contenteditable="true"]):not(pre):not(code) {
   user-select: text !important;
   -webkit-user-select: text !important;

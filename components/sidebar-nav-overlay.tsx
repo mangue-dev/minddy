@@ -233,7 +233,7 @@ export function SidebarNavOverlay({
 
   return (
     <div
-      className="relative h-full shrink-0 [transition:width_180ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:[transition:none]"
+      className="relative h-full shrink-0 [transition:width_280ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:[transition:none]"
       data-sidebar-hidden={hidden}
       style={{ width: flowWidth }}
     >

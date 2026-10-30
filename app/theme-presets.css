@@ -546,12 +546,13 @@ html.dark[data-theme-dark="high-contrast-dark"] {
   background-color: rgb(0 0 0 / 55%);
 }
 
-/* Translucent borders (`border-border/60` on issue cards…) lose the contrast
-   the palette gives `--border`: draw them at full strength. */
+/* Translucent borders (`border-border/60`, an issue card's
+   `border-foreground/10`…) lose the contrast the palette gives `--border`:
+   draw them at full strength. */
 :is(
   html:not(.dark)[data-theme-light="high-contrast-light"],
   html.dark[data-theme-dark="high-contrast-dark"]
-) [class*="border-border/"] {
+) :is([class*="border-border/"], [data-card-surface]) {
   border-color: var(--border);
 }
 

@@ -80,7 +80,7 @@ export function ReasoningBlock({
   Rendered in plain text, we read "**Step 1**" and "---" at
   on the screen. */}
         <div className="ml-5 py-1 text-muted-foreground">
-          <Markdown className="text-xs">{trace}</Markdown>
+          <Markdown className="content-selectable text-xs">{trace}</Markdown>
         </div>
       </CollapsibleContent>
     </Collapsible>

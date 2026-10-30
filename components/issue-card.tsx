@@ -174,11 +174,11 @@ const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 // (`data-menu-open`, or a pill whose picker is open), pointer on it or not:
 // the card reads as the one the open surface acts on.
 const CARD_HOVER =
-  "pointer-fine:hover:border-border pointer-fine:hover:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:pointer-fine:hover:border-foreground/25 " +
-  "data-menu-open:border-border data-menu-open:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:data-menu-open:border-foreground/25 " +
-  "has-[[aria-expanded=true]]:border-border has-[[aria-expanded=true]]:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:has-[[aria-expanded=true]]:border-foreground/25";
+  "pointer-fine:hover:border-foreground/20 pointer-fine:hover:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:pointer-fine:hover:border-foreground/25 " +
+  "data-menu-open:border-foreground/20 data-menu-open:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:data-menu-open:border-foreground/25 " +
+  "has-[[aria-expanded=true]]:border-foreground/20 has-[[aria-expanded=true]]:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:has-[[aria-expanded=true]]:border-foreground/25";
 const CARD_HELD =
-  "data-held:cursor-grabbing data-held:border-border data-held:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] data-held:shadow-md dark:data-held:border-foreground/25";
+  "data-held:cursor-grabbing data-held:border-foreground/20 data-held:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] data-held:shadow-md dark:data-held:border-foreground/25";
 
 /** Closed menu: stable identity, so a new array is not created on every render. */
 const NO_ACTIONS: ContextMenuAction[] = [];
@@ -907,7 +907,9 @@ export const IssueCardBody = memo(function IssueCardBody({
         // Text in the other corners is centered in 24px lines, so it sits
         // 18px from the top and bottom edges: an 18px side inset puts it as
         // far from the left edge, on the same arc.
-        "flex flex-col gap-2 rounded-2xl border border-border/60 px-[18px] py-3 text-left transition-colors duration-150 dark:border-border",
+        // A firmer edge than the app's light borders: cards sit side by side
+        // on the column and must read as separate objects.
+        "flex flex-col gap-2 rounded-2xl border border-foreground/10 px-[18px] py-3 text-left transition-colors duration-150",
         // Bulk selection (MIN-75): blue-tinted background instead of an outline.
         selected ? "bg-primary/10" : "bg-card",
         // Hovered, and held while it is dragged, the card firms up its edge

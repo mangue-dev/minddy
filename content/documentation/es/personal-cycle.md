@@ -83,7 +83,7 @@
 
 ## Configurar y llenar tu ciclo {#personal-cycle}
 
-Activa los ciclos en **Ajustes de la cuenta** → **Ciclos**, o con **Activar ciclos** en la pestaña **Ciclo**. Abre esa pestaña en la barra de vistas de **Todas las incidencias**, o busca Ciclo en la paleta de comandos; la pestaña **Ciclo** de un tablero de proyecto, marcada con una flecha, lleva al mismo ciclo personal. Pertenece a tu cuenta y puede contener incidencias que tienes asignadas en proyectos donde eres el propietario o un Miembro. A los lectores no se les puede asignar trabajo, así que un proyecto que solo lees no aporta ninguna incidencia. No es un sprint del proyecto ni pertenece a un objetivo del equipo.
+Activa los ciclos en **Ajustes de la cuenta** → **Ciclos**, o abre Ciclo desde la paleta de comandos y elige allí **Activar ciclos**. Una vez activados, aparece una pestaña **Ciclo** en la barra de vistas de **Todas las incidencias**, y la pestaña **Ciclo** de un tablero de proyecto, marcada con una flecha, lleva al mismo ciclo personal; mientras los ciclos están desactivados, los tableros no muestran la pestaña **Ciclo**. Pertenece a tu cuenta y puede contener incidencias que tienes asignadas en proyectos donde eres el propietario o un Miembro. A los lectores no se les puede asignar trabajo, así que un proyecto que solo lees no aporta ninguna incidencia. No es un sprint del proyecto ni pertenece a un objetivo del equipo.
 
 Elige una duración de una o dos semanas, el día de inicio, de uno a cuatro ciclos futuros y una intensidad ligera, media o alta. Estas opciones determinan tu periodo y capacidad objetivo. Los controles de captura automática indican si las incidencias asignadas entran en el ciclo actual al iniciarse o completarse.
 

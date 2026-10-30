@@ -96,6 +96,14 @@ const horizontalColumnDrag: Modifier = ({ transform }) => ({ ...transform, y: 0 
 const ROW_GUTTER_BUTTON =
   "flex size-6 shrink-0 items-center justify-center rounded-md p-0.5 text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+// Where dragged entries will land: a line over the whole row, drawn by each
+// cell's `::after` above its content. An inset shadow sat UNDER the content,
+// so the hovered name cell's background and the sticky selection cell cut it.
+const ROW_DROP_LINE =
+  "[&>td:not(.sticky)]:relative [&>td]:after:pointer-events-none [&>td]:after:absolute [&>td]:after:inset-x-0 [&>td]:after:z-30 [&>td]:after:h-0.5 [&>td]:after:bg-primary [&>td]:after:content-['']";
+const ROW_DROP_LINE_ABOVE = `${ROW_DROP_LINE} [&>td]:after:top-0`;
+const ROW_DROP_LINE_BELOW = `${ROW_DROP_LINE} [&>td]:after:bottom-0`;
+
 function SortableDatabaseColumn({ projectId, database, property, disabled, onEdit }: {
   projectId: string; database: PageSummary; property: DatabaseProperty; disabled: boolean;
   onEdit: (property: DatabaseProperty) => void;
@@ -1110,7 +1118,7 @@ export function PageDatabaseView({
                   key={entry.id}
                   data-entry-id={entry.id}
                   aria-selected={checked}
-                  className={`group h-10 pointer-coarse:h-12 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? "[&>td]:shadow-[inset_0_2px_0_var(--primary)]" : "[&>td]:shadow-[inset_0_-2px_0_var(--primary)]") : ""}`}
+                  className={`group h-10 pointer-coarse:h-12 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? ROW_DROP_LINE_ABOVE : ROW_DROP_LINE_BELOW) : ""}`}
                   onDragOver={(event) => {
                     if (
                       !manual ||
@@ -1160,7 +1168,8 @@ export function PageDatabaseView({
                               <button
                                 type="button"
                                 aria-label={t("entryActions")}
-                                className={cn(ROW_GUTTER_BUTTON, "size-7", isDragging && "cursor-grabbing")}
+                                // A handle: it shows the grab hand before the press.
+                                className={cn(ROW_GUTTER_BUTTON, "size-7", manual && "cursor-grab", isDragging && "cursor-grabbing")}
                                 onPointerDownCapture={(event) => {
                                   if (event.button === 0) event.stopPropagation();
                                 }}

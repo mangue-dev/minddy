@@ -5,8 +5,10 @@ import { openPage, CAPTURE, CAPTURE_LOCALES } from '../../lib/browser.mjs';
 import { captureDocumentationControl, settleDocumentationPage } from '../../lib/documentation-frame.mjs';
 import { catalog } from '../../lib/messages.mjs';
 import { pageDemoFixture as fixture, translateDemoPageValues } from './localize.mjs';
-const project = fixture.projectId;
-const doc = fixture.pageId;
+// The preview and production demo worlds give Aurora and its page different
+// ids; the fixture holds production's.
+const project = process.env.DOC_CAPTURE_PROJECT ?? fixture.projectId;
+const doc = process.env.DOC_CAPTURE_PAGE ?? fixture.pageId;
 const origin = new URL(CAPTURE.baseUrl);
 if (!['localhost', '127.0.0.1'].includes(origin.hostname)) throw new Error('Product documentation captures require a local candidate instance.');
 const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();

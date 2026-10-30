@@ -390,7 +390,7 @@ function CommentBody({
         <Markdown
           allowRawHtml
           linkVariant="plain"
-          className="text-sm text-foreground"
+          className="comment-selectable text-sm text-foreground"
         >
           {comment.body}
         </Markdown>

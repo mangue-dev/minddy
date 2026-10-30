@@ -551,7 +551,7 @@ export function ThreadComment({
                         <Markdown
                           allowRawHtml
                           linkVariant="plain"
-                          className="text-sm text-foreground [&_code]:bg-primary/10 [&_code]:text-primary"
+                          className="content-selectable text-sm text-foreground [&_code]:bg-primary/10 [&_code]:text-primary"
                         >
                           {edit.body}
                         </Markdown>

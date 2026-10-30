@@ -125,7 +125,7 @@ export function BoardLoadingSkeleton({
 function BoardCardSkeleton({ detailed }: { detailed: boolean }) {
   return (
     <div
-      className="flex shrink-0 flex-col gap-2 rounded-2xl border border-border/60 bg-card p-3 dark:border-border"
+      className="flex shrink-0 flex-col gap-2 rounded-2xl border border-foreground/10 bg-card p-3"
       data-board-skeleton-card
     >
       <div className="flex items-center justify-between gap-2">

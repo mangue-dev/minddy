@@ -557,11 +557,13 @@ function GlobalBoardInner() {
           withNumo
           withShare={false}
           onAskAI={handleAskAI}
-          cycleTab={{
+          // No Cycle tab while cycles are off; `?view=cycle` still reaches
+          // their activation screen.
+          cycleTab={cyclesEnabled ? {
             active: cycleMode,
             completionPercent: currentCycleCompletionPercent,
             onSelect: () => switchCycleMode(true),
-          }}
+          } : undefined}
           rightControls={
             cycleMode ? (
               cyclesEnabled && selectedCycle ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Book02Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, HistoryIcon, Home01Icon, LogOutIcon, Megaphone01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Book02Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, NewspaperIcon, Comment01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -842,14 +842,14 @@ function ChangelogButton({
               setDialogOpen(true);
             }}
           >
-            <AppIcon icon={HistoryIcon} className="size-[18px] shrink-0" />
+            <AppIcon icon={NewspaperIcon} className="size-[18px] shrink-0" />
             <span className="min-w-0 truncate">{t("changelog")}</span>
           </button>
           {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
             handleMenuOpenChange(false);
             if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
             else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");
-          }}><AppIcon icon={Megaphone01Icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{t("shareFeedback")}</span></button>}
+          }}><AppIcon icon={Comment01Icon} className="size-[18px] shrink-0" /><span className="min-w-0 truncate">{t("shareFeedback")}</span></button>}
           <AppVersions
             className="px-3 pt-3"
             web={t("webVersion")}
@@ -890,7 +890,7 @@ function ChangelogButton({
             }}
             className="py-1.5 max-[1199px]:py-1.5"
           >
-            <HugeiconsIcon icon={HistoryIcon} className="size-4 shrink-0 text-muted-foreground" />
+            <HugeiconsIcon icon={NewspaperIcon} className="size-4 shrink-0 text-muted-foreground" />
             <span className="min-w-0 flex-1 truncate">
               {t("changelog")}
             </span>
@@ -914,7 +914,7 @@ function ChangelogButton({
                 }}
                 className="py-1.5 max-[1199px]:py-1.5"
               >
-                <HugeiconsIcon icon={Megaphone01Icon} className="size-4 shrink-0 text-muted-foreground" />
+                <HugeiconsIcon icon={Comment01Icon} className="size-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">
                   {t("shareFeedback")}
                 </span>

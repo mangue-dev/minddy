@@ -63,7 +63,7 @@ function TextAttachmentPreview({ src, markdown }: { src: string; markdown: boole
     // Absolutely placed in the reader's bounded body: it scrolls inside the
     // reader while the filename and the actions stay in view.
     <div className="absolute inset-0 overflow-y-auto overscroll-contain bg-background p-6 sm:p-8">
-      {markdown ? <Markdown breaks={false} className="mx-auto max-w-4xl">{content}</Markdown>
+      {markdown ? <Markdown breaks={false} className="content-selectable mx-auto max-w-4xl">{content}</Markdown>
         : <pre className="whitespace-pre-wrap break-words font-mono text-sm">{content}</pre>}
     </div>
   );

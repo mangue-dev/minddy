@@ -685,6 +685,12 @@ code,
 [contenteditable="true"] :not([contenteditable="false"], [contenteditable="false"] *) {
   user-select: text;
 }
+/* A READ-ONLY editor too — a reader's view of a description, a page or a
+   plan — so whoever cannot edit the text can still select and copy it. */
+.ProseMirror[contenteditable="false"],
+.ProseMirror[contenteditable="false"] * {
+  user-select: text;
+}
 
 /* iOS Safari zooms a focused control whose font-size < 16px. Enforce 16px floor
    on small screens. Excludes checkbox/radio/buttons. */

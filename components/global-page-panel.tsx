@@ -14,7 +14,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PageView } from "@/components/pages/page-view";
 import { PagePeekPanel } from "@/components/pages/page-peek-panel";
-import { Spinner } from "@/components/ui/spinner";
+import { PageDocumentSkeleton } from "@/components/route-skeletons";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { pageHref, pagesHref, pushPagesHistory } from "@/lib/pages-navigation";
@@ -112,9 +112,8 @@ export function GlobalPagePanel({
           }}
         />
       ) : (
-        <div className="flex flex-1 items-center justify-center py-16">
-          <Spinner />
-        </div>
+        // The page view's own loading skeleton, not a spinner before it.
+        <PageDocumentSkeleton panel />
       )}
     </PagePeekPanel>
   );

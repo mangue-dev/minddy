@@ -673,7 +673,7 @@ export function CommentBlock({
         ) : liveBody ? (
           <div className="flex flex-col gap-1.5">
             <Markdown
-              className="text-foreground"
+              className="comment-selectable text-foreground"
               members={ctx.members}
               mentionScan={scopedMentions?.scan}
               mentionLinks={scopedMentions?.links}
@@ -743,7 +743,7 @@ export function CommentBlock({
           />
           {codeExcerpt.body && (
             <Markdown
-              className="text-foreground"
+              className="comment-selectable text-foreground"
               members={ctx.members}
               mentionScan={scopedMentions?.scan}
               mentionLinks={scopedMentions?.links}
@@ -755,7 +755,7 @@ export function CommentBlock({
       ) : (
         comment.body && (
           <Markdown
-            className="text-foreground"
+            className="comment-selectable text-foreground"
             members={ctx.members}
             mentionScan={scopedMentions?.scan}
             mentionLinks={scopedMentions?.links}

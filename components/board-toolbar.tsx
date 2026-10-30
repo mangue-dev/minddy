@@ -19,7 +19,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { DragCursor } from "@/components/drag-cursor";
-import { DRAG_ACTIVATION_DISTANCE, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
+import { DRAG_ACTIVATION_DISTANCE, DRAGGED_PILL_BG, HORIZONTAL_DRAG, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
 import {
   SortableContext,
   arrayMove,
@@ -55,7 +55,8 @@ import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
 import { ProgressRing } from "@/components/progress-ring";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
-import { ShareViewDialog } from "@/components/share-view-dialog";
+import { ShareViewDialog, prefetchViewShare } from "@/components/share-view-dialog";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/form-dialog";
 import { useDragAnnouncements } from "@/lib/use-drag-announcements";
 import {
@@ -738,6 +739,7 @@ export function BoardToolbar({
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<View | null>(null);
   const [shareTarget, setShareTarget] = useState<View | null>(null);
+  const queryClient = useQueryClient();
   const [deleteTarget, setDeleteTarget] = useState<View | null>(null);
   // Right click on a pill (MIN-135): the targeted view + the anchor point of the
   // menu. This is the CLICKED view, not the active one — the “⋯” menu remains on
@@ -784,10 +786,25 @@ export function BoardToolbar({
     [views, hasCycle]
   );
   const { order: storedOrder, setOrder } = useTabOrderQuery(tabOrderScope);
-  const tabKeys = useMemo(
+  const savedTabKeys = useMemo(
     () => mergeTabOrder(defaultTabKeys, storedOrder),
     [defaultTabKeys, storedOrder]
   );
+  // The order of the last drop, held until the saved order catches up: the
+  // cache notifies a tick after the drop, and the dragged pill showed (and
+  // its copy settled on) its old place in between.
+  const [dropOrder, setDropOrder] = useState<string[] | null>(null);
+  const savedTabOrder = savedTabKeys.join(",");
+  useEffect(() => {
+    if (!dropOrder) return;
+    if (dropOrder.length !== savedTabKeys.length || dropOrder.join(",") === savedTabOrder) {
+      setDropOrder(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setDropOrder(null), 2000);
+    return () => window.clearTimeout(timer);
+  }, [dropOrder, savedTabOrder, savedTabKeys.length]);
+  const tabKeys = dropOrder && dropOrder.length === savedTabKeys.length ? dropOrder : savedTabKeys;
   const tabAnnouncements = useDragAnnouncements((id) => {
     if (id === CYCLE_TAB_KEY) return t("cycleTab");
     const view = viewById.get(String(id));
@@ -809,8 +826,11 @@ export function BoardToolbar({
     const from = tabKeys.indexOf(String(active.id));
     const to = tabKeys.indexOf(String(over.id));
     if (from === -1 || to === -1) return;
-    // Optimistic: setOrder patches the cache instantly, then persists.
-    void setOrder(arrayMove(tabKeys, from, to)).catch((err) => {
+    // Optimistic: shown in this very frame, then setOrder patches the cache
+    // and persists.
+    const next = arrayMove(tabKeys, from, to);
+    setDropOrder(next);
+    void setOrder(next).catch((err) => {
       console.error("[board-toolbar] tab order save failed", err);
       toast.error(tApi("tabOrderSaveFailed"));
     });
@@ -825,6 +845,8 @@ export function BoardToolbar({
   // menu that sometimes only appears reads like a bug.
   const openViewMenu = (view: View | null, e: React.MouseEvent) => {
     e.preventDefault();
+    // The menu offers Share: its dialog then opens on a loaded state.
+    if (withShare && view) prefetchViewShare(queryClient, view.id);
     setViewMenu({ view, x: e.clientX, y: e.clientY });
   };
   const viewMenuActions = useMemo<ContextMenuAction[]>(() => {
@@ -899,6 +921,8 @@ export function BoardToolbar({
             sensors={tabSensors}
             accessibility={{ announcements: tabAnnouncements }}
             collisionDetection={closestCenter}
+            // Along the strip only, like the app's tabs.
+            modifiers={HORIZONTAL_DRAG}
             onDragStart={(event: DragStartEvent) =>
               setActiveTabId(String(event.active.id))
             }
@@ -943,7 +967,7 @@ export function BoardToolbar({
                 new place, or back at its origin after a cancel. */}
             <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION}>
               {activeTabId === CYCLE_TAB_KEY && cycleTab ? (
-                <div className={cn(PILL_CLASS, pillTone(cycleTab.active), "shadow-md")}>
+                <div className={cn(PILL_CLASS, pillTone(cycleTab.active), !cycleTab.active && DRAGGED_PILL_BG, "shadow-md")}>
                   {cycleTab.completionPercent === null ||
                   cycleTab.completionPercent === undefined ? (
                     <AppIcon icon={CycleIcon} className="size-3 shrink-0" aria-hidden />
@@ -964,6 +988,7 @@ export function BoardToolbar({
                   className={cn(
                     PILL_CLASS,
                     pillTone(activeDragView.id === activeViewId),
+                    activeDragView.id !== activeViewId && DRAGGED_PILL_BG,
                     "shadow-md"
                   )}
                 >
@@ -1048,7 +1073,11 @@ export function BoardToolbar({
 
           {/* Active view actions — rename / share / delete (the system view
               only shares; without Share the menu would be empty → disabled) */}
-          <DropdownMenu>
+          <DropdownMenu
+            onOpenChange={(open) => {
+              if (open && withShare && activeView) prefetchViewShare(queryClient, activeView.id);
+            }}
+          >
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenuTrigger asChild>

@@ -1813,9 +1813,9 @@ function FeedbackDetail({
 
         {translation && showTranslated ? (
           <div className="flex flex-col gap-2">
-            <h2 className="text-2xl leading-tight font-semibold">{translation.title}</h2>
+            <h2 className="content-selectable text-2xl leading-tight font-semibold">{translation.title}</h2>
             {translation.body ? (
-              <Markdown className="text-sm">{translation.body}</Markdown>
+              <Markdown className="comment-selectable text-sm">{translation.body}</Markdown>
             ) : null}
             <p className="text-xs text-muted-foreground">{t("translatedReadOnly")}</p>
           </div>
@@ -1868,7 +1868,7 @@ function FeedbackDetail({
             </summary>
             {/* ml-1.5 + pl-3: the net falls in the axis of the rafter, and the
                 text takes exactly the margin of the wording above. */}
-            <div className="mt-2 ml-1.5 flex flex-col gap-1.5 border-l-2 border-border/60 pl-3 text-sm">
+            <div className="content-selectable mt-2 ml-1.5 flex flex-col gap-1.5 border-l-2 border-border/60 pl-3 text-sm">
               <p className="font-medium">{post.submitted_title}</p>
               {post.submitted_body ? (
                 <p className="whitespace-pre-wrap text-muted-foreground">

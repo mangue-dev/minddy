@@ -83,7 +83,7 @@
 
 ## Deinen Zyklus einrichten und füllen {#personal-cycle}
 
-Aktiviere Zyklen unter **Kontoeinstellungen** → **Zyklen** oder mit **Zyklen aktivieren** im Tab **Zyklus**. Öffne diesen Tab in der Ansichtsleiste von **Alle Tickets** oder suche in der Befehlspalette nach Zyklus; der mit einem Pfeil markierte Tab **Zyklus** eines Projektboards führt zum selben persönlichen Zyklus. Er gehört zu deinem Konto und kann Tickets enthalten, die dir in Projekten zugewiesen sind, in denen du Eigentümer oder Mitglied bist. Leser können keine Zuweisungen erhalten, daher trägt ein Projekt, das du nur liest, keine Arbeit bei. Er ist kein Projektsprint und gehört nicht zu einem Teamziel.
+Aktiviere Zyklen unter **Kontoeinstellungen** → **Zyklen** oder öffne Zyklus über die Befehlspalette und wähle dort **Zyklen aktivieren**. Sind sie aktiv, erscheint in der Ansichtsleiste von **Alle Tickets** ein Tab **Zyklus**, und der mit einem Pfeil markierte Tab **Zyklus** eines Projektboards führt zum selben persönlichen Zyklus; solange Zyklen deaktiviert sind, zeigen Boards keinen Tab **Zyklus**. Er gehört zu deinem Konto und kann Tickets enthalten, die dir in Projekten zugewiesen sind, in denen du Eigentümer oder Mitglied bist. Leser können keine Zuweisungen erhalten, daher trägt ein Projekt, das du nur liest, keine Arbeit bei. Er ist kein Projektsprint und gehört nicht zu einem Teamziel.
 
 Wähle eine Dauer von einer oder zwei Wochen, den Startwochentag, ein bis vier kommende Zyklen und eine leichte, mittlere oder hohe Intensität. Diese Einstellungen bestimmen deinen persönlichen Zeitraum und die Zielkapazität. Die Schalter für automatische Übernahme steuern, ob dir zugewiesene Tickets beim Start oder Abschluss in den aktuellen Zyklus aufgenommen werden.
 

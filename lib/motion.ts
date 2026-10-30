@@ -23,5 +23,8 @@ export const transitions = {
  * layout causes the entire right half to jolt de
  * the screen. The curve starts quickly and settles gently.
  */
-  shell: { duration: 0.18, ease: [0.32, 0.72, 0, 1] } as Transition,
+  // 280ms, in step with the CSS widths and margin that travel with it
+  // (sidebar-nav-overlay.tsx, app-top-bar.tsx, globals.css): slow enough to
+  // follow the panel with the eye.
+  shell: { duration: 0.28, ease: [0.32, 0.72, 0, 1] } as Transition,
 };

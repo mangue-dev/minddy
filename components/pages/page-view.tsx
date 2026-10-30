@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { DatabaseSkeleton, PageDocumentSkeleton } from "@/components/route-skeletons";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { Editor, JSONContent } from "@tiptap/react";
@@ -1034,11 +1035,11 @@ function PageSurface({
   // The editor is built on the session's snapshot: wait for it (or for its
   // failure, which falls back to the snapshot editor) rather than remounting.
   if (isPending || !page || collaboration.status === "loading") {
-    return (
-      <div className="flex flex-1 items-center justify-center py-16">
-        <Spinner />
-      </div>
-    );
+    // The same skeleton as the route's loading state: no spinner over it. The
+    // page list already says when the page is a database.
+    return summary?.database_schema != null
+      ? <DatabaseSkeleton panel={!!panel} />
+      : <PageDocumentSkeleton panel={!!panel} />;
   }
 
   return (

@@ -83,7 +83,7 @@
 
 ## Configurar e preencher seu ciclo {#personal-cycle}
 
-Ative os ciclos em **Configurações da conta** → **Ciclos**, ou com **Ativar ciclos** na aba **Ciclo**. Abra essa aba na barra de visualizações de **Todos os tickets**, ou pesquise Ciclo na paleta de comandos; a aba **Ciclo** de um quadro de projeto, marcada com uma seta, leva ao mesmo ciclo pessoal. Ele pertence à sua conta e pode conter tickets atribuídos a você em projetos dos quais você é o proprietário ou um Membro. Os leitores não podem ser atribuídos, então um projeto que você apenas lê não contribui com trabalho. Não é uma sprint de projeto nem pertence a um objetivo da equipe.
+Ative os ciclos em **Configurações da conta** → **Ciclos**, ou abra Ciclo pela paleta de comandos e escolha ali **Ativar ciclos**. Depois de ativados, uma aba **Ciclo** aparece na barra de visualizações de **Todos os tickets**, e a aba **Ciclo** de um quadro de projeto, marcada com uma seta, leva ao mesmo ciclo pessoal; enquanto os ciclos estão desativados, os quadros não mostram a aba **Ciclo**. Ele pertence à sua conta e pode conter tickets atribuídos a você em projetos dos quais você é o proprietário ou um Membro. Os leitores não podem ser atribuídos, então um projeto que você apenas lê não contribui com trabalho. Não é uma sprint de projeto nem pertence a um objetivo da equipe.
 
 Escolha a duração de uma ou duas semanas, o dia de início, de um a quatro ciclos futuros e a intensidade leve, média ou alta. Essas configurações definem seu período pessoal e a capacidade desejada. Os controles de captura automática determinam se tickets atribuídos entram no ciclo atual quando são iniciados ou concluídos.
 

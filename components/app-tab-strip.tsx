@@ -12,10 +12,9 @@ import {
   type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
-  type Modifier,
 } from "@dnd-kit/core";
 import { DragCursor } from "@/components/drag-cursor";
-import { DRAG_ACTIVATION_DISTANCE, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
+import { DRAG_ACTIVATION_DISTANCE, HORIZONTAL_DRAG, SETTLE_DROP_ANIMATION } from "@/lib/drag-feel";
 import {
   SortableContext,
   arrayMove,
@@ -64,9 +63,6 @@ const routeLabels: Record<string, MessageKey<"Nav">> = {
   "pull-requests": "pullRequests", trash: "trash", settings: "settings", billing: "billing",
   admin: "adminDashboard", pages: "pages", tickets: "tickets", objectives: "objectives", feedback: "feedback", triage: "triage",
 };
-
-const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
-const horizontalDragModifiers = [restrictToHorizontalAxis];
 
 /** Right padding of the strip's outer container (`pr-2`) — never tab room. */
 const RAIL_PAD_RIGHT = 8;
@@ -306,7 +302,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           else return;
           event.preventDefault(); controls[next]?.focus();
         }}>
-        <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={horizontalDragModifiers}
+        <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={HORIZONTAL_DRAG}
           accessibility={{ announcements: tabAnnouncements }}
           onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
           onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
@@ -338,7 +334,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           </SortableAppTab>;
         })}
         </SortableContext>
-        <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION} modifiers={horizontalDragModifiers}>
+        <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION} modifiers={HORIZONTAL_DRAG}>
           {draggedTab && (() => {
             const { section, projectId, project, objectiveId, objective, composite, label } = describe(draggedTab);
             return <div className={draggedTab.pinned

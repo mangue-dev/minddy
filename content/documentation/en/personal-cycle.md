@@ -83,7 +83,7 @@
 
 ## Configure and fill your cycle {#personal-cycle}
 
-Enable cycles in **Account settings** → **Cycles**, or with **Activate cycles** on the **Cycle** tab. Open that tab in the view bar of **All issues**, or search for Cycle in the command palette; a project board's **Cycle** tab, marked with an arrow, leads to the same personal cycle. It belongs to your account and can contain issues assigned to you in projects where you are the owner or a Member. Readers cannot be assigned, so a project you only read contributes no work. It is not a project sprint and does not belong to a team objective.
+Enable cycles in **Account settings** → **Cycles**, or open Cycle from the command palette and choose **Activate cycles** there. Once they are on, a **Cycle** tab appears in the view bar of **All issues**, and a project board's **Cycle** tab, marked with an arrow, leads to the same personal cycle; while cycles are off, boards show no **Cycle** tab. It belongs to your account and can contain issues assigned to you in projects where you are the owner or a Member. Readers cannot be assigned, so a project you only read contributes no work. It is not a project sprint and does not belong to a team objective.
 
 Choose a duration of one or two weeks, the starting weekday, one to four upcoming cycles and light, medium or heavy intensity. These settings determine your personal period and target capacity. The automatic-capture switches control whether assigned issues enter the current cycle when they start or finish.
 

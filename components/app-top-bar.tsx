@@ -43,7 +43,7 @@ function AppTopBarContents({ hidden, inbox, onSearch, onSearchWarm, onNewTab }: 
         and inbox slide with it instead of jumping. `interpolate-size` lets the
         width travel to and from `auto`; a browser without it switches at once. */}
     <div style={{ width }}
-      className="flex h-11 shrink-0 items-center gap-1 overflow-hidden px-[10px] [interpolate-size:allow-keywords] [transition:width_180ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:[transition:none]">
+      className="flex h-11 shrink-0 items-center gap-1 overflow-hidden px-[10px] [interpolate-size:allow-keywords] [transition:width_280ms_cubic-bezier(0.32,0.72,0,1)] motion-reduce:[transition:none]">
       {native.reserved && <div aria-hidden className="shrink-0" style={{ width: WINDOW_BUTTONS_WIDTH - 10 }} />}
       <SidebarVisibilityButton collapsed />
       <AppTopActions collapsed={false} inbox={inbox} onSearch={onSearch} onSearchWarm={onSearchWarm} />

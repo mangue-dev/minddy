@@ -236,7 +236,7 @@
       "capturedAt": "2026-10-22",
       "viewport": [
         496,
-        230
+        234
       ],
       "theme": "light",
       "padding": 24,
