@@ -41,6 +41,7 @@ const EXPECTED_TOOL_NAMES = [
   "minddy_get_objective",
   "minddy_get_page",
   "minddy_get_project",
+  "minddy_get_project_stats",
   "minddy_get_pull_request",
   "minddy_get_resource",
   "minddy_get_scratchpad",

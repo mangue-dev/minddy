@@ -109,6 +109,42 @@ export const TABLE_SCOPES = {
     ],
   },
 
+  // ── Ticket relations (MIN-878) ───────────────────────────────────────────
+  // "Blocks" and "related" links between two demo tickets, for the ticket
+  // graph of the project statistics. Both ends must be proven demo tickets;
+  // a relation to an objective is never seeded.
+  issue_relations: {
+    writable: true,
+    projectColumn: "project_id",
+    parents: [
+      { column: "source_id", table: "issues" },
+      { column: "target_id", table: "issues" },
+    ],
+    userRefColumns: ["created_by"],
+  },
+
+  // ── Pull requests linked to demo tickets (MIN-878) ──────────────────────
+  // A pull request belongs to a repository, not to a project, so it is
+  // anchored by its primary ticket (`issue_id`), which must be a demo ticket.
+  // The demo repository name is not a valid GitHub owner, and no demo project
+  // links a repository, so nothing ever polls or reaches a forge. Title and
+  // repository name are protected: the seed encodes them with the
+  // application's codecs (`encrypted-content.mjs`).
+  pull_requests: {
+    writable: true,
+    parents: [{ column: "issue_id", table: "issues" }],
+  },
+  // Written by the `pull_request_primary_issue_link` trigger from the row
+  // above; declared so the guards measure it and a cleanup can reach it.
+  pull_request_issues: {
+    writable: true,
+    idColumn: "pull_request_id",
+    parents: [
+      { column: "pull_request_id", table: "pull_requests" },
+      { column: "issue_id", table: "issues" },
+    ],
+  },
+
   // ── Ticket comments mirrored from a pull request (MIN-802) ──────────────
   // A comment is anchored by its demo ticket; its author must be a demo
   // account. `parent_id` points to ANOTHER comment, like a page's parent: the

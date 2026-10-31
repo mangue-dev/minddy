@@ -6,6 +6,8 @@ import ProjectSettingsPage from "@/app/(app)/projects/[id]/settings/page";
 import { ProjectGeneralSection } from "@/components/settings/project-general-section";
 import { AppTabsSession } from "./app-tabs-session";
 import { createHomeTab } from "./app-tabs";
+import { projectPath } from "./app-urls";
+import { registerRecordIds } from "./ref-registry";
 import type { Project } from "./types";
 
 const state = vi.hoisted(() => ({
@@ -15,14 +17,22 @@ const state = vi.hoisted(() => ({
   removeMember: vi.fn(async () => {}),
   refetch: vi.fn(),
   router: { push: vi.fn(), replace: vi.fn() },
+  pathname: "/projects/project/settings",
+  projects: [] as Project[],
 }));
 const project = { id: "project", owner_id: "owner", name: "Project", key: "PRJ" } as Project;
-vi.mock("next/navigation", () => ({ useParams: () => ({ id: "project" }), useRouter: () => state.router }));
+state.projects = [project];
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ id: state.pathname.split("/")[2] }),
+  usePathname: () => state.pathname,
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => state.router,
+}));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/lib/app-tabs-context", () => ({ useOptionalAppTabSession: () => state.session }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({
-  projects: [project], loading: false, deleteProject: state.deleteProject, refetch: state.refetch,
+  projects: state.projects, loading: false, deleteProject: state.deleteProject, refetch: state.refetch,
 }) }));
 vi.mock("@/lib/members-api", () => ({ removeMemberApi: state.removeMember }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
@@ -54,6 +64,7 @@ vi.mock("sonner", async (importOriginal) => ({
 vi.mock("@/components/settings/settings-ui", () => ({
   SettingsGroup: ({ children, action }: { children?: ReactNode; action?: ReactNode }) => createElement(Fragment, null, children, action),
   SettingsRow: ({ control }: { control?: ReactNode }) => createElement(Fragment, null, control),
+  SettingsBlock: ({ children }: { children?: ReactNode }) => createElement(Fragment, null, children),
 }));
 vi.mock("@/components/settings-shell", () => ({ SettingsShell: () => null }));
 vi.mock("@/components/project-members", () => ({ ProjectMembers: () => null }));
@@ -66,6 +77,7 @@ vi.mock("@/components/settings/project-recurrences-section", () => ({ ProjectRec
 vi.mock("@/components/settings/smart-assign-section", () => ({ SmartAssignSection: () => null }));
 vi.mock("@/components/settings/project-visibility-section", () => ({ ProjectVisibilityRow: () => null }));
 vi.mock("@/components/settings/project-identity-header", () => ({ ProjectIdentityHeader: () => null }));
+vi.mock("@/components/stats/project-statistics", () => ({ ProjectStatistics: () => null }));
 vi.mock("@/components/route-skeletons", () => ({ SettingsPageSkeleton: () => null }));
 
 let root: Root;
@@ -75,6 +87,9 @@ let homeTabId: string;
 beforeEach(async () => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks();
+  state.pathname = "/projects/project/settings";
+  state.projects = [project];
+  state.confirmDelete = null;
   const home = createHomeTab("owner");
   const settings = { ...createHomeTab("owner", undefined, 1), href: "/projects/project/settings" };
   homeTabId = home.id;
@@ -121,5 +136,17 @@ describe("project removal navigation", () => {
     expect(state.removeMember).toHaveBeenCalledExactlyOnceWith(project.id, "owner");
     expect(state.refetch).toHaveBeenCalledOnce();
     expectProjectDestinationReplaced();
+  });
+  it("finds the project its short-code URL names", async () => {
+    // Links address a project by its short code, never by its id (#571).
+    const coded = { ...project, id: "3f2a9c81-0000-4000-8000-000000000001" } as Project;
+    registerRecordIds([coded]);
+    state.projects = [coded];
+    state.pathname = projectPath(coded, "settings");
+    expect(state.pathname).not.toContain(coded.id);
+    await act(() => root.render(createElement(ProjectSettingsPage)));
+    expect(container.textContent).not.toContain("projectNotFound");
+    await act(async () => { await state.confirmDelete!(); });
+    expect(state.deleteProject).toHaveBeenCalledExactlyOnceWith(coded.id);
   });
 });

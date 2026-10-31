@@ -14,7 +14,8 @@ import {useProjects} from "@/lib/projects-context";
 import {removeMemberApi} from "@/lib/members-api";
 import {normalizeKey} from "@/lib/project-key";
 import {ProjectIdentityHeader} from "@/components/settings/project-identity-header";
-import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {SettingsBlock, SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
+import {ProjectStatistics} from "@/components/stats/project-statistics";
 import {ProjectVisibilityRow} from "@/components/settings/project-visibility-section";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import type { Project } from "@/lib/types";
@@ -22,9 +23,9 @@ import type { Project } from "@/lib/types";
 /**
  * “General” tab of a project's settings: its identity as a header — icon,
  * name, key and a few figures, edited in place like the account profile
- * (MIN-737) — then the danger zone, which gathers what takes the project
- * out of view: hiding it for yourself (both branches, MIN-692), then moving
- * it to trash (owner) or leaving it (member).
+ * (MIN-737) — then its statistics (MIN-878), then the danger zone, which
+ * gathers what takes the project out of view: hiding it for yourself (both
+ * branches, MIN-692), then moving it to trash (owner) or leaving it (member).
  */
 export function ProjectGeneralSection({
   project,
@@ -38,6 +39,7 @@ export function ProjectGeneralSection({
 }) {
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
+  const tProjectStats = useTranslations("ProjectStats");
   const router = useAppRouter();
   const { user } = useAuth();
   const { updateProject, refetch } = useProjects();
@@ -71,11 +73,19 @@ export function ProjectGeneralSection({
   };
 
   const header = (
-    <ProjectIdentityHeader
-      project={project}
-      onSaveName={isOwner ? saveName : undefined}
-      onSaveKey={isOwner ? saveKey : undefined}
-    />
+    <>
+      <ProjectIdentityHeader
+        project={project}
+        onSaveName={isOwner ? saveName : undefined}
+        onSaveKey={isOwner ? saveKey : undefined}
+      />
+      <SettingsBlock
+        anchor={SETTINGS_SECTIONS.projectStatistics}
+        label={tProjectStats("title")}
+      >
+        <ProjectStatistics project={project} />
+      </SettingsBlock>
+    </>
   );
 
   if (!isOwner) {

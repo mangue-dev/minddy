@@ -113,6 +113,7 @@ export const SETTINGS_SECTIONS = {
   accountDataDelete: "account-data-delete",
 
   projectGeneral: "project-general",
+  projectStatistics: "project-statistics",
   projectVisibility: "project-visibility",
   projectLeave: "project-leave",
   projectDanger: "project-danger",
@@ -202,6 +203,7 @@ export function useSettingsSections(): SettingsSection[] {
   const tLanguage = useTranslations("Language");
   const desktopMaterialSupported = useDesktopWindowMaterial().state?.supported === true;
   const tStats = useTranslations("Stats");
+  const tProjectStats = useTranslations("ProjectStats");
 
   return useMemo(() => {
     const accountTabs: Record<AccountSettingsTab, string> = {
@@ -703,6 +705,17 @@ export function useSettingsSections(): SettingsSection[] {
         ],
       }),
       project({
+        id: SETTINGS_SECTIONS.projectStatistics,
+        tab: "general",
+        icon: ChartLineData01Icon,
+        title: tProjectStats("title"),
+        keywords: [
+          "statistiques", "statistics", "stats", "élan", "elan", "momentum",
+          "graphique", "chart", "pull request", "contributeurs",
+          "contributors", "graphe", "graph", "relations",
+        ],
+      }),
+      project({
         id: SETTINGS_SECTIONS.projectVisibility,
         tab: "general",
         icon: ViewOffIcon,
@@ -875,6 +888,7 @@ export function useSettingsSections(): SettingsSection[] {
     tSettings,
     tLanguage,
     tStats,
+    tProjectStats,
     desktopMaterialSupported,
   ]);
 }

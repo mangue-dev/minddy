@@ -65,3 +65,21 @@ encoded with the application's comment codec through
 `captures/lib/encrypted-content.mjs`. A comment already mirrored keeps its
 identity and has its text realigned with the script. The default run only
 describes the change; `--apply` requires explicit user approval.
+
+`022-projet-lumen.mjs` creates "Lumen" (LUM), a large demo project for the
+project statistics (MIN-878) and the load test of their issue graph: about a
+thousand English issues spread over eight months, with epics and sub-issues,
+assignees among the three demo people, a few overdue and stalled issues, Smart
+Fill-like "related" and "blocks" relations, and pull requests on the fictitious
+`minddy_demo/lumen` repository. GitHub owners cannot contain an underscore, so
+that name never designates a real repository, and no demo project links a
+repository, so nothing polls a forge. Pull request titles and the repository
+name are encoded with the application's codecs through
+`captures/lib/encrypted-content.mjs`; registering the encrypted repository name
+is the one write that codec makes outside the guarded plans. Everything comes
+from a fixed seed and dates are relative to the run, so the history always
+ends on the day it is applied. The default run only describes the world;
+`--apply` requires explicit user approval and only creates what is missing. Deleting the demo
+world does not remove those pull requests (their ticket link is only set to
+null), so remove them with `plan.remove("pull_requests", …)` before
+`deleteDemoWorld()`.

@@ -286,6 +286,7 @@ const RETRYABLE_READ_TOOLS = new Set([
   "search_issues",
   "get_issue",
   "list_members",
+  "get_project_stats",
   "list_objectives",
   "list_categories",
   "list_integrations",

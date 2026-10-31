@@ -439,6 +439,15 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "get_project_stats",
+      description:
+        "Read the selected project's statistics, read-only \u2014 the numbers of its General settings: issue count per status; open, overdue, unassigned and stalled counts (stalled = in progress or in review with no change for stalled_after_days days); the overdue and stalled issues themselves (identifier, title, assignee_id, due date or last change, most urgent first, up to 25 each); the momentum (issues completed over the last 28 days against the 28 before, created minus completed); the median lead time from creation to done over 90 days; issues created and completed per week over 12 weeks; the top contributors over 90 days; and, when pull requests are linked to its issues, merged/open/closed counts, median hours to merge and merges per week. Use it when the user asks how the project is doing, what is late or stuck, or about its pace. Read-only: it changes nothing.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_objective",
       description:
         "Read an objective's id, name, description, status, lead_user_id and target_date, its comment thread (comments, with their resources), plus linked_feedback (requests associated with the objective) and its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",

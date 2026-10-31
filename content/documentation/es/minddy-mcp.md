@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-27",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -53,14 +53,16 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "lib/server/issue-reads.ts",
-      "components/settings/account-settings-page.tsx"
+      "components/settings/account-settings-page.tsx",
+      "lib/server/project-stats.ts",
+      "lib/project-stats.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of external-minddy-mcp-install-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-800 bulk-edit paragraph checked against the issue, relation, text-edit, page, notebook, objective and feedback tools in lib/server/mcp/tools.ts and lib/server/mcp/page-tools.ts, and their tests bulk-tools.test.ts, page-tools.test.ts and scratchpad-text-edit.test.ts; the issue, relation, text, page, notebook and objective tools also exercised against the preview database with a throwaway account, removed afterwards (the feedback batch only by tests); figures unchanged and still accurate)",
-    "language": "agent:MIN-768 (es translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es figure update after the catalog review; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (MIN-800 es bulk-edit paragraph, glossary term and locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-27"
+    "revision": 17,
+    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept)",
+    "language": "agent:claude (es paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "numo",
@@ -81,7 +83,7 @@
       "src": "/documentation/es/external-minddy-mcp-workflow.png",
       "alt": "Selector de clientes MCP de minddy con Claude, Codex y otros asistentes.",
       "caption": "Selecciona tu cliente para ver su comando o configuración de instalación.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -98,7 +100,7 @@
       "src": "/documentation/es/external-minddy-mcp-install-workflow.png",
       "alt": "Paso de instalación de Codex en el asistente de conexión al MCP de minddy, con el endpoint de minddy Cloud.",
       "caption": "Este ejemplo conecta con minddy Cloud. Para el autoalojamiento, utiliza el origen de tu propia instancia; el comando mostrado no se ejecutó para esta captura.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -159,6 +161,8 @@ minddy expone `/api/mcp` mediante Streamable HTTP, herramientas sin estado y OAu
 Para encontrar una incidencia, llama a `minddy_list_issues` con `query`: busca palabras del título y la descripción, un identificador o un número. Las coincidencias de texto y los identificadores exactos van primero; una búsqueda descriptiva puede añadir después incidencias del mismo proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning), marcadas con `match: "semantic"`. Lee esa incidencia antes de actuar sobre ella. La búsqueda por el sentido se cobra a tu cuenta como **Búsqueda de incidencias** y no se realiza si desactivaste **Indexar incidencias**.
 
 `minddy_get_issue` acepta un UUID de incidencia, un identificador como `DEMO-42` o un número de incidencia con `project_id`. Sus `plan_tasks` proporcionan `task_index` desde cero. `minddy_update_plan_task` recibe un lote `tasks` con estados `pending`, `in_progress`, `completed` o `cancelled`; un índice inválido rechaza todo el lote. Añade contenido con `minddy_append_to_plan` y cambia un pasaje con `minddy_edit_issue_text` usando `old_string`/`new_string` exactos y únicos. Relee si el texto ha cambiado: reemplazar todo el plan puede sobrescribir el progreso de otra persona. Las preguntas bajo `## Questions` no cuentan como tareas del plan.
+
+`minddy_get_project_stats` lee las estadísticas de los ajustes generales de un proyecto: las incidencias por estado; el número de incidencias abiertas, vencidas, sin asignar y estancadas; las propias incidencias vencidas y estancadas, las más urgentes primero; el ritmo de cuatro semanas; el plazo mediano; las incidencias creadas y hechas cada semana; los principales colaboradores; y las pull requests vinculadas. Una incidencia estancada está en curso o en revisión sin cambios desde hace 14 días. La herramienta es de solo lectura y está abierta a todos los roles, lectores incluidos.
 
 Para modificar varias incidencias, envía una sola llamada a `minddy_update_issues`: `issues` con `fields` aplica el mismo cambio a cada incidencia, y `updates` añade incidencias que reciben cada una sus propios campos. Una llamada admite hasta 50 incidencias, cada una citada una sola vez, y devuelve `updated` y `failed` por incidencia, de modo que un fallo no detiene a las demás. Las demás escrituras repetidas aceptan una lista de elementos adicionales junto a sus campos habituales: `links` para `minddy_link_issues`, `edits` para `minddy_edit_issue_text` y `minddy_edit_page_text` (aplicadas en orden; si una no coincide, no se escribe nada), `pages` para `minddy_create_page` (páginas bajo el mismo padre, como las entradas de una base de datos) y `feedback_post_ids` para `minddy_update_feedback`. `minddy_update_page` con `parent_page_id` mueve una página en el árbol, o a la raíz con `null`. El cuaderno de tareas y las descripciones de objetivos se corrigen igual: `minddy_edit_scratchpad_text` reescribe o elimina pasajes del cuaderno, y `minddy_update_objective` acepta `description_edits` en lugar de una `description` completa. `minddy_append_to_plan` con `field: "description"` añade un bloque al final de la descripción de una incidencia, y `description_append` hace lo mismo con un objetivo; un cambio en un objetivo se rechaza, en lugar de aplicarse, si el objetivo cambió desde que se leyó.
 

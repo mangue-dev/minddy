@@ -29,6 +29,12 @@ import { build } from "esbuild";
 import { assertNonProductionDatabase } from "./database-target.mjs";
 import { loadEnv, ROOT } from "./env.mjs";
 
+/**
+ * The repository of every demo pull request. GitHub owners cannot contain an
+ * underscore, so this name can never designate a real repository.
+ */
+export const DEMO_REPOSITORY = "minddy_demo/lumen";
+
 /** The tables a seed may encode, with the repository functions that own them. */
 const CODECS = {
   objectives: { encode: "encodeObjective", decode: "decodeObjective" },
@@ -44,13 +50,24 @@ import { encodeComment, decodeComment } from "@/lib/server/comment-store";
 import { getServiceClient } from "@/lib/supabase-service";
 export const encodeIssueComment = (row) => encodeComment(getServiceClient(), "comments", row);
 export const decodeIssueComment = (row) => decodeComment("comments", row);
+import { encodePullRequestContent, shouldEncryptPullRequestContent } from "@/lib/server/agent/pull-request-content";
+import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
+// A demo pull request (MIN-878): its repository name becomes the registered
+// blind index when forge names are protected, and its title is encrypted
+// when pull request content is.
+export async function encodeDemoPullRequest(row) {
+  const repo_full_name = await repositoryStorageName(row.provider, row.repo_full_name, true);
+  const title = row.title && await shouldEncryptPullRequestContent()
+    ? await encodePullRequestContent(row.id, "title", row.title) : row.title;
+  return { ...row, repo_full_name, title };
+}
 `;
 
 let bundled = null;
 
 async function loadBundle() {
   if (bundled) return bundled;
-  const outfile = resolve(ROOT, "output/.cache/capture-content-codec-v2.mjs");
+  const outfile = resolve(ROOT, "output/.cache/capture-content-codec-v3.mjs");
   await mkdir(resolve(outfile, ".."), { recursive: true });
   await build({
     stdin: { contents: ENTRY, resolveDir: ROOT, loader: "ts" },
@@ -109,6 +126,20 @@ export async function openContentCodec(world) {
         hasCurrentKey: await hasCurrentKey(row.project_id),
       });
       return mode === "encrypt" ? codec[CODECS[table].encode](row) : row;
+    },
+    /**
+     * A pull request has no project: it is accepted only when its primary
+     * ticket is a demo ticket, and only for the demo repository (never a
+     * valid GitHub owner, so it can never name a real repository).
+     */
+    async encodePullRequest(row) {
+      if (!world.demoIds.issues?.has(row.issue_id)) {
+        throw new Error("captures: refusing to encode a pull request outside the demo tickets.");
+      }
+      if (row.repo_full_name !== DEMO_REPOSITORY) {
+        throw new Error(`captures: demo pull requests belong to ${DEMO_REPOSITORY} only.`);
+      }
+      return codec.encodeDemoPullRequest(row);
     },
     async decode(table, row) {
       if (!CODECS[table]) throw new Error(`captures: no content codec for "${table}".`);

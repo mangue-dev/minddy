@@ -105,6 +105,27 @@ async function listDemoAccounts(admin) {
 }
 
 /**
+ * Rows a read returns past the API's page size (1000 rows, PostgREST
+ * `max-rows`) are silently cut. A demo world past a thousand issues (the
+ * Lumen project, MIN-878) made the guards miss demo rows and miscount the
+ * rest, so every anchored read walks its pages.
+ */
+const PAGE_SIZE = 1000;
+
+async function readAllPages(build, orderColumns) {
+  const rows = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    // Ordered on every selected column: a table without its own id (a link
+    // table) still pages without ties straddling two pages.
+    const query = orderColumns.reduce((ordered, column) => ordered.order(column), build());
+    const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    rows.push(...(data || []));
+    if (!data || data.length < PAGE_SIZE) return { data: rows, error: null };
+  }
+}
+
+/**
  * Applies table anchor filters and RESOLVES the rows: the result is either
  * `null` (no demo line — never query without a filter), or the resolved
  * `{ data, error }` of the anchored select. Anchoring may need several
@@ -116,15 +137,16 @@ async function listDemoAccounts(admin) {
  * selected through chunked queries over the oversized parent, then the
  * perimeter check runs in memory, mirroring `validateRow` line for line.
  */
-async function applyAnchors(table, query, spec, world, idColumn = "id") {
+async function applyAnchors(table, columns, spec, world, idColumn = "id") {
+  const anchored = [];
   if (spec.projectColumn) {
     const projects = world.demoIds.projects;
     if (!projects || projects.size === 0) return null;
-    query = query.in(spec.projectColumn, [...projects]);
+    anchored.push((query) => query.in(spec.projectColumn, [...projects]));
   }
   if (spec.ownerColumn) {
     if (world.demoUserIds.size === 0) return null;
-    query = query.in(spec.ownerColumn, [...world.demoUserIds]);
+    anchored.push((query) => query.in(spec.ownerColumn, [...world.demoUserIds]));
   }
 
   const parents = spec.parents || [];
@@ -135,8 +157,9 @@ async function applyAnchors(table, query, spec, world, idColumn = "id") {
     for (const parent of required) {
       const ids = world.demoIds[parent.table];
       if (!ids || ids.size === 0) return null;
-      query = query.in(parent.column, [...ids]);
+      anchored.push((query) => query.in(parent.column, [...ids]));
     }
+    const build = () => anchored.reduce((query, apply) => apply(query), world.admin.from(table).select(columns));
     // Optional parents: a row may point to ANY ONE of them (or to none, when
     // `requireSomeParent` accepts an alternative anchor). An `.in()` per parent
     // would AND the filters together and drop every row that leaves the other
@@ -149,10 +172,10 @@ async function applyAnchors(table, query, spec, world, idColumn = "id") {
         const ids = [...(world.demoIds[parent.table] ?? [])];
         if (ids.length === 0) continue;
         for (let start = 0; start < ids.length; start += 100) {
-          const { data, error } = await world.admin
-            .from(table)
-            .select(idColumn)
-            .in(parent.column, ids.slice(start, start + 100));
+          const { data, error } = await readAllPages(
+            () => world.admin.from(table).select(idColumn).in(parent.column, ids.slice(start, start + 100)),
+            [idColumn],
+          );
           if (error) {
             throw new Error(`captures: résolution des ids de démo sur ${table} — ${error.message}`);
           }
@@ -160,22 +183,29 @@ async function applyAnchors(table, query, spec, world, idColumn = "id") {
         }
       }
       if (matched.size === 0) return null;
-      return world.admin.from(table).select(idColumn).in(idColumn, [...matched]).limit(5000);
+      const ids = [...matched];
+      const rows = [];
+      for (let start = 0; start < ids.length; start += 100) {
+        const { data, error } = await world.admin.from(table).select(columns).in(idColumn, ids.slice(start, start + 100));
+        if (error) return { data: null, error };
+        rows.push(...(data || []));
+      }
+      return { data: rows, error: null };
     }
-    return query.limit(5000);
+    return readAllPages(build, columns.split(",").map((column) => column.trim()));
   }
 
   // Chunked path: walk the oversized parent's ids, select every anchor
   // column, and keep the rows whose parent values mirror `validateRow`.
   const walk = oversized[0];
   const ids = [...world.demoIds[walk.table]];
-  const columns = [...new Set([idColumn, ...parents.map((p) => p.column)])];
+  const selected = [...new Set([idColumn, ...parents.map((p) => p.column)])];
   const rows = [];
   for (let start = 0; start < ids.length; start += 100) {
-    const { data, error } = await world.admin
-      .from(table)
-      .select(columns.join(","))
-      .in(walk.column, ids.slice(start, start + 100));
+    const { data, error } = await readAllPages(
+      () => world.admin.from(table).select(selected.join(",")).in(walk.column, ids.slice(start, start + 100)),
+      selected,
+    );
     if (error) {
       throw new Error(`captures: résolution des ids de démo sur ${table} — ${error.message}`);
     }
@@ -197,7 +227,7 @@ async function applyAnchors(table, query, spec, world, idColumn = "id") {
     return true;
   });
   if (ok.length === 0) return null;
-  return { data: ok.slice(0, 5000), error: null };
+  return { data: ok, error: null };
 }
 
 function allOptional(parents) {
@@ -241,7 +271,7 @@ export async function openDemoWorld({ allowMissing = false } = {}) {
         if (!PARENT_TABLES.has(table)) continue;
         const spec = TABLE_SCOPES[table];
         const idColumn = spec.idColumn || "id";
-        const resolved = await applyAnchors(table, admin.from(table).select(idColumn), spec, this);
+        const resolved = await applyAnchors(table, idColumn, spec, this, idColumn);
         if (!resolved) {
           this.demoIds[table] = new Set();
           continue;
@@ -373,13 +403,7 @@ export async function measureBlastRadius(world) {
     // and intersection live in applyAnchors, and some tables (issue_categories)
     // carry no own `id` column — the first anchor column stands in for it.
     const rowColumn = spec.parents?.[0]?.column ?? spec.ownerColumn ?? spec.projectColumn;
-    const scoped = await applyAnchors(
-      table,
-      world.admin.from(table).select(rowColumn),
-      spec,
-      world,
-      rowColumn,
-    );
+    const scoped = await applyAnchors(table, rowColumn, spec, world, rowColumn);
     let mine = 0;
     if (scoped) {
       const { data, error: e } = scoped;

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 16,
-  "sourceRevision": 15,
+  "revision": 17,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-27",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -53,14 +53,16 @@
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
       "lib/server/issue-reads.ts",
-      "components/settings/account-settings-page.tsx"
+      "components/settings/account-settings-page.tsx",
+      "lib/server/project-stats.ts",
+      "lib/project-stats.ts"
     ]
   },
   "review": {
-    "revision": 16,
-    "fact": "agent:MIN-768 (MCP setup moved to wizards: changed passages checked against components/settings/account-mcp-clients.tsx and mcp-connect-panel.tsx; 1 screenshot recaptured on 2026-10-21 from the local candidate and inspected; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected fr catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-800 bulk-edit paragraph checked against the issue, relation, text-edit, page, notebook, objective and feedback tools in lib/server/mcp/tools.ts and lib/server/mcp/page-tools.ts, and their tests bulk-tools.test.ts, page-tools.test.ts and scratchpad-text-edit.test.ts; the issue, relation, text, page, notebook and objective tools also exercised against the preview database with a throwaway account, removed afterwards (the feedback batch only by tests); figures unchanged and still accurate)",
-    "language": "agent:MIN-768 (fr translation of the changed passages with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (MIN-800 fr bulk-edit paragraph, glossary term and locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-27"
+    "revision": 17,
+    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept)",
+    "language": "agent:claude (fr paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "numo",
@@ -81,7 +83,7 @@
       "src": "/documentation/fr/external-minddy-mcp-workflow.png",
       "alt": "Choix du client MCP minddy : Claude, Codex et autres assistants.",
       "caption": "Choisissez votre client pour afficher sa commande ou sa configuration d’installation.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -98,7 +100,7 @@
       "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
       "alt": "Étape d’installation de Codex dans l’assistant de connexion au MCP de minddy, avec le point d’accès de minddy Cloud.",
       "caption": "Cet exemple se connecte à minddy Cloud. Pour l’auto-hébergement, utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
-      "revision": 16,
+      "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -159,6 +161,8 @@ minddy expose `/api/mcp` en Streamable HTTP, avec outils stateless et OAuth 2.1.
 Pour trouver un ticket, appelez `minddy_list_issues` avec `query` : la recherche porte sur les mots du titre et de la description, un identifiant ou un numéro. Les correspondances textuelles et les identifiants exacts passent en premier ; une requête descriptive peut ensuite ajouter des tickets du même projet trouvés [par le sens](/docs/navigation#search-by-meaning), marqués `match: "semantic"`. Lisez un tel ticket avant d’agir dessus. La recherche par le sens est facturée à votre compte sous **Recherche de tickets** et n’a pas lieu si vous avez désactivé **Indexer les tickets**.
 
 `minddy_get_issue` accepte UUID de ticket, identifiant de ticket tel que `DEMO-42` ou numéro de ticket, avec `project_id` fourni séparément. Ses `plan_tasks` fournissent les `task_index` à partir de zéro. `minddy_update_plan_task` reçoit un lot `tasks` avec `pending`, `in_progress`, `completed` ou `cancelled`. Un index invalide refuse tout le lot. Ajoutez avec `minddy_append_to_plan` et modifiez un passage avec `minddy_edit_issue_text` et `old_string`/`new_string` exacts et uniques. Relisez si le passage est périmé ; remplacer le plan entier peut écraser la progression d’autrui. Les questions sous `## Questions` ne comptent pas comme tâches.
+
+`minddy_get_project_stats` lit les statistiques des paramètres généraux d’un projet : les tickets par statut ; le nombre de tickets ouverts, en retard, non assignés et au point mort ; les tickets en retard et au point mort eux-mêmes, les plus urgents d’abord ; l’élan sur quatre semaines ; le délai médian ; les tickets créés et terminés chaque semaine ; les principaux contributeurs ; et les pull requests liées. Un ticket au point mort est en cours ou en revue sans aucun changement depuis 14 jours. L’outil est en lecture seule et ouvert à tous les rôles, lecteurs compris.
 
 Pour modifier plusieurs tickets, envoyez un seul appel `minddy_update_issues` : `issues` avec `fields` applique la même modification à chaque ticket, et `updates` ajoute des tickets qui reçoivent chacun leurs propres champs. Un appel accepte jusqu’à 50 tickets, chacun cité une seule fois, et renvoie `updated` et `failed` ticket par ticket : un échec n’arrête pas les autres. Les autres écritures répétées acceptent une liste d’éléments supplémentaires à côté de leurs champs habituels : `links` pour `minddy_link_issues`, `edits` pour `minddy_edit_issue_text` et `minddy_edit_page_text` (appliquées dans l’ordre ; si l’une ne correspond pas, rien n’est écrit), `pages` pour `minddy_create_page` (des pages sous le même parent, comme les entrées d’une base de données) et `feedback_post_ids` pour `minddy_update_feedback`. `minddy_update_page` avec `parent_page_id` déplace une page dans l’arborescence, ou à la racine avec `null`. Le carnet de tâches et les descriptions d’objectifs se corrigent de la même façon : `minddy_edit_scratchpad_text` réécrit ou supprime des passages du carnet, et `minddy_update_objective` accepte `description_edits` au lieu d’une `description` entière. `minddy_append_to_plan` avec `field: "description"` ajoute un bloc à la fin de la description d’un ticket, et `description_append` fait de même pour un objectif ; une modification d’objectif est refusée, et non appliquée, si l’objectif a changé depuis sa lecture.
 

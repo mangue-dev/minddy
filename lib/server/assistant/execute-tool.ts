@@ -1,3 +1,4 @@
+import { readProjectStats } from "@/lib/server/project-stats";
 import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
 import { materializePendingDescription } from "@/lib/server/description-collaboration";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
@@ -1144,6 +1145,14 @@ async function executeToolUnlisted(
           result: { ...r, pending_invitations },
           success: true,
         };
+      }
+      // ── Project statistics (MIN-878 — the General settings' numbers) ──
+      case "get_project_stats": {
+        const r = await readProjectStats(readCtx(ctx, projectId, access), {
+          ownerId: access.project.owner_id,
+          timeZone: ctx.timezone,
+        });
+        return "error" in r ? toolError(r.error) : { result: r, success: true };
       }
       case "get_objective": {
         const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";
