@@ -75,6 +75,15 @@ if (MODE === "docs") {
     await page.mouse.move(8, 8);
     await section.screenshot({ path: `${out}/statistics-en-light.png` });
     await page.setViewportSize({ width: 1440, height: 1600 });
+    // The tooltip of a status segment: icon, status, number of issues, share.
+    const breakdown = sectionNamed(section, messages.ProjectStats.statusTitle);
+    await breakdown.scrollIntoViewIfNeeded();
+    // A middle segment, so the tooltip stays inside the clip.
+    await breakdown.locator(".rounded-full > div").nth(3).hover();
+    await page.getByRole("tooltip").first().waitFor();
+    const box = await breakdown.boundingBox();
+    await page.screenshot({ path: `${out}/status-tooltip-en-light.png`, clip: { x: box.x - 8, y: box.y - 64, width: box.width + 16, height: box.height + 72 } });
+    await page.mouse.move(8, 8);
     const graph = sectionNamed(section, messages.ProjectStats.graphTitle);
     // Scroll first: an element screenshot that scrolls moves the pointer off
     // the dot, and the image would catch the highlight fading out.

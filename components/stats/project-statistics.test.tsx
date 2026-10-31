@@ -99,6 +99,10 @@ describe("ProjectStatistics", () => {
 
     expect(headings()).toEqual(["Momentum", "Where things stand", "Pull requests", "Contributors", "Issue graph"]);
     expect(container.textContent).toContain("Camille Roy");
+    // A status segment says its status, its number of issues and its share;
+    // the same for the project's breakdown and each contributor.
+    expect(container.textContent).toContain("Done: 1 issue, 33%");
+    expect(container.textContent).toContain("Done: 1 issue, 50%");
     expect(container.textContent).toContain("100%");
 
     const node = container.querySelector<SVGCircleElement>('circle[aria-label="MIN-3 Issue 3"]');

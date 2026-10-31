@@ -28,7 +28,7 @@ import { StatusIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
 import { IssueGraphCard } from "@/components/stats/issue-graph";
 import { STATUS_TINT } from "@/components/stats/status-tint";
-import { ALL_STATUSES } from "@/lib/issue-constants";
+import type { IssueStatus } from "@/lib/issue-constants";
 import { Metric, StatsCard, StatsSection } from "@/components/stats/stats-chrome";
 
 /**
@@ -113,6 +113,52 @@ function WeeklyBars({ weeks, series }: { weeks: string[]; series: BarSeries[] })
   );
 }
 
+/**
+ * One status segment of a stacked bar, the same for the project's breakdown
+ * and each contributor: its tooltip names the status (icon and label), the
+ * number of issues and their share of the bar. The bar has no legend: the
+ * tooltip is where a segment says what it is.
+ */
+function StatusSegment({
+  status,
+  count,
+  total,
+  width,
+  className,
+}: {
+  status: IssueStatus;
+  count: number;
+  /** What the share is computed against: the whole bar. */
+  total: number;
+  /** Width of the segment, in percent of the track. */
+  width: number;
+  className?: string;
+}) {
+  const t = useTranslations("ProjectStats");
+  const tStatus = useTranslations("Status");
+  const format = useFormatter();
+  const share = format.number(count / Math.max(total, 1), { style: "percent", maximumFractionDigits: 0 });
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className={cn("h-full", STATUS_TINT[status].bg, className)} style={{ width: `${width}%` }}>
+          <span className="sr-only">{`${tStatus(status)}: ${t("sliceIssues", { count })}, ${share}`}</span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="min-w-36">
+        <span className="flex items-center gap-1.5 font-medium">
+          <StatusIndicator status={status} className="size-3.5" />
+          {tStatus(status)}
+        </span>
+        <span className="mt-1 flex justify-between gap-4 text-background/80">
+          <span>{t("sliceIssues", { count })}</span>
+          <span className="tabular-nums">{share}</span>
+        </span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** A duration in the units of the personal statistics (min, h, d). */
 function useDuration() {
   const tStats = useTranslations("Stats");
@@ -126,7 +172,6 @@ function useDuration() {
 
 export function ProjectStatistics({ project }: { project: Project }) {
   const t = useTranslations("ProjectStats");
-  const tStatus = useTranslations("Status");
   const duration = useDuration();
 
   // The board's own cache entries, as in the identity header above.
@@ -184,14 +229,10 @@ export function ProjectStatistics({ project }: { project: Project }) {
   const memberById = new Map(members.map((member) => [member.user_id, member]));
   const contributionTotal = (contributor: (typeof stats.contributors)[number]) =>
     contributor.byStatus.reduce((sum, slice) => sum + slice.count, 0);
-  const maxContribution = Math.max(1, ...stats.contributors.map(contributionTotal));
-  // The legend names only the statuses the bars use.
-  const contributorStatuses = ALL_STATUSES.filter(({ value }) =>
-    stats.contributors.some((contributor) => contributor.byStatus.some((slice) => slice.status === value)));
 
   return (
     <div>
-      <StatsSection title={t("momentumTitle")} description={t("momentumDescription")} className="mt-0">
+      <StatsSection title={t("momentumTitle")} className="mt-0">
         <StatsCard className="overflow-hidden p-0">
           <div className="grid gap-5 p-5 sm:grid-cols-3">
             <Metric
@@ -235,39 +276,21 @@ export function ProjectStatistics({ project }: { project: Project }) {
         </StatsCard>
       </StatsSection>
 
-      <StatsSection title={t("statusTitle")} description={t("statusDescription", { count: total })}>
+      <StatsSection title={t("statusTitle")}>
         <StatsCard className="overflow-hidden p-0">
           <div className="p-5">
             <div className="flex h-3 w-full overflow-hidden rounded-full bg-muted">
               {stats.statuses.map((slice) => (
-                <Tooltip key={slice.status}>
-                  <TooltipTrigger asChild>
-                    <div
-                      className={cn("h-full first:rounded-l-full last:rounded-r-full", STATUS_TINT[slice.status].bg)}
-                      style={{ width: `${(slice.count / total) * 100}%` }}
-                    >
-                      <span className="sr-only">{`${tStatus(slice.status)}: ${slice.count}`}</span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t("statusSlice", {
-                      status: tStatus(slice.status),
-                      count: slice.count,
-                      percent: Math.round((slice.count / total) * 100),
-                    })}
-                  </TooltipContent>
-                </Tooltip>
+                <StatusSegment
+                  key={slice.status}
+                  status={slice.status}
+                  count={slice.count}
+                  total={total}
+                  width={(slice.count / total) * 100}
+                  className="first:rounded-l-full last:rounded-r-full"
+                />
               ))}
             </div>
-            <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
-              {stats.statuses.map((slice) => (
-                <li key={slice.status} className="flex items-center gap-1.5">
-                  <StatusIndicator status={slice.status} className="size-3.5" />
-                  {tStatus(slice.status)}
-                  <span className="tabular-nums text-foreground">{slice.count}</span>
-                </li>
-              ))}
-            </ul>
           </div>
           <div className="grid grid-cols-2 gap-5 border-t border-border p-5 sm:grid-cols-4">
             <Metric label={t("open")} value={health.open} />
@@ -279,7 +302,7 @@ export function ProjectStatistics({ project }: { project: Project }) {
       </StatsSection>
 
       {prs && prs.total > 0 && (
-        <StatsSection title={t("prTitle")} description={t("prDescription", { count: prs.total })}>
+        <StatsSection title={t("prTitle")}>
           <StatsCard className="overflow-hidden p-0">
             <div className="grid gap-5 p-5 sm:grid-cols-3">
               <Metric
@@ -318,40 +341,32 @@ export function ProjectStatistics({ project }: { project: Project }) {
                 const name = member ? displayName(member, t("formerMember")) : t("formerMember");
                 return (
                   <li key={contributor.userId} className="flex items-center gap-3">
-                    <UserAvatar seed={member?.avatar_seed ?? null} className="size-6" />
-                    <span className="w-32 min-w-0 shrink-0 truncate text-sm sm:w-40">{name}</span>
+                    <UserAvatar seed={member?.avatar_seed ?? null} className="size-7" />
+                    {/* The figures sit under the name, so every bar starts and
+                        ends at the same place. */}
+                    <span className="flex w-36 min-w-0 shrink-0 flex-col sm:w-48">
+                      <span className="truncate text-sm">{name}</span>
+                      <span className="truncate text-xs tabular-nums text-muted-foreground">
+                        {t("contributorFigures", { completed: contributor.completed, open: contributor.open })}
+                      </span>
+                    </span>
+                    {/* Each bar is that person's own issues, split by status:
+                        same length for everyone, the shares compare. */}
                     <div className="flex h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted">
                       {contributor.byStatus.map((slice) => (
-                        <Tooltip key={slice.status}>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={cn("h-full", STATUS_TINT[slice.status].bg)}
-                              style={{ width: `${(slice.count / maxContribution) * 100}%` }}
-                            >
-                              <span className="sr-only">{`${tStatus(slice.status)}: ${slice.count}`}</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t("contributorSlice", { name, status: tStatus(slice.status), count: slice.count })}
-                          </TooltipContent>
-                        </Tooltip>
+                        <StatusSegment
+                          key={slice.status}
+                          status={slice.status}
+                          count={slice.count}
+                          total={contributionTotal(contributor)}
+                          width={(slice.count / contributionTotal(contributor)) * 100}
+                        />
                       ))}
                       <span className="sr-only">{t("contributorTotal", { count: contributionTotal(contributor) })}</span>
                     </div>
-                    <span className="shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                      {t("contributorFigures", { completed: contributor.completed, open: contributor.open })}
-                    </span>
                   </li>
                 );
               })}
-            </ul>
-            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
-              {contributorStatuses.map(({ value }) => (
-                <li key={value} className="flex items-center gap-1.5">
-                  <StatusIndicator status={value} className="size-3.5" />
-                  {tStatus(value)}
-                </li>
-              ))}
             </ul>
           </StatsCard>
         </StatsSection>
