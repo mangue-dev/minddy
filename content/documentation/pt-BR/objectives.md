@@ -116,6 +116,8 @@ Abra cada ticket relevante e escolha o objetivo nas propriedades, ou use os cont
 
 ![Janela de criação de objetivo não enviada no projeto Aurora com um nome de resultado de exemplo e o botão Criar objetivo.](/documentation/pt-BR/reader-objectives.png)
 
+Na página de objetivos, mantenha Shift pressionado e clique em objetivos para selecionar vários; um clique no espaço vazio da lista limpa a seleção. **Ações** na barra flutuante, ou Command+K no macOS ou Ctrl+K nos outros sistemas, oferece **Alterar status**, **Alterar responsável**, **Alterar cor** e **Mover para a lixeira**, que pede uma confirmação antes. **Pergunte ao Numo** abre o Numo com todos os objetivos selecionados no contexto.
+
 ### Ler o progresso antes de encerrar {#objective-progress}
 
 Revise tickets concluídos e ativos junto com o progresso do objetivo. Um indicador resume o trabalho vinculado; ele não determina se um resultado de produto é aceitável. Inspecione tarefas ausentes e trabalho cancelado ou duplicado antes de marcar o objetivo como concluído. O quadro do objetivo mostra primeiro o trabalho aberto: selecione **Concluído** e **Cancelado** no filtro **Status** dele para revisar ali os tickets fechados. Em um computador, enquanto o quadro mostra os tickets de um objetivo, a barra lateral continua na lista de objetivos, sob a linha de voltar **Objetivos**, com esse objetivo destacado; escolha outro objetivo nessa lista para mudar o quadro para ele.

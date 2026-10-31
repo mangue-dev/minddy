@@ -91,6 +91,15 @@ function useCollectionContextMenu(
  * - **Mobile layout**: hosted in the revealed sidebar when its route is open.
  * Selection stays owned by the page; only the navigation moves into the menu.
  */
+/** Whether a click landed on the column's empty space rather than on a row or
+ *  a control. */
+export function isBlankSidebarClick(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return !target.closest(
+    "button, a[href], input, textarea, select, [role=button], [role=menuitem], [data-sidebar-row], [data-sidebar-filter-result], [data-navigation-href]"
+  );
+}
+
 export function SecondarySidebar({
   title,
   filter,
@@ -98,6 +107,7 @@ export function SecondarySidebar({
   hiddenOnMobile,
   itemContextActions,
   onItemContextMenu,
+  onBlankClick,
   children,
 }: {
   /**
@@ -143,6 +153,11 @@ export function SecondarySidebar({
    * `itemContextActions` whenever the caller passes a new one.
    */
   onItemContextMenu?: (target: Element | null) => void;
+  /**
+   * A click on the column's empty space, outside every row and control
+   * (MIN-873): the lists clear their multi-selection with it.
+   */
+  onBlankClick?: () => void;
   children: ReactNode;
 }) {
   const { headerSlot, slot, register, hosting, mobileHost } = useSecondarySidebar();
@@ -185,6 +200,9 @@ export function SecondarySidebar({
       data-sidebar-navigation
       className="flex min-h-0 flex-1 flex-col"
       onContextMenu={onContextMenu}
+      onClick={(event) => {
+        if (onBlankClick && isBlankSidebarClick(event.target)) onBlankClick();
+      }}
     >
       <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
         {children}

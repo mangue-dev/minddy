@@ -5,7 +5,12 @@ import {
   PALETTE_NONE,
   assigneeOptions,
   categoryOptions,
+  colorOptions,
   effortOptions,
+  feedbackStatusOptions,
+  objectiveStatusOptions,
+  sharedCurrent,
+  visibilityOptions,
   objectiveOptions,
   priorityOptions,
   toggleCategory,
@@ -60,7 +65,10 @@ describe("palette field options (MIN-820)", () => {
     expect(html(smart[0].icon)).toContain("<svg");
     expect(smart[1].icon).toBeTruthy();
     expect(smart[1].selected).toBe(true);
-    expect(assigneeOptions([member], { label: "Unassigned" })[0].icon).toBeUndefined();
+    // Without Smart Assign, the clear option shows the dimmed person (MIN-873).
+    const plain = html(assigneeOptions([member], { label: "Unassigned" })[0].icon);
+    expect(plain).toContain("opacity-60");
+    expect(plain).not.toBe(html(smart[0].icon));
   });
 
   it("keeps categories in settings order with their color dot, marking the ticket's own", () => {
@@ -79,5 +87,36 @@ describe("palette field options (MIN-820)", () => {
   it("toggles one category in or out of the ticket's set", () => {
     expect(toggleCategory(["a"], "b")).toEqual(["a", "b"]);
     expect(toggleCategory(["a", "b"], "a")).toEqual(["b"]);
+  });
+});
+
+describe("bulk selection options (MIN-873)", () => {
+  it("offers every feedback status, each with its glyph", () => {
+    const options = feedbackStatusOptions((status) => status, { current: "planned" });
+    expect(options.map((o) => o.value)).toEqual(["open", "planned", "in_progress", "shipped", "declined", "spam"]);
+    expect(options.every((o) => html(o.icon).includes("<svg"))).toBe(true);
+    expect(options.filter((o) => o.selected).map((o) => o.value)).toEqual(["planned"]);
+  });
+
+  it("offers every objective status, visibility and color with an icon", () => {
+    const statuses = objectiveStatusOptions((status) => status);
+    expect(statuses.map((o) => o.value)).toEqual(["planned", "in_progress", "done", "canceled"]);
+    expect(statuses.every((o) => html(o.icon).includes("<svg"))).toBe(true);
+    expect(visibilityOptions({ public: "Public", private: "Private" }, { current: false })
+      .filter((o) => o.selected).map((o) => o.value)).toEqual(["private"]);
+    const colors = colorOptions(["#ff0000"], { none: "No color", color: (hex) => hex });
+    expect(colors.map((o) => o.value)).toEqual([PALETTE_NONE, "#ff0000"]);
+    expect(colors.every((o) => html(o.icon).includes("rounded-full"))).toBe(true);
+  });
+
+  it("gives the clear choices of assignee and objective an icon too", () => {
+    expect(html(assigneeOptions([], { label: "Unassigned" })[0].icon)).toContain("<svg");
+    expect(html(objectiveOptions([], "No objective")[0].icon)).toContain("<svg");
+  });
+
+  it("checks a value only when the whole selection shares it", () => {
+    expect(sharedCurrent([{ v: "a" }, { v: "a" }], (item) => item.v)).toEqual({ current: "a" });
+    expect(sharedCurrent([{ v: "a" }, { v: "b" }], (item) => item.v)).toEqual({});
+    expect(sharedCurrent([], (item: { v: string }) => item.v)).toEqual({});
   });
 });

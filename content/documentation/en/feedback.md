@@ -209,6 +209,8 @@ The project owner and Members open the project's Feedback surface and select a r
 
 Optional translation is shown beside the source for the team; the public board keeps the written feedback. Check any AI classification before relying on it. If a post is linked to an issue, its status is controlled by that issue and cannot be edited independently.
 
+To act on several posts at once, hold Shift and click each post in the list; selected posts take a tinted background, and a click on the list's empty space clears the selection. Choose **Actions** in the floating bar, or press Command+K on macOS or Ctrl+K on Windows/Linux, to **Change status**, **Change objective**, **Add a category** or **Remove a category**, **Change visibility** when the board is published, publish pending AI reviews, or **Move to trash** after a confirmation. **Declined** and **Spam** ask for the same confirmation as on a single post, and a post whose status follows a linked issue keeps it. **Ask Numo** in the bar, or @, opens Numo with every selected post in its context.
+
 ### Notes and public responses {#responses}
 
 Choose internal discussion for team notes. Public replies are visible to visitors; check visibility before sending. A reader with **Can comment** can take part in internal discussion threads but cannot reply publicly on the board. Replies inherit their thread's visibility, so an internal composer choice cannot make a reply inside a public thread private. Numo public answers need an explicit request; mentioning Numo in a public comment does not trigger an automatic reply.

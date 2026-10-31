@@ -7,7 +7,7 @@ import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 // The persistent page tree and document surfaces for the project.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, File02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, File02Icon, StarIcon, StarOffIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
@@ -43,6 +43,16 @@ import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
+import { BulkEntityActions } from "@/components/bulk-entity-actions";
+import type { EntityBulkAction } from "@/lib/bulk-actions-context";
+import { useEntitySelection } from "@/lib/use-entity-selection";
+import { usePromotePages } from "@/components/pages/page-promotion-context";
+import { NumoIcon } from "@/components/numo-icon";
+import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
+import { ancestorsOf } from "@/lib/pages";
+import type { PageSummary } from "@/lib/pages-api";
 
 export function PagesShell({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   return <AppTabRouteBoundary><PagesShellInner browse={browse} /></AppTabRouteBoundary>;
@@ -215,12 +225,82 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     [trashPage, activePageId, base, t]
   );
 
+  // ⇧-click multi-selection in the tree (MIN-873). A page whose ancestor is
+  // also selected goes to the trash with it, so only the topmost are sent.
+  const tBulk = useTranslations("BulkActions");
+  const { openIntent: openNumo } = useAssistantPanelActions();
+  const pageSelection = useEntitySelection(pages);
+  const selectedPages = pageSelection.selected;
+  const askNumoAboutPages = () =>
+    openNumo({
+      source: "page",
+      action: "discuss",
+      projectId,
+      pageContext: { projectId, ...selectedItemsPageContext("page", selectedPages) },
+    });
+  const notFavorite = selectedPages.filter((page) => !page.favorite);
+  const favorite = selectedPages.filter((page) => page.favorite);
+  const setFavorite = (targets: PageSummary[], next: boolean) => {
+    for (const page of targets) {
+      void updatePage(page.id, { favorite: next }).catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : t("favoriteFailed"));
+      });
+    }
+  };
+  const promotePages = usePromotePages(projectId);
+  const bulkPageActions: EntityBulkAction[] = canWrite
+    ? [
+        {
+          id: "pages-promote",
+          title: tBulk("promotePages", { count: selectedPages.length }),
+          icon: <NumoIcon animated={false} className="size-4" />,
+          keywords: ["promote", "issue", "ticket", "promouvoir"],
+          run: () => void promotePages(selectedPages),
+        },
+        ...(notFavorite.length > 0
+          ? [{
+              id: "pages-favorite",
+              title: tBulk("addPagesToFavorites", { count: notFavorite.length }),
+              icon: StarIcon,
+              keywords: ["favorite", "pin", "favori", "épingler"],
+              run: () => setFavorite(notFavorite, true),
+            }]
+          : []),
+        ...(favorite.length > 0
+          ? [{
+              id: "pages-unfavorite",
+              title: tBulk("removePagesFromFavorites", { count: favorite.length }),
+              icon: StarOffIcon,
+              keywords: ["favorite", "unpin", "favori"],
+              run: () => setFavorite(favorite, false),
+            }]
+          : []),
+      ]
+    : [];
+  const trashSelectedPages = async () => {
+    const selectedIds = new Set(selectedPages.map((page) => page.id));
+    const roots = selectedPages.filter(
+      (page) => !ancestorsOf(pages, page.id).some((ancestor) => selectedIds.has(ancestor.id)),
+    );
+    const results = await Promise.allSettled(roots.map((page) => trashPage(page.id)));
+    const trashed = results.reduce((sum, result) => sum + (result.status === "fulfilled" ? result.value : 0), 0);
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed > 0) toast.error(tBulk("trashFailed", { count: failed }));
+    else toast.success(tBulk("trashedPages", { count: trashed }));
+    if (activePageId && roots.some((page, i) => results[i].status === "fulfilled" &&
+      (page.id === activePageId || ancestorsOf(pages, activePageId).some((ancestor) => ancestor.id === page.id)))) {
+      pushPagesHistory(base);
+    }
+    pageSelection.clear();
+  };
+
   // A project WITHOUT ANY pages keeps its column, like every collection: its
   // search and its “+” stay where they will be, and a compact scene offers the
   // first page next to the home pane that says the same.
 
   const sidebar = (
       <CollectionSidebar browse={browse}
+        onBlankClick={pageSelection.clear}
         title={t("title")}
         hiddenOnMobile
         filter={{
@@ -270,6 +350,8 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
             onMove={move}
             onTrash={trash}
             onToggleFavorite={toggleFavorite}
+            isPicked={browse ? undefined : pageSelection.isSelected}
+            onTogglePicked={browse ? undefined : pageSelection.toggle}
           />
         )}
       </CollectionSidebar>
@@ -312,6 +394,24 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
     >
       {shownPreview && <PageView panel panelMenu={previewMenu} key={shownPreview.id} projectId={projectId} pageId={shownPreview.id} onNavigate={openPage} onNavigationReady={registerPreviewFlush} />}
     </PagePeekPanel>
+    <BulkIssueActionsPresence>
+      {selectedPages.length > 0 && (
+        <BulkEntityActions
+          key="bulk-page-actions"
+          surface="pages"
+          placeholder={tBulk("pagesPlaceholder", { count: selectedPages.length })}
+          label={tBulk("selectedPages", { count: selectedPages.length })}
+          count={selectedPages.length}
+          actions={bulkPageActions}
+          trash={canWrite ? {
+            title: tBulk("trashPagesConfirm", { count: selectedPages.length }),
+            onConfirm: trashSelectedPages,
+          } : undefined}
+          onAskNumo={askNumoAboutPages}
+          onClear={pageSelection.clear}
+        />
+      )}
+    </BulkIssueActionsPresence>
     </PagePromotionProvider>
     </PagePresenceProvider>
   );

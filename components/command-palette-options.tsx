@@ -8,9 +8,11 @@
 // a selection having no single value.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { TriangleIcon } from "@hugeicons/core-free-icons";
+import { CancelCircleIcon, GlobeIcon, LockIcon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { Dot } from "@/components/ui/color-dot";
-import { PriorityIndicator, StatusIndicator } from "@/components/issue-indicators";
+import { ObjectiveStatusIndicator, PriorityIndicator, StatusIndicator } from "@/components/issue-indicators";
+import { FEEDBACK_POST_STATUSES, FEEDBACK_TO_ISSUE_STATUS, type FeedbackPostStatus } from "@/lib/feedback/types";
+import { OBJECTIVE_STATUSES } from "@/lib/objective-constants";
 import { ObjectivePill } from "@/components/objective-label";
 import { UserAvatar } from "@/components/user-avatar";
 import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
@@ -96,7 +98,9 @@ export function assigneeOptions(
       label: none.label,
       icon: none.smartAssign ? (
         <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-4" />
-      ) : undefined,
+      ) : (
+        <HugeiconsIcon icon={UserCircleIcon} className="size-4 opacity-60" />
+      ),
       selected: mark(options, null),
     },
     ...members.map((m) => ({
@@ -123,7 +127,12 @@ export function objectiveOptions(
   options: Current<string | null> = {}
 ): FormSelectOption[] {
   return [
-    { value: PALETTE_NONE, label: noneLabel, selected: mark(options, null) },
+    {
+      value: PALETTE_NONE,
+      label: noneLabel,
+      icon: <HugeiconsIcon icon={Target01Icon} className="size-4 opacity-60" />,
+      selected: mark(options, null),
+    },
     ...objectives.map((objective) => ({
       value: objective.id,
       label: objective.name,
@@ -154,4 +163,84 @@ export function toggleCategory(categoryIds: readonly string[], categoryId: strin
   return categoryIds.includes(categoryId)
     ? categoryIds.filter((id) => id !== categoryId)
     : [...categoryIds, categoryId];
+}
+
+/** The value every selected record shares, for the bulk selects' checkmark;
+    `{}` (nothing marked) when they differ. */
+export function sharedCurrent<T, V>(items: readonly T[], value: (item: T) => V): Current<V> {
+  if (items.length === 0) return {};
+  const first = value(items[0]);
+  return items.every((item) => value(item) === first) ? { current: first } : {};
+}
+
+/** Feedback statuses with the glyph the board and the row menu show: the
+    issue status each one mirrors, and a ban for spam. */
+export function feedbackStatusOptions(
+  label: (status: FeedbackPostStatus) => string,
+  options: Current<FeedbackPostStatus> = {}
+): FormSelectOption[] {
+  return FEEDBACK_POST_STATUSES.map((status) => ({
+    value: status,
+    label: label(status),
+    icon: status === "spam"
+      ? <HugeiconsIcon icon={CancelCircleIcon} className="size-4" />
+      : <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[status]} className="size-4" />,
+    selected: mark(options, status),
+  }));
+}
+
+/** Objective statuses with their glyph (MIN-785). */
+export function objectiveStatusOptions(
+  label: (status: ObjectiveStatus) => string,
+  options: Current<ObjectiveStatus> = {}
+): FormSelectOption[] {
+  return OBJECTIVE_STATUSES.map((status) => ({
+    value: status.value,
+    label: label(status.value),
+    icon: <ObjectiveStatusIndicator status={status.value} className="size-4" />,
+    selected: mark(options, status.value),
+  }));
+}
+
+/** A feedback post's visibility on the public board: "public" or "private". */
+export function visibilityOptions(
+  labels: { public: string; private: string },
+  options: Current<boolean> = {}
+): FormSelectOption[] {
+  return [
+    {
+      value: "public",
+      label: labels.public,
+      icon: <HugeiconsIcon icon={GlobeIcon} className="size-4" />,
+      selected: mark(options, true),
+    },
+    {
+      value: "private",
+      label: labels.private,
+      icon: <HugeiconsIcon icon={LockIcon} className="size-4" />,
+      selected: mark(options, false),
+    },
+  ];
+}
+
+/** The palette colors with their dot, after a "no color" choice. */
+export function colorOptions(
+  colors: readonly string[],
+  labels: { none: string; color: (hex: string) => string },
+  options: Current<string | null> = {}
+): FormSelectOption[] {
+  return [
+    {
+      value: PALETTE_NONE,
+      label: labels.none,
+      icon: <Dot color={null} />,
+      selected: mark(options, null),
+    },
+    ...colors.map((hex) => ({
+      value: hex,
+      label: labels.color(hex),
+      icon: <Dot color={hex} />,
+      selected: mark<string | null>(options, hex),
+    })),
+  ];
 }

@@ -155,6 +155,25 @@ describe("conversation identity across project contexts", () => {
     expect(assembled).toContain("<selected_text>");
     expect(assembled).toContain("Context captured for this message only");
   });
+  it("keeps one kind of selected records, capped, and lists them in the prompt (MIN-873)", async () => {
+    const db = database();
+    const items = Array.from({ length: 60 }, (_, i) => ({ kind: "feedback", id: `post-${i}`, label: `Post ${i}` }));
+    expect(await send({ conversationId: "conversation", pageContext: {
+      selectedItems: [
+        ...items,
+        { kind: "routine", id: "routine-1", label: "Digest" },
+        { kind: "secret", id: "x", label: "Forged" },
+      ],
+    } })).toBe(200);
+    const stored = db.rows.find((row) => row.role === "user")?.context as {
+      selectedItems?: Array<{ kind: string; id: string }>;
+    } | null;
+    expect(stored?.selectedItems).toHaveLength(50);
+    expect(stored?.selectedItems?.every((item) => item.kind === "feedback")).toBe(true);
+    const assembled = JSON.stringify(h.process.mock.calls[0][0]);
+    expect(assembled).toContain("Selected feedback posts (50)");
+    expect(assembled).not.toContain("Forged");
+  });
   it("drops a selection that is not a text", async () => {
     const db = database();
     expect(await send({ conversationId: "conversation", pageContext: {

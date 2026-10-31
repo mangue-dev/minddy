@@ -116,6 +116,8 @@ Apri ogni ticket pertinente e scegli l’obiettivo nelle sue proprietà oppure u
 
 ![Finestra di creazione obiettivo non inviata nel progetto Aurora con un nome di risultato d’esempio e il pulsante Crea obiettivo.](/documentation/it/reader-objectives.png)
 
+Nella pagina degli obiettivi, tieni premuto Maiusc e fai clic sugli obiettivi per selezionarne più di uno; un clic nello spazio vuoto dell’elenco annulla la selezione. **Azioni** nella barra mobile, o Command+K su macOS o Ctrl+K sugli altri sistemi, offre **Cambia stato**, **Cambia responsabile**, **Cambia colore** e **Sposta nel cestino**, che chiede prima una conferma. **Chiedi a Numo** apre Numo con tutti gli obiettivi selezionati nel suo contesto.
+
 ### Leggere il progresso prima di chiudere {#objective-progress}
 
 Esamina i ticket completati e attivi insieme al progresso dell’obiettivo. Un indicatore riassume il lavoro collegato; non può stabilire se un risultato di prodotto sia accettabile. Controlla attività mancanti e lavoro annullato o duplicato prima di segnare l’obiettivo come completato. Il tabellone dell’obiettivo mostra prima il lavoro aperto: seleziona **Completato** e **Annullato** nel suo filtro **Stato** per rivedere lì i ticket chiusi. Su un computer, finché il tabellone mostra i ticket di un obiettivo, la barra laterale resta sull’elenco degli obiettivi, sotto la riga per tornare indietro **Obiettivi**, con quell’obiettivo evidenziato; scegli un altro obiettivo in quell’elenco per passare il tabellone a quello.

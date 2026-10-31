@@ -6,6 +6,7 @@ import type { NumoIntent } from "@/lib/assistant-types";
 import {
   PagePromotionProvider,
   usePromotePage,
+  usePromotePages,
   useRegisterPagePromotionSource,
   type PagePromotionSource,
 } from "./page-promotion-context";
@@ -183,6 +184,54 @@ describe("usePromotePage", () => {
     await act(async () => promote!({ id: "page-a", title: "  " }));
 
     expect(openIntent.mock.calls[0][0].pageContext?.pageTitle).toBe("untitled");
+  });
+});
+
+let promoteMany: ReturnType<typeof usePromotePages> | undefined;
+function ManyPromoter() {
+  promoteMany = usePromotePages("project-1");
+  return null;
+}
+
+describe("usePromotePages (MIN-873)", () => {
+  it("opens ONE Numo conversation with every page as context, open ones saved first", async () => {
+    const b = { title: () => "Freshly typed", prepare: vi.fn(async () => true) };
+    await render(<>
+      <OpenEditor pageId="page-b" source={b} />
+      <ManyPromoter />
+    </>);
+
+    await act(async () => promoteMany!([
+      { id: "page-a", title: "Spec" },
+      { id: "page-b", title: "Stale summary" },
+    ]));
+
+    expect(b.prepare).toHaveBeenCalledTimes(1);
+    expect(openIntent).toHaveBeenCalledTimes(1);
+    const intent = openIntent.mock.calls[0][0];
+    expect(intent).toMatchObject({
+      source: "page",
+      action: "promote",
+      pageContext: {
+        projectId: "project-1",
+        selectedItems: [
+          { kind: "page", id: "page-a", label: "Spec" },
+          { kind: "page", id: "page-b", label: "Freshly typed" },
+        ],
+      },
+    });
+    expect(intent.prompt).toContain("promotePagesPrompt");
+  });
+
+  it("opens nothing when an open page fails to save", async () => {
+    const b = { title: () => "B", prepare: vi.fn(async () => false) };
+    await render(<>
+      <OpenEditor pageId="page-b" source={b} />
+      <ManyPromoter />
+    </>);
+    await act(async () => promoteMany!([{ id: "page-a", title: "A" }, { id: "page-b", title: "B" }]));
+    expect(openIntent).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledWith("saveFailed");
   });
 });
 

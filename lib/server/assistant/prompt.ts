@@ -1,7 +1,11 @@
 import type { ProjectRole } from "@/lib/project-roles";
 import "server-only";
 
-import type { AssistantPageContext } from "@/lib/assistant-types";
+import type {
+  AssistantPageContext,
+  AssistantSelectedItem,
+  AssistantSelectedItemKind,
+} from "@/lib/assistant-types";
 import {
   DEFAULT_NUMO_STATUS,
   type NumoDefaultStatus,
@@ -596,6 +600,41 @@ function selectionContextLines(ctx: AssistantPageContext): string[] {
  * "ce ticket" / "this issue" to the concrete entity instead of guessing.
  * Appended to the system prompt only when the request carries a pageContext.
  */
+/** How Numo reads and changes each kind of record a list surface can select. */
+const SELECTED_ITEM_GUIDE: Record<AssistantSelectedItemKind, { noun: string; idLabel: string; tools: string }> = {
+  feedback: {
+    noun: "feedback posts",
+    idLabel: "id",
+    tools: "Read each one with get_feedback; act on them with the feedback tools (link_feedback_to_objective, promote_feedback_to_issue, link_feedback_to_issue, add_feedback_comment, respond_to_feedback).",
+  },
+  routine: {
+    noun: "routines",
+    idLabel: "id",
+    tools: "Read what they do with list_routines (routine_id) and what they did with list_routine_runs; change them one by one with update_routine (enabled: false pauses one). Only the project's owner can change a routine.",
+  },
+  objective: {
+    noun: "objectives",
+    idLabel: "id",
+    tools: "Read each one with get_objective; change them with update_objective. Those ids are what objective_id fields take.",
+  },
+  page: {
+    noun: "wiki pages",
+    idLabel: "page id",
+    tools: "Read each one with get_page; write with append_to_page / edit_page_text rather than update_page, since someone may be typing in them.",
+  },
+};
+
+/** A group of records selected on a list surface (MIN-873): the list IS the
+ *  target of an instruction without another explicit one. */
+function selectedItemsLines(items: AssistantSelectedItem[], projectId: string | undefined): string[] {
+  const guide = SELECTED_ITEM_GUIDE[items[0].kind];
+  return [
+    `- Selected ${guide.noun} (${items.length}):`,
+    ...items.map((item) => `  - "${item.label.trim() || "(untitled)"}" (${guide.idLabel}: ${item.id})`),
+    `When the user says "la sélection", "ceux-ci", "these", "all of them", or gives an instruction with no explicit target, they mean exactly the ${guide.noun} above — use their ids directly, do not search for them. ${guide.tools}${projectId ? ` If a tool needs a project_id, use ${projectId}.` : ""} Moving them to the trash (move_to_trash) needs an ask_user confirmation first.`,
+  ];
+}
+
 export function buildPageContextBlock(ctx: AssistantPageContext): string {
   const lines: string[] = [];
   if (ctx.projectId) lines.push(`- Attached project (id: ${ctx.projectId}).`);
@@ -677,6 +716,7 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
     );
   }
+  if (ctx.selectedItems?.length) lines.push(...selectedItemsLines(ctx.selectedItems, ctx.projectId));
   if (ctx.pullRequestId) {
     lines.push(
       `- Open pull request: #${ctx.prNumber ?? "?"}${ctx.prState ? ` (${ctx.prState})` : ""} (pull request id: ${ctx.pullRequestId})${ctx.prHeadRef ? `, head ref ${ctx.prHeadRef}` : ""}${ctx.prBaseRef ? `, base ref ${ctx.prBaseRef}` : ""}.`,

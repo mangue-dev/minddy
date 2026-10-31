@@ -8,10 +8,23 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { usePalettePicker, type PalettePickerRequest } from "@/lib/palette-picker";
 import { IssuePalettePicker } from "@/components/issue-palette-picker";
 import { writeFeedbackPost } from "@/lib/optimistic/feedback-writes";
+import { BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
+import { BulkEntityActions } from "@/components/bulk-entity-actions";
+import type { EntityBulkAction } from "@/lib/bulk-actions-context";
+import { useEntitySelection } from "@/lib/use-entity-selection";
+import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
+import {
+  PALETTE_NONE,
+  categoryOptions,
+  feedbackStatusOptions,
+  objectiveOptions,
+  sharedCurrent,
+  visibilityOptions,
+} from "@/components/command-palette-options";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, CircleIcon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
@@ -498,10 +511,16 @@ function FeedbackRow({
   memberSeeds,
   teamLanguage,
   objective,
+  picked = false,
   onSelect,
+  onTogglePicked,
 }: {
   projectId: string;
   post: TeamFeedbackListItem;
+  /** Taken in the multi-selection (MIN-873). */
+  picked?: boolean;
+  /** ⇧-click: adds the post to the selection or takes it out. */
+  onTogglePicked?: (postId: string) => void;
   objective?: Objective;
   selected: boolean;
   boardEnabled: boolean;
@@ -535,11 +554,21 @@ function FeedbackRow({
       data-navigation-href={feedbackPostHref(projectId, post.id)}
       data-comment-target={commentTarget("feedback", post.id)}
       data-feedback-post-id={post.id}
-      onClick={onSelect}
+      onClick={(event) => {
+        if (event.shiftKey && onTogglePicked) {
+          event.preventDefault();
+          onTogglePicked(post.id);
+          return;
+        }
+        onSelect();
+      }}
       aria-current={selected ? "true" : undefined}
+      aria-pressed={onTogglePicked ? picked : undefined}
       className={cn(
         "flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
+        // Taken in the selection, the triage's shade alone says it, the
+        // opened post included.
+        picked ? "bg-primary/10" : selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
       )}
     >
       <div className="flex items-center gap-2">
@@ -773,14 +802,16 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * would only ever talk about the already selected return.
    */
   const { open: openAssistant } = useAssistantPanelActions();
+  // "@" or the pill's Numo button: the hovered post, or the whole selection
+  // (MIN-873).
   const handleAskNumo = useCallback(
-    (post: AskNumoFeedback) => {
+    (targets: AskNumoFeedback[]) => {
+      if (targets.length === 0) return;
       openAssistant({
         projectId,
         pageContext: {
           projectId,
-          feedbackId: post.id,
-          feedbackTitle: post.title,
+          ...selectedItemsPageContext("feedback", targets),
         },
       });
     },
@@ -901,6 +932,150 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const runOnPost = (postId: string, intent: FeedbackIntent) => {
     setSelectedId(postId);
     setDetailIntent({ postId, intent });
+  };
+
+  // ⇧-click multi-selection (MIN-873), over the listed posts: one leaving the
+  // list (trashed, settled out of the current scope) leaves the selection.
+  const tBulk = useTranslations("BulkActions");
+  const postSelection = useEntitySelection(posts);
+  const selectedPosts = postSelection.selected;
+  // Posts whose linked ticket drives their status keep it, as in the row menu.
+  const bulkStatusPosts = selectedPosts.filter((post) => !post.issue_id);
+  const writeSelected = (targets: TeamFeedbackListItem[], updates: Partial<TeamFeedbackListItem>) => {
+    for (const post of targets) writePost(post.id, updates);
+  };
+  // Declining and marking as spam say no to someone: the whole selection
+  // waits for the same confirmation as one post's pane.
+  const [pendingBulkStatus, setPendingBulkStatus] = useState<{
+    status: "declined" | "spam";
+    posts: TeamFeedbackListItem[];
+  } | null>(null);
+  const bulkFeedbackActions: EntityBulkAction[] = [];
+  if (canWrite && bulkStatusPosts.length > 0) {
+    bulkFeedbackActions.push({
+      id: "feedback-status",
+      title: tBulk("changeStatus"),
+      icon: CircleIcon,
+      keywords: ["status", "statut"],
+      choices: {
+        options: feedbackStatusOptions(
+          (status) => tPublic(`status.${status}`),
+          sharedCurrent(bulkStatusPosts, (post) => post.status),
+        ),
+        onPick: (value) => {
+          const status = value as FeedbackPostStatus;
+          if (status === "declined" || status === "spam") {
+            setPendingBulkStatus({ status, posts: bulkStatusPosts });
+            return;
+          }
+          writeSelected(bulkStatusPosts, { status });
+        },
+        appliedMessage: (label, value) => value === "declined" || value === "spam"
+          ? null
+          : tBulk("statusApplied", { count: bulkStatusPosts.length, status: label }),
+      },
+    });
+  }
+  if (canWrite && objectives.length > 0 && selectedPosts.length > 0) {
+    bulkFeedbackActions.push({
+      id: "feedback-objective",
+      title: tBulk("changeObjective"),
+      icon: Target01Icon,
+      keywords: ["objective", "objectif", "goal"],
+      choices: {
+        options: objectiveOptions(
+          objectives,
+          tCommonList("none"),
+          sharedCurrent(selectedPosts, (post) => post.objective_id ?? null),
+        ),
+        onPick: (value) =>
+          writeSelected(selectedPosts, { objective_id: value === PALETTE_NONE ? null : value }),
+        appliedMessage: (label) => tBulk("objectiveApplied", { count: selectedPosts.length, objective: label }),
+      },
+    });
+  }
+  if (canWrite && categories.length > 0 && selectedPosts.length > 0) {
+    const setCategory = (categoryId: string, on: boolean) => {
+      for (const post of selectedPosts) {
+        const has = post.category_ids.includes(categoryId);
+        if (has === on) continue;
+        writePostCategories(post.id, on
+          ? [...post.category_ids, categoryId]
+          : post.category_ids.filter((id) => id !== categoryId));
+      }
+    };
+    bulkFeedbackActions.push(
+      {
+        id: "feedback-category-add",
+        title: tBulk("addCategory"),
+        icon: Tag01Icon,
+        keywords: ["category", "catégorie", "tag", "label"],
+        choices: {
+          // Checked when every selected post already has it.
+          options: categoryOptions(categories).map((option) => ({
+            ...option,
+            selected: selectedPosts.every((post) => post.category_ids.includes(option.value)),
+          })),
+          onPick: (value) => setCategory(value, true),
+          appliedMessage: (label) => tBulk("categoryAdded", { count: selectedPosts.length, category: label }),
+        },
+      },
+      {
+        id: "feedback-category-remove",
+        title: tBulk("removeCategory"),
+        icon: Tag01Icon,
+        keywords: ["category", "catégorie", "tag", "label"],
+        choices: {
+          // Only the categories some selected post carries.
+          options: categoryOptions(
+            categories.filter((category) => selectedPosts.some((post) => post.category_ids.includes(category.id))),
+          ),
+          onPick: (value) => setCategory(value, false),
+          appliedMessage: (label) => tBulk("categoryRemoved", { count: selectedPosts.length, category: label }),
+        },
+      },
+    );
+  }
+  if (canWrite && boardEnabled && selectedPosts.length > 0) {
+    bulkFeedbackActions.push({
+      id: "feedback-visibility",
+      title: tBulk("changeVisibility"),
+      icon: GlobeIcon,
+      keywords: ["visibility", "public", "private", "visibilité", "privé"],
+      choices: {
+        options: visibilityOptions(
+          { public: t("public"), private: t("private") },
+          sharedCurrent(selectedPosts, (post) => post.is_public),
+        ),
+        onPick: (value) => writeSelected(selectedPosts, { is_public: value === "public" }),
+        appliedMessage: (label) => tBulk("visibilityApplied", { count: selectedPosts.length, visibility: label }),
+      },
+    });
+  }
+  const unpublishedReviews = selectedPosts.filter((post) => post.review_state !== "published");
+  if (canWrite && unpublishedReviews.length > 0) {
+    bulkFeedbackActions.push({
+      id: "feedback-publish-review",
+      title: tBulk("publishReviews", { count: unpublishedReviews.length }),
+      icon: SentIcon,
+      keywords: ["review", "publish", "publier", "analyse"],
+      run: () => {
+        writeSelected(unpublishedReviews, { review_state: "published" });
+        toast.success(tBulk("reviewsPublished", { count: unpublishedReviews.length }));
+      },
+    });
+  }
+  const trashSelectedPosts = async () => {
+    const ids = selectedPosts.map((post) => post.id);
+    const results = await Promise.allSettled(
+      ids.map((id) => api(`/api/projects/${projectId}/feedback/${id}`, { method: "DELETE" })),
+    );
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed > 0) toast.error(tBulk("trashFailed", { count: failed }));
+    else toast.success(tBulk("trashedFeedback", { count: ids.length }));
+    if (selectedId && ids.includes(selectedId)) setSelectedId(null);
+    postSelection.clear();
+    refresh();
   };
 
   /**
@@ -1076,6 +1251,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   const sidebar = (
       <CollectionSidebar browse={browse}
+        onBlankClick={postSelection.clear}
         title={t("title")}
         itemContextActions={itemContextActions}
         hiddenOnMobile
@@ -1205,6 +1381,8 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                     teamLanguage={teamLanguage}
                     objective={objectives.find((objective) => objective.id === post.objective_id)}
                     onSelect={() => setSelectedId(post.id)}
+                    picked={postSelection.isSelected(post.id)}
+                    onTogglePicked={browse ? undefined : postSelection.toggle}
                   />
                 </li>
               ))}
@@ -1220,7 +1398,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     /* “@” when hovering over a row of the column opens Numo on this return
        (MIN-105). The context passes through the secondary bar portal, which
        is only deported to the DOM. */
-    <AskNumoFeedbackProvider onAskNumo={handleAskNumo}>
+    <AskNumoFeedbackProvider selectedPosts={selectedPosts} onAskNumo={handleAskNumo}>
     <div className="flex h-full min-h-0">
       {/* ── List ────────────────────────────────────────────────────────── */}
       {sidebar}
@@ -1335,6 +1513,44 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
         onAddRelation={handleAddRelation}
         onRemoveRelation={handleRemoveRelation}
       />
+
+      <ConfirmDeleteDialog
+        open={pendingBulkStatus !== null}
+        onOpenChange={(open) => { if (!open) setPendingBulkStatus(null); }}
+        title={pendingBulkStatus?.status === "spam"
+          ? tBulk("spamFeedbackConfirm", { count: pendingBulkStatus.posts.length })
+          : tBulk("declineFeedbackConfirm", { count: pendingBulkStatus?.posts.length ?? 0 })}
+        description={pendingBulkStatus?.status === "spam"
+          ? tBulk("spamFeedbackDescription")
+          : tBulk("declineFeedbackDescription")}
+        confirmLabel={pendingBulkStatus?.status === "spam" ? t("markSpam") : t("decline")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => {
+          if (!pendingBulkStatus) return;
+          const { status, posts: targets } = pendingBulkStatus;
+          writeSelected(targets, { status });
+          toast.success(tBulk("statusApplied", { count: targets.length, status: tPublic(`status.${status}`) }));
+        }}
+      />
+
+      <BulkIssueActionsPresence>
+        {selectedPosts.length > 0 && (
+          <BulkEntityActions
+            key="bulk-feedback-actions"
+            surface="feedback"
+            placeholder={tBulk("feedbackPlaceholder", { count: selectedPosts.length })}
+            label={tBulk("selectedFeedback", { count: selectedPosts.length })}
+            count={selectedPosts.length}
+            actions={bulkFeedbackActions}
+            trash={canWrite ? {
+              title: tBulk("trashFeedbackConfirm", { count: selectedPosts.length }),
+              onConfirm: trashSelectedPosts,
+            } : undefined}
+            onAskNumo={() => handleAskNumo(selectedPosts)}
+            onClear={postSelection.clear}
+          />
+        )}
+      </BulkIssueActionsPresence>
     </div>
     </AskNumoFeedbackProvider>
   );

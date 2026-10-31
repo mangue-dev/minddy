@@ -14,6 +14,7 @@ import { selectionExcerpt } from "@/lib/assistant-selection";
 import type {
   AssistantPageContext,
   AssistantPinnedContext,
+  AssistantSelectedItemKind,
 } from "@/lib/assistant-types";
 
 export type AssistantContextKind =
@@ -66,6 +67,16 @@ export interface AssistantContextChip {
 
 /** Pill key of the quoted selection (`AssistantPageContext.selection`). */
 export const SELECTION_CHIP_KEY = "selection";
+
+/** Pill key of a list surface's selected records (`AssistantPageContext.selectedItems`). */
+export const SELECTED_ITEMS_CHIP_KEY = "selected_items";
+
+const SELECTED_ITEMS_LABEL = {
+  feedback: "contextFeedbackSelected",
+  routine: "contextRoutinesSelected",
+  objective: "contextObjectivesSelected",
+  page: "contextPagesSelected",
+} as const satisfies Record<AssistantSelectedItemKind, string>;
 
 /** Pill key of a pinned context. */
 export function pinnedKey(item: AssistantPinnedContext): string {
@@ -134,6 +145,24 @@ export function contextChips(
       tooltip: ctx.issueIdentifiers?.length
         ? ctx.issueIdentifiers.join(", ")
         : t("contextIssuesSelected", { count: ctx.issueIds.length }),
+    });
+  }
+
+  // A group selected on a list surface (MIN-873): the count on the pill,
+  // the titles in the tooltip, like a board's ticket selection.
+  const selectedItems = ctx?.selectedItems ?? [];
+  if (selectedItems.length > 0) {
+    const kind = selectedItems[0].kind;
+    // The four labels share one `{count}` plural; a key union defeats
+    // next-intl's per-key value typing.
+    const label = t(SELECTED_ITEMS_LABEL[kind] as "contextFeedbackSelected", {
+      count: selectedItems.length,
+    });
+    chips.push({
+      key: SELECTED_ITEMS_CHIP_KEY,
+      kind,
+      label,
+      tooltip: selectedItems.map((item) => item.label.trim() || label).join(", "),
     });
   }
 
@@ -310,6 +339,7 @@ const FIELDS_BY_KEY: Record<string, (keyof AssistantPageContext)[]> = {
   view: ["viewId", "viewName", "onglet"],
   cycle: ["cycleId", "cycleLabel"],
   [SELECTION_CHIP_KEY]: ["selection"],
+  [SELECTED_ITEMS_CHIP_KEY]: ["selectedItems"],
 };
 
 /**

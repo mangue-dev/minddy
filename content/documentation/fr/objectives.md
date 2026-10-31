@@ -115,6 +115,8 @@ Dans les propriétés de chaque ticket concerné, choisissez l’objectif, ou ut
 
 ![Dialogue de création d’objectif non envoyé dans le projet Aurora, avec un nom de résultat d’exemple et le bouton Créer l’objectif.](/documentation/fr/reader-objectives.png)
 
+Sur la page des objectifs, maintenez Maj et cliquez sur des objectifs pour en sélectionner plusieurs ; un clic dans l’espace vide de la liste vide la sélection. **Actions** dans la barre flottante, ou Command+K sur macOS ou Ctrl+K ailleurs, propose **Changer le statut**, **Changer le responsable**, **Changer la couleur** et **Déplacer vers la corbeille**, qui demande d’abord une confirmation. **Demander à Numo** ouvre Numo avec tous les objectifs sélectionnés dans son contexte.
+
 ### Lire le progrès avant de clôturer {#objective-progress}
 
 Examinez les tickets actifs et terminés avec le progrès de l’objectif. L’indicateur résume le travail associé ; il ne peut pas décider si un résultat produit est satisfaisant. Inspectez les tâches manquantes, les annulations et les doublons avant de terminer l’objectif. Le tableau de l’objectif montre d’abord le travail ouvert : sélectionnez **Terminé** et **Annulé** dans son filtre **Statut** pour y revoir les tickets fermés. Sur ordinateur, tant que le tableau montre les tickets d’un objectif, la barre latérale reste sur la liste des objectifs, sous la ligne de retour **Objectifs**, avec cet objectif en surbrillance ; choisissez un autre objectif dans cette liste pour y basculer le tableau.

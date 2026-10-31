@@ -119,3 +119,55 @@ export function usePromotePage(projectId: string) {
     [registry, projectId, openIntent, t]
   );
 }
+
+/**
+ * Promote several pages at once (MIN-873): one Numo conversation that turns
+ * EACH page into its own issue, with every page as explicit context. Open
+ * pages are saved first; a failed save stops before Numo reads any of them.
+ */
+export function usePromotePages(projectId: string) {
+  const t = useTranslations("Pages");
+  const registry = useContext(PagePromotionContext);
+  const { openIntent } = useAssistantPanelActions();
+  const preparing = useRef(false);
+
+  return useCallback(
+    async (pages: ReadonlyArray<{ id: string; title: string }>) => {
+      if (pages.length === 0 || preparing.current) return;
+      preparing.current = true;
+      const sourcesOf = (pageId: string) => [...(registry?.get(pageId) ?? [])];
+      try {
+        const saved = await Promise.all(
+          pages.flatMap((page) => sourcesOf(page.id).map((source) => source.prepare()))
+        );
+        if (saved.includes(false)) {
+          toast.error(t("saveFailed"));
+          return;
+        }
+      } catch {
+        toast.error(t("saveFailed"));
+        return;
+      } finally {
+        preparing.current = false;
+      }
+      const titled = pages.map((page) => ({
+        id: page.id,
+        title: (sourcesOf(page.id).at(-1)?.title() ?? page.title).trim() || t("untitled"),
+      }));
+      openIntent({
+        source: "page",
+        action: "promote",
+        projectId,
+        prompt: t("promotePagesPrompt", {
+          count: titled.length,
+          pages: titled.map((page) => `“${page.title}”`).join(", "),
+        }),
+        pageContext: {
+          projectId,
+          selectedItems: titled.map((page) => ({ kind: "page", id: page.id, label: page.title })),
+        },
+      });
+    },
+    [registry, projectId, openIntent, t]
+  );
+}

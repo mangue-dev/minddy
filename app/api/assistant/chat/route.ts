@@ -15,6 +15,8 @@ import type {
   AssistantMention,
   AssistantPageContext,
   AssistantPinnedContext,
+  AssistantSelectedItem,
+  AssistantSelectedItemKind,
 } from "@/lib/assistant-types";
 import { createSafeEmitter } from "@/lib/server/assistant/sse";
 import { parseCommand } from "@/lib/server/assistant/commands";
@@ -115,6 +117,12 @@ const PINNED_KINDS: ReadonlySet<string> = new Set([
   "objective",
   "page",
 ]);
+const SELECTED_ITEM_KINDS: ReadonlySet<string> = new Set([
+  "feedback",
+  "routine",
+  "objective",
+  "page",
+]);
 const MENTION_TYPES: ReadonlySet<string> = new Set([
   "member",
   "project",
@@ -188,6 +196,32 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     return list.length > 0 ? list : undefined;
   })();
 
+  // Records selected together on a list surface (MIN-873): one kind, the
+  // same cap as a board's ticket selection. Only quoted in the prompt; every
+  // tool re-checks access.
+  const selectedItems = ((): AssistantSelectedItem[] | undefined => {
+    if (!Array.isArray(obj.selectedItems)) return undefined;
+    const list = obj.selectedItems
+      .filter((v): v is Record<string, unknown> => !!v && typeof v === "object")
+      .filter(
+        (v) =>
+          SELECTED_ITEM_KINDS.has(v.kind as string) &&
+          typeof v.id === "string" &&
+          v.id.length <= 100 &&
+          typeof v.label === "string" &&
+          v.label.length <= 500,
+      )
+      .slice(0, 50)
+      .map((v) => ({
+        kind: v.kind as AssistantSelectedItemKind,
+        id: v.id as string,
+        label: v.label as string,
+      }));
+    const kind = list[0]?.kind;
+    const sameKind = list.filter((item) => item.kind === kind);
+    return sameKind.length > 0 ? sameKind : undefined;
+  })();
+
   const ctx: AssistantPageContext = {
     projectId: pick("projectId"),
     inbox: obj.inbox === true ? true : undefined,
@@ -226,6 +260,7 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     pageId: pick("pageId"),
     pageTitle: pick("pageTitle"),
     pageIcon: pick("pageIcon"),
+    selectedItems,
     pullRequestId: pick("pullRequestId"),
     prHeadRef: pick("prHeadRef"),
     prBaseRef: pick("prBaseRef"),

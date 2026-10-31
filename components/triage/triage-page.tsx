@@ -535,6 +535,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
   const sidebar = (
       <CollectionSidebar browse={browse}
+        onBlankClick={clearBulk}
         itemContextActions={itemContextActions}
         title={t("title")}
         hiddenOnMobile
@@ -1020,13 +1021,10 @@ function TriageRow({
       }}
       className={cn(
         "flex flex-col gap-1 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-        open && "bg-muted",
-        !open && !picked && "hover:bg-muted/60 focus-visible:bg-muted/60",
         // Taken from the selection: the same shade as the card taken from the
-        // board. The opened ticket visibly remains open if it is also taken —
-        // otherwise the column would no longer say what the right pane shows.
-        picked && "bg-primary/10",
-        picked && open && "ring-1 ring-primary/40"
+        // board, and only the background says it (MIN-873), the opened ticket
+        // included.
+        picked ? "bg-primary/10" : open ? "bg-muted" : "hover:bg-muted/60 focus-visible:bg-muted/60"
       )}
     >
       <div className="flex items-center gap-2">

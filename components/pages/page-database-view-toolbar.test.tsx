@@ -46,7 +46,8 @@ vi.mock("@/lib/use-page-database-views", () => ({
     move: vi.fn(),
   }),
 }));
-vi.mock("./page-promotion-context", () => ({ usePromotePage: () => vi.fn() }));
+vi.mock("./page-promotion-context", () => ({ usePromotePage: () => vi.fn(), usePromotePages: () => vi.fn() }));
+vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantPanelActions: () => ({ openIntent: vi.fn() }) }));
 
 const { PageDatabaseView } = await import("./page-database-view");
 

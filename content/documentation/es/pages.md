@@ -303,6 +303,8 @@ La eliminación envía a la papelera las páginas para las que se admite la recu
 
 ![Menú de creación con Nueva página y Nueva base de datos.](/documentation/es/page-create-menu.png)
 
+Mantén pulsada Mayús y haz clic en páginas del árbol para seleccionar varias; el clic las selecciona en lugar de abrirlas en una ventana nueva, y un clic en el espacio vacío del árbol borra la selección. **Acciones** en la barra flotante, o Command+K en macOS o Ctrl+K en otros sistemas, las convierte en incidencias en una sola conversación con Numo, que crea una incidencia por página, las añade a favoritos o las quita, o las mueve a la papelera con sus subpáginas tras una confirmación. **Pregúntale a Numo** abre Numo con todas las páginas seleccionadas en su contexto.
+
 ## Convertir una página en incidencia {#promote-page-to-issue}
 
 Cuando una página describe trabajo pendiente, el propietario o un Miembro puede convertirla en una incidencia con Numo. Los lectores no ven esta acción. Necesitas tener uso de IA disponible o una clave personal compatible.

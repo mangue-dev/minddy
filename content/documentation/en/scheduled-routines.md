@@ -106,6 +106,8 @@ Open the routine to inspect waiting conditions, change its instruction or trigge
 
 Right-click a routine in the list to open its latest run without selecting it first; **Open latest run** stays unavailable until the routine has run. The project owner can also choose **Run now**, **Pause** or **Resume**, **Edit** or **Move to trash** from the same menu. **Resume** is unavailable when the instance cannot schedule routines. Other members only see entries that leave the routine unchanged. To create a routine, right-click **Routines** in the sidebar and choose **New routine**.
 
+Hold Shift and click routines in the list to select several; a click on the list's empty space clears the selection. **Actions** in the floating bar, or Command+K on macOS or Ctrl+K on Windows/Linux, runs the selected routines you own now, pauses or resumes them, or moves them to the trash after a confirmation; routines of projects you do not own are left unchanged, and each run consumes usage. **Ask Numo** opens Numo with every selected routine in its context.
+
 Each occurrence uses the owner's AI budget with a 15% monthly-budget cap by default, including every Numo call of that occurrence. Open its conversation to inspect the source, outcome and questions. When owner input is required, answer in that same conversation; the remaining occurrence budget is retained. Inspect saved results before adjusting a cap or retrying. When ownership is [transferred](/docs/projects#transfer-ownership), the former owner's routines in the project are paused and cannot start new work; the new owner creates the routines that should continue.
 
 The cap applies when an included monthly budget is available; an uncapped personal-key mode does not acquire an artificial monthly allowance.
