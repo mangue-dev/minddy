@@ -3,7 +3,11 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { AnimatePresence } from "framer-motion";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SidebarPanelTransition } from "@/components/sidebar-panel-transition";
+import {
+  SidebarPanelTransition,
+  usePanelDirection,
+  type PanelDirection,
+} from "@/components/sidebar-panel-transition";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -17,7 +21,7 @@ describe("sidebar panel transitions", () => {
     const render = (name: string) => act(() => root.render(createElement(AnimatePresence, {
       mode: "sync", initial: false,
       children: createElement(SidebarPanelTransition, {
-        key: name, className: "panel", offset: 16, transition: { duration: 0.2 },
+        key: name, className: "panel", direction: 1, transition: { duration: 0.2 },
         children: createElement("button", { onClick: select, "data-panel": name }, name),
       }),
     })));
@@ -38,5 +42,42 @@ describe("sidebar panel transitions", () => {
       await act(() => root.unmount());
       host.remove();
     }
+  });
+});
+
+describe("level swap direction (MIN-877)", () => {
+  const seen: PanelDirection[] = [];
+  function Probe({ depth, panelKey }: { depth: number; panelKey: string }) {
+    seen.push(usePanelDirection(depth, panelKey));
+    return null;
+  }
+
+  async function sequence(steps: [number, string][]) {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const root = createRoot(document.createElement("div"));
+    const directions: (PanelDirection | undefined)[] = [];
+    try {
+      for (const [depth, panelKey] of steps) {
+        seen.length = 0;
+        await act(() => root.render(createElement(Probe, { depth, panelKey })));
+        directions.push(seen.at(-1));
+      }
+    } finally {
+      await act(() => root.unmount());
+    }
+    return directions;
+  }
+
+  it("descends and climbs back in opposite directions", async () => {
+    expect(await sequence([
+      [0, "home"], [1, "project-a"], [2, "secondary"], [1, "project-a"], [0, "home"],
+    ])).toEqual([0, 1, 1, -1, -1]);
+  });
+
+  it("crossfades a lateral swap and keeps the direction while the panel stays", async () => {
+    // A re-render on the same panel (a badge update) replays nothing.
+    expect(await sequence([
+      [0, "home"], [1, "project-a"], [1, "project-a"], [1, "project-b"],
+    ])).toEqual([0, 1, 1, 0]);
   });
 });

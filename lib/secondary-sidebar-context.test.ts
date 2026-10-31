@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  navigationEndsBrowseNow,
   routeHasSecondaryNav,
+  sidebarLocationKey,
   sidebarPanelForRoute,
 } from "./secondary-sidebar-context";
 import { readFileSync } from "node:fs";
@@ -58,5 +60,23 @@ describe("sidebarPanelForRoute", () => {
 
   it("keeps the home routes at the home panel", () => {
     expect(sidebarPanelForRoute(false, false, 0)).toBe("home");
+  });
+});
+
+describe("sidebar browse anchoring (MIN-877)", () => {
+  it("tells an objective's board from the plain board, and ignores the objective elsewhere", () => {
+    expect(sidebarLocationKey("/projects/p", "o")).not.toBe(sidebarLocationKey("/projects/p", null));
+    expect(sidebarLocationKey("/projects/p/pages", "o")).toBe(sidebarLocationKey("/projects/p/pages", null));
+  });
+
+  it("ends the browse at once only for a destination on the current location", () => {
+    const objectives = sidebarLocationKey("/projects/p/objectives", null);
+    expect(navigationEndsBrowseNow("/projects/p/objectives", objectives)).toBe(true);
+    expect(navigationEndsBrowseNow("/projects/p/objectives?sort=name#top", objectives)).toBe(true);
+    expect(navigationEndsBrowseNow("/projects/p", objectives)).toBe(false);
+
+    const objectiveBoard = sidebarLocationKey("/projects/p", "o");
+    expect(navigationEndsBrowseNow("/projects/p?objective=o", objectiveBoard)).toBe(true);
+    expect(navigationEndsBrowseNow("/projects/p", objectiveBoard)).toBe(false);
   });
 });
