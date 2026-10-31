@@ -8,7 +8,7 @@ import { AppIcon } from "@/components/icon";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import { transitions } from "@/lib/motion";
-import { SidebarPanelTransition } from "./sidebar-panel-transition";
+import { PANEL_OFFSET, SidebarPanelTransition, usePanelDirection } from "./sidebar-panel-transition";
 import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { MobileCreateButton, MobileNotebookButton, MobileNumoButton } from "./mobile-nav-actions";
@@ -69,6 +69,9 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
   const panelTransition = reduce ? { duration: 0 } : transitions.panel;
   const collectionPanel = (initialPanels ?? (initialPanel ? [initialPanel] : [])).find((item) => item.sidebarRoute === pathname);
   const showCollection = !!collectionPanel && panel?.key === collectionPanel.key && !!secondary?.present;
+  // The browse stack's depth orients each swap (MIN-877); the collection
+  // sits one level under the panel that opened it.
+  const direction = usePanelDirection(panels.length + (showCollection ? 1 : 0), showCollection ? "collection" : panel?.key ?? "home");
   const onBrowse = useCallback((next: MobileMenuPanel) => { browsing.current = true; setPanels((previous) => [...previous, next]); }, []);
   const onBack = useCallback(() => { browsing.current = true; setPanels((previous) => previous.slice(0, -1)); }, []);
   const onNavigate = useCallback(() => setMenuOpen(false), []);
@@ -106,15 +109,15 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
             className="absolute inset-0 flex min-h-0 flex-col"
             inert={!showCollection} aria-hidden={!showCollection}
             initial={false}
-            animate={{ opacity: showCollection ? 1 : 0, x: showCollection ? 0 : 16 }}
+            animate={{ opacity: showCollection ? 1 : 0, x: showCollection ? 0 : PANEL_OFFSET }}
             transition={panelTransition}
             style={{ pointerEvents: showCollection ? "auto" : "none" }}>
             <SidebarBackRow label={collectionPanel.title} ariaLabel={tc("back")} onBack={onBack} badge={collectionPanel.backBadge} />
             <MobileCollectionMenu route={pathname} active={showCollection} onNavigate={onNavigate} headerHost={headerHost} />
           </motion.div>}
-          <AnimatePresence mode="sync" initial={false}>
+          <AnimatePresence mode="sync" initial={false} custom={direction}>
             {!showCollection && <SidebarPanelTransition key={panel?.key ?? "home"}
-              className="absolute inset-0 flex min-h-0 flex-col" offset={panel ? 16 : -16} transition={panelTransition}>
+              className="absolute inset-0 flex min-h-0 flex-col" direction={direction} transition={panelTransition}>
               <MobileBrowsePanel panel={panel} sections={sections} projects={projects} navigation={navigation} onBack={onBack}
                 homeBadge={homeBadge} homeBadgeLabel={homeBadgeLabel}
                 onProjectSelect={(project) => {

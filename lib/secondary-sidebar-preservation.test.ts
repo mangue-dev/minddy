@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { SecondarySidebarProvider, useSecondarySidebar } from "./secondary-sidebar-context";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/projects/project/pages", useSearchParams: () => new URLSearchParams() }));
+const route = vi.hoisted(() => ({ pathname: "/projects/project/pages" }));
+vi.mock("next/navigation", () => ({ usePathname: () => route.pathname, useSearchParams: () => new URLSearchParams() }));
 const viewport = vi.hoisted(() => ({ mobile: false }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("@/lib/use-media-query", async (importOriginal) => ({
@@ -45,6 +46,7 @@ function Workspace() {
 
 beforeEach(async () => {
   viewport.mobile = false;
+  route.pathname = "/projects/project/pages";
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.append(container);
@@ -83,6 +85,43 @@ describe("secondary sidebar portal preservation", () => {
     expect(container.querySelector("[data-list-row]")).toBe(row);
     expect(row.textContent).toBe("1");
     expect(scroller.scrollTop).toBe(340);
+  });
+});
+
+describe("ending the browse on a navigation (MIN-877)", () => {
+  it("keeps the browsed panel while a navigation to another location is pending", async () => {
+    await act(() => browse.goBack());
+    expect(browse.backLevel).toBe(1);
+    // The project's Tickets row: the destination rebases the levels once the
+    // shell displays it; resetting now would show the pages bar meanwhile.
+    await act(() => browse.resetBack("/projects/project"));
+    expect(browse.backLevel).toBe(1);
+    await act(() => browse.resetBack("/projects/project?objective=o"));
+    expect(browse.backLevel).toBe(1);
+  });
+
+  it("does not revive a browse when the route returns to its location", async () => {
+    const rerender = () => act(() => root.render(createElement(SecondarySidebarProvider, { children: createElement(Workspace) })));
+    await act(() => browse.goBack());
+    expect(browse.backLevel).toBe(1);
+    // Pages → back → the project's tickets → pages again: the pages bar,
+    // not the project panel the first visit was browsing.
+    route.pathname = "/projects/project";
+    await rerender();
+    expect(browse.backLevel).toBe(0);
+    route.pathname = "/projects/project/pages";
+    await rerender();
+    expect(browse.backLevel).toBe(0);
+    expect(browse.hosting).toBe(true);
+  });
+
+  it("ends the browse at once when the row targets the location on screen", async () => {
+    await act(() => browse.goBack());
+    await act(() => browse.resetBack("/projects/project/pages?view=list"));
+    expect(browse.backLevel).toBe(0);
+    await act(() => browse.goBack());
+    await act(() => browse.resetBack());
+    expect(browse.backLevel).toBe(0);
   });
 });
 

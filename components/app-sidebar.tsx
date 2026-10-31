@@ -71,7 +71,12 @@ import { usePrefetchPages } from "@/lib/use-pages-query";
 import { useQueryClient } from "@tanstack/react-query";
 import { useOptionalAppTabSession } from "@/lib/app-tab-session-context";
 import { isPreparedAppTabDestination } from "@/lib/prefetch-tab-destination";
-import { SidebarPanelTransition } from "@/components/sidebar-panel-transition";
+import {
+  PANEL_OFFSET,
+  SidebarPanelTransition,
+  panelRowVariants,
+  usePanelDirection,
+} from "@/components/sidebar-panel-transition";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { SidebarOnboarding } from "@/components/sidebar-onboarding";
@@ -330,9 +335,14 @@ function SidebarRow({ item }: { item: AppNavItem }) {
 
 /** Mobile and desktop navigation use the same rows and section geometry. */
 export function SidebarRows({ sections, renderItem }: { sections: AppNavSection[]; renderItem?: (item: AppNavItem) => ReactNode }) {
+  const reduce = useReducedMotion();
+  // Rows follow their panel's variants (MIN-877): when a level swap brings
+  // the panel in, they arrive in reading order. The index runs across
+  // sections; -1 under reduced motion appears at once.
+  let row = 0;
   return <>{sections.map((section, index) => <section key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
-    {section.label && <h2 className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</h2>}
-    <ul className="flex flex-col gap-1">{section.items.map((item) => <li key={item.key}>{renderItem?.(item) ?? <SidebarRow item={item} />}</li>)}</ul>
+    {section.label && <motion.h2 variants={panelRowVariants} custom={reduce ? -1 : row} className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</motion.h2>}
+    <ul className="flex flex-col gap-1">{section.items.map((item) => <motion.li key={item.key} variants={panelRowVariants} custom={reduce ? -1 : row++}>{renderItem?.(item) ?? <SidebarRow item={item} />}</motion.li>)}</ul>
   </section>)}</>;
 }
 
@@ -351,7 +361,7 @@ function SidebarNav({
   /** The project panel's home-back row: one level up, sidebar only. */
   onBack?: () => void;
   /** Any navigable row picked from this panel leaves the browse. */
-  resetBack: () => void;
+  resetBack: (href?: string) => void;
 }) {
   return (
     <nav
@@ -359,18 +369,21 @@ function SidebarNav({
         "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2",
         GUTTER,
       )}
-      // A plain click on a row that NAVIGATES ends the browse: the capture
-      // runs before the row's own handler, so the panel resets to the route's
-      // level and the incoming navigation finds its place. Modifier/middle
-      // clicks want a tab or a window — the current page stays, the browse
-      // stays with it. (The home-back row is a button, not a link: it steps
-      // UP a level instead of ending the browse.)
+      // A plain click on a row that NAVIGATES ends the browse. A row of the
+      // location on screen ends it here, since no navigation will; any other
+      // row keeps this panel until its destination is displayed, which
+      // rebases the levels without a detour through the route being left
+      // (MIN-877). Modifier/middle clicks want a tab or a window — the
+      // current page stays, the browse stays with it. (The home-back row is
+      // a button, not a link: it steps UP a level instead of ending the
+      // browse.)
       onClickCapture={(event) => {
         if (!isPlainNavigationClick(event)) return;
         const target = event.target;
         if (!(target instanceof Element)) return;
-        if (!target.closest("a[href]")) return;
-        resetBack();
+        const link = target.closest("a[href]");
+        if (!link) return;
+        resetBack(link.getAttribute("href") ?? undefined);
       }}
     >
       <SidebarRows sections={sections} renderItem={(item) => item.key === "home-back" && currentProject
@@ -1140,8 +1153,9 @@ export function secondaryNavBackTarget(
  *
  * Hand-rolled (rather than a generic sidebar primitive) so the navigation can play
  * its level swaps: the top band (quick actions, then the page's filter strip)
- * and the footer stay put while only the panel between them fades/slides —
- * level 2 enters from the right, level 1 from the left. `modeKey` ("home" |
+ * and the footer stay put while only the panel between them fades/slides in
+ * the swap's direction — going deeper, the incoming panel enters from the
+ * right and the outgoing one leaves to the left; going back, the reverse. `modeKey` ("home" |
  * `project-<id>`) keys the project panel; the panel itself is chosen by the
  * route: `routeHasSecondaryNav` routes swap the nav for the page's teleported
  * secondary bar, under the back row. The aside NEVER resizes: a level change
@@ -1199,6 +1213,12 @@ export function AppSidebar({
     backLevel,
   );
   const showSecondary = panel === "secondary";
+  // Depth of the panel on screen, for the direction of its swaps: home,
+  // then a project, then the teleported bar.
+  const direction = usePanelDirection(
+    panel === "home" ? 0 : panel === "project" ? 1 : 2,
+    panel === "project" ? modeKey : panel,
+  );
 
   // The level 2/3 top fade only shows once the page's list has scrolled: at
   // rest it would dim the first option for nothing. Scroll does not bubble,
@@ -1272,7 +1292,7 @@ export function AppSidebar({
           <SidebarPanelTransition
             key="back"
             className="absolute inset-x-0 top-0"
-            offset={16}
+            direction={1}
             transition={shellTransition}
           >
             <SidebarBackRow label={back.label} onBack={goBack} badge={backBadgeFor?.(back.href)} />
@@ -1313,19 +1333,21 @@ export function AppSidebar({
           inert={!showSecondary}
           aria-hidden={!showSecondary}
           initial={false}
-          animate={{ opacity: showSecondary ? 1 : 0, x: showSecondary ? 0 : 16 }}
+          // The deepest level: hidden, it always waits on the right — it
+          // enters from there going down and leaves there going back.
+          animate={{ opacity: showSecondary ? 1 : 0, x: showSecondary ? 0 : PANEL_OFFSET }}
           transition={shellTransition}
           style={{ pointerEvents: showSecondary ? "auto" : "none" }}
         >
           {level2}
         </motion.div>
-        <AnimatePresence mode="sync" initial={false}>
+        <AnimatePresence mode="sync" initial={false} custom={direction}>
           {showSecondary ? null : panel === "home" ? (
             <SidebarPanelTransition
               key="home"
               className="absolute inset-0 flex min-h-0 flex-col"
-              offset={-16}
-              transition={reduce ? { duration: 0 } : transitions.panel}
+              direction={direction}
+              transition={shellTransition}
             >
               {homeLevel}
             </SidebarPanelTransition>
@@ -1333,8 +1355,8 @@ export function AppSidebar({
             <SidebarPanelTransition
               key={modeKey}
               className="absolute inset-0 flex min-h-0 flex-col"
-              offset={16}
-              transition={reduce ? { duration: 0 } : transitions.panel}
+              direction={direction}
+              transition={shellTransition}
             >
               {level1}
             </SidebarPanelTransition>

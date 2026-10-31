@@ -67,8 +67,12 @@ interface SecondarySidebar {
   backLevel: number;
   /** The back row: one level up in the SIDEBAR only — the page does not move. */
   goBack: () => void;
-  /** Ends the browse: back to the route's own level. */
-  resetBack: () => void;
+  /**
+   * Ends the browse: back to the route's own level. Given the href of a
+   * navigation that is starting, it only resets when that href stays on the
+   * current sidebar location; see `navigationEndsBrowseNow`.
+   */
+  resetBack: (href?: string) => void;
   /**
    * Does the sidebar's CURRENT panel include the teleport points? False the
    * moment the browse leaves the secondary level — the page then docks its
@@ -117,14 +121,23 @@ export function SecondarySidebarProvider({
   // by the way, the time of an image - enough to see the primary unfold
   // then fall back immediately.
   const [count, setCount] = useState(0);
-  // The back row's browse, ANCHORED to the route it was pressed on: any
-  // navigation (route change) makes the anchor stale and the count reads 0
-  // again — no effect to run, no stale panel for one rendering.
+  // The back row's browse, ANCHORED to the location it was pressed on: any
+  // navigation (location change) makes the anchor stale and the count reads 0
+  // again — no effect to run, no stale panel for one rendering. The location
+  // includes the board's objective: a board and an objective's board sit on
+  // different levels under the same pathname.
+  const location = sidebarLocationKey(pathname, displayedObjective);
   const [back, setBack] = useState<{ from: string; count: number }>({
     from: "",
     count: 0,
   });
-  const backLevel = back.from === pathname ? back.count : 0;
+  const backLevel = back.from === location ? back.count : 0;
+  // Leaving the anchored location ends that browse for good: kept, it would
+  // come back to life on a return to that location (Objectives → back →
+  // Tickets → Objectives showed the project panel instead of the objectives
+  // bar). Dropped during render, the way React resets state on a prop change:
+  // `backLevel` already reads 0 for this rendering.
+  if (back.count !== 0 && back.from !== location) setBack({ from: location, count: 0 });
 
   const register = useCallback(() => {
     setCount((c) => c + 1);
@@ -133,15 +146,16 @@ export function SecondarySidebarProvider({
 
   const goBack = useCallback(() => {
     setBack((prev) => ({
-      from: pathname,
+      from: location,
       count:
-        prev.from === pathname ? Math.min(prev.count + 1, MAX_BACK_LEVELS) : 1,
+        prev.from === location ? Math.min(prev.count + 1, MAX_BACK_LEVELS) : 1,
     }));
-  }, [pathname]);
+  }, [location]);
 
-  const resetBack = useCallback(() => {
+  const resetBack = useCallback((href?: string) => {
+    if (href !== undefined && !navigationEndsBrowseNow(href, location)) return;
     setBack((prev) => (prev.count === 0 ? prev : { ...prev, count: 0 }));
-  }, []);
+  }, [location]);
 
   const hosting = routeHasSecondaryNav(pathname, displayedObjective) && backLevel === 0;
 
@@ -168,6 +182,34 @@ export function SecondarySidebarProvider({
       <MobileCollectionStateProvider>{children}</MobileCollectionStateProvider>
     </SecondarySidebarContext.Provider>
   );
+}
+
+/**
+ * The sidebar location a browse is anchored to: the pathname, plus the
+ * objective when the route is that objective's board (it hosts the objectives
+ * bar, the plain board does not).
+ */
+export function sidebarLocationKey(pathname: string, objectiveParam: string | null): string {
+  const objective = objectiveIdFromBoardLocation(pathname, objectiveParam);
+  return objective === null ? pathname : `${pathname}?objective=${objective}`;
+}
+
+/**
+ * Does a navigation to `href` have to end the browse at once (MIN-877)? Only
+ * when it stays on the current sidebar location: nothing will rebase the
+ * levels then. A navigation to ANOTHER location keeps the browsed panel until
+ * the shell displays that location, which voids the anchor by itself.
+ * Resetting earlier showed the route being left at its own level for the
+ * time of the navigation — Objectives → back → Tickets flashed the
+ * objectives bar before the project panel came back.
+ */
+export function navigationEndsBrowseNow(href: string, currentLocation: string): boolean {
+  // Sidebar rows link app paths; a full URL never matches a location.
+  const [target] = href.split("#");
+  const query = target.indexOf("?");
+  const pathname = query < 0 ? target : target.slice(0, query);
+  const params = new URLSearchParams(query < 0 ? "" : target.slice(query + 1));
+  return sidebarLocationKey(pathname, params.get("objective")) === currentLocation;
 }
 
 /** Which panel the primary sidebar shows — the levels of MIN-546, resolved. */
