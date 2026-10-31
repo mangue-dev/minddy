@@ -208,6 +208,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return t("foundMembers", { count: resultCount(result, "members") });
     },
   },
+  get_project_stats: {
+    icon: Activity01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("loadingProjectStats");
+      return success ? t("projectStatsLoaded") : t("loadProjectStatsFailed");
+    },
+  },
   get_objective: {
     icon: Target01Icon,
     getLabel: (_args, result, success, status, t) => {

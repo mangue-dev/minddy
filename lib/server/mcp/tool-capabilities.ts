@@ -44,6 +44,7 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_get_issue: "read",
   minddy_get_pull_request: "read",
   minddy_list_members: "read",
+  minddy_get_project_stats: "read",
   minddy_list_categories: "read",
   minddy_list_objectives: "read",
   minddy_get_objective: "read",

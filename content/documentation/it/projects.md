@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 16,
+  "revision": 19,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,14 +63,19 @@
       "lib/collaborator-search.ts",
       "components/collaborator-suggestions.tsx",
       "app/api/me/collaborators/route.ts",
-      "components/ui/confirm-delete-dialog.tsx"
+      "components/ui/confirm-delete-dialog.tsx",
+      "components/stats/project-statistics.tsx",
+      "components/stats/issue-graph.tsx",
+      "lib/project-stats.ts",
+      "lib/issue-graph-layout.ts",
+      "app/api/projects/[id]/pull-request-stats/route.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of project-settings-steps, project-members-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude (it translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 19,
+    "fact": "agent:claude (MIN-878: project statistics paragraph, including the issue graph grouped by objective, checked against components/stats/project-statistics.tsx, components/stats/issue-graph.tsx, lib/project-stats.ts, lib/issue-graph-layout.ts and the pull-request-stats route; figures project-statistics and project-issue-graph captured on 2026-10-31 on the Lumen demo project (with objectives) from the local candidate against preview and inspected; existing figures unaffected and kept; no form submitted)",
+    "language": "agent:claude (it paragraph translated from en revision 17 with catalog UI labels and the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "issues",
@@ -94,7 +99,7 @@
       "src": "/documentation/it/project-general.png",
       "alt": "Intestazione del progetto con l’icona e il suo badge di modifica, il nome, la chiave e le cifre Ticket, Membri, Obiettivi, Categorie e Creato.",
       "caption": "Seleziona l’icona, il nome o la chiave per cambiarli sul posto; spostare il progetto nel cestino resta un’azione separata, più in basso.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +116,7 @@
       "src": "/documentation/it/project-members.png",
       "alt": "Scheda «Invita persone» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.",
       "caption": "Invita con l’email dell’account e identifica il proprietario prima di rimuovere l’accesso di un membro.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -121,11 +126,47 @@
       "theme": "light",
       "padding": 24,
       "deviceScaleFactor": 2
+    },
+    {
+      "id": "project-statistics-steps",
+      "kind": "screenshot",
+      "src": "/documentation/it/project-statistics.png",
+      "alt": "Sezioni Slancio, Situazione attuale e Collaboratori di un progetto con circa mille ticket: barre settimanali dei ticket creati e completati, una barra degli stati, indicatori di salute e una barra degli stati per persona.",
+      "caption": "Lo slancio confronta le ultime quattro settimane con le quattro precedenti; i ticket in ritardo e fermi segnalano il lavoro da guardare.",
+      "revision": 19,
+      "reviewed": true,
+      "capturedAt": "2026-10-31",
+      "viewport": [
+        816,
+        932
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "project-issue-graph",
+      "kind": "screenshot",
+      "src": "/documentation/it/project-issue-graph.png",
+      "alt": "Grafo dei ticket aperti raccolti in bolle colorate per obiettivo attorno ad ancore quadrate, con frecce grigie dal ticket padre al sottoticket, frecce rosse di blocco, collegamenti Correlati tratteggiati, linee grigie tra obiettivi, la legenda e l’interruttore Includi ticket e obiettivi chiusi.",
+      "caption": "Passa il cursore su un punto per leggere il suo ticket ed evidenziarne i collegamenti; selezionalo per aprire il ticket nel pannello laterale.",
+      "revision": 19,
+      "reviewed": true,
+      "capturedAt": "2026-10-31",
+      "viewport": [
+        816,
+        764
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
     "project-settings-steps",
-    "project-members-steps"
+    "project-members-steps",
+    "project-statistics-steps",
+    "project-issue-graph"
   ]
 }
 ---
@@ -137,6 +178,12 @@ Un progetto raccoglie ticket, obiettivi, pagine e le persone che ci lavorano. Il
 Apri il progetto e poi le sue impostazioni. La proprietà del progetto determina l’accesso alle impostazioni amministrative. I membri e i lettori possono consultare la sezione generale, nascondere il progetto per sé e lasciarlo, ma non ottengono i controlli di modifica del proprietario.
 
 La scheda **Generale** si apre con l’identità del progetto: la sua icona, il nome e la chiave, poi cinque cifre: **Ticket**, **Membri**, **Obiettivi**, **Categorie** e **Creato**. Come proprietario, modifichi icona, nome e chiave dove sono mostrati; non c’è più un pulsante Salva. Seleziona l’icona e scegli **Nuova sfera** (proposto solo finché nessuna immagine copre l’orbe), **Carica un'immagine**, **Importa da un sito…**, che chiede l’indirizzo del sito e ne importa l’icona quando scegli **Importa**, oppure, se è impostata un’immagine, **Rimuovi l’immagine**, che chiede prima conferma perché l’immagine viene eliminata. Seleziona il nome o la chiave per modificarli: su un computer diventano un campo in cui Invio o l’uscita dal campo salva ed Esc annulla; su un telefono si apre un pannello con **Salva**. Il nome non può essere vuoto. La chiave viene convertita in maiuscolo e deve avere da 2 a 5 lettere (A–Z); altrimenti compare un errore e la chiave non viene salvata. Dopo averla cambiata, controlla gli identificativi risultanti. L’icona distingue il progetto solo nella navigazione; non cambia l’appartenenza al progetto. Membri e lettori vedono la stessa intestazione senza questi controlli.
+
+Sotto l’intestazione compaiono le statistiche del progetto, calcolate sui suoi dati e visibili a tutte le persone del progetto. **Slancio** confronta i ticket completati nelle ultime quattro settimane con le quattro settimane precedenti, indica se il backlog è cresciuto o diminuito in quel periodo e mostra il tempo mediano di consegna dalla creazione a **Completato** negli ultimi 90 giorni; il suo grafico mostra i ticket creati e completati ogni settimana nell’arco di dodici settimane. **Situazione attuale** suddivide tutti i ticket per stato e conta i ticket aperti in ritardo, non assegnati o fermi, cioè in corso o in revisione senza modifiche da 14 giorni. Quando ai ticket del progetto sono collegate delle pull request, **Pull request** mostra quante sono state unite, il tempo mediano per unire, la quota di ticket completati consegnati tramite una pull request unita e le unioni per settimana. **Collaboratori** elenca chi ha completato più ticket negli ultimi 90 giorni e suddivide i ticket di ogni persona per stato: quelli aperti come sono adesso, quelli chiusi in quei 90 giorni. **Grafo dei ticket** disegna i ticket aperti collegati da una relazione o da un ticket padre, colorati in base allo stato, con frecce dal ticket padre al sottoticket e dal ticket che blocca a quello bloccato. I ticket si raccolgono in una bolla colorata per obiettivo, attorno a un quadrato che rappresenta l’obiettivo e porta le sue relazioni; una linea grigia tra due obiettivi riassume i collegamenti tra i loro ticket, che compaiono passando il cursore su uno di essi. Se i ticket sono molti, restano quelli più collegati di ogni obiettivo e la bolla indica quanti sono nascosti. Seleziona un ticket per aprirlo nel pannello laterale, o il quadrato di un obiettivo per aprire l’obiettivo; **Includi ticket e obiettivi chiusi** aggiunge il lavoro completato. I ticket annullati e i duplicati non contano mai come completati. Passa il cursore su una barra o mettila a fuoco per leggerne i valori esatti. Numo e i client Minddy MCP leggono gli stessi numeri, insieme ai ticket in ritardo e fermi stessi.
+
+![Sezioni Slancio, Situazione attuale e Collaboratori di un progetto con circa mille ticket: barre settimanali dei ticket creati e completati, una barra degli stati, indicatori di salute e una barra degli stati per persona.](/documentation/it/project-statistics.png)
+
+![Grafo dei ticket aperti raccolti in bolle colorate per obiettivo attorno ad ancore quadrate, con frecce grigie dal ticket padre al sottoticket, frecce rosse di blocco, collegamenti Correlati tratteggiati, linee grigie tra obiettivi, la legenda e l’interruttore Includi ticket e obiettivi chiusi.](/documentation/it/project-issue-graph.png)
 
 Le altre schede sono **Categorie**, **Membri**, **Ricorrenze**, **Smart Assign**, **Feedback**, **Git**, **Importa** e **Integrazioni**. Segui la guida dell’attività corrispondente prima di abilitare un fornitore o lavoro automatico. Le preferenze dell’account, come la lingua dell’interfaccia, sono separate dalla configurazione del progetto.
 

@@ -1,3 +1,4 @@
+import { readProjectStats } from "@/lib/server/project-stats";
 import { ROUTINE_TRIGGER_SCHEMA, CREATE_ROUTINE_DESCRIPTION, UPDATE_ROUTINE_DESCRIPTION } from "@/lib/server/routine-tool-schema";
 import { materializePendingDescription } from "@/lib/server/description-collaboration";
 import {
@@ -1661,6 +1662,25 @@ export function registerMinddyTools(
         mcpReadCtx(scope.access, scope.userId),
         scope.access.project.owner_id,
       );
+      if ("error" in r) return fail("database_error", r.error);
+      return ok(r);
+    },
+  );
+
+  server.registerTool(
+    "minddy_get_project_stats",
+    {
+      title: "Get project statistics",
+      description: "Read a project's statistics, read-only \u2014 the numbers of its General settings: issue count per status; open, overdue, unassigned and stalled counts (stalled = in progress or in review with no change for stalled_after_days days); the overdue and stalled issues themselves (identifier, title, assignee_id, due date or last change, most urgent first, up to 25 each); the momentum (issues completed over the last 28 days against the 28 before, created minus completed); the median lead time from creation to done over 90 days; issues created and completed per week over 12 weeks; the top contributors over 90 days; and, when pull requests are linked to its issues, merged/open/closed counts, median hours to merge and merges per week. Use it when asked how the project is doing, what is late or stuck, or about its pace. Read-only: it changes nothing.",
+      inputSchema: z.object({ project_id: PROJECT_ID }),
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const r = await readProjectStats(mcpReadCtx(scope.access, scope.userId), {
+        ownerId: scope.access.project.owner_id,
+      });
       if ("error" in r) return fail("database_error", r.error);
       return ok(r);
     },

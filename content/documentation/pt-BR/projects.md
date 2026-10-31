@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 16,
+  "revision": 18,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,14 +63,19 @@
       "lib/collaborator-search.ts",
       "components/collaborator-suggestions.tsx",
       "app/api/me/collaborators/route.ts",
-      "components/ui/confirm-delete-dialog.tsx"
+      "components/ui/confirm-delete-dialog.tsx",
+      "components/stats/project-statistics.tsx",
+      "components/stats/issue-graph.tsx",
+      "lib/project-stats.ts",
+      "lib/issue-graph-layout.ts",
+      "app/api/projects/[id]/pull-request-stats/route.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude (MIN-760: category reordering paragraph checked against components/project-categories.tsx, the order route and the Numo/MCP tools; existing figures unaffected and kept; no browser walkthrough of the procedure); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of project-settings-steps, project-members-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude (pt-BR translation of the added en paragraph, equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 18,
+    "fact": "agent:claude (MIN-878: project statistics paragraph, including the issue graph grouped by objective, checked against components/stats/project-statistics.tsx, components/stats/issue-graph.tsx, lib/project-stats.ts, lib/issue-graph-layout.ts and the pull-request-stats route; figures project-statistics and project-issue-graph captured on 2026-10-31 on the Lumen demo project (with objectives) from the local candidate against preview and inspected; existing figures unaffected and kept; no form submitted)",
+    "language": "agent:claude (pt-BR paragraph translated from en revision 17 with catalog UI labels and the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "issues",
@@ -94,7 +99,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
       "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -111,7 +116,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Cartão “Convidar pessoas” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -121,11 +126,47 @@
       "theme": "light",
       "padding": 24,
       "deviceScaleFactor": 2
+    },
+    {
+      "id": "project-statistics-steps",
+      "kind": "screenshot",
+      "src": "/documentation/pt-BR/project-statistics.png",
+      "alt": "Seções Ritmo, Situação atual e Colaboradores de um projeto com cerca de mil tickets: barras semanais de tickets criados e concluídos, uma barra de status, indicadores de saúde e uma barra de status por pessoa.",
+      "caption": "O ritmo compara as últimas quatro semanas com as quatro anteriores; os tickets atrasados e parados apontam o trabalho a observar.",
+      "revision": 18,
+      "reviewed": true,
+      "capturedAt": "2026-10-31",
+      "viewport": [
+        816,
+        932
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "project-issue-graph",
+      "kind": "screenshot",
+      "src": "/documentation/pt-BR/project-issue-graph.png",
+      "alt": "Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda e o interruptor Incluir tickets e objetivos fechados.",
+      "caption": "Passe o cursor sobre um ponto para ler o ticket e destacar suas ligações; selecione-o para abrir o ticket no painel lateral.",
+      "revision": 18,
+      "reviewed": true,
+      "capturedAt": "2026-10-31",
+      "viewport": [
+        816,
+        764
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [
     "project-settings-steps",
-    "project-members-steps"
+    "project-members-steps",
+    "project-statistics-steps",
+    "project-issue-graph"
   ]
 }
 ---
@@ -137,6 +178,12 @@ Um projeto reúne tickets, objetivos, páginas e as pessoas que trabalham neles.
 Abra o projeto e depois suas configurações. A propriedade do projeto determina o acesso às configurações administrativas. Os membros e os leitores podem consultar a seção geral, ocultar o projeto para si e sair dele, mas não recebem os controles de edição do proprietário.
 
 A aba **Geral** abre com a identidade do projeto: o ícone, o nome e a chave, e depois cinco números: **Tickets**, **Membros**, **Objetivos**, **Categorias** e **Criado em**. Como proprietário, você altera o ícone, o nome e a chave onde eles aparecem; não há mais botão Salvar. Selecione o ícone e escolha **Novo orbe** (oferecido só enquanto nenhuma imagem cobre o orbe), **Fazer upload de uma imagem**, **Importar de um site…**, que pede o endereço do site e importa o ícone dele quando você escolhe **Importar**, ou, se houver uma imagem, **Remover a imagem**, que pede confirmação antes porque a imagem é excluída. Selecione o nome ou a chave para editá-los: no computador eles viram um campo em que Enter ou sair do campo salva e Esc cancela; no celular abre um painel com **Salvar**. O nome não pode ficar vazio. A chave é normalizada para maiúsculas e precisa ter de 2 a 5 letras (A–Z); caso contrário, aparece um erro e a chave não é salva. Revise os identificadores resultantes depois de alterá-la. O ícone só distingue o projeto na navegação; ele não muda a participação no projeto. Membros e leitores veem o mesmo cabeçalho sem esses controles.
+
+Abaixo do cabeçalho vêm as estatísticas do projeto, calculadas a partir dos próprios dados e visíveis para todas as pessoas do projeto. **Ritmo** compara os tickets concluídos nas últimas quatro semanas com as quatro semanas anteriores, mostra se o backlog cresceu ou diminuiu nesse período e informa o prazo mediano entre a criação e **Concluído** nos últimos 90 dias; o gráfico mostra os tickets criados e concluídos a cada semana ao longo de doze semanas. **Situação atual** divide todos os tickets por status e conta os tickets abertos atrasados, sem responsável ou parados, ou seja, em andamento ou em revisão sem alterações há 14 dias. Quando há pull requests vinculados aos tickets do projeto, **Pull requests** mostra quantos foram mesclados, o tempo mediano até mesclar, a proporção de tickets concluídos entregues por um pull request mesclado e as mesclagens por semana. **Colaboradores** lista quem concluiu mais tickets nos últimos 90 dias e divide os tickets de cada pessoa por status: os abertos como estão agora, os fechados nesses 90 dias. **Grafo de tickets** desenha os tickets abertos ligados por uma relação ou por um ticket pai, coloridos pelo status, com setas do ticket pai para o subticket e do ticket que bloqueia para o bloqueado. Os tickets se agrupam em uma bolha colorida por objetivo, em torno de um quadrado que representa o objetivo e carrega suas próprias relações; uma linha cinza entre dois objetivos resume as ligações entre os tickets deles, que aparecem ao passar o cursor sobre um deles. Quando há muitos tickets, ficam os mais conectados de cada objetivo, e a bolha indica quantos foram ocultados. Selecione um ticket para abri-lo no painel lateral, ou o quadrado de um objetivo para abrir o objetivo; **Incluir tickets e objetivos fechados** adiciona o trabalho concluído. Tickets cancelados e duplicados nunca contam como concluídos. Passe o cursor sobre uma barra ou coloque o foco nela para ler os valores exatos. O Numo e os clientes do Minddy MCP leem os mesmos números, com os próprios tickets atrasados e parados.
+
+![Seções Ritmo, Situação atual e Colaboradores de um projeto com cerca de mil tickets: barras semanais de tickets criados e concluídos, uma barra de status, indicadores de saúde e uma barra de status por pessoa.](/documentation/pt-BR/project-statistics.png)
+
+![Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda e o interruptor Incluir tickets e objetivos fechados.](/documentation/pt-BR/project-issue-graph.png)
 
 As outras abas são **Categorias**, **Membros**, **Recorrências**, **Smart Assign**, **Feedback**, **Git**, **Importar** e **Integrações**. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
 

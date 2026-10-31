@@ -112,6 +112,9 @@ const rules = [
       "captures/world/seed/019-manuel-captures.mjs",
       // Mirrored PR comments seed (MIN-802): finds AUR-8 by number, no content.
       "captures/world/seed/021-commentaires-pr.mjs",
+      // Lumen statistics seed (MIN-878): reads demo ids, titles and numbers
+      // to stay idempotent, on a project it asserts is unencrypted.
+      "captures/world/seed/022-projet-lumen.mjs",
     ]),
   },
   {

@@ -50,6 +50,8 @@ export function getToolResultCharLimit(
     // the full run list instead of a truncated tail mid-row.
     case "get_user_stats":
     case "get_plan_usage":
+    // Up to 25 overdue and 25 stalled rows with their titles.
+    case "get_project_stats":
       return 8_000;
     // A targeted routine may contain a 20,000-character instruction. The
     // default call stays compact, while this ceiling preserves the full JSON

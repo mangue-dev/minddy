@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { GitBranchIcon as GitBranch, ImportIcon, MessageMultiple01Icon as MessagesSquare, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, TagsIcon as Tags, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
-import { useParams } from "next/navigation";
 import { useAppRouter } from "@/lib/use-app-router";
+import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -28,11 +28,23 @@ import { SettingsPageSkeleton } from "@/components/route-skeletons";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 
-export default function ProjectSettingsPage({ browse, projectId }: { browse?: SidebarBrowseTarget; projectId?: string } = {}) {
+export default function ProjectSettingsPage(props: { browse?: SidebarBrowseTarget; projectId?: string } = {}) {
+  return (
+    <AppTabRouteBoundary>
+      <Suspense fallback={<SettingsPageSkeleton />}>
+        <ProjectSettingsInner {...props} />
+      </Suspense>
+    </AppTabRouteBoundary>
+  );
+}
+
+function ProjectSettingsInner({ browse, projectId }: { browse?: SidebarBrowseTarget; projectId?: string }) {
   const t = useTranslations("Settings");
   const tRecurrence = useTranslations("Recurrence");
-  const params = useParams<{ id: string }>();
-  const id = projectId ?? params.id;
+  // The URL carries the project's short code (`/projects/min-3f2a9c81/settings`),
+  // never its id: the tab route expands it, as on the board.
+  const { projectId: routeProjectId } = useAppTabRoute();
+  const id = projectId ?? routeProjectId ?? "";
   const router = useAppRouter();
   const { user } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
