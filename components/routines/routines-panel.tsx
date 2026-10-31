@@ -23,7 +23,12 @@ import {
   groupByProject,
   toggledSet,
 } from "@/components/sidebar-project-group";
-import { useAssistantContext } from "@/lib/assistant-panel-context";
+import { useAssistantContext, useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
+import { BulkEntityActions } from "@/components/bulk-entity-actions";
+import type { EntityBulkAction } from "@/lib/bulk-actions-context";
+import { useEntitySelection } from "@/lib/use-entity-selection";
+import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useOfferedProjects } from "@/lib/use-offered-projects";
@@ -367,6 +372,83 @@ export function RoutinesPanel({
     return menu;
   };
 
+  // ⇧-click multi-selection (MIN-873). The list is cross-project: Numo gets
+  // every selected routine, the writes only reach those the user owns (the
+  // owner's budget pays for a routine, so only the owner changes one).
+  const tBulk = useTranslations("BulkActions");
+  const { openIntent: openNumo } = useAssistantPanelActions();
+  const routineSelection = useEntitySelection(routines);
+  const selectedRoutines = routineSelection.selected;
+  const ownedSelected = selectedRoutines.filter(
+    (routine) => projectById.get(routine.project_id)?.owner_id === user?.id,
+  );
+  const askNumoAboutRoutines = () => {
+    const projectIds = new Set(selectedRoutines.map((routine) => routine.project_id));
+    const projectId = projectIds.size === 1 ? selectedRoutines[0].project_id : null;
+    openNumo({
+      source: selectedRoutines.length > 1 ? "bulk" : "routine",
+      action: "discuss",
+      projectId,
+      pageContext: {
+        ...(projectId ? { projectId } : {}),
+        ...selectedItemsPageContext("routine", selectedRoutines),
+      },
+    });
+  };
+  const toPause = ownedSelected.filter((routine) => routine.enabled);
+  const toResume = ownedSelected.filter((routine) => !routine.enabled);
+  const bulkRoutineActions: EntityBulkAction[] = [
+    ...(ownedSelected.length > 0
+      ? [{
+          id: "routines-run-now",
+          title: tBulk("runRoutinesNow", { count: ownedSelected.length }),
+          icon: PlayIcon,
+          keywords: ["run", "now", "start", "lancer", "exécuter"],
+          // Each run consumes usage, like the row menu's "Run now".
+          run: () => {
+            for (const routine of ownedSelected) void actions.runNow(routine);
+          },
+        }]
+      : []),
+    ...(toPause.length > 0
+      ? [{
+          id: "routines-pause",
+          title: tBulk("pauseRoutines", { count: toPause.length }),
+          icon: PauseCircleIcon,
+          keywords: ["pause", "disable", "stop", "désactiver"],
+          run: () => {
+            for (const routine of toPause) actions.toggleEnabled(routine, false);
+            toast.success(tBulk("routinesPaused", { count: toPause.length }));
+          },
+        }]
+      : []),
+    ...(toResume.length > 0
+      ? [{
+          id: "routines-resume",
+          title: tBulk("resumeRoutines", { count: toResume.length }),
+          icon: PlayCircleIcon,
+          keywords: ["resume", "enable", "start", "activer", "reprendre"],
+          run: () => {
+            // Resuming needs the scheduler; the action says why it refuses.
+            if (!routineSchedulingConfigured) {
+              toast.error(t("unavailableScheduler"));
+              return;
+            }
+            for (const routine of toResume) actions.toggleEnabled(routine, true);
+            toast.success(tBulk("routinesResumed", { count: toResume.length }));
+          },
+        }]
+      : []),
+  ];
+  const trashSelectedRoutines = async () => {
+    const targets = ownedSelected;
+    const removed = await Promise.all(targets.map((routine) => actions.remove(routine)));
+    const trashed = removed.filter(Boolean).length;
+    if (trashed > 0) toast.success(tBulk("trashedRoutines", { count: trashed }));
+    if (selectedId && targets.some((routine, i) => removed[i] && routine.id === selectedId)) onSelect(null);
+    routineSelection.clear();
+  };
+
   const trashDialog = (
     <RoutineTrashDialog
       routine={trashTarget}
@@ -489,6 +571,8 @@ export function RoutinesPanel({
                 routine={routine}
                 selected={routine.id === selectedId}
                 onSelect={() => onSelect(routine.id)}
+                picked={routineSelection.isSelected(routine.id)}
+                onTogglePicked={browse ? undefined : routineSelection.toggle}
               />
             ))
           )}
@@ -499,6 +583,7 @@ export function RoutinesPanel({
 
   const sidebar = (
       <CollectionSidebar browse={browse}
+        onBlankClick={routineSelection.clear}
         title={t("title")}
         itemContextActions={itemContextActions}
         hiddenOnMobile
@@ -606,6 +691,25 @@ export function RoutinesPanel({
 
       {wizard}
       {trashDialog}
+
+      <BulkIssueActionsPresence>
+        {selectedRoutines.length > 0 && (
+          <BulkEntityActions
+            key="bulk-routine-actions"
+            surface="routines"
+            placeholder={tBulk("routinesPlaceholder", { count: selectedRoutines.length })}
+            label={tBulk("selectedRoutines", { count: selectedRoutines.length })}
+            count={selectedRoutines.length}
+            actions={bulkRoutineActions}
+            trash={ownedSelected.length > 0 ? {
+              title: tBulk("trashRoutinesConfirm", { count: ownedSelected.length }),
+              onConfirm: trashSelectedRoutines,
+            } : undefined}
+            onAskNumo={askNumoAboutRoutines}
+            onClear={routineSelection.clear}
+          />
+        )}
+      </BulkIssueActionsPresence>
     </>
   );
 }
@@ -619,11 +723,17 @@ export function RoutinesPanel({
 function RoutineRow({
   routine,
   selected,
+  picked = false,
   onSelect,
+  onTogglePicked,
 }: {
   routine: Routine;
   selected: boolean;
+  /** Taken in the multi-selection (MIN-873). */
+  picked?: boolean;
   onSelect: () => void;
+  /** ⇧-click: adds the routine to the selection or takes it out. */
+  onTogglePicked?: (routineId: string) => void;
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
@@ -650,13 +760,22 @@ function RoutineRow({
       aria-current={selected ? "true" : undefined}
       data-navigation-href={routineHref(routine.id)}
       data-routine-id={routine.id}
-      onClick={onSelect}
+      aria-pressed={onTogglePicked ? picked : undefined}
+      onClick={(event) => {
+        if (event.shiftKey && onTogglePicked) {
+          event.preventDefault();
+          onTogglePicked(routine.id);
+          return;
+        }
+        onSelect();
+      }}
       className={cn(
         // `pr-3` and not `pr-2`: the status point (paused, missed passage)
         // touched the right edge of the column.
         "flex items-center gap-2 rounded-md py-1.5 pr-3 text-left outline-none transition-colors",
         PROJECT_GROUP_INDENT,
-        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS,
+        // Taken in the selection, the triage's shade alone says it.
+        picked ? "bg-primary/10" : selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS,
       )}
     >
       <span className="flex min-w-0 flex-1 flex-col">

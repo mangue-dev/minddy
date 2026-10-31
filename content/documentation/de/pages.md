@@ -303,6 +303,8 @@ Das Löschen verschiebt Seiten, für die eine Wiederherstellung vorgesehen ist, 
 
 ![Erstellungsmenü mit Neue Seite und Neue Datenbank.](/documentation/de/page-create-menu.png)
 
+Halte die Umschalttaste gedrückt und klicke auf Seiten im Baum, um mehrere auszuwählen; der Klick wählt sie aus, statt sie in einem neuen Fenster zu öffnen, und ein Klick auf eine leere Stelle des Baums hebt die Auswahl auf. **Aktionen** in der schwebenden Leiste oder Command+K unter macOS bzw. Strg+K auf anderen Systemen stuft sie in einer einzigen Numo-Konversation zu Tickets hoch, die ein Ticket pro Seite erstellt, fügt sie den Favoriten hinzu, entfernt sie daraus oder verschiebt sie nach einer Bestätigung samt Unterseiten in den Papierkorb. **Numo fragen** öffnet Numo mit allen ausgewählten Seiten im Kontext.
+
 ## Eine Seite zum Ticket hochstufen {#promote-page-to-issue}
 
 Wenn eine Seite anstehende Arbeit beschreibt, kann der Eigentümer oder ein Mitglied sie mit Numo in ein Ticket umwandeln. Leser sehen diese Aktion nicht. Dafür benötigst du verfügbares KI-Kontingent oder einen kompatiblen persönlichen Schlüssel.

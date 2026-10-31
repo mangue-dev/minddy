@@ -304,6 +304,8 @@ A exclusão envia para a lixeira as páginas que permitem recuperação. Em um m
 
 ![Menu de criação com Nova página e Novo banco de dados.](/documentation/pt-BR/page-create-menu.png)
 
+Mantenha Shift pressionado e clique em páginas da árvore para selecionar várias; o clique as seleciona em vez de abri-las em uma nova janela, e um clique no espaço vazio da árvore limpa a seleção. **Ações** na barra flutuante, ou Command+K no macOS ou Ctrl+K nos outros sistemas, as promove a tickets em uma única conversa com o Numo, que cria um ticket por página, as adiciona aos favoritos ou as remove deles, ou as move para a lixeira com suas subpáginas após uma confirmação. **Pergunte ao Numo** abre o Numo com todas as páginas selecionadas no contexto.
+
 ## Promover uma página a ticket {#promote-page-to-issue}
 
 Quando uma página descreve trabalho a fazer, o proprietário ou um Membro pode transformá-la em um ticket com o Numo. Os leitores não veem essa ação. É necessário ter uso de IA disponível ou uma chave pessoal compatível.

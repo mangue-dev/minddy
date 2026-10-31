@@ -116,6 +116,8 @@ Abre cada incidencia relevante y elige el objetivo en sus propiedades, o utiliza
 
 ![Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.](/documentation/es/reader-objectives.png)
 
+En la página de objetivos, mantén pulsada Mayús y haz clic en objetivos para seleccionar varios; un clic en el espacio vacío de la lista borra la selección. **Acciones** en la barra flotante, o Command+K en macOS o Ctrl+K en otros sistemas, ofrece **Cambiar estado**, **Cambiar responsable**, **Cambiar color** y **Mover a la papelera**, que primero pide confirmación. **Pregúntale a Numo** abre Numo con todos los objetivos seleccionados en su contexto.
+
 ### Leer el progreso antes de cerrar {#objective-progress}
 
 Revisa las incidencias completadas y activas junto con el progreso del objetivo. Un indicador resume el trabajo vinculado; no puede determinar si un resultado del producto es aceptable. Revisa tareas que falten y trabajo cancelado o duplicado antes de marcar el objetivo como completado. El tablero del objetivo muestra primero el trabajo abierto: selecciona **Hecha** y **Cancelada** en su filtro **Estado** para revisar ahí las incidencias cerradas. En un ordenador, mientras el tablero muestra las incidencias de un objetivo, la barra lateral se queda en la lista de objetivos, bajo la fila de retorno **Objetivos**, con ese objetivo resaltado; elige otro objetivo en esa lista para cambiar el tablero a él.

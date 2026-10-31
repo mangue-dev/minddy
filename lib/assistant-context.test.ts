@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyContextSelection,
   contextChips,
+  SELECTED_ITEMS_CHIP_KEY,
   SELECTION_CHIP_KEY,
 } from "./assistant-context";
 import { MAX_SELECTION_LENGTH, normalizeSelectionText } from "./assistant-selection";
@@ -49,6 +50,10 @@ const everything: AssistantPageContext = {
   cycleId: "c1",
   cycleLabel: "6–19 juil",
   selection: { text: "A passage selected in the page" },
+  selectedItems: [
+    { kind: "page", id: "page-1", label: "Spec" },
+    { kind: "page", id: "page-2", label: "Roadmap" },
+  ],
 };
 
 describe("contextChips — routine", () => {
@@ -250,6 +255,36 @@ describe("contextChips — quoted selection", () => {
   it("shows no pill for a blank selection", () => {
     const chips = contextChips({ selection: { text: "   " } }, { t });
     expect(chips.some((chip) => chip.key === SELECTION_CHIP_KEY)).toBe(false);
+  });
+});
+
+describe("selected records pill (MIN-873)", () => {
+  it("counts the selection on the pill and lists the titles in its tooltip", () => {
+    const render = ((key: string, values?: { count?: number }) =>
+      `${key}:${values?.count ?? ""}`) as unknown as Parameters<typeof contextChips>[1]["t"];
+    const chip = contextChips(
+      {
+        selectedItems: [
+          { kind: "feedback", id: "f1", label: "Dark mode" },
+          { kind: "feedback", id: "f2", label: "Export" },
+        ],
+      },
+      { t: render },
+    ).find((item) => item.key === SELECTED_ITEMS_CHIP_KEY);
+
+    expect(chip).toMatchObject({
+      kind: "feedback",
+      label: "contextFeedbackSelected:2",
+      tooltip: "Dark mode, Export",
+    });
+  });
+
+  it("turning the pill off sends none of the selected records", () => {
+    const sent = applyContextSelection(
+      { projectId: "p1", selectedItems: [{ kind: "routine", id: "r1", label: "Digest" }] },
+      new Set([SELECTED_ITEMS_CHIP_KEY]),
+    );
+    expect(sent).toEqual({ projectId: "p1" });
   });
 });
 

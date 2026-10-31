@@ -105,9 +105,8 @@ export function BulkIssueActions({
   // Same for unlinking the selection from all its pull requests.
   const tPr = useTranslations("PullRequests");
   const [pendingUnlink, setPendingUnlink] = useState<{ count: number; run: () => void } | null>(null);
-  const { requestBulkActions, registerSelectionActions } = useBulkActions();
-  const reducedMotion = useReducedMotion();
-  // An exiting pill still shows the last count, but no longer owns ⌘K.
+  const { requestBulkActions } = useBulkActions();
+  // An exiting pill no longer offers the right-click trash entry.
   const present = useIsPresent();
   // Each bulk action is one gesture: ⌘Z undoes it for the whole selection,
   // not one issue per keystroke (MIN-795).
@@ -199,16 +198,6 @@ export function BulkIssueActions({
     });
   };
 
-  // ⌘K while tickets are selected opens these actions, not the search palette:
-  // the pill hands its latest gesture to the launcher for as long as it lives.
-  const openActionsRef = useRef(openActions);
-  openActionsRef.current = openActions;
-  useEffect(() => {
-    if (!present) return;
-    registerSelectionActions(() => void openActionsRef.current());
-    return () => registerSelectionActions(null);
-  }, [registerSelectionActions, present]);
-
   // A right-click on a selected card offers the same trash entry, behind the
   // same confirmation (lib/issue-selection-context.tsx).
   const { registerRequestDelete } = useIssueSelection();
@@ -218,6 +207,80 @@ export function BulkIssueActions({
     registerRequestDelete(() => setConfirmDeleteOpen(true));
     return () => registerRequestDelete(null);
   }, [registerRequestDelete, present, canDelete]);
+
+  return (
+    <SelectionPill
+      label={t("selected", { count })}
+      onActions={openActions}
+      onWarmActions={warmPullRequests}
+      onAskNumo={onAskNumo}
+      onClear={onClear}
+    >
+      {onDelete && (
+        <ConfirmDeleteDialog
+          open={confirmDeleteOpen}
+          onOpenChange={setConfirmDeleteOpen}
+          title={t("deleteConfirm", { count })}
+          description={t("deleteConfirmDescription", { days: TRASH_RETENTION_DAYS })}
+          confirmLabel={tCommon("moveToTrash")}
+          cancelLabel={tCommon("cancel")}
+          onConfirm={() => linked(onDelete)}
+        />
+      )}
+      <ConfirmDeleteDialog
+        open={pendingUnlink !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingUnlink(null);
+        }}
+        title={tPr("unlinkFromPullRequestsTitle", { count: pendingUnlink?.count ?? 0 })}
+        description={tPr("unlinkFromPullRequestsDescription")}
+        confirmLabel={tPr("unlinkIssue")}
+        cancelLabel={tCommon("cancel")}
+        onConfirm={() => pendingUnlink?.run()}
+      />
+    </SelectionPill>
+  );
+}
+
+/**
+ * The floating pill of every multi-selection (MIN-75, MIN-873): the count,
+ * "Actions" (which hands the selection to ⌘K), an icon-only "Ask Numo" and
+ * clear. While it is mounted, ⌘K opens the selection's actions instead of the
+ * search palette. Dialogs the actions open go in `children`.
+ */
+export function SelectionPill({
+  label,
+  onActions,
+  onWarmActions,
+  onAskNumo,
+  onClear,
+  children,
+}: {
+  /** "3 issues selected". */
+  label: string;
+  onActions: () => void | Promise<void>;
+  /** Hover or focus of "Actions": warms what the actions will read. */
+  onWarmActions?: () => void;
+  onAskNumo: () => void;
+  onClear: () => void;
+  children?: ReactNode;
+}) {
+  const t = useTranslations("BulkActions");
+  const { registerSelectionActions } = useBulkActions();
+  const reducedMotion = useReducedMotion();
+  // An exiting pill still shows the last count, but no longer owns ⌘K.
+  const present = useIsPresent();
+
+  // ⌘K while something is selected opens these actions, not the search
+  // palette: the pill hands its latest gesture to the launcher for as long as
+  // it lives.
+  const openActionsRef = useRef(onActions);
+  openActionsRef.current = onActions;
+  useEffect(() => {
+    if (!present) return;
+    registerSelectionActions(() => void openActionsRef.current());
+    return () => registerSelectionActions(null);
+  }, [registerSelectionActions, present]);
 
   // No `backdrop-blur`: `bg-background/95` already completely hides the background,
   // the blur was not visible and cost a composition layer (MIN-323).
@@ -234,15 +297,15 @@ export function BulkIssueActions({
       transition={{ type: "spring", duration: 0.28, bounce: 0.15 }}
     >
       <span className="min-w-0 px-3 text-sm font-medium whitespace-nowrap app-mobile:truncate app-mobile:px-1">
-        {t("selected", { count })}
+        {label}
       </span>
       <Button
         type="button"
         size="sm"
         className="h-8 gap-1.5 rounded-full px-3 text-xs"
-        onClick={() => void openActions()}
-        onPointerEnter={warmPullRequests}
-        onFocus={warmPullRequests}
+        onClick={() => void onActions()}
+        onPointerEnter={onWarmActions}
+        onFocus={onWarmActions}
       >
         <HugeiconsIcon icon={CommandIcon} className="size-3.5" />
         {t("actions")}
@@ -276,28 +339,7 @@ export function BulkIssueActions({
       >
         <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
       </Button>
-      {onDelete && (
-        <ConfirmDeleteDialog
-          open={confirmDeleteOpen}
-          onOpenChange={setConfirmDeleteOpen}
-          title={t("deleteConfirm", { count })}
-          description={t("deleteConfirmDescription", { days: TRASH_RETENTION_DAYS })}
-          confirmLabel={tCommon("moveToTrash")}
-          cancelLabel={tCommon("cancel")}
-          onConfirm={() => linked(onDelete)}
-        />
-      )}
-      <ConfirmDeleteDialog
-        open={pendingUnlink !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingUnlink(null);
-        }}
-        title={tPr("unlinkFromPullRequestsTitle", { count: pendingUnlink?.count ?? 0 })}
-        description={tPr("unlinkFromPullRequestsDescription")}
-        confirmLabel={tPr("unlinkIssue")}
-        cancelLabel={tCommon("cancel")}
-        onConfirm={() => pendingUnlink?.run()}
-      />
+      {children}
     </motion.div>
   );
 }

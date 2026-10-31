@@ -20,8 +20,11 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactElement,
   type ReactNode,
 } from "react";
+import type { IconSvgElement } from "@hugeicons/react";
+import type { FormSelectOption } from "@/lib/command-palette/registry/types";
 import type { IssueUpdateInput, Member, Objective } from "@/lib/types";
 import { trackEvent } from "./analytics";
 
@@ -38,6 +41,8 @@ export interface BulkCycleActions {
 }
 
 export interface BulkActionsRequest {
+  /** Ticket selections leave it unset; see {@link EntityBulkActionsRequest}. */
+  kind?: "issues";
   /** Number of selected tickets — drives the item title, plurals and confirms. */
   count: number;
   /** Where does the selection come from, for analytics only. By default “board” — the
@@ -72,6 +77,53 @@ export interface BulkActionsRequest {
   pullRequestLinks?: BulkPullRequestLinks;
 }
 
+/**
+ * One palette row of a non-ticket selection (MIN-873). It either runs at once
+ * or, with `choices`, opens the palette's inline select first; the record
+ * surface owns the writes, the palette only presents them.
+ */
+export interface EntityBulkAction {
+  id: string;
+  title: string;
+  /** A Hugeicons glyph, or an element for a glyph of its own (Numo's). */
+  icon: IconSvgElement | ReactElement;
+  keywords?: string[];
+  /** Runs at once (a confirmation dialog, when the action needs one). */
+  run?: () => void;
+  /** A value to pick for the whole selection, then applied with `onPick`.
+   *  Options carry their icon, and the value the whole selection shares is
+   *  checked. */
+  choices?: {
+    options: FormSelectOption[];
+    onPick: (value: string) => void;
+    /** Toast shown once applied; null when `onPick` only asks for a
+     *  confirmation first. */
+    appliedMessage: (label: string, value: string) => string | null;
+  };
+}
+
+/**
+ * The selection of a list surface other than an issue board (MIN-873):
+ * feedback posts, routines, objectives, wiki pages. Every row comes from the
+ * surface, so the palette needs no knowledge of the record type.
+ */
+export interface EntityBulkActionsRequest {
+  kind: "entities";
+  count: number;
+  /** "3 feedback posts selected" — the palette group. */
+  label: string;
+  /** The palette's search placeholder, naming what the selection holds:
+   *  "Actions for 3 feedback posts…". */
+  placeholder: string;
+  /** Where the selection comes from, for analytics. */
+  surface: string;
+  /** Hands the whole selection to Numo. */
+  onAskNumo: () => void;
+  actions: EntityBulkAction[];
+}
+
+export type AnyBulkActionsRequest = BulkActionsRequest | EntityBulkActionsRequest;
+
 /** A pull request a selection can be linked to. */
 export interface BulkPullRequestOption {
   prId: string;
@@ -96,13 +148,13 @@ export interface BulkPullRequestLinks {
 
 interface BulkActionsContextValue {
   /** The last requested selection (read by the palette). Null until first request. */
-  request: BulkActionsRequest | null;
+  request: AnyBulkActionsRequest | null;
   /** Bumps on each request so the palette re-opens on repeat actions. */
   openSignal: number;
   /** Claims a launch signal once, including across palette remounts. */
   consumeOpenSignal: (signal: number) => boolean;
   /** Called by the pill's "Actions" button — stores the request and opens ⌘K. */
-  requestBulkActions: (request: BulkActionsRequest) => void;
+  requestBulkActions: (request: AnyBulkActionsRequest) => void;
   /** The mounted selection pill registers its "Actions" gesture (null on unmount). */
   registerSelectionActions: (open: (() => void) | null) => void;
   /** ⌘K with a selection: opens its actions instead of the search palette.
@@ -113,7 +165,7 @@ interface BulkActionsContextValue {
 const BulkActionsContext = createContext<BulkActionsContextValue | null>(null);
 
 export function BulkActionsProvider({ children }: { children: ReactNode }) {
-  const [request, setRequest] = useState<BulkActionsRequest | null>(null);
+  const [request, setRequest] = useState<AnyBulkActionsRequest | null>(null);
   const [openSignal, setOpenSignal] = useState(0);
   const consumedOpenSignal = useRef(0);
   const selectionActions = useRef<(() => void) | null>(null);
@@ -132,7 +184,7 @@ export function BulkActionsProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
-  const requestBulkActions = useCallback((next: BulkActionsRequest) => {
+  const requestBulkActions = useCallback((next: AnyBulkActionsRequest) => {
     // MIN-75: the “Actions” button of the selection pill. It's the only one
     // waypoint to bulk actions — the size of the selection
     // says if the function is used for two tickets or thirty.

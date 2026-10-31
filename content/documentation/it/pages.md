@@ -307,6 +307,8 @@ L’eliminazione sposta nel cestino le pagine per cui è previsto il recupero. D
 
 ![Menu di creazione con Nuova pagina e Nuovo database.](/documentation/it/page-create-menu.png)
 
+Tieni premuto Maiusc e fai clic sulle pagine dell’albero per selezionarne più di una; il clic le seleziona invece di aprirle in una nuova finestra, e un clic nello spazio vuoto dell’albero annulla la selezione. **Azioni** nella barra mobile, o Command+K su macOS o Ctrl+K sugli altri sistemi, le promuove a ticket in un’unica conversazione con Numo, che crea un ticket per pagina, le aggiunge ai preferiti o le rimuove, oppure le sposta nel cestino con le loro sottopagine dopo una conferma. **Chiedi a Numo** apre Numo con tutte le pagine selezionate nel suo contesto.
+
 ## Promuovere una pagina a ticket {#promote-page-to-issue}
 
 Quando una pagina descrive lavoro da fare, il proprietario o un Membro può trasformarla in un ticket con Numo. I lettori non vedono questa azione. Servono utilizzo IA disponibile o una chiave personale compatibile.

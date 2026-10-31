@@ -89,6 +89,10 @@ export interface PageTreeProps {
   onTrash: (page: PageMenuTarget) => void;
   /** Pin/unpin. The favorite is SHARED by the project (lib/pages.ts). */
   onToggleFavorite: (page: PageMenuTarget) => void;
+  /** Whether a page is taken in the multi-selection (MIN-873). */
+  isPicked?: (pageId: string) => boolean;
+  /** ⇧-click on a row: adds the page to the selection or takes it out. */
+  onTogglePicked?: (pageId: string) => void;
 }
 
 export function PageTree({
@@ -103,6 +107,8 @@ export function PageTree({
   onMove,
   onTrash,
   onToggleFavorite,
+  isPicked,
+  onTogglePicked,
 }: PageTreeProps) {
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
@@ -236,6 +242,8 @@ export function PageTree({
             onCreateChild={canWrite ? createChild : undefined}
             onOpen={onOpen}
             onPrefetch={onPrefetch}
+            picked={isPicked?.(page.id) ?? false}
+            onTogglePicked={onTogglePicked}
           />
         ))}
         {dialogs}
@@ -269,6 +277,8 @@ export function PageTree({
             onOpen={onOpen}
             onPrefetch={onPrefetch}
             onDragPointerDown={canWrite ? dragFrom(node.id) : undefined}
+            picked={isPicked?.(node.id) ?? false}
+            onTogglePicked={onTogglePicked}
           />
         );
         if (open) walk(node.children);
@@ -312,6 +322,8 @@ function PageRow({
   onOpen,
   onPrefetch,
   onDragPointerDown,
+  picked = false,
+  onTogglePicked,
 }: {
   page: PageSummary;
   depth: number;
@@ -333,6 +345,10 @@ function PageRow({
   onPrefetch: (pageId: string) => void;
   /** Starts a drag of this row (page-tree-drag.ts); absent for readers. */
   onDragPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+  /** Taken in the multi-selection (MIN-873). */
+  picked?: boolean;
+  /** ⇧-click: adds the page to the selection or takes it out. */
+  onTogglePicked?: (pageId: string) => void;
 }) {
   const t = useTranslations("Pages");
   const href = pagePath(page.project_id, page.id);
@@ -353,7 +369,8 @@ function PageRow({
     <div data-sidebar-page-row data-sidebar-row
       className={cn(
         "group/page relative flex items-center rounded-md pr-1 transition-colors",
-        active ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_COMPOSITE_ROW_HOVER_CLASS,
+        // Taken in the selection, the triage's shade alone says it.
+        picked ? "bg-primary/10" : active ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_COMPOSITE_ROW_HOVER_CLASS,
         dragging && "opacity-40",
         // “Inside” is said by the bottom of the target line, “before/after” by
         // a line on its edge: two different signals for two gestures
@@ -374,7 +391,12 @@ function PageRow({
         setMenuPosition({ x: event.clientX, y: event.clientY });
       }}
       data-page-row-id={page.id}
-      onPointerDown={onDragPointerDown}
+      data-picked={picked || undefined}
+      // A ⇧-click toggles the selection: it must not start a drag.
+      onPointerDown={(event) => {
+        if (event.shiftKey && onTogglePicked) return;
+        onDragPointerDown?.(event);
+      }}
       // The link and icons inside would start the browser's own drag, which
       // takes the pointer away from ours.
       onDragStart={(event) => event.preventDefault()}
@@ -422,6 +444,12 @@ function PageRow({
         onMouseEnter={() => onPrefetch(page.id)}
         onFocus={() => onPrefetch(page.id)}
         onClick={(event) => {
+          // ⇧-click would open the link in a new window: here it selects.
+          if (event.shiftKey && onTogglePicked && event.button === 0) {
+            event.preventDefault();
+            onTogglePicked(page.id);
+            return;
+          }
           if (!isPlainNavigationClick(event)) return;
           event.preventDefault();
           onOpen(page.id);

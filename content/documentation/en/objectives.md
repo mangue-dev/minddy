@@ -115,6 +115,8 @@ Open each relevant issue and choose the objective in its properties, or use the 
 
 ![Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.](/documentation/en/reader-objectives.png)
 
+On the objectives page, hold Shift and click objectives to select several; a click on the list's empty space clears the selection. **Actions** in the floating bar, or Command+K on macOS or Ctrl+K on Windows/Linux, offers **Change status**, **Change lead**, **Change color** and **Move to trash**, which asks for a confirmation first. **Ask Numo** opens Numo with every selected objective in its context.
+
 ### Read progress before closing {#objective-progress}
 
 Review completed and active issues alongside the objective's progress. A progress indicator summarizes attached work; it cannot determine whether a product outcome is acceptable. Inspect missing tasks and canceled or duplicate work before marking the objective complete. The objective's board shows open work first: select **Done** and **Canceled** in its **Status** filter to review closed issues there. On a computer, while the board shows one objective's issues, the sidebar stays on the objectives list, under the **Objectives** back row, with that objective highlighted; choose another objective in that list to switch the board to it.

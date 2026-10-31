@@ -301,6 +301,8 @@ La suppression envoie les pages prises en charge à la corbeille. Depuis un menu
 
 ![Menu de création proposant Nouvelle page et Nouvelle base de données.](/documentation/fr/page-create-menu.png)
 
+Maintenez Maj et cliquez sur des pages de l’arborescence pour en sélectionner plusieurs ; le clic les sélectionne au lieu de les ouvrir dans une nouvelle fenêtre, et un clic dans l’espace vide de l’arborescence vide la sélection. **Actions** dans la barre flottante, ou Command+K sur macOS ou Ctrl+K ailleurs, les promeut en tickets dans une seule conversation avec Numo, qui crée un ticket par page, les ajoute aux favoris ou les en retire, ou les déplace vers la corbeille avec leurs sous-pages après confirmation. **Demander à Numo** ouvre Numo avec toutes les pages sélectionnées dans son contexte.
+
 ## Promouvoir une page en ticket {#promote-page-to-issue}
 
 Quand une page décrit du travail à faire, le propriétaire ou un Membre peut la transformer en ticket avec Numo. Les lecteurs ne voient pas cette action. La promotion nécessite un budget IA disponible ou une clé personnelle compatible.

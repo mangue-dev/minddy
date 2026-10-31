@@ -26,9 +26,10 @@
 // Open state is owned by AppShellChrome (so the header pill and the shortcuts
 // share it); this component is controlled via `open` / `onOpenChange`.
 
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { AiAutoRotateIcon as CycleIcon, Cancel01Icon, CircleIcon, ComputerIcon, Copy01Icon, Delete02Icon, GitPullRequestIcon, Link02Icon, MoonIcon, SignalFull01Icon, StickyNote02Icon, Sun01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import {
+  isValidElement,
   useCallback,
   useMemo,
   useRef,
@@ -985,6 +986,33 @@ export function CommandPalette({
   // `bulkFieldProvider`.
   const bulkItems = useMemo<CpPaletteItem[]>(() => {
     if (!bulkRequest) return [];
+    // A feedback, routine, objective or page selection (MIN-873): the surface
+    // describes every row; one with choices opens the inline select below.
+    if (bulkRequest.kind === "entities") {
+      const askNumo: CpPaletteItem = {
+        id: "bulk-ask-numo",
+        title: tBulk("askNumo"),
+        icon: <NumoActionIcon className="size-4" />,
+        keywords: ["numo", "agent", "ai", "demander"],
+        filterCategory: "bulk",
+        execute: () => bulkRequest.onAskNumo(),
+      };
+      return [
+        askNumo,
+        ...bulkRequest.actions.map((action): CpPaletteItem => ({
+          id: `bulk-${action.id}`,
+          title: action.title,
+          icon: isValidElement(action.icon)
+            ? action.icon
+            : <HugeiconsIcon icon={action.icon as IconSvgElement} className="size-4" />,
+          keywords: action.keywords,
+          filterCategory: "bulk",
+          ...(action.choices
+            ? { entityType: "bulk-field", data: { field: action.id } }
+            : { execute: () => action.run?.() }),
+        })),
+      ];
+    }
     const {
       count,
       onDelete,
@@ -1166,7 +1194,12 @@ export function CommandPalette({
   const bulkCategories = useMemo<CategoryDefinition[]>(
     () =>
       bulkRequest
-        ? [{ id: "bulk", label: tBulk("selected", { count: bulkRequest.count }) }]
+        ? [{
+            id: "bulk",
+            label: bulkRequest.kind === "entities"
+              ? bulkRequest.label
+              : tBulk("selected", { count: bulkRequest.count }),
+          }]
         : [],
     [bulkRequest, tBulk]
   );
@@ -1190,6 +1223,33 @@ export function CommandPalette({
         if (!req) return [];
         const fieldKey = (item.data as { field?: string } | undefined)?.field;
         if (!fieldKey) return [];
+
+        if (req.kind === "entities") {
+          const action = req.actions.find((candidate) => candidate.id === fieldKey);
+          const choices = action?.choices;
+          if (!action || !choices) return [];
+          return [
+            {
+              id: `bulk.${action.id}`,
+              label: action.title,
+              // Choices are always Hugeicons rows: an element has no place here.
+              icon: isValidElement(action.icon) ? CircleIcon : (action.icon as IconSvgElement),
+              category: "primary",
+              requiresForm: {
+                ...selectField("value", action.title, choices.options),
+                onSubmit: async (values): Promise<ActionResult> => {
+                  const value = values.value as string;
+                  const option = choices.options.find((candidate) => candidate.value === value);
+                  if (!option) return { success: false, closeMenu: false };
+                  choices.onPick(value);
+                  const message = choices.appliedMessage(option.label, value);
+                  if (message) toast.success(message);
+                  return { success: true, closeMenu: false };
+                },
+              },
+            },
+          ];
+        }
 
         // closeMenu:false → return to the bulk list, we can chain another field.
         const update = async (
@@ -1471,7 +1531,9 @@ export function CommandPalette({
     }
     if (showBulk && bulkRequest) {
       return {
-        "search.placeholder": tAction("bulkSearchPlaceholder", { count: bulkRequest.count }),
+        "search.placeholder": bulkRequest.kind === "entities"
+          ? bulkRequest.placeholder
+          : tAction("bulkSearchPlaceholder", { count: bulkRequest.count }),
       };
     }
     if (destinationOnly) {

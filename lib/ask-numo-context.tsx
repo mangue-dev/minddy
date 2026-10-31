@@ -185,24 +185,20 @@ const feedbackAsk = createAskNumo<AskNumoFeedback>();
 
 /**
  * Set up by the returns team tab: "@" on hovering over a line opens
- * Numo with THIS feedback in context, without having to open it first.
- *
- * No selection here — the returns are decided one by one — so hovering
- * decides alone, and the callback receives a return and not a list.
+ * Numo with THIS feedback in context, without having to open it first. With
+ * a selection (MIN-873), "@" sends the selection, as on the boards.
  */
 export function AskNumoFeedbackProvider({
+  selectedPosts = NOTHING,
   onAskNumo,
   children,
 }: {
-  onAskNumo: (post: AskNumoFeedback) => void;
+  selectedPosts?: readonly AskNumoFeedback[];
+  onAskNumo: (posts: AskNumoFeedback[]) => void;
   children: ReactNode;
 }) {
-  const onAsk = useCallback(
-    (targets: AskNumoFeedback[]) => onAskNumo(targets[0]),
-    [onAskNumo]
-  );
   return (
-    <feedbackAsk.AskProvider selection={NOTHING} onAsk={onAsk}>
+    <feedbackAsk.AskProvider selection={selectedPosts} onAsk={onAskNumo}>
       {children}
     </feedbackAsk.AskProvider>
   );

@@ -116,6 +116,8 @@ Die Zielbeschreibung und ihre Kommentare verwenden denselben Editor wie Projekts
 
 ![Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.](/documentation/de/reader-objectives.png)
 
+Halte auf der Zielseite die Umschalttaste gedrückt und klicke auf Ziele, um mehrere auszuwählen; ein Klick auf eine leere Stelle der Liste hebt die Auswahl auf. **Aktionen** in der schwebenden Leiste oder Command+K unter macOS bzw. Strg+K auf anderen Systemen bietet **Status ändern**, **Verantwortliche Person ändern**, **Farbe ändern** und **In den Papierkorb verschieben**, das vorher eine Bestätigung verlangt. **Numo fragen** öffnet Numo mit allen ausgewählten Zielen im Kontext.
+
 ### Den Fortschritt vor dem Abschluss prüfen {#objective-progress}
 
 Prüfe abgeschlossene und aktive Tickets zusammen mit dem Fortschritt des Ziels. Eine Fortschrittsanzeige fasst zugeordnete Arbeit zusammen; sie kann nicht beurteilen, ob ein Produktergebnis akzeptabel ist. Prüfe fehlende Aufgaben sowie abgebrochene oder doppelte Arbeit, bevor du das Ziel abschließt. Das Board des Ziels zeigt zuerst offene Arbeit: Wähle **Erledigt** und **Abgebrochen** in seinem Filter **Status**, um dort geschlossene Tickets zu prüfen. Auf einem Computer bleibt die Seitenleiste, solange das Board die Tickets eines Ziels zeigt, auf der Liste der Ziele, unter der Zurück-Zeile **Ziele**, mit diesem Ziel hervorgehoben; wähle dort ein anderes Ziel, um das Board darauf umzuschalten.

@@ -301,6 +301,8 @@ Deletion sends supported page work to trash. From a page menu, **Move to trash**
 
 ![Page creation menu offering New page and New database.](/documentation/en/page-create-menu.png)
 
+Hold Shift and click pages in the tree to select several; the click selects them instead of opening them in a new window, and a click on the tree's empty space clears the selection. **Actions** in the floating bar, or Command+K on macOS or Ctrl+K on Windows/Linux, promotes them to issues in one Numo conversation that creates one issue per page, adds them to or removes them from favorites, or moves them to the trash with their subpages after a confirmation. **Ask Numo** opens Numo with every selected page in its context.
+
 ## Promote a page to an issue {#promote-page-to-issue}
 
 When a page describes work to do, the owner or a Member can turn it into an issue with Numo. Readers do not see this action. Promotion needs available AI usage or a compatible personal key.

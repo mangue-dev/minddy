@@ -5,7 +5,7 @@ import { objectiveBoardHref, objectiveHref, projectPath } from "@/lib/app-urls";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, Delete02Icon, FilterIcon, Target01Icon, TaskEdit01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, CircleIcon, Delete02Icon, PaintBoardIcon, FilterIcon, Target01Icon, TaskEdit01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
 import { useCreateOptional } from "@/lib/create-context";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
@@ -63,6 +63,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { commentTarget } from "@/lib/comment-focus";
+import { BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
+import { BulkEntityActions } from "@/components/bulk-entity-actions";
+import type { EntityBulkAction } from "@/lib/bulk-actions-context";
+import { useEntitySelection } from "@/lib/use-entity-selection";
+import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
+import {
+  PALETTE_NONE,
+  assigneeOptions,
+  colorOptions,
+  objectiveStatusOptions,
+  sharedCurrent,
+} from "@/components/command-palette-options";
 
 const ObjectiveDialog = dynamic(
   () => import("@/components/objective-dialog").then((m) => m.ObjectiveDialog),
@@ -223,14 +235,20 @@ function ObjectiveRow({
   selected,
   progress,
   lead,
+  picked = false,
   onSelect,
+  onTogglePicked,
 }: {
   projectId: string;
   objective: Objective;
   selected: boolean;
   progress: { done: number; total: number; percent: number };
   lead: Member | null;
+  /** Taken in the multi-selection (MIN-873). */
+  picked?: boolean;
   onSelect: () => void;
+  /** ⇧-click: adds the objective to the selection or takes it out. */
+  onTogglePicked?: (objectiveId: string) => void;
 }) {
   const tStatus = useTranslations("ObjectiveStatus");
   const status = OBJECTIVE_STATUS_MAP[objective.status];
@@ -241,11 +259,20 @@ function ObjectiveRow({
       data-navigation-href={objectiveHref(projectId, objective.id)}
       data-comment-target={commentTarget("objective", objective.id)}
       data-objective-id={objective.id}
-      onClick={onSelect}
+      onClick={(event) => {
+        if (event.shiftKey && onTogglePicked) {
+          event.preventDefault();
+          onTogglePicked(objective.id);
+          return;
+        }
+        onSelect();
+      }}
       aria-current={selected ? "true" : undefined}
+      aria-pressed={onTogglePicked ? picked : undefined}
       className={cn(
         "flex w-full flex-col gap-1.5 rounded-lg px-3 py-2.5 text-left outline-none transition-colors",
-        selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
+        // Taken in the selection, the triage's shade alone says it.
+        picked ? "bg-primary/10" : selected ? SIDEBAR_ROW_SELECTED_CLASS : SIDEBAR_ROW_HOVER_CLASS
       )}
     >
       {/* Status, then the name in the objective's color (MIN-785). */}
@@ -588,6 +615,92 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
   // Objective creation is keyboard-driven by the app-wide `O` shortcut now
   // (see CreateProvider) — no page-local `C` handler.
 
+  // ⇧-click multi-selection (MIN-873), on the objectives page itself (a
+  // browsed list or a board's sidebar has no room for the pill).
+  const tBulk = useTranslations("BulkActions");
+  const { openIntent: openNumo } = useAssistantPanelActions();
+  const objectiveSelection = useEntitySelection(objectives);
+  const selectedObjectives = objectiveSelection.selected;
+  const askNumoAboutObjectives = () =>
+    openNumo({
+      source: selectedObjectives.length > 1 ? "bulk" : "objective",
+      action: "discuss",
+      projectId,
+      pageContext: {
+        projectId,
+        ...selectedItemsPageContext(
+          "objective",
+          selectedObjectives.map((objective) => ({ id: objective.id, title: objective.name })),
+        ),
+      },
+    });
+  const updateSelectedObjectives = (updates: Parameters<typeof updateObjective>[1]) => {
+    for (const objective of selectedObjectives) {
+      void updateObjective(objective.id, updates).catch((err: Error) => toast.error(err.message));
+    }
+  };
+  const bulkObjectiveActions: EntityBulkAction[] = canWrite && selectedObjectives.length > 0
+    ? [
+        {
+          id: "objectives-status",
+          title: tBulk("changeStatus"),
+          icon: CircleIcon,
+          keywords: ["status", "statut"],
+          choices: {
+            options: objectiveStatusOptions(
+              (status) => tStatus(status),
+              sharedCurrent(selectedObjectives, (objective) => objective.status),
+            ),
+            onPick: (value) => updateSelectedObjectives({ status: value as Objective["status"] }),
+            appliedMessage: (label) =>
+              tBulk("statusApplied", { count: selectedObjectives.length, status: label }),
+          },
+        },
+        {
+          id: "objectives-lead",
+          title: tBulk("changeLead"),
+          icon: UserCircleIcon,
+          keywords: ["lead", "owner", "responsable"],
+          choices: {
+            // Only the owner or a Member can lead (MIN-693), as in the row menu.
+            options: assigneeOptions(
+              members.filter((member) => member.role !== "reader"),
+              { label: t("noLead") },
+              sharedCurrent(selectedObjectives, (objective) => objective.lead_user_id),
+            ),
+            onPick: (value) =>
+              updateSelectedObjectives({ lead_user_id: value === PALETTE_NONE ? null : value }),
+            appliedMessage: (label) =>
+              tBulk("leadApplied", { count: selectedObjectives.length, lead: label }),
+          },
+        },
+        {
+          id: "objectives-color",
+          title: tBulk("changeColor"),
+          icon: PaintBoardIcon,
+          keywords: ["color", "colour", "couleur"],
+          choices: {
+            options: colorOptions(
+              CATEGORY_COLORS,
+              { none: t("noColor"), color: colorLabel },
+              sharedCurrent(selectedObjectives, (objective) => objective.color?.toLowerCase() ?? null),
+            ),
+            onPick: (value) => updateSelectedObjectives({ color: value === PALETTE_NONE ? null : value }),
+            appliedMessage: (label) =>
+              tBulk("colorApplied", { count: selectedObjectives.length, color: label }),
+          },
+        },
+      ]
+    : [];
+  const trashSelectedObjectives = async () => {
+    const ids = selectedObjectives.map((objective) => objective.id);
+    const results = await Promise.allSettled(ids.map((id) => deleteObjective(id)));
+    const failed = results.filter((result) => result.status === "rejected").length;
+    if (failed > 0) toast.error(tBulk("trashFailed", { count: failed }));
+    else toast.success(tBulk("trashedObjectives", { count: ids.length }));
+    objectiveSelection.clear();
+  };
+
   if (projectsLoading && !project) {
     return (
       <div className="px-6 py-10">
@@ -638,6 +751,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
   // gesture; the pane says where to start rather than "select a goal".
   const sidebar = (
       <CollectionSidebar browse={browse}
+        onBlankClick={objectiveSelection.clear}
         title={t("title")}
         itemContextActions={itemContextActions}
         hiddenOnMobile
@@ -727,6 +841,8 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
                     : null
                 }
                 onSelect={() => (board ? board.onOpen(objective.id) : select(objective.id))}
+                picked={objectiveSelection.isSelected(objective.id)}
+                onTogglePicked={listOnly ? undefined : objectiveSelection.toggle}
               />
             ))}
           </div>
@@ -836,6 +952,25 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
 
       {createDialog}
       {trashDialog}
+
+      <BulkIssueActionsPresence>
+        {selectedObjectives.length > 0 && (
+          <BulkEntityActions
+            key="bulk-objective-actions"
+            surface="objectives"
+            placeholder={tBulk("objectivesPlaceholder", { count: selectedObjectives.length })}
+            label={tBulk("selectedObjectives", { count: selectedObjectives.length })}
+            count={selectedObjectives.length}
+            actions={bulkObjectiveActions}
+            trash={canWrite ? {
+              title: tBulk("trashObjectivesConfirm", { count: selectedObjectives.length }),
+              onConfirm: trashSelectedObjectives,
+            } : undefined}
+            onAskNumo={askNumoAboutObjectives}
+            onClear={objectiveSelection.clear}
+          />
+        )}
+      </BulkIssueActionsPresence>
     </div>
   );
 }

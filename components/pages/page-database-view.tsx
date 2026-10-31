@@ -58,7 +58,12 @@ import {
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
-import { usePromotePage } from "./page-promotion-context";
+import { usePromotePage, usePromotePages } from "./page-promotion-context";
+import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
+import { BulkEntityActions } from "@/components/bulk-entity-actions";
+import type { EntityBulkAction } from "@/lib/bulk-actions-context";
+import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
 import { NumoIcon } from "@/components/numo-icon";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePageDatabase } from "@/lib/use-page-database";
@@ -610,6 +615,44 @@ export function PageDatabaseView({
       await created.settled;
     });
   const [duplicateTargets, setDuplicateTargets] = useState<PageSummary[]>([]);
+  // The checked entries act through the same selection bar and ⌘K actions as
+  // the page tree (MIN-873); duplicating and trashing keep their dialogs.
+  const tBulk = useTranslations("BulkActions");
+  const { openIntent: openNumo } = useAssistantPanelActions();
+  const promotePages = usePromotePages(projectId);
+  const askNumoAboutEntries = () =>
+    openNumo({
+      source: "page",
+      action: "discuss",
+      projectId,
+      pageContext: { projectId, ...selectedItemsPageContext("page", selectedRows) },
+    });
+  const entryActions: EntityBulkAction[] = canWrite
+    ? [
+          {
+            id: "entries-promote",
+            title: tBulk("promoteEntries", { count: selectedRows.length }),
+            icon: <NumoIcon animated={false} className="size-4" />,
+            keywords: ["promote", "issue", "ticket", "promouvoir"],
+            run: () => void promotePages(selectedRows),
+          },
+          {
+            id: "entries-duplicate",
+            title: t("duplicate"),
+            icon: Copy01Icon,
+            keywords: ["duplicate", "copy", "dupliquer"],
+            run: () => setDuplicateTargets(selectedRows),
+          },
+          {
+            id: "entries-trash",
+            title: t("moveToTrash"),
+            icon: Delete02Icon,
+            keywords: ["trash", "delete", "corbeille", "supprimer"],
+            // Opens the entries' own confirmation below.
+            run: () => setRemove(selectedRows),
+          },
+        ]
+    : [];
   const duplicate = (targets: PageSummary[]) =>
     void run(async () => {
       const copies = await Promise.all(
@@ -845,46 +888,6 @@ export function PageDatabaseView({
             onDelete={databaseViews.remove}
             onMove={databaseViews.move}
           />
-          {selectedRows.length > 0 && (
-            <>
-              <span
-                className="text-xs text-muted-foreground"
-                aria-live="polite"
-              >
-                {t("selectedCount", { count: selectedRows.length })}
-              </span>
-              <AppTooltip label={t("duplicate")}>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("duplicate")}
-                  onClick={() => setDuplicateTargets(selectedRows)}
-                >
-                  <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                </Button>
-              </AppTooltip>
-              <AppTooltip label={t("moveToTrash")}>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("moveToTrash")}
-                  onClick={() => setRemove(selectedRows)}
-                >
-                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                </Button>
-              </AppTooltip>
-              <AppTooltip label={t("clearSelection")}>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={t("clearSelection")}
-                  onClick={() => setSelected([])}
-                >
-                  <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
-                </Button>
-              </AppTooltip>
-            </>
-          )}
         </div>
         {mobile ? (
           <>
@@ -1352,6 +1355,20 @@ export function PageDatabaseView({
           onClose={() => setCreateProperty(false)}
         />
       )}
+      <BulkIssueActionsPresence>
+        {selectedRows.length > 0 && (
+          <BulkEntityActions
+            key="bulk-entry-actions"
+            surface="database"
+            label={tBulk("selectedEntries", { count: selectedRows.length })}
+            placeholder={tBulk("entriesPlaceholder", { count: selectedRows.length })}
+            count={selectedRows.length}
+            actions={entryActions}
+            onAskNumo={askNumoAboutEntries}
+            onClear={() => setSelected([])}
+          />
+        )}
+      </BulkIssueActionsPresence>
       <AlertDialog open={duplicateTargets.length > 0} onOpenChange={(open) => { if (!open) setDuplicateTargets([]); }}>
         <AlertDialogContent><AlertDialogHeader>
           <AlertDialogTitle>{t("duplicateEntries", { count: duplicateTargets.length })}</AlertDialogTitle>

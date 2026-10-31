@@ -321,7 +321,25 @@ export interface AssistantPageContext {
    * `normalizeSelectionText` on both sides (lib/assistant-selection.ts).
    */
   selection?: AssistantSelectionContext;
+  /**
+   * Records the user selected together on a list surface (MIN-873), all of
+   * one kind. Tickets keep their own `issueIds` lists.
+   */
+  selectedItems?: AssistantSelectedItem[];
 }
+
+/**
+ * One record of a group selected on a list surface other than an issue board
+ * (MIN-873): feedback posts, routines, objectives or wiki pages. The label is
+ * the record's title, so Numo can name it before its first tool call.
+ */
+export interface AssistantSelectedItem {
+  kind: AssistantSelectedItemKind;
+  id: string;
+  label: string;
+}
+
+export type AssistantSelectedItemKind = "feedback" | "routine" | "objective" | "page";
 
 /** The quoted passage of `AssistantPageContext.selection`. */
 export interface AssistantSelectionContext {
