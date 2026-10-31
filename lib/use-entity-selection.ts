@@ -37,4 +37,3 @@ export function useEntitySelection<T extends { id: string }>(
   const clear = useCallback(() => setIds(new Set()), []);
   return { selected, isSelected, toggle, clear };
 }
-
