@@ -2192,10 +2192,13 @@
     "contributorTotal": "{count, plural, one {# ticket} other {# tickets}}",
     "formerMember": "Ancien membre",
     "graphTitle": "Graphe des tickets",
-    "graphDescription": "Les tickets ouverts liés par une relation ou un parent ; s'il y en a beaucoup, les plus connectés. Sélectionnez-en un pour l'ouvrir.",
+    "graphDescription": "Les tickets ouverts liés par une relation ou un parent, regroupés par objectif ; s'il y en a beaucoup, les plus connectés. Sélectionnez un ticket pour l'ouvrir.",
     "graphParent": "Parent et sous-ticket",
+    "graphObjective": "Objectif",
+    "graphGroupLinks": "Liens entre tickets d'objectifs",
+    "graphGroupLinksCount": "{count, plural, one {# lien entre leurs tickets} other {# liens entre leurs tickets}}",
     "graphHidden": "{count, plural, one {# ticket lié masqué} other {# tickets liés masqués}} pour garder le graphe lisible",
-    "graphShowClosed": "Inclure les tickets fermés"
+    "graphShowClosed": "Inclure les tickets et objectifs fermés"
   },
   "Trash": {
     "title": "Corbeille",

@@ -5,18 +5,21 @@
  * (MIN-878) — momentum, weekly flow, status breakdown, overdue and stalled
  * issues, contributors, pull requests and the issue graph — in the manual and
  * the pull request. It is also the load test of the graph: about a thousand
- * issues and as many relations as Smart Fill tends to add.
+ * issues and as many relations as Smart Fill tends to add, gathered under
+ * eight objectives that block or relate to each other.
  *
  * Everything is generated from a fixed seed, so two runs describe the same
  * world. Dates are relative to the day of the run: the history always ends
  * "now", and the momentum, overdue and stalled figures stay meaningful.
  *
  * Steps, each its own guarded plan (a child row needs its parent applied):
- * project, members and categories; parent issues; the other issues; then
- * categories links, relations and pull requests.
+ * project, members and categories; objectives; parent issues; the other
+ * issues; then categories links, relations and pull requests. Issues are
+ * filed under their objective when created: filing them later would reset
+ * their last change (`issues_set_updated_at`) and erase the stalled ones.
  *
- * Idempotent: issues are matched by title, relations by pair, pull requests
- * by number; only what is missing is created.
+ * Idempotent: objectives are matched by name, issues by title, relations by
+ * pair, pull requests by number; only what is missing is created.
  *
  *   node captures/world/seed/022-projet-lumen.mjs            (describe only)
  *   node captures/world/seed/022-projet-lumen.mjs --apply    (after approval)
@@ -40,6 +43,10 @@ const NOW = Date.now();
 let state = 878;
 const random = () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 2 ** 32);
 const pick = (list) => list[Math.floor(random() * list.length)];
+// The objectives draw from their own stream, so adding them left every other
+// generated value as it was.
+let objectiveState = 879;
+const objectiveRandom = () => ((objectiveState = (Math.imul(objectiveState, 1664525) + 1013904223) >>> 0) / 2 ** 32);
 const weighted = (entries) => {
   const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
   let roll = random() * total;
@@ -105,6 +112,34 @@ const TEMPLATES = [
   ["technical", "Refactor {s}"],
   ["technical", "Remove the legacy code behind {s}"],
 ];
+/**
+ * Lumen's objectives: the areas (`TOPICS` indexes) whose issues they gather,
+ * their lead and their target, in days from the run. "Annual billing" is
+ * done: only billing issues already completed are filed under it.
+ */
+const OBJECTIVES = [
+  { name: "Offline-first sync", topics: [0, 1], status: "in_progress", color: "#3b82f6", lead: "camille", targetDays: 21 },
+  { name: "Search v2", topics: [2], status: "in_progress", color: "#a855f7", lead: "alice", targetDays: 35 },
+  { name: "Notification center", topics: [3], status: "in_progress", color: "#f97316", lead: "tom", targetDays: 14 },
+  { name: "Annual billing", topics: [4], status: "done", color: "#22c55e", lead: "alice", targetDays: -40 },
+  { name: "Onboarding revamp", topics: [5, 13], status: "in_progress", color: "#ec4899", lead: "camille", targetDays: 28 },
+  { name: "Editor 2.0", topics: [6], status: "planned", color: "#eab308", lead: "tom", targetDays: 70 },
+  { name: "Mobile polish", topics: [7, 10], status: "planned", color: "#14b8a6", lead: "alice", targetDays: null },
+  { name: "Enterprise readiness", topics: [8, 12, 14], status: "in_progress", color: "#ef4444", lead: "camille", targetDays: 49 },
+];
+/** Objective ↔ objective links, by name: [source, target, type]. */
+const OBJECTIVE_LINKS = [
+  ["Search v2", "Enterprise readiness", "blocks"],
+  ["Offline-first sync", "Mobile polish", "blocks"],
+  ["Onboarding revamp", "Annual billing", "related"],
+  ["Notification center", "Mobile polish", "related"],
+  ["Editor 2.0", "Search v2", "related"],
+  ["Offline-first sync", "Editor 2.0", "blocks"],
+  ["Enterprise readiness", "Onboarding revamp", "related"],
+  ["Notification center", "Enterprise readiness", "related"],
+];
+const objectiveKey = (name) => `objective:${name}`;
+
 const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 // ── Generation ─────────────────────────────────────────────────────────────
@@ -196,6 +231,25 @@ function generate() {
     }
   }
 
+  // Objectives: an epic and its sub-issues share one; other issues of an
+  // objective's areas are filed under it six times in ten.
+  const objectiveOfTopic = new Map(OBJECTIVES.flatMap((objective) => objective.topics.map((topic) => [topic, objective])));
+  const fileable = (issue, objective) => objective && (objective.status !== "done" || issue.status === "done");
+  for (const issue of issues.filter((i) => i.parent)) {
+    const objective = objectiveOfTopic.get(issue.topic);
+    if (fileable(issue, objective) && objectiveRandom() < 0.6) issue.objective = objective.name;
+  }
+  const byKey = new Map(issues.map((issue) => [issue.key, issue]));
+  for (const issue of issues.filter((i) => !i.parent)) {
+    const parent = issue.parentKey ? byKey.get(issue.parentKey) : null;
+    if (parent) {
+      if (parent.objective && fileable(issue, objectiveOfTopic.get(issue.topic))) issue.objective = parent.objective;
+      continue;
+    }
+    const objective = objectiveOfTopic.get(issue.topic);
+    if (fileable(issue, objective) && objectiveRandom() < 0.6) issue.objective = objective.name;
+  }
+
   // Relations, the way Smart Fill adds them: mostly within an area, a few
   // across; "blocks" always from the older issue to the newer one.
   const relations = [];
@@ -214,6 +268,23 @@ function generate() {
       const [source, target] = blocks && other.createdMs < issue.createdMs ? [other, issue] : [issue, other];
       relations.push({ sourceKey: source.key, targetKey: target.key, type: blocks ? "blocks" : "related" });
     }
+  }
+
+  // An open issue of another area blocks or relates to each objective, three
+  // times; objectives link to each other.
+  const openIssues = issues.filter((issue) => !issue.completedMs && !issue.parent);
+  for (const objective of OBJECTIVES) {
+    for (let i = 0; i < 3; i += 1) {
+      const pool = openIssues.filter((candidate) => candidate.objective !== objective.name);
+      const issue = pool[Math.floor(objectiveRandom() * pool.length)];
+      const pair = [issue.key, objectiveKey(objective.name)].sort().join("\0");
+      if (pairs.has(pair)) continue;
+      pairs.add(pair);
+      relations.push({ sourceKey: issue.key, targetKey: objectiveKey(objective.name), type: objectiveRandom() < 0.5 ? "blocks" : "related" });
+    }
+  }
+  for (const [source, target, type] of OBJECTIVE_LINKS) {
+    relations.push({ sourceKey: objectiveKey(source), targetKey: objectiveKey(target), type });
   }
 
   // Pull requests: most delivered code went through one.
@@ -248,7 +319,10 @@ function describe({ issues, relations, pullRequests }) {
     `      par statut : ${Object.entries(byStatus).map(([s, n]) => `${s} ${n}`).join(", ")}`,
     `      terminés ces 4 dernières semaines : ${recent(28)} (les 4 d'avant : ${recent(56) - recent(28)})`,
     `      en retard : ${overdue} · au point mort : ${stalled}`,
-    `  • ${relations.length} relations (${relations.filter((r) => r.type === "blocks").length} « bloque »)`,
+    `  • ${OBJECTIVES.length} objectifs, ${count((i) => i.objective)} tickets rangés sous l'un d'eux : ` +
+      OBJECTIVES.map((o) => `${o.name} (${count((i) => i.objective === o.name)})`).join(", "),
+    `  • ${relations.length} relations (${relations.filter((r) => r.type === "blocks").length} « bloque », ` +
+      `${relations.filter((r) => r.sourceKey.startsWith("objective:") || r.targetKey.startsWith("objective:")).length} touchant un objectif)`,
     `  • ${pullRequests.length} pull requests sur le dépôt fictif ${DEMO_REPOSITORY} : ` +
       `${pullRequests.filter((p) => p.state === "merged").length} fusionnées, ` +
       `${pullRequests.filter((p) => p.state === "open" || p.state === "draft").length} ouvertes, ` +
@@ -290,6 +364,36 @@ async function main() {
     await plan.apply({ confirmed: true });
   }
 
+  // Objectives, before the issues filed under them. A generic reader keeps
+  // the protected table behind the codec, as in 020-objectifs.mjs.
+  const codec = await openContentCodec(demo);
+  const readRows = async (table, columns) => {
+    const { data, error } = await demo.admin.from(table).select(columns).eq("project_id", project.id);
+    if (error) throw new Error(`captures: lecture de ${table} — ${error.message}`);
+    return data ?? [];
+  };
+  const objectiveIds = async () => new Map((await Promise.all(
+    (await readRows("objectives", "*")).map((row) => codec.decode("objectives", row)),
+  )).map((row) => [row.name, row.id]));
+  let objectiveByName = await objectiveIds();
+  const missingObjectives = OBJECTIVES.filter((objective) => !objectiveByName.has(objective.name));
+  if (missingObjectives.length) {
+    const plan = createPlan(demo);
+    plan.insert("objectives", await Promise.all(missingObjectives.map((objective) => codec.encode("objectives", {
+      project_id: project.id,
+      name: objective.name,
+      description: null,
+      status: objective.status,
+      color: objective.color,
+      lead_user_id: people[objective.lead],
+      target_date: objective.targetDays === null ? null : dueAt(dateOnly(NOW + objective.targetDays * DAY)),
+      created_at: iso(NOW - HISTORY_DAYS * DAY),
+    }))), "objectif");
+    await plan.apply({ confirmed: true });
+    objectiveByName = await objectiveIds();
+    console.log(`  → ${missingObjectives.length} objectifs créés`);
+  }
+
   // Issues: parents first, so the children can point at them.
   const readIssues = async () => {
     const rows = [];
@@ -318,6 +422,7 @@ async function main() {
         effort: issue.effort,
         assignee_id: issue.assignee ? people[issue.assignee] : null,
         parent_id: issue.parentKey ? existing.get(keyToTitle.get(issue.parentKey))?.id ?? null : null,
+        objective_id: issue.objective ? objectiveByName.get(issue.objective) : null,
         due_date: issue.dueDate ?? null,
         position: number * 1000,
         created_by: issue.assignee ? people[issue.assignee] : owner,
@@ -334,7 +439,10 @@ async function main() {
     console.log(`  → ${rows.length} tickets créés`);
     existing = await readIssues();
   }
-  const idOf = (key) => existing.get(keyToTitle.get(key))?.id;
+  const idOf = (key) => key.startsWith("objective:")
+    ? objectiveByName.get(key.slice("objective:".length))
+    : existing.get(keyToTitle.get(key))?.id;
+  const endpoint = (key) => (key.startsWith("objective:") ? "objective" : "issue");
 
   // Categories, relations and pull requests point at applied issues.
   const categories = await resolveCategories(demo, project.id);
@@ -354,12 +462,20 @@ async function main() {
     .map((issue) => ({ issue_id: idOf(issue.key), category_id: categories.get(issue.category).id }));
   const knownPairs = new Set((await readAll("issue_relations", "source_id, target_id", "source_id"))
     .map((row) => [row.source_id, row.target_id].sort().join("\0")));
+  for (const row of await readRows("issue_relations", "source_id, target_id")) {
+    knownPairs.add([row.source_id, row.target_id].sort().join("\0"));
+  }
   const relationRows = world.relations
-    .map((relation) => ({ source_id: idOf(relation.sourceKey), target_id: idOf(relation.targetKey), type: relation.type }))
+    .map((relation) => ({
+      source_id: idOf(relation.sourceKey),
+      target_id: idOf(relation.targetKey),
+      type: relation.type,
+      source_type: endpoint(relation.sourceKey),
+      target_type: endpoint(relation.targetKey),
+    }))
     .filter((row) => row.source_id && row.target_id && !knownPairs.has([row.source_id, row.target_id].sort().join("\0")))
-    .map((row) => ({ ...row, project_id: project.id, source_type: "issue", target_type: "issue", created_by: owner }));
+    .map((row) => ({ ...row, project_id: project.id, created_by: owner }));
   const knownNumbers = new Set((await readAll("pull_requests", "number", "issue_id")).map((row) => row.number));
-  const codec = await openContentCodec(demo);
   const pullRequestRows = [];
   for (const pr of world.pullRequests.filter((p) => !knownNumbers.has(p.number))) {
     pullRequestRows.push(await codec.encodePullRequest({

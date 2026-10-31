@@ -2192,10 +2192,13 @@
     "contributorTotal": "{count, plural, one {# incidencia} other {# incidencias}}",
     "formerMember": "Antiguo miembro",
     "graphTitle": "Grafo de incidencias",
-    "graphDescription": "Incidencias abiertas vinculadas por una relación o una incidencia principal; si hay muchas, las más conectadas. Selecciona una para abrirla.",
+    "graphDescription": "Incidencias abiertas vinculadas por una relación o una incidencia principal, agrupadas por objetivo; si hay muchas, las más conectadas. Selecciona una incidencia para abrirla.",
     "graphParent": "Principal y subincidencia",
+    "graphObjective": "Objetivo",
+    "graphGroupLinks": "Vínculos entre incidencias de objetivos",
+    "graphGroupLinksCount": "{count, plural, one {# vínculo entre sus incidencias} other {# vínculos entre sus incidencias}}",
     "graphHidden": "{count, plural, one {# incidencia vinculada oculta} other {# incidencias vinculadas ocultas}} para que el grafo siga legible",
-    "graphShowClosed": "Incluir incidencias cerradas"
+    "graphShowClosed": "Incluir incidencias y objetivos cerrados"
   },
   "Trash": {
     "title": "Papelera",

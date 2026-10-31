@@ -2192,10 +2192,13 @@
     "contributorTotal": "{count, plural, one {# Ticket} other {# Tickets}}",
     "formerMember": "Ehemaliges Mitglied",
     "graphTitle": "Ticket-Graph",
-    "graphDescription": "Offene Tickets, die über eine Beziehung oder ein übergeordnetes Ticket verknüpft sind; bei sehr vielen die am stärksten vernetzten. Wähle eines aus, um es zu öffnen.",
+    "graphDescription": "Offene Tickets, die über eine Beziehung oder ein übergeordnetes Ticket verknüpft sind, nach Ziel gruppiert; bei sehr vielen die am stärksten vernetzten. Wähle ein Ticket aus, um es zu öffnen.",
     "graphParent": "Übergeordnet und Unterticket",
+    "graphObjective": "Ziel",
+    "graphGroupLinks": "Verknüpfungen zwischen Tickets der Ziele",
+    "graphGroupLinksCount": "{count, plural, one {# Verknüpfung zwischen ihren Tickets} other {# Verknüpfungen zwischen ihren Tickets}}",
     "graphHidden": "{count, plural, one {# verknüpftes Ticket ausgeblendet} other {# verknüpfte Tickets ausgeblendet}}, damit der Graph lesbar bleibt",
-    "graphShowClosed": "Abgeschlossene Tickets einbeziehen"
+    "graphShowClosed": "Abgeschlossene Tickets und Ziele einbeziehen"
   },
   "Trash": {
     "title": "Papierkorb",

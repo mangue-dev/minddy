@@ -1459,21 +1459,28 @@
     "file": "captures/world/seed/022-projet-lumen.mjs",
     "operation": "from",
     "resource": "project_members",
-    "line": 283,
-    "storage": false
-  },
-  {
-    "file": "captures/world/seed/022-projet-lumen.mjs",
-    "operation": "from",
-    "resource": "issues",
-    "line": 297,
+    "line": 357,
     "storage": false
   },
   {
     "file": "captures/world/seed/022-projet-lumen.mjs",
     "operation": "from",
     "resource": null,
-    "line": 345,
+    "line": 371,
+    "storage": false
+  },
+  {
+    "file": "captures/world/seed/022-projet-lumen.mjs",
+    "operation": "from",
+    "resource": "issues",
+    "line": 401,
+    "storage": false
+  },
+  {
+    "file": "captures/world/seed/022-projet-lumen.mjs",
+    "operation": "from",
+    "resource": null,
+    "line": 453,
     "storage": false
   },
   {

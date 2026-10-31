@@ -73,7 +73,7 @@
   },
   "review": {
     "revision": 17,
-    "fact": "agent:claude (MIN-878: project statistics paragraph checked against components/stats/project-statistics.tsx, components/stats/issue-graph.tsx, lib/project-stats.ts and the pull-request-stats route; figures project-statistics and project-issue-graph captured on 2026-10-31 on the Lumen demo project from the local candidate against preview and inspected; existing figures unaffected and kept; no form submitted)",
+    "fact": "agent:claude (MIN-878: project statistics paragraph, including the issue graph grouped by objective, checked against components/stats/project-statistics.tsx, components/stats/issue-graph.tsx, lib/project-stats.ts, lib/issue-graph-layout.ts and the pull-request-stats route; figures project-statistics and project-issue-graph captured on 2026-10-31 on the Lumen demo project (with objectives) from the local candidate against preview and inspected; existing figures unaffected and kept; no form submitted)",
     "language": "agent:claude (en paragraph added with catalog UI labels; agent self-review, not human acceptance)",
     "date": "2026-10-31"
   },
@@ -148,14 +148,14 @@
       "id": "project-issue-graph",
       "kind": "screenshot",
       "src": "/documentation/en/project-issue-graph.png",
-      "alt": "Issue graph of the open issues: clusters of dots colored by status, gray arrows from parent to sub-issue, red blocking arrows and dashed related links, with the legend and the Include closed issues switch.",
+      "alt": "Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend and the Include closed issues and objectives switch.",
       "caption": "Hover over a dot to read its issue and highlight its links; select it to open the issue in the side panel.",
       "revision": 17,
       "reviewed": true,
       "capturedAt": "2026-10-31",
       "viewport": [
         816,
-        743
+        764
       ],
       "theme": "light",
       "padding": 24,
@@ -179,11 +179,11 @@ Open the project, then its settings. Project ownership controls administrative s
 
 The **General** tab opens with the project's identity: its icon, its name and key, then five figures: **Issues**, **Members**, **Objectives**, **Categories** and **Created**. As owner, you change the icon, name and key where they are shown; there is no Save button. Select the icon and choose **New orb** (offered only while no image covers the orb), **Upload an image**, **Import from a website…**, which asks for the website address and imports its icon when you choose **Import**, or, when an image is set, **Remove the image**, which asks first because the image is deleted. Select the name or the key to edit it: on a computer it becomes a field, where Enter or leaving the field saves and Escape cancels; on a phone it opens a sheet with **Save**. The name cannot be empty. The key is normalized to uppercase and must have 2 to 5 letters (A–Z); otherwise an error appears and the key is not saved. Review the resulting identifiers after changing it. The icon only distinguishes the project in navigation; it does not change membership. Members and readers see the same header without these controls.
 
-Below the header come the project's statistics, built from its own data and visible to everyone in the project. **Momentum** compares the issues completed over the last four weeks with the four weeks before, shows whether the backlog grew or shrank over that span, and gives the median lead time from creation to **Done** over the last 90 days; its chart shows the issues created and completed each week over twelve weeks. **Where things stand** splits every issue by status and counts the open issues that are overdue, unassigned or stalled, that is in progress or in review with no change for 14 days. When pull requests are linked to the project's issues, **Pull requests** shows how many were merged, the median time to merge, the share of completed issues shipped through a merged pull request and the merges per week. **Contributors** lists who completed the most issues over the last 90 days and splits each person's issues by status: the open ones as they stand, the closed ones over those 90 days. **Issue graph** draws the issues linked by a relation or a parent, colored by status; select one to open it on the board. Canceled and duplicate issues never count as completed. Hover over or focus a bar to read its exact figures. Numo and Minddy MCP clients read the same numbers, with the overdue and stalled issues themselves.
+Below the header come the project's statistics, built from its own data and visible to everyone in the project. **Momentum** compares the issues completed over the last four weeks with the four weeks before, shows whether the backlog grew or shrank over that span, and gives the median lead time from creation to **Done** over the last 90 days; its chart shows the issues created and completed each week over twelve weeks. **Where things stand** splits every issue by status and counts the open issues that are overdue, unassigned or stalled, that is in progress or in review with no change for 14 days. When pull requests are linked to the project's issues, **Pull requests** shows how many were merged, the median time to merge, the share of completed issues shipped through a merged pull request and the merges per week. **Contributors** lists who completed the most issues over the last 90 days and splits each person's issues by status: the open ones as they stand, the closed ones over those 90 days. **Issue graph** draws the open issues linked by a relation or a parent, colored by status, with arrows from parent to sub-issue and from blocker to blocked. Issues gather in a colored bubble per objective, around a square that stands for the objective and carries its own relations; a gray line between two objectives sums up the links between their issues, which show when you hover one of them. When there are many issues, the most connected ones of each objective are kept, and the bubble shows how many were left out. Select an issue to open it in the side panel, or an objective's square to open the objective; **Include closed issues and objectives** adds finished work. Canceled and duplicate issues never count as completed. Hover over or focus a bar to read its exact figures. Numo and Minddy MCP clients read the same numbers, with the overdue and stalled issues themselves.
 
 ![Momentum, Where things stand and Contributors sections of a project with about a thousand issues: weekly created and completed bars, a status bar, health counts and one status bar per person.](/documentation/en/project-statistics.png)
 
-![Issue graph of the open issues: clusters of dots colored by status, gray arrows from parent to sub-issue, red blocking arrows and dashed related links, with the legend and the Include closed issues switch.](/documentation/en/project-issue-graph.png)
+![Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend and the Include closed issues and objectives switch.](/documentation/en/project-issue-graph.png)
 
 The other tabs are **Categories**, **Members**, **Recurrences**, **Smart Assign**, **Feedback**, **Git**, **Import** and **Integrations**. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
 

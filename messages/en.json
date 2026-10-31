@@ -2192,10 +2192,13 @@
     "contributorTotal": "{count, plural, one {# issue} other {# issues}}",
     "formerMember": "Former member",
     "graphTitle": "Issue graph",
-    "graphDescription": "Open issues linked by a relation or a parent; when there are many, the most connected ones. Select one to open it.",
+    "graphDescription": "Open issues linked by a relation or a parent, gathered by objective; when there are many, the most connected ones. Select an issue to open it.",
     "graphParent": "Parent and sub-issue",
+    "graphObjective": "Objective",
+    "graphGroupLinks": "Links between objectives' issues",
+    "graphGroupLinksCount": "{count, plural, one {# link between their issues} other {# links between their issues}}",
     "graphHidden": "{count, plural, one {# linked issue left out} other {# linked issues left out}} to keep the graph readable",
-    "graphShowClosed": "Include closed issues"
+    "graphShowClosed": "Include closed issues and objectives"
   },
   "Trash": {
     "title": "Trash",

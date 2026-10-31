@@ -2192,10 +2192,13 @@
     "contributorTotal": "{count, plural, one {# ticket} other {# ticket}}",
     "formerMember": "Ex membro",
     "graphTitle": "Grafo dei ticket",
-    "graphDescription": "Ticket aperti collegati da una relazione o da un ticket padre; se sono molti, quelli più collegati. Selezionane uno per aprirlo.",
+    "graphDescription": "Ticket aperti collegati da una relazione o da un ticket padre, raggruppati per obiettivo; se sono molti, quelli più collegati. Seleziona un ticket per aprirlo.",
     "graphParent": "Padre e sottoticket",
+    "graphObjective": "Obiettivo",
+    "graphGroupLinks": "Collegamenti tra ticket degli obiettivi",
+    "graphGroupLinksCount": "{count, plural, one {# collegamento tra i loro ticket} other {# collegamenti tra i loro ticket}}",
     "graphHidden": "{count, plural, one {# ticket collegato nascosto} other {# ticket collegati nascosti}} per mantenere leggibile il grafo",
-    "graphShowClosed": "Includi ticket chiusi"
+    "graphShowClosed": "Includi ticket e obiettivi chiusi"
   },
   "Trash": {
     "title": "Cestino",

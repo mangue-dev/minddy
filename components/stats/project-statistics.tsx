@@ -6,6 +6,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { issuesQueryFn } from "@/lib/issues-api";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
 import { useProjectPullRequestStats } from "@/lib/use-project-pull-request-stats";
 import { todayISO } from "@/lib/cycle";
@@ -135,6 +136,7 @@ export function ProjectStatistics({ project }: { project: Project }) {
   });
   const { relations } = useIssueRelationsQuery(project.id);
   const { members } = useMembersQuery(project.id, true);
+  const { objectives } = useObjectivesQuery(project.id);
   const { pullRequests } = useProjectPullRequestStats(project.id);
 
   const today = todayISO();
@@ -355,7 +357,7 @@ export function ProjectStatistics({ project }: { project: Project }) {
         </StatsSection>
       )}
 
-      <IssueGraphCard project={project} issues={issues} relations={relations} />
+      <IssueGraphCard project={project} issues={issues} relations={relations} objectives={objectives} />
     </div>
   );
 }

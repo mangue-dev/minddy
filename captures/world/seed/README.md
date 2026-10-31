@@ -70,7 +70,11 @@ describes the change; `--apply` requires explicit user approval.
 project statistics (MIN-878) and the load test of their issue graph: about a
 thousand English issues spread over eight months, with epics and sub-issues,
 assignees among the three demo people, a few overdue and stalled issues, Smart
-Fill-like "related" and "blocks" relations, and pull requests on the fictitious
+Fill-like "related" and "blocks" relations, eight objectives that gather about
+half of the issues and block or relate to each other (encoded with the
+application's codec like `020-objectifs.mjs`; drawn from their own random
+stream, so they leave every other generated value unchanged), and pull
+requests on the fictitious
 `minddy_demo/lumen` repository. GitHub owners cannot contain an underscore, so
 that name never designates a real repository, and no demo project links a
 repository, so nothing polls a forge. Pull request titles and the repository

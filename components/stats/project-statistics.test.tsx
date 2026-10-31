@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import messages from "@/messages/en.json";
-import type { Issue, IssueRelation, Member, Project } from "@/lib/types";
+import type { Issue, IssueRelation, Member, Objective, Project } from "@/lib/types";
 import type { PullRequestTimelineEntry } from "@/lib/project-stats";
 
 const mocks = vi.hoisted(() => ({
@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   members: [] as Member[],
   pullRequests: [] as PullRequestTimelineEntry[],
   openIssue: vi.fn(),
+  objectives: [] as Objective[],
+  push: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({ data: mocks.issues }) }));
@@ -24,6 +26,8 @@ vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: m
 vi.mock("@/lib/use-project-pull-request-stats", () => ({
   useProjectPullRequestStats: () => ({ pullRequests: mocks.pullRequests, loading: false }),
 }));
+vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: () => ({ objectives: mocks.objectives }) }));
+vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/lib/issue-panel-context", () => ({ useIssuePanelActions: () => ({ openIssue: mocks.openIssue }) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 
@@ -59,6 +63,8 @@ describe("ProjectStatistics", () => {
     document.body.append(container);
     root = createRoot(container);
     mocks.openIssue.mockReset();
+    mocks.push.mockReset();
+    mocks.objectives = [];
   });
 
   afterEach(() => {
@@ -122,5 +128,29 @@ describe("ProjectStatistics", () => {
     await render();
 
     expect(container.textContent).toContain("Statistics appear once the project has issues.");
+  });
+
+  it("gathers issues in their objective's bubble, whose anchor opens the objective", async () => {
+    mocks.issues = [
+      issue(1, { objective_id: "o1" }),
+      issue(2, { objective_id: "o1" }),
+      issue(3),
+    ];
+    mocks.relations = [
+      { id: "r1", source_id: "i1", target_id: "i2", type: "related" },
+      { id: "r2", source_id: "i3", target_id: "o1", type: "blocks", target_type: "objective" },
+    ];
+    mocks.members = [];
+    mocks.pullRequests = [];
+    mocks.objectives = [{ id: "o1", name: "Search v2", color: "#3b82f6", status: "in_progress" } as Objective];
+    await render();
+
+    expect(container.textContent).toContain("Search v2");
+    const anchor = container.querySelector<SVGRectElement>('rect[aria-label="Search v2"]');
+    expect(anchor).not.toBeNull();
+    // An issue outside any objective that blocks it keeps its arrow.
+    expect(container.querySelectorAll('line[marker-end*="-blocks"]')).toHaveLength(1);
+    await act(async () => anchor?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(mocks.push).toHaveBeenCalledWith(expect.stringContaining("/objectives?open="));
   });
 });

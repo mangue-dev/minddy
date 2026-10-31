@@ -109,17 +109,15 @@ export const TABLE_SCOPES = {
     ],
   },
 
-  // ── Ticket relations (MIN-878) ───────────────────────────────────────────
-  // "Blocks" and "related" links between two demo tickets, for the ticket
-  // graph of the project statistics. Both ends must be proven demo tickets;
-  // a relation to an objective is never seeded.
+  // ── Ticket and objective relations (MIN-878) ────────────────────────────
+  // "Blocks" and "related" links for the graph of the project statistics,
+  // between tickets and objectives alike. Anchored by their demo project: an
+  // end may be a ticket or an objective, which `parents` cannot express, and
+  // the `enforce_issue_relation` trigger already requires both ends to belong
+  // to the relation's own project.
   issue_relations: {
     writable: true,
     projectColumn: "project_id",
-    parents: [
-      { column: "source_id", table: "issues" },
-      { column: "target_id", table: "issues" },
-    ],
     userRefColumns: ["created_by"],
   },
 
