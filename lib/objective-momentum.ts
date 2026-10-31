@@ -39,6 +39,8 @@ export interface ObjectiveMomentumInsight {
   elapsedPercent: number | null;
   forecastDate: string | null;
   forecastDays: number | null;
+  /** End of the target day, in the zone used to display it. */
+  targetAt: string | null;
   targetPace: ObjectiveTargetPace | null;
 }
 
@@ -138,6 +140,37 @@ function momentumState({
   if (recentCompleted > previousCompleted) return "accelerating";
   if (recentCompleted < previousCompleted) return "slowing";
   return "steady";
+}
+
+/**
+ * Compare a finish estimate with the target. Without an estimate, progress is
+ * compared with elapsed time. Shared with the server forecast (MIN-876), which
+ * replaces the local estimate once it arrives.
+ */
+export function objectiveTargetPace({
+  remainingIssues,
+  targetAt,
+  nowMs,
+  forecastDate,
+  progressPercent,
+  elapsedPercent,
+}: {
+  remainingIssues: number;
+  targetAt: number | null;
+  nowMs: number;
+  forecastDate: string | null;
+  progressPercent: number | null;
+  elapsedPercent: number | null;
+}): ObjectiveTargetPace | null {
+  if (remainingIssues === 0 || targetAt === null) return null;
+  if (targetAt < nowMs) return "overdue";
+  if (forecastDate) {
+    return new Date(forecastDate).getTime() <= targetAt ? "on_track" : "at_risk";
+  }
+  if (progressPercent !== null && elapsedPercent !== null) {
+    return progressPercent >= elapsedPercent ? "on_track" : "at_risk";
+  }
+  return null;
 }
 
 /**
@@ -254,15 +287,14 @@ export function objectiveMomentum(
     forecastDate = new Date(nowMs + forecastDays * DAY_MS).toISOString();
   }
 
-  let targetPace: ObjectiveTargetPace | null = null;
-  if (!canceled && remaining.length > 0 && targetAt !== null) {
-    if (targetAt < nowMs) targetPace = "overdue";
-    else if (forecastDate) {
-      targetPace = new Date(forecastDate).getTime() <= targetAt ? "on_track" : "at_risk";
-    } else if (progressPercent !== null && elapsedPercent !== null) {
-      targetPace = progressPercent >= elapsedPercent ? "on_track" : "at_risk";
-    }
-  }
+  const targetPace = canceled ? null : objectiveTargetPace({
+    remainingIssues: remaining.length,
+    targetAt,
+    nowMs,
+    forecastDate,
+    progressPercent,
+    elapsedPercent,
+  });
 
   const lastCompletion = completions.reduce<number | null>(
     (latest, completion) =>
@@ -293,6 +325,7 @@ export function objectiveMomentum(
     elapsedPercent,
     forecastDate,
     forecastDays,
+    targetAt: targetAt === null ? null : new Date(targetAt).toISOString(),
     targetPace,
   };
 }

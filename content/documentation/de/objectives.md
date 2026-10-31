@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/palette-picker-rows.tsx",
       "app/(app)/projects/[id]/page.tsx",
       "components/objectives/objectives-page.tsx",
-      "components/app-sidebar.tsx"
+      "components/app-sidebar.tsx",
+      "lib/objective-forecast.ts",
+      "lib/server/objective-forecast.ts",
+      "app/api/objectives/[id]/forecast/route.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 24,
+    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate)",
+    "language": "agent:claude-code (de translation of the changed passage, reviewed against en revision 23; agent review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "issues",
@@ -86,7 +89,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -136,7 +139,7 @@ Der Bereich Dynamik erscheint nur, wenn das Ziel ein Zieldatum hat. Wenn du dies
 
 Momentum fasst kürzlich abgeschlossene Arbeit zusammen. Es kann beschleunigend, gleichmäßig, langsamer oder stockend sein; für noch nicht begonnene, abgeschlossene und abgebrochene Ziele gibt es eigene Zustände. Nutze es, um Ergebnisse mit Handlungsbedarf zu erkennen, und lies dann die zugrunde liegenden Tickets und Aktivitäten.
 
-Ein geschätztes Abschlussdatum setzt mindestens zwei Abschlüsse, eine volle beobachtete Woche, positiven gelieferten Aufwand und verbleibende Arbeit voraus. Nur aktuell zugeordnete Tickets zählen; ein Abschluss vor der Erstellung des Ziels erzeugt kein künstliches jüngstes Momentum. Bei einem gültigen Zieldatum reicht der Verlauf von der Erstellung bis zu diesem Datum. Der Durchsatz verwendet die beobachtete Zeit seit der Erstellung, einschließlich der Zeit nach einem verpassten Zieltermin. Wenn ein Zieldatum eingetragen ist, aber keinen gültigen Zeitraum nach der Erstellung definiert, verwendet die Berechnung einen gleitenden Verlauf von acht Wochen und ein Vorhersagefenster von 28 Tagen. Wenig Verlauf oder eine kürzliche Änderung des Umfangs verringern den Nutzen. Die Schätzung ist kein zugesagter Termin und enthält keine noch nicht zugeordnete, unsichtbare Arbeit. Vergleiche Zieldatum, verbleibende Arbeit und tatsächliche Einschränkungen, bevor du Zusagen änderst.
+Das geschätzte Abschlussdatum geht von den Personen aus, die die Arbeit erledigen. Für jede Person, der zugeordnete Tickets zugewiesen sind, leitet minddy ihre üblichen Aktivitätszeiten aus den Zeitpunkten ab, zu denen sie Tickets abschließt, misst den Aufwand, den sie über alle ihre Projekte hinweg liefert, und schätzt anhand ihrer jüngsten Abschlüsse und ihrer offenen Arbeit, welcher Anteil dieses Aufwands auf dieses Ziel entfällt. Die Schätzung schreitet nur während dieser Aktivitätszeiten voran: Nächte und Wochenenden bringen keinen Fortschritt, und nicht zugewiesene Arbeit wird auf die Mitwirkenden verteilt. Die Berechnung erfolgt auf dem Server: Tickets anderer Projekte und die Werte einzelner Personen werden nie angezeigt, nur das daraus resultierende Datum. Eine Person zählt, sobald sie in den letzten sechs Wochen mindestens zwei Tickets abgeschlossen hat. Ohne eine solche Person greift die Schätzung auf das eigene Tempo des Ziels zurück, das mindestens zwei Abschlüsse, eine volle beobachtete Woche, positiven gelieferten Aufwand und verbleibende Arbeit voraussetzt. Nur aktuell zugeordnete Tickets zählen zum Momentum; ein Abschluss vor der Erstellung des Ziels erzeugt kein künstliches jüngstes Momentum. Bei einem gültigen Zieldatum reicht der Verlauf von der Erstellung bis zu diesem Datum. Der Durchsatz verwendet die beobachtete Zeit seit der Erstellung, einschließlich der Zeit nach einem verpassten Zieltermin. Wenn ein Zieldatum eingetragen ist, aber keinen gültigen Zeitraum nach der Erstellung definiert, verwendet die Berechnung einen gleitenden Verlauf von acht Wochen und ein Vorhersagefenster von 28 Tagen. Wenig Verlauf oder eine kürzliche Änderung des Umfangs verringern den Nutzen. Die Schätzung ist kein zugesagter Termin und enthält keine noch nicht zugeordnete, unsichtbare Arbeit. Vergleiche Zieldatum, verbleibende Arbeit und tatsächliche Einschränkungen, bevor du Zusagen änderst.
 
 
 ## Ein Ziel für Feedback wählen {#objective-feedback}

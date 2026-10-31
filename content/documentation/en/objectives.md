@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/palette-picker-rows.tsx",
       "app/(app)/projects/[id]/page.tsx",
       "components/objectives/objectives-page.tsx",
-      "components/app-sidebar.tsx"
+      "components/app-sidebar.tsx",
+      "lib/objective-forecast.ts",
+      "lib/server/objective-forecast.ts",
+      "app/api/objectives/[id]/forecast/route.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 23,
+    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate)",
+    "language": "agent:claude-code (en changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "issues",
@@ -86,7 +89,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -135,7 +138,9 @@ The Momentum panel appears only when the objective has a target date. Removing t
 
 Momentum summarizes recently completed work. It can be accelerating, steady, slowing or stalled, with separate states for not-started, complete and canceled objectives. Use it to identify an outcome needing attention, then read the underlying issues and activity.
 
-An estimated finish date requires at least two completions, a full observed week, positive delivered effort and remaining work. Only currently linked issues contribute; completions before objective creation do not count as recent momentum.
+An estimated finish date comes from the people doing the work. For each person assigned to linked issues, minddy learns their usual activity hours from when they complete issues, measures the effort they deliver across all their projects, and estimates the share of that effort going to this objective from their recent completions and their open work. The estimate advances only during those active hours, so nights and weekends add no progress, and unassigned work is shared among the contributors. It is computed on the server: issues from other projects and each person's figures are never shown, only the resulting date.
+
+A person counts once they have completed at least two issues in the last six weeks. Without such a person, the estimate falls back to the objective's own pace, which requires at least two completions, a full observed week, positive delivered effort and remaining work. Only currently linked issues contribute to momentum; completions before objective creation do not count as recent momentum.
 
 - With a valid target, history spans creation to that date. Throughput uses observed time since creation, including time after a missed target.
 - If a target date is set but does not define a valid period after creation, the calculation uses a rolling eight-week history and a 28-day forecast window.

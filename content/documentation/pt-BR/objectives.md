@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/palette-picker-rows.tsx",
       "app/(app)/projects/[id]/page.tsx",
       "components/objectives/objectives-page.tsx",
-      "components/app-sidebar.tsx"
+      "components/app-sidebar.tsx",
+      "lib/objective-forecast.ts",
+      "lib/server/objective-forecast.ts",
+      "app/api/objectives/[id]/forecast/route.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 24,
+    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate)",
+    "language": "agent:claude-code (pt-BR translation of the changed passage, reviewed against en revision 23; agent review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "issues",
@@ -86,7 +89,7 @@
       "src": "/documentation/pt-BR/reader-objectives.png",
       "alt": "Janela de criação de objetivo não enviada no projeto Aurora com um nome de resultado de exemplo e o botão Criar objetivo.",
       "caption": "Defina o resultado antes de escolher responsável, data prevista e status. Essa janela não criou um segundo objetivo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -136,7 +139,9 @@ O painel Ritmo aparece apenas quando o objetivo tem uma data-alvo. Ao remover es
 
 O ritmo resume trabalho concluído recentemente. Ele pode estar acelerando, estável, desacelerando ou parado, com estados separados para objetivos não iniciados, concluídos e cancelados. Use-o para identificar um resultado que precisa de atenção, depois leia os tickets e a atividade subjacentes.
 
-A data estimada de conclusão exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os tickets atualmente vinculados contribuem; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial.
+A data estimada de conclusão parte das pessoas que fazem o trabalho. Para cada pessoa responsável por tickets vinculados, o minddy deduz seus horários habituais de atividade a partir dos momentos em que ela conclui tickets, mede o esforço que entrega em todos os seus projetos e estima a parcela desse esforço dedicada a este objetivo com base nas conclusões recentes e no trabalho em aberto. A estimativa só avança durante esses horários de atividade: noites e fins de semana não somam progresso, e o trabalho sem responsável é dividido entre quem contribui. O cálculo é feito no servidor: os tickets de outros projetos e os números de cada pessoa nunca são exibidos, apenas a data resultante.
+
+Uma pessoa passa a contar assim que concluiu pelo menos dois tickets nas últimas seis semanas. Sem nenhuma pessoa nessa situação, a estimativa volta ao ritmo próprio do objetivo, que exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os tickets atualmente vinculados contribuem para o ritmo; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial.
 
 Com uma data-alvo válida, o histórico vai da criação até essa data e o ritmo de entrega usa o tempo observado desde a criação, incluindo o período depois de um prazo não cumprido. Se uma data-alvo estiver definida, mas não determinar um período válido após a criação, o cálculo usa um histórico móvel de oito semanas e uma janela de previsão de 28 dias.
 

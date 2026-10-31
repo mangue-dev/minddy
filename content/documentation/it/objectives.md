@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/palette-picker-rows.tsx",
       "app/(app)/projects/[id]/page.tsx",
       "components/objectives/objectives-page.tsx",
-      "components/app-sidebar.tsx"
+      "components/app-sidebar.tsx",
+      "lib/objective-forecast.ts",
+      "lib/server/objective-forecast.ts",
+      "app/api/objectives/[id]/forecast/route.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 24,
+    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate)",
+    "language": "agent:claude-code (it translation of the changed passage, reviewed against en revision 23; agent review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "issues",
@@ -86,7 +89,7 @@
       "src": "/documentation/it/reader-objectives.png",
       "alt": "Finestra di creazione obiettivo non inviata nel progetto Aurora con un nome di risultato d’esempio e il pulsante Crea obiettivo.",
       "caption": "Definisci il risultato prima di scegliere responsabile, data limite e stato. Questa finestra non ha creato un secondo obiettivo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -136,7 +139,9 @@ Il pannello Ritmo appare solo quando l’obiettivo ha una data obiettivo. Rimuov
 
 L’andamento riassume il lavoro completato di recente. Può essere in accelerazione, costante, in rallentamento o fermo, con stati separati per obiettivi non iniziati, completati e annullati. Usalo per individuare un risultato che richiede attenzione, poi leggi i ticket e l’attività sottostanti.
 
-La data di fine stimata richiede almeno due completamenti, una settimana intera osservata, impegno consegnato positivo e lavoro rimanente. Contribuiscono solo i ticket attualmente collegati; un completamento precedente alla creazione dell’obiettivo non produce un andamento recente artificiale.
+La data di fine stimata parte dalle persone che svolgono il lavoro. Per ogni persona assegnataria di ticket collegati, minddy ricava le sue abituali ore di attività dai momenti in cui completa i ticket, misura l’impegno che consegna in tutti i suoi progetti e stima la quota di quell’impegno dedicata a questo obiettivo in base ai completamenti recenti e al lavoro aperto. La stima avanza solo durante quelle ore di attività: notti e fine settimana non aggiungono progressi, e il lavoro non assegnato viene ripartito tra chi contribuisce. Il calcolo avviene sul server: i ticket degli altri progetti e i dati di ogni persona non vengono mai mostrati, solo la data risultante.
+
+Una persona viene considerata appena ha completato almeno due ticket nelle ultime sei settimane. Se non ce n’è nessuna, la stima torna al ritmo proprio dell’obiettivo, che richiede almeno due completamenti, una settimana intera osservata, impegno consegnato positivo e lavoro rimanente. Contribuiscono all’andamento solo i ticket attualmente collegati; un completamento precedente alla creazione dell’obiettivo non produce un andamento recente artificiale.
 
 Con una data obiettivo valida, lo storico va dalla creazione a quella data e il ritmo di consegna usa il tempo osservato dalla creazione, compreso il tempo dopo una scadenza non rispettata. Se è impostata una data obiettivo ma non definisce un periodo valido successivo alla creazione, il calcolo usa uno storico mobile di otto settimane e una finestra di previsione di 28 giorni.
 
