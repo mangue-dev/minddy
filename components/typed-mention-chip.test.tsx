@@ -13,8 +13,14 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLo
 vi.mock("@/lib/pr-endpoint-context", () => ({ usePrEndpoint: () => null }));
 vi.mock("@/components/mention-chip", () => ({
   NUMO_MENTION_ID: "__numo__",
-  MentionChip: ({ type, label }: { type: string; label: string }) =>
-    createElement("span", { "data-chip": type }, label),
+  MentionChip: ({ type, label, hoverCard, icon, database }: {
+    type: string; label: string; hoverCard?: unknown; icon?: string | null; database?: boolean;
+  }) => createElement("span", {
+    "data-chip": type,
+    "data-hover-card": hoverCard ? JSON.stringify(hoverCard) : undefined,
+    "data-icon": icon ?? undefined,
+    "data-database": database ? "" : undefined,
+  }, label),
 }));
 
 const ISSUE = "9f1c2a3b-0000-4000-8000-000000000001";
@@ -54,6 +60,28 @@ it("shows the current label from the sources on screen", async () => {
   expect(host.textContent).not.toContain("MIN-1");
 });
 
+it("offers the hover card of a target the reader sees, read in the surface's project (MIN-879)", async () => {
+  const project = "11111111-1111-4111-8111-111111111111";
+  await render(`Fix [@](mention:issue/${ISSUE})`, { ...links({ [`issue:${ISSUE}`]: "MIN-42" }), projectId: project });
+  expect(host.querySelector("[data-chip=issue]")?.getAttribute("data-hover-card")).toBe(JSON.stringify({ project }));
+});
+
+it("shows a page's emoji, or the database glyph, as the server resolves it (MIN-879)", async () => {
+  const database = "9f1c2a3b-0000-4000-8000-000000000003";
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ mentions: [
+    { type: "page", id: PAGE, label: "Spec", icon: "📘", database: false },
+    { type: "page", id: database, label: "Releases", icon: null, database: true },
+  ] }))));
+  // Named by the surface's sources, the pills still ask for their figure.
+  await render(`[@](mention:page/${PAGE}) [@](mention:page/${database})`,
+    links({ [`page:${PAGE}`]: "Spec", [`page:${database}`]: "Releases" }));
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+  const [page, table] = host.querySelectorAll("[data-chip=page]");
+  expect(page.getAttribute("data-icon")).toBe("📘");
+  expect(page.hasAttribute("data-database")).toBe(false);
+  expect(table.hasAttribute("data-database")).toBe(true);
+});
+
 it("shows a neutral pill when the server says the reader may not see the target", async () => {
   const fetchMock = vi.fn(async () => new Response(JSON.stringify({
     mentions: [{ type: "page", id: PAGE, label: null }],
@@ -63,6 +91,8 @@ it("shows a neutral pill when the server says the reader may not see the target"
   await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
   expect(fetchMock).toHaveBeenCalledOnce();
   expect(host.querySelector("[data-chip=unavailable]")?.textContent).toBe("mentionUnavailable");
+  // Nor a hover card: there is nothing more to say about it.
+  expect(host.querySelector("[data-chip=unavailable]")?.hasAttribute("data-hover-card")).toBe(false);
   expect(host.textContent).not.toContain("Secret roadmap");
 });
 

@@ -1680,6 +1680,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   ? OBJECTIVE_STATUS_MAP[option.objectiveStatus].issueStatus
                   : undefined)
               }
+              // While composing too, a mention shows its card (MIN-879).
+              hoverCard={{ meta: option.meta }}
             />,
             el,
             // Two mentions of the SAME person in a message: the key takes

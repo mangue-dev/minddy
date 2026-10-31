@@ -14,8 +14,8 @@ import { formatMentionDate, mentionDateFrom, type MentionDate } from "@/lib/ment
 import { useOptionalScratchpad } from "@/lib/scratchpad-context";
 import {
   rememberShownMention,
+  useResolvedMentionDetails,
   useResolvedMentionLabel,
-  useResolvedMentionStatus,
 } from "@/lib/mention-resolution";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { useEffect } from "react";
@@ -57,13 +57,17 @@ function useTypedMentionLabel(
   id: string,
   meta: MentionMeta | undefined,
   links: MentionLinks | null,
+  /** Ask the server even when the sources name the target: a pill whose
+      figure only the server knows (an MCP logo, a page's emoji, MIN-879). */
+  askFigure = false,
 ): string | null | undefined {
   const tPages = useTranslations("Pages");
   const tCommon = useTranslations("Common");
   const locale = useLocale();
   const local = knownLabel(links?.label?.(type, id, meta) ?? null, type, tPages("untitled"));
   const ownOnly = LOCAL_ONLY.has(type);
-  const resolved = useResolvedMentionLabel(local || ownOnly ? null : type, local || ownOnly ? null : id, meta);
+  const ask = !ownOnly && (!local || askFigure);
+  const resolved = useResolvedMentionLabel(ask ? type : null, ask ? id : null, meta);
   if (type === "scratchpad") return id === SCRATCHPAD_MENTION_ID ? tCommon("mentionScratchpad") : null;
   if (type === "date") {
     const date = mentionDateFrom(id, meta);
@@ -103,10 +107,19 @@ export function TypedMentionChip({
   const t = useTranslations("Common");
   const links = useMentionLinks();
   const scratchpad = useOptionalScratchpad();
-  const label = useTypedMentionLabel(type, id, meta, links);
-  // An objective's status: from the sources on screen, else from the server
-  // resolution (MIN-785) — without it the pill falls back to the target.
-  const resolvedStatus = useResolvedMentionStatus(type === "objective" ? type : null, id);
+  // An MCP pill shows its service's logo, and a page its emoji or the
+  // database glyph: the server answers both, so it is asked even when the
+  // surface's sources already named the target (MIN-879).
+  const label = useTypedMentionLabel(type, id, meta, links, type === "mcp" || type === "page");
+  // An objective's status (MIN-785), an MCP service, a page's figure: one
+  // read of what the resolution returned beside the label.
+  const details = useResolvedMentionDetails(
+    type === "objective" || type === "mcp" || type === "page" ? type : null, id);
+  const mcpService = type === "mcp" ? details?.service : undefined;
+  const pageFigure = type === "page" ? details?.page : undefined;
+  // From the sources on screen, else from the server resolution — without
+  // it the pill falls back to the target.
+  const resolvedStatus = type === "objective" ? details?.status : undefined;
   const status = mentionStatus(links, type, id)
     ?? (resolvedStatus ? OBJECTIVE_STATUS_MAP[resolvedStatus].issueStatus : undefined);
   // A copy of this pill carries what it shows, never its stored label.
@@ -143,14 +156,15 @@ export function TypedMentionChip({
         onNavigate={href ? () => links?.navigate(type, id) : undefined}
         onClick={openNotebook}
         status={status ?? undefined}
-        tooltip={label === undefined ? null
-          : type === "issue" ? links?.issueTitle?.(id) ?? null
-          : type === "skill" ? links?.detail?.(type, id, meta) ?? null
-          : null}
+        // Once the reader is known to see the target, its hover card says
+        // more than the label (MIN-879).
+        hoverCard={label === undefined ? undefined : { meta, project: links?.projectId ?? null }}
+        mcpService={label === undefined ? null : mcpService ?? null}
         avatarSeed={label === undefined ? null : appearance?.seed ?? null}
         color={label === undefined ? null : appearance?.color ?? null}
         iconUrl={label !== undefined && type === "project" ? appearance?.icon ?? null : null}
-        icon={label !== undefined && type === "page" ? appearance?.icon ?? null : null}
+        icon={label !== undefined && type === "page" ? appearance?.icon || pageFigure?.icon || null : null}
+        database={type === "page" && !!pageFigure?.database}
       />
     </span>
   );

@@ -26,6 +26,8 @@ import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
 import { PagePanelProvider } from "@/lib/page-panel-context";
 import { ResourcePreviewHost } from "@/components/resource-preview-host";
+import { MentionHoverProvider } from "@/components/mention-hover";
+import { MentionHoverCard } from "@/components/mention-hover-card";
 import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { AssistantFab } from "@/components/assistant-fab";
@@ -80,6 +82,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
  Supabase to read it (see lib/keyboard/use-send-mode). */}
       <SendModeBoundary>
         <AccountQueryProvider>
+          {/* Mentions show their hover card in the signed-in app only (MIN-879). */}
+          <MentionHoverProvider card={MentionHoverCard}>
           <RealtimeProvider>
             <ProjectsProvider>
               <IssuePanelProvider>
@@ -156,6 +160,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               </IssuePanelProvider>
             </ProjectsProvider>
           </RealtimeProvider>
+          </MentionHoverProvider>
         </AccountQueryProvider>
       </SendModeBoundary>
     </AuthProvider>

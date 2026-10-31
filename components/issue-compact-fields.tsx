@@ -6,6 +6,7 @@
 // avatar). Same value/onChange contracts as the side-panel fields in
 // issue-property-fields.tsx.
 
+import { MentionHover } from "@/components/mention-hover";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, UserCircleIcon, Link02Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
@@ -400,7 +401,12 @@ export function ObjectiveCompact({
           className={current ? cn(OBJECTIVE_PILL_TRIGGER, "max-w-48") : BARE}
         >
           {current ? (
-            <ObjectivePill objective={current} />
+            // Its card on hover, like a mention of it (MIN-879).
+            <MentionHover type="objective" id={current.id} project={current.project_id} disabled={open}>
+              <span className="flex min-w-0">
+                <ObjectivePill objective={current} />
+              </span>
+            </MentionHover>
           ) : (
             <>
               <HugeiconsIcon icon={Target01Icon} className="size-4 shrink-0 text-muted-foreground" />

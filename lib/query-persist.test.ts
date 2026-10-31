@@ -6,11 +6,16 @@ import { isPersistableKey, wasRestoredBeforeMount } from "./query-provider";
 import { issuePullRequestQueryKey } from "./use-agent-runs";
 import { issuePrQueryKey } from "@/components/issue-pr-context";
 import { pullRequestQueryOptions } from "./pull-request-query";
+import { mentionPreviewKey } from "./use-mention-preview";
 
 // The persistence filter decides what goes to disk (MIN-89). A false positive
 // either saturates localStorage with the palette index or restores a stale
 // pull request state after reload.
 describe("isPersistableKey", () => {
+  it("keeps mention hover cards in memory, read again on hover (MIN-879)", () => {
+    expect(isPersistableKey(mentionPreviewKey("project", "p1", null))).toBe(false);
+    expect(isPersistableKey(["mention-preview", "mcp-tools", "m1"])).toBe(false);
+  });
   it("keeps unbounded application tabs out of the shared disk snapshot", () => {
     expect(isPersistableKey(appTabsQueryKey("owner"))).toBe(false);
   });

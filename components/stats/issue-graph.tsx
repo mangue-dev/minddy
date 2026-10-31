@@ -16,7 +16,7 @@ import {
   type GraphNode,
 } from "@/lib/issue-graph-layout";
 import type { Issue, IssueRelation, Objective, Project } from "@/lib/types";
-import { StatusIndicator } from "@/components/issue-indicators";
+import { MentionHover } from "@/components/mention-hover";
 import { objectiveColor } from "@/components/objective-icon";
 import { Switch } from "@/components/ui/switch";
 import { StatsCard, StatsSection } from "@/components/stats/stats-chrome";
@@ -27,6 +27,8 @@ const HEIGHT = 380;
 /** A crowded graph gets more room rather than smaller gaps. */
 const TALL_HEIGHT = 540;
 const TALL_FROM_NODES = 60;
+/** How far past a dot the pointer still takes it. */
+const HIT_SLOP = 5;
 /** How far an objective's bubble reaches past its dots, in pixels. */
 const BUBBLE_PADDING = 14;
 
@@ -47,9 +49,11 @@ const isClosedObjective = (objective: Objective) => objective.status === "done" 
  * The project's tickets as a graph (MIN-878): a dot per ticket that has a
  * relation or a parent, a line per link, open tickets only unless closed ones
  * are asked for. Tickets are gathered in a bubble per objective, around a
- * square anchor that takes the objective's own relations. Selecting a dot
- * opens the ticket in the side panel, without leaving the page; selecting an
- * anchor opens the objective. Nothing renders without any link.
+ * square anchor that takes the objective's own relations. Hovering a dot
+ * shows the ticket's board card, an anchor the objective's card (MIN-879),
+ * and names the hovered ticket and its neighbours. Selecting a dot opens the
+ * ticket in the side panel, without leaving the page; selecting an anchor
+ * opens the objective. Nothing renders without any link.
  */
 export function IssueGraphCard({
   project,
@@ -64,7 +68,6 @@ export function IssueGraphCard({
 }) {
   const t = useTranslations("ProjectStats");
   const tRelations = useTranslations("Relations");
-  const tObjectiveStatus = useTranslations("ObjectiveStatus");
   // A quick look, not a trip to the board: the shell's issue panel opens
   // above the settings.
   const { openIssue } = useIssuePanelActions();
@@ -135,8 +138,6 @@ export function IssueGraphCard({
     }
     return [...counts].map(([key, entry]) => ({ key, ...entry })).filter((entry) => entry.from && entry.to);
   })();
-  const hoveredIssue = hovered ? byId.get(hovered) : undefined;
-  const hoveredObjective = hovered ? objectiveById.get(hovered) : undefined;
   const label = (issue: Issue) => `${issueIdentifier(project.key, issue.number)} ${issue.title}`;
   const hover = (node: GraphNode) => ({
     onPointerEnter: () => setHovered(node.id),
@@ -254,78 +255,94 @@ export function IssueGraphCard({
             })}
             {graph.nodes.map((node) => {
               const faded = hovered && node.id !== hovered && !neighbors.has(node.id);
+              // The dot is small: a wider transparent disc takes the pointer,
+              // and its hover card (MIN-879) anchors on the whole group.
+              const hit = <circle cx={node.x} cy={node.y} r={node.radius + HIT_SLOP} className="fill-transparent" />;
               if (node.kind === "objective") {
                 const objective = objectiveById.get(node.id);
                 if (!objective) return null;
                 const size = node.radius * 2;
                 return (
-                  <rect
-                    key={node.id}
-                    x={node.x - node.radius}
-                    y={node.y - node.radius}
-                    width={size}
-                    height={size}
-                    rx={size * 0.28}
-                    role="link"
-                    tabIndex={0}
-                    aria-label={objective.name}
-                    style={{ fill: objectiveColor(objective.color) }}
-                    {...activate(() => router.push(objectiveHref(project, objective.id)))}
-                    {...hover(node)}
-                    className={cn(
-                      "cursor-pointer stroke-card stroke-2 outline-none transition-opacity focus-visible:stroke-ring",
-                      isClosedObjective(objective) && "opacity-50",
-                      faded && "opacity-15",
-                    )}
-                  />
+                  <MentionHover key={node.id} type="objective" id={objective.id} project={project.id} side="top" align="center"
+                    onOpen={() => router.push(objectiveHref(project, objective.id))}>
+                    <g
+                      role="link"
+                      tabIndex={0}
+                      aria-label={objective.name}
+                      {...activate(() => router.push(objectiveHref(project, objective.id)))}
+                      {...hover(node)}
+                      className="group cursor-default outline-none"
+                    >
+                      {hit}
+                      <rect
+                        x={node.x - node.radius}
+                        y={node.y - node.radius}
+                        width={size}
+                        height={size}
+                        rx={size * 0.28}
+                        style={{ fill: objectiveColor(objective.color) }}
+                        className={cn(
+                          "stroke-card stroke-2 transition-opacity group-focus-visible:stroke-ring",
+                          isClosedObjective(objective) && "opacity-50",
+                          faded && "opacity-15",
+                        )}
+                      />
+                    </g>
+                  </MentionHover>
                 );
               }
               const issue = byId.get(node.id);
               if (!issue) return null;
               return (
-                <circle
-                  key={node.id}
-                  cx={node.x}
-                  cy={node.y}
-                  r={node.radius}
-                  role="link"
-                  tabIndex={0}
-                  aria-label={label(issue)}
-                  {...activate(() => openIssue(project.id, issue.id))}
-                  {...hover(node)}
-                  className={cn(
-                    STATUS_TINT[issue.status].fill,
-                    "cursor-pointer stroke-card stroke-2 outline-none transition-opacity focus-visible:stroke-ring",
-                    isClosedStatus(issue.status) && "opacity-50",
-                    faded && "opacity-15",
-                  )}
-                />
+                <MentionHover key={node.id} type="issue" id={issue.id} project={project.id} side="top" align="center"
+                  onOpen={() => openIssue(project.id, issue.id)}>
+                  <g
+                    role="link"
+                    tabIndex={0}
+                    aria-label={label(issue)}
+                    {...activate(() => openIssue(project.id, issue.id))}
+                    {...hover(node)}
+                    className="group cursor-default outline-none"
+                  >
+                    {hit}
+                    <circle
+                      cx={node.x}
+                      cy={node.y}
+                      r={hovered === node.id ? node.radius + 1.5 : node.radius}
+                      className={cn(
+                        STATUS_TINT[issue.status].fill,
+                        "stroke-card stroke-2 transition-opacity group-focus-visible:stroke-ring",
+                        isClosedStatus(issue.status) && "opacity-50",
+                        faded && "opacity-15",
+                      )}
+                    />
+                  </g>
+                </MentionHover>
               );
             })}
-          </svg>
-          {(hoveredIssue || hoveredObjective) && (
-            <div className="pointer-events-none absolute top-3 left-3 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-md border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-sm">
-              {hoveredIssue ? (
-                <>
-                  <StatusIndicator status={hoveredIssue.status} className="size-3.5" />
-                  <span className="shrink-0 font-mono text-muted-foreground">
-                    {issueIdentifier(project.key, hoveredIssue.number)}
-                  </span>
-                  <span className="truncate">{hoveredIssue.title}</span>
-                </>
-              ) : hoveredObjective ? (
-                <>
-                  <span
-                    className="size-2.5 shrink-0 rounded-[3px]"
-                    style={{ background: objectiveColor(hoveredObjective.color) }}
+            {/* The hovered ticket and its neighbours name themselves: who is
+                linked to what reads without hovering each dot in turn. */}
+            {hovered && graph.nodes
+              .filter((node) => node.kind !== "objective" && (node.id === hovered || neighbors.has(node.id)))
+              .map((node) => {
+                const issue = byId.get(node.id);
+                if (!issue) return null;
+                return (
+                  <text
+                    key={`label-${node.id}`}
+                    x={node.x + node.radius + 4}
+                    y={node.y + 3.5}
                     aria-hidden
-                  />
-                  <span className="truncate">{hoveredObjective.name}</span>
-                  <span className="shrink-0 text-muted-foreground">{tObjectiveStatus(hoveredObjective.status)}</span>
-                </>
-              ) : null}
-            </div>
-          )}
+                    className={cn(
+                      "pointer-events-none fill-muted-foreground font-mono text-[10px] [paint-order:stroke] stroke-card stroke-[3px]",
+                      node.id === hovered && "fill-foreground font-medium",
+                    )}
+                  >
+                    {issueIdentifier(project.key, issue.number)}
+                  </text>
+                );
+              })}
+          </svg>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-5 py-3 text-xs text-muted-foreground">
           {graph.groups.length > 0 && (
@@ -353,7 +370,7 @@ export function IssueGraphCard({
           ))}
           {graph.hiddenNodes > 0 && <span>{t("graphHidden", { count: graph.hiddenNodes })}</span>}
           {canToggleClosed && (
-            <label className="ml-auto flex cursor-pointer items-center gap-2 text-foreground">
+            <label className="ml-auto flex items-center gap-2 text-foreground">
               <Switch checked={showClosed} onCheckedChange={setShowClosed} />
               {t("graphShowClosed")}
             </label>

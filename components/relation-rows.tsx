@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { MentionHover } from "@/components/mention-hover";
 import { Button } from "@/components/ui/button";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ObjectiveStatusIndicator, RelationIcon, StatusIndicator } from "@/components/issue-indicators";
@@ -52,8 +53,12 @@ export type RelationRowTarget =
   | { kind: "issue"; status?: IssueStatus; identifier: string | null; title: string }
   | { kind: "objective"; objective?: Objective; name: string };
 
+/** The other end's id, for its hover card (MIN-879). */
+type RelationRowId = { id?: string; projectId?: string | null };
+
 export function RelationRow({ target, via, resolved, onOpen, action }: {
-  target: RelationRowTarget;
+  /** With an `id`, hovering the row shows the target's card (MIN-879). */
+  target: RelationRowTarget & RelationRowId;
   /** The objective passing a blocker on, named under the title. */
   via?: string | null;
   resolved?: boolean;
@@ -68,6 +73,8 @@ export function RelationRow({ target, via, resolved, onOpen, action }: {
   const title = target.kind === "issue" ? target.title || target.identifier || "" : target.name;
   return (
     <div className="group/relrow flex min-h-8 items-center gap-1 rounded-md hover:bg-muted/60">
+      <MentionHover type={target.id ? target.kind : "none"} id={target.id ?? ""} project={target.projectId ?? null}
+        side="left" onOpen={onOpen}>
       <button
         type="button"
         disabled={!onOpen}
@@ -113,6 +120,7 @@ export function RelationRow({ target, via, resolved, onOpen, action }: {
           </span>
         )}
       </button>
+      </MentionHover>
       {action}
     </div>
   );

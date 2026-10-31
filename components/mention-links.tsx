@@ -48,6 +48,9 @@ export interface MentionLinks {
   label?: (type: MentionTargetType, id: string, meta?: MentionMeta) => string | null;
   /** A second line for a pill's tooltip: a skill's description. */
   detail?: (type: MentionTargetType, id: string, meta?: MentionMeta) => string | null;
+  /** The project the surface belongs to: a person's hover card gives their
+      role in it (MIN-879). */
+  projectId?: string | null;
 }
 
 const Context = createContext<MentionLinks | null>(null);

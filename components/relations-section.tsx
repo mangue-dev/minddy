@@ -286,8 +286,8 @@ export function RelationsSection({
                     <RelationRow
                       key={r.id}
                       target={isObjective
-                        ? { kind: "objective", objective, name: objective?.name ?? r.otherName ?? "" }
-                        : { kind: "issue", status: other?.status, identifier: id, title: other?.title ?? "" }}
+                        ? { kind: "objective", objective, name: objective?.name ?? r.otherName ?? "", id: r.otherId, projectId: issue.project_id }
+                        : { kind: "issue", status: other?.status, identifier: id, title: other?.title ?? "", id: r.otherId, projectId: issue.project_id }}
                       via={r.inheritedObjectiveName}
                       resolved={r.resolved}
                       onOpen={() =>

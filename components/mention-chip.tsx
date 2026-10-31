@@ -30,7 +30,7 @@
 // that a color cannot render: a face, an orb, an emoji.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AttachmentIcon, Book02Icon, Layers01Icon, LockIcon, Target01Icon } from "@hugeicons/core-free-icons";
+import { AttachmentIcon, Book02Icon, DatabaseIcon, Layers01Icon, LockIcon, Target01Icon } from "@hugeicons/core-free-icons";
 import type { CSSProperties, MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -53,6 +53,10 @@ import {
   SCRATCHPAD_ICON,
 } from "@/components/feature-icons";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { McpServiceLogo } from "@/components/mcp-service-logo";
+import { MentionHover } from "@/components/mention-hover";
+import { isPreviewMentionType } from "@/lib/mention-preview";
+import type { MentionMeta } from "@/lib/mention-link";
 import type { IssueStatus } from "@/lib/issue-constants";
 
 /** The id of the pseudo-entity “Numo” in the mention lists: the assistant
@@ -85,17 +89,38 @@ export type MentionChipType =
   | "unavailable";
 
 /**
- * A mention pill. With a `tooltip` (a ticket's title, which its identifier
- * does not say), the pill shows it on hover; the wrapper is a plain inline
- * span so the tooltip has a box to anchor to.
+ * A mention pill. With `hoverCard`, a target that has one shows its hover
+ * card (MIN-879): the ticket's board card, a page's first lines, a person's
+ * account. Otherwise a `tooltip` (a short text the label does not say) shows
+ * on hover. Either way the wrapper is a plain inline span, so the overlay
+ * has a box to anchor to.
  */
 export function MentionChip({
   tooltip,
+  hoverCard,
   ...props
 }: MentionChipProps & {
   tooltip?: string | null;
+  /** Show the target's hover card. `meta` is the mention's metadata (a
+      skill's project), `project` the project the pill is read in. */
+  hoverCard?: boolean | { meta?: MentionMeta; project?: string | null };
 }) {
   const chip = <MentionChipBody {...props} />;
+  if (hoverCard && isPreviewMentionType(props.type)) {
+    const options = hoverCard === true ? {} : hoverCard;
+    return (
+      <MentionHover
+        type={props.type}
+        id={props.id}
+        meta={options.meta}
+        project={options.project ?? null}
+        // A click on the card does what a click on the pill does.
+        onOpen={props.href ? props.onNavigate : props.onClick}
+      >
+        <span>{chip}</span>
+      </MentionHover>
+    );
+  }
   if (!tooltip) return chip;
   return (
     <AppTooltip label={tooltip}>
@@ -120,6 +145,8 @@ function MentionChipBody({
   onNavigate,
   onClick,
   ariaHasPopup,
+  mcpService,
+  database,
   className,
 }: {
   type: MentionChipType;
@@ -156,6 +183,11 @@ function MentionChipBody({
   /** Opens an inline action while preserving the editor's selection. */
   onClick?: () => void;
   ariaHasPopup?: "dialog";
+  /** An MCP connection's known service: its logo replaces the glyph (MIN-879). */
+  mcpService?: string | null;
+  /** A page that is a database: without an emoji, it shows the database
+      glyph of the page tree, not the page's (MIN-879). */
+  database?: boolean;
   className?: string;
 }) {
   // Images use the narrower left gutter; glyphs use the wider one. Every
@@ -197,6 +229,8 @@ function MentionChipBody({
         <HugeiconsIcon icon={Layers01Icon} className="size-full" aria-hidden />
       ) : type === "resource" ? (
         <HugeiconsIcon icon={AttachmentIcon} className="size-full" aria-hidden />
+      ) : type === "mcp" && mcpService ? (
+        <McpServiceLogo service={mcpService} className="size-full" />
       ) : type in FEATURE_GLYPHS ? (
         <HugeiconsIcon icon={FEATURE_GLYPHS[type as keyof typeof FEATURE_GLYPHS]} className="size-full" aria-hidden />
       ) : type === "page" ? (
@@ -205,7 +239,7 @@ function MentionChipBody({
         icon ? (
           <span className="text-[0.85em] leading-none">{icon}</span>
         ) : (
-          <HugeiconsIcon icon={Book02Icon} className="size-full" />
+          <HugeiconsIcon icon={database ? DatabaseIcon : Book02Icon} className="size-full" />
         )
       ) : status ? (
         // An objective whose status the sources hold shows it (MIN-785),
@@ -233,7 +267,9 @@ function MentionChipBody({
   // the space between the figure and the label must not become a point of
   // hyphenation, which the flex box prevented on its own.
   const shape = cn(
-    "mx-[0.14em] inline-block whitespace-nowrap rounded-[0.35em] py-[0.07em] pr-[0.43em] align-baseline text-[0.95em] leading-[1.15] font-medium",
+    // The default arrow, like every control (DESIGN.md, MIN-587): never the
+    // text caret, even inside an editor, nor the pointer hand on a link.
+    "mx-[0.14em] inline-block cursor-default whitespace-nowrap rounded-[0.35em] py-[0.07em] pr-[0.43em] align-baseline text-[0.95em] leading-[1.15] font-medium",
     hasImage ? "pl-[0.29em]" : "pl-[0.43em]",
     "bg-(--mention-chip) text-(--mention-chip-ink)",
   );

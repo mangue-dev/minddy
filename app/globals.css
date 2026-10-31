@@ -404,6 +404,20 @@ a.markdown-link[data-documentation-citation]::before {
   --mention-chip-l: 0.58; --mention-chip-a: 16%; --mention-chip-a-hover: 26%; --mention-chip-ink-l: 0.45;
 }
 
+/* A pill placed on a TINTED surface: the bubble of a message sent to Numo,
+   in the brand's lavender. The pill's translucent tint would mix with it —
+   a person's purple or an issue's blue all but vanish on lavender — so it is
+   laid over the page's own background first, and reads exactly as it does
+   on the page (MIN-879). */
+.mention-on-tint [style*="--mention-chip:"] {
+  background: linear-gradient(var(--mention-chip), var(--mention-chip)), var(--background);
+}
+@media (hover: hover) and (pointer: fine) {
+  .mention-on-tint [style*="--mention-chip:"]:is(a, button):hover {
+    background: linear-gradient(var(--mention-chip-hover), var(--mention-chip-hover)), var(--background);
+  }
+}
+
 /* The search chip of a typed “/”, “@” or “$” (components/editor/suggestion-chip.ts):
    decorations over the open query, never content. It borrows the pill's
    radius, takes a background tinted with the text's own ink (the neutral

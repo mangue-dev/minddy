@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Link02Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
+import { MentionHover } from "@/components/mention-hover";
 import { RelationIcon } from "@/components/issue-indicators";
 import { relationToneClass } from "@/components/relation-rows";
 import { useRelationPalettePicker } from "@/components/palette-picker-rows";
@@ -265,12 +266,13 @@ export function CreationRelationPills({
               relation.type !== "blocked_by" && relation.type !== "blocks" && "bg-muted",
             )}
           >
-            <AppTooltip label={fullLabel}>
+            {/* The linked issue or objective's card (MIN-879). */}
+            <MentionHover type={relation.target_type} id={relation.target_id} project={projectId}>
               <span className="flex min-w-0 items-center gap-1">
                 <RelationIcon relation={relation.type} className="size-3.5" />
                 <span className="truncate">{label}</span>
               </span>
-            </AppTooltip>
+            </MentionHover>
             {!disabled && (
               <AppTooltip label={`${tCommon("remove")}: ${fullLabel}`}>
                 <button

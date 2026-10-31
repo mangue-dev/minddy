@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 44,
-  "sourceRevision": 44,
+  "revision": 45,
+  "sourceRevision": 45,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -127,14 +127,16 @@
       "lib/use-bulk-selection-actions.ts",
       "components/relation-chips.tsx",
       "components/sub-issues-section.tsx",
-      "lib/create-context.tsx"
+      "lib/create-context.tsx",
+      "components/mention-hover-card.tsx",
+      "components/resources.tsx"
     ]
   },
   "review": {
-    "revision": 44,
-    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 45,
+    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken)",
+    "language": "agent:claude (it sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "feedback",
@@ -179,7 +181,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-21.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -196,7 +198,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo AUR-19 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -230,7 +232,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +248,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "La palette dei comandi mostra i ticket che possono bloccare questo, con la domanda della relazione nel campo di ricerca.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -262,7 +264,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sottoticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -279,7 +281,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -296,7 +298,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -313,7 +315,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -330,7 +332,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -466,7 +468,7 @@ Apri la cronologia di discussione del ticket per aggiungere un commento. Spiega 
 
 Allega una pagina pertinente del progetto, un file o un collegamento attraverso i controlli delle risorse. Una pagina collegata è una risorsa aggiornata: il suo titolo segue le rinominazioni e il contenuto può evolvere. Un file è un allegato memorizzato, non una garanzia che un URL esterno resti disponibile. **Pagina** apre la palette dei comandi sulle pagine del progetto, nell’ordine della barra laterale; scegline una per allegarla. Per scrivere una pagina che non esiste ancora, scegli **Nuova pagina** in fondo all’elenco; un titolo digitato prima nella ricerca diventa il suo titolo. La pagina viene creata nel progetto, allegata al ticket e aperta in un pannello laterale, dove **Espandi** apre la pagina intera.
 
-Le risorse appaiono come schede: l’immagine stessa o l’icona del tipo di file, il nome e la dimensione. Un link mostra l’immagine di anteprima della sua pagina quando il sito ne fornisce una, altrimenti la sua favicon. Fai clic o clic destro su una scheda per aprirne il menu: Anteprima, Apri collegamento o Apri pagina, poi Rinomina, Scarica e Rimuovi quando si applicano. Anteprima apre un file supportato su tutta la finestra. Immagini, PDF, Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV e formati audio o video supportati usano lo stesso visualizzatore. Il Markdown viene formattato, il testo resta letterale e il CSV si apre come tabella scorrevole. Usa Chiudi o Escape per tornare al ticket. Il menu Azioni del file (`…`) offre Scarica e, se puoi modificare quella risorsa, Rinomina e Rimuovi. Un clic sulla menzione di un file in un testo apre lo stesso visualizzatore. Minddy chiede una conferma prima di rimuovere una risorsa, che viene poi scollegata da questo contesto. Una risorsa pagina mantiene il titolo della sua pagina e non si può rinominare. I formati non supportati mantengono l’azione di download. **Apri pagina** la mostra in un pannello laterale, dove **Espandi** apre la pagina intera; un database si apre direttamente come pagina intera.
+Le risorse appaiono come schede: l’immagine stessa o l’icona del tipo di file, il nome e la dimensione. Un link mostra l’immagine di anteprima della sua pagina quando il sito ne fornisce una, altrimenti la sua favicon. Fai clic o clic destro su una scheda per aprirne il menu: Anteprima, Apri collegamento o Apri pagina, poi Rinomina, Scarica e Rimuovi quando si applicano. Anteprima apre un file supportato su tutta la finestra. Immagini, PDF, Markdown (`.md`), testo semplice (`.txt`, `.text`), CSV e formati audio o video supportati usano lo stesso visualizzatore. Il Markdown viene formattato, il testo resta letterale e il CSV si apre come tabella scorrevole. Usa Chiudi o Escape per tornare al ticket. Il menu Azioni del file (`…`) offre Scarica e, se puoi modificare quella risorsa, Rinomina e Rimuovi. Un clic sulla menzione di un file in un testo apre lo stesso visualizzatore. Minddy chiede una conferma prima di rimuovere una risorsa, che viene poi scollegata da questo contesto. Una risorsa pagina mantiene il titolo della sua pagina e non si può rinominare. I formati non supportati mantengono l’azione di download. **Apri pagina** la mostra in un pannello laterale, dove **Espandi** apre la pagina intera; un database si apre direttamente come pagina intera. Passando il puntatore sulla scheda di una pagina ne vedi le prime righe, o le prime voci di un database.
 
 ![Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.](/documentation/it/file-preview.png)
 

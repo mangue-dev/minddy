@@ -22,7 +22,9 @@ const RESOLVES_PER_MINUTE = 600;
  * at most 200; `meta.project` names a skill's project (MIN-872). Answer: `{ mentions: [{ type, id, label, status? }] }`, where `label`
  * is the target's current label, or `null` when it is unknown, deleted or not
  * the reader's to see — the three are indistinguishable on purpose. An
- * objective the reader may see also carries its `status`. See
+ * objective the reader may see also carries its `status`, and an MCP
+ * connection of a known service its `service`, for its logo, and a page its
+ * `icon` and whether it is a `database`, for its glyph (MIN-879). See
  * lib/server/mention-access.ts.
  */
 export async function POST(request: NextRequest) {
@@ -53,11 +55,21 @@ export async function POST(request: NextRequest) {
     refs.push(typeof project === "string" ? { type, id, meta: { project } } : { type, id });
   }
   const statuses = new Map<string, ObjectiveStatus>();
-  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses);
+  const services = new Map<string, string>();
+  const pages = new Map<string, { icon: string | null; database: boolean }>();
+  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses, services, pages);
   return NextResponse.json({
     mentions: refs.map((ref) => {
       const status = statuses.get(mentionKey(ref));
-      return { ...ref, label: resolution.get(mentionKey(ref)) ?? null, ...(status ? { status } : {}) };
+      const service = services.get(mentionKey(ref));
+      const page = pages.get(mentionKey(ref));
+      return {
+        ...ref,
+        label: resolution.get(mentionKey(ref)) ?? null,
+        ...(status ? { status } : {}),
+        ...(service ? { service } : {}),
+        ...(page ? { icon: page.icon, database: page.database } : {}),
+      };
     }),
   }, { headers: NO_STORE });
 }

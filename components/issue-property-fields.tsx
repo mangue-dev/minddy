@@ -1,5 +1,6 @@
 "use client";
 
+import { MentionHover } from "@/components/mention-hover";
 import { Dot } from "@/components/ui/color-dot";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
@@ -378,7 +379,12 @@ export function ObjectiveValue({
           className={current ? OBJECTIVE_PILL_TRIGGER : TRIGGER}
         >
           {current ? (
-            <ObjectivePill objective={current} />
+            // Its card on hover, like a mention of it (MIN-879).
+            <MentionHover type="objective" id={current.id} project={current.project_id}>
+              <span className="flex min-w-0">
+                <ObjectivePill objective={current} />
+              </span>
+            </MentionHover>
           ) : (
             <span className="text-muted-foreground">{tCommon("none")}</span>
           )}

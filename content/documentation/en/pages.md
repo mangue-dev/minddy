@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -105,14 +105,17 @@
       "lib/mention-menu.ts",
       "components/pages/block-menu.tsx",
       "lib/action-menu-search.ts",
-      "components/pages/block-drag.ts"
+      "components/pages/block-drag.ts",
+      "components/mention-hover-card.tsx",
+      "lib/server/mention-preview.ts",
+      "components/pages/page-backlinks.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (list items as blocks with their own handle: handle left of the list, + adding an item of the same kind below or above with Alt/Option-click and the / menu open, dragging among lists of the same kind of item including nested lists, emptied lists removed, handle menu acting on the item or the selection; checked against components/pages/block-gutter.tsx, components/pages/block-actions.ts and components/pages/block-drag.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show list item handles)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 23,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken)",
+    "language": "agent:claude (en sentences added with catalog UI labels; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "notifications-and-inbox",
@@ -147,7 +150,7 @@
       "src": "/documentation/en/page-create-menu.png",
       "alt": "Page creation menu offering New page and New database.",
       "caption": "Use the project page controls to choose a document or a database.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -163,7 +166,7 @@
       "src": "/documentation/en/page-editor.png",
       "alt": "Demonstration page with headings, paragraphs, task checkboxes and an issue mention.",
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/en/page-comments.png",
       "alt": "Page activity dialog with a demonstration edit event and an empty comment composer.",
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -195,7 +198,7 @@
       "src": "/documentation/en/page-file-states.png",
       "alt": "Demo page with an unfinished upload and a saved 67-byte file offering Download.",
       "caption": "Check the actual file state: the second attachment is available, while the first unfinished upload is not.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -211,7 +214,7 @@
       "src": "/documentation/en/page-history-preview.png",
       "alt": "Versions tab with an expanded earlier state, its author, Restore and the 30-day retention notice.",
       "caption": "Preview a saved state and compare it with the current page before restoring.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -227,7 +230,7 @@
       "src": "/documentation/en/page-publish.png",
       "alt": "Page publication dialog with Private selected and password or bearer-link alternatives.",
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +246,7 @@
       "src": "/documentation/en/page-export.png",
       "alt": "Document export menu with Markdown (.md) and Print / PDF.",
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -259,7 +262,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -322,7 +325,7 @@ The `/` menu lists blocks under **Basic blocks**, **Lists** and **Advanced block
 
 Use mentions to link relevant issues, objectives, people or pages. Type `@` followed by an identifier, a name or a title, which may contain single spaces; the menu closes in the same ways as the `/` menu, and when you choose an item. A word that describes the work rather than naming it also lists issues found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**, after the text matches. Backlinks help readers find pages that reference the current one. A link supplies context rather than granting a reader access to another project's private object. A mention of a page that has no title yet reads **Untitled**.
 
-Once you type `@`, the menu also lists the task notebook and your current and upcoming cycles under **Planning** (cycles only when they are turned on), your routines, the project's repository skills, your connected MCP servers, and pull requests, open ones first. A mention stores only what it points at, never a name: each reader sees the target's current name, and a target they cannot open shows as **Unavailable**. Type a date after `@`, such as `@today`, `@tomorrow`, `@next monday`, `@in 3 weeks`, `@15 november` or `@tomorrow 9am`, and choose it under **Dates**. The date is fixed when you write it: it reads **Today**, **Tomorrow** or **Yesterday** while it is that close, then the full date. Click a date in an editor to change it or add a time. A date mention sends no reminder. Accents and full words are optional: `@thursday in 2 weeks`, `@day after tomorrow`, `@tmrw` or `@15 nov` work too, and so do times said in words, such as `@tomorrow at half past 8` or `@friday at a quarter to 9`. A typo per word is forgiven, two in a long word: `@tomorow at half past 8` still reads. Type `@date` to open the date picker on the current date and time. When a pill shows a full date, hovering it tells how far it is from now, such as “in 3 weeks”. The Numo composer and routine instructions offer the same mentions, dates included.
+Once you type `@`, the menu also lists the task notebook and your current and upcoming cycles under **Planning** (cycles only when they are turned on), your routines, the project's repository skills, your connected MCP servers, and pull requests, open ones first. A mention stores only what it points at, never a name: each reader sees the target's current name, and a target they cannot open shows as **Unavailable**. Type a date after `@`, such as `@today`, `@tomorrow`, `@next monday`, `@in 3 weeks`, `@15 november` or `@tomorrow 9am`, and choose it under **Dates**. The date is fixed when you write it: it reads **Today**, **Tomorrow** or **Yesterday** while it is that close, then the full date. Click a date in an editor to change it or add a time. A date mention sends no reminder. Accents and full words are optional: `@thursday in 2 weeks`, `@day after tomorrow`, `@tmrw` or `@15 nov` work too, and so do times said in words, such as `@tomorrow at half past 8` or `@friday at a quarter to 9`. A typo per word is forgiven, two in a long word: `@tomorow at half past 8` still reads. Type `@date` to open the date picker on the current date and time. When a pill shows a full date, hovering it tells how far it is from now, such as “in 3 weeks”. The Numo composer and routine instructions offer the same mentions, dates included. Rest the pointer on any other mention to see more without leaving what you are reading: an issue shows its full card, an objective its status, progress, issues and relations, a page, a routine, a skill or the task notebook its first lines, a database its first rows, a person their email and their role in the project, a pull request its state and branches, a connected MCP server whether it is signed in and how many tools it offers, a cycle its progress, and a project its members and their roles. Clicking the card opens what the mention opens. A mention you cannot open shows nothing more. Backlinks, pages attached to an issue or objective, relations, an issue's objective and the people in activity and statistics show the same card; an MCP agent in the activity shows whose key it used.
 
 Clicking a page mention, a backlink, a page attached to an issue or objective, or a link to a page in a comment or a Numo answer opens that page in a side panel above what you were reading. Read or edit it there, choose **Expand** to open the full page, or close the panel to return. Between **Expand** and close, the panel's **Page options** menu (`…`) offers the same actions as on the full page; moving the page to the trash from there closes the panel and leaves you on the page underneath. A database opens in the panel too, with the compact toolbar described in the [Databases guide](/docs/databases#database-display); an entry opened from its table takes its place, and **Back**, at the top left of the panel, returns to the table.
 

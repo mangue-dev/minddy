@@ -16,6 +16,7 @@ import {
 import { mentionDateFrom } from "@/lib/mention-date";
 import { findPullRequestsWithProjects } from "@/lib/server/agent/pull-requests";
 import { getMcpConnection } from "@/lib/server/mcp-client";
+import { mcpPresetForUrl } from "@/lib/mcp-catalog";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { issueStore } from "@/lib/server/issue-store";
@@ -94,12 +95,17 @@ function rows(result: { data: unknown; error: unknown }, what: string): Row[] {
 /** Resolve mention targets for `userId`. Unknown, deleted and inaccessible
  targets all resolve to `null`, indistinguishably. `objectiveStatuses`, when
  given, also receives the status of each objective the reader may open, for
- the glyph of its pill (MIN-785). */
+ the glyph of its pill (MIN-785). `mcpServices` receives the known service
+ of each MCP connection the reader owns, for the logo of its pill, and
+ `pageFigures` each visible page's emoji and whether it is a database, for its
+ glyph (MIN-879). */
 export async function resolveMentionTargets(
   userId: string,
   refs: readonly MentionRef[],
   service: SupabaseClient = getServiceClient(),
-  objectiveStatuses?: Map<string, ObjectiveStatus>
+  objectiveStatuses?: Map<string, ObjectiveStatus>,
+  mcpServices?: Map<string, string>,
+  pageFigures?: Map<string, { icon: string | null; database: boolean }>
 ): Promise<MentionResolution> {
   const resolution: MentionResolution = new Map();
   const unique = new Map<string, MentionRef>();
@@ -136,7 +142,7 @@ export async function resolveMentionTargets(
       : none,
     idsOf("page").length
       ? service.from("pages")
-        .select("id, project_id, title, icon, deleted_at, encrypted_content, encryption_version")
+        .select("id, project_id, title, icon, database_schema, deleted_at, encrypted_content, encryption_version")
         .in("id", idsOf("page")).then((result) => rows(result, "page"))
       : none,
     idsOf("project").length
@@ -211,6 +217,10 @@ export async function resolveMentionTargets(
     // A page the reader may see but nobody titled yet (a subpage just
     // created): untitled, not unavailable.
     resolution.set(`page:${row.id}`, title || UNTITLED_PAGE_LABEL);
+    pageFigures?.set(`page:${row.id}`, {
+      icon: typeof row.icon === "string" && row.icon ? row.icon : null,
+      database: Array.isArray(row.database_schema),
+    });
   }
   for (const stored of resources) {
     if (!allowed.has(String(stored.project_id))) continue;
@@ -246,7 +256,10 @@ export async function resolveMentionTargets(
   // A connection is read under its owner's id: another account's reads as none.
   for (const id of idsOf("mcp")) {
     const connection = await getMcpConnection(userId, id).catch(() => null);
-    if (connection?.name) resolution.set(`mcp:${id}`, connection.name);
+    if (!connection?.name) continue;
+    resolution.set(`mcp:${id}`, connection.name);
+    const known = mcpPresetForUrl(connection.url)?.id;
+    if (known) mcpServices?.set(`mcp:${id}`, known);
   }
   const visibleMembers = new Set<string>(
     memberships.filter((row) => allowed.has(String(row.project_id))).map((row) => String(row.user_id))

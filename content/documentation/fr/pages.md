@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -105,14 +105,17 @@
       "lib/mention-menu.ts",
       "components/pages/block-menu.tsx",
       "lib/action-menu-search.ts",
-      "components/pages/block-drag.ts"
+      "components/pages/block-drag.ts",
+      "components/mention-hover-card.tsx",
+      "lib/server/mention-preview.ts",
+      "components/pages/page-backlinks.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (list items as blocks with their own handle: handle left of the list, + adding an item of the same kind below or above with Alt/Option-click and the / menu open, dragging among lists of the same kind of item including nested lists, emptied lists removed, handle menu acting on the item or the selection; checked against components/pages/block-gutter.tsx, components/pages/block-actions.ts and components/pages/block-drag.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show list item handles)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 23,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken)",
+    "language": "agent:claude (fr sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "notifications-and-inbox",
@@ -147,7 +150,7 @@
       "src": "/documentation/fr/page-create-menu.png",
       "alt": "Menu de création proposant Nouvelle page et Nouvelle base de données.",
       "caption": "Les contrôles des pages du projet permettent de choisir un document ou une base de données.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -163,7 +166,7 @@
       "src": "/documentation/fr/page-editor.png",
       "alt": "Page de démonstration avec titres, paragraphes, cases de tâches et mention d’un ticket.",
       "caption": "Les titres, blocs de tâches et la mention AUR-2 structurent la page. Ce contenu est un exemple de démonstration.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -179,7 +182,7 @@
       "src": "/documentation/fr/page-comments.png",
       "alt": "Fenêtre d’activité de la page avec modification de démonstration et champ de commentaire vide.",
       "caption": "Lisez l’activité et rédigez un commentaire dans le champ. Aucun commentaire n’a été envoyé dans cet exemple.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -195,7 +198,7 @@
       "src": "/documentation/fr/page-file-states.png",
       "alt": "Page de démonstration avec un envoi inachevé et un fichier enregistré de 67 octets proposant Télécharger.",
       "caption": "Vérifiez l’état réel du fichier : la seconde pièce jointe est disponible, contrairement au premier envoi inachevé.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -211,7 +214,7 @@
       "src": "/documentation/fr/page-history-preview.png",
       "alt": "Onglet Versions avec un état antérieur déplié, son auteur, Restaurer et l’indication de conservation pendant 30 jours.",
       "caption": "Prévisualisez un état enregistré et comparez-le à la page actuelle avant de le restaurer.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -227,7 +230,7 @@
       "src": "/documentation/fr/page-publish.png",
       "alt": "Fenêtre de publication avec Privée sélectionné et options par mot de passe ou lien.",
       "caption": "Privée conserve la page dans le projet. Vérifiez le public souhaité avant de modifier la publication.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,7 +246,7 @@
       "src": "/documentation/fr/page-export.png",
       "alt": "Menu d’export du document avec Markdown (.md) et Imprimer / PDF.",
       "caption": "Choisissez Markdown pour télécharger le document, ou Imprimer / PDF pour ouvrir la vue imprimable.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -259,7 +262,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -322,7 +325,7 @@ Le menu `/` range les blocs sous **Blocs de base**, **Listes** et **Blocs avanc�
 
 Les mentions relient tickets, objectifs, personnes ou pages. Tapez `@` suivi d’un identifiant, d’un nom ou d’un titre, qui peut contenir des espaces simples ; le menu se ferme de la même façon que le menu `/`, ainsi qu’au choix d’un élément. Un mot qui décrit le travail plutôt qu’il ne le nomme liste aussi des tickets trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**, après les correspondances textuelles. Les liens retour aident à retrouver les pages qui citent celle-ci. Un lien apporte du contexte, sans ouvrir les objets privés d’un autre projet. La mention d’une page qui n’a pas encore de titre affiche **Sans titre**.
 
-Dès que vous tapez `@`, le menu présente aussi le carnet de tâches et vos cycles en cours et à venir sous **Planification** (les cycles seulement s’ils sont activés), vos routines, les skills du dépôt du projet, vos serveurs MCP connectés et les pull requests, ouvertes en premier. Une mention n’enregistre que ce qu’elle désigne, jamais un nom : chaque lecteur voit le nom actuel de la cible, et une cible qu’il ne peut pas ouvrir s’affiche **Indisponible**. Tapez une date après `@`, comme `@aujourd’hui`, `@demain`, `@lundi prochain`, `@dans 3 semaines`, `@15 novembre` ou `@demain 9h`, puis choisissez-la sous **Dates**. La date est fixée au moment où vous l’écrivez : elle s’affiche **Aujourd’hui**, **Demain** ou **Hier** tant qu’elle est aussi proche, puis en entier. Cliquez sur une date dans un éditeur pour la modifier ou ajouter une heure. Une mention de date n’envoie aucun rappel. Les accents et les mots complets sont facultatifs : `@jeudi dans 2 semaines`, `@apres demain`, `@dem` ou `@15 nov` fonctionnent aussi, comme les heures dites en toutes lettres, par exemple `@demain à 8 heures et demie` ou `@vendredi à 9 heures moins le quart`. Une faute par mot est tolérée, deux dans un mot long : `@demian à 8 heyre et demi` se lit quand même. Tapez `@date` pour ouvrir le sélecteur de date sur la date et l’heure actuelles. Quand une puce affiche une date complète, la survoler indique à quelle distance elle se trouve de maintenant, comme « dans 3 semaines ». Le compositeur de Numo et l’instruction des routines proposent les mêmes mentions, dates comprises.
+Dès que vous tapez `@`, le menu présente aussi le carnet de tâches et vos cycles en cours et à venir sous **Planification** (les cycles seulement s’ils sont activés), vos routines, les skills du dépôt du projet, vos serveurs MCP connectés et les pull requests, ouvertes en premier. Une mention n’enregistre que ce qu’elle désigne, jamais un nom : chaque lecteur voit le nom actuel de la cible, et une cible qu’il ne peut pas ouvrir s’affiche **Indisponible**. Tapez une date après `@`, comme `@aujourd’hui`, `@demain`, `@lundi prochain`, `@dans 3 semaines`, `@15 novembre` ou `@demain 9h`, puis choisissez-la sous **Dates**. La date est fixée au moment où vous l’écrivez : elle s’affiche **Aujourd’hui**, **Demain** ou **Hier** tant qu’elle est aussi proche, puis en entier. Cliquez sur une date dans un éditeur pour la modifier ou ajouter une heure. Une mention de date n’envoie aucun rappel. Les accents et les mots complets sont facultatifs : `@jeudi dans 2 semaines`, `@apres demain`, `@dem` ou `@15 nov` fonctionnent aussi, comme les heures dites en toutes lettres, par exemple `@demain à 8 heures et demie` ou `@vendredi à 9 heures moins le quart`. Une faute par mot est tolérée, deux dans un mot long : `@demian à 8 heyre et demi` se lit quand même. Tapez `@date` pour ouvrir le sélecteur de date sur la date et l’heure actuelles. Quand une puce affiche une date complète, la survoler indique à quelle distance elle se trouve de maintenant, comme « dans 3 semaines ». Le compositeur de Numo et l’instruction des routines proposent les mêmes mentions, dates comprises. Laissez le pointeur sur toute autre mention pour en voir davantage sans quitter votre lecture : un ticket montre sa carte complète, un objectif son statut, sa progression, ses tickets et ses relations, une page, une routine, un skill ou le carnet de tâches ses premières lignes, une base de données ses premières entrées, une personne son adresse e-mail et son rôle dans le projet, une pull request son état et ses branches, un serveur MCP connecté s’il est authentifié et combien d’outils il propose, un cycle sa progression, et un projet ses membres et leurs rôles. Cliquer sur la carte ouvre ce qu’ouvre la mention. Une mention que vous ne pouvez pas ouvrir n’en montre pas davantage. Les liens retour, les pages jointes à un ticket ou à un objectif, les relations, l’objectif d’un ticket et les personnes de l’activité et des statistiques montrent la même carte ; un agent MCP dans l’activité indique à qui appartient la clé qu’il a utilisée.
 
 Un clic sur la mention d’une page, un lien retour, une page jointe à un ticket ou à un objectif, ou un lien vers une page dans un commentaire ou une réponse de Numo ouvre cette page dans un panneau latéral, au-dessus de ce que vous lisiez. Lisez-la ou modifiez-la sur place, choisissez **Agrandir** pour ouvrir la page entière, ou fermez le panneau pour revenir. Entre **Agrandir** et la fermeture, le menu **Options de la page** (`…`) du panneau propose les mêmes actions que sur la page entière ; déplacer la page vers la corbeille depuis ce menu ferme le panneau et vous laisse sur la page située dessous. Une base de données s’ouvre aussi dans le panneau, avec la barre d’outils compacte décrite dans le [guide des bases de données](/docs/databases#database-display) ; une entrée ouverte depuis son tableau prend sa place, et **Retour**, en haut à gauche du panneau, ramène au tableau.
 

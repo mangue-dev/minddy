@@ -1,6 +1,6 @@
 # Mentions
 
-MIN-734, MIN-872. A mention is a typed reference to a target: a person, an
+MIN-734, MIN-872, MIN-879. A mention is a typed reference to a target: a person, an
 issue, an objective, a project, a page, a resource (an attachment) of the
 surface being written (MIN-742), and since MIN-872 a pull request, a routine,
 the task notebook, a cycle, a repository skill, a connected MCP server or a
@@ -158,10 +158,85 @@ weeks"), and one with a time that close, in hours or minutes. In an editor, a cl
 date opens the date and time picker and writes the new day into the node
 (`components/date-mention-chip.tsx`). minddy schedules nothing from a date.
 
+Hovering a pill shows its target's hover card (MIN-879,
+`components/mention-hover-card.tsx`) in the signed-in app, which provides it
+through `MentionHover` (`components/mention-hover.tsx`): the marketing site and
+public pages render the pill alone and never load the card. It is read only
+when the card opens, from
+`GET /api/mentions/preview?type=&id=&project=` (`lib/server/mention-preview.ts`).
+The server first resolves the target with `resolveMentionTargets`, under the
+access rules below: a target without a label for the reader has no card
+either, and the answer is `null` for unknown, deleted and inaccessible targets
+alike. Only then does it read the details, scoped to the project that
+resolution allowed. Pages, routines, cycles and MCP connections skip that
+pass: their own readers (`getPage`, `getRoutineForUser`, the owner filter)
+apply the same rule.
+
+| Type | Card |
+| --- | --- |
+| issue | the board card itself (`IssueCardBody`, read-only), with its project, assignee, categories, objective, parent and relations |
+| objective | status indicator, name in its color, progress ring and lead beside it, target date, relations as pills, the start of its description |
+| page | title, icon, project, last edit, the first lines of its body under a fade; a database shows its first rows and columns as its table draws them (widths, header icons, option badges, checkboxes, 40px rows), fading out to the right and at the bottom |
+| routine, skill, scratchpad | the first lines of the instruction, `SKILL.md` or notebook; a routine shows its state badge beside its title and when it runs next, the notebook its task count |
+| project | its members, owner first, each with a colored role badge |
+| member | name, email, avatar, a colored role badge and the arrival date, in the project the pill is read in (`MentionLinks.projectId`) when the reader shares it, else in a project both share |
+| pull request | state, repository, branches, author, when it opened or merged |
+| mcp | its service's logo, a state badge (signed in, sign-in needed, turned off) and its tool count, from a live connection (`POST /api/account/mcp-connections/[id]/test`) asked only once the card is open |
+| cycle | its window and progress over the reader's issues in it |
+
+Issue, objective, page and routine cards show their project at the top left,
+as an issue card does. A click on the card does what a click on the pill does
+(`MentionHover`'s `onOpen`). An MCP pill shows its service's logo
+(`McpServiceLogo`): the resolution answers it as `service`
+(`lib/mcp-catalog.ts`). A page pill shows the page's emoji, or without one
+the database glyph of the page tree for a database and the page glyph
+otherwise: the resolution answers `icon` and `database`, so MCP and page
+pills ask the server even when the surface's sources already named them. Every pill keeps the default arrow cursor
+(DESIGN.md), never the text caret or the pointer hand.
+
+What a card costs, kept off navigation:
+
+- The app shell holds only the card's shell (`mention-hover-card.tsx`: the
+  hover logic, the query, a skeleton). The bodies (`mention-preview-cards.tsx`,
+  with the issue card, the read-only editor, database cells) load on the
+  first card about to open.
+- A pointer resting 150 ms on a pill reads its card ahead (the bodies' code
+  and `GET /api/mentions/preview`), before the card's own 450 ms delay opens
+  it; a pointer only crossing a paragraph reads nothing, and a touch never
+  does. Focus reads ahead at once.
+- Answers stay fresh a minute and are never persisted to disk.
+- On the server, a page, a routine, a cycle and an MCP connection are read
+  through their own guarded readers, without a resolution pass first; a
+  database reads only the rows its card shows, and counts the rest.
+- A typed pill subscribes twice to the resolution cache: its label, and what
+  came with it (`useResolvedMentionDetails`).
+
+A date keeps its relative tooltip, and a resource its click preview: both
+have no card. Excerpts are Markdown cut at a line (`cutExcerpt`) and rendered
+by the read-only document editor (`LazyDocumentEditor`), so code blocks,
+callouts, task lists and pills look as in the text. Like a database's rows,
+an excerpt starts under the card's title, on a surface wider than the card,
+fades out to the right and at the bottom, and is dimmed as a whole so the
+title reads first; its typed pills resolve
+like any other, so a card never prints a stored label. The card opens on mouse hover and keyboard
+focus, never on touch, so a tap keeps its meaning. Page backlinks, page
+resources of issues and objectives, the statistics graph's dots and objective
+anchors, the statistics landscape pills, relation rows and creation-dialog
+relation pills (`RelationRow`, `CreationRelationPills`), the objective field
+of the issue panel and triage, the pills of the Numo composer (the panel, the
+shell and the home page), and the people of activity logs,
+comment headers and statistics contributors show the same cards. In an
+activity line the person shows their card and the action keeps its
+full-sentence tooltip (`OneLine` holds it back over `data-one-line-lead`).
+An MCP agent there shows its own card (`components/agent-hover-card.tsx`),
+laid out as a project's: the agent's logo and name over "MCP", then the
+person whose key it used. It is built from the activity line itself and reads
+nothing.
+
 A pull request opens the Pull requests screen, a routine its detail, a cycle
 the global board's cycle view, an MCP server its settings card, and the
 notebook opens in place (`lib/mention-target.ts`). A skill leads nowhere; its
-pill shows its description on hover where the surface knows it.
+pill shows its hover card.
 
 In an editor, the pills a selection covers are marked `mention-selected` and
 painted in the selection color: an atom is not painted as selected text by
@@ -304,7 +379,12 @@ it before writing the plain `@Label` the forge reads.
   relabeling of what agents read.
 - `components/typed-mention-chip.test.tsx`: the rendered pill shows the live
   label or the neutral pill, never the stored label, and a just-picked mention
-  appears without a server round trip.
+  appears without a server round trip; only a visible target offers a hover
+  card.
+- `lib/server/mention-preview.test.ts`: hover card details per type, and
+  nothing read for a target the reader may not see.
+- `components/mention-hover-card.test.tsx`, `lib/mention-preview.test.ts`:
+  what each card shows, and how excerpts are cut.
 - `components/mention-selection.test.ts`: pills inside a selection are marked.
 - `lib/mention-paste.test.ts`: paste into the Numo composer.
 - `lib/server/description-mentions.test.ts`: notifications from typed

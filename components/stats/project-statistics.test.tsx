@@ -30,6 +30,14 @@ vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: () => ({ obje
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: mocks.push }) }));
 vi.mock("@/lib/issue-panel-context", () => ({ useIssuePanelActions: () => ({ openIssue: mocks.openIssue }) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
+// The hover card itself is covered on its own: here, which card each node opens.
+vi.mock("@/components/mention-hover", async () => {
+  const { cloneElement } = await import("react");
+  return {
+    MentionHover: ({ type, id, children }: { type: string; id: string; children: React.ReactElement }) =>
+      cloneElement(children as React.ReactElement<Record<string, unknown>>, { "data-hover-card": `${type}:${id}` }),
+  };
+});
 
 import { ProjectStatistics } from "./project-statistics";
 
@@ -99,17 +107,21 @@ describe("ProjectStatistics", () => {
 
     expect(headings()).toEqual(["Momentum", "Where things stand", "Pull requests", "Contributors", "Issue graph"]);
     expect(container.textContent).toContain("Camille Roy");
+    // A contributor's avatar and name show their card (MIN-879).
+    expect(container.querySelectorAll('[data-hover-card="member:u1"]')).toHaveLength(2);
     // A status segment says its status, its number of issues and its share;
     // the same for the project's breakdown and each contributor.
     expect(container.textContent).toContain("Done: 1 issue, 33%");
     expect(container.textContent).toContain("Done: 1 issue, 50%");
     expect(container.textContent).toContain("100%");
 
-    const node = container.querySelector<SVGCircleElement>('circle[aria-label="MIN-3 Issue 3"]');
+    const node = container.querySelector<SVGGElement>('g[aria-label="MIN-3 Issue 3"]');
+    // A ticket's dot shows its board card on hover (MIN-879).
+    expect(node?.getAttribute("data-hover-card")).toBe("issue:i3");
     // The done ticket stays out of the graph until closed ones are asked for.
-    expect(container.querySelectorAll("circle[role=link]")).toHaveLength(2);
+    expect(container.querySelectorAll("g[role=link]")).toHaveLength(2);
     await act(async () => container.querySelector<HTMLButtonElement>("button[role=switch]")?.click());
-    expect(container.querySelectorAll("circle[role=link]")).toHaveLength(3);
+    expect(container.querySelectorAll("g[role=link]")).toHaveLength(3);
     // Directed links point the way they read: parent to sub-issue, blocker to blocked.
     expect(container.querySelectorAll('line[marker-end*="-parent"]')).toHaveLength(1);
     expect(container.querySelectorAll('line[marker-end*="-blocks"]')).toHaveLength(1);
@@ -150,8 +162,8 @@ describe("ProjectStatistics", () => {
     await render();
 
     expect(container.textContent).toContain("Search v2");
-    const anchor = container.querySelector<SVGRectElement>('rect[aria-label="Search v2"]');
-    expect(anchor).not.toBeNull();
+    const anchor = container.querySelector<SVGGElement>('g[aria-label="Search v2"]');
+    expect(anchor?.getAttribute("data-hover-card")).toBe("objective:o1");
     // An issue outside any objective that blocks it keeps its arrow.
     expect(container.querySelectorAll('line[marker-end*="-blocks"]')).toHaveLength(1);
     await act(async () => anchor?.dispatchEvent(new MouseEvent("click", { bubbles: true })));

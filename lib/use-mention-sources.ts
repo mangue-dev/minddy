@@ -332,7 +332,8 @@ export function useDescriptionMentions(
     ...entityLinks,
     label: (type, id, meta) => entityLinks.label?.(type, id, meta) ?? features.label(type, id, meta),
     detail: features.detail,
-  }), [entityLinks, features]);
+    projectId: projectId ?? null,
+  }), [entityLinks, features, projectId]);
   const onQuery = useCallback(() => {
     armNow();
     features.arm();

@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 44,
-  "sourceRevision": 44,
+  "revision": 45,
+  "sourceRevision": 45,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -127,14 +127,16 @@
       "lib/use-bulk-selection-actions.ts",
       "components/relation-chips.tsx",
       "components/sub-issues-section.tsx",
-      "lib/create-context.tsx"
+      "lib/create-context.tsx",
+      "components/mention-hover-card.tsx",
+      "components/resources.tsx"
     ]
   },
   "review": {
-    "revision": 44,
-    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 45,
+    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken)",
+    "language": "agent:claude (fr sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "feedback",
@@ -179,7 +181,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -195,7 +197,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -212,7 +214,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -228,7 +230,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -244,7 +246,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -260,7 +262,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -276,7 +278,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -292,7 +294,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -308,7 +310,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -325,7 +327,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -464,7 +466,7 @@ Ouvrez le fil du ticket pour ajouter un commentaire. Expliquez une décision, po
 
 Joignez une page du projet, un fichier ou un lien depuis les ressources. Une page liée est une ressource vivante : son titre suit les renommages et son contenu évolue. Un fichier est une pièce jointe stockée, pas la garantie qu’une URL externe restera disponible. **Page** ouvre la palette de commandes sur les pages du projet, dans l’ordre de la barre latérale ; choisissez-en une pour la joindre. Pour rédiger une page qui n’existe pas encore, choisissez **Nouvelle page** en bas de la liste ; un titre tapé d’abord dans la recherche devient son titre. La page est créée dans le projet, jointe au ticket et ouverte dans un panneau latéral, où **Agrandir** ouvre la page entière.
 
-Les ressources s’affichent en cartes : l’image elle-même ou l’icône du type de fichier, le nom et le poids. Un lien affiche l’image d’aperçu de sa page quand le site en fournit une, sinon son favicon. Cliquez ou faites un clic droit sur une carte pour ouvrir son menu : Aperçu, Ouvrir le lien ou Ouvrir la page, puis Renommer, Télécharger et Retirer quand ils s’appliquent. Aperçu ouvre un fichier pris en charge sur toute la fenêtre. Images, PDF, Markdown (`.md`), texte brut (`.txt`, `.text`), CSV et formats audio ou vidéo compatibles utilisent le même lecteur. Le Markdown est mis en forme, le texte reste littéral et le CSV s’ouvre dans un tableau défilant. Utilisez Fermer ou Échap pour revenir au ticket. Le menu Actions du fichier (`…`) propose Télécharger et, si vous pouvez modifier cette ressource, Renommer et Retirer. Un clic sur la mention d’un fichier dans un texte ouvre le même lecteur. Minddy demande une confirmation avant de retirer une ressource, qui est alors détachée de ce contexte. Une ressource page garde le titre de sa page et ne se renomme pas. Les formats non pris en charge conservent leur action de téléchargement. **Ouvrir la page** l’affiche dans un panneau latéral, où **Agrandir** ouvre la page entière ; une base de données s’ouvre directement en page entière.
+Les ressources s’affichent en cartes : l’image elle-même ou l’icône du type de fichier, le nom et le poids. Un lien affiche l’image d’aperçu de sa page quand le site en fournit une, sinon son favicon. Cliquez ou faites un clic droit sur une carte pour ouvrir son menu : Aperçu, Ouvrir le lien ou Ouvrir la page, puis Renommer, Télécharger et Retirer quand ils s’appliquent. Aperçu ouvre un fichier pris en charge sur toute la fenêtre. Images, PDF, Markdown (`.md`), texte brut (`.txt`, `.text`), CSV et formats audio ou vidéo compatibles utilisent le même lecteur. Le Markdown est mis en forme, le texte reste littéral et le CSV s’ouvre dans un tableau défilant. Utilisez Fermer ou Échap pour revenir au ticket. Le menu Actions du fichier (`…`) propose Télécharger et, si vous pouvez modifier cette ressource, Renommer et Retirer. Un clic sur la mention d’un fichier dans un texte ouvre le même lecteur. Minddy demande une confirmation avant de retirer une ressource, qui est alors détachée de ce contexte. Une ressource page garde le titre de sa page et ne se renomme pas. Les formats non pris en charge conservent leur action de téléchargement. **Ouvrir la page** l’affiche dans un panneau latéral, où **Agrandir** ouvre la page entière ; une base de données s’ouvre directement en page entière. Survoler la carte d’une page montre ses premières lignes, ou les premières entrées d’une base de données.
 
 ![Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.](/documentation/fr/file-preview.png)
 
