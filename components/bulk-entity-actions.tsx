@@ -26,7 +26,7 @@ export function BulkEntityActions({
 }: {
   /** "3 feedback posts selected". */
   label: string;
-  /** The palette's search placeholder: "Actions for 3 feedback posts…". */
+  /** The palette's search hint, naming the selection ("Actions for 3 feedback posts…"). */
   placeholder: string;
   count: number;
   /** For analytics: "feedback", "routines", "objectives", "pages". */
