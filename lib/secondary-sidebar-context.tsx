@@ -204,13 +204,12 @@ export function sidebarLocationKey(pathname: string, objectiveParam: string | nu
  * objectives bar before the project panel came back.
  */
 export function navigationEndsBrowseNow(href: string, currentLocation: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(href, "http://minddy.local");
-  } catch {
-    return true;
-  }
-  return sidebarLocationKey(url.pathname, url.searchParams.get("objective")) === currentLocation;
+  // Sidebar rows link app paths; a full URL never matches a location.
+  const [target] = href.split("#");
+  const query = target.indexOf("?");
+  const pathname = query < 0 ? target : target.slice(0, query);
+  const params = new URLSearchParams(query < 0 ? "" : target.slice(query + 1));
+  return sidebarLocationKey(pathname, params.get("objective")) === currentLocation;
 }
 
 /** Which panel the primary sidebar shows — the levels of MIN-546, resolved. */

@@ -10,3 +10,6 @@
 6e2f10bee0507543bd59ff171e9778b24a710575:lib/server/instance-variables.test.ts:generic-api-key:66
 6e2f10bee0507543bd59ff171e9778b24a710575:lib/server/instance-variables.test.ts:generic-api-key:78
 6e2f10bee0507543bd59ff171e9778b24a710575:lib/server/instance-variables.test.ts:generic-api-key:118
+# MIN-877: a placeholder base for parsing app-relative hrefs, not a network
+# address; the next commit parses the href without a base URL.
+21b3a48d7870d3f4f574a09b88501418a9a89c6c:lib/secondary-sidebar-context.tsx:minddy-internal-network-url:209
