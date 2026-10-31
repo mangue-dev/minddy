@@ -590,4 +590,3 @@ const MCP_STATE_STYLES = {
   warn: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
   off: "bg-muted text-muted-foreground",
 } as const;
-
