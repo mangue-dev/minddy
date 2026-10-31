@@ -282,14 +282,14 @@ export function RoutineSettings({
   );
 }
 
-const ROUTINE_STATE_STYLES = {
+export const ROUTINE_STATE_STYLES = {
   active: "bg-green-600/10 text-green-700 dark:bg-green-500/15 dark:text-green-400",
   // The amber of the product's warning badges: not an error, but a state
   // nobody wants to discover by wondering why nothing happened.
   paused: "bg-amber-500/10 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
 } as const;
 
-const ROUTINE_STATE_ICONS = { active: PlayCircleIcon, paused: PauseCircleIcon } as const;
+export const ROUTINE_STATE_ICONS = { active: PlayCircleIcon, paused: PauseCircleIcon } as const;
 
 /** The control keeps its color when hovered or open, as a pull request's state does. */
 const ROUTINE_STATE_CONTROL_STYLES = {

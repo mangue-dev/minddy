@@ -926,7 +926,9 @@ export const IssueCardBody = memo(function IssueCardBody({
           <ProjectOrb
             seed={projectOrbSeed(project)}
             iconUrl={project.icon_url}
-            className="size-3.5"
+            // A rounded square at this size, as the project's pill: the orb's
+            // default 5px radius makes a 14px icon a disc.
+            className="size-3.5 rounded-[3px]"
           />
           <span className="truncate">{project.name}</span>
         </div>

@@ -111,6 +111,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["version"], // lib/use-new-version.ts
   ["page"], // ["page", pageId] — the BODY, not the list ["pages", projectId]
   ["rich-document"], // lib/use-rich-document.ts: editor documents, like page bodies
+  ["mention-preview"], // lib/use-mention-preview.ts: read on hover; a restored card would outlive its shape (MIN-879)
 ];
 
 /** Exported for unit testing (lib/query-persist.test.ts). */

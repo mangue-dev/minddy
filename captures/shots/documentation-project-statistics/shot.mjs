@@ -31,7 +31,7 @@ async function open(locale, viewport = { width: 1440, height: 1600 }) {
   const messages = await catalog(locale);
   const section = session.page.locator("#settings-section-project-statistics");
   await section.getByRole("heading", { name: messages.ProjectStats.momentumTitle, exact: true }).waitFor();
-  await section.locator("circle[role=link]").first().waitFor();
+  await section.locator("g[role=link]").first().waitFor();
   await settle(session.page);
   return { ...session, messages, section };
 }
@@ -88,7 +88,7 @@ if (MODE === "docs") {
     // Scroll first: an element screenshot that scrolls moves the pointer off
     // the dot, and the image would catch the highlight fading out.
     await graph.scrollIntoViewIfNeeded();
-    const node = graph.locator("circle[role=link]").nth(3);
+    const node = graph.locator("g[role=link]").nth(3);
     await node.hover();
     await graph.screenshot({ path: `${out}/graph-hover-en-light.png` });
     await node.click();

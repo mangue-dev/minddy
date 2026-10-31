@@ -44,6 +44,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { MentionHover } from "@/components/mention-hover";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   ResourceCard,
@@ -968,6 +969,11 @@ export function ResourcePills({
               menuLabel={t("actions")}
               struck={!!pageId && !pageHref}
               className={pillClassName}
+              // A page the reader may open shows its first lines on hover (MIN-879).
+              hoverCard={pageId && pageHref ? {
+                type: "page", id: pageId, project: a.project_id,
+                onOpen: openPageInPanel ?? undefined,
+              } : undefined}
             />
           );
         }
@@ -978,7 +984,12 @@ export function ResourcePills({
               // the outside, and opening it in a tab would lose the context of the
               // ticket we are currently reading. A plain click reads it in the
               // page panel, beside that ticket (MIN-777).
-              <AppTooltip label={label}>
+              <MentionHover
+                type="page"
+                id={pageId!}
+                project={a.project_id}
+                onOpen={openPageInPanel ?? undefined}
+              >
                 <Link
                   href={pageHref}
                   aria-label={label}
@@ -991,7 +1002,7 @@ export function ResourcePills({
                 >
                   {body}
                 </Link>
-              </AppTooltip>
+              </MentionHover>
             ) : pageId ? (
               <Tooltip>
                 <TooltipTrigger asChild>

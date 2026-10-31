@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { UserAvatar } from "@/components/user-avatar";
+import { MentionHover } from "@/components/mention-hover";
 import { IssueGraphCard } from "@/components/stats/issue-graph";
 import { STATUS_TINT } from "@/components/stats/status-tint";
 import type { IssueStatus } from "@/lib/issue-constants";
@@ -341,11 +342,18 @@ export function ProjectStatistics({ project }: { project: Project }) {
                 const name = member ? displayName(member, t("formerMember")) : t("formerMember");
                 return (
                   <li key={contributor.userId} className="flex items-center gap-3">
-                    <UserAvatar seed={member?.avatar_seed ?? null} className="size-7" />
+                    {/* The person's card on hover (MIN-879). */}
+                    <MentionHover type="member" id={contributor.userId} project={project.id}>
+                      <span className="flex shrink-0">
+                        <UserAvatar seed={member?.avatar_seed ?? null} className="size-7" />
+                      </span>
+                    </MentionHover>
                     {/* The figures sit under the name, so every bar starts and
                         ends at the same place. */}
                     <span className="flex w-36 min-w-0 shrink-0 flex-col sm:w-48">
-                      <span className="truncate text-sm">{name}</span>
+                      <MentionHover type="member" id={contributor.userId} project={project.id}>
+                        <span className="truncate text-sm">{name}</span>
+                      </MentionHover>
                       <span className="truncate text-xs tabular-nums text-muted-foreground">
                         {t("contributorFigures", { completed: contributor.completed, open: contributor.open })}
                       </span>

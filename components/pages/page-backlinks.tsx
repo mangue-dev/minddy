@@ -77,13 +77,14 @@ function BacklinkPill({
   const title = item.title.trim() || t("untitled");
 
   // The pill of a mention, the one the citing text itself shows: a ticket by
-  // its identifier (its title on hover), an objective and a page by name.
+  // its identifier, an objective and a page by name, each with its hover
+  // card (MIN-879).
   return (
     <MentionChip
       type={item.kind}
       id={item.id}
       label={item.kind === "issue" && item.identifier ? item.identifier : title}
-      tooltip={item.kind === "issue" && item.identifier ? title : null}
+      hoverCard={{ project: projectId }}
       color={item.kind === "objective" ? item.color : null}
       icon={item.kind === "page" ? item.icon : null}
       // A ticket and an objective show their status, as their mentions do.

@@ -59,6 +59,7 @@ export function WorkLandscape({
       label: (
         <MentionChip
           type="project"
+          hoverCard
           id={project.id}
           label={project.name}
           avatarSeed={seed}
@@ -93,6 +94,7 @@ export function WorkLandscape({
       label: (
         <MentionChip
           type="objective"
+          hoverCard
           id={objective.id}
           label={objective.name}
           color={objective.color}

@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 44,
-  "sourceRevision": 44,
+  "revision": 45,
+  "sourceRevision": 45,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -127,14 +127,16 @@
       "lib/use-bulk-selection-actions.ts",
       "components/relation-chips.tsx",
       "components/sub-issues-section.tsx",
-      "lib/create-context.tsx"
+      "lib/create-context.tsx",
+      "components/mention-hover-card.tsx",
+      "components/resources.tsx"
     ]
   },
   "review": {
-    "revision": 44,
-    "fact": "agent:claude-code (inline sub-issue field replaced by the Create a sub-issue split button, which opens the issue creation dialog with the parent set, and its Ask Numo to split the issue menu entry, hidden from Readers, checked against components/sub-issues-section.tsx, lib/create-context.tsx and the IssueUI catalog entries; remove button with the same confirmation on each relation of a board card relation chip popover, none for relations inherited through an objective, checked against components/relation-chips.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the sub-issues figure still shows the former inline field)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 45,
+    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken)",
+    "language": "agent:claude (es sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "feedback",
@@ -179,7 +181,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -196,7 +198,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -213,7 +215,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -230,7 +232,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +248,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -263,7 +265,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -280,7 +282,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -297,7 +299,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -313,7 +315,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -330,7 +332,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 44,
+      "revision": 45,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -462,7 +464,7 @@ Abre la cronología de discusión de la incidencia para añadir un comentario. E
 
 Adjunta una página relevante del proyecto, un archivo o un enlace mediante los controles de recursos. Una página vinculada es un recurso actualizado: su título sigue los cambios de nombre y su contenido puede evolucionar. Un archivo es un adjunto almacenado, no una garantía de que una URL externa seguirá disponible. **Página** abre la paleta de comandos con las páginas del proyecto, en el orden de la barra lateral; elige una para adjuntarla. Para redactar una página que aún no existe, elige **Nueva página** al final de la lista; un título escrito antes en la búsqueda se convierte en su título. La página se crea en el proyecto, se adjunta a la incidencia y se abre en un panel lateral, donde **Ampliar** abre la página completa.
 
-Los recursos aparecen como tarjetas: la propia imagen o el icono del tipo de archivo, el nombre y el tamaño. Un enlace muestra la imagen de vista previa de su página cuando el sitio la ofrece; si no, su favicon. Haz clic o clic derecho en una tarjeta para abrir su menú: Vista previa, Abrir enlace o Abrir la página, y después Cambiar nombre, Descargar y Eliminar cuando correspondan. Vista previa abre un archivo compatible en toda la ventana. Las imágenes, los PDF, Markdown (`.md`), el texto sin formato (`.txt`, `.text`), los CSV y los formatos de audio o vídeo compatibles usan el mismo visor. Markdown se muestra con formato, el texto se mantiene literal y el CSV se abre como una tabla desplazable. Usa Cerrar o Escape para volver al ticket. El menú Acciones del archivo (`…`) ofrece Descargar y, si puedes modificar ese recurso, Cambiar nombre y Eliminar. Al hacer clic en la mención de un archivo en un texto se abre el mismo visor. Minddy pide confirmación antes de quitar un recurso, que entonces se desvincula de este contexto. Un recurso de página conserva el título de su página y no se puede renombrar. Los formatos no compatibles conservan su acción de descarga. **Abrir la página** la muestra en un panel lateral, donde **Ampliar** abre la página completa; una base de datos se abre directamente como página completa.
+Los recursos aparecen como tarjetas: la propia imagen o el icono del tipo de archivo, el nombre y el tamaño. Un enlace muestra la imagen de vista previa de su página cuando el sitio la ofrece; si no, su favicon. Haz clic o clic derecho en una tarjeta para abrir su menú: Vista previa, Abrir enlace o Abrir la página, y después Cambiar nombre, Descargar y Eliminar cuando correspondan. Vista previa abre un archivo compatible en toda la ventana. Las imágenes, los PDF, Markdown (`.md`), el texto sin formato (`.txt`, `.text`), los CSV y los formatos de audio o vídeo compatibles usan el mismo visor. Markdown se muestra con formato, el texto se mantiene literal y el CSV se abre como una tabla desplazable. Usa Cerrar o Escape para volver al ticket. El menú Acciones del archivo (`…`) ofrece Descargar y, si puedes modificar ese recurso, Cambiar nombre y Eliminar. Al hacer clic en la mención de un archivo en un texto se abre el mismo visor. Minddy pide confirmación antes de quitar un recurso, que entonces se desvincula de este contexto. Un recurso de página conserva el título de su página y no se puede renombrar. Los formatos no compatibles conservan su acción de descarga. **Abrir la página** la muestra en un panel lateral, donde **Ampliar** abre la página completa; una base de datos se abre directamente como página completa. Al pasar el puntero sobre la tarjeta de una página ves sus primeras líneas, o las primeras filas de una base de datos.
 
 ![Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.](/documentation/es/file-preview.png)
 

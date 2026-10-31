@@ -195,6 +195,7 @@ function MentionNodeView({ node, editor, updateAttributes }: NodeViewProps) {
           (type === "issue" ? node.attrs.status ?? undefined : undefined)
         }
         tooltip={type === "issue" ? links?.issueTitle?.(id) ?? null : null}
+        hoverCard={{ project: links?.projectId ?? null }}
         // The `icon` attribute carries two things depending on the type, and only one on
         // times: the favicon of a project (a URL) or the emoji of a page. THE
         // passing both without distinguishing would give a page pill

@@ -241,8 +241,8 @@ export function ObjectiveRelationsSection({
                     <RelationRow
                       key={r.id}
                       target={isObjective
-                        ? { kind: "objective", objective: otherObjective, name: otherObjective?.name ?? "" }
-                        : { kind: "issue", status: otherIssue?.status, identifier, title: otherIssue?.title ?? "" }}
+                        ? { kind: "objective", objective: otherObjective, name: otherObjective?.name ?? "", id: r.otherId, projectId }
+                        : { kind: "issue", status: otherIssue?.status, identifier, title: otherIssue?.title ?? "", id: r.otherId, projectId }}
                       resolved={r.resolved}
                       onOpen={() => {
                         setBoardOpen(false);

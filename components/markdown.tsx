@@ -545,6 +545,7 @@ function MarkdownRenderer({
                   id={p["data-mention-id"] as string}
                   label={p["data-mention-label"] as string}
                   avatarSeed={p["data-mention-seed"] as string}
+                  hoverCard={{ project: links?.projectId ?? null }}
                 />
               );
             }
@@ -579,6 +580,7 @@ function MarkdownRenderer({
                       : undefined)
                   }
                   tooltip={type === "issue" ? links?.issueTitle?.(id) ?? null : null}
+                  hoverCard={{ project: links?.projectId ?? null }}
                   href={links?.href(type, id) ?? null}
                   onNavigate={() => links?.navigate(type, id)}
                 />

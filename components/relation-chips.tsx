@@ -109,8 +109,8 @@ export function RelationChips({
                     <RelationRow
                       key={r.id}
                       target={isObjective
-                        ? { kind: "objective", objective: r.otherObjective, name }
-                        : { kind: "issue", status: r.otherStatus, identifier, title: r.otherName ?? "" }}
+                        ? { kind: "objective", objective: r.otherObjective, name, id: r.otherId }
+                        : { kind: "issue", status: r.otherStatus, identifier, title: r.otherName ?? "", id: r.otherId }}
                       via={r.inheritedObjectiveName}
                       onOpen={open ? () => {
                         setExpanded(null);

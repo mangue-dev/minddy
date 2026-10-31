@@ -3,10 +3,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-/** Measure overflowing activity text after layout and preserve its focusable DOM. */
+/**
+ * Measure overflowing activity text after layout and preserve its focusable
+ * DOM. A part marked `data-one-line-lead` (the person who acted) has its own
+ * hover card (MIN-879): over it, the full-text tooltip holds back.
+ */
 export function OneLine({ full, children }: { full: string; children: ReactNode }) {
   const ref = useRef<HTMLParagraphElement>(null);
   const [truncated, setTruncated] = useState(false);
+  const [overLead, setOverLead] = useState(false);
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
@@ -22,9 +27,17 @@ export function OneLine({ full, children }: { full: string; children: ReactNode 
     };
   }, [full]);
 
-  return <Tooltip open={truncated ? undefined : false}>
+  return <Tooltip open={truncated && !overLead ? undefined : false}>
     <TooltipTrigger asChild>
-      <p ref={ref} className="min-w-0 flex-1 truncate text-sm">{children}</p>
+      <p
+        ref={ref}
+        className="min-w-0 flex-1 truncate text-sm"
+        onPointerOver={(event) =>
+          setOverLead(!!(event.target as Element).closest?.("[data-one-line-lead]"))}
+        onPointerLeave={() => setOverLead(false)}
+      >
+        {children}
+      </p>
     </TooltipTrigger>
     <TooltipContent className="max-w-xs">{full}</TooltipContent>
   </Tooltip>;

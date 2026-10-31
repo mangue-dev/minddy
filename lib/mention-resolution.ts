@@ -15,8 +15,16 @@ import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validat
  * only, for a minute, so a rename shows up without a reload.
  */
 
-/** `status`: an objective's, for the glyph of its pill (MIN-785). */
-type Entry = { label: string | null; status?: ObjectiveStatus; at: number };
+/** `status`: an objective's, for the glyph of its pill (MIN-785).
+    `service`: an MCP connection's known service, for its logo (MIN-879). */
+type Entry = {
+  label: string | null;
+  status?: ObjectiveStatus;
+  service?: string;
+  /** A page's emoji and whether it is a database, for its glyph (MIN-879). */
+  page?: { icon: string | null; database: boolean };
+  at: number;
+};
 
 const TTL_MS = 60_000;
 const BATCH = 200;
@@ -54,13 +62,20 @@ async function flush() {
       const now = Date.now();
       if (response.ok) {
         const { mentions } = (await response.json()) as {
-          mentions: Array<{ type: string; id: string; label: string | null; status?: unknown }>;
+          mentions: Array<{
+            type: string; id: string; label: string | null;
+            status?: unknown; service?: unknown; icon?: unknown; database?: unknown;
+          }>;
         };
         for (const [index, mention] of mentions.entries()) {
           // The answer follows the request's order: its key is the request's.
           cache.set(chunk[index] ?? `${mention.type}:${mention.id}`, {
             label: mention.label,
             ...(isObjectiveStatus(mention.status) ? { status: mention.status } : {}),
+            ...(typeof mention.service === "string" ? { service: mention.service } : {}),
+            ...(typeof mention.database === "boolean"
+              ? { page: { icon: typeof mention.icon === "string" ? mention.icon : null, database: mention.database } }
+              : {}),
             at: now,
           });
         }
@@ -114,17 +129,19 @@ export function useResolvedMentionLabel(
 }
 
 /**
- * The objective status the server returned with a resolved mention, read
- * from the same cache as its label; `undefined` until it is known. It never
- * requests: the label hook beside it does.
+ * What the server returned with a resolved mention besides its label, read
+ * from the same cache and in ONE subscription: an objective's status for the
+ * glyph of its pill (MIN-785), an MCP connection's service for its logo, a
+ * page's emoji and database flag for its glyph (MIN-879). `undefined` until
+ * it is known. It never requests: the label hook beside it does.
  */
-export function useResolvedMentionStatus(
+export function useResolvedMentionDetails(
   type: MentionLinkType | null,
-  id: string | null
-): ObjectiveStatus | undefined {
+  id: string | null,
+): Pick<Entry, "status" | "service" | "page"> | undefined {
   const current = useSyncExternalStore(subscribe, () => version, () => -1);
   if (!type || !id || current === -1) return undefined;
-  return cache.get(keyOf(type, id))?.status;
+  return cache.get(keyOf(type, id));
 }
 
 /**

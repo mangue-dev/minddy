@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 22,
+  "revision": 25,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -105,14 +105,17 @@
       "lib/mention-menu.ts",
       "components/pages/block-menu.tsx",
       "lib/action-menu-search.ts",
-      "components/pages/block-drag.ts"
+      "components/pages/block-drag.ts",
+      "components/mention-hover-card.tsx",
+      "lib/server/mention-preview.ts",
+      "components/pages/page-backlinks.tsx"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (list items as blocks with their own handle: handle left of the list, + adding an item of the same kind below or above with Alt/Option-click and the / menu open, dragging among lists of the same kind of item including nested lists, emptied lists removed, handle menu acting on the item or the selection; checked against components/pages/block-gutter.tsx, components/pages/block-actions.ts and components/pages/block-drag.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show list item handles)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 25,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken)",
+    "language": "agent:claude (pt-BR sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "notifications-and-inbox",
@@ -148,7 +151,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -164,7 +167,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -181,7 +184,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página ainda sem eventos e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -198,7 +201,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -214,7 +217,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -230,7 +233,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +249,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -262,7 +265,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -325,7 +328,7 @@ O menu `/` agrupa os blocos em **Blocos básicos**, **Listas** e **Blocos avanç
 
 Use menções para vincular tickets, objetivos, pessoas ou páginas relevantes. Digite `@` seguido de um identificador, um nome ou um título, que pode conter espaços simples; o menu fecha das mesmas formas que o menu `/`, e ao escolher um item. Uma palavra que descreve o trabalho em vez de nomeá-lo também lista tickets encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto. Referências inversas ajudam leitores a encontrar páginas que apontam para a atual. Um link fornece contexto, não acesso a um objeto privado de outro projeto. A menção de uma página que ainda não tem título mostra **Sem título**.
 
-Assim que você digita `@`, o menu também lista o caderno de tarefas e seus ciclos atual e próximos em **Planejamento** (os ciclos só quando estão ativados), suas rotinas, as skills do repositório do projeto, seus servidores MCP conectados e as pull requests, as abertas primeiro. Uma menção guarda apenas o que ela aponta, nunca um nome: cada leitor vê o nome atual do destino, e um destino que ele não pode abrir aparece como **Indisponível**. Digite uma data depois de `@`, como `@hoje`, `@amanhã`, `@próxima segunda`, `@em 3 semanas`, `@15 novembro` ou `@amanhã 9h`, e escolha-a em **Datas**. A data fica fixa quando você a escreve: mostra **Hoje**, **Amanhã** ou **Ontem** enquanto está tão perto, depois a data completa. Clique em uma data em um editor para alterá-la ou adicionar um horário. Uma menção de data não envia nenhum lembrete. Acentos e palavras completas são opcionais: `@quinta em 2 semanas`, `@depois de amanha` ou `@15 nov` também funcionam, assim como horários ditos por extenso, como `@amanhã às 8 e meia` ou `@sexta quinze para as 9`. Um erro de digitação por palavra é tolerado, dois numa palavra longa: `@amanah às 8 e meia` é lido mesmo assim. Digite `@data` para abrir o seletor de data na data e hora atuais. Quando uma menção mostra uma data completa, passar o cursor sobre ela indica quanto falta ou quanto passou, como “em 3 semanas”. O compositor do Numo e a instrução das rotinas oferecem as mesmas menções, incluindo datas.
+Assim que você digita `@`, o menu também lista o caderno de tarefas e seus ciclos atual e próximos em **Planejamento** (os ciclos só quando estão ativados), suas rotinas, as skills do repositório do projeto, seus servidores MCP conectados e as pull requests, as abertas primeiro. Uma menção guarda apenas o que ela aponta, nunca um nome: cada leitor vê o nome atual do destino, e um destino que ele não pode abrir aparece como **Indisponível**. Digite uma data depois de `@`, como `@hoje`, `@amanhã`, `@próxima segunda`, `@em 3 semanas`, `@15 novembro` ou `@amanhã 9h`, e escolha-a em **Datas**. A data fica fixa quando você a escreve: mostra **Hoje**, **Amanhã** ou **Ontem** enquanto está tão perto, depois a data completa. Clique em uma data em um editor para alterá-la ou adicionar um horário. Uma menção de data não envia nenhum lembrete. Acentos e palavras completas são opcionais: `@quinta em 2 semanas`, `@depois de amanha` ou `@15 nov` também funcionam, assim como horários ditos por extenso, como `@amanhã às 8 e meia` ou `@sexta quinze para as 9`. Um erro de digitação por palavra é tolerado, dois numa palavra longa: `@amanah às 8 e meia` é lido mesmo assim. Digite `@data` para abrir o seletor de data na data e hora atuais. Quando uma menção mostra uma data completa, passar o cursor sobre ela indica quanto falta ou quanto passou, como “em 3 semanas”. O compositor do Numo e a instrução das rotinas oferecem as mesmas menções, incluindo datas. Deixe o ponteiro sobre qualquer outra menção para ver mais sem sair do que está lendo: um ticket mostra seu cartão completo, um objetivo seu status, progresso, tickets e relações, uma página, uma rotina, uma skill ou o caderno de tarefas as primeiras linhas, um banco de dados as primeiras entradas, uma pessoa seu e-mail e sua função no projeto, um pull request seu estado e branches, um servidor MCP conectado se está autenticado e quantas ferramentas oferece, um ciclo seu progresso, e um projeto seus membros e suas funções. Clicar no cartão abre o mesmo que a menção. Uma menção que você não pode abrir não mostra nada além. Referências inversas, páginas anexadas a um ticket ou objetivo, relações, o objetivo de um ticket e as pessoas da atividade e das estatísticas mostram o mesmo cartão; um agente MCP na atividade mostra de quem é a chave que ele usou.
 
 Clicar na menção de uma página, em uma referência inversa, em uma página anexada a um ticket ou objetivo, ou em um link para uma página em um comentário ou resposta do Numo abre essa página em um painel lateral sobre o que você estava lendo. Leia ou edite ali, escolha **Expandir** para abrir a página inteira ou feche o painel para voltar. Entre **Expandir** e fechar, o menu **Opções de página** (`…`) do painel oferece as mesmas ações da página inteira; mover a página para a lixeira por ali fecha o painel e deixa você na página que está por baixo. Um banco de dados também abre no painel, com a barra de ferramentas compacta descrita no [guia de bancos de dados](/docs/databases#database-display); um registro aberto da tabela dele toma o seu lugar, e **Voltar**, no canto superior esquerdo do painel, retorna à tabela.
 

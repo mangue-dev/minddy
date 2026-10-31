@@ -20,7 +20,7 @@ import type { PageSummary } from "@/lib/pages-api";
 
 import { DatabaseOptionsDialog } from "./database-property-dialogs";
 
-function OptionBadge({
+export function OptionBadge({
   option,
   single,
 }: {

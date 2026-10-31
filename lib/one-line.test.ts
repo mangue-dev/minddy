@@ -53,4 +53,31 @@ describe("activity text overflow", () => {
     await act(async () => root.unmount());
     expect(disconnected).toHaveBeenCalled();
   });
+
+  it("holds the full-text tooltip back over the person, who has their own card (MIN-879)", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(createElement(OneLine, {
+        full: "Camille Roy changed the status",
+        children: [
+          createElement("span", { key: "who", "data-one-line-lead": "" }, "Camille Roy"),
+          createElement("span", { key: "what" }, " changed the status"),
+        ],
+      }));
+    });
+    const text = container.querySelector("p")!;
+    Object.defineProperty(text, "scrollWidth", { get: () => 100 });
+    Object.defineProperty(text, "clientWidth", { get: () => 50 });
+    await act(async () => { resized?.(); });
+    const eligible = () => container.querySelector("[data-disabled]")?.getAttribute("data-disabled") === "false";
+    expect(eligible()).toBe(true);
+    const [who, what] = text.querySelectorAll("span");
+    await act(async () => { who.dispatchEvent(new Event("pointerover", { bubbles: true })); });
+    expect(eligible()).toBe(false);
+    await act(async () => { what.dispatchEvent(new Event("pointerover", { bubbles: true })); });
+    expect(eligible()).toBe(true);
+    await act(async () => root.unmount());
+  });
 });

@@ -9,6 +9,7 @@ const HIDDEN = "22222222-2222-4222-8222-222222222222";
 const ISSUE_OK = "33333333-3333-4333-8333-333333333331";
 const ISSUE_HIDDEN = "33333333-3333-4333-8333-333333333332";
 const PAGE_HIDDEN = "44444444-4444-4444-8444-444444444441";
+const PAGE_DATABASE = "44444444-4444-4444-8444-444444444442";
 const MEMBER = "55555555-5555-4555-8555-555555555551";
 const STRANGER = "55555555-5555-4555-8555-555555555552";
 const OWNER = "55555555-5555-4555-8555-555555555553";
@@ -93,7 +94,10 @@ beforeEach(() => {
       { id: ALLOWED, key: "MIN", name: "Minddy", deleted_at: null, owner_id: OWNER },
       { id: HIDDEN, key: "SEC", name: "Secret project", deleted_at: null },
     ],
-    pages: [{ id: PAGE_HIDDEN, project_id: HIDDEN, title: "Secret roadmap", deleted_at: null }],
+    pages: [
+      { id: PAGE_HIDDEN, project_id: HIDDEN, title: "Secret roadmap", icon: "🔒", database_schema: null, deleted_at: null },
+      { id: PAGE_DATABASE, project_id: ALLOWED, title: "Releases", icon: null, database_schema: [], deleted_at: null },
+    ],
     objectives: [
       { id: OBJECTIVE_OK, project_id: ALLOWED, name: "Launch", status: "in_progress", deleted_at: null },
       { id: OBJECTIVE_HIDDEN, project_id: HIDDEN, name: "Secret goal", status: "done", deleted_at: null },
@@ -124,6 +128,15 @@ describe("resolving mention targets", () => {
     expect(resolution.get(`objective:${OBJECTIVE_OK}`)).toBe("Launch");
     expect(resolution.get(`objective:${OBJECTIVE_HIDDEN}`)).toBeNull();
     expect(Object.fromEntries(statuses)).toEqual({ [`objective:${OBJECTIVE_OK}`]: "in_progress" });
+  });
+
+  it("gives a visible page's emoji and database flag, and nothing of a hidden page (MIN-879)", async () => {
+    const pages = new Map<string, { icon: string | null; database: boolean }>();
+    await resolveMentionTargets("reader", [
+      { type: "page", id: PAGE_DATABASE },
+      { type: "page", id: PAGE_HIDDEN },
+    ], undefined, undefined, undefined, pages);
+    expect(Object.fromEntries(pages)).toEqual({ [`page:${PAGE_DATABASE}`]: { icon: null, database: true } });
   });
 
   it("names a resource by its decoded name, only inside a project the reader can open", async () => {

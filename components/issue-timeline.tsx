@@ -3,6 +3,8 @@
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { OneLine } from "@/components/one-line";
+import { MentionHover } from "@/components/mention-hover";
+import { AgentHoverCard } from "@/components/agent-hover-card";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
 import { createContext, useContext, useMemo, useRef, useState } from "react";
@@ -254,6 +256,27 @@ function ActorAvatar({
   return <UserAvatar seed={seed} className={cn("size-5", className)} />;
 }
 
+/** The person whose key an MCP agent used, as its card names them. */
+function agentOwner(members: Member[], id: string | null, name: string) {
+  if (!id) return null;
+  const member = members.find((m) => m.user_id === id);
+  return { name, avatarSeed: member?.avatar_seed ?? id };
+}
+
+/** The project an activity is read in: a person's card gives their role there. */
+const ActivityProject = createContext<string | null>(null);
+
+/**
+ * A person of the activity — their avatar or their name — showing their
+ * hover card (MIN-879). The action beside them keeps its own tooltip, the
+ * full sentence.
+ */
+function PersonHover({ id, children }: { id: string | null; children: React.ReactElement }) {
+  const project = useContext(ActivityProject);
+  if (!id) return children;
+  return <MentionHover type="member" id={id} project={project}>{children}</MentionHover>;
+}
+
 /** Fallback avatar for a return from the board of which we do not know
     the author: the board acts as an actor. Known author → his own face,
     that of the author file (`authorAvatarSeed`). */
@@ -393,6 +416,9 @@ function EventRow({
             : viaBoard
               ? boardAuthor?.label ?? t("boardActor")
               : actor;
+  // A person did it, rather than an agent, a feature or the forge.
+  const human = !forgeSync && !viaSmartAssign && !viaSmartFill && !viaAutomation && !viaNumo &&
+    !forgeActor && !viaMcp && !viaIntegration && !viaBoard;
   const summary =
     entity === "feedback"
       ? describeFeedbackEvent(item.event, ctx, tr)
@@ -416,7 +442,11 @@ function EventRow({
       ) : forgeActor ? (
         <ForgeAvatar provider={forgeActor.provider} />
       ) : viaMcp ? (
-        <McpAvatar agent={item.event.api_key_agent} />
+        // The agent's card says whose key it used (MIN-879).
+        <AgentHoverCard agent={item.event.api_key_agent} name={name}
+          owner={agentOwner(ctx.members, item.event.actor_id, actor)}>
+          <span className="flex shrink-0"><McpAvatar agent={item.event.api_key_agent} /></span>
+        </AgentHoverCard>
       ) : viaIntegration ? (
         <IntegrationAvatar />
       ) : viaBoard ? (
@@ -426,10 +456,23 @@ function EventRow({
           <BoardAvatar />
         )
       ) : (
-        <ActorAvatar members={ctx.members} id={item.event.actor_id} name={actor} />
+        <PersonHover id={item.event.actor_id}>
+          <span className="flex shrink-0">
+            <ActorAvatar members={ctx.members} id={item.event.actor_id} name={actor} />
+          </span>
+        </PersonHover>
       )}
       <OneLine full={`${name} ${summary}`}>
-        <span className="font-medium text-foreground">{name}</span>
+        {viaMcp ? (
+          <AgentHoverCard agent={item.event.api_key_agent} name={name}
+            owner={agentOwner(ctx.members, item.event.actor_id, actor)}>
+            <span data-one-line-lead="" className="font-medium text-foreground">{name}</span>
+          </AgentHoverCard>
+        ) : (
+          <PersonHover id={human ? item.event.actor_id : null}>
+            <span data-one-line-lead="" className="font-medium text-foreground">{name}</span>
+          </PersonHover>
+        )}
         {forgeLogin?.isBot ? <BotBadge className="ml-1" /> : null}{" "}
         <span className="text-muted-foreground">{summary}</span>
       </OneLine>
@@ -588,15 +631,31 @@ export function CommentBlock({
         {viaNumo ? (
           <NumoAvatar />
         ) : viaMcp ? (
-          <McpAvatar agent={comment.api_key_agent} />
+          <AgentHoverCard agent={comment.api_key_agent} name={name}
+            owner={agentOwner(ctx.members, comment.author_id, author)}>
+            <span className="flex shrink-0"><McpAvatar agent={comment.api_key_agent} /></span>
+          </AgentHoverCard>
         ) : github ? (
           <UserAvatar seed={github.author_login ?? "GitHub"} className="size-5" />
         ) : visitor ? (
           <UserAvatar seed={visitor.pseudonym} className="size-5" />
         ) : (
-          <ActorAvatar members={ctx.members} id={comment.author_id} name={author} />
+          <PersonHover id={comment.author_id}>
+            <span className="flex shrink-0">
+              <ActorAvatar members={ctx.members} id={comment.author_id} name={author} />
+            </span>
+          </PersonHover>
         )}
-        <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
+        {viaMcp ? (
+          <AgentHoverCard agent={comment.api_key_agent} name={name}
+            owner={agentOwner(ctx.members, comment.author_id, author)}>
+            <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
+          </AgentHoverCard>
+        ) : (
+          <PersonHover id={!viaNumo && !github && !visitor ? comment.author_id : null}>
+            <span className="min-w-0 truncate text-sm font-medium text-foreground">{name}</span>
+          </PersonHover>
+        )}
         {/* What this comment commits, says before reading it: “Public” wants
             say that it is ON the board, readable by everyone. The absence of
             badge is the app-wide default — a team rating. */}
@@ -1258,6 +1317,7 @@ export function IssueActivity({
 
   return (
     <CommentPermissionsContext.Provider value={permissions}>
+    <ActivityProject.Provider value={projectId}>
     <div className="flex flex-col">
       <span className="py-1 text-sm font-medium">{t("activity")}</span>
 
@@ -1312,6 +1372,7 @@ export function IssueActivity({
       )}
       </QueryReadBoundary>
     </div>
+    </ActivityProject.Provider>
     </CommentPermissionsContext.Provider>
   );
 }

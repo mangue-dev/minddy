@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import Link from "@/components/app-link";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
+import { MentionHover } from "@/components/mention-hover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -170,6 +171,7 @@ export function ResourceCard({
   menuLabel,
   struck = false,
   busy = false,
+  hoverCard,
   className,
 }: {
   name: string;
@@ -184,6 +186,8 @@ export function ResourceCard({
   struck?: boolean;
   /** An upload in flight. */
   busy?: boolean;
+  /** The mention whose hover card the card shows: a page resource (MIN-879). */
+  hoverCard?: { type: string; id: string; project?: string | null; onOpen?: () => void };
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -215,7 +219,7 @@ export function ResourceCard({
     );
   }
 
-  return (
+  const card = (
     <div className={frame} data-slot="resource-card">
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
@@ -304,5 +308,13 @@ export function ResourceCard({
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
+  );
+  if (!hoverCard) return card;
+  // Kept closed while the card's menu is open: the menu is what was asked for.
+  return (
+    <MentionHover type={hoverCard.type} id={hoverCard.id} project={hoverCard.project ?? null}
+      onOpen={hoverCard.onOpen} disabled={open}>
+      {card}
+    </MentionHover>
   );
 }

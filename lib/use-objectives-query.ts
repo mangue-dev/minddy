@@ -146,7 +146,14 @@ export function objectiveProgress(
   objectiveId: string,
   issues: { objective_id: string | null; status: string; effort?: IssueEffort | null }[]
 ): { done: number; total: number; percent: number } {
-  const linked = issues.filter((i) => i.objective_id === objectiveId);
+  return workProgress(issues.filter((i) => i.objective_id === objectiveId));
+}
+
+/** The same progress for any set of tickets: a cycle's, an objective's as a
+    hover card receives them (MIN-879). */
+export function workProgress(
+  linked: { status: string; effort?: IssueEffort | null }[]
+): { done: number; total: number; percent: number } {
   const total = linked.length;
   const done = linked.filter((i) => isClosedStatus(i.status as IssueStatus)).length;
   let totalPoints = 0;

@@ -7654,56 +7654,126 @@
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 138,
+    "line": 144,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 143,
+    "line": 149,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 150,
+    "line": 156,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 152,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mention-access.ts",
-    "operation": "from",
-    "resource": "attachments",
     "line": 158,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
-    "resource": "agent_routines",
-    "line": 163,
+    "resource": "attachments",
+    "line": 164,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
-    "resource": "cycles",
+    "resource": "agent_routines",
     "line": 169,
     "storage": false
   },
   {
     "file": "lib/server/mention-access.ts",
     "operation": "from",
+    "resource": "cycles",
+    "line": 175,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-access.ts",
+    "operation": "from",
     "resource": "projects",
-    "line": 188,
+    "line": 194,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 98,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "issue_relations",
+    "line": 136,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 235,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 236,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "pages",
+    "line": 320,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 372,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 374,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 415,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 418,
+    "storage": false
+  },
+  {
+    "file": "lib/server/mention-preview.ts",
+    "operation": "from",
+    "resource": "cycles",
+    "line": 461,
     "storage": false
   },
   {
