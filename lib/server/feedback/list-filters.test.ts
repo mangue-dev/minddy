@@ -7,7 +7,10 @@ import { GET } from "@/app/api/projects/[id]/feedback/route";
 
 const state = vi.hoisted(() => ({ client: null as SupabaseClient | null, member: true }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => state.client }));
-vi.mock("./team-guard", () => ({ requireProjectMember: async () => state.member ? { ok: true } : { ok: false, response: NextResponse.json({}, { status: 403 }) } }));
+vi.mock("./team-guard", () => {
+  const guard = async () => state.member ? { ok: true } : { ok: false, response: NextResponse.json({}, { status: 403 }) };
+  return { requireProjectMember: guard, requireFeedbackMember: guard };
+});
 vi.mock("./boards", () => ({ getBoardForProject: async () => ({ enabled: true }) }));
 vi.mock("./identity-content", () => ({ decodeFeedbackIdentityRow: async (row: unknown) => row }));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));

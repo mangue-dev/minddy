@@ -317,6 +317,47 @@ export async function authorizeUserClient(
   return authorizeVerifiedSession(supabase, verified, options);
 }
 
+export type AuthedAlongsideResult<T> =
+  | (Extract<AuthedResult, { ok: true }> & { alongside: { value: T } | { error: unknown } })
+  | AuthFailure;
+
+/**
+ * `getAuthedUser` for a handler that must also read data about the caller's own
+ * account (for example the admin boundary reading the Auth account). That read
+ * starts as soon as the signed claims verify and runs while the live
+ * authorization lookup is in flight, instead of after it.
+ *
+ * `alongside` must be a read with no side effect. Its outcome is only handed
+ * back when the live check succeeds; a denial returns the same 401, 403 MFA or
+ * 503 response as `getAuthedUser` and the outcome is discarded, so nothing can
+ * depend on it before the session is known to be active. A failure of
+ * `alongside` is returned as `{ error }` for the caller to treat as it sees fit.
+ */
+export async function getAuthedUserAlongside<T>(
+  request: NextRequest,
+  alongside: (verified: { user: User; claims: Record<string, unknown> }) => Promise<T>,
+): Promise<AuthedAlongsideResult<T>> {
+  if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
+    console.error("[api-auth] cross_origin_request_refused");
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  const supabase = createSupabaseFromRequest(request);
+  const verified = await verifySessionClaims(supabase);
+  if (!verified.ok) return verified;
+  const live = authorizeVerifiedSession(supabase, verified);
+  const side = (async () => alongside({
+    user: userFromClaims(verified.claims),
+    claims: verified.claims as unknown as Record<string, unknown>,
+  }))().then((value) => ({ value }), (error: unknown) => ({ error }));
+  const [result, outcome] = await Promise.all([live, side]);
+  if (!result.ok) return result;
+  return { ...result, alongside: outcome };
+}
+
 /** Reads that may start before the live check, through the RLS client only. */
 export type RlsReads<T> = (verified: { user: User; supabase: SupabaseClient }) => Promise<T> | null;
 

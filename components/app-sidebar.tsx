@@ -231,8 +231,12 @@ function SidebarRow({ item }: { item: AppNavItem }) {
   // also, what exactly is wanted.
   const prefetchProject = usePrefetchProject();
   const prefetchPages = usePrefetchPages();
+  const session = useOptionalAppTabSession();
   const warm = item.href
     ? () => {
+        // The tab strip's intent path: surface code, route prefetch and the
+        // destination's queries, once per href for the session.
+        session?.prefetch(item.href as string);
         const projectId = projectIdFromPath(item.href as string);
         if (!projectId) return;
         prefetchProject(projectId);
@@ -267,6 +271,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
         aria-current={active ? "page" : undefined}
         onMouseEnter={warm}
         onFocus={warm}
+        onPointerDown={warm}
         onContextMenu={openContextMenu}
         whileTap={{ scale: 0.97 }}
         transition={transitions.snappy}

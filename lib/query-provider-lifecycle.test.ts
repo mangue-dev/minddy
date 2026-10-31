@@ -3,7 +3,7 @@ import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, dehydrate, useQueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AppQueryProvider, clearPersistedQueryCache, QUERY_CACHE_STORAGE_KEY } from "./query-provider";
+import { AppQueryProvider, clearPersistedQueryCache, isPersistableKey, QUERY_CACHE_STORAGE_KEY } from "./query-provider";
 import { AccountQueryProvider } from "./account-query-provider";
 import { projectIconQueryKey } from "./use-project-icon";
 const account = vi.hoisted(() => ({ id: "account-a" }));
@@ -106,6 +106,13 @@ describe("query provider persistence lifecycle", () => {
     // Exceed the five-second batching window and its idle allowance after logout.
     await vi.advanceTimersByTimeAsync(6_000);
     expect(window.localStorage.getItem(QUERY_CACHE_STORAGE_KEY)).toBeNull();
+  });
+
+  it("keeps operator-only admin payloads out of persisted storage", () => {
+    expect(isPersistableKey(["admin", "costs", 30])).toBe(false);
+    expect(isPersistableKey(["admin", "app-config"])).toBe(false);
+    expect(isPersistableKey(["admin", "instance-variables"])).toBe(false);
+    expect(isPersistableKey(["admin-capabilities"])).toBe(true);
   });
 
   it("persists confirmed comments but never pending drafts or per-query search snippets", async () => {

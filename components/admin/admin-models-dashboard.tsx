@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, Delete02Icon, FileExportIcon, FileImportIcon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -122,32 +123,23 @@ function useFieldLabel() {
  * enforced server-side by `app/(app)/admin/layout.tsx` and the API — this is
  * UI only.
  */
+const APP_CONFIG_QUERY_KEY = ["admin", "app-config"] as const;
+
 export function AdminModelsDashboard() {
   const t = useTranslations("Admin");
-  const [values, setValues] = useState<ConfigValues | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/admin/app-config", { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = (await res.json()) as { values: ConfigValues };
-    return data.values ?? {};
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const next = await load();
-        if (alive) setValues(next);
-      } catch (e) {
-        if (alive) setError((e as Error).message);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [load]);
+  const queryClient = useQueryClient();
+  const configQuery = useQuery({
+    queryKey: APP_CONFIG_QUERY_KEY,
+    queryFn: async (): Promise<ConfigValues> => {
+      const res = await fetch("/api/admin/app-config", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { values: ConfigValues };
+      return data.values ?? {};
+    },
+    staleTime: 60 * 1000,
+  });
+  const values = configQuery.data ?? null;
+  const error = configQuery.data ? null : ((configQuery.error as Error | null)?.message ?? null);
 
   const fieldsByGroup = useMemo(() => {
     const map = Object.fromEntries(AI_MODEL_CONFIG_GROUPS.map((group) => [group, [] as AiConfigField[]])) as Record<
@@ -175,16 +167,16 @@ export function AdminModelsDashboard() {
   // Reflect a saved value back into local state so the row's dirty check
   // resets; released task rows now follow their category.
   const onSaved = useCallback<OnSaved>((key, value, released = []) => {
-    setValues((prev) => ({
+    queryClient.setQueryData<ConfigValues>(APP_CONFIG_QUERY_KEY, (prev) => ({
       ...prev,
       [key]: value,
       ...Object.fromEntries(released.map((releasedKey) => [releasedKey, null])),
     }));
-  }, []);
+  }, [queryClient]);
 
   const reload = useCallback(async () => {
-    setValues(await load());
-  }, [load]);
+    await queryClient.invalidateQueries({ queryKey: APP_CONFIG_QUERY_KEY });
+  }, [queryClient]);
 
   const recommendedField = getAiConfigField("recommended_models")!;
 

@@ -31,28 +31,26 @@ export async function getEntitlements(userId: string): Promise<ResolvedBilling> 
 export async function countAccessibleProjects(userId: string): Promise<number> {
   const service = getServiceClient();
 
-  const { data: memberships, error: membershipError } = await service
-    .from("project_members")
-    .select("project_id")
-    .eq("user_id", userId);
-  if (membershipError) throw new Error(membershipError.message);
-
-  const memberIds = [
-    ...new Set((memberships ?? []).map((m) => m.project_id as string)),
-  ];
-
-  const base = service
-    .from("projects")
-    .select("id", { count: "exact", head: true })
-    .is("deleted_at", null);
-
-  // `or()` automatically deduplicates (union of lines): an owner who would also have
-  // a `project_members` line would not be counted twice.
-  const { count, error } = await (memberIds.length > 0
-    ? base.or(`owner_id.eq.${userId},id.in.(${memberIds.join(",")})`)
-    : base.eq("owner_id", userId));
-  if (error) throw new Error(error.message);
-  return count ?? 0;
+  // Two independent head counts, so the lookup is one round trip. Owned
+  // projects are counted first; the membership count then skips the projects
+  // the user also owns, so an owner with a `project_members` line is not
+  // counted twice. Trashed projects are filtered on both sides.
+  const [owned, joined] = await Promise.all([
+    service
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .eq("owner_id", userId),
+    service
+      .from("project_members")
+      .select("project_id, projects!inner(id)", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .is("projects.deleted_at", null)
+      .neq("projects.owner_id", userId),
+  ]);
+  if (owned.error) throw new Error(owned.error.message);
+  if (joined.error) throw new Error(joined.error.message);
+  return (owned.count ?? 0) + (joined.count ?? 0);
 }
 
 /** Project creation guard: throw 403 `project_limit_reached` if full. */

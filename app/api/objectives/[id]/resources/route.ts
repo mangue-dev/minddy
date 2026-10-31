@@ -1,7 +1,8 @@
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
@@ -19,16 +20,19 @@ type RouteContext = { params: Promise<{ id: string }> };
     members; a page resource comes back with its page resolved. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getAuthedUser(request);
+  // The RLS read overlaps the live session check, which still gates the response.
+  const listResources = (supabase: SupabaseClient) =>
+    supabase
+      .from("attachments")
+      .select(RESOURCE_SELECT)
+      .eq("objective_id", id)
+      .is("comment_id", null)
+      .order("created_at", { ascending: true });
+  const auth = await getAuthedUserWithRlsReads(request, async ({ supabase }) => listResources(supabase));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("attachments")
-    .select(RESOURCE_SELECT)
-    .eq("objective_id", id)
-    .is("comment_id", null)
-    .order("created_at", { ascending: true });
+  const { data, error } = await (auth.reads ?? listResources(auth.supabase));
 
   if (error) {
     console.error("[api/objectives/:id/resources] list failed:", error.message);

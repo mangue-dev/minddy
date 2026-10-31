@@ -12,6 +12,16 @@ export interface MfaStatus {
 
 export const mfaStatusQueryKey = ["mfa-status"] as const;
 
+/** Shared by the hook and the settings tab preparation so both fill one entry. */
+export const mfaStatusQueryOptions = {
+  queryKey: mfaStatusQueryKey,
+  queryFn: async (): Promise<MfaStatus> => {
+    const response = await fetch("/api/account/mfa");
+    if (!response.ok) throw new Error("Failed to load MFA status");
+    return (await response.json()) as MfaStatus;
+  },
+};
+
 /**
  * State of the second factor of the account (MIN-132).
  *
@@ -22,13 +32,6 @@ export const mfaStatusQueryKey = ["mfa-status"] as const;
  * which we don't think to open.
  */
 export function useMfaStatusQuery() {
-  const { data, isPending } = useQuery({
-    queryKey: mfaStatusQueryKey,
-    queryFn: async (): Promise<MfaStatus> => {
-      const response = await fetch("/api/account/mfa");
-      if (!response.ok) throw new Error("Failed to load MFA status");
-      return (await response.json()) as MfaStatus;
-    },
-  });
+  const { data, isPending } = useQuery(mfaStatusQueryOptions);
   return { status: data ?? null, loading: isPending };
 }

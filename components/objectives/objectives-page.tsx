@@ -55,6 +55,9 @@ import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELEC
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchObjectiveDetail } from "@/lib/secondary-view-queries";
+import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { matchesObjectiveState, secondarySelectionId } from "@/lib/secondary-view-selection";
 import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 import {
@@ -252,10 +255,20 @@ function ObjectiveRow({
 }) {
   const tStatus = useTranslations("ObjectiveStatus");
   const status = OBJECTIVE_STATUS_MAP[objective.status];
+  const queryClient = useQueryClient();
+  // Browsing intent warms the detail's reads; the description session snapshot
+  // is short-lived, so it waits for the pointer-down that precedes the click.
+  const warmDetail = () => prefetchObjectiveDetail(queryClient, projectId, objective.id);
   return (
     <button
       type="button"
       data-sidebar-filter-result
+      onPointerEnter={warmDetail}
+      onFocus={warmDetail}
+      onPointerDown={() => {
+        warmDetail();
+        prefetchDescriptionSnapshot("objective", objective.id);
+      }}
       data-navigation-href={objectiveHref(projectId, objective.id)}
       data-comment-target={commentTarget("objective", objective.id)}
       data-objective-id={objective.id}

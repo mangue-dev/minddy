@@ -3,7 +3,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserAlongside } from "@/lib/server/api-auth";
 import {
   accessAllows,
   getProjectAccess,
@@ -75,18 +75,21 @@ export async function requireFeedbackMember(
   projectId: string,
   postId?: string
 ): Promise<FeedbackMemberResult> {
-  const auth = await getAuthedUser(request);
-  if (!auth.ok) return { ok: false, response: auth.response };
-  const [t, access, post] = await Promise.all([
-    getTranslations("ApiErrors"),
-    hasProjectAccess(auth.user.id, projectId),
+  // Both probes are side-effect-free service reads keyed on the verified
+  // claims: they overlap the live session check, and a denial discards them.
+  const auth = await getAuthedUserAlongside(request, ({ user }) => Promise.all([
+    hasProjectAccess(user.id, projectId),
     postId === undefined ? null : feedbackPostStore(getServiceClient())
       .select("id")
       .is("deleted_at", null)
       .eq("id", postId)
       .eq("project_id", projectId)
       .maybeSingle(),
-  ]);
+  ]));
+  if (!auth.ok) return { ok: false, response: auth.response };
+  if ("error" in auth.alongside) throw auth.alongside.error;
+  const [access, post] = auth.alongside.value;
+  const t = await getTranslations("ApiErrors");
   if (!access) {
     return {
       ok: false,

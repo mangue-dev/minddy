@@ -19,8 +19,19 @@ const h = vi.hoisted(() => ({
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
-vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: h.auth }));
-vi.mock("@/lib/server/admin", () => ({ isAdminUser: h.admin }));
+// `getAuthedAdmin` is `getAuthedUser` followed by `isAdminUser`; its single
+// authorization lookup is covered by admin.test.ts.
+vi.mock("@/lib/server/admin", () => ({
+  getAuthedAdmin: async (request: unknown) => {
+    const auth = await h.auth(request);
+    if (!auth.ok) return auth;
+    if (!(await h.admin(auth.user, auth.claims))) {
+      const { NextResponse } = await import("next/server");
+      return { ok: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    }
+    return auth;
+  },
+}));
 vi.mock("@/lib/server/instance-variables", () => ({
   setInstanceVariable: h.set,
   clearInstanceVariable: h.clear,

@@ -107,6 +107,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["pr-comments"],
   ["pr-review-comments"],
   ["billing"],
+  ["admin"], // Operator-only payloads (accounts, costs, config, instance variables): memory only.
   ["auth-sessions"], // lib/use-auth-sessions-query.ts: device list of live sign-ins, always re-read
   ["version"], // lib/use-new-version.ts
   ["page"], // ["page", pageId] — the BODY, not the list ["pages", projectId]

@@ -2,7 +2,8 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, FilterIcon, Globe02Icon, SparklesIcon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -198,10 +199,6 @@ export function AdminCostsDashboard() {
   const format = useFormatter();
   const [days, setDays] = useState<number>(30);
   const [filters, setFilters] = useState<CostFilters>(NO_FILTERS);
-  const [finance, setFinance] = useState<AdminFinance | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const featureLabel = useCallback(
     (feature: string) =>
@@ -217,54 +214,30 @@ export function AdminCostsDashboard() {
     [t],
   );
 
-  const load = useCallback(async (window: number, refresh: boolean) => {
-    const [financeRes, statsRes] = await Promise.all([
-      fetch(`/api/admin/finance?days=${window}${refresh ? "&refresh=1" : ""}`),
-      fetch(`/api/admin/ai-usage?days=${window}`),
-    ]);
-    if (!financeRes.ok) throw new Error(`HTTP ${financeRes.status}`);
-    if (!statsRes.ok) throw new Error(`HTTP ${statsRes.status}`);
-    return {
-      financeData: (await financeRes.json()) as AdminFinance,
-      statsData: ((await statsRes.json()) as { stats: Stats }).stats,
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    (async () => {
-      try {
-        const { financeData, statsData } = await load(days, false);
-        if (!alive) return;
-        setFinance(financeData);
-        setStats(statsData);
-      } catch (e) {
-        if (alive) setError((e as Error).message);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [days, load]);
-
-  // Quietly re-read while the tab stays open and visible: a failed background
-  // read keeps the figures already on screen.
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void load(days, false)
-        .then(({ financeData, statsData }) => {
-          setFinance(financeData);
-          setStats(statsData);
-        })
-        .catch(() => {});
-    }, BACKGROUND_REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [days, load]);
+  // Cached per window, so coming back to this tab paints at once. The quiet
+  // re-read keeps the figures on screen when it fails, and only runs while the
+  // page is visible (react-query pauses interval refetches in the background).
+  const costsQuery = useQuery({
+    queryKey: ["admin", "costs", days],
+    queryFn: async () => {
+      const [financeRes, statsRes] = await Promise.all([
+        fetch(`/api/admin/finance?days=${days}`),
+        fetch(`/api/admin/ai-usage?days=${days}`),
+      ]);
+      if (!financeRes.ok) throw new Error(`HTTP ${financeRes.status}`);
+      if (!statsRes.ok) throw new Error(`HTTP ${statsRes.status}`);
+      return {
+        finance: (await financeRes.json()) as AdminFinance,
+        stats: ((await statsRes.json()) as { stats: Stats }).stats,
+      };
+    },
+    staleTime: 60 * 1000,
+    refetchInterval: BACKGROUND_REFRESH_MS,
+  });
+  const finance = costsQuery.data?.finance ?? null;
+  const stats = costsQuery.data?.stats ?? null;
+  const loading = costsQuery.isPending;
+  const error = costsQuery.data ? null : ((costsQuery.error as Error | null)?.message ?? null);
 
   const view = useMemo(() => {
     if (!finance) return null;

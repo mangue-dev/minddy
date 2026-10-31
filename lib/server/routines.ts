@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeRoutine, encodeRoutine, routineContentValues } from
   "@/lib/server/routine-content";
-import { getProjectAccess } from "@/lib/server/project-access";
+import { getProjectAccess, hasProjectAccess } from "@/lib/server/project-access";
 import { softDeleteItem } from "@/lib/server/trash";
 import { syncDescriptionWrite } from "@/lib/server/description-collaboration";
 import { promptToMarkdown } from "@/lib/prompt-document";
@@ -524,10 +524,21 @@ async function routineWaitingState(routine: Routine): Promise<Routine> {
     trigger_error: result.data?.find(a => a.error_code)?.error_code ?? null };
 }
 
-export async function getRoutineForUser(
+/** A routine row read for the detail view, with the caller's access decision. */
+export type RoutineDetailRead = {
+  row: Record<string, unknown>;
+  isOwner: boolean;
+} | null;
+
+/**
+ * The routine row and the caller's access to its project, still undecoded. A
+ * side-effect-free read (no decryption, no audit), so a route can start it while
+ * the live session check runs; `getRoutineForUser` decodes it afterwards.
+ */
+export async function readRoutineDetail(
   routineId: string,
   userId: string,
-): Promise<{ routine: Routine; isOwner: boolean } | null> {
+): Promise<RoutineDetailRead> {
   const service = getServiceClient();
   const { data } = await service
     .from("agent_routines")
@@ -536,21 +547,32 @@ export async function getRoutineForUser(
     .is("deleted_at", null)
     .maybeSingle();
   if (!data) return null;
-  const access = await getProjectAccess(userId, data.project_id as string);
-  if (!access) return null;
-  return { routine: await routineWaitingState(await decodeRoutine(data, userId) as unknown as Routine),
-    isOwner: access.isOwner };
+  // The access decision without decoding the project, which the detail never uses.
+  const access = await hasProjectAccess(userId, data.project_id as string);
+  return access ? { row: data, isOwner: access.isOwner } : null;
 }
 
+export async function getRoutineForUser(
+  routineId: string,
+  userId: string,
+  prefetched?: RoutineDetailRead,
+): Promise<{ routine: Routine; isOwner: boolean } | null> {
+  const found = prefetched === undefined ? await readRoutineDetail(routineId, userId) : prefetched;
+  if (!found) return null;
+  return { routine: await routineWaitingState(await decodeRoutine(found.row, userId) as unknown as Routine),
+    isOwner: found.isOwner };
+}
+
+/** The accessible routine rows of a user, still undecoded. */
+export type RoutineListRead = Array<Routine & { projects?: unknown }>;
+
 /**
- * Project routines accessible to the user — owner AND members. The
- * reading is open: a member must be able to see what is running on the repository
- * that they share, even if they cannot put it down or stop it.
+ * The stored rows behind `listRoutinesForUser`: project ids, then the routines
+ * of those projects. Side-effect free, so a route can start it while the live
+ * session check runs.
  */
-export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
+export async function readRoutineList(userId: string): Promise<RoutineListRead> {
   const service = getServiceClient();
-  // Owned rows are read whole once: the archived-automation pass below
-  // decodes them instead of re-reading each project.
   const [{ data: owned }, { data: member }] = await Promise.all([
     service
       .from("projects")
@@ -568,7 +590,7 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
   ]);
   if (ids.size === 0) return [];
 
-  const readRoutines = () => service
+  const { data } = await service
     .from("agent_routines")
     // Same guard as the cron scan: a trashed project leaves the
     // list. Path "member" cannot filter `deleted_at` itself
@@ -581,10 +603,21 @@ export async function listRoutinesForUser(userId: string): Promise<Routine[]> {
     .is("deleted_at", null)
     .in("project_id", [...ids])
     .order("created_at", { ascending: false });
-  const { data } = await readRoutines();
-  return Promise.all(((data ?? []) as Array<Routine & { projects?: unknown }>)
-    .map(async ({ projects: _joined, ...routine }) =>
-      await routineWaitingState(await decodeRoutine(routine, userId) as unknown as Routine)));
+  return (data ?? []) as RoutineListRead;
+}
+
+/**
+ * Project routines accessible to the user — owner AND members. The
+ * reading is open: a member must be able to see what is running on the repository
+ * that they share, even if they cannot put it down or stop it.
+ */
+export async function listRoutinesForUser(
+  userId: string,
+  prefetched?: RoutineListRead,
+): Promise<Routine[]> {
+  const rows = prefetched ?? await readRoutineList(userId);
+  return Promise.all(rows.map(async ({ projects: _joined, ...routine }) =>
+    await routineWaitingState(await decodeRoutine(routine, userId) as unknown as Routine)));
 }
 
 /**

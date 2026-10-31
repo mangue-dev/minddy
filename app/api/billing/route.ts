@@ -1,7 +1,8 @@
 import { type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUserAlongside } from "@/lib/server/api-auth";
 import {
   getResolvedBilling,
+  readBillingAccountRow,
   resolveBasePlanFromBillingAccount,
 } from "@/lib/server/billing-accounts";
 import type { BillingStatusResponse } from "@/lib/billing-types";
@@ -9,10 +10,13 @@ import { managedServices } from "@/lib/managed-services";
 
 /** GET /api/billing — effective plan + caller subscription status (MIN-72). */
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  // The account row is a side-effect-free read that overlaps the live session
+  // check. Decoding and the Stripe re-sync, which may write, wait for it.
+  const auth = await getAuthedUserAlongside(request, ({ user }) => readBillingAccountRow(user.id));
   if (!auth.ok) return auth.response;
+  if ("error" in auth.alongside) throw auth.alongside.error;
 
-  const billing = await getResolvedBilling(auth.user.id);
+  const billing = await getResolvedBilling(auth.user.id, auth.alongside.value);
   const account = billing.account;
   const services = managedServices();
 

@@ -604,8 +604,16 @@ function keepCollaborationToken(pageId: string, response: Response): void {
   if (token) collaborationTokens.set(pageId, token);
 }
 
-/** The session snapshot: both streams of the page, from one server read. */
-export async function fetchPageCollaborationApi(
+/**
+ * How long a warmed session snapshot may be adopted by the surface that opens.
+ * Memory only and consumed once: the live streams catch up from the snapshot's
+ * revision on attach, so an adopted snapshot is never trusted past that.
+ */
+export const COLLABORATION_WARM_MS = 10_000;
+const warmedCollaboration = new Map<string, { at: number; promise: Promise<PageCollaborationSnapshot> }>();
+const warmKey = (projectId: string, pageId: string) => `${projectId}:${pageId}`;
+
+async function readCollaborationSnapshot(
   projectId: string,
   pageId: string,
   signal?: AbortSignal
@@ -613,6 +621,52 @@ export async function fetchPageCollaborationApi(
   const response = await fetchClientRead(collaborationUrl(projectId, pageId), { signal });
   keepCollaborationToken(pageId, response);
   return json(response, "Request failed");
+}
+
+/**
+ * Starts the session snapshot read on browsing intent (hover, focus, press), so
+ * the surface that opens adopts it instead of starting the read after it
+ * mounts. One warm read per page per window; a failure is simply dropped.
+ */
+export function warmPageCollaboration(projectId: string, pageId: string, now = Date.now()): void {
+  const key = warmKey(projectId, pageId);
+  const existing = warmedCollaboration.get(key);
+  if (existing && now - existing.at < COLLABORATION_WARM_MS) return;
+  const promise = readCollaborationSnapshot(projectId, pageId);
+  const entry = { at: now, promise };
+  warmedCollaboration.set(key, entry);
+  promise.catch(() => {
+    if (warmedCollaboration.get(key) === entry) warmedCollaboration.delete(key);
+  });
+}
+
+/** The session snapshot: both streams of the page, from one server read. */
+export async function fetchPageCollaborationApi(
+  projectId: string,
+  pageId: string,
+  signal?: AbortSignal
+): Promise<PageCollaborationSnapshot> {
+  const key = warmKey(projectId, pageId);
+  const warmed = warmedCollaboration.get(key);
+  if (warmed) {
+    if (Date.now() - warmed.at < COLLABORATION_WARM_MS) {
+      try {
+        const snapshot = await warmed.promise;
+        // An aborted caller (an effect replayed on mount) leaves the snapshot
+        // to the read that replaces it.
+        signal?.throwIfAborted();
+        if (warmedCollaboration.get(key) === warmed) warmedCollaboration.delete(key);
+        return snapshot;
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        // The warm read failed: fall through to a real, observable read.
+        if (warmedCollaboration.get(key) === warmed) warmedCollaboration.delete(key);
+      }
+    } else {
+      warmedCollaboration.delete(key);
+    }
+  }
+  return readCollaborationSnapshot(projectId, pageId, signal);
 }
 
 /** Accepted steps of a stream after `since`, or a reset with a fresh snapshot. */

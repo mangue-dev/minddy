@@ -4,6 +4,7 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 
 import { fetchRoutineRunsApi, fetchRoutinesApi, type Routine } from "./routines-api";
 import { refetchOnRevealWhenStale } from "./reveal-freshness";
+import { agentModelsQueryKey, fetchAgentModels } from "./use-agent-models-query";
 
 /**
  * ROUTINES (MIN-185) on the client side.
@@ -85,4 +86,28 @@ export function useRoutineRunsQuery(routineId: string | null) {
     },
   });
   return { runs: data?.runs ?? [], loading: enabled && isPending };
+}
+
+const warmedRoutines = new WeakMap<QueryClient, Set<string>>();
+
+/**
+ * Starts a routine pane's reads (its runs, plus the model catalog its toggle
+ * waits on) before the pane mounts, from browsing intent on its list row or
+ * from a selection arriving with the URL. One attempt per routine per query
+ * client: repeated hovers do nothing, and `prefetchQuery` itself skips a
+ * fresh cache entry.
+ */
+export function prefetchRoutineDetail(queryClient: QueryClient, routineId: string): void {
+  let warmed = warmedRoutines.get(queryClient);
+  if (!warmed) warmedRoutines.set(queryClient, (warmed = new Set()));
+  if (warmed.has(routineId)) return;
+  warmed.add(routineId);
+  void queryClient.prefetchQuery({
+    queryKey: routineRunsQueryKey(routineId),
+    queryFn: () => fetchRoutineRunsApi(routineId),
+  });
+  void queryClient.prefetchQuery({
+    queryKey: agentModelsQueryKey,
+    queryFn: () => fetchAgentModels("user", "text"),
+  });
 }

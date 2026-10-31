@@ -1,7 +1,7 @@
-import { loadProjectMembers } from "@/lib/server/project-working-set-readers";
+import { buildProjectMembers, readProjectMembersSource } from "@/lib/server/project-working-set-readers";
 import { NextResponse, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserAlongside } from "@/lib/server/api-auth";
 import { canonicalAppOrigin } from "@/lib/server/app-origin";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
@@ -19,10 +19,14 @@ type RouteContext = { params: Promise<{ id: string }> };
 /** GET /api/projects/[id]/members — members + pending invitations (any accessible user). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getAuthedUser(request);
+  // The member, invitation and account reads have no side effect and key on the
+  // verified claims, so they overlap the live session check; a denial discards
+  // them. Invitation decryption and avatar seeds (which may insert) wait for it.
+  const auth = await getAuthedUserAlongside(request, ({ user }) => readProjectMembersSource(user.id, id));
   if (!auth.ok) return auth.response;
+  if ("error" in auth.alongside) throw auth.alongside.error;
   const t = await getTranslations("ApiErrors");
-  const result = await loadProjectMembers(auth, id);
+  const result = await buildProjectMembers(auth, auth.alongside.value);
   if (!result.ok) return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   return NextResponse.json(result.data);
 }

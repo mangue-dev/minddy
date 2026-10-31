@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { requireProjectMember } from "@/lib/server/feedback/team-guard";
+import { requireFeedbackMember, requireProjectMember } from "@/lib/server/feedback/team-guard";
 import { parseFeedbackListFilters } from "@/lib/feedback-list-filters";
 import { countTeamFeedback, listTeamFeedback } from "@/lib/server/feedback/team-queries";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
@@ -19,7 +19,8 @@ const NAME_MAX = 200;
  on behalf of an end user ('internal' channel, never anonymous). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const guard = await requireProjectMember(request, id);
+  // Membership only: the list never uses the project, so it is not decoded.
+  const guard = await requireFeedbackMember(request, id);
   if (!guard.ok) return guard.response;
 
   // `board_enabled` travels WITH the list, and not in a separate call: without

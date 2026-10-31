@@ -443,6 +443,7 @@ function PageRow({
         aria-current={active ? "page" : undefined}
         onMouseEnter={() => onPrefetch(page.id)}
         onFocus={() => onPrefetch(page.id)}
+        onPointerDown={() => onPrefetch(page.id)}
         onClick={(event) => {
           // ⇧-click would open the link in a new window: here it selects.
           if (event.shiftKey && onTogglePicked && event.button === 0) {

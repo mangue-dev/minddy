@@ -206,6 +206,21 @@ function SettingsTabs({
 
   const contentFade = useScrollFade<HTMLDivElement>();
 
+  // A query change on the screen already shown needs no server round trip:
+  // Next's patched history keeps `useSearchParams` in sync, so the tab flips
+  // immediately. The retained `browse` route is not the live URL and keeps
+  // the router.
+  const replaceQuery = useCallback(
+    (href: string) => {
+      if (!browse && window.location.pathname === pathname) {
+        window.history.replaceState(window.history.state, "", href + window.location.hash);
+        return;
+      }
+      router.replace(href, { scroll: false });
+    },
+    [browse, pathname, router],
+  );
+
   const setActiveTab = useCallback(
     (value: string) => {
       // Two screens share this shell: account settings (/settings) and
@@ -220,10 +235,9 @@ function SettingsTabs({
       } else {
         params.set("tab", value);
       }
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      replaceQuery(`${pathname}${params.toString() ? `?${params}` : ""}`);
     },
-    [fallback, pathname, router, searchParams],
+    [fallback, pathname, replaceQuery, searchParams],
   );
 
   // `?section=`: the palette does not just open the right tab, it
@@ -265,8 +279,9 @@ function SettingsTabs({
     }));
     const params = new URLSearchParams(searchParams.toString());
     params.delete(SETTINGS_SECTION_PARAM);
-    const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    // `?section=` arrives with a navigation (palette, notification): a raw
+    // history write could race it into a full reload, so this keeps the router.
+    router.replace(`${pathname}${params.toString() ? `?${params}` : ""}`, { scroll: false });
   }, [sectionParam, searchParams, pathname, router]);
 
   useSectionFocus(focus, !!reduceMotion);

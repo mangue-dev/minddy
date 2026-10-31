@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import type { Invitation, Issue, Member, MembersResponse, Objective } from "@/lib/types";
 import { getServiceClient } from "@/lib/supabase-service";
 import { fetchAuthUsersById, toNamed } from "./auth-users";
@@ -85,8 +85,19 @@ export async function loadProjectObjectives(auth: ProjectWorkingSetAuth, project
 type InvitationRow = InvitationEmailColumns & { id: string; project_id: string; status: string; created_at: string; role?: string | null; can_comment?: boolean | null };
 type MembershipRow = { user_id: string; role: string; can_comment: boolean | null; created_at: string };
 
-/** Service-role member enrichment retains the ordinary living-project ACL. */
-export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId: string): Promise<ProjectWorkingSetReadResult<MembersResponse>> {
+/**
+ * What the member list needs before any decryption or write: the project, its
+ * members, its pending invitations and the Auth accounts of the people
+ * involved. Every read is side-effect free, so a route may start it while the
+ * live session check is still running (`getAuthedUserAlongside`) and discard it
+ * on a denial.
+ */
+export type ProjectMembersSource =
+  | { ok: false; failure: typeof databaseError | typeof projectNotFound }
+  | { ok: true; ownerId: string; memberRows: MembershipRow[]; inviteRows: InvitationRow[]; users: Map<string, User> };
+
+/** Read the member list inputs for `userId`; returns a failure instead of throwing. */
+export async function readProjectMembersSource(userId: string, projectId: string): Promise<ProjectMembersSource> {
   try {
     const service = getServiceClient();
     const expiresAfter = new Date().toISOString();
@@ -117,12 +128,30 @@ export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId:
     ]);
     // A failed metadata/member read cannot masquerade as an absent project or
     // a successful owner-only collection. Actual absence or access denial remains a 404 response.
-    if (projectResult.error) return databaseError;
+    if (projectResult.error) return { ok: false, failure: databaseError };
     const project = projectResult.data;
-    if (!project || project.deleted_at) return projectNotFound;
+    if (!project || project.deleted_at) return { ok: false, failure: projectNotFound };
     const ownerId = project.owner_id as string;
+    if (ownerId !== userId && !memberRows.some((member) => member.user_id === userId)) {
+      return { ok: false, failure: projectNotFound };
+    }
+    // Only a caller who may see the project resolves its accounts.
+    const users = await fetchAuthUsersById(service, [ownerId, ...memberRows.map((member) => member.user_id)]);
+    return { ok: true, ownerId, memberRows, inviteRows, users };
+  } catch {
+    console.error("[api/members] complete list failed");
+    return { ok: false, failure: databaseError };
+  }
+}
+
+/** Decrypt invitations and assemble the response once the caller is authorized. */
+export async function buildProjectMembers(
+  auth: ProjectWorkingSetAuth, source: ProjectMembersSource,
+): Promise<ProjectWorkingSetReadResult<MembersResponse>> {
+  if (!source.ok) return source.failure;
+  try {
+    const { ownerId, memberRows, inviteRows, users } = source;
     const isOwner = ownerId === auth.user.id;
-    if (!isOwner && !memberRows.some((member) => member.user_id === auth.user.id)) return projectNotFound;
     memberRows.sort((a, b) => compareDate(a.created_at, b.created_at) || compareDate(a.user_id, b.user_id));
     inviteRows.sort((a, b) => compareDate(b.created_at, a.created_at) || compareDate(a.id, b.id));
     const pending: Invitation[] = isOwner ? await Promise.all(inviteRows.map(async (row) => ({
@@ -132,7 +161,7 @@ export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId:
       role: memberRoleFromRow(row.role), can_comment: row.role === "reader" && row.can_comment === true,
     }))) : [];
     const memberIds = [ownerId, ...memberRows.map((member) => member.user_id)];
-    const [users, seeds] = await Promise.all([fetchAuthUsersById(service, memberIds), fetchAvatarSeeds(service, memberIds)]);
+    const seeds = await fetchAvatarSeeds(getServiceClient(), memberIds);
     const members: Member[] = [{ user_id: ownerId, ...toNamed(users.get(ownerId)), avatar_seed: seeds.get(ownerId) ?? ownerId,
       role: "owner", can_comment: true, is_owner: true },
     ...memberRows.map((member) => {
@@ -149,4 +178,9 @@ export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId:
     console.error("[api/members] complete list failed");
     return databaseError;
   }
+}
+
+/** Service-role member enrichment retains the ordinary living-project ACL. */
+export async function loadProjectMembers(auth: ProjectWorkingSetAuth, projectId: string): Promise<ProjectWorkingSetReadResult<MembersResponse>> {
+  return buildProjectMembers(auth, await readProjectMembersSource(auth.user.id, projectId));
 }

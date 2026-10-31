@@ -1,8 +1,9 @@
 import { commentStore } from "@/lib/server/comment-store";
 import { isCommentId } from "@/lib/comment-id";
 import { NextResponse, after, type NextRequest } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getLocale, getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { addPageComment } from "@/lib/server/page-comments";
@@ -35,14 +36,17 @@ const MAX_MENTIONS = 50;
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { pageId } = await params;
-  const auth = await getAuthedUser(request);
+  // The RLS read overlaps the live session check, which still gates the response.
+  const listComments = (supabase: SupabaseClient, userId: string) =>
+    commentStore(supabase, "page_comments", userId)
+      .select("*")
+      .eq("page_id", pageId)
+      .order("created_at", { ascending: true });
+  const auth = await getAuthedUserWithRlsReads(request, async ({ user, supabase }) => listComments(supabase, user.id));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await commentStore(auth.supabase, "page_comments", auth.user.id)
-    .select("*")
-    .eq("page_id", pageId)
-    .order("created_at", { ascending: true });
+  const { data, error } = await (auth.reads ?? listComments(auth.supabase, auth.user.id));
 
   if (error) {
     console.error("[api/pages/:id/comments] list failed:", error.message);

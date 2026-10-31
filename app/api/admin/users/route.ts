@@ -1,17 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
-import { isAdminUser } from "@/lib/server/admin";
+import { getAuthedAdmin } from "@/lib/server/admin";
 import { fetchAdminAccount, fetchAdminUserDetails } from "@/lib/server/admin-users";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" };
 
 async function requireAdmin(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  const auth = await getAuthedAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!(await isAdminUser(auth.user, auth.claims))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
   return null;
 }
 

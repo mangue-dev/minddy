@@ -1034,7 +1034,9 @@ function PageSurface({
   // waits for its fresh basis, preserving immediate typing in the local overlay.
   // The editor is built on the session's snapshot: wait for it (or for its
   // failure, which falls back to the snapshot editor) rather than remounting.
-  if (isPending || !page || collaboration.status === "loading") {
+  // A database renders no editor, so it does not wait for the live session.
+  const isDatabase = (page ?? summary)?.database_schema != null;
+  if (isPending || !page || (collaboration.status === "loading" && !isDatabase)) {
     // The same skeleton as the route's loading state: no spinner over it. The
     // page list already says when the page is a database.
     return summary?.database_schema != null
