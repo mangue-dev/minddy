@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { act, createElement, type PropsWithChildren } from "react";
-import { hydrateRoot, type Root } from "react-dom/client";
+import { createRoot, hydrateRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ObjectiveMomentum } from "@/components/objective-momentum";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,8 +31,10 @@ const issues = [
   { objective_id: objective.id, status: "todo", effort: "m", completed_at: null },
 ] as Issue[];
 
+let queryClient = new QueryClient();
+
 function card(source = objective, locale: "en" | "fr" = "en", timeZone = "Europe/Paris") {
-  return createElement(
+  return createElement(QueryClientProvider, { client: queryClient }, createElement(
     NextIntlClientProvider,
     {
       locale,
@@ -44,7 +47,7 @@ function card(source = objective, locale: "en" | "fr" = "en", timeZone = "Europe
         createElement(ObjectiveMomentum, { objective: source, issues }),
       ),
     },
-  );
+  ));
 }
 
 function render(source = objective, locale: "en" | "fr" = "en", timeZone = "Europe/Paris") {
@@ -57,6 +60,9 @@ describe("objective momentum card", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(NOW);
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    // The server estimate stays pending unless a test answers it.
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -161,6 +167,31 @@ describe("objective momentum card", () => {
       expect(container.textContent).toContain("On track");
     } finally {
       await act(() => root?.unmount());
+    }
+  });
+
+  it("replaces the local estimate with the server forecast once it arrives", async () => {
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+    const fetchMock = vi.fn(async () => Response.json({
+      forecastDate: "2026-10-15T10:00:00.000Z", forecastDays: 43, basis: "contributors",
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    try {
+      await act(() => root.render(card()));
+      for (let tick = 0; tick < 20 && !container.textContent?.includes("October 15"); tick += 1) {
+        await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+      }
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/objectives/objective-1/forecast?tz=Europe%2FParis",
+        expect.objectContaining({ cache: "no-store" }),
+      );
+      expect(container.textContent).toContain("should finish around October 15, 2026, after the target date.");
+      expect(container.textContent).toContain("Behind schedule");
+    } finally {
+      await act(() => root.unmount());
     }
   });
 

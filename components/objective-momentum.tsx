@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Activity01Icon, AnalyticsDownIcon, AnalyticsUpIcon, CancelCircleIcon as CircleSlash2, MinusSignIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useFormatter, useTimeZone, useTranslations } from "next-intl";
 import { useLiveNow, useTimeAgo } from "@/lib/use-live-now";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import {
   objectiveMomentum,
+  objectiveTargetPace,
   type ObjectiveMomentumState,
   type ObjectiveTargetPace,
 } from "@/lib/objective-momentum";
@@ -80,6 +82,43 @@ const PACE_META: Record<
   },
 };
 
+interface ObjectiveForecast {
+  forecastDate: string | null;
+  forecastDays: number | null;
+  basis: "contributors" | "objective" | null;
+}
+
+/**
+ * Finish estimate computed by the server from the contributors' activity
+ * hours and their allocation across every project (MIN-876). The key follows
+ * the linked work, so a status, effort or assignee change asks again.
+ */
+function useObjectiveForecast(objective: Objective, issues: Issue[], timeZone: string) {
+  const signature = useMemo(
+    () => issues
+      .filter((issue) => issue.objective_id === objective.id)
+      .map((issue) => `${issue.id}:${issue.status}:${issue.effort ?? ""}:${issue.assignee_id ?? ""}`)
+      .sort()
+      .join("|"),
+    [issues, objective.id],
+  );
+  const { data } = useQuery({
+    queryKey: ["objective-forecast", objective.id, timeZone, objective.status,
+      objective.target_date, signature] as const,
+    queryFn: async ({ signal }): Promise<ObjectiveForecast> => {
+      const response = await fetch(
+        `/api/objectives/${objective.id}/forecast?tz=${encodeURIComponent(timeZone)}`,
+        { cache: "no-store", signal },
+      );
+      if (!response.ok) throw new Error("Unable to load the objective forecast");
+      return response.json();
+    },
+    staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
+  });
+  return data ?? null;
+}
+
 interface ObjectiveMomentumProps {
   objective: Objective;
   issues: Issue[];
@@ -109,6 +148,17 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
     () => objectiveMomentum(objective, issues, now, timeZone),
     [objective, issues, now, timeZone],
   );
+  // The server estimate supersedes the local one, which only bridges loading.
+  const remote = useObjectiveForecast(objective, issues, timeZone);
+  const forecastDate = remote ? remote.forecastDate : insight.forecastDate;
+  const targetPace = insight.state === "canceled" ? null : objectiveTargetPace({
+    remainingIssues: insight.remainingIssues,
+    targetAt: insight.targetAt ? new Date(insight.targetAt).getTime() : null,
+    nowMs: now.getTime(),
+    forecastDate,
+    progressPercent: insight.progressPercent,
+    elapsedPercent: insight.elapsedPercent,
+  });
   const state = STATE_META[insight.state];
   const StateIcon = state.icon;
   const maxCompleted = Math.max(
@@ -118,7 +168,7 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
   const titleId = `objective-momentum-${objective.id}`;
   const canceled = insight.state === "canceled";
   const SummaryIcon = canceled ? CircleSlash2 : DATE_ICON;
-  const pace = insight.targetPace ? PACE_META[insight.targetPace] : null;
+  const pace = targetPace ? PACE_META[targetPace] : null;
   const periodDate = (value: string) =>
     format.dateTime(new Date(value), {
       day: "numeric",
@@ -127,8 +177,8 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
     });
   const periodStart = insight.period ? periodDate(insight.period.start) : "";
   const periodEnd = insight.period ? periodDate(insight.period.end) : "";
-  const estimate = insight.forecastDate
-    ? format.dateTime(new Date(insight.forecastDate), {
+  const estimate = forecastDate
+    ? format.dateTime(new Date(forecastDate), {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -139,7 +189,7 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
     if (canceled) return t("momentumCanceledSummary");
     if (insight.linkedIssues === 0) return t("momentumEmpty");
     if (insight.remainingIssues === 0) return t("momentumAllClosed");
-    if (insight.targetPace === "overdue") {
+    if (targetPace === "overdue") {
       const overdue = t("momentumOverdue", { count: insight.remainingIssues });
       return estimate
         ? `${overdue} ${t("momentumForecast", { date: estimate })}`
@@ -147,10 +197,10 @@ function ObjectiveMomentumCard({ objective, issues }: ObjectiveMomentumProps) {
     }
     if (estimate) {
       const date = estimate;
-      if (insight.targetPace === "at_risk") {
+      if (targetPace === "at_risk") {
         return t("momentumForecastAtRisk", { date });
       }
-      if (insight.targetPace === "on_track") {
+      if (targetPace === "on_track") {
         return t("momentumForecastOnTrack", { date });
       }
       return t("momentumForecast", { date });

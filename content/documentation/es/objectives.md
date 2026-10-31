@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-10-31",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -58,14 +58,17 @@
       "components/palette-picker-rows.tsx",
       "app/(app)/projects/[id]/page.tsx",
       "components/objectives/objectives-page.tsx",
-      "components/app-sidebar.tsx"
+      "components/app-sidebar.tsx",
+      "lib/objective-forecast.ts",
+      "lib/server/objective-forecast.ts",
+      "app/api/objectives/[id]/forecast/route.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (desktop sidebar staying on the objectives list with the shown objective highlighted while a project board shows one objective's issues, and switching objectives from that list; checked against app/(app)/projects/[id]/page.tsx, components/objectives/objectives-page.tsx and components/app-sidebar.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the objective board sidebar)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 24,
+    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate)",
+    "language": "agent:claude-code (es translation of the changed passage, reviewed against en revision 23; agent review, not human acceptance)",
+    "date": "2026-10-31"
   },
   "related": [
     "issues",
@@ -86,7 +89,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -136,7 +139,7 @@ El panel Ritmo solo aparece cuando el objetivo tiene una fecha objetivo. Al elim
 
 El ritmo resume el trabajo completado recientemente. Puede estar acelerándose, estable, ralentizándose o detenido, con estados separados para objetivos no iniciados, completados y cancelados. Úsalo para identificar un resultado que necesite atención y después lee las incidencias y la actividad subyacentes.
 
-La fecha estimada requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Si hay una fecha objetivo pero no define un periodo válido posterior a la creación, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos.
+La fecha estimada parte de las personas que hacen el trabajo. Para cada persona asignada a incidencias vinculadas, minddy deduce sus horas de actividad habituales a partir de cuándo finaliza incidencias, mide el esfuerzo que entrega en todos sus proyectos y estima la parte de ese esfuerzo dedicada a este objetivo según sus finalizaciones recientes y su trabajo abierto. La estimación solo avanza durante esas horas de actividad: las noches y los fines de semana no suman progreso, y el trabajo sin asignar se reparte entre quienes contribuyen. El cálculo se hace en el servidor: las incidencias de otros proyectos y las cifras de cada persona nunca se muestran, solo la fecha resultante. Una persona cuenta en cuanto ha finalizado al menos dos incidencias en las últimas seis semanas. Si no hay ninguna, la estimación vuelve al ritmo propio del objetivo, que requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen al ritmo las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Si hay una fecha objetivo pero no define un periodo válido posterior a la creación, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos.
 
 
 ## Elegir un objetivo para un comentario {#objective-feedback}

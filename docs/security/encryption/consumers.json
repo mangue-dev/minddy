@@ -241,49 +241,49 @@
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 371,
+    "line": 406,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 389,
+    "line": 424,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 461,
+    "line": 496,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 482,
+    "line": 517,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 641,
+    "line": 676,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 680,
+    "line": 715,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 695,
+    "line": 730,
     "storage": false
   },
   {
@@ -2250,28 +2250,28 @@
     "file": "lib/server/ai-usage.ts",
     "operation": "rpc",
     "resource": "get_ai_run_spend",
-    "line": 55,
+    "line": 59,
     "storage": false
   },
   {
     "file": "lib/server/ai-usage.ts",
     "operation": "rpc",
     "resource": "get_numo_operation_spend",
-    "line": 75,
+    "line": 79,
     "storage": false
   },
   {
     "file": "lib/server/ai-usage.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 205,
+    "line": 209,
     "storage": false
   },
   {
     "file": "lib/server/ai-usage.ts",
     "operation": "from",
     "resource": "ai_usage",
-    "line": 273,
+    "line": 281,
     "storage": false
   },
   {
@@ -8488,6 +8488,13 @@
     "operation": "from",
     "resource": "oauth_grants",
     "line": 429,
+    "storage": false
+  },
+  {
+    "file": "lib/server/objective-forecast.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 82,
     "storage": false
   },
   {
