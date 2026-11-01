@@ -15,7 +15,8 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import dynamic from "next/dynamic";
-import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { AppTabRouteBoundary, ProjectRouteReady, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { ListDetailSkeleton } from "@/components/route-skeletons";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
@@ -1017,7 +1018,7 @@ export default function ObjectivesPage() {
         </div>
       }
     >
-      <ObjectivesInner />
+      <ProjectRouteReady fallback={<ListDetailSkeleton />}><ObjectivesInner /></ProjectRouteReady>
     </Suspense></AppTabRouteBoundary>
   );
 }

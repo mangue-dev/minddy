@@ -11,7 +11,7 @@ import { Add01Icon, File02Icon, StarIcon, StarOffIcon } from "@hugeicons/core-fr
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation } from "@/lib/use-app-router";
-import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { AppTabRouteBoundary, ProjectRouteReady, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,7 +23,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
 import { markDatabaseSetup } from "@/lib/page-database-setup";
 import { PageView } from "@/components/pages/page-view";
-import { PageDocumentSkeleton } from "@/components/route-skeletons";
+import { PageDocumentSkeleton, PageTreeSkeleton } from "@/components/route-skeletons";
 import { RetainedPageDocuments } from "./retained-page-documents";
 import { retainedPageDocumentCost } from "@/lib/retained-page-documents";
 import { PagesHome } from "@/components/pages/pages-home";
@@ -56,7 +56,9 @@ import { ancestorsOf } from "@/lib/pages";
 import type { PageSummary } from "@/lib/pages-api";
 
 export function PagesShell({ browse }: { browse?: SidebarBrowseTarget } = {}) {
-  return <AppTabRouteBoundary><PagesShellInner browse={browse} /></AppTabRouteBoundary>;
+  return <AppTabRouteBoundary>
+    <ProjectRouteReady fallback={<PageTreeSkeleton />}><PagesShellInner browse={browse} /></ProjectRouteReady>
+  </AppTabRouteBoundary>;
 }
 
 function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {

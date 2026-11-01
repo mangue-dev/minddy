@@ -50,7 +50,7 @@ import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { BulkIssueActions, BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
 import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the triage route —
-// see components/editor/document-editor-lazy.tsx. Warmed from idle time in TriagePage.
+// see components/editor/document-editor-lazy.tsx. Loaded at mount by TriagePage.
 import {
   LazyDocumentEditor,
   useDocumentEditorForFirstContent,

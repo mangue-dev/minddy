@@ -652,6 +652,9 @@ function FeedbackRow({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export function FeedbackTeamPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
+  // The opened post and its reply field are first content: load the editor
+  // now (components/editor/document-editor-lazy.tsx).
+  useDocumentEditorForFirstContent();
   return <AppTabRouteBoundary><FeedbackTeamPageInner browse={browse} /></AppTabRouteBoundary>;
 }
 
@@ -659,9 +662,6 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const timeAgo = useTimeAgo();
-  // The opened post and its reply field are first content: load the editor
-  // now (components/editor/document-editor-lazy.tsx).
-  useDocumentEditorForFirstContent();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const postParam = expandParam(searchParams.get("post"));
