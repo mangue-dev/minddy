@@ -136,7 +136,6 @@ export interface AnalyticsEventProps {
   project_wizard_completed: {
     has_git_link: boolean;
     smart_assign_enabled: boolean;
-    auto_assign_enabled: boolean;
   };
   project_created: { has_icon: boolean; has_git_link: boolean };
   project_opened: { project_id: string };

@@ -80,9 +80,6 @@ export async function updateProjectSettings({
     updates.color =
       typeof input.color === "string" ? input.color.slice(0, MAX_COLOR_LENGTH) : null;
   }
-  if (typeof input.auto_assign_enabled === "boolean") {
-    updates.auto_assign_enabled = input.auto_assign_enabled;
-  }
   // Numo feedback review: two plane-independent switches (the
   // disarming costs nothing — it’s arming them that consumes them, and the budget consumes them
   // referee at the time of the pass).

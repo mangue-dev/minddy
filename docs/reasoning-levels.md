@@ -1,6 +1,6 @@
 # Numo reasoning levels, provider by provider
 
-> **Date**: 2026-07-29, reviewed on 2026-10-05, 2026-10-16 and 2026-10-28 · **Tickets**: MIN-122, MIN-721, MIN-826
+> **Date**: 2026-07-29, reviewed on 2026-10-05, 2026-10-16, 2026-10-28 and 2026-11-01 · **Tickets**: MIN-122, MIN-721, MIN-826
 >
 > What the user chooses, what really goes on the wire, and what happens
 > when the model in front does not accept it.
@@ -92,10 +92,15 @@ call also drops a manual thinking budget ("Thinking may not be enabled when
 tool_choice forces tool use"). See the
 [Anthropic thinking reference](https://platform.claude.com/docs/en/build-with-claude/thinking).
 
-OpenAI GPT-5.6 exception: as soon as Chat Completions contains function tools,
-the adapter sends `reasoning_effort: "none"`, regardless of the level chosen.
-OpenAI rejects this combination with active effort and recommends Responses
-to maintain both reasoning, tools and multi-turn.
+OpenAI GPT-5.6 / GPT-6 Sol-Luna exception: as soon as Chat Completions
+contains function tools, the adapter sends `reasoning_effort: "none"`,
+regardless of the level chosen. OpenAI rejects this combination with active
+effort for GPT-5.6 and documents Chat Completions function calling for GPT-6
+Sol and GPT-6 Luna only with `none`
+(see [Using GPT-6](https://developers.openai.com/api/docs/guides/latest-model)).
+GPT-6 Astra, GPT-6.1 Sol and GPT-6.1 Terra require Responses for tool calling
+and reject `none`; the adapter leaves them untouched and their tool requests
+fail upstream.
 
 ### Smart Fill structured output
 

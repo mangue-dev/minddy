@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 11,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (2026-11-01: removed the retired project auto-assignment switch from the finishing step, checked against components/create-project-wizard.tsx; no screenshot shows it)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (2026-11-01: deleted sentence only, remaining text unchanged; agent review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "accounts",
@@ -65,7 +65,7 @@
       "src": "/documentation/es/reader-first-project.png",
       "alt": "Incidencia AUR-3 en curso, con su descripción, responsable, esfuerzo y categoría.",
       "caption": "La incidencia muestra su identificador, estado y propiedades. Márcala como completada solo después de verificar el resultado esperado.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -92,7 +92,7 @@ Si tu equipo ya tiene un proyecto, comunica al propietario el correo de tu cuent
 1. Abre Inicio después de iniciar sesión. Para empezar un trabajo nuevo, elige la acción para crear un proyecto en la navegación. Selecciona un proyecto completamente nuevo en el asistente, introduce un nombre y una clave de dos a cinco letras.
 2. Continúa por los pasos del icono y el repositorio. Para este ejemplo manual, conserva el icono predeterminado y no elijas ningún repositorio. Puedes dejar vacía la descripción inicial.
 3. A continuación, el asistente propone invitar a tu equipo. Sáltalo en este ejemplo manual; si trabajas con otras personas, busca en su lugar por nombre a las personas de tus otros proyectos o introduce sus correos electrónicos. No se envía nada hasta que finalizas la creación del proyecto.
-4. En el último paso, revisa Smart Assign y la asignación automática; deja esta última desactivada si quieres asignar tú el ticket de demostración. Elige la acción para finalizar, espera a que se cree el proyecto y ábrelo.
+4. En el último paso, revisa Smart Assign. Elige la acción para finalizar, espera a que se cree el proyecto y ábrelo.
 5. Abre el proyecto y crea una incidencia. Ponle un título concreto, como «Comprobar el enlace de contacto del sitio web». Describe la página, el destino esperado y cómo verificarás el resultado. Si el botón Smart Fill aparece y está activado, desactívalo para este ejemplo manual antes de crear la incidencia. Controla el rellenado de esta incidencia y es independiente de Smart Assign y de las rutinas.
 6. Elige una persona responsable, una prioridad y un esfuerzo si ayudan a planificar la tarea. Confirma la creación, abre la incidencia creada y comprueba su proyecto e identificador.
 7. Cambia el estado a «En curso» cuando empiece el trabajo. Realiza la comprobación y registra el resultado en un comentario. Usa «En revisión» si otra persona todavía tiene que revisarlo.

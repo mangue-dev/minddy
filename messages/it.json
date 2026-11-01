@@ -3348,8 +3348,6 @@
     "wizardNoRepo": "nessun repository",
     "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Assegna automaticamente qualsiasi ticket che supera il triage senza assegnatario.",
-    "wizardAutoAssignLabel": "Assegnazione automatica",
-    "wizardAutoAssignDesc": "Ti assegna i ticket che crei in questo progetto.",
     "wizardFinish": "Fine",
     "wizardBriefPageTitle": "Brief iniziale",
     "wizardDoneToast": "Il progetto «{name}» è pronto.",

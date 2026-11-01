@@ -52,6 +52,26 @@ describe("translateAiChatRequest", () => {
     expect(withoutTools.reasoning_effort).toBe("high");
   });
 
+  it("applies the no-reasoning-with-tools contract to GPT-6 Sol and Luna", () => {
+    const tools = [{ type: "function", function: { name: "search" } }];
+    for (const model of ["gpt-6-sol", "gpt-6-luna"]) {
+      expect(
+        translateAiChatRequest({ ...base, model, tools }, "openai").reasoning_effort,
+      ).toBe("none");
+    }
+    // Without tools the contract does not apply.
+    expect(
+      translateAiChatRequest({ ...base, model: "gpt-6-sol" }, "openai").reasoning_effort,
+    ).not.toBe("none");
+    // GPT-6 Astra and GPT-6.1 Sol reject `none` and need Responses for tools:
+    // no effort value fixes them, so the adapter never sends `none` to them.
+    for (const model of ["gpt-6-astra", "gpt-6.1-sol"]) {
+      expect(
+        translateAiChatRequest({ ...base, model, tools }, "openai").reasoning_effort,
+      ).not.toBe("none");
+    }
+  });
+
   it("translates OpenRouter with its counting and reasoning extensions", () => {
     const body = translateAiChatRequest({ ...base, stream: true }, "openrouter");
     expect(body).toMatchObject({

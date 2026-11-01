@@ -57,6 +57,15 @@ describe("account transfer compatibility", () => {
     expect(result.document.issue_categories).toEqual([]);
   });
 
+  it("normalizes the collections added after v2 for legacy exports", () => {
+    const result = validateAccountTransfer(emptyDocument);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.document.agent_routines).toEqual([]);
+    expect(result.document.numo_preferences).toEqual([]);
+  });
+
   it("accepts the explicit current transfer envelope without the retired sections", () => {
     const { preferences: _preferences, code_agent_conversations: _code, ...current } =
       emptyDocument;
@@ -113,6 +122,11 @@ describe("account transfer compatibility", () => {
     expect(validateAccountTransfer({ ...emptyDocument, format_version: 99 })).toMatchObject({
       ok: false,
       error: "unsupportedVersion",
+    });
+    expect(validateAccountTransfer({ ...emptyDocument, format_version: 1 })).toMatchObject({
+      ok: false,
+      error: "unsupportedVersion",
+      field: "format_version",
     });
     expect(validateAccountTransfer({ ...emptyDocument, issues: "not-an-array" })).toMatchObject({
       ok: false,

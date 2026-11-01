@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
   const color =
     typeof input.color === "string" ? input.color.slice(0, MAX_COLOR_LENGTH) : null;
   const smartAssignEnabled = input.smart_assign_enabled === true;
-  const autoAssignEnabled = input.auto_assign_enabled === true;
   // The language of the interface at the time of creation becomes that of
   // the team, and it is to this that Numo will translate the foreign feedback. She
   // can ONLY be read from here: the app keeps it in a cookie, never on the account,
@@ -147,7 +146,6 @@ export async function POST(request: NextRequest) {
       key,
       color,
       smart_assign_enabled: smartAssignEnabled,
-      auto_assign_enabled: autoAssignEnabled,
       ...(teamLanguage ? { feedback_team_language: teamLanguage } : {}),
     })
     .select("*")

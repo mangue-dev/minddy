@@ -111,7 +111,7 @@ const draft: ProjectDraft = {
   id: "11111111-1111-4111-8111-111111111111", name: "New project", key: "NEW",
   orbSeed: null, keyTouched: true, step: "seed", origin: "new", seed: null,
   icon: { kind: "none" }, repo: null, smartAssignEnabled: true,
-  autoAssignEnabled: false, invitees: [], inviteeUsers: [], updatedAt: "2026-10-06T10:00:00Z",
+  invitees: [], inviteeUsers: [], updatedAt: "2026-10-06T10:00:00Z",
 };
 
 beforeEach(() => {
@@ -348,6 +348,23 @@ async function pressEnterInInvitee() {
 const queued = () => [...host.querySelectorAll(`[aria-label="${en.Projects.wizardMembersListLabel}"] li`)].map((li) => li.textContent);
 const suggested = () => [...host.querySelectorAll('[role="option"]')].map((li) => li.textContent);
 const inviteeError = () => host.querySelector("#project-invitee-error")?.textContent ?? null;
+
+describe("finishing step", () => {
+  it("saves Smart Assign as the only project assignment setting", async () => {
+    await mount({ step: "finish" });
+    await submit();
+    expect(mocks.updateProject).toHaveBeenCalledExactlyOnceWith(draft.id, {
+      smart_assign_enabled: true,
+    });
+  });
+
+  it("writes no assignment setting when Smart Assign is off", async () => {
+    await mount({ step: "finish", smartAssignEnabled: false });
+    await submit();
+    expect(mocks.createProject).toHaveBeenCalledOnce();
+    expect(mocks.updateProject).not.toHaveBeenCalled();
+  });
+});
 
 describe("member invitations", () => {
   it("queues normalized addresses, refuses invalid, duplicate and own ones, and sends nothing before Finish", async () => {

@@ -566,7 +566,8 @@ export interface Project {
   orb_seed: string | null;
   /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
   smart_assign_enabled: boolean;
-  /** Automatically assign new issues to the project lead or available member. */
+  /** Retired: never read. Auto-assigning one's own issues is the account
+      preference `auto_assign_created`. Kept until the column is dropped. */
   auto_assign_enabled: boolean;
   /** Smart Assign rules, user_id → free text describing the member's preferred
       tasks (kept on the project — the owner has no project_members row). */
@@ -615,7 +616,6 @@ export interface CreateProjectInput {
   key: string;
   color?: string | null;
   smart_assign_enabled?: boolean;
-  auto_assign_enabled?: boolean;
   /** Language of the interface at the time of creation (MIN — translation of
  returns): it becomes the language of the project team. */
   locale?: string;
@@ -626,7 +626,6 @@ export interface ProjectUpdateInput {
   key?: string;
   color?: string | null;
   smart_assign_enabled?: boolean;
-  auto_assign_enabled?: boolean;
   smart_assign_rules?: Record<string, string>;
   /** Smart Triage mode (MIN-566) — validated server-side against the known
       values; arming `jev` additionally requires the owner's AI budget. */

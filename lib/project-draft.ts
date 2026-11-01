@@ -105,7 +105,6 @@ export interface ProjectDraft {
   icon: ProjectIconChoice;
   repo: DraftRepo | null;
   smartAssignEnabled: boolean;
-  autoAssignEnabled: boolean;
   /**
    * Addresses to invite, normalized (trimmed, lowercased, unique). Nothing is
    * sent while the project is a draft: the invitations go out once it exists.
@@ -154,7 +153,6 @@ export function projectDraftFromRow(row: ProjectDraftRow): ProjectDraft {
     // Smart Assign is proposed ACTIVATED by the wizard: a silent draft must
     // fall back on the same default, not on `false`.
     smartAssignEnabled: data.smartAssignEnabled !== false,
-    autoAssignEnabled: data.autoAssignEnabled === true,
     invitees: normalizeInvitees(data.invitees),
     inviteeUsers: normalizeInviteeUsers(data.inviteeUsers),
     updatedAt: row.updated_at,
@@ -181,7 +179,6 @@ export function projectDraftToRow(draft: ProjectDraftInput): {
       icon: draft.icon,
       repo: draft.repo,
       smartAssignEnabled: draft.smartAssignEnabled,
-      autoAssignEnabled: draft.autoAssignEnabled,
       invitees: normalizeInvitees(draft.invitees),
       inviteeUsers: normalizeInviteeUsers(draft.inviteeUsers),
     },
