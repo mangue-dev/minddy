@@ -41,6 +41,7 @@ import {
 } from "./realtime-resume";
 import {
   createCatchUpQueue,
+  refreshMissedQueries,
   INITIAL_CATCH_UP_COALESCE_MS,
   type CatchUpQueue,
 } from "./realtime-catch-up";
@@ -237,17 +238,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const catchUpQueue = useRef<CatchUpQueue | null>(null);
   const initialCatchUpQueue = useRef<CatchUpQueue | null>(null);
   if (catchUpQueue.current === null) {
-    catchUpQueue.current = createCatchUpQueue((matches) => {
-      void queryClient.invalidateQueries({
-        predicate: (query) => matches(query.queryKey),
-      });
+    catchUpQueue.current = createCatchUpQueue((matches, since) => {
+      void refreshMissedQueries(queryClient, matches, since);
     });
   }
   if (initialCatchUpQueue.current === null) {
-    initialCatchUpQueue.current = createCatchUpQueue((matches) => {
-      void queryClient.invalidateQueries({
-        predicate: (query) => matches(query.queryKey),
-      });
+    initialCatchUpQueue.current = createCatchUpQueue((matches, since) => {
+      void refreshMissedQueries(queryClient, matches, since);
     }, INITIAL_CATCH_UP_COALESCE_MS);
   }
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
-import { useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { memo, startTransition, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -464,7 +464,12 @@ function PropertySettings({
   );
 }
 
-export function PageDatabaseView({
+/** Rows in the first paint of a database (more than a screen holds), then per step. */
+const FIRST_PAINT_ROWS = 40;
+
+// Memoized: the page and the retained pages view around it re-render for
+// route and query changes that leave the database as it is (MIN-875).
+export const PageDatabaseView = memo(function PageDatabaseView({
   projectId,
   database,
   onOpen,
@@ -489,7 +494,6 @@ export function PageDatabaseView({
   const mobile = useMobileLayout() === true;
   const columnAnnouncements = useDragAnnouncements((id) =>
     database.database_schema?.find((property) => property.id === id)?.name);
-  const tPages = useTranslations("Pages");
   const { canWrite } = useProjectCapabilities(projectId);
   const promotePage = usePromotePage(projectId);
   const {
@@ -530,7 +534,7 @@ export function PageDatabaseView({
     id: string;
     above: boolean;
   } | null>(null);
-  const schema = database.database_schema ?? [];
+  const schema = useMemo(() => database.database_schema ?? [], [database.database_schema]);
   const names = useMemo(
     () =>
       new Map(
@@ -538,12 +542,14 @@ export function PageDatabaseView({
       ),
     [members, t],
   );
-  const entries = pages
+  // Filtering joins every cell's text: memoized on what it reads, so a menu,
+  // a selection or a drag step does not recompute 150 rows (MIN-875).
+  const entries = useMemo(() => pages
     .filter((p) => p.parent_id === database.id)
     .sort((a, b) =>
       a.position < b.position ? -1 : a.position > b.position ? 1 : 0,
-    );
-  const rows = entries
+    ), [pages, database.id]);
+  const rows = useMemo(() => entries
     .filter((entry) => {
       const text = [
         entry.title,
@@ -585,7 +591,17 @@ export function PageDatabaseView({
                 schema.find((p) => p.id === effectiveSort),
               );
       return (descending ? -result : result) || a.id.localeCompare(b.id);
-    });
+    }), [entries, schema, names, query, filters, sort, descending]);
+  // Each row mounts its gutter menu, tooltips and cell editors: 150 of them
+  // took ~230 ms of script in one blocking task (MIN-875). The first paint
+  // renders more rows than a screen holds; the rest follow one step at a time,
+  // each in a transition, so no single commit blocks input for long. Every row
+  // still ends up in the page, so selection, drag and find-in-page see them all.
+  const [rowLimit, setRowLimit] = useState(FIRST_PAINT_ROWS);
+  useEffect(() => {
+    if (rows.length > rowLimit) startTransition(() => setRowLimit((limit) => limit + FIRST_PAINT_ROWS));
+  }, [rows.length, rowLimit]);
+  const shownRows = rows.length > rowLimit ? rows.slice(0, rowLimit) : rows;
   const run = async (action: () => Promise<unknown>) => {
     try {
       await action();
@@ -685,7 +701,78 @@ export function PageDatabaseView({
       );
     });
   };
-  const visible = schema.filter((property) => !hidden.includes(property.id));
+  // Row handlers keep one identity and read the latest state when called, so
+  // a memoized row re-renders only when what it shows changes (MIN-875).
+  const rowActions = useRowActions({
+    open: (id) => onOpen(id),
+    prefetch: (id) => prefetchPage(id),
+    insert: (entry, altKey) => insert(entry, altKey),
+    menuOpenChange: (id, open) => setMenuEntry(open ? id : null),
+    promote: (entry) => void promotePage(entry),
+    duplicate: (entry) => setDuplicateTargets(targetsFor(entry)),
+    remove: (entry) => setRemove(targetsFor(entry)),
+    dragOver: (event, id) => {
+      if (!manual || !dragging.current.length || dragging.current.includes(id)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const box = event.currentTarget.getBoundingClientRect();
+      setDropTarget({ id, above: event.clientY < box.top + box.height / 2 });
+    },
+    drop: (event, id) => {
+      if (!dragging.current.length) return;
+      event.preventDefault();
+      const box = event.currentTarget.getBoundingClientRect();
+      drop(id, event.clientY < box.top + box.height / 2);
+    },
+    handleMouseDown: (event, entry) => {
+      const table = event.currentTarget.closest("table");
+      if (!manual || event.button !== 0 || !table) return;
+      event.preventDefault();
+      const ids = targetsFor(entry).map((target) => target.id);
+      trackRowDrag({
+        start: event.nativeEvent,
+        table,
+        dragged: ids,
+        onBegin: () => {
+          dragging.current = ids;
+          setIsDragging(true);
+        },
+        onTarget: setDropTarget,
+        onDrop: ({ id, above }) => drop(id, above),
+        onEnd: () => {
+          setIsDragging(false);
+          // `drop` reads the dragged ids after this.
+          queueMicrotask(() => { dragging.current = []; });
+        },
+      });
+    },
+    checkboxClick: (event, id, checked) => {
+      if (event.shiftKey && selectionAnchor.current) {
+        event.preventDefault();
+        setSelected((ids) =>
+          selectDatabaseRows(
+            rows.map((row) => row.id),
+            ids,
+            id,
+            !checked,
+            selectionAnchor.current,
+          ),
+        );
+      }
+    },
+    checkedChange: (id, next) => {
+      setSelected((ids) =>
+        selectDatabaseRows(
+          rows.map((row) => row.id),
+          ids,
+          id,
+          next,
+        ),
+      );
+      selectionAnchor.current = id;
+    },
+  });
+  const visible = useMemo(() => schema.filter((property) => !hidden.includes(property.id)), [schema, hidden]);
   const columnWidths = [
     240,
     ...visible.map(
@@ -1113,213 +1200,26 @@ export function PageDatabaseView({
             </tr>
           </thead>
           <tbody>
-            {rows.map((entry) => {
-              const targets = targetsFor(entry);
+            {shownRows.map((entry) => {
               const checked = selected.includes(entry.id);
               return (
-                <tr
+                <DatabaseRow
                   key={entry.id}
-                  data-entry-id={entry.id}
-                  aria-selected={checked}
-                  className={`group h-10 pointer-coarse:h-12 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropTarget?.id === entry.id ? (dropTarget.above ? ROW_DROP_LINE_ABOVE : ROW_DROP_LINE_BELOW) : ""}`}
-                  onDragOver={(event) => {
-                    if (
-                      !manual ||
-                      !dragging.current.length ||
-                      dragging.current.includes(entry.id)
-                    )
-                      return;
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
-                    const box = event.currentTarget.getBoundingClientRect();
-                    setDropTarget({
-                      id: entry.id,
-                      above: event.clientY < box.top + box.height / 2,
-                    });
-                  }}
-                  onDrop={(event) => {
-                    if (!dragging.current.length) return;
-                    event.preventDefault();
-                    const box = event.currentTarget.getBoundingClientRect();
-                    drop(entry.id, event.clientY < box.top + box.height / 2);
-                  }}
-                >
-                  {!mobile && (
-                  <td className="h-10 w-16 bg-background p-0">
-                      <div
-                        // Fades in and out with the hover, like a page block's gutter.
-                        className="flex h-10 items-center justify-end gap-0 pr-1 opacity-0 transition-opacity duration-[120ms] ease-out group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none touch:hidden"
-                      >
-                        <AppTooltip label={t("insertEntryHint")}>
-                          <button
-                            type="button"
-                            className={ROW_GUTTER_BUTTON}
-                            aria-label={t("insertEntryHint")}
-                            onClick={(event) => insert(entry, event.altKey)}
-                          >
-                            <HugeiconsIcon icon={Add01Icon} className="size-5" />
-                          </button>
-                        </AppTooltip>
-                        <DropdownMenu
-                          open={menuEntry === entry.id}
-                          onOpenChange={(open) =>
-                            setMenuEntry(open ? entry.id : null)
-                          }
-                        >
-                          <AppTooltip label={t("entryActions")}>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label={t("entryActions")}
-                                // A handle: it shows the grab hand before the press.
-                                className={cn(ROW_GUTTER_BUTTON, "size-7", manual && "cursor-grab", isDragging && "cursor-grabbing")}
-                                onPointerDownCapture={(event) => {
-                                  if (event.button === 0) event.stopPropagation();
-                                }}
-                                onClick={() => setMenuEntry(entry.id)}
-                                // The page's gesture (database-row-drag.ts):
-                                // the rows themselves follow the pointer, and
-                                // below the threshold the press stays a click.
-                                onMouseDown={(event) => {
-                                  const table = event.currentTarget.closest("table");
-                                  if (!manual || event.button !== 0 || !table) return;
-                                  event.preventDefault();
-                                  const ids = targets.map((target) => target.id);
-                                  trackRowDrag({
-                                    start: event.nativeEvent,
-                                    table,
-                                    dragged: ids,
-                                    onBegin: () => {
-                                      dragging.current = ids;
-                                      setIsDragging(true);
-                                    },
-                                    onTarget: setDropTarget,
-                                    onDrop: ({ id, above }) => drop(id, above),
-                                    onEnd: () => {
-                                      setIsDragging(false);
-                                      // `drop` reads the dragged ids after this.
-                                      queueMicrotask(() => { dragging.current = []; });
-                                    },
-                                  });
-                                }}
-                              >
-                                {/* Filled dots, as on a page's handle. */}
-                                <HugeiconsIcon icon={DragDropVerticalIcon} className="size-6 [&_path]:fill-current" />
-                              </button>
-                            </DropdownMenuTrigger>
-                          </AppTooltip>
-                          <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
-                            {targets.length === 1 && (
-                              <DropdownMenuItem onSelect={() => onOpen(entry.id)}>
-                                <HugeiconsIcon icon={File02Icon} className="size-4" />
-                                {t("openEntry")}
-                              </DropdownMenuItem>
-                            )}
-                            {/* One entry, one issue: a selection is not promoted in bulk. */}
-                            {targets.length === 1 && canWrite && (
-                              <DropdownMenuItem onSelect={() => void promotePage(entry)}>
-                                <NumoIcon animated={false} className="size-4" />
-                                {tPages("promoteToIssue")}
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onSelect={() => setDuplicateTargets(targets)}>
-                              <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                              {t("duplicate")}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() => setRemove(targets)}
-                            >
-                              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                              {t("moveToTrash")}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </td>
-                  )}
-                  <td
-                    className="pointer-events-none sticky left-0 z-20 h-10 w-8 p-0 pointer-coarse:h-12"
-                    data-selection-cell
-                  >
-                    <div
-                      className={`absolute inset-0 flex items-center justify-center bg-background ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 touch:opacity-100"}`}
-                    >
-                      <AppTooltip label={t(checked ? "deselectEntryTooltip" : "selectEntryTooltip")}>
-                      <div className="pointer-events-auto flex size-6 items-center justify-center">
-                        {/* Anchor the checkbox hit area to the full selection container. */}
-                        <Checkbox
-                          className="static after:inset-x-0 after:inset-y-0"
-                          aria-label={t("selectEntry", {
-                            name: entry.title || tPages("untitled"),
-                          })}
-                          checked={checked}
-                          onClick={(event) => {
-                            if (event.shiftKey && selectionAnchor.current) {
-                              event.preventDefault();
-                              setSelected((ids) =>
-                                selectDatabaseRows(
-                                  rows.map((row) => row.id),
-                                  ids,
-                                  entry.id,
-                                  !checked,
-                                  selectionAnchor.current,
-                                ),
-                              );
-                            }
-                          }}
-                          onCheckedChange={(next) => {
-                            setSelected((ids) =>
-                              selectDatabaseRows(
-                                rows.map((row) => row.id),
-                                ids,
-                                entry.id,
-                                next === true,
-                              ),
-                            );
-                            selectionAnchor.current = entry.id;
-                          }}
-                        />
-                      </div>
-                      </AppTooltip>
-                    </div>
-                  </td>
-                  <td className="h-10 overflow-hidden border-b border-border/40 p-0 pointer-coarse:h-12">
-                    <button
-                      type="button"
-                      className="flex h-10 w-full min-w-0 items-center gap-2 overflow-hidden px-2 text-left transition-colors pointer-coarse:h-12 hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                      onClick={() => onOpen(entry.id)}
-                      onMouseEnter={() => prefetchPage(entry.id)}
-                      onFocus={() => prefetchPage(entry.id)}
-                    >
-                      {entry.icon ?? (
-                        <HugeiconsIcon icon={File02Icon} className="size-4 shrink-0 text-muted-foreground" />
-                      )}
-                      <span className="min-w-0 overflow-hidden whitespace-nowrap text-clip">
-                        {entry.title.slice(0, 160) || tPages("untitled")}
-                      </span>
-                    </button>
-                  </td>
-                  {visible.map((property) => (
-                    <td
-                      key={property.id}
-                      className="h-10 overflow-hidden border-b border-l border-border/30 p-0 pointer-coarse:h-12"
-                    >
-                      <DatabasePropertyCell
-                        table
-                        projectId={projectId}
-                        page={entry}
-                        database={database}
-                        property={property}
-                      />
-                    </td>
-                  ))}
-                  <td
-                    aria-hidden="true"
-                    className="h-10 border-b border-l border-border/30 p-0 pointer-coarse:h-12"
-                  />
-                </tr>
+                  entry={entry}
+                  projectId={projectId}
+                  database={database}
+                  visible={visible}
+                  checked={checked}
+                  // The menu offers "Open" and "Promote" only for a single target.
+                  singleTarget={!checked || selectedRows.length === 1}
+                  menuOpen={menuEntry === entry.id}
+                  dropLine={dropTarget?.id === entry.id ? (dropTarget.above ? "above" : "below") : null}
+                  manual={manual}
+                  isDragging={isDragging}
+                  mobile={mobile}
+                  canWrite={canWrite}
+                  actions={rowActions}
+                />
               );
             })}
           </tbody>
@@ -1420,4 +1320,205 @@ export function PageDatabaseView({
       </AlertDialog>
     </div>
   );
+});
+
+type RowActions = {
+  open: (id: string) => void;
+  prefetch: (id: string) => void;
+  insert: (entry: PageSummary, altKey: boolean) => void;
+  menuOpenChange: (id: string, open: boolean) => void;
+  promote: (entry: PageSummary) => void;
+  duplicate: (entry: PageSummary) => void;
+  remove: (entry: PageSummary) => void;
+  dragOver: (event: DragEvent<HTMLTableRowElement>, id: string) => void;
+  drop: (event: DragEvent<HTMLTableRowElement>, id: string) => void;
+  handleMouseDown: (event: MouseEvent<HTMLButtonElement>, entry: PageSummary) => void;
+  checkboxClick: (event: MouseEvent<HTMLButtonElement>, id: string, checked: boolean) => void;
+  checkedChange: (id: string, next: boolean) => void;
+};
+
+/**
+ * One identity for every row handler, each calling its latest version — the
+ * same contract as `useStableCallback`, for a whole set: handlers only, never
+ * read during rendering.
+ */
+function useRowActions(actions: RowActions): RowActions {
+  const latest = useRef(actions);
+  latest.current = actions;
+  return useMemo(() => {
+    const stable = {} as Record<keyof RowActions, (...args: never[]) => void>;
+    for (const key of Object.keys(actions) as (keyof RowActions)[]) {
+      stable[key] = (...args: never[]) => (latest.current[key] as (...a: never[]) => void)(...args);
+    }
+    return stable as RowActions;
+    // The keys never change; the bodies are read through `latest`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
+
+/**
+ * One entry of the table, memoized on what it shows: a row mounts a gutter
+ * menu, three tooltips and its cell editors, so re-rendering all of them for
+ * each 40-row step, menu, selection or drag-over cost tens of thousands of
+ * component renders on a 150-row database (MIN-875).
+ */
+const DatabaseRow = memo(function DatabaseRow({
+  entry, projectId, database, visible, checked, singleTarget, menuOpen, dropLine, manual, isDragging, mobile, canWrite, actions,
+}: {
+  entry: PageSummary;
+  projectId: string;
+  database: PageSummary;
+  visible: DatabaseProperty[];
+  checked: boolean;
+  /** The menu acts on this entry alone (not on a wider selection). */
+  singleTarget: boolean;
+  menuOpen: boolean;
+  dropLine: "above" | "below" | null;
+  manual: boolean;
+  isDragging: boolean;
+  mobile: boolean;
+  canWrite: boolean;
+  actions: RowActions;
+}) {
+  const t = useTranslations("PageDatabase");
+  const tPages = useTranslations("Pages");
+  return (
+    <tr
+      data-entry-id={entry.id}
+      aria-selected={checked}
+      className={`group h-10 pointer-coarse:h-12 ${checked ? "bg-primary/5" : "hover:bg-muted/20"} ${dropLine ? (dropLine === "above" ? ROW_DROP_LINE_ABOVE : ROW_DROP_LINE_BELOW) : ""}`}
+      onDragOver={(event) => actions.dragOver(event, entry.id)}
+      onDrop={(event) => actions.drop(event, entry.id)}
+    >
+      {!mobile && (
+      <td className="h-10 w-16 bg-background p-0">
+          <div
+            // Fades in and out with the hover, like a page block's gutter.
+            className="flex h-10 items-center justify-end gap-0 pr-1 opacity-0 transition-opacity duration-[120ms] ease-out group-hover:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100 motion-reduce:transition-none touch:hidden"
+          >
+            <AppTooltip label={t("insertEntryHint")}>
+              <button
+                type="button"
+                className={ROW_GUTTER_BUTTON}
+                aria-label={t("insertEntryHint")}
+                onClick={(event) => actions.insert(entry, event.altKey)}
+              >
+                <HugeiconsIcon icon={Add01Icon} className="size-5" />
+              </button>
+            </AppTooltip>
+            <DropdownMenu
+              open={menuOpen}
+              onOpenChange={(open) => actions.menuOpenChange(entry.id, open)}
+            >
+              <AppTooltip label={t("entryActions")}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={t("entryActions")}
+                    // A handle: it shows the grab hand before the press.
+                    className={cn(ROW_GUTTER_BUTTON, "size-7", manual && "cursor-grab", isDragging && "cursor-grabbing")}
+                    onPointerDownCapture={(event) => {
+                      if (event.button === 0) event.stopPropagation();
+                    }}
+                    onClick={() => actions.menuOpenChange(entry.id, true)}
+                    // The page's gesture (database-row-drag.ts): the rows
+                    // themselves follow the pointer, and below the threshold
+                    // the press stays a click.
+                    onMouseDown={(event) => actions.handleMouseDown(event, entry)}
+                  >
+                    {/* Filled dots, as on a page's handle. */}
+                    <HugeiconsIcon icon={DragDropVerticalIcon} className="size-6 [&_path]:fill-current" />
+                  </button>
+                </DropdownMenuTrigger>
+              </AppTooltip>
+              <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
+                {singleTarget && (
+                  <DropdownMenuItem onSelect={() => actions.open(entry.id)}>
+                    <HugeiconsIcon icon={File02Icon} className="size-4" />
+                    {t("openEntry")}
+                  </DropdownMenuItem>
+                )}
+                {/* One entry, one issue: a selection is not promoted in bulk. */}
+                {singleTarget && canWrite && (
+                  <DropdownMenuItem onSelect={() => actions.promote(entry)}>
+                    <NumoIcon animated={false} className="size-4" />
+                    {tPages("promoteToIssue")}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => actions.duplicate(entry)}>
+                  <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+                  {t("duplicate")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => actions.remove(entry)}
+                >
+                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+                  {t("moveToTrash")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </td>
+      )}
+      <td
+        className="pointer-events-none sticky left-0 z-20 h-10 w-8 p-0 pointer-coarse:h-12"
+        data-selection-cell
+      >
+        <div
+          className={`absolute inset-0 flex items-center justify-center bg-background ${checked ? "" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100 touch:opacity-100"}`}
+        >
+          <AppTooltip label={t(checked ? "deselectEntryTooltip" : "selectEntryTooltip")}>
+          <div className="pointer-events-auto flex size-6 items-center justify-center">
+            {/* Anchor the checkbox hit area to the full selection container. */}
+            <Checkbox
+              className="static after:inset-x-0 after:inset-y-0"
+              aria-label={t("selectEntry", {
+                name: entry.title || tPages("untitled"),
+              })}
+              checked={checked}
+              onClick={(event) => actions.checkboxClick(event, entry.id, checked)}
+              onCheckedChange={(next) => actions.checkedChange(entry.id, next === true)}
+            />
+          </div>
+          </AppTooltip>
+        </div>
+      </td>
+      <td className="h-10 overflow-hidden border-b border-border/40 p-0 pointer-coarse:h-12">
+        <button
+          type="button"
+          className="flex h-10 w-full min-w-0 items-center gap-2 overflow-hidden px-2 text-left transition-colors pointer-coarse:h-12 hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+          onClick={() => actions.open(entry.id)}
+          onMouseEnter={() => actions.prefetch(entry.id)}
+          onFocus={() => actions.prefetch(entry.id)}
+        >
+          {entry.icon ?? (
+            <HugeiconsIcon icon={File02Icon} className="size-4 shrink-0 text-muted-foreground" />
+          )}
+          <span className="min-w-0 overflow-hidden whitespace-nowrap text-clip">
+            {entry.title.slice(0, 160) || tPages("untitled")}
+          </span>
+        </button>
+      </td>
+      {visible.map((property) => (
+        <td
+          key={property.id}
+          className="h-10 overflow-hidden border-b border-l border-border/30 p-0 pointer-coarse:h-12"
+        >
+          <DatabasePropertyCell
+            table
+            projectId={projectId}
+            page={entry}
+            database={database}
+            property={property}
+          />
+        </td>
+      ))}
+      <td
+        aria-hidden="true"
+        className="h-10 border-b border-l border-border/30 p-0 pointer-coarse:h-12"
+      />
+    </tr>
+  );
+});

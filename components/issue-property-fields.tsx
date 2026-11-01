@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { MentionHover } from "@/components/mention-hover";
 import { Dot } from "@/components/ui/color-dot";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -67,7 +68,8 @@ export function PropertyRow({
   );
 }
 
-export function StatusValue({
+// Memoized (MIN-875): the detail panels re-render for each query they read.
+export const StatusValue = memo(function StatusValue({
   value,
   onChange,
 }: {
@@ -97,9 +99,9 @@ export function StatusValue({
       }
     />
   );
-}
+});
 
-export function PriorityValue({
+export const PriorityValue = memo(function PriorityValue({
   value,
   onChange,
 }: {
@@ -129,9 +131,9 @@ export function PriorityValue({
       }
     />
   );
-}
+});
 
-export function EffortValue({
+export const EffortValue = memo(function EffortValue({
   value,
   onChange,
 }: {
@@ -165,9 +167,9 @@ export function EffortValue({
       }
     />
   );
-}
+});
 
-export function AssigneeValue({
+export const AssigneeValue = memo(function AssigneeValue({
   value,
   members,
   onChange,
@@ -241,9 +243,9 @@ export function AssigneeValue({
       }
     />
   );
-}
+});
 
-export function CategoryValue({
+export const CategoryValue = memo(function CategoryValue({
   categories,
   value,
   onChange,
@@ -297,9 +299,9 @@ export function CategoryValue({
       }
     />
   );
-}
+});
 
-export function DueDateValue({
+export const DueDateValue = memo(function DueDateValue({
   value,
   onChange,
   recurrence,
@@ -339,9 +341,9 @@ export function DueDateValue({
       shortcutHint={shortcutHint}
     />
   );
-}
+});
 
-export function ObjectiveValue({
+export const ObjectiveValue = memo(function ObjectiveValue({
   value,
   objectives,
   onChange,
@@ -392,4 +394,4 @@ export function ObjectiveValue({
       }
     />
   );
-}
+});

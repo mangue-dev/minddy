@@ -32,7 +32,7 @@
  * (same reason as lib/realtime-topics.ts).
  */
 
-import type { QueryKey } from "@tanstack/react-query";
+import type { Query, QueryClient, QueryKey } from "@tanstack/react-query";
 
 /**
  * Catch-up grouping window. Wide enough to cover the flight of
@@ -86,14 +86,16 @@ export interface CatchUpQueue {
  * refetch in its identity (`${refetch}:${hash}`) so that a `"none"` does not swallow
  * not a pending `"active"`; sharing both would reintroduce this exact bug.
  *
- * @param flush receives the predicate to pass to `invalidateQueries`.
+ * @param flush receives the predicate to pass to `invalidateQueries`, and the
+ * time of the batch's latest push (see {@link refreshMissedQueries}).
  * @param delayMs grouping window.
  */
 export function createCatchUpQueue(
-  flush: (matches: (queryKey: readonly unknown[]) => boolean) => void,
+  flush: (matches: (queryKey: readonly unknown[]) => boolean, since: number) => void,
   delayMs: number = CATCH_UP_COALESCE_MS
 ): CatchUpQueue {
   let pending: Set<string> | null = null;
+  let since = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   return {
@@ -101,13 +103,14 @@ export function createCatchUpQueue(
       if (keys.length === 0) return;
       if (!pending) pending = new Set<string>();
       for (const key of keys) pending.add(hash(key));
+      since = Date.now();
       if (timer) return;
       timer = setTimeout(() => {
         timer = null;
         const wanted = pending;
         pending = null;
         if (!wanted) return;
-        flush((queryKey) => matchesCatchUpScope(queryKey, wanted));
+        flush((queryKey) => matchesCatchUpScope(queryKey, wanted), since);
       }, delayMs);
     },
     cancel() {
@@ -116,4 +119,64 @@ export function createCatchUpQueue(
       pending = null;
     },
   };
+}
+
+/** When each query last started a request, recorded by {@link trackFetchStarts}. */
+const fetchStarts = new WeakMap<Query, number>();
+
+/**
+ * Records when each query of `client` starts a request. Installed when the
+ * client is created: the first reads start in child effects, before any
+ * provider effect could subscribe. A query without a record counts as read
+ * before every catch-up.
+ */
+export function trackFetchStarts(client: QueryClient): () => void {
+  return client.getQueryCache().subscribe((event) => {
+    if (event.type === "updated" && event.action.type === "fetch") fetchStarts.set(event.query, Date.now());
+  });
+}
+
+const readSince = (query: Query, since: number) => (fetchStarts.get(query) ?? Number.NEGATIVE_INFINITY) >= since;
+
+function afterRequest(client: QueryClient, query: Query): Promise<void> {
+  return new Promise((resolve) => {
+    if (query.state.fetchStatus !== "fetching") return resolve();
+    const stop = client.getQueryCache().subscribe((event) => {
+      if (event.query !== query || (event.type !== "removed" && query.state.fetchStatus === "fetching")) return;
+      stop();
+      resolve();
+    });
+  });
+}
+
+/**
+ * Refreshes the queries a catch-up covers, as `invalidateQueries` with the
+ * same predicate did, without restarting a request already in flight.
+ *
+ * `since` is when the scope was (re)joined, or when the absence was noticed.
+ * A request that started at or after it read every write the channel did not
+ * deliver, so its query is already caught up. A request still in flight that
+ * started before it may have missed one: it finishes first, then its query is
+ * read once more. Invalidating it right away cancelled it and restarted it from
+ * zero, which kept a cold page's first content waiting on the restart
+ * (MIN-875: `/all` waited ~650 ms more for its board).
+ */
+export function refreshMissedQueries(
+  client: QueryClient,
+  matches: (queryKey: readonly unknown[]) => boolean,
+  since: number,
+): Promise<void> {
+  const missed = (query: Query) => matches(query.queryKey) && !readSince(query, since);
+  const inFlight = client.getQueryCache().findAll({
+    predicate: (query) => missed(query) && query.state.fetchStatus === "fetching",
+  });
+  const now = client.invalidateQueries({
+    predicate: (query) => missed(query) && query.state.fetchStatus !== "fetching",
+  });
+  const later = inFlight.map((query) => afterRequest(client, query).then(() => {
+    // Removed, or read again since: nothing left to catch up.
+    if (client.getQueryCache().get(query.queryHash) !== query || readSince(query, since)) return;
+    return client.invalidateQueries({ queryKey: query.queryKey, exact: true });
+  }));
+  return Promise.all([now, ...later]).then(() => undefined);
 }

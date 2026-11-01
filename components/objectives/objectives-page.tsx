@@ -459,7 +459,10 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
     ];
   };
   const { issues } = useIssuesQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  // A project browsed from elsewhere waits for the project list.
+  const { members } = useMembersQuery(projectId, !!project || projectId === routeProjectId);
   const { open: openAssistant } = useAssistantPanelActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);

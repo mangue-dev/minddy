@@ -26,6 +26,7 @@ import { useEffect, type RefObject } from "react";
 import { BlockSelection } from "@/components/editor/block-selection";
 import { lineEdge } from "@/components/editor/margin-caret";
 import { scrollPane } from "@/lib/scroll-pane";
+import { MARQUEE_DRAWING_CLASS } from "@/components/marquee-drawing";
 
 /** Below this distance the press stays a click. */
 const START_DISTANCE = 5;
@@ -34,16 +35,6 @@ const AUTOSCROLL_STEP = 14;
 
 /** The rectangle's element, styled in app/globals.css. */
 export const BLOCK_MARQUEE_CLASS = "block-marquee";
-/** The class on <html> while a rectangle is drawn (here or on a board): the
-    default cursor everywhere. */
-export const MARQUEE_DRAWING_CLASS = "marquee-drawing";
-
-/** Whether a selection rectangle is being drawn: the selection card
-    (page-comment-bubble.tsx) waits for its release, as it waits for the end
-    of a text drag. */
-export function isMarqueeDrawing(): boolean {
-  return document.documentElement.classList.contains(MARQUEE_DRAWING_CLASS);
-}
 /** The empty space under a document that a press may start from. */
 export const EDITOR_RESERVE_ATTR = "data-editor-reserve";
 

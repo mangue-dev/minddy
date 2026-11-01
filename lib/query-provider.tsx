@@ -10,6 +10,7 @@ import { configurePayloadRetention, isMemoryOnlyPayload } from "./query-retentio
 import { observePageReadFailures } from "./page-read-receipts";
 import { retryTemporaryReadFailure } from "./backend-availability";
 import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
+import { trackFetchStarts } from "./realtime-catch-up";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
@@ -204,6 +205,7 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
         },
       });
       observePageReadFailures(client);
+      trackFetchStarts(client);
       configurePayloadRetention(client);
       installRefRegistry(client);
       return client;

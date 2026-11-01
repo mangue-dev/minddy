@@ -1,7 +1,7 @@
 "use client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Alert01Icon, AlertCircleIcon, Home01Icon, MoreHorizontalIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -23,6 +23,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useDragAnnouncements } from "@/lib/use-drag-announcements";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +43,10 @@ import { APP_TAB_MAX_NAME, type AppTab } from "@/lib/app-tabs";
 import { useOpenPullRequestCountQuery } from "@/lib/use-agent-runs";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useAppTabMetadata } from "@/lib/use-app-tab-metadata";
-import { appTabIndicator } from "@/lib/app-tab-indicators";
+import { appTabIndicator, type AppTabIndicator } from "@/lib/app-tab-indicators";
+import type { AppTabsSession } from "@/lib/app-tabs-session";
+import type { Project } from "@/lib/types";
+import type { ObjectiveStatus } from "@/lib/objective-validation";
 import { NotificationBadge } from "./notification-badge";
 import { countLabel } from "./nav-badge";
 import { useNotifications } from "@/lib/use-notifications";
@@ -68,6 +72,8 @@ const routeLabels: Record<string, MessageKey<"Nav">> = {
 const RAIL_PAD_RIGHT = 8;
 /** Slack the tab fit always keeps free before the "more tabs" menu takes over. */
 const RAIL_MARGIN = 16;
+/** Module-level, so the sensors keep their identity across strip renders. */
+const MOUSE_SENSOR_OPTIONS = { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } };
 
 export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; onNewTabWarm?: () => void }) {
   const { tabs: sessionTabs, activeId, session, busy, error, loading, loadError, reload } = useAppTabs();
@@ -106,36 +112,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
     smartAssignWarning: smartAssignWarnings.length > 0,
     triageCounts,
   };
-  const sectionBadges = (section: string, projectId: string | null): ReactNode => {
-    const indicator = appTabIndicator({ section, projectId }, indicatorData);
-    if (!indicator) return null;
-    if (indicator.kind === "alert") {
-      return (
-        <HugeiconsIcon icon={Alert01Icon} className="size-2.5 text-amber-500"
-          aria-label={nav("smartAssignIncomplete")} />
-      );
-    }
-    // The Inbox count asks for attention, like its sidebar entry (MIN-727).
-    if (indicator.label === "inboxBadge") {
-      return (
-        <NotificationBadge size="sm" count={indicator.count}
-          label={nav("inboxBadge", { count: indicator.count })} />
-      );
-    }
-    // Smaller than the sidebar sticker: the tab icon badge reads as a dot
-    // of digits; the tab paints its own background around it.
-    return (
-      <span
-        aria-label={nav(indicator.label, { count: indicator.count })}
-        className="px-1 text-[9px] font-medium leading-3 tabular-nums text-muted-foreground"
-      >
-        {countLabel(indicator.count)}
-      </span>
-    );
-  };
+  const sectionBadges = (section: string, projectId: string | null): ReactNode =>
+    tabBadge(appTabIndicator({ section, projectId }, indicatorData), nav);
 
   const strip = useRef<HTMLDivElement>(null);
-  const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }));
+  const sensors = useSensors(useSensor(MouseSensor, MOUSE_SENSOR_OPTIONS));
   const [dragged, setDragged] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<AppTab | null>(null);
@@ -159,14 +140,17 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
     return () => observer.disconnect();
   }, []);
   const focusId = focused && tabs.some((tab) => tab.id === focused) ? focused : activeId;
-  const close = (id: string) => {
+  const close = useCallback((id: string) => {
     void session.close(id).then(() => {
       const active = session.getSnapshot().activeId;
       strip.current?.querySelector<HTMLElement>(`[data-app-tab-id="${active}"]`)?.focus();
     });
-  };
+  }, [session]);
+  const rename = useCallback((tab: AppTab) => { setName(tab.custom_name ?? ""); setRenaming(tab); }, []);
   const errorKey = error === "save_failed" ? "saveFailed" : error === "conflict" ? "conflict" : error === "last_tab" ? "lastTab" : error === "destination_unavailable" ? "destinationUnavailable" : "syncFailed";
-  const collisionDetection: CollisionDetection = (args) => {
+  // Stable drag wiring: the strip re-renders for each of its badge queries,
+  // and dnd-kit then keeps its context and the memoized tabs (MIN-875).
+  const collisionDetection: CollisionDetection = useStableCallback((args) => {
     const source = tabs.find((tab) => tab.id === String(args.active.id));
     if (!source) return [];
     return closestCenter({
@@ -175,8 +159,8 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
         tabs.some((tab) => tab.id === String(container.id) && tab.pinned === source.pinned)
       ),
     });
-  };
-  const finishDrag = (event: DragEndEvent) => {
+  });
+  const finishDrag = useStableCallback((event: DragEndEvent) => {
     setDragged(null);
     const active = String(event.active.id);
     const over = event.over ? String(event.over.id) : null;
@@ -194,7 +178,7 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       tabs: sessionTabs.map((tab) => (tab.pinned === source.pinned ? reordered[next++] : tab)),
     });
     void session.move(active, reordered[to + 1]?.id ?? null);
-  };
+  });
   const draggedTab = dragged ? tabs.find((tab) => tab.id === dragged) : undefined;
   const describe = (tab: AppTab) => {
     const route = appTabRoute(tab.id === activeId ? session.getActiveHref() ?? tab.href : tab.href);
@@ -235,6 +219,17 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const described = tabs.map((tab) => ({ tab, view: describe(tab) }));
   const tabAnnouncements = useDragAnnouncements((id) =>
     described.find(({ tab }) => tab.id === id)?.view.label);
+  const accessibility = useMemo(() => ({ announcements: tabAnnouncements }), [tabAnnouncements]);
+  const startDrag = useCallback((event: DragStartEvent) => setDragged(String(event.active.id)), []);
+  const cancelDrag = useCallback(() => setDragged(null), []);
+  const moveWithKeys = useStableCallback((tab: AppTab, event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault(); event.stopPropagation();
+    const group = tabs.filter((row) => row.pinned === tab.pinned);
+    const index = group.findIndex((row) => row.id === tab.id);
+    if (event.key === "ArrowLeft" && index > 0) void session.move(tab.id, group[index - 1].id);
+    if (event.key === "ArrowRight" && index < group.length - 1) void session.move(tab.id, group[index + 2]?.id ?? null);
+  });
   const PINNED_COMPOSITE_W = 52;
   const PINNED_W = 34;
   // Regular tabs stop shrinking while the label still has a few words: below
@@ -285,6 +280,10 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
       regularWidth = REGULAR_MIN_W;
     }
   }
+  const visibleKey = visible.map(({ tab }) => tab.id).join(" ");
+  // Same ids, same array: a fresh one would refresh every sortable tab.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const visibleIds = useMemo(() => visibleKey ? visibleKey.split(" ") : [], [visibleKey]);
   return <>
     <div ref={strip} className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden pr-2">
       <div role="tablist" aria-label={t("label")} aria-busy={loading || busy}
@@ -303,35 +302,24 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
           event.preventDefault(); controls[next]?.focus();
         }}>
         <DndContext sensors={sensors} collisionDetection={collisionDetection} modifiers={HORIZONTAL_DRAG}
-          accessibility={{ announcements: tabAnnouncements }}
-          onDragStart={(event: DragStartEvent) => setDragged(String(event.active.id))}
-          onDragCancel={() => setDragged(null)} onDragEnd={finishDrag}>
+          accessibility={accessibility}
+          onDragStart={startDrag}
+          onDragCancel={cancelDrag} onDragEnd={finishDrag}>
         <DragCursor />
-        <SortableContext items={visible.map(({ tab }) => tab.id)} strategy={horizontalListSortingStrategy}>
+        <SortableContext items={visibleIds} strategy={horizontalListSortingStrategy}>
         {visible.map(({ tab, view }) => {
           const { section, projectId, project, objectiveId, objective, pageIcon, composite, label } = view;
-          return <SortableAppTab key={tab.id} id={tab.id} disabled={busy}
-            onKeyDown={(event) => {
-              if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
-              event.preventDefault(); event.stopPropagation();
-              const group = tabs.filter((row) => row.pinned === tab.pinned);
-              const index = group.findIndex((row) => row.id === tab.id);
-              if (event.key === "ArrowLeft" && index > 0) void session.move(tab.id, group[index - 1].id);
-              if (event.key === "ArrowRight" && index < group.length - 1) void session.move(tab.id, group[index + 2]?.id ?? null);
-            }}>
-          <AppTabItem tab={tab} active={tab.id === activeId} focusable={tab.id === focusId} label={label}
-            icon={pageIcon
-              ? <span className="text-sm leading-none" aria-hidden>{pageIcon}</span>
-              : <AppTabIcon section={section} project={project} projectId={projectId}
-                  objectiveColor={objectiveId ? objective?.color ?? null : undefined}
-                  objectiveStatus={objectiveId ? objective?.status : undefined} />}
-            badge={sectionBadges(section, projectId ?? null)} busy={busy} last={tabs.length <= 1}
-            compositeIcon={composite} width={tab.pinned ? undefined : regularWidth}
-            onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => close(tab.id)}
-            onWarm={() => { if (tab.id !== activeId) session.prefetch(tab.href); }}
-            onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}
-            onRename={() => { setName(tab.custom_name ?? ""); setRenaming(tab); }} onFocus={() => setFocused(tab.id)} />
-          </SortableAppTab>;
+          const indicator = appTabIndicator({ section, projectId: projectId ?? null }, indicatorData);
+          return <SortableAppTab key={tab.id} disabled={busy} onMoveKey={moveWithKeys}
+            tab={tab} active={tab.id === activeId} focusable={tab.id === focusId} label={label}
+            section={section} project={project} projectId={projectId ?? null}
+            objectiveColor={objectiveId ? objective?.color ?? null : undefined}
+            objectiveStatus={objectiveId ? objective?.status : undefined}
+            pageIcon={pageIcon} composite={composite}
+            indicatorKind={indicator?.kind} indicatorLabel={indicator?.kind === "count" ? indicator.label : undefined}
+            indicatorCount={indicator?.kind === "count" ? indicator.count : undefined}
+            busy={busy} last={tabs.length <= 1} width={tab.pinned ? undefined : regularWidth}
+            session={session} onClose={close} onRename={rename} onFocusTab={setFocused} />;
         })}
         </SortableContext>
         <DragOverlay dropAnimation={SETTLE_DROP_ANIMATION} modifiers={HORIZONTAL_DRAG}>
@@ -415,16 +403,87 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   </>;
 }
 
-function SortableAppTab({ id, disabled, onKeyDown, children }: {
-  id: string;
+type NavTranslator = ReturnType<typeof useTranslations<"Nav">>;
+
+function tabBadge(indicator: AppTabIndicator | null, nav: NavTranslator): ReactNode {
+  if (!indicator) return null;
+  if (indicator.kind === "alert") {
+    return (
+      <HugeiconsIcon icon={Alert01Icon} className="size-2.5 text-amber-500"
+        aria-label={nav("smartAssignIncomplete")} />
+    );
+  }
+  // The Inbox count asks for attention, like its sidebar entry (MIN-727).
+  if (indicator.label === "inboxBadge") {
+    return (
+      <NotificationBadge size="sm" count={indicator.count}
+        label={nav("inboxBadge", { count: indicator.count })} />
+    );
+  }
+  // Smaller than the sidebar sticker: the tab icon badge reads as a dot
+  // of digits; the tab paints its own background around it.
+  return (
+    <span
+      aria-label={nav(indicator.label, { count: indicator.count })}
+      className="px-1 text-[9px] font-medium leading-3 tabular-nums text-muted-foreground"
+    >
+      {countLabel(indicator.count)}
+    </span>
+  );
+}
+
+/**
+ * One tab on the rail, memoized on plain values: the strip re-renders for
+ * each of the ten queries behind its badges and labels, and every tab mounts
+ * two tooltips and a context menu (MIN-875). Handlers are rebuilt here from
+ * stable session actions, so a tab re-renders only when what it shows changes.
+ */
+type StripTabProps = {
+  tab: AppTab; active: boolean; focusable: boolean; label: string;
+  section: string; project?: Project; projectId: string | null;
+  objectiveColor?: string | null; objectiveStatus?: ObjectiveStatus;
+  pageIcon?: string | null; composite: boolean;
+  indicatorKind?: AppTabIndicator["kind"];
+  indicatorLabel?: Extract<AppTabIndicator, { kind: "count" }>["label"];
+  indicatorCount?: number;
+  busy: boolean; last: boolean; width?: number;
+  session: AppTabsSession;
+  onClose: (id: string) => void;
+  onRename: (tab: AppTab) => void;
+  onFocusTab: (id: string) => void;
+};
+
+const StripTab = memo(function StripTab({
+  tab, active, focusable, label, section, project, projectId, objectiveColor, objectiveStatus, pageIcon, composite,
+  indicatorKind, indicatorLabel, indicatorCount, busy, last, width, session, onClose, onRename, onFocusTab,
+}: StripTabProps) {
+  const nav = useTranslations("Nav");
+  const indicator: AppTabIndicator | null = indicatorKind === "alert" ? { kind: "alert" }
+    : indicatorKind === "count" && indicatorLabel && indicatorCount !== undefined
+      ? { kind: "count", label: indicatorLabel, count: indicatorCount } : null;
+  return <AppTabItem tab={tab} active={active} focusable={focusable} label={label}
+    icon={pageIcon
+      ? <span className="text-sm leading-none" aria-hidden>{pageIcon}</span>
+      : <AppTabIcon section={section} project={project} projectId={projectId}
+          objectiveColor={objectiveColor} objectiveStatus={objectiveStatus} />}
+    badge={tabBadge(indicator, nav)} busy={busy} last={last}
+    compositeIcon={composite} width={width}
+    onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => onClose(tab.id)}
+    onWarm={() => { if (!active) session.prefetch(tab.href); }}
+    onPin={() => { void session.update(tab.id, { pinned: !tab.pinned }); }}
+    onRename={() => onRename(tab)} onFocus={() => onFocusTab(tab.id)} />;
+});
+
+/** The sortable wrapper renders its tab itself, so both stay memoized. */
+const SortableAppTab = memo(function SortableAppTab({ disabled, onMoveKey, ...tabProps }: StripTabProps & {
   disabled: boolean;
-  onKeyDown: React.KeyboardEventHandler<HTMLDivElement>;
-  children: React.ReactNode;
+  onMoveKey: (tab: AppTab, event: React.KeyboardEvent<HTMLDivElement>) => void;
 }) {
-  const { setNodeRef, transform, transition, isDragging, listeners } = useSortable({ id, disabled });
-  return <div ref={setNodeRef} role="presentation" {...listeners} onKeyDown={onKeyDown}
+  const { tab } = tabProps;
+  const { setNodeRef, transform, transition, isDragging, listeners } = useSortable({ id: tab.id, disabled });
+  return <div ref={setNodeRef} role="presentation" {...listeners} onKeyDown={(event) => onMoveKey(tab, event)}
     className={isDragging ? "shrink-0 opacity-40" : "shrink-0"}
     style={{ transform: CSS.Translate.toString(transform), transition, WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-    {children}
+    <StripTab {...tabProps} />
   </div>;
-}
+});

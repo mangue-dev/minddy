@@ -1,7 +1,7 @@
 "use client";
 
 import { expandParam } from "@/lib/ref-registry";
-import { recordRef } from "@/lib/app-urls";
+import { isUuid, recordRef } from "@/lib/app-urls";
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 
 // The persistent page tree and document surfaces for the project.
@@ -23,6 +23,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { PageCreateMenu } from "@/components/pages/page-create-menu";
 import { markDatabaseSetup } from "@/lib/page-database-setup";
 import { PageView } from "@/components/pages/page-view";
+import { PageDocumentSkeleton } from "@/components/route-skeletons";
 import { RetainedPageDocuments } from "./retained-page-documents";
 import { retainedPageDocumentCost } from "@/lib/retained-page-documents";
 import { PagesHome } from "@/components/pages/pages-home";
@@ -372,7 +373,12 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         <RetainedPageDocuments projectId={projectId} pageId={activePageId} eligible={eligible} active={!validPreview}
-          renderPage={(id, active) => <PageView projectId={projectId} pageId={id} active={active} onNavigate={openPage} />}
+          renderPage={(id, active) => !isUuid(id) && loading
+            // A cold URL carries the page's short code, which only the tree
+            // expands: mounting the page on it sent its watch and session
+            // reads for a code the API does not know, then again (MIN-875).
+            ? <PageDocumentSkeleton />
+            : <PageView projectId={projectId} pageId={id} active={active} onNavigate={openPage} />}
           home={
           <PagesHome
             projectId={projectId}

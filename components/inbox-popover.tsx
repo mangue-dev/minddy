@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { memo, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -22,7 +22,8 @@ function visibleTrigger() {
     .find((element) => element.getBoundingClientRect().width > 0);
 }
 
-export function InboxPopover({ open, onOpenChange: setOpen }: {
+// Memoized (MIN-875): the shell re-renders for every query it reads.
+export const InboxPopover = memo(function InboxPopover({ open, onOpenChange: setOpen }: {
   open: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
 }) {
@@ -100,4 +101,4 @@ export function InboxPopover({ open, onOpenChange: setOpen }: {
       </ResponsivePopoverContent>
     </ResponsivePopover>
   );
-}
+});

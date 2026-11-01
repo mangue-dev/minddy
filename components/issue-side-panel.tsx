@@ -6,6 +6,7 @@ import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useIssuePanelTab } from "@/lib/use-issue-panel-tab";
 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { useQuery } from "@tanstack/react-query";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
@@ -858,6 +859,33 @@ export function IssueSidePanel({
       !linked.has(target.id)));
   }, [issue, relationType, resolvedRelations, objectives]);
 
+  // Stable handlers and context for the memoized sections below (property
+  // pickers, relations, activity, composer): the panel re-renders for each of
+  // its queries, and those sections then keep their render (MIN-875).
+  const setStatus = useStableCallback((status: IssueUpdateInput["status"]) => void patch({ status }));
+  const setPriority = useStableCallback((priority: IssueUpdateInput["priority"]) => void patch({ priority }));
+  const setEffort = useStableCallback((effort: IssueUpdateInput["effort"]) => void patch({ effort }));
+  const setAssignee = useStableCallback((assignee_id: IssueUpdateInput["assignee_id"]) => void patch({ assignee_id }));
+  const setObjective = useStableCallback((objective_id: IssueUpdateInput["objective_id"]) => void patch({ objective_id }));
+  const setDueDate = useStableCallback((due_date: IssueUpdateInput["due_date"]) => void patch({ due_date }));
+  const setRecurrence = useStableCallback((next: IssueUpdateInput) => void patch(next));
+  const setCategories = useStableCallback((ids: string[]) => {
+    if (!issue) return;
+    void onSetCategories(issue.id, ids).catch((err) => toast.error((err as Error).message));
+  });
+  const setParentLinkStable = useStableCallback(setParentLink);
+  const reply = useStableCallback((parentId: string, body: string, mentions: Parameters<typeof addComment>[1], attachments: Parameters<typeof addComment>[3]) =>
+    addComment(body, mentions, parentId, attachments));
+  const compose = useStableCallback((body: string, mentions: Parameters<typeof addComment>[1], attachments: Parameters<typeof addComment>[3]) =>
+    addComment(body, mentions, null, attachments));
+  const activityContext = useMemo(() => ({
+    members,
+    objectives,
+    categories,
+    issues: allIssues,
+    projectKey,
+  }), [members, objectives, categories, allIssues, projectKey]);
+
   if (!issue) return null;
 
   const isChild = !!issue.parent_id;
@@ -1153,19 +1181,19 @@ export function IssueSidePanel({
                   <PropertyRow label={tField("status")}>
                     <StatusValue
                       value={issue.status}
-                      onChange={(status) => void patch({ status })}
+                      onChange={setStatus}
                     />
                   </PropertyRow>
                   <PropertyRow label={tField("priority")}>
                     <PriorityValue
                       value={issue.priority}
-                      onChange={(priority) => void patch({ priority })}
+                      onChange={setPriority}
                     />
                   </PropertyRow>
                   <PropertyRow label={tField("effort")}>
                     <EffortValue
                       value={issue.effort}
-                      onChange={(effort) => void patch({ effort })}
+                      onChange={setEffort}
                     />
                   </PropertyRow>
                   <PropertyRow label={tField("assignee")}>
@@ -1176,7 +1204,7 @@ export function IssueSidePanel({
                         issueProject?.smart_assign_enabled,
                         issue.status,
                       )}
-                      onChange={(assignee_id) => void patch({ assignee_id })}
+                      onChange={setAssignee}
                     />
                   </PropertyRow>
                   <PropertyRow label={tField("categories")}>
@@ -1184,11 +1212,7 @@ export function IssueSidePanel({
                       categories={categories}
                       projectId={issue.project_id}
                       value={issue.category_ids}
-                      onChange={(ids) => {
-                        void onSetCategories(issue.id, ids).catch((err) =>
-                          toast.error((err as Error).message)
-                        );
-                      }}
+                      onChange={setCategories}
                     />
                   </PropertyRow>
                   <PropertyRow label={tField("objectiveLinked")}>
@@ -1196,15 +1220,15 @@ export function IssueSidePanel({
                       value={issue.objective_id}
                       objectives={objectives}
                       projectId={issue.project_id}
-                      onChange={(objective_id) => void patch({ objective_id })}
+                      onChange={setObjective}
                     />
                   </PropertyRow>
                   <PropertyRow label={tField("dueDate")}>
                     <DueDateValue
                       value={issue.due_date}
-                      onChange={(due_date) => void patch({ due_date })}
+                      onChange={setDueDate}
                       recurrence={issue.recurrence}
-                      onRecurrenceChange={(next) => void patch(next)}
+                      onRecurrenceChange={setRecurrence}
                     />
                   </PropertyRow>
                   </fieldset>
@@ -1218,7 +1242,7 @@ export function IssueSidePanel({
                     onOpenIssue={onOpenIssue}
                     onAddRelation={onAddRelation}
                     onRemoveRelation={onRemoveRelation}
-                    onSetParent={setParentLink}
+                    onSetParent={setParentLinkStable}
                     readOnly={readOnly}
                     addOpen={relationsOpen}
                     onAddOpenChange={setRelationsOpen}
@@ -1292,18 +1316,10 @@ export function IssueSidePanel({
                   readState={readState}
                   onRetryRead={retryRead}
                   items={items}
-                  ctx={{
-                    members,
-                    objectives,
-                    categories,
-                    issues: allIssues,
-                    projectKey,
-                  }}
+                  ctx={activityContext}
                   currentUserId={user?.id ?? null}
                   projectId={issue.project_id}
-                  onReply={(parentId, body, mentions, attachments) =>
-                    addComment(body, mentions, parentId, attachments)
-                  }
+                  onReply={reply}
                   onEditComment={updateComment}
                   onDeleteComment={deleteComment}
                   onDeleteAttachment={deleteAttachment}
@@ -1360,9 +1376,7 @@ export function IssueSidePanel({
                 members={members}
                 projectId={issue.project_id}
                 commentTarget={commentTarget("issue", issue.id)}
-                onSubmit={(body, mentions, attachments) =>
-                  addComment(body, mentions, null, attachments)
-                }
+                onSubmit={compose}
               />
             </SidePanelFooter>
           )}

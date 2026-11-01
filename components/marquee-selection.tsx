@@ -8,7 +8,7 @@ import {
   type RefCallback,
   type RefObject,
 } from "react";
-import { MARQUEE_DRAWING_CLASS } from "@/components/editor/block-marquee";
+import { MARQUEE_DRAWING_CLASS } from "@/components/marquee-drawing";
 
 /**
  * Selection lasso on the bottom of the boards, “like on the desk”: press

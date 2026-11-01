@@ -149,7 +149,9 @@ function ProjectBoard() {
   } = useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } =
     useIssueRelationsQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  const { members } = useMembersQuery(projectId, true);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
   const { integrations } = useIntegrationsQuery(projectId);

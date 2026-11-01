@@ -64,6 +64,12 @@ import { CommentEditor, extractMentions } from "@/components/editor/comment-edit
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
+// This page shows an editor on first paint (MIN-875): the description
+// stream module ships with the route, as before, instead of downloading
+// after hydration where it competes with the page's reads on a slow link.
+// Routes that open no editor at load (/all, the board) load it on demand
+// (lib/use-description-collaboration.ts).
+import "@/lib/description-collaboration-stream";
 import { IssuePalettePicker } from "@/components/issue-palette-picker";
 import { useIssuePropertyMenuActions } from "@/components/issue-property-menu-actions";
 import { addCommentApi } from "@/lib/comments-api";
@@ -124,7 +130,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
   const { issues, loading, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  const { members } = useMembersQuery(projectId, true);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
   const { integrations } = useIntegrationsQuery(projectId);

@@ -13,6 +13,7 @@ import { documentationPath } from "@/lib/documentation-core.mjs";
 import { ContentToaster } from "@/components/content-toaster";
 import { Add01Icon, AiAutoRotateIcon as CycleIcon, Book02Icon, BotIcon, DollarCircleIcon, ServerStack01Icon, UserGroupIcon, Alert01Icon, ArrowLeft01Icon, CircleDotDashedIcon, Clock01Icon as FileClock, Delete02Icon, Download01Icon, File02Icon, GitPullRequestIcon, Home01Icon, InboxIcon, KeyboardIcon, MessageMultiple01Icon, Settings01Icon, StickyNote02Icon, Target01Icon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import {
+  memo,
   startTransition,
   useCallback,
   useEffect,
@@ -152,7 +153,7 @@ const GlobalPagePanel = dynamic(
 );
 
 /** Keeps panel state updates out of the large app-shell render path. */
-function GlobalIssuePanelHost() {
+const GlobalIssuePanelHost = memo(function GlobalIssuePanelHost() {
   const liveTarget = useIssuePanelTarget();
   const target = useRetainedWhileClosing(liveTarget);
   const { closeIssue } = useIssuePanelActions();
@@ -166,11 +167,11 @@ function GlobalIssuePanelHost() {
       onClose={closeIssue}
     />
   );
-}
+});
 
 /** The page panel (MIN-777), mounted after the issue panel so a page opened
  * from an issue lies above it. */
-function GlobalPagePanelHost() {
+const GlobalPagePanelHost = memo(function GlobalPagePanelHost() {
   const liveTarget = usePagePanelTarget();
   const target = useRetainedWhileClosing(liveTarget);
   const { closePage } = usePagePanelActions();
@@ -184,7 +185,7 @@ function GlobalPagePanelHost() {
       onClose={closePage}
     />
   );
-}
+});
 
 /** Right-aligned project tag shown on palette rows (orb + name), AutoKap-style. */
 function projectChip(project: Project) {
@@ -582,10 +583,13 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     () => allSmartAssignWarnings.filter((w) => !hiddenProjectIds.has(w.projectId)),
     [allSmartAssignWarnings, hiddenProjectIds]
   );
-  const smartAssignBadge =
-    smartAssignWarnings.length > 0 ? (
+  // Badges are memoized elements: a fresh element each render would recompute
+  // every navigation section and re-render the whole sidebar (MIN-875).
+  const smartAssignWarned = smartAssignWarnings.length > 0;
+  const smartAssignBadge = useMemo(() =>
+    smartAssignWarned ? (
       <HugeiconsIcon icon={Alert01Icon} className="size-3.5 text-amber-500" aria-label={t("smartAssignIncomplete")} />
-    ) : undefined;
+    ) : undefined, [smartAssignWarned, t]);
 
   // What's waiting to be sorted in each of my projects — tickets in triage +
   // open returns, the “To be sorted” queue at reception viewed by project.
@@ -606,7 +610,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       ? t("toSortEverywhereBadge", { count: toSortEverywhere })
       : null,
   ].filter(Boolean).join(" · ");
-  const homeBadge =
+  const homeBadge = useMemo(() =>
     smartAssignBadge || toSortEverywhere > 0 ? (
       <span className="flex items-center gap-1.5">
         {smartAssignBadge}
@@ -617,7 +621,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             )
           : null}
       </span>
-    ) : undefined;
+    ) : undefined, [smartAssignBadge, toSortEverywhere, t]);
   // The back rows wear the same numbers on their chevron: Home's aggregate
   // (amber while Smart Assign is incomplete), or a project's own total.
   const smartAssignAlert = smartAssignWarnings.length > 0;
@@ -1305,7 +1309,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     });
   }, [paletteMounted, agentsAllowed, paletteRoutines, palettePullRequests, globalViews, projectViews, currentProjectId, notifications, paletteProjectById, router, t, ti, tInbox, tTimeline]);
 
-  const inboxItem: AppNavItem = {
+  const inboxItem = useMemo<AppNavItem>(() => ({
     key: "inbox",
     label: t("inbox"),
     icon: InboxIcon,
@@ -1315,7 +1319,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     badge: inboxCount > 0
       ? <NotificationBadge count={inboxCount} label={t("inboxBadge", { count: inboxCount })} />
       : undefined,
-  };
+  }), [inboxCount, t]);
 
   // The installed PWA's icon carries the same count (Badging API). The desktop
   // shell sets its own dock badge (lib/use-desktop-notifications.ts).
@@ -1663,6 +1667,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     },
     [armSearchIndex, refreshSearchIndex, warmPalette]
   );
+  const openPalette = useCallback(() => handlePaletteOpenChange(true), [handlePaletteOpenChange]);
   const openDestinationPalette = useCallback(() => {
     warmPalette();
     setPaletteMode("destination");
@@ -1695,7 +1700,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         ready={Boolean(appTabSession)}
         hidden={sidebarHidden}
         inbox={inboxItem}
-        onSearch={() => handlePaletteOpenChange(true)}
+        onSearch={openPalette}
         onSearchWarm={warmPalette}
         onNewTab={openDestinationPalette}
       />
@@ -1738,7 +1743,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       mobileNav={
         <MobileNavigation
           {...mobileNavigation}
-          onSearch={() => handlePaletteOpenChange(true)}
+          onSearch={openPalette}
         />
       }
     >

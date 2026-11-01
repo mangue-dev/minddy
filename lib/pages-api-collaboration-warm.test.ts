@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const fetchClientRead = vi.fn();
 vi.mock("./client-read", () => ({ fetchClientRead: (...args: unknown[]) => fetchClientRead(...args) }));
 
-import { COLLABORATION_WARM_MS, fetchPageCollaborationApi, warmPageCollaboration } from "./pages-api";
+import { COLLABORATION_WARM_MS, fetchPageCollaborationApi, takeLandedPageCollaboration, warmPageCollaboration } from "./pages-api";
 
 const snapshot = (pageId: string) => ({ pageId, projectId: "p1", body: { revision: 1 }, title: { revision: 1, text: "" } });
 const respond = (pageId: string) => new Response(JSON.stringify(snapshot(pageId)), { status: 200 });
@@ -56,5 +56,28 @@ describe("collaboration snapshot warming", () => {
     await expect(aborted).rejects.toThrow();
     await expect(fetchPageCollaborationApi("p1", "d")).resolves.toMatchObject({ pageId: "d" });
     expect(fetchClientRead).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("landed collaboration snapshots", () => {
+  beforeEach(() => fetchClientRead.mockReset());
+
+  it("hands over a landed snapshot synchronously, once", async () => {
+    fetchClientRead.mockImplementation(async () => respond("e"));
+    warmPageCollaboration("p1", "e");
+    expect(takeLandedPageCollaboration("p1", "e")).toBeNull();
+    await vi.waitFor(() => expect(takeLandedPageCollaboration("p1", "e")).toMatchObject({ pageId: "e" }));
+    expect(takeLandedPageCollaboration("p1", "e")).toBeNull();
+    await fetchPageCollaborationApi("p1", "e");
+    expect(fetchClientRead).toHaveBeenCalledTimes(2);
+  });
+
+  it("never hands over a snapshot older than the window", async () => {
+    fetchClientRead.mockImplementation(async () => respond("f"));
+    const start = Date.now();
+    warmPageCollaboration("p1", "f", start);
+    await vi.waitFor(() => expect(fetchClientRead).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(takeLandedPageCollaboration("p1", "f", start + COLLABORATION_WARM_MS)).toBeNull();
   });
 });

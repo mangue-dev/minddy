@@ -4,12 +4,19 @@ import { objectiveBoardHref } from "@/lib/app-urls";
 import type { JSONContent } from "@tiptap/core";
 import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
+// This page shows an editor on first paint (MIN-875): the description
+// stream module ships with the route, as before, instead of downloading
+// after hydration where it competes with the page's reads on a slow link.
+// Routes that open no editor at load (/all, the board) load it on demand
+// (lib/use-description-collaboration.ts).
+import "@/lib/description-collaboration-stream";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon } from "@hugeicons/core-free-icons";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useTranslations } from "next-intl";
@@ -105,7 +112,7 @@ const TRIGGER =
   "-mr-1.5 flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm whitespace-nowrap text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted";
 
 /** Objective status picker rendered as a borderless property-row value. */
-function ObjectiveStatusValue({
+const ObjectiveStatusValue = memo(function ObjectiveStatusValue({
   value,
   onChange,
   ...control
@@ -139,10 +146,10 @@ function ObjectiveStatusValue({
       }
     />
   );
-}
+});
 
 /** Objective color picker rendered as a borderless property-row value. */
-function ObjectiveColorValue({
+const ObjectiveColorValue = memo(function ObjectiveColorValue({
   value,
   onChange,
   ...control
@@ -177,7 +184,7 @@ function ObjectiveColorValue({
       }
     />
   );
-}
+});
 
 /**
  * The open objective, as it occupies the right half of the Objectives page
@@ -233,9 +240,13 @@ export function ObjectiveDetail({
   // Field shortcuts (MIN-757): S/A/D like an issue's fields, C for the color.
   // Page-wide, as R for relations: the page shows a single objective.
   const [openPicker, setOpenPicker] = useState<ObjectiveShortcutField | null>(null);
+  // One open-change handler per field, so the memoized pickers keep their
+  // render while the page re-renders for its queries (MIN-875).
+  const pickerOpenChange = useMemo(() => Object.fromEntries(PAGE_SHORTCUT_FIELDS.map((field) =>
+    [field, (o: boolean) => setOpenPicker(o ? field : null)])) as Record<ObjectiveShortcutField, (open: boolean) => void>, []);
   const pickerControl = (field: ObjectiveShortcutField): PickerControl => ({
     open: openPicker === field,
-    onOpenChange: (o) => setOpenPicker(o ? field : null),
+    onOpenChange: pickerOpenChange[field],
     shortcutHint: OBJECTIVE_KEY_FOR_FIELD[field],
   });
   useObjectiveFieldShortcuts({
@@ -422,6 +433,15 @@ export function ObjectiveDetail({
     useDescriptionMentions(projectId, members),
     objectiveResources,
   );
+
+  const setStatus = useStableCallback((status: ObjectiveUpdateInput["status"]) => void patch({ status }));
+  const setLead = useStableCallback((lead_user_id: ObjectiveUpdateInput["lead_user_id"]) => void patch({ lead_user_id }));
+  const setTargetDate = useStableCallback((target_date: ObjectiveUpdateInput["target_date"]) => void patch({ target_date }));
+  const setColor = useStableCallback((color: ObjectiveUpdateInput["color"]) => void patch({ color }));
+  const reply = useStableCallback((parentId: string, body: string, mentionedUserIds: Parameters<typeof addComment>[1], attachments: Parameters<typeof addComment>[3]) =>
+    addComment(body, mentionedUserIds, parentId, attachments));
+  const compose = useStableCallback((body: string, mentionedUserIds: Parameters<typeof addComment>[1], attachments: Parameters<typeof addComment>[3]) =>
+    addComment(body, mentionedUserIds, null, attachments));
 
   const commitName = () => {
     nameEdited.current = false;
@@ -624,7 +644,7 @@ export function ObjectiveDetail({
             <PropertyRow label={t("statusFieldLabel")}>
               <ObjectiveStatusValue
                 value={objective.status}
-                onChange={(status) => void patch({ status })}
+                onChange={setStatus}
                 {...pickerControl("status")}
               />
             </PropertyRow>
@@ -632,21 +652,21 @@ export function ObjectiveDetail({
               <AssigneeValue
                 value={objective.lead_user_id}
                 members={members}
-                onChange={(lead_user_id) => void patch({ lead_user_id })}
+                onChange={setLead}
                 {...pickerControl("lead")}
               />
             </PropertyRow>
             <PropertyRow label={t("targetDatePlaceholder")}>
               <DueDateValue
                 value={objective.target_date}
-                onChange={(target_date) => void patch({ target_date })}
+                onChange={setTargetDate}
                 {...pickerControl("targetDate")}
               />
             </PropertyRow>
             <PropertyRow label={t("colorFieldLabel")}>
               <ObjectiveColorValue
                 value={objective.color}
-                onChange={(color) => void patch({ color })}
+                onChange={setColor}
                 {...pickerControl("color")}
               />
             </PropertyRow>
@@ -672,9 +692,7 @@ export function ObjectiveDetail({
             entity="objective"
             currentUserId={user?.id ?? null}
             projectId={projectId}
-            onReply={(parentId, body, mentionedUserIds, attachments) =>
-              addComment(body, mentionedUserIds, parentId, attachments)
-            }
+            onReply={reply}
             onEditComment={updateComment}
             onDeleteComment={deleteComment}
             onDeleteAttachment={deleteAttachment}
@@ -692,9 +710,7 @@ export function ObjectiveDetail({
             members={members}
             projectId={projectId}
             commentTarget={commentTarget("objective", objective.id)}
-            onSubmit={(body, mentionedUserIds, attachments) =>
-              addComment(body, mentionedUserIds, null, attachments)
-            }
+            onSubmit={compose}
           />
         </div>
       </div>

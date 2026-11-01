@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -14,6 +15,7 @@ import { useObjectiveResources } from "@/lib/use-objective-resources";
 import { useAuth } from "@/lib/auth-context";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 
+// Memoized (MIN-875): the detail panels re-render for each query they read.
 /**
  * Attachments of an OBJECTIVE — twin of IssueResourcesSection. A coin
  * is saved as soon as it lands (no validation step); withdrawal is
@@ -24,7 +26,7 @@ import { useProjectCapabilities } from "@/lib/use-project-capabilities";
  * Color, the same gray and on the same grid. It was close to it without being part of it — a bolder title, two pixels further to the left —, and this
  * difference didn't say anything we wanted to say.
  */
-export function ObjectiveResourcesSection({
+export const ObjectiveResourcesSection = memo(function ObjectiveResourcesSection({
   objectiveId,
   projectId,
 }: {
@@ -94,4 +96,4 @@ export function ObjectiveResourcesSection({
       )}
     </div>
   );
-}
+});

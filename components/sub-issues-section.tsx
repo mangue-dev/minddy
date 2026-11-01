@@ -3,7 +3,7 @@
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
@@ -17,12 +17,13 @@ import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import type { Issue } from "@/lib/types";
 
+// Memoized (MIN-875): the detail panels re-render for each query they read.
 /**
  * Parent-side view of its children: progress, the list, then "Create a
  * sub-issue", which opens the creation dialog with this issue as parent; its
  * menu asks Numo to split the issue into sub-issues instead.
  */
-export function SubIssuesSection({
+export const SubIssuesSection = memo(function SubIssuesSection({
   issue,
   allIssues,
   projectKey,
@@ -131,4 +132,4 @@ export function SubIssuesSection({
       )}
     </div>
   );
-}
+});

@@ -22,6 +22,7 @@ import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
@@ -641,6 +642,9 @@ function PageSurface({
     },
     [projectId, onNavigate, openDestination]
   );
+  // A stable handler keeps the memoized database view (150 rows of menus,
+  // tooltips and cell editors) out of this page's own re-renders (MIN-875).
+  const openDatabaseEntry = useStableCallback((id: string) => onNavigate ? onNavigate(id, pageId) : openPage(id));
 
   const lookup = useMemo<PagesLookup>(
     () => ({
@@ -1158,7 +1162,7 @@ function PageSurface({
               <PageDatabaseProperties projectId={projectId} page={summary ?? page} database={byId.get(page.parent_id)!} />
             </fieldset>
           )}
-          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} compact={panel} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
+          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} compact={panel} onOpen={openDatabaseEntry} /> : <div ref={bodyRef} className="mt-6">
             {/* What “assign a task” means when it comes off a page
                 rather than the notebook: the prompt names the page, and the navigation
                 waits for what is pending to be written (MIN-274). */}

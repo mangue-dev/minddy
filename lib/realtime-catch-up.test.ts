@@ -6,6 +6,8 @@ import {
   createCatchUpQueue,
   INITIAL_CATCH_UP_COALESCE_MS,
   matchesCatchUpScope,
+  refreshMissedQueries,
+  trackFetchStarts,
 } from "./realtime-catch-up";
 
 /**
@@ -218,5 +220,82 @@ describe("with a real QueryClient", () => {
     );
     expect([...stale].sort()).toEqual([...expected].sort());
     client.clear();
+  });
+});
+
+describe("refreshMissedQueries", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function deferred<T>() {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => { resolve = r; });
+    return { promise, resolve };
+  }
+
+  it("lets a first read in flight finish, then reads it once more", async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    trackFetchStarts(client);
+    const answers = [deferred<string>(), deferred<string>()];
+    const signals: AbortSignal[] = [];
+    let calls = 0;
+    const observer = new QueryObserver(client, {
+      queryKey: ["me", "board"],
+      queryFn: ({ signal }) => { signals.push(signal); return answers[calls++].promise; },
+    });
+    const stop = observer.subscribe(() => {});
+    try {
+      expect(calls).toBe(1);
+      vi.setSystemTime(1_500); // the channel joins while the first read is in flight
+      const done = refreshMissedQueries(client, (key) => key[0] === "me", Date.now());
+      expect(calls).toBe(1);
+      expect(signals[0].aborted).toBe(false);
+      answers[0].resolve("before the join");
+      await vi.waitFor(() => expect(calls).toBe(2));
+      expect(observer.getCurrentResult().data).toBe("before the join");
+      answers[1].resolve("after the join");
+      await done;
+      expect(observer.getCurrentResult().data).toBe("after the join");
+      expect(calls).toBe(2);
+    } finally { stop(); client.clear(); }
+  });
+
+  it("skips a query read after the join and refreshes one read before it", async () => {
+    vi.useFakeTimers({ now: 1_000 });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    trackFetchStarts(client);
+    const before = vi.fn(async () => "before");
+    const after = vi.fn(async () => "after");
+    const inactive = vi.fn(async () => "inactive");
+    await client.fetchQuery({ queryKey: ["notifications"], queryFn: before });
+    await client.fetchQuery({ queryKey: ["issues", "p1"], queryFn: inactive });
+    const since = 1_500;
+    vi.setSystemTime(since);
+    const stopBefore = new QueryObserver(client, { queryKey: ["notifications"], queryFn: before, staleTime: Infinity }).subscribe(() => {});
+    await client.fetchQuery({ queryKey: ["views", "global"], queryFn: after });
+    const stopAfter = new QueryObserver(client, { queryKey: ["views", "global"], queryFn: after, staleTime: Infinity }).subscribe(() => {});
+    try {
+      await refreshMissedQueries(client, () => true, since);
+      expect(before).toHaveBeenCalledTimes(2);
+      expect(after).toHaveBeenCalledTimes(1);
+      expect(client.getQueryState(["views", "global"])?.isInvalidated).toBe(false);
+      // Inactive queries read before the join are marked stale, not fetched.
+      expect(inactive).toHaveBeenCalledTimes(1);
+      expect(client.getQueryState(["issues", "p1"])?.isInvalidated).toBe(true);
+    } finally { stopBefore(); stopAfter(); client.clear(); }
+  });
+
+  it("passes the time of the latest push to the flush", async () => {
+    vi.useFakeTimers({ now: 10_000 });
+    const flush = vi.fn();
+    const queue = createCatchUpQueue(flush, INITIAL_CATCH_UP_COALESCE_MS);
+    queue.push([["notifications"]]);
+    await vi.advanceTimersByTimeAsync(100);
+    queue.push([["issues", "p1"]]);
+    await vi.advanceTimersByTimeAsync(INITIAL_CATCH_UP_COALESCE_MS);
+    expect(flush).toHaveBeenCalledOnce();
+    expect(flush.mock.calls[0][1]).toBe(10_100);
   });
 });

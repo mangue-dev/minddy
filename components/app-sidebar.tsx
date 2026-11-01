@@ -8,6 +8,7 @@ import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import {
+  memo,
   useCallback,
   useEffect,
   useId,
@@ -1178,7 +1179,9 @@ export function secondaryNavBackTarget(
  * panel and stay mounted across route changes within it — the pages' bars
  * portal INTO the sidebar. In mobile layout none of this renders (mobile shell).
  */
-export function AppSidebar({
+// Memoized: the shell re-renders for every query it reads; the sidebar
+// follows its own props and hooks (MIN-875).
+export const AppSidebar = memo(function AppSidebar({
   sections,
   homeSections,
   modeKey,
@@ -1395,4 +1398,4 @@ export function AppSidebar({
 
     </SidebarFrame>
   );
-}
+});

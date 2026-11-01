@@ -16,6 +16,15 @@ import {
 import type { MembersResponse } from "./types";
 
 const membersKey = (projectId: string) => ["members", projectId] as const;
+// One empty value while loading: a fresh one each render broke every
+// memoized board column and card that receives the members (MIN-875).
+const NO_MEMBERS: MembersResponse = {
+  members: [],
+  invitations: [],
+  isOwner: false,
+  myRole: "member",
+  canComment: true,
+};
 
 export function useMembersQuery(projectId: string | null, enabled: boolean) {
   const queryClient = useQueryClient();
@@ -100,13 +109,7 @@ export function useMembersQuery(projectId: string | null, enabled: boolean) {
     [projectId, invalidate, queryClient]
   );
 
-  const value: MembersResponse = data ?? {
-    members: [],
-    invitations: [],
-    isOwner: false,
-    myRole: "member",
-    canComment: true,
-  };
+  const value: MembersResponse = data ?? NO_MEMBERS;
 
   return {
     members: value.members,

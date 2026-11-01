@@ -30,6 +30,7 @@ import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/fee
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
@@ -119,6 +120,12 @@ import {
   LazyDocumentEditor,
   useIdleDocumentEditorPreload,
 } from "@/components/editor/document-editor-lazy";
+// This page shows an editor on first paint (MIN-875): the description
+// stream module ships with the route, as before, instead of downloading
+// after hydration where it competes with the page's reads on a slow link.
+// Routes that open no editor at load (/all, the board) load it on demand
+// (lib/use-description-collaboration.ts).
+import "@/lib/description-collaboration-stream";
 import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { Dot } from "@/components/ui/color-dot";
 import {
@@ -760,7 +767,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const { issues, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  const { members } = useMembersQuery(projectId, true);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
   const categoryMap = useMemo(
@@ -1785,6 +1794,11 @@ function FeedbackDetail({
     toast.error(error instanceof Error ? error.message : t("errorGeneric"));
   }, [t]);
   const handleCategoriesChange = useFeedbackCategories(projectId, postId, saveCategories, categoryError);
+  // Stable props for the memoized objective picker and comment composer (MIN-875).
+  const setObjective = useStableCallback((objective_id: string | null) => patch.mutate({ objective_id }));
+  const publicOption = useMemo(() => canWrite
+    ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
+    : undefined, [canWrite, boardEnabled, t]);
 
   // The fade that replaces the border under the top bar: it only appears
   // on the side where there is still something to discover.
@@ -2291,7 +2305,7 @@ function FeedbackDetail({
 
           <PropertyRow label={tField("objective")}>
             <ObjectiveValue value={post.objective_id} objectives={objectives} projectId={projectId}
-              onChange={(objective_id) => patch.mutate({ objective_id })} />
+              onChange={setObjective} />
           </PropertyRow>
 
           <PropertyRow label={tField("categories")}>
@@ -2379,11 +2393,7 @@ function FeedbackDetail({
             // Without a published board, a public comment has nowhere to appear.
             // Keep the toggle visible but disabled so the missing setting is explicit.
             // A public reply speaks for the team: readers only comment internally.
-            publicOption={
-              canWrite
-                ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
-                : undefined
-            }
+            publicOption={publicOption}
           />
         </div>
       </div>

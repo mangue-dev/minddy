@@ -610,7 +610,12 @@ function keepCollaborationToken(pageId: string, response: Response): void {
  * revision on attach, so an adopted snapshot is never trusted past that.
  */
 export const COLLABORATION_WARM_MS = 10_000;
-const warmedCollaboration = new Map<string, { at: number; promise: Promise<PageCollaborationSnapshot> }>();
+const warmedCollaboration = new Map<string, {
+  at: number;
+  promise: Promise<PageCollaborationSnapshot>;
+  /** Set once the read has landed, so an opening surface can take it synchronously. */
+  value?: PageCollaborationSnapshot;
+}>();
 const warmKey = (projectId: string, pageId: string) => `${projectId}:${pageId}`;
 
 async function readCollaborationSnapshot(
@@ -633,11 +638,29 @@ export function warmPageCollaboration(projectId: string, pageId: string, now = D
   const existing = warmedCollaboration.get(key);
   if (existing && now - existing.at < COLLABORATION_WARM_MS) return;
   const promise = readCollaborationSnapshot(projectId, pageId);
-  const entry = { at: now, promise };
+  const entry: { at: number; promise: Promise<PageCollaborationSnapshot>; value?: PageCollaborationSnapshot } = { at: now, promise };
   warmedCollaboration.set(key, entry);
-  promise.catch(() => {
+  promise.then((value) => { entry.value = value; }, () => {
     if (warmedCollaboration.get(key) === entry) warmedCollaboration.delete(key);
   });
+}
+
+/**
+ * The warmed snapshot when its read has already landed, consumed like an
+ * adoption by `fetchPageCollaborationApi`; otherwise null. It lets the surface
+ * build its session before the first paint instead of painting a skeleton
+ * frame while a resolved promise settles.
+ */
+export function takeLandedPageCollaboration(
+  projectId: string,
+  pageId: string,
+  now = Date.now(),
+): PageCollaborationSnapshot | null {
+  const key = warmKey(projectId, pageId);
+  const warmed = warmedCollaboration.get(key);
+  if (!warmed?.value || now - warmed.at >= COLLABORATION_WARM_MS) return null;
+  warmedCollaboration.delete(key);
+  return warmed.value;
 }
 
 /** The session snapshot: both streams of the page, from one server read. */
