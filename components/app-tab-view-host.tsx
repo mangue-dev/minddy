@@ -10,7 +10,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { AppTabNavigationScope, useAppTabs, useOptionalAppTabNavigation, useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 import { nextReadActivationSequence } from "@/lib/read-activation-sequence";
-import { normalizeAppTabLocation } from "@/lib/app-tab-location";
+import { appTabDestinationKey } from "@/lib/app-tab-location";
 import { isRetainedDestination, RETAINED_APP_VIEW_LIMIT, retainAppView, retainedAppViewBudget, retainedAppViewKind, type RetainedAppView } from "@/lib/retained-app-views";
 import { RetainedBoardTitle } from "./retained-board-title";
 import { BoardLoadingSkeleton } from "./board-loading-skeleton";
@@ -134,7 +134,7 @@ function useViewHostRoute(tabs: ReturnType<typeof useOptionalAppTabs>): ViewHost
   const activeId = tabs?.activeId ?? null;
   const href = tabs?.session.getActiveHref() ?? null;
   const [activation, setActivation] = useState({ id: activeId, urgent: false });
-  const ahead = !!tabs && !!href && normalizeAppTabLocation(href) !== normalizeAppTabLocation(`${pathname}?${search}`) &&
+  const ahead = !!tabs && !!href && appTabDestinationKey(href) !== appTabDestinationKey(`${pathname}?${search}`) &&
     tabs.session.isRetainedDestination(activeId, href);
   // Only the activation render opts in; the destination then holds until Next
   // commits it, so no intermediate location is lent to the incoming tab.
@@ -215,10 +215,11 @@ function DesktopTabViews({ homeWeight, route: { pathname, search }, ahead }: {
   const location = `${pathname}?${search}`;
   const tabIds = tabs.map((tab) => tab.id).join(",");
   const hrefs = JSON.stringify(tabs.map((tab) => [tab.id, tab.href]));
-  const expectedLocation = normalizeAppTabLocation(session.getActiveHref());
+  // Keys, not raw hrefs: the stored href may hold full ids, the address short codes.
+  const expectedLocation = appTabDestinationKey(session.getActiveHref());
   // Activation precedes a cold router commit. Never assign the outgoing board's
   // state to the incoming tab during that gap.
-  const pendingActivation = state.tabId !== activeId && !!expectedLocation && expectedLocation !== normalizeAppTabLocation(location);
+  const pendingActivation = state.tabId !== activeId && !!expectedLocation && expectedLocation !== appTabDestinationKey(location);
   const tabId = pendingActivation ? state.tabId : activeId;
   useColdBoardPrefetch(pathname === "/all" && !pendingActivation);
   let views = state.views;

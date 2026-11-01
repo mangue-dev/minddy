@@ -84,6 +84,16 @@ afterEach(async () => {
 });
 
 describe("bounded retained board views", () => {
+  it("shows a tab whose stored destination holds full ids while the address carries short codes", async () => {
+    const project = "9e3d0c35-c1d7-4d2a-983d-8190638cc887", view = "9051fa69-0000-4000-8000-000000000001";
+    state.tabs = [{ id: "board", href: "/all" }, { id: "project", href: `/projects/${project}?view=${view}` }];
+    await render();
+    // Navigation writes the short form into the address (MIN-875).
+    Object.assign(state, { path: "/projects/aur-9e3d0c35", search: "view=9051fa69", activeId: "project", activeHref: `/projects/${project}?view=${view}` });
+    await render();
+    expect(container.querySelector('[data-board-path="/projects/aur-9e3d0c35"]')).not.toBeNull();
+  });
+
   it.each(["/routines", "/projects/p/objectives"])("mounts the prepared route for %s and preserves its draft while hidden", async (path) => {
     const prepared = vi.spyOn(surfaces, "preparedCollectionSurface").mockReturnValue(PreparedBoard);
     state.tabs = [{ id: "collection", href: path }, { id: "other", href: "/settings" }];

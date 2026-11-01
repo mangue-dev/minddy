@@ -208,12 +208,13 @@ function SettingsTabs({
 
   // A query change on the screen already shown needs no server round trip:
   // Next's patched history keeps `useSearchParams` in sync, so the tab flips
-  // immediately. The retained `browse` route is not the live URL and keeps
-  // the router.
+  // immediately. The state must not be Next's own (`window.history.state`):
+  // Next takes such a write for its internal one and leaves the router as it
+  // was. The retained `browse` route is not the live URL and keeps the router.
   const replaceQuery = useCallback(
     (href: string) => {
       if (!browse && window.location.pathname === pathname) {
-        window.history.replaceState(window.history.state, "", href + window.location.hash);
+        window.history.replaceState(null, "", href + window.location.hash);
         return;
       }
       router.replace(href, { scroll: false });

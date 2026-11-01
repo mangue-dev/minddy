@@ -138,11 +138,13 @@ export function AdminDashboard() {
   const reduceMotion = useReducedMotion();
   const contentFade = useScrollFade<HTMLDivElement>();
   // A query change on the page already shown needs no server round trip:
-  // Next's patched history keeps `useSearchParams` in sync, so tabs flip at once.
+  // Next's patched history keeps `useSearchParams` in sync, so tabs flip at
+  // once. The state must not be Next's own (`window.history.state`): Next
+  // takes such a write for its internal one and leaves the router as it was.
   const replaceQuery = useCallback(
     (href: string) => {
       if (window.location.pathname === pathname) {
-        window.history.replaceState(window.history.state, "", href + window.location.hash);
+        window.history.replaceState(null, "", href + window.location.hash);
         return;
       }
       router.replace(href, { scroll: false });
