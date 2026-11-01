@@ -253,6 +253,24 @@ describe("describeSchedule", () => {
     expect(seen[0][0]).toBe("cadenceMonthly");
     expect(String(seen[0][1].day)).toBe("4");
   });
+
+  it("lists the days from the account's first day of the week (MIN-881)", () => {
+    const weekday = (weekStart?: number) => {
+      let value = "";
+      describeSchedule(
+        paris({ weekdays: [1, 0, 6] }),
+        ((_key: string, values: Record<string, string | number>) => {
+          value = String(values.weekday);
+          return "";
+        }) as never,
+        { locale: "en-US", weekStart },
+      );
+      return value;
+    };
+    expect(weekday()).toBe("Monday, Saturday, and Sunday");
+    expect(weekday(0)).toBe("Sunday, Monday, and Saturday");
+    expect(weekday(6)).toBe("Saturday, Sunday, and Monday");
+  });
 });
 
 describe("nextRunAt — daylight saving transitions (MIN-707)", () => {

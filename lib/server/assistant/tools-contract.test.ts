@@ -71,6 +71,7 @@ describe("Numo tool contracts", () => {
     for (const name of [
       "send_shortcut",
       "dictation_cleanup",
+      "week_start",
       "analytics_consent",
       "theme_light",
       "theme_dark",

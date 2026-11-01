@@ -73,6 +73,13 @@ import {
 } from "@/lib/keyboard/send-shortcut";
 import { ANALYTICS_CONSENT_META_KEY, resolveAnalyticsConsent } from "@/lib/cookie-consent";
 import { DICTATION_CLEANUP_META_KEY, resolveDictationCleanup } from "@/lib/dictation-context";
+import {
+  WEEK_START_META_KEY,
+  WEEK_START_OPTIONS,
+  isWeekStartPreference,
+  resolveWeekStartPreference,
+  type WeekStartPreference,
+} from "@/lib/week-start";
 
 /**
  * The requesting user's own account settings, mirroring Account → Profile /
@@ -105,6 +112,8 @@ export interface AccountSettings {
   send_shortcut: SendMode;
   /** Voice dictation cleanup pass (MIN-773); off = raw transcription. */
   dictation_cleanup: boolean;
+  /** First day of the week (MIN-881); `auto` follows the interface language. */
+  week_start: WeekStartPreference;
   smart_fill: boolean;
   smart_fill_created: boolean;
   smart_fill_triage: boolean;
@@ -161,6 +170,7 @@ function toSettings(
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
     send_shortcut: resolveSendMode(meta),
     dictation_cleanup: resolveDictationCleanup(meta),
+    week_start: resolveWeekStartPreference(meta),
     smart_fill: resolveSmartFill(meta),
     smart_fill_created: resolveSmartFillScope(meta, "created"),
     smart_fill_triage: resolveSmartFillScope(meta, "triage"),
@@ -277,6 +287,15 @@ export async function updateAccountSettings({
       };
     }
     next[SEND_MODE_META_KEY] = input.send_shortcut;
+  }
+  if (WEEK_START_META_KEY in input) {
+    if (!isWeekStartPreference(input[WEEK_START_META_KEY])) {
+      return {
+        ok: false,
+        error: `${WEEK_START_META_KEY} must be one of: ${WEEK_START_OPTIONS.join(", ")}.`,
+      };
+    }
+    next[WEEK_START_META_KEY] = input[WEEK_START_META_KEY];
   }
   if ("auto_assign_created" in input) {
     if (typeof input.auto_assign_created !== "boolean") {
@@ -398,6 +417,7 @@ export async function updateAccountSettings({
     THEME_TRANSPARENCY_META_KEY,
     "numo_default_status",
     "send_shortcut",
+    WEEK_START_META_KEY,
     "auto_assign_created",
     "auto_assign_on_start",
     "prompt_copy_auto_start",

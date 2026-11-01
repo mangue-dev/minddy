@@ -32,7 +32,10 @@ vi.mock("@/lib/use-description-collaboration", () => ({
     return state.live;
   },
 }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) }));
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ user: { id: "owner" } }),
+  useAuthOptional: () => ({ user: { id: "owner" } }),
+}));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("@/components/ui/tooltip", () => ({

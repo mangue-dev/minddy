@@ -57,6 +57,17 @@ describe("updateAccountSettings — the settings Numo could not reach before", (
     expect(r.ok).toBe(false);
   });
 
+  it("writes the first day of the week (MIN-881)", async () => {
+    const r = await updateAccountSettings({ userId: "user-1", input: { week_start: "sunday" } });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.settings.week_start).toBe("sunday");
+  });
+
+  it("refuses an unknown first day of the week", async () => {
+    const r = await updateAccountSettings({ userId: "user-1", input: { week_start: "friday" } });
+    expect(r.ok).toBe(false);
+  });
+
   it("writes the automation start delay and per-effort switches", async () => {
     const meta: Meta = { automation_efforts: { xl: false } };
     setup({ meta });

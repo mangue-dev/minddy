@@ -16,6 +16,7 @@ import { NUMO_DEFAULT_STATUS_OPTIONS } from "@/lib/numo-default-status";
 import { ACCOUNT_THEMES } from "@/lib/account-theme";
 import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS } from "@/lib/theme-presets";
 import { SEND_MODES } from "@/lib/keyboard/send-shortcut";
+import { WEEK_START_OPTIONS } from "@/lib/week-start";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
@@ -1796,6 +1797,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...SEND_MODES],
             description:
               "The keyboard gesture that SENDS a composer (comments, Numo, issue fields). 'mod-enter' (default) sends on Cmd/Ctrl+Enter, Enter only inserts a line break; 'enter' sends on plain Enter, Shift+Enter still inserts a line break. Cmd/Ctrl+Enter sends in BOTH modes.",
+          },
+          week_start: {
+            type: "string",
+            enum: [...WEEK_START_OPTIONS],
+            description:
+              "The first day of the week for date pickers, routine day lists and the activity calendar. 'auto' (default) follows the interface language: Sunday in English and Brazilian Portuguese, Monday otherwise.",
           },
           numo_default_status: {
             type: "string",
