@@ -75,8 +75,18 @@ function anthropicEffort(model: string, level: ReasoningLevel): ReasoningLevel {
   return nearestReasoningLevel(level === "off" ? "low" : level, allowed);
 }
 
-function isGpt56(model: string): boolean {
-  return /^gpt-5\.6(?:-|$)/i.test(model);
+/**
+ * Families whose Chat Completions function calling only works with
+ * `reasoning_effort: "none"`: GPT-5.6, and GPT-6 Sol and GPT-6 Luna (OpenAI
+ * guide "Using GPT-6"). GPT-6 Astra, GPT-6.1 Sol and GPT-6.1 Terra are left
+ * out on purpose: they reject `none` and need Responses for tool calling, so
+ * no effort value makes them usable on this transport.
+ */
+function needsReasoningOffWithFunctionTools(model: string): boolean {
+  return (
+    /^gpt-5\.6(?:-|$)/i.test(model) ||
+    /^gpt-6-(?:sol|luna)(?:-|$)/i.test(model)
+  );
 }
 
 /**
@@ -209,10 +219,10 @@ function providerReasoningFields(
   maxOutputTokens: number | undefined,
   hasFunctionTools: boolean,
 ): Record<string, unknown> {
-  // GPT-5.6 knows how to call functions via Chat Completions, but not at the same time
-  // time than an effort of reasoning. Responses is the full path; so much
-  // that this transport remains Chat Completions, `none` is the documented contract.
-  if (provider === "openai" && hasFunctionTools && isGpt56(model)) {
+  // GPT-5.6 and GPT-6 Sol/Luna call functions via Chat Completions only
+  // without an active reasoning effort. Responses is the full path; as long as
+  // this transport remains Chat Completions, `none` is the documented contract.
+  if (provider === "openai" && hasFunctionTools && needsReasoningOffWithFunctionTools(model)) {
     return { reasoning_effort: "none" };
   }
   if (provider === "openrouter" && reasoning?.enabled === false) {
@@ -372,7 +382,7 @@ export function alternateOutputTokenBody(
 /**
  * Repairs the only compatibility 400s that we know how to replay without risk:
  * a denied cap alias, a reasoning disable refused by a model that must reason,
- * or GPT-5.6 Chat Completions that denies the couple function tools +
+ * or GPT-5.6 / GPT-6 Sol-Luna Chat Completions that denies the couple function tools +
  * reasoning. Any other error keeps the initial body.
  */
 export function repairRejectedAiChatBody(

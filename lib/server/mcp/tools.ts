@@ -206,9 +206,11 @@ import {
 } from "@/lib/server/mcp/discovery-metadata";
 
 /**
- * MCP tools from minddy — naming minddy_<verbe>_<nom>, voluntarily reduced surface
- *: projects (reading), tickets (+ plan), objectives, comments.
- * No Views, no deletions, no member/category management.
+ * MCP tools from minddy — named minddy_<verb>_<noun>, a deliberately reduced
+ * surface: projects, issues (+ plan), objectives, comments, resources, pages,
+ * scratchpad, cycles, pull requests, feedback board, integrations and routines.
+ * No views, no member management, and no deletion except routines
+ * (minddy_delete_routine).
  * Each tool re-authenticates (requireUser) and re-verifies project access —
  * there is no session state between two calls (stateless transport).
  */
@@ -1762,8 +1764,9 @@ export function registerMinddyTools(
         "List a project's objectives (issue groups with a shared goal): id, name, " +
         "a TRUNCATED description, " +
         "status (planned/in_progress/done/canceled), lead, target date, " +
-        "progress: { done, total, percent } computed from linked issues " +
-        "(status 'done' / all linked), same as the UI's progress bar. Plus, when " +
+        "progress: { done, total, percent } computed from linked issues — done " +
+        "counts every closed status (done/canceled/duplicate), percent is " +
+        "effort-weighted, same as the UI's progress bar. Plus, when " +
         "present, the objective's own resources — files, links AND pages of the " +
         "wiki (id + kind, file name/type/size, url, or page_id; read one with " +
         "minddy_get_resource). " +
@@ -1821,8 +1824,8 @@ export function registerMinddyTools(
       // label, but percent is weighted by effort in Fibonacci points
       // (effortToPoints) with partial credit by status — same calculation as
       // objectiveProgress in lib/use-objectives-query.ts (MIN-56). `done`
-      // counts all CLOS statuses (done, canceled, duplicate), as in
-      // percentage which already credits them at 100%: a canceled ticket is settled.
+      // counts every closed status (done, canceled, duplicate), as does the
+      // percentage, which already credits them at 100%: a canceled issue is settled.
       const progress = new Map<
         string,
         {
