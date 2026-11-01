@@ -29,7 +29,7 @@ import { retainedPageDocumentCost } from "@/lib/retained-page-documents";
 import { PagesHome } from "@/components/pages/pages-home";
 import { PagePresenceProvider } from "@/components/pages/page-presence";
 import { PagePromotionProvider } from "@/components/pages/page-promotion-context";
-import { pageKey, usePagesQuery } from "@/lib/use-pages-query";
+import { pageKey, pagesKey, usePagesQuery } from "@/lib/use-pages-query";
 import { computePageMove, type PageDropMode } from "@/lib/pages-move";
 import { isPageCycleError } from "@/lib/pages-api";
 import { rememberLastPage } from "@/lib/pages-last-open";
@@ -75,13 +75,26 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const registerPreviewFlush = useCallback((flush: () => Promise<boolean>) => { previewFlush.current = flush; }, []);
 
   const base = pagesHref(projectId);
-  const { pages, tree, byId, loading, createPage, prefetchPage, updatePage, trashPage } =
+  const { pages, tree, byId, loading, fetching, createPage, prefetchPage, updatePage, trashPage } =
     usePagesQuery(projectId);
   // The path carries the page's short code (or a legacy id); it expands once
   // the tree is loaded, which also re-renders this shell.
   const activeSegment = pathname.match(/^\/projects\/[^/]+\/pages\/([^/]+)/)?.[1] ?? null;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- The tree is the input that makes the code expandable.
   const activePageId = useMemo(() => activeSegment && activeSegment !== "trash" ? expandParam(activeSegment) : null, [activeSegment, pages]);
+  // A cached tree can predate the page the URL names (one created elsewhere,
+  // MIN-880): read the tree again once before mounting the page on its code,
+  // which the API does not know.
+  const unknownCode = activePageId && !isUuid(activePageId) ? activePageId : null;
+  const treeRefreshRequested = useRef<string | null>(null);
+  const [treeRefreshedFor, setTreeRefreshedFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!unknownCode || loading || fetching || treeRefreshRequested.current === unknownCode) return;
+    treeRefreshRequested.current = unknownCode;
+    void client.refetchQueries({ queryKey: pagesKey(projectId), exact: true })
+      .finally(() => setTreeRefreshedFor(unknownCode));
+  }, [client, projectId, unknownCode, loading, fetching]);
+  const awaitingTree = !!unknownCode && (loading || fetching || treeRefreshedFor !== unknownCode);
   const eligible = new Set(pages.filter((page) => {
     const state = client.getQueryState(pageKey(page.id));
     return state?.status === "success" && !isDraftPage(page.id) &&
@@ -375,7 +388,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         <RetainedPageDocuments projectId={projectId} pageId={activePageId} eligible={eligible} active={!validPreview}
-          renderPage={(id, active) => !isUuid(id) && loading
+          renderPage={(id, active) => !isUuid(id) && awaitingTree
             // A cold URL carries the page's short code, which only the tree
             // expands: mounting the page on it sent its watch and session
             // reads for a code the API does not know, then again (MIN-875).

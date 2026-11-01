@@ -344,6 +344,8 @@ export interface UsePagesResult {
   tree: PageTreeNode<PageSummary>[];
   byId: Map<string, PageSummary>;
   loading: boolean;
+  /** The list is being read, at first or again (a cached list being refreshed). */
+  fetching: boolean;
   error: Error | null;
   createPage: (input?: CreatePageInput) => Promise<PageCreation>;
   prefetchPage: (pageId: string) => void;
@@ -467,7 +469,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
   const queryClient = useQueryClient();
   const enabled = !!projectId;
 
-  const { data, isPending, error } = useQuery({
+  const { data, isPending, isFetching, error } = useQuery({
     queryKey: pagesKey(projectId ?? ""),
     queryFn: () => fetchPagesApi(projectId as string),
     enabled,
@@ -762,6 +764,7 @@ export function usePagesQuery(projectId: string | null): UsePagesResult {
     tree,
     byId,
     loading: enabled && isPending,
+    fetching: enabled && isFetching,
     error: (error as Error | null) ?? null,
     createPage,
     prefetchPage,
