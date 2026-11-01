@@ -199,7 +199,7 @@ function MentionChipBody({
   // `align-middle` targets the x-height; the small upward offset aligns it with
   // the capitals and stems that dominate mention labels.
   const figure = (
-    <span className="relative -top-[0.1em] mr-[0.3em] inline-flex size-[1.05em] items-center justify-center align-middle">
+    <span className="relative -top-[0.1em] mr-[0.3em] inline-flex size-[1.05em] shrink-0 items-center justify-center self-center">
       {type === "member" ? (
         <UserAvatar seed={avatarSeed ?? id} className="size-full" />
       ) : type === "forge" ? (
@@ -256,25 +256,32 @@ function MentionChipBody({
   // radius are also expressed in em so the background grows with the label
   // without turning into a capsule.
   //
-  // `inline-block align-baseline`, and above all NOT `inline-flex align-middle`:
-  // a flex box does not have the baseline of its text (it takes that of
-  // its first child, here a figure without text), and `align-middle` center
-  // then the pill on the x-height of the paragraph. The wording is found
-  // offset from the line of text surrounding it — visible from one word to another in
-  // a comment. A `inline-block` takes the baseline of its
-  // last line, that is to say that of the label: placed on `baseline`, it
-  // falls exactly on that of the sentence. `whitespace-nowrap` goes with:
-  // the space between the figure and the label must not become a point of
-  // hyphenation, which the flex box prevented on its own.
+  // `inline-flex items-baseline`, with the figure alone centered: the flex
+  // box then takes its baseline from the label, the only item aligned on
+  // it, and `align-baseline` puts that on the sentence's baseline. (A plain
+  // `inline-flex align-middle` would take the figure's, a box without text,
+  // and center the pill on the paragraph's x-height.) `whitespace-nowrap`
+  // keeps the label on one line.
+  //
+  // A label longer than the whole line (a long attachment name, a page
+  // title) is cut with an ellipsis: the chip never exceeds its line, and the
+  // label, `min-w-0`, is the one item that shrinks. A label that fits is
+  // never touched — nothing else caps it.
   const shape = cn(
     // The default arrow, like every control (DESIGN.md, MIN-587): never the
     // text caret, even inside an editor, nor the pointer hand on a link.
-    "mx-[0.14em] inline-block cursor-default whitespace-nowrap rounded-[0.35em] py-[0.07em] pr-[0.43em] align-baseline text-[0.95em] leading-[1.15] font-medium",
+    "mx-[0.14em] inline-flex max-w-[calc(100%-0.28em)] items-baseline cursor-default whitespace-nowrap rounded-[0.35em] py-[0.07em] pr-[0.43em] align-baseline text-[0.95em] leading-[1.15] font-medium",
     hasImage ? "pl-[0.29em]" : "pl-[0.43em]",
     "bg-(--mention-chip) text-(--mention-chip-ink)",
   );
 
   const tone = toneStyle(type, avatarSeed ?? id, color);
+
+  const text = (
+    <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+      {label}
+    </span>
+  );
 
   if (!href && onClick)
     return (
@@ -291,7 +298,7 @@ function MentionChipBody({
         aria-haspopup={ariaHasPopup}
       >
         {figure}
-        {label}
+        {text}
       </button>
     );
 
@@ -299,7 +306,7 @@ function MentionChipBody({
     return (
       <span style={tone} className={cn(shape, className)}>
         {figure}
-        {label}
+        {text}
       </span>
     );
 
@@ -330,7 +337,7 @@ function MentionChipBody({
       }}
     >
       {figure}
-      {label}
+      {text}
     </a>
   );
 }

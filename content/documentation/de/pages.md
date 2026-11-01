@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 23,
+  "revision": 26,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -108,14 +108,16 @@
       "components/pages/block-drag.ts",
       "components/mention-hover-card.tsx",
       "lib/server/mention-preview.ts",
-      "components/pages/page-backlinks.tsx"
+      "components/pages/page-backlinks.tsx",
+      "lib/use-context-mentions.ts",
+      "components/markdown-link-menu.tsx"
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (de sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 26,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:claude (de sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (de context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "notifications-and-inbox",
@@ -150,7 +152,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -166,7 +168,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -183,7 +185,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -200,7 +202,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -216,7 +218,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -232,7 +234,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +250,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -264,7 +266,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -327,7 +329,7 @@ Das Menü `/` ordnet die Blöcke unter **Grundblöcke**, **Listen** und **Erweit
 
 Verwende Erwähnungen, um passende Tickets, Ziele, Personen oder Seiten zu verknüpfen. Tippe `@` gefolgt von einer Kennung, einem Namen oder einem Titel, auch mit einzelnen Leerzeichen; das Menü schließt sich auf dieselben Weisen wie das Menü `/` und bei der Wahl eines Eintrags. Ein Wort, das die Arbeit beschreibt, statt sie zu benennen, listet nach den Textübereinstimmungen auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets unter **Inhaltlich verwandt** auf. Rückverweise helfen Lesern, Seiten zu finden, die auf die aktuelle Seite verweisen. Ein Link liefert Kontext, gewährt aber keinen Zugriff auf private Objekte eines anderen Projekts. Die Erwähnung einer Seite, die noch keinen Titel hat, lautet **Ohne Titel**.
 
-Sobald du `@` tippst, zeigt das Menü auch das Aufgabennotizbuch und deinen aktuellen und kommende Zyklen unter **Planung** (Zyklen nur, wenn sie aktiviert sind), deine Routinen, die Repository-Skills des Projekts, deine verbundenen MCP-Server und Pull Requests, offene zuerst. Eine Erwähnung speichert nur, worauf sie zeigt, nie einen Namen: Alle Lesenden sehen den aktuellen Namen des Ziels, und ein Ziel, das sie nicht öffnen können, erscheint als **Nicht verfügbar**. Tippe nach `@` ein Datum, etwa `@heute`, `@morgen`, `@nächster Montag`, `@in 3 Wochen`, `@15 November` oder `@morgen 9:00`, und wähle es unter **Daten**. Das Datum steht fest, sobald du es schreibst: Es lautet **Heute**, **Morgen** oder **Gestern**, solange es so nah ist, danach das vollständige Datum. Klicke in einem Editor auf ein Datum, um es zu ändern oder eine Uhrzeit hinzuzufügen. Eine Datumserwähnung sendet keine Erinnerung. Akzente und ausgeschriebene Wörter sind optional: `@Donnerstag in 2 Wochen`, `@übermorgen`, `@naechsten montag` oder `@15 Nov` funktionieren auch, ebenso ausgeschriebene Uhrzeiten wie `@morgen um halb 9` oder `@Freitag um viertel vor 9`. Ein Tippfehler pro Wort wird verziehen, zwei in einem langen Wort: `@morgn um halb 9` wird trotzdem gelesen. Tippe `@datum`, um die Datumsauswahl mit dem aktuellen Datum und der aktuellen Uhrzeit zu öffnen. Zeigt eine Erwähnung ein vollständiges Datum, verrät das Darüberfahren, wie weit es von jetzt entfernt ist, etwa „in 3 Wochen“. Der Numo-Composer und die Anweisung einer Routine bieten dieselben Erwähnungen an, Daten eingeschlossen. Lass den Mauszeiger auf einer anderen Erwähnung ruhen, um mehr zu sehen, ohne das Gelesene zu verlassen: Ein Ticket zeigt seine vollständige Karte, ein Ziel seinen Status, seinen Fortschritt, seine Tickets und Beziehungen, eine Seite, eine Routine, ein Skill oder das Aufgabennotizbuch die ersten Zeilen, eine Datenbank ihre ersten Einträge, eine Person ihre E-Mail-Adresse und ihre Rolle im Projekt, ein Pull Request seinen Status und seine Branches, ein verbundener MCP-Server, ob er angemeldet ist und wie viele Tools er anbietet, ein Zyklus seinen Fortschritt und ein Projekt seine Mitglieder und ihre Rollen. Ein Klick auf die Karte öffnet, was die Erwähnung öffnet. Eine Erwähnung, die du nicht öffnen kannst, zeigt nichts weiter. Rückverweise, an ein Ticket oder Ziel angehängte Seiten, Beziehungen, das Ziel eines Tickets und die Personen in Aktivität und Statistiken zeigen dieselbe Karte; ein MCP-Agent in der Aktivität zeigt, wessen Schlüssel er verwendet hat.
+Sobald du `@` tippst, zeigt das Menü auch das Aufgabennotizbuch und deinen aktuellen und kommende Zyklen unter **Planung** (Zyklen nur, wenn sie aktiviert sind), deine Routinen, die Repository-Skills des Projekts, deine verbundenen MCP-Server und Pull Requests, offene zuerst. Was mit dem Text, den du schreibst, verbunden ist, steht oben, jeweils in einem eigenen Abschnitt: auf einer Seite ihre Unterseiten unter **Unterseiten**; in einem Ticket oder Ziel sein übergeordnetes Element, seine Untertickets sowie blockierende, blockierte und verwandte Einträge unter **Beziehungen** und sein Fälligkeitsdatum, beim Ziel das Zieldatum, unter **Dieses Ticket** oder **Dieses Ziel**. In der Beschreibung eines Tickets, und nur dort, bietet **Dieses Ticket** auch den **Plan** des Tickets an: Sein Pill zeigt die Kennung gefolgt von **Plan**, etwa `MIN-42 · Plan`, und ein Klick darauf wechselt im Ticketbereich zum Tab **Plan**. MCP-Server zeigen das Logo ihres Anbieters, und eine Erwähnung, deren Name länger als die Zeile ist, wird mit Auslassungspunkten gekürzt. Eine Erwähnung speichert nur, worauf sie zeigt, nie einen Namen: Alle Lesenden sehen den aktuellen Namen des Ziels, und ein Ziel, das sie nicht öffnen können, erscheint als **Nicht verfügbar**. Tippe nach `@` ein Datum, etwa `@heute`, `@morgen`, `@nächster Montag`, `@in 3 Wochen`, `@15 November` oder `@morgen 9:00`, und wähle es unter **Daten**. Das Datum steht fest, sobald du es schreibst: Es lautet **Heute**, **Morgen** oder **Gestern**, solange es so nah ist, danach das vollständige Datum. Klicke in einem Editor auf ein Datum, um es zu ändern oder eine Uhrzeit hinzuzufügen. Eine Datumserwähnung sendet keine Erinnerung. Akzente und ausgeschriebene Wörter sind optional: `@Donnerstag in 2 Wochen`, `@übermorgen`, `@naechsten montag` oder `@15 Nov` funktionieren auch, ebenso ausgeschriebene Uhrzeiten wie `@morgen um halb 9` oder `@Freitag um viertel vor 9`. Ein Tippfehler pro Wort wird verziehen, zwei in einem langen Wort: `@morgn um halb 9` wird trotzdem gelesen. Tippe `@datum`, um die Datumsauswahl mit dem aktuellen Datum und der aktuellen Uhrzeit zu öffnen. Zeigt eine Erwähnung ein vollständiges Datum, verrät das Darüberfahren, wie weit es von jetzt entfernt ist, etwa „in 3 Wochen“. Der Numo-Composer und die Anweisung einer Routine bieten dieselben Erwähnungen an, Daten eingeschlossen. Lass den Mauszeiger auf einer anderen Erwähnung ruhen, um mehr zu sehen, ohne das Gelesene zu verlassen: Ein Ticket zeigt seine vollständige Karte, ein Ziel seinen Status, seinen Fortschritt, seine Tickets und Beziehungen, eine Seite, eine Routine, ein Skill oder das Aufgabennotizbuch die ersten Zeilen, eine Datenbank ihre ersten Einträge, eine Person ihre E-Mail-Adresse und ihre Rolle im Projekt, ein Pull Request seinen Status und seine Branches, ein verbundener MCP-Server, ob er angemeldet ist und wie viele Tools er anbietet, ein Zyklus seinen Fortschritt und ein Projekt seine Mitglieder und ihre Rollen. Ein Klick auf die Karte öffnet, was die Erwähnung öffnet. Eine Erwähnung, die du nicht öffnen kannst, zeigt nichts weiter. Rückverweise, an ein Ticket oder Ziel angehängte Seiten, Beziehungen, das Ziel eines Tickets und die Personen in Aktivität und Statistiken zeigen dieselbe Karte; ein MCP-Agent in der Aktivität zeigt, wessen Schlüssel er verwendet hat.
 
 Ein Klick auf die Erwähnung einer Seite, einen Rückverweis, eine an ein Ticket oder Ziel angehängte Seite oder einen Link auf eine Seite in einem Kommentar oder einer Antwort von Numo öffnet diese Seite in einem Seitenpanel über dem, was du gerade gelesen hast. Lies oder bearbeite sie dort, wähle **Vergrößern**, um die ganze Seite zu öffnen, oder schließe das Panel, um zurückzukehren. Zwischen **Vergrößern** und Schließen bietet das Menü **Seitenoptionen** (`…`) des Panels dieselben Aktionen wie auf der ganzen Seite; wenn du die Seite dort in den Papierkorb verschiebst, schließt sich das Panel und du bleibst auf der Seite darunter. Auch eine Datenbank öffnet sich im Panel, mit der kompakten Symbolleiste, die der [Leitfaden zu Datenbanken](/docs/databases#database-display) beschreibt; ein aus ihrer Tabelle geöffneter Eintrag tritt an ihre Stelle, und **Zurück** oben links im Panel führt zur Tabelle zurück.
 
@@ -336,7 +338,7 @@ Ein Klick auf die Erwähnung einer Seite, einen Rückverweis, eine an ein Ticket
 
 ### Text formatieren und auf dem Smartphone schreiben {#editor-formatting}
 
-Seiten, Beschreibungen, Kommentare und das Aufgabennotizbuch verwenden denselben Editor. Markiere Text oder, wie weiter unten beschrieben, ganze Blöcke, um die Auswahlleiste zu öffnen. Ihre erste Zeile zeigt den aktuellen Blocktyp: Wähle sie, um **Umwandeln in** zu öffnen und den Block zu ändern. Danach folgen **Farbe** für Text oder Hintergrund, **Fett**, **Kursiv**, **Unterstrichen**, **Durchgestrichen**, **Code**, **Link hinzufügen** (oder **Link entfernen** auf einem Link), **Inline-Gleichung**, das den markierten Text in eine Inline-Gleichung umwandelt oder zurück, **Formatierung entfernen** und **Kopieren**, das die Auswahl kopiert. Am Computer sendet eine Zeile **Numo fragen** die Passage an Numo, wie in der [Numo-Anleitung](/de/dokumentation/numo#work-with-numo) beschrieben, und auf einer Seite verankert eine Zeile **Kommentieren** einen Kommentar an der Auswahl. **Umwandeln in** markiert nur den Typ des Blocks, in dem die Auswahl liegt. In den Farblisten, hier und im Blockmenü, erscheint jede Farbe mit ihrem Namen, in dieser Farbe oder auf diesem Hintergrund geschrieben. Ein Klick außerhalb des Editors beendet die Auswahl und blendet die Leiste aus, ebenso die Wahl von **Kommentieren**. Die Tooltips zeigen die Tastenkürzel: Command+B, Command+I, Command+U, Command+Umschalt+S und Command+E unter macOS oder Strg mit denselben Tasten unter Windows/Linux. In einem Editor formatiert Command/Strg+B den Text fett; außerhalb blendet das Kürzel weiterhin die Seitenleiste ein oder aus. In einem Codeblock zeigt die Leiste nur den Blocktyp, **Farbe**, **Kopieren**, **Numo fragen** und **Kommentieren**: Eine Textfarbe ersetzt die Syntaxhervorhebung des Codes, eine Hintergrundfarbe behält sie bei, und die Standardfarbe stellt sie wieder her. Text- und Hintergrundfarben bleiben in Markdown nicht erhalten. Die Leiste folgt der markierten Passage, während die Seite scrollt, und schließt sich, sobald die Passage aus dem sichtbaren Bereich scrollt.
+Seiten, Beschreibungen, Kommentare und das Aufgabennotizbuch verwenden denselben Editor. Markiere Text oder, wie weiter unten beschrieben, ganze Blöcke, um die Auswahlleiste zu öffnen. Ihre erste Zeile zeigt den aktuellen Blocktyp: Wähle sie, um **Umwandeln in** zu öffnen und den Block zu ändern. Danach folgen **Farbe** für Text oder Hintergrund, **Fett**, **Kursiv**, **Unterstrichen**, **Durchgestrichen**, **Code**, **Link hinzufügen** (oder **Link entfernen** auf einem Link), **Inline-Gleichung**, das den markierten Text in eine Inline-Gleichung umwandelt oder zurück, **Formatierung entfernen** und **Kopieren**, das die Auswahl kopiert. Am Computer sendet eine Zeile **Numo fragen** die Passage an Numo, wie in der [Numo-Anleitung](/de/dokumentation/numo#work-with-numo) beschrieben, und auf einer Seite verankert eine Zeile **Kommentieren** einen Kommentar an der Auswahl. **Umwandeln in** markiert nur den Typ des Blocks, in dem die Auswahl liegt. In den Farblisten, hier und im Blockmenü, erscheint jede Farbe mit ihrem Namen, in dieser Farbe oder auf diesem Hintergrund geschrieben. Ein Klick außerhalb des Editors beendet die Auswahl und blendet die Leiste aus, ebenso die Wahl von **Kommentieren**. Die Tooltips zeigen die Tastenkürzel: Command+B, Command+I, Command+U, Command+Umschalt+S und Command+E unter macOS oder Strg mit denselben Tasten unter Windows/Linux. In einem Editor formatiert Command/Strg+B den Text fett; außerhalb blendet das Kürzel weiterhin die Seitenleiste ein oder aus. In einem Codeblock zeigt die Leiste nur den Blocktyp, **Farbe**, **Kopieren**, **Numo fragen** und **Kommentieren**: Eine Textfarbe ersetzt die Syntaxhervorhebung des Codes, eine Hintergrundfarbe behält sie bei, und die Standardfarbe stellt sie wieder her. Text- und Hintergrundfarben bleiben in Markdown nicht erhalten. Die Leiste folgt der markierten Passage, während die Seite scrollt, und schließt sich, sobald die Passage aus dem sichtbaren Bereich scrollt. Ein Klick auf einen Link in einem Editor öffnet ein Menü mit **Link bearbeiten**, **Link öffnen**, **Link kopieren** und zuletzt **Link entfernen**, das den Link entfernt, seinen Text aber behält; Rückgängig stellt den Link wieder her.
 
 Umschalt+Eingabetaste beginnt eine neue Zeile im selben Block. Command/Strg+Eingabetaste fügt keinen Zeilenumbruch ein: In einem Kommentar oder einem anderen Eingabebereich sendet es, unabhängig vom Sende-Kürzel in deinen [Einstellungen](/de/dokumentation/accounts#preferences), und wenn du die Eingabetaste als Sende-Kürzel gewählt hast, sendet auch die Eingabetaste.
 

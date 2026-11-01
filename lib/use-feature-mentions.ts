@@ -14,6 +14,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { SCRATCHPAD_MENTION_ID, type MentionMeta } from "@/lib/mention-link";
 import { useMcpConnections } from "@/lib/use-mcp-connections";
+import { mcpPresetForUrl } from "@/lib/mcp-catalog";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { useRoutinesQuery } from "@/lib/use-routines-query";
@@ -157,7 +158,10 @@ export function useFeatureMentions(
         meta: { project: projectId as string },
         keywords: [skill.id],
       })),
-      ...connections.map((connection) => ({ type: "mcp" as const, id: connection.id, label: connection.name })),
+      ...connections.map((connection) => {
+        const service = mcpPresetForUrl(connection.url)?.id;
+        return { type: "mcp" as const, id: connection.id, label: connection.name, ...(service ? { mcpService: service } : {}) };
+      }),
       ...pullRequests.map((pr) => ({
         type: "pull_request" as const,
         id: pr.prId,

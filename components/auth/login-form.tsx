@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { RedirectingScreen } from "@/components/auth/redirecting-screen";
 import { toast } from "sonner";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import {
@@ -212,9 +213,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
       ) : (authLoading && shouldAutoSignup) || redirecting || mfaStep === "unknown" || redirectingToSignup ? (
         /* Full-page takeover, no form left behind: the redirect owns the
            screen until the app lands on the other side. */
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-          <p className="text-sm text-muted-foreground">{t("redirecting")}</p>
-        </div>
+        <RedirectingScreen label={t("redirecting")} />
       ) : (
         <div className="space-y-8">
           {/* The invitation banner (MIN-197). He only ANNOUNCES: nothing

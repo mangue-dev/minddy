@@ -2,7 +2,6 @@
 
 import type { ComponentProps } from "react";
 import { useTranslations } from "next-intl";
-import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 /** Where an issue picker's search by meaning (MIN-718) stands. */
@@ -27,8 +26,7 @@ export function SemanticSearchingHint({
       className={cn("flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground", className)}
       {...props}
     >
-      {status === "searching" && <Spinner className="size-3 shrink-0" />}
-      <span className="truncate">{t(status === "searching" ? "searchingByMeaning" : "noRelatedByMeaning")}</span>
+      <span className={cn("truncate", status === "searching" && "text-shimmer")}>{t(status === "searching" ? "searchingByMeaning" : "noRelatedByMeaning")}</span>
     </div>
   );
 }

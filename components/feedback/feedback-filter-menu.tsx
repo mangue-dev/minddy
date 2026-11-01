@@ -4,13 +4,13 @@ import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FilterIcon, CancelCircleIcon as Ban } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
-import { FilterMenu, FilterSub, FilterItem, MenuToggleRow } from "@/components/filter-menu";
+import { FilterMenu, filterFacet, filterToggle } from "@/components/filter-menu";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
-import { FeedbackPropertyFilterItems } from "./feedback-property-filters";
+import { useFeedbackPropertyFilterActions } from "./feedback-property-filters";
 import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { FEEDBACK_POST_STATUSES, FEEDBACK_TO_ISSUE_STATUS, type FeedbackPostStatus } from "@/lib/feedback/types";
 import type { FeedbackPropertyFilters } from "@/lib/collection-filters";
@@ -90,30 +90,29 @@ export function FeedbackFilterMenu({
   // “Open, by popularity, everything” is the starting point: nothing to report.
   const active = state !== "unresolved" || sort !== "top" || onlyToReview || Object.values(properties).some((values) => values?.length);
   const tooltip = t("filterTooltip", { state: stateLabel });
+  const propertyActions = useFeedbackPropertyFilterActions({ filters: properties, onChange: onPropertiesChange, objectives,
+    categories, posts, authors, boardEnabled });
 
-  return <FilterMenu open={open} onOpenChange={(next) => { setOpen(next); if (!next) setSearch(""); }} label={tooltip}
+  const actions: ContextMenuAction[] = [
+    filterFacet({ id: "state", label: t("filterStateLabel"), count: state === "unresolved" ? 0 : 1, children: [
+      filterToggle({ id: "unresolved", label: t("filterUnresolved"), active: state === "unresolved", onToggle: () => onStateChange("unresolved") }),
+      ...FEEDBACK_POST_STATUSES.map((value) => filterToggle({
+        id: value, label: tStatus(`status.${value}`), active: state === value, onToggle: () => onStateChange(value),
+        icon: value === "spam" ? <AppIcon icon={Ban} className="size-4 shrink-0 text-muted-foreground" /> : <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[value]} className="size-4 shrink-0" />,
+      })),
+      filterToggle({ id: "all", label: t("filterAll"), active: state === "all", onToggle: () => onStateChange("all") }),
+    ] }),
+    ...propertyActions,
+    ...(toReviewCount > 0 ? [filterToggle({ id: "to-review", label: t("filterToReview"), active: onlyToReview,
+      trailing: toReviewCount, separatorBefore: true, onToggle: () => onToReviewChange(!onlyToReview) })] : []),
+    filterFacet({ id: "sort", label: t("filterSortLabel"), count: 0, separatorBefore: toReviewCount === 0,
+      children: SORTS.map((option) => filterToggle({ id: option.value, label: t(option.label), active: sort === option.value, onToggle: () => onSortChange(option.value) })) }),
+    { id: "reset", label: t("resetFilters"), separatorBefore: true,
+      onSelect: () => { onPropertiesChange({}); onStateChange("unresolved"); onSortChange("top"); onToReviewChange(false); } },
+  ];
+
+  return <FilterMenu label={tooltip} actions={actions} onOpenChange={setOpen} onQueryChange={setSearch}
     trigger={<Button variant="ghost" size="icon-sm" className={SIDEBAR_HEADER_ACTION_CLASS} aria-label={tooltip}>
       <HugeiconsIcon icon={FilterIcon} className={active ? "size-4 text-primary" : "size-4"} />
-    </Button>}>
-    <FilterSub label={t("filterStateLabel")} count={state === "unresolved" ? 0 : 1}>
-      <MenuToggleRow active={state === "unresolved"} onSelect={() => onStateChange("unresolved")}>{t("filterUnresolved")}</MenuToggleRow>
-      {FEEDBACK_POST_STATUSES.map((value) => <MenuToggleRow key={value} active={state === value} onSelect={() => onStateChange(value)}>
-        {value === "spam" ? <AppIcon icon={Ban} className="size-4 shrink-0 text-muted-foreground" /> : <StatusIndicator status={FEEDBACK_TO_ISSUE_STATUS[value]} className="size-4 shrink-0" />}
-        <span className="truncate">{tStatus(`status.${value}`)}</span>
-      </MenuToggleRow>)}
-      <MenuToggleRow active={state === "all"} onSelect={() => onStateChange("all")}>{t("filterAll")}</MenuToggleRow>
-    </FilterSub>
-    <FeedbackPropertyFilterItems filters={properties} onChange={onPropertiesChange} objectives={objectives}
-      categories={categories} posts={posts} authors={authors} boardEnabled={boardEnabled} authorSearch={search} onAuthorSearchChange={setSearch} />
-    <DropdownMenuSeparator />
-    {toReviewCount > 0 && <MenuToggleRow active={onlyToReview} onSelect={() => onToReviewChange(!onlyToReview)}>
-      <span className="min-w-0 flex-1 truncate">{t("filterToReview")}</span>
-      <span className="text-xs tabular-nums text-muted-foreground">{toReviewCount}</span>
-    </MenuToggleRow>}
-    <FilterSub label={t("filterSortLabel")} count={0}>
-      {SORTS.map((option) => <MenuToggleRow key={option.value} active={sort === option.value} onSelect={() => onSortChange(option.value)}>{t(option.label)}</MenuToggleRow>)}
-    </FilterSub>
-    <DropdownMenuSeparator />
-    <FilterItem onSelect={() => { onPropertiesChange({}); onStateChange("unresolved"); onSortChange("top"); onToReviewChange(false); }}>{t("resetFilters")}</FilterItem>
-  </FilterMenu>;
+    </Button>} />;
 }

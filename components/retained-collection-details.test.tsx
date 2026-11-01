@@ -78,6 +78,8 @@ vi.mock("@/lib/use-agent-models-query", () => ({ useAgentModelsQuery: () => ({ r
 vi.mock("@/lib/use-routines-query", () => ({ useRoutineRunsQuery: () => ({ runs: state.runs, loading: false }), routineRunsQueryKey: (id: string) => ["routines", id, "runs"], routinesQueryKey: () => ["routines"], patchRoutineInCache: vi.fn() }));
 vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: null, scrollProps: {}, edges: { start: false, end: false } }) }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => ({}) }));
+vi.mock("@/lib/use-context-mentions", () => ({ useContextMentions: <T,>(base: T) => base }));
+vi.mock("@/lib/use-issue-relations-query", () => ({ useIssueRelationsQuery: () => ({ relations: [] }) }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
 vi.mock("@/lib/use-repository-skills", () => ({ useRepositorySkills: () => ({ skills: [] }) }));
 vi.mock("@/components/ui/tooltip", () => ({ Tooltip: ({ children }: { children: ReactNode }) => children, TooltipTrigger: ({ children }: { children: ReactNode }) => children, TooltipContent: () => null }));

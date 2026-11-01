@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 45,
-  "sourceRevision": 45,
+  "revision": 46,
+  "sourceRevision": 46,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -133,10 +133,10 @@
     ]
   },
   "review": {
-    "revision": 45,
-    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (de sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 46,
+    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken); agent:claude (Smart Fill menu shortcut: source review of components/issue-compact-fields.tsx; sentence added on Command/Ctrl+Shift+F and the restored cursor; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:claude (de sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance); agent:claude (de Smart Fill shortcut sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "feedback",
@@ -181,7 +181,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -198,7 +198,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -264,7 +264,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -281,7 +281,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -298,7 +298,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -315,7 +315,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -332,7 +332,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -365,7 +365,7 @@ Ein Ticket erfasst eine Arbeitseinheit im Projekt, von der ersten Anfrage bis zu
 
 Du musst Eigentümer oder Mitglied des Zielprojekts sein; Leser können Tickets öffnen, aber weder erstellen noch bearbeiten. Öffne das Projekt und seine Funktion zum Erstellen eines Tickets. Gib einen Titel ein, der die Arbeit benennt, und ergänze Kontext, erwartetes Ergebnis und Einschränkungen in der Beschreibung. Titel und Beschreibung verhalten sich wie ein einziger Text: Am Computer wechselt die Abwärtspfeiltaste in der letzten Zeile des Titels in die erste Zeile der Beschreibung, die Aufwärtspfeiltaste zurück, und der Cursor behält ungefähr seine Position in der Zeile. Umschalt+Eingabetaste im Titel wechselt zur Beschreibung; die Eingabetaste ebenfalls, außer du hast die Eingabetaste als Sendekürzel gewählt – dann erstellt sie das Ticket. Command/Strg+Eingabetaste erstellt es aus beiden Feldern. Dieselben Pfeiltasten und die Eingabetaste verbinden auch Titel und Beschreibung eines geöffneten Tickets, Ziels, einer Seite oder eines Feedbacks. Das Formular öffnet sich im aktuellen Projekt; wähle unter **Erstellen in** oben links im Formular (auf dem Telefon neben dem Titel **Neues Ticket**) ein anderes, besonders wenn du aus einer persönlichen oder projektübergreifenden Ansicht erstellst. Am Computer öffnet Command/Strg+Umschalt+P dieses Menü, auch während du Titel oder Beschreibung eingibst; sobald du ein Projekt wählst oder das Menü schließt, steht der Cursor wieder genau dort, wo er war. Die Schaltfläche zeigt dieses Kürzel an, das es nur gibt, wenn mehr als ein Projekt zur Wahl steht; auf dem Telefon wird kein Kürzel angezeigt. Ein Projektwechsel entfernt die für das vorherige Projekt gewählten Kategorien, das Ziel und die Beziehungen. Die Erstellen-Schaltfläche nennt die Kennung, die das Ticket erhält, etwa `MIN-42`, und berücksichtigt zwischenzeitlich erstellte Tickets; ihr Menü erstellt das Ticket und kopiert diese Kennung.
 
-Schalte für eine manuelle Erstellung Smart Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien, Ziel und Beziehungen selbst festlegen. Um nur einige dieser Eigenschaften festzulegen, lass Smart Fill eingeschaltet und öffne den Pfeil neben seiner Schaltfläche: Wähle eine Eigenschaft und dann ihren Wert. **Beziehungen** listet dort die Beziehungsarten auf; wählst du eine, öffnet sich die Befehlspalette mit ihren möglichen Zielen. Außerhalb von Titel und Beschreibung öffnet die Taste der Eigenschaft ihre Auswahl direkt: P für Priorität, E für Aufwand, L für Kategorien oder O für Ziel. Der gewählte Wert bleibt im Formular sichtbar. Smart Fill ergänzt nur die Eigenschaften, die du leer gelassen hast. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig. Solange Smart Fill eingeschaltet ist, [verknüpft es das Ticket nach dem Speichern auch mit verwandten Tickets](#smart-fill-relations), deshalb ist die Beziehungsauswahl ausgeblendet; R öffnet sie trotzdem. Bereits gewählte Beziehungen bleiben als Chips in der Eigenschaftszeile sichtbar, zwischen der zuständigen Person und dem Fälligkeitsdatum, und werden mit dem Ticket angelegt.
+Schalte für eine manuelle Erstellung Smart Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien, Ziel und Beziehungen selbst festlegen. Um nur einige dieser Eigenschaften festzulegen, lass Smart Fill eingeschaltet und öffne den Pfeil neben seiner Schaltfläche: Wähle eine Eigenschaft und dann ihren Wert. **Beziehungen** listet dort die Beziehungsarten auf; wählst du eine, öffnet sich die Befehlspalette mit ihren möglichen Zielen. Außerhalb von Titel und Beschreibung öffnet die Taste der Eigenschaft ihre Auswahl direkt: P für Priorität, E für Aufwand, L für Kategorien oder O für Ziel. Am Computer öffnet Command/Strg+Umschalt+F dieses Pfeilmenü, solange Smart Fill für das Ticket eingeschaltet ist, auch während du Titel oder Beschreibung eingibst; sobald du einen Wert wählst oder das Menü schließt, steht der Cursor wieder genau dort, wo du geschrieben hast, wie bei Command/Strg+Umschalt+P für **Erstellen in**. Der gewählte Wert bleibt im Formular sichtbar. Smart Fill ergänzt nur die Eigenschaften, die du leer gelassen hast. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig. Solange Smart Fill eingeschaltet ist, [verknüpft es das Ticket nach dem Speichern auch mit verwandten Tickets](#smart-fill-relations), deshalb ist die Beziehungsauswahl ausgeblendet; R öffnet sie trotzdem. Bereits gewählte Beziehungen bleiben als Chips in der Eigenschaftszeile sichtbar, zwischen der zuständigen Person und dem Fälligkeitsdatum, und werden mit dem Ticket angelegt.
 
 Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Aufwand, zuständige Person, Ziel, Kategorien, Fälligkeitsdatum und Wiederholung. Zuständig ist der Projekteigentümer oder ein Mitglied, nie ein Leser; ein Ziel bündelt Tickets zu einem Projektergebnis. Optionale Eigenschaften kannst du offenlassen, statt Werte zu erraten. Die Priorität ist **Nicht festgelegt** oder reicht von niedrig über mittel und hoch bis dringend; der Aufwand ist **Nicht festgelegt** oder verwendet XS, S, M, L und XL.
 

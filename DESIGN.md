@@ -255,8 +255,11 @@ Exceptions, which need no dialog:
   can already see.
 - **Loading.** Show the matching route skeleton, shaped like the real layout,
   and read React Query's `isPending`, never `isLoading`, so an empty state
-  never flashes before data arrives (`lib/query-loading.test.ts`). Use
-  `Spinner` inside the control that is working.
+  never flashes before data arrives (`lib/query-loading.test.ts`). A region
+  inside a screen (a list, a panel tab, a dialog body) shows a skeleton shaped
+  like its content (`components/loading-skeletons.tsx`), never a spinner; a
+  status line for running work shimmers its label (`text-shimmer`). Use
+  `Spinner` only inside the control that is working.
 - **Empty states** say what the area is for and offer the one action that
   fills it. Don't render an empty frame just to say it is empty.
 

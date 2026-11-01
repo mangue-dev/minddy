@@ -30,8 +30,9 @@ vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   toast: { info: vi.fn() },
 }));
-vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
-vi.mock("@/components/search-select", () => ({ checkedProps: () => ({}) }));
+vi.mock("@/components/filter-menu", () => ({ FilterMenu: ({ actions }: { actions: { id: string; label: string; onSelect?: () => void }[] }) => (
+  <div>{actions.map((action) => <button key={action.id} data-command={action.id} onClick={action.onSelect}>{action.label}</button>)}</div>
+) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/components/objective-progress", () => ({ ObjectiveProgressStat: () => null }));
 vi.mock("@/components/issue-indicators", () => ({ ObjectiveStatusIndicator: () => null }));

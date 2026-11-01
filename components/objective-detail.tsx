@@ -16,6 +16,9 @@ import { Delete02Icon, Mic01Icon, MoreHorizontalIcon, TaskEdit01Icon } from "@hu
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
+import { resolveRelations } from "@/lib/relation-constants";
+import { useContextMentions } from "@/lib/use-context-mentions";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -429,9 +432,18 @@ export function ObjectiveDetail({
 
   // The description cites the objective's own resources (MIN-742).
   const { resources: objectiveResources } = useObjectiveResources(objective.id);
-  const mentions = useResourceMentions(
-    useDescriptionMentions(projectId, members),
-    objectiveResources,
+  // Its relations and its target date come first in the "@" menu.
+  const { relations } = useIssueRelationsQuery(projectId);
+  const mentionRelated = useMemo(
+    () => resolveRelations(objective.id, relations, new Map(), new Map()).map((relation) => ({
+      type: relation.otherType === "objective" ? "objective" as const : "issue" as const,
+      id: relation.otherId,
+    })),
+    [objective.id, relations],
+  );
+  const mentions = useContextMentions(
+    useResourceMentions(useDescriptionMentions(projectId, members), objectiveResources),
+    { subject: "objective", related: mentionRelated, dueDate: objective.target_date },
   );
 
   const setStatus = useStableCallback((status: ObjectiveUpdateInput["status"]) => void patch({ status }));

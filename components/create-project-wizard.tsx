@@ -12,7 +12,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingRegion } from "@/components/loading-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -1106,9 +1107,9 @@ export function CreateProjectWizard({
                 {tSettings("gitPickRepoDesc")}
               </p>
               {candidatesLoading ? (
-                <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
-                  <Spinner /> {tSettings("gitLoadingRepos")}
-                </div>
+                <LoadingRegion label={tSettings("gitLoadingRepos")}>
+                  <Skeleton className="h-9 w-44" />
+                </LoadingRegion>
               ) : (candidates ?? []).length === 0 ? (
                 <p className="py-2 text-sm text-muted-foreground">
                   {tSettings("gitNoRepos")}

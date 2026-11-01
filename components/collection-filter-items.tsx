@@ -1,11 +1,11 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FilterIcon } from "@hugeicons/core-free-icons";
-import { FilterMenu, FilterSub, FilterItem, MenuToggleRow } from "@/components/filter-menu";
+import { FilterMenu, filterFacet, filterToggle } from "@/components/filter-menu";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { cn } from "@/lib/utils";
 import { EFFORTS, PRIORITIES } from "@/lib/issue-constants";
@@ -20,7 +20,7 @@ export type CollectionFilterProps = {
   integrations?: { id: string; name: string }[];
 };
 
-export function CollectionFilterItems({ filters, onChange, members, categories, objectives, integrations }: CollectionFilterProps) {
+function useCollectionFilterActions({ filters, onChange, members, categories, objectives, integrations }: CollectionFilterProps): ContextMenuAction[] {
   const tf = useTranslations("Field");
   const tc = useTranslations("Common");
   const tp = useTranslations("Priority");
@@ -33,26 +33,26 @@ export function CollectionFilterItems({ filters, onChange, members, categories, 
     { key: "category", label: tf("categories"), options: categories.map((c) => ({ value: c.id, label: c.name })) },
     ...(integrations ? [{ key: "integration" as const, label: tf("integration"), options: [{ value: null, label: tc("none") }, ...integrations.map((i) => ({ value: i.id, label: i.name }))] }] : []),
   ];
-  return <>
-    {facets.filter((facet) => facet.options.length).map(({ key, label, options }) => <FilterSub key={key} label={label} count={filters[key]?.length ?? 0}>
-      {options.map((option) => {
+  return [
+    ...facets.filter((facet) => facet.options.length).map(({ key, label, options }) => filterFacet({
+      id: key, label, count: filters[key]?.length ?? 0,
+      children: options.map((option) => {
         const selected = filters[key] as (string | null)[] | undefined ?? [];
         const active = selected.includes(option.value);
-        return <MenuToggleRow key={option.value ?? "none"} active={active} onSelect={() => {
-          onChange({ ...filters, [key]: active ? selected.filter((value) => value !== option.value) : [...selected, option.value] });
-        }}>{option.node ?? <span className="truncate">{option.label}</span>}</MenuToggleRow>;
-      })}
-    </FilterSub>)}
-    <DropdownMenuSeparator /><FilterItem onSelect={() => onChange({})}>{tc("clearFilter")}</FilterItem>
-  </>;
+        return filterToggle({
+          id: option.value ?? "none", label: option.label, labelNode: option.node, active,
+          onToggle: () => onChange({ ...filters, [key]: active ? selected.filter((value) => value !== option.value) : [...selected, option.value] }),
+        });
+      }),
+    })),
+    { id: "clear", label: tc("clearFilter"), separatorBefore: true, onSelect: () => onChange({}) },
+  ];
 }
 
 export function CollectionFilterMenu(props: CollectionFilterProps) {
-  const [open, setOpen] = useState(false);
   const tc = useTranslations("Common");
+  const actions = useCollectionFilterActions(props);
   const active = Object.values(props.filters).some((values) => values?.length);
-  return <FilterMenu open={open} onOpenChange={setOpen} label={tc("filters")}
-    trigger={<Button variant="ghost" size="icon-sm" className={SIDEBAR_HEADER_ACTION_CLASS} aria-label={tc("filters")}><HugeiconsIcon icon={FilterIcon} className={cn("size-4", active && "text-primary")} /></Button>}>
-    <CollectionFilterItems {...props} />
-  </FilterMenu>;
+  return <FilterMenu label={tc("filters")} actions={actions}
+    trigger={<Button variant="ghost" size="icon-sm" className={SIDEBAR_HEADER_ACTION_CLASS} aria-label={tc("filters")}><HugeiconsIcon icon={FilterIcon} className={cn("size-4", active && "text-primary")} /></Button>} />;
 }

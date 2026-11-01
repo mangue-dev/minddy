@@ -50,6 +50,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton, TextLinesSkeleton } from "@/components/loading-skeletons";
 import {
   Tabs,
   TabsContent,
@@ -237,9 +238,12 @@ export function PageHistorySheet({
 
             <TabsContent value="versions" className="mt-4 flex flex-col gap-3">
               {versions.isPending ? (
-                <div className="flex justify-center py-8">
-                  <Spinner className="size-4 text-muted-foreground" />
-                </div>
+                <RowsSkeleton
+                  rows={4}
+                  secondLine
+                  className="gap-2"
+                  rowClassName="rounded-lg border border-border/60 px-3.5 py-2.5"
+                />
               ) : versions.error ? (
                 <p className="py-6 text-xs text-muted-foreground">
                   {t("historyLoadFailed")}
@@ -476,9 +480,7 @@ function VersionCard({
       {open && (
         <div className="border-t border-border/60 px-3.5 py-3">
           {preview?.pending ? (
-            <div className="flex justify-center py-6">
-              <Spinner className="size-4 text-muted-foreground" />
-            </div>
+            <TextLinesSkeleton title lines={4} className="py-2" />
           ) : preview?.failed || !preview?.data ? (
             <p className="py-4 text-sm text-muted-foreground">
               {t("historyLoadFailed")}

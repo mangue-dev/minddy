@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Spinner } from "@/components/ui/spinner";
+import { InboxRowsSkeleton } from "@/components/inbox-skeleton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EmptyScene } from "@/components/empty-scene";
@@ -456,9 +457,7 @@ export default function InboxContent({
             )}
 
             {loading ? (
-              <div className="flex justify-center py-16 text-muted-foreground">
-                <Spinner className="size-5" />
-              </div>
+              <InboxRowsSkeleton />
             ) : visible.length === 0 ? (
               showInvitations ? null : (
                 <EmptyScene

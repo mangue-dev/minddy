@@ -6,7 +6,7 @@ import {useQuery, useQueryClient} from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 
 import {SettingsGroup, SettingsEmpty} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
@@ -123,10 +123,13 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
             {t("feedbackParticipantsHint")}
           </p>
         ) : isPending ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Spinner className="size-3.5" />
-            {tc("loading")}
-          </div>
+          <RowsSkeleton
+            rows={2}
+            secondLine
+            label={tc("loading")}
+            className="gap-1"
+            rowClassName="rounded-md border border-border px-3 py-2"
+          />
         ) : users.length === 0 ? (
           <SettingsEmpty className="py-0 text-xs">
             {t("feedbackParticipantsEmpty")}

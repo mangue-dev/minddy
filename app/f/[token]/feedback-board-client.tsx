@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
+import { TextLinesSkeleton } from "@/components/loading-skeletons";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -794,7 +795,8 @@ function ComposerDialog({
             catch { setDraftError(tDrafts("deleteFailed")); }
           }}>{tDrafts("closeDiscard")}</Button>
         </div>}
-        {draftLoading && <Spinner className="size-4" />}
+        {/* The title and description the draft restores into, while it loads. */}
+        {draftLoading && <TextLinesSkeleton title lines={3} className="pb-2" />}
         {legacyDraft && <div className="mb-3 space-y-2">
           <p className="text-sm text-muted-foreground">{tDrafts("legacyWarning")}</p>
           <div className="flex flex-wrap gap-2">
@@ -843,9 +845,8 @@ function ComposerDialog({
         </div>
         </div>
         {checking && similar.length === 0 && (
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Spinner className="size-3" />
-            {t("similarChecking")}
+          <p role="status" className="mt-3 text-xs text-muted-foreground">
+            <span className="text-shimmer">{t("similarChecking")}</span>
           </p>
         )}
         {similar.length > 0 && (

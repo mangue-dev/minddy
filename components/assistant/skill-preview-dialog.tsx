@@ -1,12 +1,13 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Layers01Icon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Layers01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Markdown } from "@/components/markdown";
+import { TextLinesSkeleton } from "@/components/loading-skeletons";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import type {
   RepositorySkill,
@@ -92,9 +93,9 @@ export function SkillPreviewDialog({
             </DialogDescription>
 
             {loading ? (
-              <div className="mt-10 flex items-center gap-2 text-sm text-muted-foreground">
-                <HugeiconsIcon icon={LoaderCircleIcon} className="size-4 animate-spin" aria-hidden />
-                <span>{t("skillPreviewLoading")}</span>
+              // The description and the skill text, where they will land.
+              <div data-sheet-section className="mt-8 border-t border-border pt-8">
+                <TextLinesSkeleton label={t("skillPreviewLoading")} lines={6} />
               </div>
             ) : failed || !loaded ? (
               <p className="mt-10 text-sm text-destructive">

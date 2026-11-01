@@ -15,7 +15,7 @@
 // tell Numo. These three gestures come from `useTaskSurface()` (task-surface.tsx),
 // that the notebook and the page each fill in their own way.
 //
-// ⚠️ This file imports client UI (SearchMenu, Button, toast), so
+// ⚠️ This file imports client UI (the actions menu, Button, toast), so
 // it is NOT importable outside the browser. The page block register, for its part,
 // must be (markdown projection, MCP tools, tests — cf. lib/cx.ts): it is
 // why no block file names it, and why it's the editor
@@ -36,16 +36,13 @@ import {
 import type { NodeViewRenderer } from "@tiptap/core";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  CommandGroup,
-  CommandItem,
-  CommandSeparator,
-  CommandShortcut,
-} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Kbd } from "@/components/ui/kbd";
-import { SearchMenu } from "@/components/search-menu";
+import {
+  IssueActionsMenu,
+  IssueContextMenu,
+  type ContextMenuAction,
+} from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";
 import { taskSectionHeadings } from "@/lib/task-sections";
 import { isPlanTaskState, type PlanTaskState } from "@/lib/plan";
@@ -203,24 +200,46 @@ export function TaskItemView({
     surface.promote(note);
   };
 
-  // The ⋯ menu is a searchable cmdk palette (SearchMenu), opened from the button
-  // or by right-clicking the task; anchored to the ⋯ trigger (Radix positions it
-  // transform-aware, unlike a fixed-point anchor inside the dialog).
+  // The ⋯ menu is the searchable actions menu of a ticket card
+  // (IssueActionsMenu), and a right click opens the same actions at the
+  // pointer. “Change state” is a submenu whose four states stay reachable
+  // from the search field (typing “done” lists Change state › Done).
   const [menuOpen, setMenuOpen] = useState(false);
-  // The four states fit behind a single “Change state” entry: the
-  // menu advances one step without closing, like the relationship selector. There
-  // search is controlled to leave empty in step 2 — otherwise the text
-  // typed to find the entry would then filter the states.
-  const [statePage, setStatePage] = useState(false);
-  const [query, setQuery] = useState("");
-  const pick = (fn: () => void) => {
-    fn();
-    setMenuOpen(false);
-    setStatePage(false);
-    setQuery("");
-  };
+  const [contextPosition, setContextPosition] = useState<{ x: number; y: number } | null>(null);
   const CurrentStateIcon =
     STATE_CHOICES.find((c) => c.value === state)?.icon ?? CircleIcon;
+  const actions: ContextMenuAction[] = [
+    {
+      id: "state",
+      label: t("changeState"),
+      icon: <AppIcon icon={CurrentStateIcon} />,
+      children: STATE_CHOICES.map(({ value, icon: Icon, label, keywords }) => ({
+        id: `state-${value}`,
+        label: t(label),
+        keywords: [...keywords],
+        icon: <AppIcon icon={Icon} />,
+        checked: value === state,
+        onSelect: () => set(value),
+      })),
+    },
+    {
+      id: "promote",
+      label: t("promoteToIssue"),
+      keywords: ["ticket", "issue", "promote", "promouvoir", "convertir", "convert", "numo"],
+      icon: <NumoIcon animated={false} className="size-4" />,
+      separatorBefore: true,
+      transfersFocus: true,
+      onSelect: promoteToIssue,
+    },
+    {
+      id: "copy",
+      label: t("copyLine"),
+      keywords: ["copy", "copier", "prompt", "agent"],
+      icon: <HugeiconsIcon icon={Copy01Icon} />,
+      shortcut: "⇧P",
+      onSelect: copyLine,
+    },
+  ];
 
   // Shortcut on hover, like on a ticket card: ⇧P copies the line as a prompt. They are placed on the TASK alone — the
   // sections keep their hover buttons, the entire notebook its buttons
@@ -275,7 +294,7 @@ export function TaskItemView({
       e.stopImmediatePropagation();
       liveRef.current.copyLine();
     },
-    surface !== null && !menuOpen
+    surface !== null && !menuOpen && contextPosition === null
   );
 
   return (
@@ -288,7 +307,8 @@ export function TaskItemView({
       onContextMenu={(e: MouseEvent) => {
         if (!surface || !editable) return;
         e.preventDefault();
-        setMenuOpen(true);
+        e.stopPropagation();
+        setContextPosition({ x: e.clientX, y: e.clientY });
       }}
     >
       {/* Wrappers a full text-line tall (text-sm × leading-relaxed) so the box
@@ -321,19 +341,11 @@ export function TaskItemView({
 
       {surface && editable && (
         <span contentEditable={false} className={TASK_LINE} data-task-checkbox>
-          <SearchMenu
-            open={menuOpen}
-            onOpenChange={(next) => {
-              setMenuOpen(next);
-              if (!next) {
-                setStatePage(false);
-                setQuery("");
-              }
-            }}
-            searchValue={query}
-            onSearchValueChange={setQuery}
-            tooltip={t("taskActionsAria")}
+          <IssueActionsMenu
+            searchable
             align="end"
+            actions={actions}
+            onOpenChange={setMenuOpen}
             trigger={
               <Button
                 variant="ghost"
@@ -345,72 +357,12 @@ export function TaskItemView({
                 <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             }
-          >
-            {statePage ? (
-              // Step 2: the states, minus the current state — propose it
-              // would amount to proposing to do nothing.
-              <CommandGroup heading={t("changeState")}>
-                {STATE_CHOICES.filter((c) => c.value !== state).map(
-                  ({ value, icon: Icon, label, keywords }) => (
-                    <CommandItem
-                      key={value}
-                      value={t(label)}
-                      keywords={[...keywords]}
-                      onSelect={() => pick(() => set(value))}
-                    >
-                      <AppIcon icon={Icon} />
-                      {t(label)}
-                    </CommandItem>
-                  )
-                )}
-              </CommandGroup>
-            ) : (
-              <CommandGroup>
-                {/* Only one entry for the four states, but it keeps all
- their keywords: typing "done" from the first page always finds
-, instead of finding nothing. */}
-                <CommandItem
-                  value={t("changeState")}
-                  keywords={STATE_CHOICES.flatMap((c) => [...c.keywords])}
-                  onSelect={() => {
-                    setStatePage(true);
-                    setQuery("");
-                  }}
-                >
-                  <AppIcon icon={CurrentStateIcon} />
-                  {t("changeState")}
-                </CommandItem>
-                <CommandSeparator className="my-1" />
-                <CommandItem
-                  value={t("promoteToIssue")}
-                  keywords={[
-                    "ticket",
-                    "issue",
-                    "promote",
-                    "promouvoir",
-                    "convertir",
-                    "convert",
-                    "numo",
-                  ]}
-                  onSelect={() => pick(promoteToIssue)}
-                >
-                  <NumoIcon animated={false} className="size-4" />
-                  {t("promoteToIssue")}
-                </CommandItem>
-                <CommandItem
-                  value={t("copyLine")}
-                  keywords={["copy", "copier", "prompt", "agent"]}
-                  onSelect={() => pick(copyLine)}
-                >
-                  <HugeiconsIcon icon={Copy01Icon} />
-                  {t("copyLine")}
-                  <CommandShortcut>
-                    <Kbd size="sm">⇧P</Kbd>
-                  </CommandShortcut>
-                </CommandItem>
-              </CommandGroup>
-            )}
-          </SearchMenu>
+          />
+          <IssueContextMenu
+            position={contextPosition}
+            onClose={() => setContextPosition(null)}
+            actions={actions}
+          />
         </span>
       )}
     </NodeViewWrapper>

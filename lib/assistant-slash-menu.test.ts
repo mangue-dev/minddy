@@ -114,8 +114,8 @@ describe("Numo slash options", () => {
       createElement(SkillChip, { name: "release" }),
     );
 
-    expect(html).toContain("</span>release</span>");
-    expect(html).not.toContain("</span>/release</span>");
+    expect(html).toContain(">release</span>");
+    expect(html).not.toContain(">/release</span>");
   });
 
   it("exposes clickable composer skill badges as dialog triggers", () => {

@@ -723,9 +723,8 @@ export function CommentBlock({
         // One live line at a time: the current tool, else the text being
         // written, else a plain "Working…" — each update replaces the previous.
         liveTool ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate italic">
+          <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="min-w-0 truncate italic text-shimmer">
               {toolRunningLabel(liveTool, tToolCall)}
             </span>
           </div>
@@ -739,15 +738,13 @@ export function CommentBlock({
             >
               {liveBody}
             </Markdown>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Spinner className="size-3 shrink-0" />
-              <span className="italic">{tAssistant("working")}</span>
+            <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="italic text-shimmer">{tAssistant("working")}</span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner className="size-3.5 shrink-0" />
-            <span className="italic">{tAssistant("working")}</span>
+          <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="italic text-shimmer">{tAssistant("working")}</span>
           </div>
         )
       ) : failed ? (

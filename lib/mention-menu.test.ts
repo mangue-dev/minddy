@@ -5,6 +5,7 @@ import {
   findActiveTriggerQuery,
   orderMentionItems,
 } from "@/lib/mention-menu";
+import { groupBySection, mentionSection } from "@/lib/suggestion-menu";
 
 describe("findActiveMentionQuery", () => {
   it("opens on an at sign and keeps single spaces inside the query", () => {
@@ -116,5 +117,30 @@ describe("findActiveTriggerQuery", () => {
     expect(findActiveMentionQuery("Ask @\u00a0")).toBeNull();
     // Typing on after that space does not reopen the query.
     expect(findActiveMentionQuery("Ask @ cam")).toBeNull();
+  });
+});
+
+describe("contextual mention sections", () => {
+  const items = [
+    { type: "numo", label: "Numo" },
+    { type: "member", label: "Ada" },
+    { type: "issue", label: "MIN-1", status: "todo" },
+    { type: "issue", label: "MIN-2", status: "todo", section: "relations" },
+    { type: "page", label: "Child", section: "subpages" },
+  ];
+
+  it("lists what the surface is tied to before everything else", () => {
+    expect(orderMentionItems(items).map((item) => item.label)).toEqual([
+      "MIN-2", "Child", "Numo", "Ada", "MIN-1",
+    ]);
+  });
+
+  it("keeps them first while a query filters the list", () => {
+    expect(filterMentionItems(items, "min").map((item) => item.label)).toEqual(["MIN-2", "MIN-1"]);
+  });
+
+  it("files a lifted option under its own section, not its type's", () => {
+    const { sections } = groupBySection(orderMentionItems(items), mentionSection as (item: typeof items[number]) => string | null);
+    expect(sections.map((section) => section.id)).toEqual(["relations", "subpages", "people", "issues"]);
   });
 });

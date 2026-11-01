@@ -68,4 +68,55 @@ describe("context menu search across submenus", () => {
       host.remove();
     }
   });
+
+  it("builds the entries from the query and keeps the fallback entry first, then last", async () => {
+    const ask = vi.fn();
+    const toggled = vi.fn();
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = createRoot(host);
+    try {
+      await act(() => root.render(createElement(IssueContextMenu, {
+        position: { x: 10, y: 10 },
+        onClose: vi.fn(),
+        actions: (query: string) => [
+          { id: "numo", label: query ? `Create with Numo: ${query}` : "Create with Numo", searchFallback: true, onSelect: () => ask(query) },
+          {
+            id: "priority",
+            label: "Priority",
+            children: [
+              { id: "high", label: "High", keepOpen: true, checked: true, onSelect: toggled },
+              { id: "low", label: "Low", keepOpen: true, onSelect: toggled },
+            ],
+          },
+        ],
+      })));
+      await act(nextFrame);
+      const labels = () => [...document.querySelectorAll('[role="menuitem"]')].map((row) => row.textContent);
+      expect(labels()).toEqual(["Create with Numo", "Priority"]);
+
+      const input = document.querySelector("input")!;
+      await act(() => type(input, "high"));
+      expect(labels()).toEqual(["PriorityHigh", "Create with Numo: high"]);
+
+      // Enter picks the first match: a toggle, which keeps the menu open.
+      await act(() => {
+        input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      expect(toggled).toHaveBeenCalledTimes(1);
+      expect(document.querySelector("input")).not.toBeNull();
+
+      // A query nothing matches leaves the fallback alone, and Enter sends it.
+      await act(() => type(input, "only urgent bugs"));
+      expect(labels()).toEqual(["Create with Numo: only urgent bugs"]);
+      await act(() => {
+        input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(nextFrame);
+      expect(ask).toHaveBeenCalledWith("only urgent bugs");
+    } finally {
+      await act(() => root.unmount());
+      host.remove();
+    }
+  });
 });

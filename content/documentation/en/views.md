@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,14 +41,15 @@
       "lib/public-board-projection.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "components/share-view-dialog.tsx"
+      "components/share-view-dialog.tsx",
+      "components/filter-menu.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (en figure alt text and caption with catalog UI labels; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "navigation",
@@ -68,14 +69,14 @@
       "id": "views-and-filters-steps",
       "kind": "screenshot",
       "src": "/documentation/en/work-view-filters.png",
-      "alt": "Manual view filters and the sorting menu.",
-      "caption": "Filter by issue properties or choose a sort order. The AI field is optional for these manual controls.",
-      "revision": 11,
+      "alt": "Filters menu with its search field, Create with Numo, the property submenus and Sort.",
+      "caption": "Search any filter value, open a property's submenu or choose a sort order. Create with Numo lets you describe the filters you want instead.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-01",
       "viewport": [
-        288,
-        393
+        304,
+        448
       ],
       "theme": "light",
       "padding": 24
@@ -86,7 +87,7 @@
       "src": "/documentation/en/work-share-view.png",
       "alt": "View-sharing dialog with private access selected.",
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -112,9 +113,11 @@ Start from a project board or a personal cross-project issue surface. Use its fi
 
 Filter on supported properties such as status, assignee, priority, categories or objective. Sort the result to make the next action clear. In kanban, issues remain grouped by status; changing a view does not edit their status or assignment. Without a status filter of its own, a board shows only **Backlog**, **Todo**, **In progress** and **In review**. Select **Done** or **Canceled** in the **Status** filter to show those columns; a view keeps the status filter you save with it.
 
+In the **Filters** menu, each property opens a submenu. Type in the menu's search field to find a value in any property; a match shows the property it belongs to, such as **Priority › High**. On a board where Numo is available, **Create with Numo** comes first in the menu, then moves to the end of the list while you type: choose it to send what you typed to Numo, which updates the current view's filters. Chosen with nothing typed, it opens the Numo composer.
+
 Save the view with a name describing its purpose, then select it again in the view bar at the top of the board (a menu on a narrow screen) and verify its filters. Edit or remove it when its purpose changes. **Delete view** asks for confirmation, and a board always keeps at least one view of its own. For publication permissions and revocation, see [sharing a view](#share-a-view).
 
-![Manual view filters and the sorting menu.](/documentation/en/work-view-filters.png)
+![Filters menu with its search field, Create with Numo, the property submenus and Sort.](/documentation/en/work-view-filters.png)
 
 ### Empty or unexpected results {#view-recovery}
 

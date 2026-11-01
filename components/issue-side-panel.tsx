@@ -79,6 +79,8 @@ import {
   useIssueFieldShortcuts,
 } from "@/components/issue-field-shortcuts";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
+import { useScrollFade } from "@/lib/use-scroll-fade";
+import { useContextMentions } from "@/lib/use-context-mentions";
 import { CommentFollowUpButton } from "@/components/comment-follow-up-button";
 import { commentFollowUp } from "@/lib/comment-follow-up";
 import { IssueResourcesSection } from "@/components/issue-resources-section";
@@ -613,6 +615,17 @@ export function IssueSidePanel({
       [RELATION_SHORTCUT_KEY]: () => setRelationsOpen(true),
     }
   );
+  // The body fades out under the top bar and above the comment composer
+  // whenever content scrolls past them, instead of being cut off sharply.
+  const { ref: fadeRef, scrollProps: fadeScrollProps } = useScrollFade<HTMLDivElement>();
+  const { ref: shortcutsRef, ...shortcutHandlers } = containerProps;
+  const bodyRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      shortcutsRef(node);
+      fadeRef(node);
+    },
+    [shortcutsRef, fadeRef]
+  );
 
   // ⇧C (MIN-803), on the panel or on the issue's card: the comment field.
   useCommentSurface(open && canComment && issue ? commentTarget("issue", issue.id) : null);
@@ -668,7 +681,7 @@ export function IssueSidePanel({
   // The description and the plan can cite the ticket's own resources, and
   // only those (MIN-742). Comments cite their own (components/issue-timeline).
   const { resources: issueResources } = useIssueResources(issue?.id ?? null);
-  const mentions = useResourceMentions(
+  const baseMentions = useResourceMentions(
     useDescriptionMentions(
       issue?.project_id ?? null,
       members,
@@ -676,6 +689,29 @@ export function IssueSidePanel({
     ),
     issueResources,
   );
+  // What this issue is tied to comes first in its "@" menu: its parent,
+  // sub-issues and relations, and its due date. Its description can also
+  // cite its own plan, which a click on the pill opens here.
+  const mentionRelated = useMemo(() => {
+    if (!issue) return [];
+    const related: Array<{ type: "issue" | "objective"; id: string }> = [];
+    if (issue.parent_id) related.push({ type: "issue", id: issue.parent_id });
+    for (const child of allIssues) {
+      if (child.parent_id === issue.id) related.push({ type: "issue", id: child.id });
+    }
+    for (const relation of resolvedRelations) {
+      related.push({ type: relation.otherType === "objective" ? "objective" : "issue", id: relation.otherId });
+    }
+    return related;
+  }, [issue, allIssues, resolvedRelations]);
+  const mentionContext = issue
+    ? { subject: "issue" as const, related: mentionRelated, dueDate: issue.due_date }
+    : null;
+  const mentions = useContextMentions(baseMentions, mentionContext && {
+    ...mentionContext,
+    plan: { issueId: issue!.id, onOpen: () => setTab("plan") },
+  });
+  const planMentions = useContextMentions(baseMentions, mentionContext);
 
   // Voice editing (Numo): dictated commands become immediate field updates.
   // The draft fallbacks are for type-safety only — the mic lives inside the
@@ -941,6 +977,8 @@ export function IssueSidePanel({
             <div className="flex min-w-0 items-center gap-1">
               <IssueParentMenu
                 key={issue.id}
+                parentId={parent?.id ?? null}
+                projectId={issue.project_id}
                 parentIdentifier={parent ? issueIdentifier(projectKey, parent.number) : null}
                 onOpenParent={() => parent && onOpenIssue(parent.id)}
                 onUnlink={readOnly ? undefined : () => patch({ parent_id: null })}
@@ -1019,7 +1057,7 @@ export function IssueSidePanel({
             </div>
           </div>
 
-          <SidePanelBody className="flex flex-col gap-4 pt-0" {...containerProps}>
+          <SidePanelBody ref={bodyRef} className="flex flex-col gap-4 pt-0" {...shortcutHandlers} {...fadeScrollProps}>
             <AutoTextarea
               ref={arrowTitle.ref}
               value={title}
@@ -1076,7 +1114,7 @@ export function IssueSidePanel({
                   projectId={issue.project_id}
                   plan={issue.plan}
                   live={livePlan}
-                  mentions={mentions}
+                  mentions={planMentions}
                   readOnly={readOnly}
                   onCommit={(plan) => void patch({ plan })}
                   // Copyable prompts serve the user's own coding agent.

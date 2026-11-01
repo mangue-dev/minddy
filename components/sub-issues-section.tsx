@@ -12,6 +12,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import { cn } from "@/lib/utils";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";
+import { MentionHover } from "@/components/mention-hover";
 import { useCreateOptional } from "@/lib/create-context";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
@@ -84,9 +85,11 @@ export const SubIssuesSection = memo(function SubIssuesSection({
       {children.length > 0 && (
         <div className="mb-2 flex flex-col">
           {children.map((child) => {
+            // The sub-issue's card on hover, as on the relation rows (MIN-879).
             return (
+              <MentionHover key={child.id} type="issue" id={child.id} project={issue.project_id}
+                side="left" onOpen={() => onOpenIssue(child.id)}>
               <button
-                key={child.id}
                 type="button"
                 onClick={() => onOpenIssue(child.id)}
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"
@@ -104,6 +107,7 @@ export const SubIssuesSection = memo(function SubIssuesSection({
                   )}
                 />
               </button>
+              </MentionHover>
             );
           })}
         </div>

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,14 +41,15 @@
       "lib/public-board-projection.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "components/share-view-dialog.tsx"
+      "components/share-view-dialog.tsx",
+      "components/filter-menu.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (fr figure alt text and caption with catalog UI labels; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "navigation",
@@ -68,14 +69,14 @@
       "id": "views-and-filters-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/work-view-filters.png",
-      "alt": "Filtres manuels d’une vue et menu de classement.",
-      "caption": "Filtrez par propriétés du ticket ou choisissez un ordre. Le champ IA est facultatif pour ces commandes manuelles.",
-      "revision": 11,
+      "alt": "Menu Filtres avec son champ de recherche, Créer avec Numo, les sous-menus des propriétés et Trier.",
+      "caption": "Recherchez une valeur de filtre, ouvrez le sous-menu d’une propriété ou choisissez un ordre. Créer avec Numo vous permet plutôt de décrire les filtres voulus.",
+      "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-01",
       "viewport": [
-        288,
-        393
+        304,
+        448
       ],
       "theme": "light",
       "padding": 24
@@ -86,7 +87,7 @@
       "src": "/documentation/fr/work-share-view.png",
       "alt": "Dialogue de partage d’une vue avec l’accès privé sélectionné.",
       "caption": "Les accès privé, protégé par mot de passe et public correspondent à trois choix distincts. Cette vue reste privée sur la capture.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -112,9 +113,11 @@ Partez du tableau d’un projet ou d’une surface personnelle transversale. Uti
 
 Filtrez selon les propriétés disponibles, comme état, responsable, priorité, catégories ou objectif. Classez les résultats pour clarifier la prochaine action. En kanban, les tickets restent regroupés par état ; modifier la vue ne modifie ni leurs états ni leurs affectations. Sans filtre d’état qui lui soit propre, un tableau n’affiche que **Backlog**, **À faire**, **En cours** et **En revue**. Sélectionnez **Terminé** ou **Annulé** dans le filtre **Statut** pour afficher ces colonnes ; une vue conserve le filtre d’état enregistré avec elle.
 
+Dans le menu **Filtres**, chaque propriété ouvre un sous-menu. Saisissez du texte dans le champ de recherche du menu pour trouver une valeur dans n’importe quelle propriété ; un résultat indique la propriété à laquelle il appartient, par exemple **Priorité › Haute**. Sur un tableau où Numo est disponible, **Créer avec Numo** apparaît en tête du menu, puis passe en fin de liste dès que vous saisissez du texte : choisissez-le pour transmettre votre saisie à Numo, qui met à jour les filtres de la vue courante. Choisi sans texte saisi, il ouvre la zone de saisie de Numo.
+
 Enregistrez la vue avec un nom qui décrit son usage, sélectionnez-la de nouveau dans la barre des vues en haut du tableau (un menu sur un écran étroit) et vérifiez ses filtres. Modifiez-la ou supprimez-la lorsque son usage change. **Supprimer la vue** demande une confirmation, et un tableau garde toujours au moins une vue qui lui est propre. Pour les permissions de publication et la révocation, consultez le [partage d’une vue](#share-a-view).
 
-![Filtres manuels d’une vue et menu de classement.](/documentation/fr/work-view-filters.png)
+![Menu Filtres avec son champ de recherche, Créer avec Numo, les sous-menus des propriétés et Trier.](/documentation/fr/work-view-filters.png)
 
 ### Résultat vide ou inattendu {#view-recovery}
 

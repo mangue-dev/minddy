@@ -10,6 +10,12 @@ export interface SearchableAction<T> {
   keywords?: string[];
   disabled?: boolean;
   children?: T[];
+  /**
+   * A top-level entry that answers any query (e.g. hand the typed text to
+   * Numo): it stays listed whatever is typed and, while a query is typed,
+   * moves after every match so the matches keep the first rows.
+   */
+  searchFallback?: boolean;
 }
 
 export interface ActionSearchMatch<T> {
@@ -44,6 +50,7 @@ export function actionMatchesQuery(action: SearchableAction<unknown>, query: str
  * entry under it unless they share the term. A nested branch is never
  * returned itself: a flat result row has no submenu to open, so only its
  * matching entries are. An empty query returns the top level unchanged.
+ * Top-level `searchFallback` entries close the results of a query.
  */
 export function searchActionTree<T extends SearchableAction<T>>(
   actions: readonly T[],
@@ -60,6 +67,8 @@ export function searchActionTree<T extends SearchableAction<T>>(
       if (action.children?.length) walk(action.children, [...path, action.label], off);
     }
   };
-  walk(actions, [], false);
+  const fallbacks = actions.filter((action) => action.searchFallback);
+  walk(actions.filter((action) => !action.searchFallback), [], false);
+  for (const action of fallbacks) matches.push({ action, path: [], disabled: !!action.disabled });
   return matches;
 }

@@ -10,10 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { FilterItem, FilterMenu, FilterSub, MenuToggleRow } from "@/components/filter-menu";
+import { FilterMenu, filterFacet, filterToggle } from "@/components/filter-menu";
 import { AdminHeaderActions } from "@/components/admin/admin-header-slot";
-import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
 import { ModelBadge } from "@/components/model-badge";
@@ -195,7 +194,6 @@ function fmtInt(n: number | null | undefined): string {
 export function AdminCostsDashboard() {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const format = useFormatter();
   const [days, setDays] = useState<number>(30);
   const [filters, setFilters] = useState<CostFilters>(NO_FILTERS);
@@ -300,46 +298,40 @@ export function AdminCostsDashboard() {
           pane's header, the filters behind one button as on the board. */}
       <AdminHeaderActions>
         <FilterMenu
-          open={filtersOpen}
-          onOpenChange={setFiltersOpen}
           label={tCommon("filters")}
           trigger={
             <Button variant="ghost" size="icon-sm" aria-label={tCommon("filters")}>
               <HugeiconsIcon icon={FilterIcon} className={cn("size-4", filtered && "text-primary")} />
             </Button>
           }
-        >
-          <FilterSub label={t("costs.facetFeature")} count={filters.group === "all" ? 0 : 1}>
-            {ADMIN_COST_GROUPS.map((group) => (
-              <MenuToggleRow
-                key={group}
-                active={filters.group === group}
-                onSelect={() => setFilters((prev) => ({ ...prev, group: prev.group === group ? "all" : group }))}
-              >
-                <AppIcon icon={GROUP_UI[group].icon} className={cn("size-3.5", GROUP_UI[group].text)} strokeWidth={2} />
-                <span className="truncate">{t(GROUP_UI[group].labelKey)}</span>
-              </MenuToggleRow>
-            ))}
-          </FilterSub>
-          {(view?.models.length ?? 0) > 0 && (
-            <FilterSub label={t("costs.facetModel")} count={filters.model === "all" ? 0 : 1}>
-              {(view?.models ?? []).map((model) => (
-                <MenuToggleRow
-                  key={model || "none"}
-                  active={filters.model === model}
-                  onSelect={() => setFilters((prev) => ({ ...prev, model: prev.model === model ? "all" : model }))}
-                >
-                  {model ? <ModelLogo model={model} size={14} /> : null}
-                  <span className="truncate">{modelLabel(model)}</span>
-                </MenuToggleRow>
-              ))}
-            </FilterSub>
-          )}
-          <DropdownMenuSeparator />
-          <FilterItem disabled={!filtered} onSelect={() => setFilters(NO_FILTERS)}>
-            {t("costs.clearFilters")}
-          </FilterItem>
-        </FilterMenu>
+          actions={[
+            filterFacet({
+              id: "feature",
+              label: t("costs.facetFeature"),
+              count: filters.group === "all" ? 0 : 1,
+              children: ADMIN_COST_GROUPS.map((group) => filterToggle({
+                id: group,
+                label: t(GROUP_UI[group].labelKey),
+                icon: <AppIcon icon={GROUP_UI[group].icon} className={cn("size-3.5", GROUP_UI[group].text)} strokeWidth={2} />,
+                active: filters.group === group,
+                onToggle: () => setFilters((prev) => ({ ...prev, group: prev.group === group ? "all" : group })),
+              })),
+            }),
+            ...((view?.models.length ?? 0) > 0 ? [filterFacet({
+              id: "model",
+              label: t("costs.facetModel"),
+              count: filters.model === "all" ? 0 : 1,
+              children: (view?.models ?? []).map((model) => filterToggle({
+                id: model || "none",
+                label: modelLabel(model),
+                icon: model ? <ModelLogo model={model} size={14} /> : undefined,
+                active: filters.model === model,
+                onToggle: () => setFilters((prev) => ({ ...prev, model: prev.model === model ? "all" : model })),
+              })),
+            })] : []),
+            { id: "clear", label: t("costs.clearFilters"), separatorBefore: true, disabled: !filtered, onSelect: () => setFilters(NO_FILTERS) },
+          ]}
+        />
         <Select value={String(days)} onValueChange={(value) => setDays(Number(value))}>
           {/* A pill like every control of the content header, so its ends stay
               concentric with the pane's corner. */}
@@ -753,9 +745,7 @@ function RunRowItem({
       {open ? (
         <div className="bg-muted/20 px-4 pb-3 pl-10">
           {loading ? (
-            <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
-              <Spinner className="size-3" /> {t("costs.loadingCalls")}
-            </div>
+            <RowsSkeleton rows={3} label={t("costs.loadingCalls")} className="gap-2 py-3" />
           ) : !calls || calls.length === 0 ? (
             <p className="py-3 text-xs text-muted-foreground">{t("costs.empty")}</p>
           ) : (

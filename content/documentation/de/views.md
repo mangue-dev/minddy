@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 11,
+  "revision": 13,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,14 +41,15 @@
       "lib/public-board-projection.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "components/share-view-dialog.tsx"
+      "components/share-view-dialog.tsx",
+      "components/filter-menu.tsx"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (de figure alt text and caption with catalog UI labels; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "navigation",
@@ -68,14 +69,14 @@
       "id": "views-and-filters-steps",
       "kind": "screenshot",
       "src": "/documentation/de/work-view-filters.png",
-      "alt": "Manuelle Ansichtsfilter und Sortiermenü.",
-      "caption": "Filtere nach Ticketeigenschaften oder wähle eine Reihenfolge. Für diese manuellen Bedienelemente ist das KI-Feld optional.",
-      "revision": 12,
+      "alt": "Menü Filter mit Suchfeld, Mit Numo erstellen, den Untermenüs der Eigenschaften und Reihenfolge.",
+      "caption": "Suche einen Filterwert, öffne das Untermenü einer Eigenschaft oder wähle eine Reihenfolge. Mit „Mit Numo erstellen“ beschreibst du stattdessen die gewünschten Filter.",
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-01",
       "viewport": [
-        288,
-        413
+        323,
+        448
       ],
       "theme": "light",
       "padding": 24,
@@ -87,7 +88,7 @@
       "src": "/documentation/de/work-share-view.png",
       "alt": "Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.",
       "caption": "Privater, passwortgeschützter und öffentlicher Zugriff sind unterschiedliche Optionen. Die Ansicht bleibt hier privat.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -114,9 +115,11 @@ Beginne in einem Projektboard oder einer persönlichen projektübergreifenden Ti
 
 Filtere nach unterstützten Eigenschaften wie Status, zuständiger Person, Priorität, Kategorien oder Ziel. Sortiere die Ergebnisse so, dass die nächste Aktion klar wird. Im Kanban bleiben Tickets nach Status gruppiert; eine geänderte Ansicht bearbeitet weder Status noch Zuweisung. Ohne eigenen Statusfilter zeigt ein Board nur **Backlog**, **Zu erledigen**, **In Bearbeitung** und **In Prüfung**. Wähle **Erledigt** oder **Abgebrochen** im Filter **Status**, um diese Spalten anzuzeigen; eine Ansicht behält den Statusfilter, den du mit ihr speicherst.
 
+Im Menü **Filter** öffnet jede Eigenschaft ein Untermenü. Tippe in das Suchfeld des Menüs, um einen Wert in einer beliebigen Eigenschaft zu finden; ein Treffer zeigt die Eigenschaft, zu der er gehört, etwa **Priorität › Hoch**. Auf einem Board, auf dem Numo verfügbar ist, steht **Mit Numo erstellen** oben im Menü und rückt ans Ende der Liste, sobald du tippst: Wähle es, um deine Eingabe an Numo zu senden, das die Filter der aktuellen Ansicht anpasst. Ohne Eingabe gewählt, öffnet es das Eingabefeld von Numo.
+
 Speichere die Ansicht unter einem Namen, der ihren Zweck beschreibt, wähle sie erneut in der Ansichtsleiste oben auf dem Board (auf einem schmalen Bildschirm in einem Menü) und prüfe ihre Filter. Bearbeite oder entferne die gespeicherte Ansicht, wenn sich ihr Zweck ändert. **Ansicht löschen** verlangt eine Bestätigung, und ein Board behält immer mindestens eine eigene Ansicht. Das Teilen ist eine gesonderte Veröffentlichung mit eigenen Berechtigungen und Widerrufsregeln.
 
-![Manuelle Ansichtsfilter und Sortiermenü.](/documentation/de/work-view-filters.png)
+![Menü Filter mit Suchfeld, Mit Numo erstellen, den Untermenüs der Eigenschaften und Reihenfolge.](/documentation/de/work-view-filters.png)
 
 ### Leere oder unerwartete Ergebnisse klären {#view-recovery}
 

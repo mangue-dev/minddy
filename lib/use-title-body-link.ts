@@ -50,9 +50,11 @@ export function useTitleBodyLink(
         focusFirstLine(editor, x);
         return true;
       }
-      // Another editable surface (no tiptap instance): at least its focus.
-      const editable = bodyRef.current?.querySelector<HTMLElement>('[contenteditable="true"]');
+      // Another editable surface (no tiptap instance, or a plain textarea):
+      // at least its focus, at its start.
+      const editable = bodyRef.current?.querySelector<HTMLElement>('[contenteditable="true"], textarea');
       editable?.focus();
+      if (editable instanceof HTMLTextAreaElement) editable.setSelectionRange(0, 0);
       return !!editable;
     },
     [bodyRef]

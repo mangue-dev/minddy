@@ -72,6 +72,7 @@ import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
+import { useContextMentions } from "@/lib/use-context-mentions";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageDatabaseView } from "./page-database-view";
 import { DatabaseSetupBanner } from "./database-setup-banner";
@@ -343,7 +344,15 @@ function PageSurface({
   // The watch heartbeat: while this surface holds the document open, the
   // server knows someone is reading it and stays quiet about agent writes.
   usePageWatch(projectId, pageId);
-  const mentionSources = useDescriptionMentions(projectId, members);
+  // The page's own sub-pages come first in its "@" menu.
+  const subpageIds = useMemo(
+    () => pages.filter((page) => page.parent_id === pageId).map((page) => page.id),
+    [pages, pageId]
+  );
+  const mentionSources = useContextMentions(
+    useDescriptionMentions(projectId, members),
+    { subject: "page", subpages: subpageIds }
+  );
   const mentions = useMemo(
     () => ({
       items: () => mentionSources.options,

@@ -228,14 +228,15 @@ function GlobalBoardInner() {
     }
   };
 
-  // The filters menu's AI input: hand the typed wish to the Numo conversation
-  // (MIN-592, review — the classifier pass proved unreliable for filter
-  // selection, the agent with its hardened view tools is the reliable path),
-  // carrying the active view as context so "this view" resolves.
+  // The filters menu's “Create with Numo”: hand the typed wish to the Numo
+  // conversation (MIN-592, review — the classifier pass proved unreliable for
+  // filter selection, the agent with its hardened view tools is the reliable
+  // path), carrying the active view as context so "this view" resolves.
+  // Nothing typed opens the composer on that same context.
   const handleAskAI = (wish: string) => {
     openAssistant({
       projectId: null,
-      prompt: tBoard("aiFilterPrompt", { wish }),
+      ...(wish ? { prompt: tBoard("aiFilterPrompt", { wish }) } : { focusComposer: true }),
       pageContext: activeView
         ? { viewId: activeView.id, viewName: activeView.name }
         : undefined,

@@ -1,99 +1,81 @@
 "use client";
 
-import { createContext, useContext, type ReactNode } from "react";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, CheckIcon } from "@hugeicons/core-free-icons";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useMobileLayout } from "@/lib/use-mobile-layout";
+import type { ReactNode } from "react";
+import {
+  IssueActionsMenu,
+  type ContextMenuAction,
+  type ContextMenuActions,
+} from "@/components/issue-context-menu";
 
-const MobileFilters = createContext(false);
-export function FilterItem({ onSelect, disabled, children, pressed }: React.ComponentProps<typeof DropdownMenuItem> & { pressed?: boolean }) {
-  if (!useContext(MobileFilters)) return <DropdownMenuItem onSelect={onSelect} disabled={disabled}>{children}</DropdownMenuItem>;
-  return <button type="button" disabled={disabled} aria-pressed={pressed}
-    className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-left hover:bg-control-hover disabled:opacity-50"
-    onClick={(event) => onSelect?.(event.nativeEvent)}>{children}</button>;
-}
+// The filter menus of the collections (board, triage, feedback, pull
+// requests, objectives, admin costs) are the searchable action menu of the
+// issue cards: each facet is a submenu, the search reaches every value
+// ("Priority › High"), and a toggle keeps the menu open to set several in a
+// row. On a phone the same tree becomes one searchable sheet.
 
-/** One toggle row inside a filter submenu — Linear style: clicking toggles
-    WITHOUT closing the menu (onSelect preventDefault), the check sits on the
-    right. */
-export function MenuToggleRow({
-  active,
-  onSelect,
-  children,
-}: {
-  active: boolean;
-  onSelect: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <FilterItem
-      pressed={active}
-      onSelect={(event) => {
-        event.preventDefault();
-        onSelect();
-      }}
-    >
-      <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
-      {active && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
-    </FilterItem>
-  );
-}
-
-/** One facet submenu of the filters menu: the trigger carries the facet name
-    and, when the facet is active, how many values are selected — a bare
-    number, the same count treatment as the sidebar. */
-export function FilterSub({
+/** One facet of a filter menu: a submenu whose trigger carries, when the
+    facet is active, how many values are selected — a bare number, the same
+    count treatment as the sidebar. */
+export function filterFacet({
+  id,
   label,
   count,
+  icon,
+  separatorBefore,
   children,
 }: {
+  id: string;
   label: string;
   count: number;
-  children: React.ReactNode;
-}) {
-  if (useContext(MobileFilters)) return <details className="group/filter rounded-xl">
-    <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-3 text-sm [&::-webkit-details-marker]:hidden">
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {count > 0 && <span className="shrink-0 tabular-nums text-muted-foreground">{count}</span>}
-      <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground transition-transform group-open/filter:rotate-180 motion-reduce:transition-none" />
-    </summary>
-    <div className="pl-3">{children}</div>
-  </details>;
-  return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <span className="min-w-0 flex-1 truncate">{label}</span>
-        {count > 0 && (
-          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-            {count}
-          </span>
-        )}
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="w-56">{children}</DropdownMenuSubContent>
-    </DropdownMenuSub>
-  );
+  icon?: ReactNode;
+  separatorBefore?: boolean;
+  children: ContextMenuAction[];
+}): ContextMenuAction {
+  return { id, label, icon, separatorBefore, trailing: count > 0 ? count : undefined, children };
 }
 
-export function FilterMenu({ open, onOpenChange, label, trigger, children }: {
-  open: boolean; onOpenChange: (open: boolean) => void; label: string;
-  trigger: ReactNode; children: ReactNode;
+/** One toggle row of a filter menu — Linear style: selecting it toggles
+    WITHOUT closing the menu, and the check sits on the right. */
+export function filterToggle({
+  id,
+  label,
+  active,
+  onToggle,
+  ...rest
+}: {
+  id: string;
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+} & Pick<ContextMenuAction, "icon" | "labelNode" | "keywords" | "trailing" | "disabled" | "separatorBefore">): ContextMenuAction {
+  return { id, label, checked: active, keepOpen: true, onSelect: onToggle, ...rest };
+}
+
+/** The filter menu of a collection, anchored to its icon button. */
+export function FilterMenu({
+  label,
+  trigger,
+  actions,
+  onQueryChange,
+  onOpenChange,
+}: {
+  /** The tooltip of the icon-only trigger. */
+  label: string;
+  trigger: ReactNode;
+  actions: ContextMenuActions;
+  /** Notified of the typed search query (a facet searched on the server). */
+  onQueryChange?: (query: string) => void;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const mobile = useMobileLayout() === true;
-  return <MobileFilters.Provider value={mobile}>
-    {mobile ? <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent aria-describedby={undefined}>
-        <DialogTitle>{label}</DialogTitle>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
-      </DialogContent>
-    </Dialog> : <DropdownMenu open={open} onOpenChange={onOpenChange}>
-      <Tooltip><TooltipTrigger asChild><DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger></TooltipTrigger>
-        <TooltipContent>{label}</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent align="end" className="w-60">{children}</DropdownMenuContent>
-    </DropdownMenu>}
-  </MobileFilters.Provider>;
+  return (
+    <IssueActionsMenu
+      searchable
+      align="end"
+      tooltip={label}
+      trigger={trigger}
+      actions={actions}
+      onQueryChange={onQueryChange}
+      onOpenChange={onOpenChange}
+    />
+  );
 }
