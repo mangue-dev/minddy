@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 17,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -69,14 +69,15 @@
       "components/mobile-account.tsx",
       "lib/keyboard/shortcuts.ts",
       "desktop/src/local-installer.ts",
-      "desktop/src/local-account.ts"
+      "desktop/src/local-account.ts",
+      "lib/week-start.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 19,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "choose-an-instance",
@@ -108,7 +109,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -125,7 +126,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Intestazione del profilo con l’avatar e il suo badge di modifica, il nome e l’email di sola lettura.",
       "caption": "Seleziona l’avatar per generarne o caricarne uno, oppure il nome per cambiarlo; l’indirizzo email resta di sola lettura.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -142,7 +143,7 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua, controlli del tema chiaro, scuro e di sistema, selettori di palette delle modalità chiara e scura e interruttore della trasparenza.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -159,7 +160,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -249,6 +250,8 @@ L’immagine sorgente non deve superare 10 MiB. Il server verifica byte leggibil
 Nelle preferenze seleziona lingua e tema e controlla un’altra pagina. La lingua dell’account riguarda il prodotto autenticato; il sito pubblico ha un selettore separato. Il tema viene salvato nell’account su tutti i dispositivi.
 
 Il tema sceglie la modalità chiara, scura o di sistema. **Palette modalità chiara** e **Palette modalità scura** impostano ciascuna i colori di una modalità. I **colori d'accento** mantengono i colori di minddy e ricolorano solo i pulsanti e l'anello di focus: minddy (lavanda), Nero in modalità chiara o Bianco in modalità scura, Blu, Verde, Arancione e Rosa; le **palette complete** (Solarized, Catppuccin, Nord) ricolorano tutte le superfici; **Contrasto elevato** si trova in Accessibilità. La palette della modalità visualizzata si applica subito; l’altra viene salvata e compare quando la sua modalità torna attiva, anche quando Sistema segue un cambio del sistema operativo. Contrasto elevato aumenta il contrasto di testo e bordi, contorna campi, menu, finestre di dialogo e schede, segnala la pagina corrente e l'elemento selezionato, mostra sempre il focus da tastiera e mantiene opachi i menu. Disattiva **Trasparenza** per rendere opachi, senza sfocatura, menu, popover e palette dei comandi. Palette e trasparenza vengono salvate nell’account; un altro dispositivo le applica al successivo caricamento di una pagina. Nell’app desktop su macOS e Windows 11, **Trasparenza dell’app desktop** lascia intravedere la scrivania, sfocata, dietro la barra laterale, le schede e i bordi della finestra, mentre il contenuto resta opaco. Vale solo per questo dispositivo e si applica subito. La finestra resta opaca con una palette ad alto contrasto, o quando l’impostazione «Riduci trasparenza» o il contrasto elevato del sistema è attiva; l’interruttore è allora disattivato. Windows 10 e Linux mantengono una finestra opaca e non mostrano l’interruttore.
+
+**Primo giorno della settimana** stabilisce il giorno in cui iniziano le tue settimane. Il calendario del selettore di data, i giorni di una routine e il loro ordine in Routine, le righe della griglia delle attività nelle tue statistiche e una menzione di data come `@giovedì tra 2 settimane` lo seguono. **In base alla lingua** mantiene l’uso della lingua dell’interfaccia: domenica in inglese e portoghese brasiliano, lunedì nelle altre lingue. Scegli lunedì, domenica o sabato per fissarlo tu. La scelta viene salvata nell’account. I [cicli personali](/docs/personal-cycle) mantengono il proprio giorno di inizio.
 
 Scegli la scorciatoia di invio nella sezione tastiera. Si applica a commenti, a Numo e a Invio nel titolo di un modulo di creazione; una descrizione mantiene Command/Ctrl+Invio, e Maiusc+Invio in un titolo passa sempre alla descrizione. Usa il pulsante di invio quando la piattaforma intercetta la scorciatoia; i modificatori variano tra sistemi. I progetti che hai nascosto sono elencati nella loro scheda **Progetti nascosti**, dove puoi mostrarli di nuovo. **Preferenze** contiene anche il riquadro **App desktop**: sul web rimanda al download dell’app desktop; nell’app desktop mostra il server collegato e la versione dell’app. Anche le preferenze dei ticket appartengono all’account, senza cambiare quelle degli altri membri: l’assegnazione automatica è nella scheda **Ticket**, lo stato dei ticket creati da Numo in **IA e Numo** → **Ticket creati da Numo**.
 

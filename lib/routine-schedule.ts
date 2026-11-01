@@ -18,6 +18,8 @@
  * it only puts a ticket in a column.
  */
 
+import { weekdayRank } from "./week-start";
+
 export type RoutineFrequency = "daily" | "weekly" | "monthly";
 
 export const ROUTINE_FREQUENCIES: RoutineFrequency[] = ["daily", "weekly", "monthly"];
@@ -347,6 +349,8 @@ export function describeSchedule(
  *: this is where we check what time it leaves.
  */
     omitTimezone?: boolean;
+    /** The account's first day of the week, which orders the listed days. */
+    weekStart?: number;
   },
 ): string {
   const time = formatTimeOfDay(schedule.hour, schedule.minute, opts?.locale);
@@ -359,7 +363,7 @@ export function describeSchedule(
   if (schedule.frequency === "weekly") {
     // The days IN ORDER of the week, whatever order they are in
     // been checked — “Monday and Thursday”, never “Thursday and Monday”.
-    const days = sortedWeekdays(schedule.weekdays);
+    const days = sortedWeekdays(schedule.weekdays, opts?.weekStart);
     const weekday = joinList(
       days.map((d) => opts?.weekdayLabel?.(d) ?? weekdayName(d, opts?.locale)),
       opts?.locale,
@@ -376,13 +380,17 @@ export function describeSchedule(
 }
 
 /**
- * Weekdays sorted in the order WEEK presents them — Monday
- * first, Sunday at the end —, not in the 0–6 order of `Intl`, which would make
- * start the list with Sunday.
+ * Weekdays sorted in the order the account's week presents them (MIN-881) —
+ * Monday first by default —, not in the 0–6 order of `Intl`, which would
+ * always start the list with Sunday.
  */
-export function sortedWeekdays(weekdays: number[] | null | undefined): number[] {
-  const rank = (d: number) => (d + 6) % 7;
-  return [...new Set(weekdays ?? [1])].sort((a, b) => rank(a) - rank(b));
+export function sortedWeekdays(
+  weekdays: number[] | null | undefined,
+  weekStart: number = 1,
+): number[] {
+  return [...new Set(weekdays ?? [1])].sort(
+    (a, b) => weekdayRank(a, weekStart) - weekdayRank(b, weekStart),
+  );
 }
 
 /** “Monday, Tuesday and Thursday” — the conjunction is that of the language. */

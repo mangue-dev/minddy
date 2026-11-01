@@ -18,6 +18,7 @@ import * as chronoPt from "chrono-node/pt";
 import type { Chrono } from "chrono-node";
 import { locales, type Locale } from "@/i18n/config";
 import type { MentionMeta } from "@/lib/mention-link";
+import { weekdayRank } from "@/lib/week-start";
 
 /** A calendar day as stored, `YYYY-MM-DD`. */
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -266,8 +267,9 @@ function shifted(today: Date, amount: number, unit: Unit): Date {
   return addMonths(today, unit === "month" ? amount : amount * 12);
 }
 
-/** Our own readings of a query, best first. */
-function ownDates(query: string, now: Date): MentionDate[] {
+/** Our own readings of a query, best first. `weekStart` (0 = Sunday) bounds the
+ *  week a "weekday in N weeks" lands in (MIN-881). */
+function ownDates(query: string, now: Date, weekStart = 1): MentionDate[] {
   const text = normalize(query);
   if (!text) return [];
   weekdays ??= namesOf("weekday");
@@ -311,8 +313,8 @@ function ownDates(query: string, now: Date): MentionDate[] {
     const unit = unitOf(words[inIndex + 2]);
     if (weekday !== null && amount !== null && unit) {
       const landing = shifted(today, amount, unit);
-      const monday = addDays(landing, -((landing.getDay() + 6) % 7));
-      add(addDays(monday, (weekday + 6) % 7), time);
+      const firstDay = addDays(landing, -weekdayRank(landing.getDay(), weekStart));
+      add(addDays(firstDay, weekdayRank(weekday, weekStart)), time);
     }
   }
 
@@ -548,14 +550,19 @@ export function correctTypos(text: string): string {
  * own. An empty query proposes nothing: dates appear once the reader types
  * one, and `@date` opens the picker (`DATE_PICKER_WORDS`).
  */
-export function parseDateQuery(query: string, now: Date = new Date(), locale: string = "en"): MentionDate[] {
+export function parseDateQuery(
+  query: string,
+  now: Date = new Date(),
+  locale: string = "en",
+  weekStart: number = 1,
+): MentionDate[] {
   const text = normalize(query);
   if (!text) return [];
   // Typos corrected, then a time said in words ("halb 9") read as `8h30`.
   const prepared = spokenTimes(correctTypos(text));
   const read = prepared === text ? query : prepared;
   const found: MentionDate[] = [];
-  for (const value of [...chronoDates(read, now, locale), ...ownDates(read, now)]) {
+  for (const value of [...chronoDates(read, now, locale), ...ownDates(read, now, weekStart)]) {
     if (!parseDay(value.date)) continue;
     if (found.some((item) => item.date === value.date && item.time === value.time && item.end === value.end)) continue;
     found.push(value);
@@ -666,8 +673,9 @@ export function dateMentionOptions(
   locale: string,
   now: Date = new Date(),
   pickLabel?: string,
+  weekStart: number = 1,
 ): DateMentionOption[] {
-  const options: DateMentionOption[] = parseDateQuery(query, now, locale).map((value) => {
+  const options: DateMentionOption[] = parseDateQuery(query, now, locale, weekStart).map((value) => {
     const meta = mentionDateMeta(value);
     return { type: "date", id: value.date, label: formatMentionDate(value, locale, now), ...(meta ? { meta } : {}) };
   });

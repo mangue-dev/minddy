@@ -47,6 +47,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useWeekStart } from "@/lib/use-week-start";
 
 // Shared with the row-intent preload: both resolve the same module promise.
 const loadRoutineDetail = () => import("@/components/routines/routine-detail");
@@ -102,6 +103,7 @@ export function RoutinesPanel({
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
   const locale = useLocale();
+  const weekStart = useWeekStart();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
@@ -211,6 +213,8 @@ export function RoutinesPanel({
           daysOfMonth: routine.days_of_month,
         })),
         locale,
+        new Date(),
+        weekStart,
       ),
     }));
     if (query.trim()) return ordered;
@@ -243,7 +247,7 @@ export function RoutinesPanel({
       }));
     return [...ordered, ...extra];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, projectById, offeredProjects, query, user?.id, locale]);
+  }, [visible, projectById, offeredProjects, query, user?.id, locale, weekStart]);
 
   const selected = routines.find((r) => r.id === selectedId) ?? null;
   const selectedIsOwner =
@@ -756,6 +760,7 @@ function RoutineRow({
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
+  const weekStart = useWeekStart();
   const statusT = useTranslations("Status");
   const cadence = routine.trigger && routine.trigger.type !== "schedule" ? (routine.trigger.type === "database" ? t("trigger_database") : t(`event_${routine.trigger.event.replaceAll(".", "_")}` as "event_issue_created") + (routine.trigger.status ? ` · ${statusT(routine.trigger.status as "triage")}` : "")) : describeSchedule(
     {
@@ -769,7 +774,7 @@ function RoutineRow({
     (key, values) => t(key, values),
     // Without the time zone: on a column line, “(Europe/Paris)” takes more
     // more space than the cadence itself. It reads in the routine.
-    { locale, omitTimezone: true },
+    { locale, omitTimezone: true, weekStart },
   );
 
   return (

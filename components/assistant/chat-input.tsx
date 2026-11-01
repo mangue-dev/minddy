@@ -112,6 +112,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useWeekStart } from "@/lib/use-week-start";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
     text-ish) — MIN-24 scope. */
@@ -482,6 +483,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const tAttach = useTranslations("Resources");
     const tPicker = useTranslations("Picker");
     const locale = useLocale();
+    const weekStart = useWeekStart();
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     // A long message scrolls inside the field: its hidden lines fade at the
@@ -744,10 +746,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             const found = filterMentions([...(mentionables ?? []), ...skillMentionables], mentionQuery);
             // Dates come from the query itself, as in every editor (MIN-872),
             // first when the query clearly is one.
-            const dates = dateMentionOptions(mentionQuery, locale);
+            const dates = dateMentionOptions(mentionQuery, locale, new Date(), undefined, weekStart);
             return datesFirst(mentionQuery, locale) ? [...dates, ...found] : [...found, ...dates];
           })(),
-      [mentionQuery, mentionables, skillMentionables, locale],
+      [mentionQuery, mentionables, skillMentionables, locale, weekStart],
     );
     // Issues found by meaning (MIN-718): appended last, and the highlight
     // resets on the query only, so a late answer never moves it.

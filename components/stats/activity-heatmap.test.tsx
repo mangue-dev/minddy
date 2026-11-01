@@ -5,10 +5,11 @@ import { createRoot, type Root } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ActivityHeatmap } from "@/components/stats/activity-heatmap";
+import { ActivityHeatmap, heatmapLeadingDays } from "@/components/stats/activity-heatmap";
 import type { HeatmapDay, StatsHeatmap } from "@/lib/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import messages from "@/messages/en.json";
+import type { Locale } from "@/i18n/config";
 
 vi.stubGlobal(
   "ResizeObserver",
@@ -57,13 +58,13 @@ describe("ActivityHeatmap", () => {
     vi.restoreAllMocks();
   });
 
-  async function render(boxWidth: number) {
+  async function render(boxWidth: number, locale: Locale = "en") {
     width = boxWidth;
     const data = heatmap();
     await act(async () => {
       root.render(
         createElement(NextIntlClientProvider, {
-          locale: "en",
+          locale,
           messages,
           children: createElement(TooltipProvider, null, createElement(ActivityHeatmap, { heatmap: data })),
         }),
@@ -88,5 +89,16 @@ describe("ActivityHeatmap", () => {
   it("shows the whole year when it fits", async () => {
     await render(2000);
     expect(cells()).toHaveLength(53 * 7);
+  });
+
+  it("starts its weeks on the first day the language uses (MIN-881)", async () => {
+    // Outside an account, a French reader's weeks start on Monday: the
+    // Sunday that opens the server window is dropped.
+    await render(2000, "fr");
+    const shown = cells();
+    expect(shown).toHaveLength(53 * 7 - 1);
+    expect(shown[0]?.getAttribute("aria-label")).toContain("13 oct.");
+    expect(heatmapLeadingDays(heatmap().days, 6)).toBe(6);
+    expect(heatmapLeadingDays(heatmap().days, 0)).toBe(0);
   });
 });

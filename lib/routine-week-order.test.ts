@@ -30,6 +30,21 @@ describe("routine week ordering", () => {
     ]);
   });
 
+  it("starts the week on the account's first day (MIN-881)", () => {
+    const routines = [
+      { ...base, title: "Monday", hour: 9 },
+      { ...base, title: "Sunday", weekdays: [0], hour: 9 },
+      { ...base, title: "Saturday", weekdays: [6], hour: 9 },
+    ];
+    const from = new Date("2026-09-02T12:00:00Z");
+    const titles = (weekStart: number) =>
+      orderRoutinesWithinWeek(routines, "en", from, weekStart).map((routine) => routine.title);
+
+    expect(titles(1)).toEqual(["Monday", "Saturday", "Sunday"]);
+    expect(titles(0)).toEqual(["Sunday", "Monday", "Saturday"]);
+    expect(titles(6)).toEqual(["Saturday", "Sunday", "Monday"]);
+  });
+
   it("uses a weekly routine's first configured weekday", () => {
     expect(
       routineWeekPosition({ ...base, title: "Twice", weekdays: [4, 1] }),

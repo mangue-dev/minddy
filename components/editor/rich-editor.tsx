@@ -121,6 +121,7 @@ import { isMobileLayout } from "@/lib/app-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { FindReplace } from "@/components/editor/find-replace";
 import { FindBar } from "@/components/editor/find-bar";
+import { useWeekStart } from "@/lib/use-week-start";
 
 export interface RichEditorMentions extends MentionSuggestOptions {
   /** Rebuild mention nodes from the plain-text form stored by agent writes. */
@@ -503,8 +504,13 @@ export function RichEditor({
   localeRef.current = locale;
   const pickDateLabelRef = useRef("");
   pickDateLabelRef.current = tPicker("mentionPickDate");
+  // The account's first day of the week bounds "thursday in 2 weeks" (MIN-881).
+  const weekStart = useWeekStart();
+  const weekStartRef = useRef(weekStart);
+  weekStartRef.current = weekStart;
   const readDateOptions = useMemo(
-    () => (query: string) => dateMentionOptions(query, localeRef.current, new Date(), pickDateLabelRef.current),
+    () => (query: string) =>
+      dateMentionOptions(query, localeRef.current, new Date(), pickDateLabelRef.current, weekStartRef.current),
     []
   );
   const mentionSuggest = useMemo(
