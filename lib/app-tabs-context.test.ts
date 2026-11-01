@@ -255,3 +255,14 @@ it("uses local history only for a destination qualified by the mounted retained 
   expect(router.push).toHaveBeenCalledWith("/projects/cold", { scroll: false });
   history.mockRestore();
 });
+
+it("navigates to a stored full-id destination through its short codes", () => {
+  const history = vi.spyOn(window.history, "pushState");
+  session.isRetainedDestination = () => true;
+  session.navigate("/projects/aur-9e3d0c35/objectives?open=71384d77-1fc9-4227-b045-56ff2c8e29e4");
+  expect(history).toHaveBeenCalledWith(null, "", "/projects/aur-9e3d0c35/objectives?open=71384d77");
+  session.isRetainedDestination = () => false;
+  session.navigate("/projects/9e3d0c35-c1d7-4d2a-983d-8190638cc887?objective=71384d77-1fc9-4227-b045-56ff2c8e29e4");
+  expect(router.push).toHaveBeenCalledWith("/projects/9e3d0c35?objective=71384d77", { scroll: false });
+  history.mockRestore();
+});

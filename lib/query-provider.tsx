@@ -10,6 +10,8 @@ import { configurePayloadRetention, isMemoryOnlyPayload } from "./query-retentio
 import { observePageReadFailures } from "./page-read-receipts";
 import { retryTemporaryReadFailure } from "./backend-availability";
 import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
+import { trackFetchStarts } from "./realtime-catch-up";
+import { discardServerSeeds } from "./server-seed";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
@@ -107,6 +109,7 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["pr-comments"],
   ["pr-review-comments"],
   ["billing"],
+  ["admin"], // Operator-only payloads (accounts, costs, config, instance variables): memory only.
   ["auth-sessions"], // lib/use-auth-sessions-query.ts: device list of live sign-ins, always re-read
   ["version"], // lib/use-new-version.ts
   ["page"], // ["page", pageId] — the BODY, not the list ["pages", projectId]
@@ -163,6 +166,7 @@ function datedBeforeMount(client: PersistedClient | undefined, mountedAt: number
  */
 export function clearPersistedQueryCache() {
   invalidateLocalSnapshotWrites();
+  discardServerSeeds();
   // Cancel queued snapshots before removing storage. Otherwise a delayed write
   // or pagehide flush could restore the departing account's data after logout.
   for (const stop of persistenceStops) stop();
@@ -203,6 +207,7 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
         },
       });
       observePageReadFailures(client);
+      trackFetchStarts(client);
       configurePayloadRetention(client);
       installRefRegistry(client);
       return client;

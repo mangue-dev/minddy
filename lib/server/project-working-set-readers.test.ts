@@ -17,6 +17,10 @@ vi.mock("./api-auth", () => {
     ? { ok: false, response: new Response(null, { status: 401 }) }
     : { ok: true, user: { id: state.actor }, supabase: state.client };
   return { getAuthedUser: async () => authed(),
+    getAuthedUserAlongside: async (_request: unknown, read: (verified: { user: { id: string } }) => Promise<unknown>) => {
+      const result = authed();
+      return result.ok ? { ...result, alongside: { value: await read({ user: result.user! }) } } : result;
+    },
     getAuthedUserWithRlsReads: async (_request: unknown, read: (verified: { user: { id: string }; supabase: unknown }) => unknown) => {
       const result = authed();
       return result.ok ? { ...result, reads: read({ user: result.user!, supabase: result.supabase }) } : result;
@@ -220,7 +224,8 @@ describe("ordinary project working-set readers", () => {
       return row.invited_email;
     });
     expect(await loadProjectMembers(auth(f.client), projectId)).toEqual(failure);
-    expect(state.names).not.toHaveBeenCalled();
+    // Accounts are read beside the invitations; the avatar seeds (which may insert) follow the decode.
+    expect(state.avatars).not.toHaveBeenCalled();
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain("Private protected invitation");
   });
 

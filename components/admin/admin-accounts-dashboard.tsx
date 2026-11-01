@@ -3,6 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Search01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useRef, useState} from "react";
+import {useQuery} from "@tanstack/react-query";
 import type {ReactNode} from "react";
 import {useFormatter, useTranslations} from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ import {giftSectionVisible} from "@/lib/admin-tabs";
 import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { fetchSeeded } from "@/lib/server-seed";
 
 /**
  * `/admin` → “Accounts” (MIN-829): how many accounts the instance has, then
@@ -561,25 +563,17 @@ function Value({
 function AccountCount() {
   const t = useTranslations("Admin");
   const format = useFormatter();
-  const [total, setTotal] = useState<number | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      try {
-        const response = await fetch("/api/admin/overview", { cache: "no-store" });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = (await response.json()) as AdminAccountsOverview;
-        if (alive) setTotal(data.totalAccounts);
-      } catch {
-        if (alive) setFailed(true);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { data, isError } = useQuery({
+    queryKey: ["admin", "overview"],
+    queryFn: async (): Promise<AdminAccountsOverview> => {
+      const response = await fetchSeeded("/api/admin/overview", { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return (await response.json()) as AdminAccountsOverview;
+    },
+    staleTime: 60 * 1000,
+  });
+  const total = data?.totalAccounts ?? null;
+  const failed = isError;
 
   return (
     <StatsCard id={adminSectionAnchor(ADMIN_SECTIONS.accountsSummary)}>

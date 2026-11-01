@@ -11,6 +11,9 @@ import {
 } from "./categories-api";
 import type { Category, CategoryUpdateInput, CreateCategoryInput } from "./types";
 
+/** Stable while loading, like `NO_OBJECTIVES`: memoized consumers keep their render. */
+const NO_CATEGORIES: Category[] = [];
+
 const categoriesKey = (projectId: string) => ["categories", projectId] as const;
 
 export function useCategoriesQuery(projectId: string | null) {
@@ -93,7 +96,7 @@ export function useCategoriesQuery(projectId: string | null) {
   );
 
   return {
-    categories: (data ?? []) as Category[],
+    categories: (data ?? NO_CATEGORIES) as Category[],
     loading: enabled && isPending,
     createCategory,
     updateCategory,

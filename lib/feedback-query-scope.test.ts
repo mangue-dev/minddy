@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { feedbackFiltersForDestination, feedbackFiltersForRequestedPost, feedbackQueryOptions } from "./feedback-query";
 import { FEEDBACK_OPEN_STATUSES } from "@/lib/feedback/types";
+import { DEFAULT_FEEDBACK_SORT, DEFAULT_FEEDBACK_STATE, defaultFeedbackListReadPath } from "./feedback-selection-hint";
 import type { TeamFeedbackListItem } from "@/lib/server/feedback/team-queries";
 
 const project = "00000000-0000-4000-8000-000000000001";
@@ -75,5 +76,17 @@ describe("requested feedback scope reuse", () => {
     await expect(client.fetchQuery(feedbackQueryOptions(project, feedbackFiltersForRequestedPost(client, project, id(120), normal)))).rejects.toThrow("Denied");
     expect(client.getQueryData(feedbackQueryOptions(project, normal).queryKey)).toBe(accepted);
     expect(client.getQueryData(["feedback", project])).toBeUndefined(); client.clear();
+  });
+});
+
+describe("the read a bare team page makes", () => {
+  it("is the exact path the document can carry (MIN-880)", async () => {
+    const client = new QueryClient();
+    const fetch = vi.fn(async () => Response.json(envelope())); vi.stubGlobal("fetch", fetch);
+    const hint = { state: DEFAULT_FEEDBACK_STATE, sort: DEFAULT_FEEDBACK_SORT, onlyToReview: false };
+    await client.fetchQuery(feedbackQueryOptions(project, normal, { client, hint: () => hint }));
+    expect(fetch).toHaveBeenCalledWith(defaultFeedbackListReadPath(project), expect.objectContaining({ cache: "no-store" }));
+    expect(defaultFeedbackListReadPath(project)).toBe(
+      `/api/projects/${project}/feedback?statuses=open&statuses=planned&statuses=in_progress&prepare=unresolved.top.0`);
   });
 });

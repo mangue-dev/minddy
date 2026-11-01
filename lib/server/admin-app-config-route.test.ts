@@ -27,8 +27,19 @@ const {
   validateDecisionModelChoice: vi.fn(),
 }));
 
-vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser }));
-vi.mock("@/lib/server/admin", () => ({ isAdminUser }));
+// `getAuthedAdmin` is `getAuthedUser` followed by `isAdminUser`; its single
+// authorization lookup is covered by admin.test.ts.
+vi.mock("@/lib/server/admin", () => ({
+  getAuthedAdmin: async (request: unknown) => {
+    const auth = await getAuthedUser(request);
+    if (!auth.ok) return auth;
+    if (!(await isAdminUser(auth.user, auth.claims))) {
+      const { NextResponse } = await import("next/server");
+      return { ok: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    }
+    return auth;
+  },
+}));
 vi.mock("@/lib/server/app-config", () => ({
   getAppConfigValues,
   setAppConfigValue,

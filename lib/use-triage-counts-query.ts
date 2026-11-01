@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { ProjectTriageCount, TriageCountsResponse } from "./types";
+import { fetchSeeded } from "./server-seed";
 
 /**
  * What is waiting to be sorted in each of my projects (tickets in sorting +
@@ -26,7 +27,7 @@ export function useTriageCountsQuery() {
   const { data } = useQuery({
     queryKey: TRIAGE_COUNTS_KEY,
     queryFn: async (): Promise<TriageCountsResponse> => {
-      const response = await fetch("/api/me/triage-counts");
+      const response = await fetchSeeded("/api/me/triage-counts");
       if (!response.ok) return { counts: {} };
       return (await response.json()) as TriageCountsResponse;
     },

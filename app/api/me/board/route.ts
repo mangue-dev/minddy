@@ -33,20 +33,29 @@ function cyclePrefsOf(user: User) {
   );
 }
 
-/** The board's RLS reads. They use the user's client only, never the service role. */
-function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined) {
-  return Promise.all([
-    measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(supabase, actorId, timing)),
-    measureAllStartupPhase(timing, "projects", () => supabase.from("projects").select("id, owner_id").is("deleted_at", null)),
-    measureAllStartupPhase(timing, "categories", () => categoryStore(supabase, actorId).select("*").order("position")),
-    measureAllStartupPhase(timing, "objectives", () => objectiveStore(supabase).select("*")),
+/**
+ * The board's RLS reads. They use the user's client only, never the service
+ * role. Cycle reconciliation writes only cycles and issues, so every read but
+ * the issues one can run while it does; `issues` is null when it must wait.
+ */
+function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined, withIssues: boolean) {
+  // `Promise.resolve` sends each query now: a builder only runs once awaited.
+  return {
+    issues: withIssues ? readBoardIssues(supabase, actorId, timing) : null,
+    projects: Promise.resolve(measureAllStartupPhase(timing, "projects", () => supabase.from("projects").select("id, owner_id").is("deleted_at", null))),
+    categories: Promise.resolve(measureAllStartupPhase(timing, "categories", () => categoryStore(supabase, actorId).select("*").order("position"))),
+    objectives: Promise.resolve(measureAllStartupPhase(timing, "objectives", () => objectiveStore(supabase).select("*"))),
     // ALL relation types: `blocks` feeds the cycle reco ordering, and the
     // full set powers the cards' relation chips + the side panel (RLS scopes
     // the rows to my projects).
-    measureAllStartupPhase(timing, "relations", () => supabase
+    relations: Promise.resolve(measureAllStartupPhase(timing, "relations", () => supabase
       .from("issue_relations")
-      .select("id, source_id, target_id, type, source_type, target_type")),
-  ]);
+      .select("id, source_id, target_id, type, source_type, target_type"))),
+  };
+}
+
+function readBoardIssues(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined) {
+  return Promise.resolve(measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(supabase, actorId, timing)));
 }
 
 /**
@@ -67,19 +76,49 @@ function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllSta
  */
 export async function GET(request: NextRequest) {
   const timing = createAllStartupTiming(request);
-  // Without cycles, the RLS reads overlap the live session check; the response
-  // and every service-role read still wait for it. Cycle reconciliation writes
-  // through the service client first, so that path starts the reads afterwards.
+  // The RLS reads overlap the live session check; the response and every
+  // service-role read still wait for it. With cycles, the issues read waits
+  // for the reconciliation, which writes through the service client.
   const auth = await measureAllStartupPhase(timing, "auth", () => getAuthedUserWithRlsReads(request,
-    ({ user, supabase }) => cyclePrefsOf(user).enabled ? null : readBoardRows(supabase, user.id, timing)));
+    ({ user, supabase }) => Promise.resolve(readBoardRows(supabase, user.id, timing, !cyclePrefsOf(user).enabled))));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
   const service = getServiceClient();
+  const rows = (await auth.reads) ?? readBoardRows(auth.supabase, auth.user.id, timing, !cyclePrefsOf(auth.user).enabled);
+
+  // Members and integrations need only the authorized project ids: they start
+  // as soon as the projects read lands, beside the other reads.
+  const people = rows.projects.then(async (projectsRes) => {
+    if (projectsRes.error) return null;
+    const projectRows = (projectsRes.data ?? []) as { id: string; owner_id: string }[];
+    const projectIds = projectRows.map((project) => project.id);
+    // Integrations across my projects — feeds the cross-project integration
+    // filter (issues carry integration_id). Read via the service client like
+    // members, then bucketed by project. Kind and revocation state let the client
+    // hide integrations that cannot match a living board ticket.
+    const [{ members }, { data: integrationRows }] = await Promise.all([
+      // Owner (from projects) + collaborators (from project_members), resolved
+      // to display names/avatars via the auth admin API (shared helper —
+      // GET /api/me/search-index builds the same map for the command palette).
+      measureAllStartupPhase(timing, "members", () => buildMembersByProject(service, projectRows, timing)),
+      measureAllStartupPhase<{ data: IntegrationRef[] | null }>(timing, "integrations", () => projectIds.length
+        ? service
+            .from("integrations")
+            .select("id, name, project_id, kind, revoked_at")
+            .in("project_id", projectIds)
+            .order("id", { ascending: true })
+        : Promise.resolve({ data: [] as IntegrationRef[] })),
+    ]);
+    return { members, integrationRows };
+  });
+  // A failed projects read answers 500 below; nothing awaits `people` then.
+  people.catch(() => {});
 
   // Cycles first: the reconciliation may move issues around (rollover,
   // auto-fill), and the issues read below must reflect it.
   const prefs = cyclePrefsOf(auth.user);
   let cycles: BoardCycles = { enabled: false, current: null, upcoming: [], past: [] };
+  let issuesRead = rows.issues;
   if (prefs.enabled) {
     const ensured = await measureAllStartupPhase(timing, "cycles", () => ensureCycles({
       service,
@@ -93,10 +132,11 @@ export async function GET(request: NextRequest) {
       upcoming: ensured.upcoming.map(toCycleInfo),
       past: ensured.past.slice(0, PAST_CYCLES_SHOWN).map(toCycleInfo),
     };
+    issuesRead = readBoardIssues(auth.supabase, auth.user.id, timing);
   }
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =
-    await (auth.reads ?? readBoardRows(auth.supabase, auth.user.id, timing));
+    await Promise.all([issuesRead!, rows.projects, rows.categories, rows.objectives, rows.relations]);
 
   const firstError =
     issuesRes.error ||
@@ -121,30 +161,7 @@ export async function GET(request: NextRequest) {
     (objectives[o.project_id] ??= []).push(o);
   }
 
-  // Members: owner (from projects) + collaborators (from project_members), all
-  // resolved to display names/avatars via the auth admin API (shared helper —
-  // GET /api/me/search-index builds the same map for the command palette).
-  const projectRows = (projectsRes.data ?? []) as {
-    id: string;
-    owner_id: string;
-  }[];
-  // Integrations across my projects — feeds the cross-project integration
-  // filter (issues carry integration_id). Read via the service client like
-  // members, then bucketed by project. Kind and revocation state let the client
-  // hide integrations that cannot match a living board ticket.
-  // These reads share the authorized project IDs, but integrations do not
-  // depend on member or avatar resolution. Start both branches together.
-  const projectIds = projectRows.map((project) => project.id);
-  const [{ members }, { data: integrationRows }] = await Promise.all([
-    measureAllStartupPhase(timing, "members", () => buildMembersByProject(service, projectRows, timing)),
-    measureAllStartupPhase<{ data: IntegrationRef[] | null }>(timing, "integrations", () => projectIds.length
-      ? service
-          .from("integrations")
-          .select("id, name, project_id, kind, revoked_at")
-          .in("project_id", projectIds)
-          .order("id", { ascending: true })
-      : Promise.resolve({ data: [] as IntegrationRef[] })),
-  ]);
+  const { members, integrationRows } = (await people)!;
 
   const integrations: Record<string, IntegrationRef[]> = {};
   await measureAllStartupPhase(timing, "integrations_decode", async () => {

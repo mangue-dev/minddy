@@ -102,7 +102,7 @@ vi.mock("@/lib/use-description-collaboration", () => ({
 }));
 vi.mock("@/components/editor/document-editor-lazy", async () => {
   const { useState } = await import("react");
-  return { useIdleDocumentEditorPreload: () => {}, LazyDocumentEditor: ({ value, onEdit }: { value: string; onEdit: () => void }) => {
+  return { useIdleDocumentEditorPreload: () => {}, useDocumentEditorForFirstContent: () => {}, LazyDocumentEditor: ({ value, onEdit }: { value: string; onEdit: () => void }) => {
     const [draft, setDraft] = useState(value);
     return <textarea data-objective-description value={draft} onChange={(event) => { setDraft(event.target.value); onEdit(); }} />;
   } };

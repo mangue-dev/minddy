@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
-import { isAdminUser } from "@/lib/server/admin";
+import { getAuthedAdmin } from "@/lib/server/admin";
 import {
   importAiConfigFile,
   readAiConfigValues,
@@ -15,11 +14,8 @@ const PRIVATE_HEADERS = { "Cache-Control": "private, no-store" };
  * response to short-circuit with, or null when the caller is cleared.
  */
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
-  const auth = await getAuthedUser(request);
+  const auth = await getAuthedAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!(await isAdminUser(auth.user, auth.claims))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
   return null;
 }
 

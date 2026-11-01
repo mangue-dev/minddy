@@ -1,5 +1,6 @@
 import { hashKey, onlineManager, QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { markFirstContent } from "@/lib/first-content";
 import { createPrTabPreparation } from "@/lib/pr-tab-preparation";
 import { appTabPreparationQueries } from "@/lib/prefetch-tab-destination";
 import { issuesQueryFn } from "@/lib/issues-api";
@@ -8,6 +9,8 @@ vi.mock("@/lib/app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(), isAppT
 vi.mock("@/lib/supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
 } }) }));
+// These cases describe a page that has shown its content (lib/first-content.ts).
+beforeEach(() => markFirstContent());
 beforeEach(() => onlineManager.setOnline(true));
 afterEach(() => { onlineManager.setOnline(true); vi.unstubAllGlobals(); });
 

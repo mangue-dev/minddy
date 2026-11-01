@@ -5,6 +5,7 @@ import { pullRequestQueryOptions } from "./pull-request-query";
 import { ApiError } from "./agent-api";
 import { navigationPreparationPending } from "./navigation-preparation-priority";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
+import { markFirstContent, resetFirstContentForTests } from "./first-content";
 import { appTabPreparationQueries, isPreparedAppTabDestination, prefetchPullRequestDetail } from "./prefetch-tab-destination";
 import { fetchPageNavigationData, isPreparedPageData, pageKey } from "./use-pages-query";
 import { issuesQueryFn } from "./issues-api";
@@ -41,6 +42,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 function setup() {
   vi.mocked(prepareAppTabSurface).mockClear();
+  // Most cases describe a page that has shown its content (lib/first-content.ts).
+  resetFirstContentForTests();
+  markFirstContent();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tasks = new Set<() => void>();
   const preparation = createPrTabPreparation(client, (task) => {
@@ -716,6 +720,35 @@ describe("account-owned PR preparation", () => {
       expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/issues"))).toHaveLength(1);
       expect(prepared.fetch.mock.calls.filter(([url]) => String(url).endsWith("/new/objectives"))).toHaveLength(1);
       expect(prepared.tasks.size).toBe(0);
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("loads only the destination's code before the first content, then the other tabs'", () => {
+    const prepared = setup();
+    resetFirstContentForTests();
+    const tabs = ["/projects/new", "/projects/new/pages/a", "/projects/new/feedback"];
+    try {
+      prepared.preparation.visit(tabs[0], tabs);
+      expect(vi.mocked(prepareAppTabSurface).mock.calls.map(([href]) => href)).toEqual(["/projects/new"]);
+      markFirstContent();
+      expect(new Set(vi.mocked(prepareAppTabSurface).mock.calls.map(([href]) => href))).toEqual(new Set(tabs));
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
+  it("holds the tabs' reads until the first content, then prepares them", async () => {
+    const prepared = setup();
+    resetFirstContentForTests();
+    prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+    const tabs = ["/projects/new/feedback", "/projects/new/objectives"];
+    try {
+      prepared.preparation.visit(tabs[0], tabs);
+      await drain(prepared);
+      expect(prepared.fetch).not.toHaveBeenCalled();
+      markFirstContent();
+      await drain(prepared);
+      for (const options of appTabPreparationQueries(prepared.client, tabs[1])) {
+        expect(prepared.client.getQueryState(options.queryKey)?.status, JSON.stringify(options.queryKey)).toBe("success");
+      }
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
 

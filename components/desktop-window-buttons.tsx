@@ -1,4 +1,5 @@
 "use client";
+import { memo } from "react";
 
 import { useWideLayout, useWindowButtonsSlot } from "@/lib/use-window-buttons";
 import { WINDOW_BUTTONS_WIDTH } from "@/lib/sidebar-window-controls";
@@ -14,7 +15,8 @@ export { WINDOW_BUTTONS_WIDTH } from "@/lib/sidebar-window-controls";
  */
 const HEADER_PADDING_PX = 16;
 
-export function HeaderWindowButtonsSlot() {
+// Memoized (MIN-875): the shell re-renders for every query it reads.
+export const HeaderWindowButtonsSlot = memo(function HeaderWindowButtonsSlot() {
   const slot = useWindowButtonsSlot(!useWideLayout());
   if (!slot.reserved) return null;
   return (
@@ -24,4 +26,4 @@ export function HeaderWindowButtonsSlot() {
       style={{ width: WINDOW_BUTTONS_WIDTH - HEADER_PADDING_PX }}
     />
   );
-}
+});

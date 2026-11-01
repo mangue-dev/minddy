@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { requireProjectMember } from "@/lib/server/feedback/team-guard";
+import { requireFeedbackMember, requireProjectMember } from "@/lib/server/feedback/team-guard";
 import { parseFeedbackListFilters } from "@/lib/feedback-list-filters";
 import { countTeamFeedback, listTeamFeedback } from "@/lib/server/feedback/team-queries";
+import { prepareFeedbackPost } from "@/lib/server/feedback/post-reads";
+import { readFeedbackSelectionHint } from "@/lib/feedback-selection-hint";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
 import { getBoardForProject } from "@/lib/server/feedback/boards";
 import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
@@ -19,7 +21,8 @@ const NAME_MAX = 200;
  on behalf of an end user ('internal' channel, never anonymous). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const guard = await requireProjectMember(request, id);
+  // Membership only: the list never uses the project, so it is not decoded.
+  const guard = await requireFeedbackMember(request, id);
   if (!guard.ok) return guard.response;
 
   // `board_enabled` travels WITH the list, and not in a separate call: without
@@ -39,7 +42,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     countTeamFeedback(id),
     getBoardForProject(id),
   ]);
-  return NextResponse.json({ posts, total, board_enabled: board?.enabled ?? false });
+  // The post the page opens on this list, read along (MIN-875).
+  const hint = readFeedbackSelectionHint(request.nextUrl.searchParams);
+  const prepared = hint ? await prepareFeedbackPost(id, guard.userId, posts, hint) : null;
+  return NextResponse.json({ posts, total, board_enabled: board?.enabled ?? false, ...(prepared ? { prepared } : {}) });
 }
 
 export async function POST(request: NextRequest, { params }: RouteContext) {

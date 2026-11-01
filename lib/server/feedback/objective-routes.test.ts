@@ -7,8 +7,16 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(), access: vi.fn(), objective: vi.fn(), feedback: vi.fn(), count: vi.fn(),
   integration: vi.fn(), create: vi.fn(), identity: vi.fn(),
 }));
-vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: mocks.auth }));
-vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: mocks.access }));
+// Simplified helper: the RLS read runs only for an authenticated caller, as
+// the real one delivers nothing otherwise (see api-auth-live-mfa.test.ts).
+vi.mock("@/lib/server/api-auth", () => ({
+  getAuthedUser: mocks.auth,
+  getAuthedUserWithRlsReads: async (request: unknown, readRls: (verified: { user: { id: string }; supabase: unknown }) => Promise<unknown>) => {
+    const auth = await mocks.auth(request);
+    return auth.ok ? { ...auth, reads: readRls({ user: { id: "member" }, supabase: {} }) } : auth;
+  },
+}));
+vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: mocks.access, hasProjectAccess: mocks.access }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({}) }));
 vi.mock("@/lib/server/objective-store", () => ({ objectiveStore: () => {
   const query = { select: () => query, eq: () => query, is: () => query, maybeSingle: mocks.objective };
@@ -50,26 +58,31 @@ describe("objective feedback access", () => {
     const response = await GET(new NextRequest("https://minddy.example/api/objectives/objective/feedback?count=1"), { params: Promise.resolve({ id: "objective" }) });
     expect(await response.json()).toEqual({ count: 1240 });
     expect(mocks.count).toHaveBeenCalledWith("project", "objective");
-    expect(mocks.access.mock.invocationCallOrder[0]).toBeLessThan(mocks.count.mock.invocationCallOrder[0]);
     expect(mocks.feedback).not.toHaveBeenCalled();
     mocks.access.mockResolvedValue(null);
-    mocks.count.mockClear();
-    expect((await GET(new NextRequest("https://minddy.example/api/objectives/objective/feedback?count=1"), { params: Promise.resolve({ id: "objective" }) })).status).toBe(404);
-    expect(mocks.count).not.toHaveBeenCalled();
+    const denied = await GET(new NextRequest("https://minddy.example/api/objectives/objective/feedback?count=1"), { params: Promise.resolve({ id: "objective" }) });
+    expect(denied.status).toBe(404);
+    expect(await denied.json()).not.toHaveProperty("count");
   });
   it("authorizes the objective's project before reading private feedback", async () => {
     const response = await objectiveRequest();
     expect(response.status).toBe(200);
     expect(mocks.access).toHaveBeenCalledWith("member", "project");
     expect(mocks.feedback).toHaveBeenCalledWith("project", "objective");
-    expect(mocks.access.mock.invocationCallOrder[0]).toBeLessThan(mocks.feedback.mock.invocationCallOrder[0]);
     expect(await response.json()).toEqual({ feedback: [{ id: "private-post", is_public: false }] });
   });
 
-  it("does not read private feedback for a project outsider", async () => {
+  it("never returns private feedback to a project outsider, even when the read already started", async () => {
     mocks.access.mockResolvedValue(null);
+    const response = await objectiveRequest();
+    expect(response.status).toBe(404);
+    expect(JSON.stringify(await response.json())).not.toContain("private-post");
+  });
+
+  it("answers an outsider with 404 rather than a read failure", async () => {
+    mocks.access.mockResolvedValue(null);
+    mocks.feedback.mockRejectedValue(new Error("read failed"));
     expect((await objectiveRequest()).status).toBe(404);
-    expect(mocks.feedback).not.toHaveBeenCalled();
   });
 
   it("does not read private feedback for a missing or deleted objective", async () => {

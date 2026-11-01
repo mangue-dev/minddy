@@ -30,7 +30,7 @@ import { TextSelection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { isBlockSelection } from "@/components/editor/block-selection";
-import { isMarqueeDrawing } from "@/components/editor/block-marquee";
+import { isMarqueeDrawing } from "@/components/marquee-drawing";
 import { posToDOMRect } from "@tiptap/core";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";

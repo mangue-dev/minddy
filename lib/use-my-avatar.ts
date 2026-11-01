@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
+import { fetchSeeded } from "./server-seed";
 
 type AvatarResponse = { avatar: string };
 
@@ -24,7 +25,7 @@ export function useMyAvatarSource(): string | null {
     enabled: !!user,
     staleTime: Infinity,
     queryFn: async (): Promise<AvatarResponse> => {
-      const response = await fetch("/api/me/avatar");
+      const response = await fetchSeeded("/api/me/avatar");
       if (!response.ok) throw new Error("Avatar could not be loaded");
       return response.json();
     },

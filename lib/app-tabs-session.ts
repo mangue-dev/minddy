@@ -1,5 +1,5 @@
 import { createHomeTab, moveAppTabBefore, reconcileAppTabs, selectTabAfterClose, sortAppTabs, type AppTab, type AppTabPatch } from "./app-tabs";
-import { normalizeAppTabLocation, sameAppTabDestination } from "./app-tab-location";
+import { appTabDestinationKey, normalizeAppTabLocation, sameAppTabDestination } from "./app-tab-location";
 import { AppTabRequestError } from "./app-tabs-api";
 
 /** Whether `url` reopens the remembered destination's page while carrying no
@@ -282,11 +282,14 @@ export class AppTabsSession {
     if (this.target) {
       // A consumed selection acknowledges restoration by publishing its target.
       // If there is no publication, the URL itself is the acknowledgement.
-      const targetUrl = new URL(this.target, "https://minddy.invalid");
-      const candidate = new URL(view ?? location, "https://minddy.invalid");
+      // Compared as destination keys: the target may hold full ids where the
+      // address carries short codes.
+      const targetUrl = new URL(appTabDestinationKey(this.target) ?? this.target, "https://minddy.invalid");
+      const candidate = new URL(appTabDestinationKey(view ?? location) ?? location, "https://minddy.invalid");
       const matches = candidate.pathname === targetUrl.pathname &&
         [...targetUrl.searchParams].every(([key, value]) => candidate.searchParams.get(key) === value);
-      if (!matches || location.split(/[?#]/)[0] !== targetUrl.pathname) return;
+      const locationPath = (appTabDestinationKey(location) ?? location).split(/[?#]/)[0];
+      if (!matches || locationPath !== targetUrl.pathname) return;
       const destination = this.target;
       this.target = null;
       clearTimeout(this.targetTimer);

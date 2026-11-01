@@ -12,7 +12,7 @@ import { EncryptedRowCodec, type StoredRow } from "./encryption/row-codec";
 import { getEncryptedStore } from "./encryption/registry";
 import { shouldProtectPages } from "./page-content";
 import { pageWriteRefusal, type PageResult } from "./pages";
-import { getProjectAccess } from "./project-access";
+import { hasProjectAccess } from "./project-access";
 
 /**
  * Saved views of a page database (MIN-764): named sort, filter and hidden
@@ -73,12 +73,6 @@ async function databasePage(service: SupabaseClient, projectId: string,
   return data ? { ok: true, page: null } : notFound;
 }
 
-/** Project members read the views; `pageWriteRefusal` also gates writers. */
-async function readable(projectId: string, pageId: string, actorId: string) {
-  if (!await getProjectAccess(actorId, projectId)) return notFound;
-  return databasePage(getServiceClient(), projectId, pageId);
-}
-
 async function writable(projectId: string, pageId: string, actorId: string) {
   return await pageWriteRefusal(actorId, projectId, "pageNotFound") ??
     await databasePage(getServiceClient(), projectId, pageId);
@@ -95,11 +89,24 @@ async function readRows(service: SupabaseClient, projectId: string, pageId: stri
 /** The views of a database, in strip order; empty for the default view. */
 export async function listPageDatabaseViews(projectId: string, pageId: string,
   actorId: string): Promise<PageResult<SavedDatabaseView[]>> {
-  const allowed = await readable(projectId, pageId, actorId);
-  if (!allowed.ok) return allowed;
+  // Access, the database page and the view rows are independent reads, issued
+  // together. Rows are decoded only once access and the page are confirmed, and
+  // a denial discards them.
+  const service = getServiceClient();
+  const rowsRead = UUID.test(pageId)
+    ? readRows(service, projectId, pageId).then((rows) => ({ rows }), (error: unknown) => ({ error }))
+    : null;
+  const [access, page] = await Promise.all([
+    hasProjectAccess(actorId, projectId),
+    databasePage(service, projectId, pageId),
+  ]);
+  if (!access) return notFound;
+  if (!page.ok) return page;
   try {
-    const rows = await readRows(getServiceClient(), projectId, pageId);
-    const views = await Promise.all(rows.map((row) => decodeRow(row, actorId)));
+    const read = await rowsRead;
+    if (!read) return notFound;
+    if ("error" in read) throw read.error;
+    const views = await Promise.all(read.rows.map((row) => decodeRow(row, actorId)));
     return { ok: true, page: views.filter((view): view is SavedDatabaseView => view !== null) };
   } catch (error) {
     return failure(error);

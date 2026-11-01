@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextIntlClientProvider } from "next-intl";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import messages from "@/messages/en.json";
 
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
@@ -77,7 +78,8 @@ const json = (data: unknown) => new Response(JSON.stringify(data), { status: 200
 const fetchMock = vi.fn<typeof fetch>();
 let host: HTMLDivElement;
 let root: Root;
-const flush = async (fn?: () => void) => { await act(async () => { fn?.(); }); };
+// react-query notifies subscribers on a macrotask, so settle one before asserting.
+const flush = async (fn?: () => void) => { await act(async () => { fn?.(); await new Promise((resolve) => setTimeout(resolve, 0)); }); };
 const button = (text: string) => Array.from(document.querySelectorAll("button")).find(b => b.textContent?.includes(text))!;
 const type = async (value: string) => flush(() => {
   const input = document.querySelector("#admin-support-email") as HTMLInputElement;
@@ -94,7 +96,7 @@ beforeEach(async () => {
   fetchMock.mockReset().mockImplementation(async (url) =>
     url === "/api/admin/overview" ? json({ totalAccounts: 1234 }) : new Response("", { status: 500 }));
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
-  await flush(() => root.render(<NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminAccountsDashboard /></NextIntlClientProvider>));
+  await flush(() => root.render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminAccountsDashboard /></NextIntlClientProvider></QueryClientProvider>));
   await flush();
   fetchMock.mockClear();
 });

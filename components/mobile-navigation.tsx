@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useLayoutEffect, useCallback, useEffect, useId, type ReactNode } from "react";
+import { memo, useRef, useState, useLayoutEffect, useCallback, useEffect, useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LayoutAlignLeftIcon, Search01Icon } from "@hugeicons/core-free-icons";
@@ -43,7 +43,8 @@ export function MobileMenuRows({ sections, onBrowse, onNavigate }: { sections: M
   })) }))} />;
 }
 
-export function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], homeBadge, homeBadgeLabel, onSearch }: {
+// Memoized like the desktop sidebar: it is mounted (and hidden) on desktop too.
+export const MobileNavigation = memo(function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], homeBadge, homeBadgeLabel, onSearch }: {
   sections: MobileMenuSection[];
   initialPanel?: MobileMenuPanel;
   initialPanels?: MobileMenuPanel[];
@@ -130,7 +131,7 @@ export function MobileNavigation({ sections, initialPanel, initialPanels, projec
       </SidebarFrame>
     </MobileSidebarReveal>
   </>;
-}
+});
 
 /** Exiting levels keep their rows visible, but only the current level owns the filter band. */
 function MobileBrowsePanel({ panel, sections, projects, navigation, onBack, onProjectSelect, homeBadge, homeBadgeLabel }: {

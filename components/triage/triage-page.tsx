@@ -50,10 +50,10 @@ import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { BulkIssueActions, BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
 import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the triage route —
-// see components/editor/document-editor-lazy.tsx. Warmed from idle time in TriagePage.
+// see components/editor/document-editor-lazy.tsx. Loaded at mount by TriagePage.
 import {
   LazyDocumentEditor,
-  useIdleDocumentEditorPreload,
+  useDocumentEditorForFirstContent,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
@@ -64,6 +64,12 @@ import { CommentEditor, extractMentions } from "@/components/editor/comment-edit
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { useRichDocument } from "@/lib/use-rich-document";
 import { useDescriptionCollaboration } from "@/lib/use-description-collaboration";
+// This page shows an editor on first paint (MIN-875): the description
+// stream module ships with the route, as before, instead of downloading
+// after hydration where it competes with the page's reads on a slow link.
+// Routes that open no editor at load (/all, the board) load it on demand
+// (lib/use-description-collaboration.ts).
+import "@/lib/description-collaboration-stream";
 import { IssuePalettePicker } from "@/components/issue-palette-picker";
 import { useIssuePropertyMenuActions } from "@/components/issue-property-menu-actions";
 import { addCommentApi } from "@/lib/comments-api";
@@ -108,8 +114,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const tIssue = useTranslations("Issue");
   const tPicker = useTranslations("Picker");
   const format = useFormatter();
-  // Mounts with the page: warm the deferred editor chunk once painted.
-  useIdleDocumentEditorPreload();
+  // The opened issue's description is first content: load the editor now.
+  useDocumentEditorForFirstContent();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const router = useRouter();
@@ -124,7 +130,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
   const { issues, loading, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  const { members } = useMembersQuery(projectId, true);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
   const { integrations } = useIntegrationsQuery(projectId);

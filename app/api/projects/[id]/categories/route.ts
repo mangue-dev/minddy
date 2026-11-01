@@ -1,7 +1,7 @@
 import { categoryStore } from "@/lib/server/category-store";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { createCategory } from "@/lib/server/categories";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -9,14 +9,16 @@ type RouteContext = { params: Promise<{ id: string }> };
 /** GET /api/projects/[id]/categories — the project's categories, in display order. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getAuthedUser(request);
+  // The RLS read overlaps the live session check, which still gates the response.
+  const auth = await getAuthedUserWithRlsReads(request, async ({ user, supabase }) =>
+    categoryStore(supabase, user.id).select("*").eq("project_id", id).order("position", { ascending: true }));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await categoryStore(auth.supabase, auth.user.id)
+  const { data, error } = await (auth.reads ?? categoryStore(auth.supabase, auth.user.id)
     .select("*")
     .eq("project_id", id)
-    .order("position", { ascending: true });
+    .order("position", { ascending: true }));
 
   if (error) {
     console.error("[api/categories] list failed:", error.message);

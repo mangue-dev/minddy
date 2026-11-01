@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { CapabilityId, CapabilityStatus } from "@/lib/capabilities";
+import { fetchSeeded } from "@/lib/server-seed";
 
 /**
  * The instance capabilities, as the admin shell reads them to decide which
@@ -20,7 +21,7 @@ export function useAdminCapabilities(options: { enabled?: boolean } = {}) {
       capabilities: Partial<Record<CapabilityId, CapabilityStatus>>;
       instanceOverrides: string | null;
     }> => {
-      const res = await fetch("/api/admin/capabilities");
+      const res = await fetchSeeded("/api/admin/capabilities");
       if (!res.ok) return { capabilities: {}, instanceOverrides: null };
       const body = (await res.json()) as {
         capabilities?: Record<CapabilityId, CapabilityStatus>;

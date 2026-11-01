@@ -1,7 +1,8 @@
 import { commentStore } from "@/lib/server/comment-store";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import { addCommentToObjective } from "@/lib/server/add-comment";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
@@ -25,14 +26,17 @@ const MAX_MENTIONS = 50;
 /** GET /api/objectives/[id]/comments — the objective's comment thread (RLS: project access). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getAuthedUser(request);
+  // The RLS read overlaps the live session check, which still gates the response.
+  const listComments = (supabase: SupabaseClient, userId: string) =>
+    commentStore(supabase, "comments", userId)
+      .select("*, attachments(*)")
+      .eq("objective_id", id)
+      .order("created_at", { ascending: true });
+  const auth = await getAuthedUserWithRlsReads(request, async ({ user, supabase }) => listComments(supabase, user.id));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await commentStore(auth.supabase, "comments", auth.user.id)
-    .select("*, attachments(*)")
-    .eq("objective_id", id)
-    .order("created_at", { ascending: true });
+  const { data, error } = await (auth.reads ?? listComments(auth.supabase, auth.user.id));
 
   if (error) {
     console.error("[api/objectives/:id/comments] list failed:", error.message);

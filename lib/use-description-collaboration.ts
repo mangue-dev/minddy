@@ -11,34 +11,17 @@
 // only own what stops with visibility: wake-ups, carets and the unload guard.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getSchema, type JSONContent } from "@tiptap/core";
-import { Node as PMNode, type Schema } from "@tiptap/pm/model";
+import type { JSONContent } from "@tiptap/core";
 
-import { pageExtensions } from "@/components/pages/page-extensions";
-import { MENTION_HYDRATION_META } from "@/components/markdown-mention";
-import {
-  caretColor,
-  type BodyCollaboration,
-  type CaretView,
-} from "@/components/pages/page-collaboration";
-import {
-  COLLAB_BEACON_MAX_BYTES,
-  CollabFatalError,
-  CollabStream,
-  type CollabTransport,
-} from "./page-collaboration-stream";
 import type {
-  CollabCatchUp,
-  CollabRefusal,
-  CollabSubmission,
-  CollabSubmitResult,
-  PageCollaborationSnapshot,
-} from "./page-collaboration";
+  BodyCollaboration,
+  CaretView,
+} from "@/components/pages/page-collaboration";
+import type { CollabStream } from "./page-collaboration-stream";
+import type { CollabRefusal } from "./page-collaboration";
 import {
   descriptionCollaborationTopic,
-  descriptionCollaborationUrl,
   takeDescriptionSnapshot,
-  type DescriptionCatchUp,
   type DescriptionKind,
   type DescriptionSnapshot,
 } from "./description-collaboration";
@@ -48,7 +31,31 @@ import {
   type PageCollaborationPresence,
   type PeerCaret,
 } from "./page-collaboration-presence";
-import { mergeDocs, type PageDocJSON } from "./pages-merge";
+
+type StreamModule = typeof import("./description-collaboration-stream");
+
+let streamModuleLoad: Promise<StreamModule> | null = null;
+
+/** Load the ProseMirror half of the session (see description-collaboration-stream.ts). */
+export function loadDescriptionCollaborationStream(): Promise<StreamModule> {
+  streamModuleLoad ??= import("./description-collaboration-stream").catch((error) => {
+    // A failed chunk load is retried by the next session.
+    streamModuleLoad = null;
+    throw error;
+  });
+  return streamModuleLoad;
+}
+
+let idlePreloadScheduled = false;
+
+/** Warm the stream module during idle time, once per tab, like the editor itself. */
+function scheduleIdleStreamPreload(): void {
+  if (idlePreloadScheduled || typeof window === "undefined") return;
+  idlePreloadScheduled = true;
+  const run = () => { void loadDescriptionCollaborationStream().catch(() => {}); };
+  if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(run, { timeout: 3000 });
+  else window.setTimeout(run, 1500);
+}
 
 export interface DescriptionCollaborationSession {
   /** `unavailable` falls back to saving the Markdown (an old server, a failed read). */
@@ -67,83 +74,8 @@ interface Member {
   email?: string | null;
 }
 
-let documentSchemaCache: Schema | null = null;
-
-/** The description schema, for a stream with no editor attached. */
-function documentSchema(): Schema {
-  documentSchemaCache ??= getSchema(pageExtensions({ headless: true, blocks: "document" }));
-  return documentSchemaCache;
-}
-
 function sessionId(): string {
   return crypto.randomUUID().replace(/-/g, "");
-}
-
-class DescriptionApiError extends Error {
-  constructor(readonly status: number, message: string) {
-    super(message);
-  }
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  const data = await response.json().catch(() => null);
-  if (!response.ok && response.status !== 409 && response.status !== 422) {
-    throw new DescriptionApiError(response.status,
-      (data as { error?: string } | null)?.error ?? "Request failed");
-  }
-  return data as T;
-}
-
-const endpoint = descriptionCollaborationUrl;
-
-/** The stream reads a page-shaped snapshot: a description is its body. */
-function asStreamSnapshot(snapshot: DescriptionSnapshot): PageCollaborationSnapshot {
-  return {
-    protocol: snapshot.protocol,
-    pageId: snapshot.documentId,
-    projectId: snapshot.projectId,
-    body: { revision: snapshot.revision, doc: snapshot.doc },
-    title: { revision: 0, text: "" },
-    version: 0,
-    updatedAt: "",
-  };
-}
-
-function transportFor(kind: DescriptionKind, id: string): CollabTransport {
-  const fatal = (error: unknown) =>
-    error instanceof DescriptionApiError && [401, 403, 404].includes(error.status)
-      ? new CollabFatalError(error.message)
-      : error;
-  const post = (submission: CollabSubmission, keepalive = false) =>
-    fetch(endpoint(kind, id), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(submission),
-      keepalive,
-    });
-  return {
-    steps: async (_field, since): Promise<CollabCatchUp> => {
-      try {
-        const answer = await readJson<DescriptionCatchUp>(
-          await fetch(`${endpoint(kind, id)}?since=${since}`, { cache: "no-store" }));
-        return answer.kind === "reset"
-          ? { kind: "reset", reason: answer.reason, snapshot: asStreamSnapshot(answer.snapshot) }
-          : answer;
-      } catch (error) {
-        throw fatal(error);
-      }
-    },
-    submit: async (submission): Promise<CollabSubmitResult> => {
-      try {
-        return await readJson<CollabSubmitResult>(await post(submission));
-      } catch (error) {
-        throw fatal(error);
-      }
-    },
-    beacon: (submission) => {
-      void post(submission, true).catch(() => {});
-    },
-  };
 }
 
 /**
@@ -175,6 +107,8 @@ interface Session {
   key: string;
   snapshot: DescriptionSnapshot;
   stream: CollabStream;
+  /** The module the stream came from (its beacon size, caret colors). */
+  engine: StreamModule;
   clientId: string;
   peers: PeerCaret[];
   hydrationRefused: boolean;
@@ -232,6 +166,9 @@ export function useDescriptionCollaboration({
   membersRef.current = members;
   const canWriteRef = useRef(false);
 
+  // Hosts mount before their description opens: warm the stream module then.
+  useEffect(scheduleIdleStreamPreload, []);
+
   /* ── Creating the session from a snapshot ──────────────────────────────── */
   useEffect(() => {
     if (!key || !id) {
@@ -255,8 +192,10 @@ export function useDescriptionCollaboration({
     sessionRef.current = null;
     setStatus("loading", key);
     const controller = new AbortController();
-    void takeDescriptionSnapshot(kind, id, controller.signal)
-      .then((snapshot) => {
+    // The snapshot and the stream module load together: the module is on the
+    // network path only when idle time has not warmed it yet.
+    void Promise.all([takeDescriptionSnapshot(kind, id, controller.signal), loadDescriptionCollaborationStream()])
+      .then(([snapshot, engine]) => {
         if (controller.signal.aborted) return;
         // A plan's document has its own id; a description's is its parent's.
         if (snapshot.kind !== kind || (kind !== "plan" && snapshot.documentId !== id)) {
@@ -266,27 +205,11 @@ export function useDescriptionCollaboration({
         canWriteRef.current = snapshot.canWrite;
         const clientId = sessionId();
         const attachedListeners = new Set<(attached: boolean) => void>();
-        const stream = new CollabStream({
-          field: "body",
+        const stream = engine.createDescriptionStream({
+          kind,
+          id,
+          snapshot,
           clientId,
-          revision: snapshot.revision,
-          transport: transportFor(kind, id),
-          schema: documentSchema,
-          docFromSnapshot: (next, schema) => PMNode.fromJSON(schema, next.body.doc),
-          toJSON: (doc) => doc.toJSON(),
-          fromJSON: (schema, json) => PMNode.fromJSON(schema, json),
-          // A reset with local work keeps it block by block; contested blocks
-          // keep the local version (descriptions have no conflict banner).
-          merge: (base, mine, theirs) => {
-            const merged = mergeDocs(base.toJSON() as PageDocJSON, mine.toJSON() as PageDocJSON,
-              theirs.toJSON() as PageDocJSON);
-            try {
-              return { doc: PMNode.fromJSON(mine.type.schema, merged.doc) };
-            } catch {
-              return { doc: mine };
-            }
-          },
-          isPresentation: (origin) => origin.getMeta(MENTION_HYDRATION_META) === true,
           canSend: () => canWriteRef.current,
           onRefused: (reason, dropped) => {
             console.warn("[description-collaboration] batch refused:", reason);
@@ -321,6 +244,7 @@ export function useDescriptionCollaboration({
           key,
           snapshot,
           stream,
+          engine,
           clientId,
           peers: [],
           hydrationRefused: false,
@@ -371,7 +295,7 @@ export function useDescriptionCollaboration({
     // Leaving the tab with unsent typing: deliver it with keepalive, and warn.
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (!stream.hasPending()) return;
-      stream.beacon(COLLAB_BEACON_MAX_BYTES);
+      stream.beacon(session.engine.COLLAB_BEACON_MAX_BYTES);
       event.preventDefault();
     };
     window.addEventListener("online", catchUp);
@@ -433,7 +357,7 @@ export function useDescriptionCollaboration({
         .map((peer): CaretView => ({
           sessionId: peer.sessionId,
           name: nameOf(peer.userId),
-          color: caretColor(peer.userId),
+          color: session.engine.caretColor(peer.userId),
           revision: peer.revision,
           anchor: peer.anchor,
           head: peer.head,

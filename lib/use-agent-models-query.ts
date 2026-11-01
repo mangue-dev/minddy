@@ -12,6 +12,7 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import type { AdminCatalogCapability } from "@/lib/model-catalog-capability";
+import { fetchSeeded } from "@/lib/server-seed";
 
 /**
  * Model catalog for the picker (MIN-46). `staleTime` long: the catalog
@@ -112,7 +113,7 @@ export async function fetchAgentModels(
   const endpoint = params.size > 0
     ? `${SCOPE_ENDPOINTS[scope]}?${params.toString()}`
     : SCOPE_ENDPOINTS[scope];
-  const res = await fetch(endpoint);
+  const res = await fetchSeeded(endpoint);
   if (!res.ok) return empty;
   const data = (await res.json()) as {
     provider?: AgentProviderId;

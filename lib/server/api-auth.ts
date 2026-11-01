@@ -4,6 +4,8 @@ import {
 } from "@/lib/server/supabase-fetch";
 import "server-only";
 
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
@@ -137,13 +139,48 @@ const UUID_PATTERN =
  * so handlers that later use the service role cannot authorize from JWT claims
  * alone.
  */
+type LiveAuthorizationState = { sessionActive: boolean; mfaAllowed: boolean };
+
+/**
+ * One live lookup per session within a scope that runs several route
+ * handlers for the same incoming request (lib/server/server-seed.ts). Each
+ * handler still verifies its token and applies the result; they only share
+ * the answer for the identical user, session, AAL and AMR.
+ */
+const sharedLiveAuthorization = new AsyncLocalStorage<Map<string, Promise<LiveAuthorizationState>>>();
+
+/** Run `work` with live authorization lookups shared within it. */
+export function withSharedLiveAuthorization<T>(work: () => T): T {
+  return sharedLiveAuthorization.run(new Map(), work);
+}
+
 async function liveAuthorizationState(
   userId: string,
   sessionId: string,
   aal: unknown,
   amr: unknown,
   skipMfa: boolean,
-): Promise<{ sessionActive: boolean; mfaAllowed: boolean }> {
+): Promise<LiveAuthorizationState> {
+  const shared = sharedLiveAuthorization.getStore();
+  if (!shared) return readLiveAuthorizationState(userId, sessionId, aal, amr, skipMfa);
+  const key = JSON.stringify([userId, sessionId, aal, amr, skipMfa]);
+  let pending = shared.get(key);
+  if (!pending) {
+    pending = readLiveAuthorizationState(userId, sessionId, aal, amr, skipMfa);
+    shared.set(key, pending);
+    // A failed lookup is not shared with later handlers: they try again.
+    pending.catch(() => { if (shared.get(key) === pending) shared.delete(key); });
+  }
+  return pending;
+}
+
+async function readLiveAuthorizationState(
+  userId: string,
+  sessionId: string,
+  aal: unknown,
+  amr: unknown,
+  skipMfa: boolean,
+): Promise<LiveAuthorizationState> {
   const { data, error } = await getServiceClient()
     .rpc("auth_authorization_state", {
       p_user: userId,
@@ -315,6 +352,57 @@ export async function authorizeUserClient(
   const verified = await verifySessionClaims(supabase);
   if (!verified.ok) return verified;
   return authorizeVerifiedSession(supabase, verified, options);
+}
+
+/**
+ * The user id of a locally verified session, without the live lookup. Only
+ * for naming reads that each go through their own route boundary afterwards
+ * (lib/server/server-seed.ts); it authorizes nothing by itself.
+ */
+export async function verifiedSessionUserId(supabase: SupabaseClient): Promise<string | null> {
+  const verified = await verifySessionClaims(supabase);
+  return verified.ok ? verified.claims.sub : null;
+}
+
+export type AuthedAlongsideResult<T> =
+  | (Extract<AuthedResult, { ok: true }> & { alongside: { value: T } | { error: unknown } })
+  | AuthFailure;
+
+/**
+ * `getAuthedUser` for a handler that must also read data about the caller's own
+ * account (for example the admin boundary reading the Auth account). That read
+ * starts as soon as the signed claims verify and runs while the live
+ * authorization lookup is in flight, instead of after it.
+ *
+ * `alongside` must be a read with no side effect. Its outcome is only handed
+ * back when the live check succeeds; a denial returns the same 401, 403 MFA or
+ * 503 response as `getAuthedUser` and the outcome is discarded, so nothing can
+ * depend on it before the session is known to be active. A failure of
+ * `alongside` is returned as `{ error }` for the caller to treat as it sees fit.
+ */
+export async function getAuthedUserAlongside<T>(
+  request: NextRequest,
+  alongside: (verified: { user: User; claims: Record<string, unknown> }) => Promise<T>,
+): Promise<AuthedAlongsideResult<T>> {
+  if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
+    console.error("[api-auth] cross_origin_request_refused");
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  const supabase = createSupabaseFromRequest(request);
+  const verified = await verifySessionClaims(supabase);
+  if (!verified.ok) return verified;
+  const live = authorizeVerifiedSession(supabase, verified);
+  const side = (async () => alongside({
+    user: userFromClaims(verified.claims),
+    claims: verified.claims as unknown as Record<string, unknown>,
+  }))().then((value) => ({ value }), (error: unknown) => ({ error }));
+  const [result, outcome] = await Promise.all([live, side]);
+  if (!result.ok) return result;
+  return { ...result, alongside: outcome };
 }
 
 /** Reads that may start before the live check, through the RLS client only. */

@@ -34,6 +34,9 @@ import type {
   IssueUpdateInput,
 } from "./types";
 
+/** Stable while loading: memoized board columns and cards keep their render. */
+const NO_ISSUES: Issue[] = [];
+
 const issuesKey = (projectId: string) => ["issues", projectId] as const;
 
 // Freshness across clients (Numo, MCP, other members) comes from the central
@@ -476,7 +479,7 @@ export function useIssuesQuery(projectId: string | null) {
   );
 
   return {
-    issues: (data ?? []) as Issue[],
+    issues: (data ?? NO_ISSUES) as Issue[],
     loading: enabled && isPending,
     error: error as Error | null,
     createIssue,

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/server/admin";
+import { noteVerifiedSigningKey, verificationJwks } from "@/lib/server/auth-jwks";
 import { appPageMetadata } from "@/lib/app-metadata";
 
 // The admin dashboard must never be indexed, whatever the deploy environment —
@@ -26,8 +27,12 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const supabase = await createServerSupabase();
-  const { data } = await supabase.auth.getClaims();
+  // The process-wide key set `getAuthedUser` verifies with; when it is
+  // unavailable the SDK performs its own lookup, as before.
+  const jwks = await verificationJwks().catch(() => undefined);
+  const { data } = await supabase.auth.getClaims(undefined, jwks ? { jwks } : undefined);
   const claims = data?.claims;
+  if (claims?.sub) noteVerifiedSigningKey(data?.header);
 
   if (!claims?.sub) {
     redirect("/login");

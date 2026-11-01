@@ -1,8 +1,7 @@
-import { commentStore } from "@/lib/server/comment-store";
 import { NextResponse, after, type NextRequest } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { addCommentToFeedbackPost } from "@/lib/server/add-comment";
-import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
+import { readFeedbackComments } from "@/lib/server/feedback/post-reads";
 import { getServiceClient } from "@/lib/supabase-service";
 import {
   getProjectFeedbackPost,
@@ -52,27 +51,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!guard.ok) return guard.response;
   const t = await getTranslations("ApiErrors");
 
-  const service = getServiceClient();
-  const { data, error } = await commentStore(service, "comments", guard.userId)
-    .select("*, attachments(*), feedback_users!feedback_user_id (id, name, email, pseudonym)")
-    .eq("feedback_post_id", postId)
-    .order("created_at", { ascending: true });
-
+  const { data, error } = await readFeedbackComments(postId, guard.userId);
   if (error) {
     console.error("[api/feedback/:id/comments] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-
-  const keyActors = await resolveApiKeyActors(
-    (data ?? []).map((c) => c.api_key_id as string | null)
-  );
-  return NextResponse.json(
-    (data ?? []).map((comment) => ({
-      ...comment,
-      api_key_name: keyActors.get(comment.api_key_id as string)?.name ?? null,
-      api_key_agent: keyActors.get(comment.api_key_id as string)?.agent ?? null,
-    }))
-  );
+  return NextResponse.json(data);
 }
 
 /** POST — add a comment on the feedback post (author = caller). `visibility`

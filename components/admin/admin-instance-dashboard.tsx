@@ -3,6 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Cancel01Icon, Clock01Icon, PencilEdit02Icon, Refresh01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { AppTooltip } from "@/components/ui/app-tooltip";
@@ -152,28 +153,32 @@ function useGuardedWrite() {
   return { run, reauth, closeReauth };
 }
 
+const INSTANCE_VARIABLES_QUERY_KEY = ["admin", "instance-variables"] as const;
+
 export function AdminInstanceDashboard() {
   const t = useTranslations("Admin");
-  const [variables, setVariables] = useState<VariableView[] | null>(null);
-  const [failed, setFailed] = useState(false);
+  const queryClient = useQueryClient();
   const [restartNeeded, setRestartNeeded] = useState(false);
   const [query, setQuery] = useState("");
   const { run, reauth, closeReauth } = useGuardedWrite();
 
-  const load = useCallback(async () => {
-    try {
+  const variablesQuery = useQuery({
+    queryKey: INSTANCE_VARIABLES_QUERY_KEY,
+    queryFn: async (): Promise<VariableView[]> => {
       const res = await fetch("/api/admin/instance-variables", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { variables: VariableView[] };
-      setVariables(data.variables);
-      setFailed(false);
-    } catch {
-      setFailed(true);
-    }
-  }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
+      return ((await res.json()) as { variables: VariableView[] }).variables;
+    },
+    staleTime: 60 * 1000,
+  });
+  const variables = variablesQuery.data ?? null;
+  const failed = variablesQuery.isError;
+  // Resolves once the refetch has landed, so a write is reported done only
+  // when the list shows it.
+  const load = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: INSTANCE_VARIABLES_QUERY_KEY }),
+    [queryClient],
+  );
 
   // A variable matches by its name, its label, its help or its theme.
   const byTheme = useMemo(() => {

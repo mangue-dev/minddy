@@ -2172,6 +2172,12 @@ describe("live collaboration authority (MIN-688)", () => {
     ...extra,
   });
 
+  it("answers a page's short code as an unknown page, not a server error", async () => {
+    const { id } = await livePage([paragraph("Body", "b1")]);
+    expect(await readPageCollaborationSnapshot(PROJECT, id.slice(0, 8), ACTOR))
+      .toEqual({ ok: false, status: 404, errorKey: "pageNotFound" });
+  });
+
   it("journals an accepted batch without rewriting the page, and the materialization signs it once", async () => {
     const { id, snapshot } = await livePage([paragraph("Hello", "b1")]);
     const { version, content_revision: envelope } = rowOf(id) as unknown as Record<string, number>;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FullCatalogMessages } from "@/components/full-catalog-messages";
 import { AppProviders } from "./app-providers";
+import { ServerSeed } from "./server-seed";
 
 /**
  * Segment of the authenticated app. SERVER component, which does nothing else
@@ -22,6 +23,9 @@ export const metadata: Metadata = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <FullCatalogMessages>
+      {/* Outside the providers and the tab host: delivery reaches a module
+          store, whichever view ends up rendering the page (MIN-880). */}
+      <ServerSeed />
       <AppProviders>{children}</AppProviders>
     </FullCatalogMessages>
   );

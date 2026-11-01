@@ -32,7 +32,7 @@ import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useOfferedProjects } from "@/lib/use-offered-projects";
-import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
+import { prefetchRoutineDetail, routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
@@ -48,8 +48,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+// Shared with the row-intent preload: both resolve the same module promise.
+const loadRoutineDetail = () => import("@/components/routines/routine-detail");
+
 const RoutineDetail = dynamic(
-  () => import("@/components/routines/routine-detail").then((m) => m.RoutineDetail),
+  () => loadRoutineDetail().then((m) => m.RoutineDetail),
   {
     ssr: false,
     loading: () => <RoutineDetailSkeleton />,
@@ -138,6 +141,15 @@ export function RoutinesPanel({
     const timer = setTimeout(warm, 2000);
     return () => clearTimeout(timer);
   }, [selectedId, browse]);
+
+  // A selection that arrives with the URL (cold load, link, palette) would
+  // otherwise start its chunk and runs only after the list has resolved and
+  // the pane has mounted. Starting them now overlaps both with the list read.
+  useEffect(() => {
+    if (browse || !selectedId) return;
+    void loadRoutineDetail();
+    prefetchRoutineDetail(queryClient, selectedId);
+  }, [selectedId, browse, queryClient]);
 
   const projectById = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),
@@ -571,6 +583,10 @@ export function RoutinesPanel({
                 routine={routine}
                 selected={routine.id === selectedId}
                 onSelect={() => onSelect(routine.id)}
+                onIntent={() => {
+                  void loadRoutineDetail();
+                  prefetchRoutineDetail(queryClient, routine.id);
+                }}
                 picked={routineSelection.isSelected(routine.id)}
                 onTogglePicked={browse ? undefined : routineSelection.toggle}
               />
@@ -725,6 +741,7 @@ function RoutineRow({
   selected,
   picked = false,
   onSelect,
+  onIntent,
   onTogglePicked,
 }: {
   routine: Routine;
@@ -732,6 +749,8 @@ function RoutineRow({
   /** Taken in the multi-selection (MIN-873). */
   picked?: boolean;
   onSelect: () => void;
+  /** Browsing intent (hover, focus, pointer down): warms the pane's reads. */
+  onIntent?: () => void;
   /** ⇧-click: adds the routine to the selection or takes it out. */
   onTogglePicked?: (routineId: string) => void;
 }) {
@@ -761,6 +780,9 @@ function RoutineRow({
       data-navigation-href={routineHref(routine.id)}
       data-routine-id={routine.id}
       aria-pressed={onTogglePicked ? picked : undefined}
+      onPointerEnter={onIntent}
+      onFocus={onIntent}
+      onPointerDown={onIntent}
       onClick={(event) => {
         if (event.shiftKey && onTogglePicked) {
           event.preventDefault();

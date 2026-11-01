@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -13,6 +14,7 @@ import { useAttachmentUploads } from "@/lib/use-attachment-uploads";
 import { useIssueResources } from "@/lib/use-issue-resources";
 import { useAuth } from "@/lib/auth-context";
 
+// Memoized (MIN-875): the detail panels re-render for each query they read.
 /**
  * Issue-LEVEL resources in the side panel (description tab). Rendered as a row
  * of the key/value property table — label left, « + » right — with the
@@ -23,7 +25,7 @@ import { useAuth } from "@/lib/auth-context";
  * resolved — with no submit step, and anyone can add more; removal is
  * uploader-only (RLS). The row and its resources are one drop target.
  */
-export function IssueResourcesSection({
+export const IssueResourcesSection = memo(function IssueResourcesSection({
   issueId,
   projectId,
   readOnly = false,
@@ -90,4 +92,4 @@ export function IssueResourcesSection({
       )}
     </div>
   );
-}
+});

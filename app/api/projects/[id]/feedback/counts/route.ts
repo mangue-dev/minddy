@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase-service";
-import { requireProjectMember } from "@/lib/server/feedback/team-guard";
+import { requireFeedbackMember } from "@/lib/server/feedback/team-guard";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -8,7 +8,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  still open or planned (the counterpart of the sorting counter). */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const guard = await requireProjectMember(request, id);
+  const guard = await requireFeedbackMember(request, id);
   if (!guard.ok) return guard.response;
 
   const service = getServiceClient();

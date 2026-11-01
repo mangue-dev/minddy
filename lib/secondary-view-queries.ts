@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { fetchFeedbackCommentsApi, fetchFeedbackEventsApi, fetchObjectiveCommentsApi, fetchObjectiveEventsApi } from "./comments-api";
 import type { Attachment } from "./types";
 import type { TeamFeedbackDetail } from "./server/feedback/team-queries";
@@ -49,3 +49,22 @@ export const objectiveFeedbackCountOptions = (projectId: string, objectiveId: st
     return response.json();
   },
 });
+
+const warmedObjectives = new WeakMap<QueryClient, Set<string>>();
+
+/**
+ * Starts the reads an objective's detail renders first (comments, events,
+ * resources, linked-feedback count) from browsing intent on its list row. One
+ * attempt per objective per query client; `prefetchQuery` skips fresh entries,
+ * and a failed warm-up is silent: the pane's own query retries when it mounts.
+ */
+export function prefetchObjectiveDetail(queryClient: QueryClient, projectId: string, objectiveId: string): void {
+  let warmed = warmedObjectives.get(queryClient);
+  if (!warmed) warmedObjectives.set(queryClient, (warmed = new Set()));
+  if (warmed.has(objectiveId)) return;
+  warmed.add(objectiveId);
+  void queryClient.prefetchQuery({ ...objectiveCommentsOptions(objectiveId), retry: false });
+  void queryClient.prefetchQuery({ ...objectiveEventsOptions(objectiveId), retry: false });
+  void queryClient.prefetchQuery({ ...objectiveResourcesOptions(objectiveId), retry: false });
+  void queryClient.prefetchQuery({ ...objectiveFeedbackCountOptions(projectId, objectiveId), retry: false });
+}

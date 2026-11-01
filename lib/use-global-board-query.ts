@@ -53,6 +53,13 @@ import type {
 export { GLOBAL_BOARD_KEY };
 
 const BOARD_CACHE_STALE_MS = 5 * 60_000;
+// Stable while loading: fresh fallbacks each render broke the board's memos.
+const NO_ISSUES: Issue[] = [];
+const NO_RELATIONS: IssueRelation[] = [];
+const NO_MEMBERS_BY_PROJECT: GlobalBoardResponse["members"] = {};
+const NO_CATEGORIES_BY_PROJECT: GlobalBoardResponse["categories"] = {};
+const NO_OBJECTIVES_BY_PROJECT: GlobalBoardResponse["objectives"] = {};
+const NO_INTEGRATIONS_BY_PROJECT: GlobalBoardResponse["integrations"] = {};
 
 /**
  * The cross-project "My/All" kanban's data + writes. Edits go through the
@@ -465,12 +472,12 @@ export function useGlobalBoardQuery() {
   );
 
   return {
-    issues: (data?.issues ?? []) as Issue[],
-    membersByProject: data?.members ?? {},
-    categoriesByProject: data?.categories ?? {},
-    objectivesByProject: data?.objectives ?? {},
-    integrationsByProject: data?.integrations ?? {},
-    relations: (data?.relations ?? []) as IssueRelation[],
+    issues: (data?.issues ?? NO_ISSUES) as Issue[],
+    membersByProject: data?.members ?? NO_MEMBERS_BY_PROJECT,
+    categoriesByProject: data?.categories ?? NO_CATEGORIES_BY_PROJECT,
+    objectivesByProject: data?.objectives ?? NO_OBJECTIVES_BY_PROJECT,
+    integrationsByProject: data?.integrations ?? NO_INTEGRATIONS_BY_PROJECT,
+    relations: (data?.relations ?? NO_RELATIONS) as IssueRelation[],
     cycles: data?.cycles ?? null,
     loading: isPending,
     updateIssue,

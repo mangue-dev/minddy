@@ -7,7 +7,7 @@ import { MentionHover } from "@/components/mention-hover";
 import { AgentHoverCard } from "@/components/agent-hover-card";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
-import { createContext, useContext, useMemo, useRef, useState } from "react";
+import { memo, createContext, useContext, useMemo, useRef, useState } from "react";
 import { revealLatestComment, useCommentComposerFocus } from "@/lib/comment-focus";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
@@ -1251,7 +1251,8 @@ function groupRows(
 }
 
 /** Minimalist activity feed, always visible; only long runs of events collapse. */
-export function IssueActivity({
+// Memoized (MIN-875): the detail panels re-render for each query they read.
+export const IssueActivity = memo(function IssueActivity({
   items,
   readState,
   onRetryRead,
@@ -1375,10 +1376,10 @@ export function IssueActivity({
     </ActivityProject.Provider>
     </CommentPermissionsContext.Provider>
   );
-}
+});
 
 /** Fixed comment composer (panel footer). */
-export function CommentComposer({
+export const CommentComposer = memo(function CommentComposer({
   members,
   projectId,
   onSubmit,
@@ -1539,7 +1540,7 @@ export function CommentComposer({
       </div>
     </div>
   );
-}
+});
 
 /**
  * Who we write to: the team, or the board (MIN-196).

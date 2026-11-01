@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserAlongside } from "@/lib/server/api-auth";
 import { parseRoutinePromptMentions } from "@/lib/agent-mentions";
 import {
   deleteRoutine,
   getRoutineForUser,
+  readRoutineDetail,
   updateRoutine,
 } from "@/lib/server/routines";
 import { routineErrorResponse } from "../route";
@@ -40,10 +41,13 @@ function days(value: unknown): number[] {
 }
 
 export async function GET(request: NextRequest, ctx: RouteContext) {
-  const auth = await getAuthedUser(request);
-  if (!auth.ok) return auth.response;
   const { id } = await ctx.params;
-  const found = await getRoutineForUser(id, auth.user.id);
+  // The routine row and the access decision are side-effect-free reads that
+  // overlap the live session check; decryption (which is audited) waits for it.
+  const auth = await getAuthedUserAlongside(request, ({ user }) => readRoutineDetail(id, user.id));
+  if (!auth.ok) return auth.response;
+  if ("error" in auth.alongside) throw auth.alongside.error;
+  const found = await getRoutineForUser(id, auth.user.id, auth.alongside.value);
   if (!found)
     return NextResponse.json({ error: "routineNotFound" }, { status: 404 });
   return NextResponse.json({ routine: found.routine, isOwner: found.isOwner });

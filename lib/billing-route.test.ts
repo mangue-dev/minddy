@@ -20,10 +20,16 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({ ok: true, user: { id: "user-1" } }),
+  getAuthedUserAlongside: async (_request: unknown, alongside: (verified: { user: { id: string } }) => Promise<unknown>) => ({
+    ok: true,
+    user: { id: "user-1" },
+    alongside: await alongside({ user: { id: "user-1" } }).then((value) => ({ value }), (error: unknown) => ({ error })),
+  }),
 }));
 
 vi.mock("@/lib/server/billing-accounts", () => ({
   getResolvedBilling: async () => mocks.billing,
+  readBillingAccountRow: async () => null,
   resolveBasePlanFromBillingAccount: (account: {
     stripe_plan_id: "free" | "go" | "pro" | null;
     stripe_subscription_status: string | null;

@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserAlongside } from "@/lib/server/api-auth";
 import { parseRoutinePromptMentions } from "@/lib/agent-mentions";
 import {
   createRoutine,
   listRoutinesForUser,
+  readRoutineList,
   type RoutineErrorKey,
 } from "@/lib/server/routines";
 
@@ -57,9 +58,12 @@ export function routineErrorResponse(result: {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  // The project and routine rows are side-effect-free reads that overlap the
+  // live session check; decryption (which is audited) waits for it.
+  const auth = await getAuthedUserAlongside(request, ({ user }) => readRoutineList(user.id));
   if (!auth.ok) return auth.response;
-  const routines = await listRoutinesForUser(auth.user.id);
+  if ("error" in auth.alongside) throw auth.alongside.error;
+  const routines = await listRoutinesForUser(auth.user.id, auth.alongside.value);
   return NextResponse.json({ routines });
 }
 

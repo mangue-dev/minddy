@@ -1,5 +1,5 @@
 "use client";
-import { useLayoutEffect } from "react";
+import { memo, useLayoutEffect } from "react";
 import { useWindowButtonsSlot, useWideLayout } from "@/lib/use-window-buttons";
 import { appTopBarNavigationWidth } from "@/lib/app-chrome-layout";
 import { SidebarVisibilityButton } from "./sidebar-visibility-button";
@@ -17,12 +17,17 @@ type AppTopBarProps = {
   onNewTab: () => void;
 };
 
-export function AppTopBar({ ready, ...props }: AppTopBarProps & { ready: boolean }) {
+/**
+ * Memoized: the shell re-renders on every query it reads (notifications,
+ * counts, drafts…), and the tab strip under this bar is one of the largest
+ * subtrees of the chrome (MIN-875). Its own hooks still update it.
+ */
+export const AppTopBar = memo(function AppTopBar({ ready, ...props }: AppTopBarProps & { ready: boolean }) {
   // Reserve the desktop height before authentication and tab restoration finish.
   return <div className="app-top-bar relative z-40 hidden h-11 shrink-0 items-center bg-sidebar text-sidebar-foreground app-desktop:flex">
     {ready && <AppTopBarContents {...props} />}
   </div>;
-}
+});
 
 function AppTopBarContents({ hidden, inbox, onSearch, onSearchWarm, onNewTab }: AppTopBarProps) {
   // Track bar presence once rather than matching a root :has() on every mutation.

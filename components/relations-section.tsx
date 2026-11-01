@@ -26,7 +26,7 @@ import {
   MessageMultiple01Icon,
   Target01Icon,
 } from "@hugeicons/core-free-icons";
-import { useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
@@ -64,7 +64,8 @@ import type {
   RelationEndpointType,
 } from "@/lib/types";
 
-export function RelationsSection({
+// Memoized (MIN-875): the detail panels re-render for each query they read.
+export const RelationsSection = memo(function RelationsSection({
   issue,
   relations,
   allIssues,
@@ -422,4 +423,4 @@ export function RelationsSection({
       />
     </>
   );
-}
+});

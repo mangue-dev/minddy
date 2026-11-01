@@ -8,6 +8,7 @@ import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import {
+  memo,
   useCallback,
   useEffect,
   useId,
@@ -231,8 +232,12 @@ function SidebarRow({ item }: { item: AppNavItem }) {
   // also, what exactly is wanted.
   const prefetchProject = usePrefetchProject();
   const prefetchPages = usePrefetchPages();
+  const session = useOptionalAppTabSession();
   const warm = item.href
     ? () => {
+        // The tab strip's intent path: surface code, route prefetch and the
+        // destination's queries, once per href for the session.
+        session?.prefetch(item.href as string);
         const projectId = projectIdFromPath(item.href as string);
         if (!projectId) return;
         prefetchProject(projectId);
@@ -267,6 +272,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
         aria-current={active ? "page" : undefined}
         onMouseEnter={warm}
         onFocus={warm}
+        onPointerDown={warm}
         onContextMenu={openContextMenu}
         whileTap={{ scale: 0.97 }}
         transition={transitions.snappy}
@@ -1173,7 +1179,9 @@ export function secondaryNavBackTarget(
  * panel and stay mounted across route changes within it — the pages' bars
  * portal INTO the sidebar. In mobile layout none of this renders (mobile shell).
  */
-export function AppSidebar({
+// Memoized: the shell re-renders for every query it reads; the sidebar
+// follows its own props and hooks (MIN-875).
+export const AppSidebar = memo(function AppSidebar({
   sections,
   homeSections,
   modeKey,
@@ -1390,4 +1398,4 @@ export function AppSidebar({
 
     </SidebarFrame>
   );
-}
+});

@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 
-import { getAuthedUser } from "@/lib/server/api-auth";
-import { isAdminUser } from "@/lib/server/admin";
+import { getAuthedAdmin } from "@/lib/server/admin";
 import { hasFreshAal2Verification, REAUTH_REQUIRED_CODE } from "@/lib/server/reauth";
 import {
   clearInstanceVariable,
@@ -40,11 +39,8 @@ type Gate =
   | { ok: false; response: NextResponse };
 
 async function requireAdmin(request: NextRequest): Promise<Gate> {
-  const auth = await getAuthedUser(request);
+  const auth = await getAuthedAdmin(request);
   if (!auth.ok) return { ok: false, response: auth.response };
-  if (!(await isAdminUser(auth.user, auth.claims))) {
-    return { ok: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
-  }
   return {
     ok: true,
     actor: { id: auth.user.id, email: auth.user.email ?? null, appMetadata: auth.user.app_metadata },

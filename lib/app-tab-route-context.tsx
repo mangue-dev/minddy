@@ -36,6 +36,17 @@ export function AppTabRouteBoundary({ children }: { children: ReactNode }) {
   return retained ? children : <LiveRoute>{children}</LiveRoute>;
 }
 
+/**
+ * Render a project page once its project id is known. A retained view reads
+ * its route outside the project layout, so a short code this browser has not
+ * learned yet (a project created elsewhere, while the project list loads)
+ * expands to null for a moment; the page waits behind its skeleton instead of
+ * rendering without a project, which crashed into the error screen.
+ */
+export function ProjectRouteReady({ fallback, children }: { fallback: ReactNode; children: ReactNode }) {
+  return useAppTabRoute().projectId ? children : fallback;
+}
+
 /** Hidden views retain their own location while the window navigates elsewhere. */
 export function useAppTabRoute() {
   const route = useContext(Context);

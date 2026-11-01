@@ -15,7 +15,8 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import dynamic from "next/dynamic";
-import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { AppTabRouteBoundary, ProjectRouteReady, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
+import { ListDetailSkeleton } from "@/components/route-skeletons";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
@@ -55,6 +56,9 @@ import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELEC
 import { ObjectiveDetail } from "@/components/objective-detail";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { Member, Objective } from "@/lib/types";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchObjectiveDetail } from "@/lib/secondary-view-queries";
+import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { matchesObjectiveState, secondarySelectionId } from "@/lib/secondary-view-selection";
 import { deepLinkNeedsAllFilter } from "@/lib/sidebar-deep-link";
 import {
@@ -75,6 +79,7 @@ import {
   objectiveStatusOptions,
   sharedCurrent,
 } from "@/components/command-palette-options";
+import { useDocumentEditorForFirstContent } from "@/components/editor/document-editor-lazy";
 
 const ObjectiveDialog = dynamic(
   () => import("@/components/objective-dialog").then((m) => m.ObjectiveDialog),
@@ -252,10 +257,20 @@ function ObjectiveRow({
 }) {
   const tStatus = useTranslations("ObjectiveStatus");
   const status = OBJECTIVE_STATUS_MAP[objective.status];
+  const queryClient = useQueryClient();
+  // Browsing intent warms the detail's reads; the description session snapshot
+  // is short-lived, so it waits for the pointer-down that precedes the click.
+  const warmDetail = () => prefetchObjectiveDetail(queryClient, projectId, objective.id);
   return (
     <button
       type="button"
       data-sidebar-filter-result
+      onPointerEnter={warmDetail}
+      onFocus={warmDetail}
+      onPointerDown={() => {
+        warmDetail();
+        prefetchDescriptionSnapshot("objective", objective.id);
+      }}
       data-navigation-href={objectiveHref(projectId, objective.id)}
       data-comment-target={commentTarget("objective", objective.id)}
       data-objective-id={objective.id}
@@ -446,7 +461,10 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
     ];
   };
   const { issues } = useIssuesQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  // A project browsed from elsewhere waits for the project list.
+  const { members } = useMembersQuery(projectId, !!project || projectId === routeProjectId);
   const { open: openAssistant } = useAssistantPanelActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -990,6 +1008,8 @@ export function ObjectivesBoardSidebar({ projectId, objectiveId }: { projectId: 
 }
 
 export default function ObjectivesPage() {
+  // The opened objective's description and comment field are first content.
+  useDocumentEditorForFirstContent();
   return (
     <AppTabRouteBoundary><Suspense
       fallback={
@@ -998,7 +1018,7 @@ export default function ObjectivesPage() {
         </div>
       }
     >
-      <ObjectivesInner />
+      <ProjectRouteReady fallback={<ListDetailSkeleton />}><ObjectivesInner /></ProjectRouteReady>
     </Suspense></AppTabRouteBoundary>
   );
 }

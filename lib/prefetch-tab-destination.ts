@@ -22,6 +22,7 @@ import { globalBoardQueryFn } from "./global-board-api";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fetchViewsApi } from "./views-api";
 import { fetchStatsApi } from "./stats-api";
+import { mfaStatusQueryOptions } from "./use-mfa-status";
 import { statsTimeZone } from "./use-stats-query";
 import { myInvitationsQueryOptions } from "./invitations-api";
 import { retainedAppViewKind } from "./retained-app-views";
@@ -84,7 +85,17 @@ export function prefetchAppTabDestination(
     return;
   }
   if (route.projectId && route.section === "feedback") {
-    void queryClient.prefetchQuery(feedbackQueryOptions(route.projectId, feedbackFiltersForDestination(queryClient, route.projectId, href)));
+    // The same set `isPreparedAppTabDestination` requires, so a hovered
+    // Feedback destination can qualify for local navigation.
+    for (const options of appTabPreparationQueries(queryClient, href)) void queryClient.prefetchQuery(options);
+    return;
+  }
+  if (route.projectId && route.section === "settings") {
+    // The General tab's identity header reads these four project lists.
+    for (const options of projectPreparationQueries(queryClient, route.projectId)
+      .filter((option) => ["issues", "categories", "members", "objectives"].includes(String(option.queryKey[0])))) {
+      void queryClient.prefetchQuery(options);
+    }
     return;
   }
   if (route.projectId && route.section === "objectives") {
@@ -147,6 +158,8 @@ export function prefetchAppTabDestination(
     case "settings": {
       const tz = statsTimeZone();
       void queryClient.prefetchQuery({ queryKey: ["stats", tz], queryFn: () => fetchStatsApi(tz) });
+      // The account settings page badges its Security tab from this status.
+      void queryClient.prefetchQuery(mfaStatusQueryOptions);
       return;
     }
     default:

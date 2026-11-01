@@ -2,6 +2,7 @@ import { HttpResponseError } from "./backend-availability";
 import { withClientRequestDeadline } from "./client-request-deadline";
 import { confirmSessionAfterUnauthorized, isSessionInvalidResponse } from "./session-revocation";
 import { getSupabase } from "./supabase";
+import { takeServerSeed } from "./server-seed";
 
 export const CLIENT_READ_TIMEOUT_MS = 30_000;
 
@@ -33,7 +34,9 @@ export function fetchClientRead(
       : prepareClientSession();
     const owner = await prepare();
     signal.throwIfAborted();
-    const response = await fetch(path, { ...init, signal });
+    // The document may already carry this read (MIN-880, lib/server-seed.ts).
+    const seeded = takeServerSeed(path, owner);
+    const response = (seeded && await seeded) || await fetch(path, { ...init, signal });
     // Include body consumption in the deadline: headers alone do not finish a read.
     const body = await response.arrayBuffer();
     signal.throwIfAborted();

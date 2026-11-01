@@ -27,9 +27,11 @@ import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, CircleIcon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
+import { DEFAULT_FEEDBACK_SORT, DEFAULT_FEEDBACK_STATE, type FeedbackSelectionHint } from "@/lib/feedback-selection-hint";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
@@ -117,8 +119,14 @@ import { useTitleBodyLink } from "@/lib/use-title-body-link";
 // see components/editor/document-editor-lazy.tsx.
 import {
   LazyDocumentEditor,
-  useIdleDocumentEditorPreload,
+  useDocumentEditorForFirstContent,
 } from "@/components/editor/document-editor-lazy";
+// This page shows an editor on first paint (MIN-875): the description
+// stream module ships with the route, as before, instead of downloading
+// after hydration where it competes with the page's reads on a slow link.
+// Routes that open no editor at load (/all, the board) load it on demand
+// (lib/use-description-collaboration.ts).
+import "@/lib/description-collaboration-stream";
 import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { Dot } from "@/components/ui/color-dot";
 import {
@@ -644,6 +652,9 @@ function FeedbackRow({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export function FeedbackTeamPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
+  // The opened post and its reply field are first content: load the editor
+  // now (components/editor/document-editor-lazy.tsx).
+  useDocumentEditorForFirstContent();
   return <AppTabRouteBoundary><FeedbackTeamPageInner browse={browse} /></AppTabRouteBoundary>;
 }
 
@@ -651,9 +662,6 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const timeAgo = useTimeAgo();
-  // Mounts with the page: warm the deferred editor chunk once painted, so a
-  // team reply never waits on tiptap (components/editor/document-editor-lazy.tsx).
-  useIdleDocumentEditorPreload();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const postParam = expandParam(searchParams.get("post"));
@@ -669,12 +677,16 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [setupOpen, setSetupOpen] = useState(false);
 
   const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
-  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(projectPath(projectId, "feedback"), "state", searchParams.has("objective") ? "all" : "unresolved");
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(projectPath(projectId, "feedback"), "state", searchParams.has("objective") ? "all" : DEFAULT_FEEDBACK_STATE);
   const [onlyToReview, setOnlyToReview] = useMobileCollectionState(projectPath(projectId, "feedback"), "onlyToReview", false);
   const normalListFilters = { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
   const listFilters = feedbackFiltersForRequestedPost(queryClient, projectId, postParam, normalListFilters, onlyToReview);
+  // The post this list will open, read with it (set below, once the view's
+  // sort is known; the read leaves after layout effects).
+  const preparedHint = useRef<FeedbackSelectionHint | null>(null);
+  const preparation = useMemo(() => ({ client: queryClient, hint: () => preparedHint.current }), [queryClient]);
   const { data: listData, isPending } = useQuery({
-    ...feedbackQueryOptions(projectId, listFilters),
+    ...feedbackQueryOptions(projectId, listFilters, preparation),
     // Consuming `?post=` narrows the full list to the normal scope. Keep the
     // full list of this project on screen, filtered as it already was, while
     // that scope loads; a narrower list never stands in for a wider one, and
@@ -712,7 +724,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // archives which buried them.
   const objectiveParam = searchParams.getAll("objective").join(",");
   useEffect(() => { if (objectiveParam) setState("all"); }, [objectiveParam, setState]);
-  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(projectPath(projectId, "feedback"), "sort", "top");
+  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(projectPath(projectId, "feedback"), "sort", DEFAULT_FEEDBACK_SORT);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
@@ -721,6 +733,12 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // A search looks through every post, whatever the state, review and
   // property filters: they narrow the resting list, the query finds anything.
   const searching = query.trim() !== "";
+  useLayoutEffect(() => {
+    // Property filters and search select among rows the server does not order:
+    // the page reads the post itself then.
+    preparedHint.current = searching || Object.keys(properties).length ? null
+      : { state, sort, onlyToReview, ...(postParam ? { post: postParam } : {}) };
+  }, [searching, properties, state, sort, onlyToReview, postParam]);
   const visiblePosts = useMemo(() => feedbackSelectionItems(posts, searching
     ? { state: "all", sort }
     : { state, sort, onlyToReview, properties }),
@@ -760,7 +778,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const { issues, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  const { members } = useMembersQuery(projectId, true);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
   const categoryMap = useMemo(
@@ -1785,6 +1805,11 @@ function FeedbackDetail({
     toast.error(error instanceof Error ? error.message : t("errorGeneric"));
   }, [t]);
   const handleCategoriesChange = useFeedbackCategories(projectId, postId, saveCategories, categoryError);
+  // Stable props for the memoized objective picker and comment composer (MIN-875).
+  const setObjective = useStableCallback((objective_id: string | null) => patch.mutate({ objective_id }));
+  const publicOption = useMemo(() => canWrite
+    ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
+    : undefined, [canWrite, boardEnabled, t]);
 
   // The fade that replaces the border under the top bar: it only appears
   // on the side where there is still something to discover.
@@ -2291,7 +2316,7 @@ function FeedbackDetail({
 
           <PropertyRow label={tField("objective")}>
             <ObjectiveValue value={post.objective_id} objectives={objectives} projectId={projectId}
-              onChange={(objective_id) => patch.mutate({ objective_id })} />
+              onChange={setObjective} />
           </PropertyRow>
 
           <PropertyRow label={tField("categories")}>
@@ -2379,11 +2404,7 @@ function FeedbackDetail({
             // Without a published board, a public comment has nowhere to appear.
             // Keep the toggle visible but disabled so the missing setting is explicit.
             // A public reply speaks for the team: readers only comment internally.
-            publicOption={
-              canWrite
-                ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
-                : undefined
-            }
+            publicOption={publicOption}
           />
         </div>
       </div>

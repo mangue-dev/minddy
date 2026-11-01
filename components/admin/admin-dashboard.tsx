@@ -137,6 +137,20 @@ export function AdminDashboard() {
   const searchParams = useSearchParams();
   const reduceMotion = useReducedMotion();
   const contentFade = useScrollFade<HTMLDivElement>();
+  // A query change on the page already shown needs no server round trip:
+  // Next's patched history keeps `useSearchParams` in sync, so tabs flip at
+  // once. The state must not be Next's own (`window.history.state`): Next
+  // takes such a write for its internal one and leaves the router as it was.
+  const replaceQuery = useCallback(
+    (href: string) => {
+      if (window.location.pathname === pathname) {
+        window.history.replaceState(null, "", href + window.location.hash);
+        return;
+      }
+      router.replace(href, { scroll: false });
+    },
+    [pathname, router],
+  );
   // Tab existence follows the instance, not the product (MIN-416): the
   // “Costs” screen reads the OpenRouter ledger, so an instance without a
   // linked OpenRouter key has nothing to show there and the tab disappears.
@@ -161,8 +175,9 @@ export function AdminDashboard() {
     const params = new URLSearchParams(searchParams.toString());
     if (requested === DEFAULT_TAB) params.delete("tab");
     else params.set("tab", requested);
-    const qs = params.toString();
-    router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    // An arrival rewrite keeps the router: a raw history write can race the
+    // navigation that brought the old value and end it in a full reload.
+    router.replace(`${pathname}${params.toString() ? `?${params}` : ""}`, { scroll: false });
   }, [pathname, rawTab, requested, router, searchParams]);
 
   const [query, setQuery] = useState("");
@@ -202,10 +217,9 @@ export function AdminDashboard() {
       const params = new URLSearchParams(searchParams.toString());
       if (value === DEFAULT_TAB) params.delete("tab");
       else params.set("tab", value);
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      replaceQuery(`${pathname}${params.toString() ? `?${params}` : ""}`);
     },
-    [pathname, router, searchParams],
+    [pathname, replaceQuery, searchParams],
   );
 
   const openSection = useCallback(
@@ -215,9 +229,9 @@ export function AdminDashboard() {
       if (section.tab === DEFAULT_TAB) params.delete("tab");
       else params.set("tab", section.tab);
       params.set(ADMIN_SECTION_PARAM, section.id);
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      replaceQuery(`${pathname}?${params.toString()}`);
     },
-    [pathname, router, searchParams],
+    [pathname, replaceQuery, searchParams],
   );
 
   const sectionParam = searchParams.get(ADMIN_SECTION_PARAM);
@@ -246,10 +260,8 @@ export function AdminDashboard() {
         nonce: (previous?.nonce ?? 0) + 1,
       }));
     }
-    const queryString = params.toString();
-    router.replace(`${pathname}${queryString ? `?${queryString}` : ""}`, {
-      scroll: false,
-    });
+    // Consumption keeps the router, like the legacy-tab rewrite above.
+    router.replace(`${pathname}${params.toString() ? `?${params}` : ""}`, { scroll: false });
   }, [pathname, router, searchableSections, searchParams, sectionParam]);
 
   useAdminSectionFocus(focus, !!reduceMotion);

@@ -34,6 +34,8 @@ let plan: {
   maxMembersPerProject: number | null;
 };
 
+const NOT_JOINED = Symbol("not joined");
+
 /** PostgREST string duplicate: accumulate filters, then count. */
 function table(rows: () => Row[]) {
   const filters: ((row: Row) => boolean)[] = [];
@@ -45,10 +47,26 @@ function table(rows: () => Row[]) {
     filters.push((row) => (row as Record<string, unknown>)[column] === value);
     return query;
   };
+  // `projects.deleted_at` on `project_members` is the embedded `projects!inner`
+  // join: a membership whose project does not exist matches nothing.
+  const valueOf = (row: Row, column: string): unknown => {
+    const [, field] = column.split(".");
+    if (field === undefined) return (row as Record<string, unknown>)[column];
+    const parent = projectRows.find((project) => project.id === row.project_id);
+    return parent ? (parent as Record<string, unknown>)[field] : NOT_JOINED;
+  };
   query.is = (column: string, value: unknown) => {
-    filters.push(
-      (row) => ((row as Record<string, unknown>)[column] ?? null) === value
-    );
+    filters.push((row) => {
+      const found = valueOf(row, column);
+      return found !== NOT_JOINED && (found ?? null) === value;
+    });
+    return query;
+  };
+  query.neq = (column: string, value: unknown) => {
+    filters.push((row) => {
+      const found = valueOf(row, column);
+      return found !== NOT_JOINED && found !== value;
+    });
     return query;
   };
   query.gt = (column: string, value: unknown) => {
@@ -150,6 +168,22 @@ describe("project limit", () => {
       { id: "p2", owner_id: OWNER, deleted_at: TRASHED },
     ];
     await expect(countAccessibleProjects(OWNER)).resolves.toBe(1);
+  });
+
+  it("counts joined projects once, skips trashed ones and never double-counts an owner's membership", async () => {
+    projectRows = [
+      { id: "own", owner_id: OWNER, deleted_at: null },
+      { id: "joined", owner_id: "other", deleted_at: null },
+      { id: "joined-trashed", owner_id: "other", deleted_at: TRASHED },
+      { id: "elsewhere", owner_id: "other", deleted_at: null },
+    ];
+    memberRows = [
+      { id: "m1", project_id: "joined", user_id: OWNER },
+      { id: "m2", project_id: "joined-trashed", user_id: OWNER },
+      { id: "m3", project_id: "own", user_id: OWNER },
+      { id: "m4", project_id: "elsewhere", user_id: "someone-else" },
+    ];
+    await expect(countAccessibleProjects(OWNER)).resolves.toBe(2);
   });
 
   it("frees a slot for a full account as soon as one project is trashed", async () => {

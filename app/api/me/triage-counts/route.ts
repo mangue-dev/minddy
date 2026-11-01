@@ -1,6 +1,7 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { ProjectTriageCount, TriageCountsResponse } from "@/lib/types";
 
@@ -20,21 +21,31 @@ import type { ProjectTriageCount, TriageCountsResponse } from "@/lib/types";
  * when entering it. A discrepancy here would be seen immediately.
  */
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  // Both RLS reads start together and overlap the live session check, which
+  // still gates the response. The service-role feedback read below depends on
+  // the project ids and therefore waits for both.
+  const readScope = (supabase: SupabaseClient) => Promise.all([
+    // Tickets go through the user's client: RLS (`can_access_project`) limits
+    // reading to my projects. This list ALSO serves as a scope: it excludes
+    // trashed projects, and the feedback read must exclude them with it.
+    supabase.from("projects").select("id").is("deleted_at", null),
+    // `projects!inner(deleted_at)` is not a read column, it is the FILTER of
+    // the trash: throwing away a project does not affect its tickets (they come
+    // back with it), and `can_access_project` does not look at `deleted_at`, so
+    // the tickets of a trashed project continue to pass RLS. Without this
+    // filter, they fell in `counts` under the id of a project that the sidebar
+    // no longer lists, and the "Home" badge, which IS the table, counted them.
+    // Same join as the table edge (app/api/me/summary/route.ts) and cycle
+    // reconciliation.
+    issueStore(supabase).select("project_id, projects!inner(deleted_at)")
+      .eq("status", "triage")
+      .is("deleted_at", null)
+      .is("projects.deleted_at", null),
+  ]);
+  const auth = await getAuthedUserWithRlsReads(request, ({ supabase }) => readScope(supabase));
   if (!auth.ok) return auth.response;
 
-  // Tickets go through the user's client: RLS
-  // (`can_access_project`) limits reading to my projects. The tables
-  // `feedback_*` are RLS deny-all (see supabase/migrations/…_feedback.sql),
-  // hence a service-role reading limited to the ids read just before — under
-  // RLS, therefore.
-  //
-  // This list ALSO serves as a scope: it excludes trashed projects,
-  // and the account must exclude it with it (see the join below).
-  const { data: projectRows, error: projectsError } = await auth.supabase
-    .from("projects")
-    .select("id")
-    .is("deleted_at", null);
+  const [{ data: projectRows, error: projectsError }, triageRes] = await (auth.reads ?? readScope(auth.supabase));
   if (projectsError) {
     console.error("[api/me/triage-counts] projects load failed:", projectsError.message);
     return NextResponse.json({ counts: {} } satisfies TriageCountsResponse);
@@ -44,28 +55,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ counts: {} } satisfies TriageCountsResponse);
   }
 
-  const [triageRes, feedbackRes] = await Promise.all([
-    // `projects!inner(deleted_at)` is not a read column, it is the FILTER of
-    // the trash: throwing away a project does not affect its tickets (they come back
-    // with him), and `can_access_project` does not look at `deleted_at` — those of a
-    // Project thrown away therefore continue to pass RLS. Without this filter, they fell
-    // in `counts` under the id of a project that the sidebar no longer lists: none
-    // line did not carry them, but the “Home” badge — which IS the table —
-    // mattered. A “+1” that could not be found anywhere, until
-    // emptying the trash makes it disappear. Same join as the table
-    // edge (app/api/me/summary/route.ts) and cycle reconciliation.
-    issueStore(auth.supabase).select("project_id, projects!inner(deleted_at)")
-      .eq("status", "triage")
-      .is("deleted_at", null)
-      .is("projects.deleted_at", null),
-    getServiceClient()
-      .from("feedback_posts")
-      .select("project_id")
-      .is("deleted_at", null)
-      .in("project_id", projectIds)
-      .is("merged_into_id", null)
-      .in("status", ["open", "planned"]),
-  ]);
+  // The `feedback_*` tables are RLS deny-all (see
+  // supabase/migrations/…_feedback.sql), hence a service-role read limited to
+  // the ids read under RLS above. It cannot be expressed without them.
+  const feedbackRes = await getServiceClient()
+    .from("feedback_posts")
+    .select("project_id")
+    .is("deleted_at", null)
+    .in("project_id", projectIds)
+    .is("merged_into_id", null)
+    .in("status", ["open", "planned"]);
 
   // A reading failure is not a 500 error: these numbers decorate a
   // sidebar mounted on all pages, and a 500 per navigation would

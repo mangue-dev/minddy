@@ -8,7 +8,9 @@ import {
 } from "@/lib/billing-plans";
 import {
   getResolvedBilling,
+  readBillingAccountRow,
   shouldUseStripePlan,
+  type BillingAccountRead,
   type ResolvedBilling,
 } from "@/lib/server/billing-accounts";
 import { resolveUsageWindow } from "@/lib/billing-cycle";
@@ -127,16 +129,37 @@ function roundUsd(value: number): number {
   return Math.round(value * 1e6) / 1e6;
 }
 
+/**
+ * The side-effect-free reads that open a usage summary: the stored billing
+ * account and the latest quota reset. A route can start them while the live
+ * session check runs and pass them to `getUserUsage` once authorized.
+ */
+export interface UserUsageInputs {
+  account: BillingAccountRead;
+  resetAt: string | null;
+}
+
+export async function readUserUsageInputs(userId: string): Promise<UserUsageInputs> {
+  const [account, resetAt] = await Promise.all([
+    readBillingAccountRow(userId),
+    latestQuotaResetAt(userId),
+  ]);
+  return { account, resetAt };
+}
+
 /** Spent + breakdown by user feature on their current window. */
-export async function getUserUsage(userId: string): Promise<UserUsage> {
+export async function getUserUsage(
+  userId: string,
+  inputs?: UserUsageInputs
+): Promise<UserUsage> {
   // Resolve the billing window as soon as billing returns, while the
   // independent quota-reset query is already in flight.
   const [billingRead, resetRead] = await Promise.allSettled([
-    getResolvedBilling(userId).then((billing) => ({
+    getResolvedBilling(userId, inputs?.account).then((billing) => ({
       billing,
       window: getBillingWindow(billing),
     })),
-    latestQuotaResetAt(userId),
+    inputs ? Promise.resolve(inputs.resetAt) : latestQuotaResetAt(userId),
   ]);
   if (billingRead.status === "rejected") throw billingRead.reason;
   if (resetRead.status === "rejected") throw resetRead.reason;

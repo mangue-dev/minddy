@@ -115,9 +115,14 @@ export function resolvePlanFromBillingAccount(
   return resolveBasePlanFromBillingAccount(account);
 }
 
-export async function getBillingAccountForUser(
-  userId: string
-): Promise<BillingAccount | null> {
+/**
+ * The stored `billing_accounts` row of a user, still encoded. A side-effect-free
+ * read, so a route may start it while the live session check is in flight
+ * (`getAuthedUserAlongside`) and hand it to `getResolvedBilling` afterwards.
+ */
+export type BillingAccountRead = { row: BillingAccount | null };
+
+export async function readBillingAccountRow(userId: string): Promise<BillingAccountRead> {
   const service = getServiceClient();
   const { data, error } = await service
     .from("billing_accounts")
@@ -125,7 +130,20 @@ export async function getBillingAccountForUser(
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data ? decodeBillingAccount(userId, data as BillingAccount) : null;
+  return { row: (data as BillingAccount | null) ?? null };
+}
+
+async function decodeBillingAccountRead(
+  userId: string,
+  { row }: BillingAccountRead
+): Promise<BillingAccount | null> {
+  return row ? decodeBillingAccount(userId, row) : null;
+}
+
+export async function getBillingAccountForUser(
+  userId: string
+): Promise<BillingAccount | null> {
+  return decodeBillingAccountRead(userId, await readBillingAccountRow(userId));
 }
 
 export async function upsertBillingAccount(
@@ -310,9 +328,21 @@ async function withStripeSync(
 
 // ── Entry point ───────────────────────────── ──────────────────────────────
 
-/** A user's effective plan — the single server entry point. */
-export async function getResolvedBilling(userId: string): Promise<ResolvedBilling> {
-  const account = await withStripeSync(await getBillingAccountForUser(userId));
+/**
+ * A user's effective plan — the single server entry point. `prefetched` is the
+ * account row a caller already read for this user; decoding and the Stripe
+ * re-sync, which may write, still happen here and only after the caller was
+ * authorized.
+ */
+export async function getResolvedBilling(
+  userId: string,
+  prefetched?: BillingAccountRead
+): Promise<ResolvedBilling> {
+  const account = await withStripeSync(
+    prefetched
+      ? await decodeBillingAccountRead(userId, prefetched)
+      : await getBillingAccountForUser(userId)
+  );
   const { planId, source } = resolvePlanFromBillingAccount(account);
   return {
     planId,
