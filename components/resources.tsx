@@ -28,7 +28,7 @@ import { ResourceTypeIcon } from "@/components/resource-type-icon";
 import {
   attachmentPreviewKind,
 } from "@/lib/attachment-preview";
-import { FileViewer } from "@/components/file-viewer";
+import dynamic from "next/dynamic";
 import type { ResourceKind } from "@/lib/types";
 import { normalizeWebUrl } from "@/lib/url-normalize";
 import { useCreatePage, usePagesQuery } from "@/lib/use-pages-query";
@@ -65,6 +65,10 @@ import {
   normalizeResourceName,
   resourceNameStemLength,
 } from "@/lib/resource-name";
+
+// The reader renders Markdown and highlighted code; it opens from a pill, so
+// boards that list cards do not load it with their first content (MIN-880).
+const FileViewer = dynamic(() => import("@/components/file-viewer").then((m) => m.FileViewer), { ssr: false });
 
 /**
  * Saved rows (with id) and just-added composer entries (without) alike, in the

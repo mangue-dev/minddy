@@ -144,12 +144,18 @@ describe("global board reads overlapped with the live session check", () => {
     } finally { log.mockRestore(); }
   });
 
-  it("keeps cycle reconciliation and the reads after the live check", async () => {
+  it("keeps cycle reconciliation after the live check and the issues read after reconciliation", async () => {
     state.cycles = true;
     const pending = GET(new NextRequest("http://localhost/api/me/board"));
     await settle();
 
-    expect(state.events).toEqual(["service:rpc/auth_authorization_state"]);
+    // Reconciliation writes only cycles and issues: the other RLS reads
+    // overlap the live check, the issues read and every service read wait.
+    expect(state.events).toContain("service:rpc/auth_authorization_state");
+    expect(state.events).toEqual(expect.arrayContaining(RLS_READS.filter((read) => read !== "rls:issues")));
+    expect(state.events).not.toContain("rls:issues");
+    expect(state.events).not.toContain("cycles");
+    expect(state.events).not.toContain("members");
 
     answerLive({ sessionActive: true, mfaAllowed: true });
     const response = await pending;

@@ -12,10 +12,8 @@ import {
   useProjectDrafts,
   type UseProjectDraftsResult,
 } from "./use-project-drafts-query";
-import {
-  CreateProjectWizard,
-  type ProjectSetupResumeState,
-} from "@/components/create-project-wizard";
+import dynamic from "next/dynamic";
+import type { ProjectSetupResumeState } from "@/components/create-project-wizard";
 import type { ProjectDraft } from "./project-draft";
 import { useTranslations } from "next-intl";
 import { ServerUnavailableState } from "@/components/server-unavailable-state";
@@ -25,6 +23,13 @@ import {
   ProjectsContext,
   type ViewerProjectRole,
 } from "./projects-context-store";
+
+// The wizard (git connection, import, seeding) loads on its first opening,
+// not with the shell (MIN-880), and stays mounted to animate out.
+const CreateProjectWizard = dynamic(
+  () => import("@/components/create-project-wizard").then((m) => m.CreateProjectWizard),
+  { ssr: false },
+);
 
 export interface ProjectsContextValue extends UseProjectsResult {
   /** Opens the shared "new project" wizard (mounted once here). */
@@ -48,6 +53,8 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
   const { drafts, saveDraft, deleteDraft } = useProjectDrafts();
   const [createOpen, setCreateOpen] = useState(false);
   const [resume, setResume] = useState<ProjectSetupResumeState | null>(null);
+  const [wizardMounted, setWizardMounted] = useState(false);
+  if (createOpen && !wizardMounted) setWizardMounted(true);
 
   const handleOpenChange = (open: boolean) => {
     setCreateOpen(open);
@@ -144,11 +151,13 @@ export function ProjectsProvider({ children }: { children: ReactNode }) {
     <ProjectsContext.Provider value={value}>
       <ProjectRolesContext.Provider value={roles}>
         {children}
-        <CreateProjectWizard
-          open={createOpen}
-          onOpenChange={handleOpenChange}
-          resume={resume}
-        />
+        {wizardMounted && (
+          <CreateProjectWizard
+            open={createOpen}
+            onOpenChange={handleOpenChange}
+            resume={resume}
+          />
+        )}
       </ProjectRolesContext.Provider>
     </ProjectsContext.Provider>
   );

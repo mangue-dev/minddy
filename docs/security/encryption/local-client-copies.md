@@ -63,6 +63,25 @@ identity-provider material with their own refresh/logout lifecycle, not an
 exemption for application content. Electron secure credential storage and
 server-selection preferences remain separate device-security controls.
 
+The `minddy-tz` cookie holds the browser's IANA time zone name, validated on
+read. The server uses it only to name the timezone-dependent startup reads of a
+document load; a stale value makes the page read from the network.
+
+## Startup reads sent with the document
+
+A document load of an app route carries the API responses its startup reads
+would fetch (`lib/server-seed.ts`, `lib/server/server-seed.ts`). The proxy marks
+only browser document navigations; the layout then runs each GET route handler
+with the request's cookies, so authentication, the live session and MFA check,
+authorization, decryption and errors stay those of the route. Only 2xx bodies
+are rendered, into that document only, which is dynamic and not cached. The
+browser keeps each response in memory until the first read of that exact path
+for the account the server read for, then drops it, and drops them all at
+sign-out. Nothing is written to storage; what the query cache persists
+afterwards follows the rules above. The rendered page tree (the router's
+memory) keeps a copy of these bodies for the life of the page, as it does for
+any server-rendered prop.
+
 Supabase Auth account import accepts only the explicit keys and bounded shapes
 in `account-metadata-import.ts`: public member display names and product
 preferences. Arbitrary JSON, comments, issue/page content, secrets and provider

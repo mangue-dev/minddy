@@ -4,6 +4,8 @@ import {
 } from "@/lib/server/supabase-fetch";
 import "server-only";
 
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
@@ -137,13 +139,48 @@ const UUID_PATTERN =
  * so handlers that later use the service role cannot authorize from JWT claims
  * alone.
  */
+type LiveAuthorizationState = { sessionActive: boolean; mfaAllowed: boolean };
+
+/**
+ * One live lookup per session within a scope that runs several route
+ * handlers for the same incoming request (lib/server/server-seed.ts). Each
+ * handler still verifies its token and applies the result; they only share
+ * the answer for the identical user, session, AAL and AMR.
+ */
+const sharedLiveAuthorization = new AsyncLocalStorage<Map<string, Promise<LiveAuthorizationState>>>();
+
+/** Run `work` with live authorization lookups shared within it. */
+export function withSharedLiveAuthorization<T>(work: () => T): T {
+  return sharedLiveAuthorization.run(new Map(), work);
+}
+
 async function liveAuthorizationState(
   userId: string,
   sessionId: string,
   aal: unknown,
   amr: unknown,
   skipMfa: boolean,
-): Promise<{ sessionActive: boolean; mfaAllowed: boolean }> {
+): Promise<LiveAuthorizationState> {
+  const shared = sharedLiveAuthorization.getStore();
+  if (!shared) return readLiveAuthorizationState(userId, sessionId, aal, amr, skipMfa);
+  const key = JSON.stringify([userId, sessionId, aal, amr, skipMfa]);
+  let pending = shared.get(key);
+  if (!pending) {
+    pending = readLiveAuthorizationState(userId, sessionId, aal, amr, skipMfa);
+    shared.set(key, pending);
+    // A failed lookup is not shared with later handlers: they try again.
+    pending.catch(() => { if (shared.get(key) === pending) shared.delete(key); });
+  }
+  return pending;
+}
+
+async function readLiveAuthorizationState(
+  userId: string,
+  sessionId: string,
+  aal: unknown,
+  amr: unknown,
+  skipMfa: boolean,
+): Promise<LiveAuthorizationState> {
   const { data, error } = await getServiceClient()
     .rpc("auth_authorization_state", {
       p_user: userId,
@@ -315,6 +352,16 @@ export async function authorizeUserClient(
   const verified = await verifySessionClaims(supabase);
   if (!verified.ok) return verified;
   return authorizeVerifiedSession(supabase, verified, options);
+}
+
+/**
+ * The user id of a locally verified session, without the live lookup. Only
+ * for naming reads that each go through their own route boundary afterwards
+ * (lib/server/server-seed.ts); it authorizes nothing by itself.
+ */
+export async function verifiedSessionUserId(supabase: SupabaseClient): Promise<string | null> {
+  const verified = await verifySessionClaims(supabase);
+  return verified.ok ? verified.claims.sub : null;
 }
 
 export type AuthedAlongsideResult<T> =

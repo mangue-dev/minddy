@@ -54,6 +54,12 @@ export async function CookiesContent({ locale }: { locale: Locale }) {
                 purpose: t("essentialCookie3Purpose"),
                 duration: t("essentialCookie3Duration"),
               },
+              // MIN-880: the browser's time zone, read when a page is served.
+              {
+                name: t("essentialCookie4Name"),
+                purpose: t("essentialCookie4Purpose"),
+                duration: t("essentialCookie4Duration"),
+              },
             ]}
           />
 

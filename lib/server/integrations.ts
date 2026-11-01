@@ -63,9 +63,12 @@ const MAX_NAME_LENGTH = 60;
 // Classic URL terminal (it is persisted then replayed on each delivery).
 const MAX_WEBHOOK_URL_LENGTH = 2048;
 
-export async function listIntegrations(
-  projectId: string,
-): Promise<IntegrationSummary[] | null> {
+/**
+ * The project's integration rows as stored, not yet decoded. A route may read
+ * them beside its access check and decode them only once access is granted
+ * ({@link summarizeIntegrations}); null on a failed read.
+ */
+export async function readIntegrationRows(projectId: string): Promise<unknown[] | null> {
   const service = getServiceClient();
   const { data, error } = await service
     .from("integrations")
@@ -76,7 +79,19 @@ export async function listIntegrations(
     console.error("[integrations] list failed:", error.message);
     return null;
   }
-  return Promise.all((data ?? []).map(toSummary));
+  return data ?? [];
+}
+
+/** Decode rows from {@link readIntegrationRows} for a caller already authorized. */
+export function summarizeIntegrations(rows: unknown[]): Promise<IntegrationSummary[]> {
+  return Promise.all(rows.map(toSummary));
+}
+
+export async function listIntegrations(
+  projectId: string,
+): Promise<IntegrationSummary[] | null> {
+  const rows = await readIntegrationRows(projectId);
+  return rows && summarizeIntegrations(rows);
 }
 
 export async function createIntegration({

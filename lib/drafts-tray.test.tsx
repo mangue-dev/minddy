@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
 import type { DraftKind, IssueDraft, ObjectiveDraft } from "./drafts";
+// Evaluated up front: the tray loads it on demand, which a loaded suite slows.
+await import("@/components/typed-mention-chip");
 
 const h = vi.hoisted(() => ({
   store: { issue: [] as IssueDraft[], objective: [] as ObjectiveDraft[] },
@@ -119,8 +121,9 @@ describe("drafts tray", () => {
       expect.stringContaining("Issue old"),
     ]);
     expect(rows[0]).toContain("No description");
-    // The description is shown as plain text, without its Markdown syntax.
-    expect(rows[1]).toContain("Bold context line");
+    // The description is shown as plain text, without its Markdown syntax. Its
+    // renderer loads with the tray, not with the shell (MIN-880).
+    await vi.waitFor(() => expect(document.querySelectorAll("li")[1].textContent).toContain("Bold context line"), { timeout: 5_000 });
     expect(document.body.textContent).not.toContain("Issue hidden");
 
     await click(button("Resume “Untitled”"));

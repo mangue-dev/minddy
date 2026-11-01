@@ -128,6 +128,7 @@ import {
   loadScratchpadModal,
   preloadSurface,
 } from "@/lib/lazy-app-surfaces";
+import { afterFirstContentIdle } from "@/lib/first-content";
 
 // The CSV export is deferred like the creation dialogs: a dialog that we
 // opens from ⌘K a few times in the life of an account has nothing to do in the
@@ -370,31 +371,17 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
 
   // Build the large palette item model off the interaction path. A transition
   // lets React yield while thousands of cross-project rows are mapped.
-  useEffect(() => {
-    const run = () => warmPalette();
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(run, { timeout: 3_000 });
-      return () => window.cancelIdleCallback(handle);
-    }
-    const handle = window.setTimeout(run, 1_500);
-    return () => window.clearTimeout(handle);
-  }, [warmPalette]);
+  // Idle starts only after the first content (MIN-880): on a cold load the
+  // main thread idles while the reads are in flight.
+  useEffect(() => afterFirstContentIdle(() => warmPalette(), 3_000, 1_500), [warmPalette]);
 
   // These surfaces are less frequent, so preload their code after the palette.
   // Pointer intent below still starts the scratchpad immediately when needed.
-  useEffect(() => {
-    const run = () => {
-      preloadSurface(loadGlobalIssuePanel);
-      preloadSurface(loadIssueSidePanel);
-      preloadSurface(loadScratchpadModal);
-    };
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(run, { timeout: 5_000 });
-      return () => window.cancelIdleCallback(handle);
-    }
-    const handle = window.setTimeout(run, 2_500);
-    return () => window.clearTimeout(handle);
-  }, []);
+  useEffect(() => afterFirstContentIdle(() => {
+    preloadSurface(loadGlobalIssuePanel);
+    preloadSurface(loadIssueSidePanel);
+    preloadSurface(loadScratchpadModal);
+  }, 5_000, 2_500), []);
 
   // Does the page have a secondary sidebar? The mounting of the bar is
   // correct answer; the road gives the same before hydration, where nothing is

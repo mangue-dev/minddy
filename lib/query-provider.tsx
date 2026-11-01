@@ -11,6 +11,7 @@ import { observePageReadFailures } from "./page-read-receipts";
 import { retryTemporaryReadFailure } from "./backend-availability";
 import { navigationWorkingSetQueryHashes } from "./navigation-working-set";
 import { trackFetchStarts } from "./realtime-catch-up";
+import { discardServerSeeds } from "./server-seed";
 
 /**
  * The cache is persisted as a server-sealed account envelope in localStorage.
@@ -165,6 +166,7 @@ function datedBeforeMount(client: PersistedClient | undefined, mountedAt: number
  */
 export function clearPersistedQueryCache() {
   invalidateLocalSnapshotWrites();
+  discardServerSeeds();
   // Cancel queued snapshots before removing storage. Otherwise a delayed write
   // or pagehide flush could restore the departing account's data after logout.
   for (const stop of persistenceStops) stop();

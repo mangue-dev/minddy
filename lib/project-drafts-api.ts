@@ -7,6 +7,7 @@ import {
   type ProjectDraftInput,
   type ProjectDraftRow,
 } from "./project-draft";
+import { fetchSeeded } from "./server-seed";
 
 /**
  * Network round trips of project creation drafts. The FORM of the
@@ -34,7 +35,7 @@ async function parseJson<T>(response: Response): Promise<T> {
 
 export async function fetchProjectDraftsApi(): Promise<ProjectDraft[]> {
   const rows = await parseJson<ProjectDraftRow[]>(
-    await fetch("/api/project-drafts")
+    await fetchSeeded("/api/project-drafts")
   );
   return rows.map(projectDraftFromRow);
 }

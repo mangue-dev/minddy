@@ -6,6 +6,7 @@ import type {
   DocumentEditorMentions,
   DocumentEditorProps,
 } from "@/components/editor/document-editor";
+import { afterFirstContentIdle } from "@/lib/first-content";
 
 export type { DocumentEditorMentions };
 
@@ -149,10 +150,7 @@ export function useIdleDocumentEditorPreload() {
   useEffect(() => {
     if (preloadStarted || typeof window === "undefined") return;
     preloadStarted = true;
-    if (typeof window.requestIdleCallback === "function") {
-      window.requestIdleCallback(() => preloadDocumentEditor(), { timeout: 3000 });
-    } else {
-      window.setTimeout(preloadDocumentEditor, 1500);
-    }
+    // After the first content (MIN-880); never cancelled, as before.
+    afterFirstContentIdle(preloadDocumentEditor, 3000, 1500);
   }, []);
 }

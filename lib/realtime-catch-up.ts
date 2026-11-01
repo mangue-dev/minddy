@@ -33,6 +33,7 @@
  */
 
 import type { Query, QueryClient, QueryKey } from "@tanstack/react-query";
+import { readStartTime } from "./server-seed";
 
 /**
  * Catch-up grouping window. Wide enough to cover the flight of
@@ -132,7 +133,8 @@ const fetchStarts = new WeakMap<Query, number>();
  */
 export function trackFetchStarts(client: QueryClient): () => void {
   return client.getQueryCache().subscribe((event) => {
-    if (event.type === "updated" && event.action.type === "fetch") fetchStarts.set(event.query, Date.now());
+    // A read may be served with data the server read when the page started.
+    if (event.type === "updated" && event.action.type === "fetch") fetchStarts.set(event.query, readStartTime());
   });
 }
 

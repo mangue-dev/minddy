@@ -30,8 +30,15 @@ import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
 import { useQueryClient } from "@tanstack/react-query";
 import { HOME_SUMMARY_KEY } from "@/lib/use-home-summary-query";
 import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
-import { OnboardingImportDialog } from "@/components/home/onboarding-import-dialog";
+import dynamic from "next/dynamic";
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
+
+// The import wizard (CSV parsing, column mapping) loads on its first opening,
+// not with the sidebar (MIN-880), and stays mounted to animate out.
+const OnboardingImportDialog = dynamic(
+  () => import("@/components/home/onboarding-import-dialog").then((m) => m.OnboardingImportDialog),
+  { ssr: false },
+);
 
 function LeaveMobileMenu({ mobile, children }: { mobile: boolean; children: ReactElement }) {
   return mobile ? <DialogClose asChild>{children}</DialogClose> : children;
@@ -60,6 +67,8 @@ export function SidebarOnboarding({ mobile = false, onLayerOpenChange }: Sidebar
   const [busy, setBusy] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [importMounted, setImportMounted] = useState(false);
+  if (importOpen && !importMounted) setImportMounted(true);
 
   if (!onboarding.showChecklist) return null;
 
@@ -239,7 +248,7 @@ export function SidebarOnboarding({ mobile = false, onLayerOpenChange }: Sidebar
         </CollapsibleContent>
       </Collapsible>
       <OnboardingJoinDialog open={joinOpen} onOpenChange={setJoinOpen} outro="inbox" />
-      <OnboardingImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => { setImportOpen(false); void run(() => onboarding.acknowledgeStep("tickets")); }} />
+      {importMounted && <OnboardingImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={() => { setImportOpen(false); void run(() => onboarding.acknowledgeStep("tickets")); }} />}
     </>
   );
 }

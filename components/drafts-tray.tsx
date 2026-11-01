@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete02Icon, NoteEditIcon } from "@hugeicons/core-free-icons";
@@ -8,11 +9,19 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PlainPreview } from "@/components/typed-mention-chip";
+import { afterFirstContentIdle } from "@/lib/first-content";
+import { preloadSurface } from "@/lib/lazy-app-surfaces";
 import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
 import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { useAllDrafts, type DraftEntry } from "@/lib/use-all-drafts";
+
+// The preview renders typed mentions, whose chips carry the date picker and
+// its parser: they load after the page's first content, or when the pill is
+// hovered or focused, not with the shell (MIN-880).
+const loadPlainPreview = () => import("@/components/typed-mention-chip");
+const PlainPreview = dynamic(() => loadPlainPreview().then((m) => m.PlainPreview), { ssr: false });
+const preloadPlainPreview = () => preloadSurface(loadPlainPreview);
 
 /**
  * The drafts tray of the bottom chrome bar (MIN-753), between Numo and the
@@ -28,6 +37,8 @@ export function DraftsTray() {
   const { openCreateIssue, openCreateObjective } = useCreate();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState<DraftEntry | null>(null);
+  const hasDrafts = drafts.length > 0;
+  useEffect(() => hasDrafts ? afterFirstContentIdle(preloadPlainPreview, 5_000, 2_500) : undefined, [hasDrafts]);
 
   if (drafts.length === 0 && !deleting) return null;
 
@@ -49,6 +60,8 @@ export function DraftsTray() {
                   variant="ghost"
                   size="sm"
                   aria-label={t("trayAria", { count: drafts.length })}
+                  onPointerEnter={preloadPlainPreview}
+                  onFocus={preloadPlainPreview}
                   className="h-7 gap-1.5 rounded-full px-2 text-[13px] font-medium text-sidebar-foreground/70 shadow-none transition-transform hover:bg-sidebar-accent/70 hover:text-sidebar-foreground active:scale-[0.97] data-[state=open]:bg-sidebar-accent/70 data-[state=open]:text-sidebar-foreground"
                 >
                   <HugeiconsIcon icon={NoteEditIcon} className="size-4" />

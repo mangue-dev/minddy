@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getProjectAccess } from "@/lib/server/project-access";
-import { listIntegrations, createIntegration } from "@/lib/server/integrations";
+import { createIntegration, readIntegrationRows, summarizeIntegrations } from "@/lib/server/integrations";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -13,7 +13,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const access = await getProjectAccess(auth.user.id, id);
+  // The stored rows are read beside the access check, after the live session
+  // check; they are decoded, and leave, only once access is granted.
+  const [access, rows] = await Promise.all([getProjectAccess(auth.user.id, id), readIntegrationRows(id)]);
   if (!access) {
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
@@ -23,11 +25,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ integrations: [], isOwner: false });
   }
 
-  const integrations = await listIntegrations(id);
-  if (!integrations) {
+  if (!rows) {
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json({ integrations, isOwner: access.isOwner });
+  return NextResponse.json({ integrations: await summarizeIntegrations(rows), isOwner: access.isOwner });
 }
 
 /** POST /api/projects/[id]/integrations — owner creates a named API key.

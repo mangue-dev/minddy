@@ -3,6 +3,7 @@ import { expect, it, vi } from "vitest";
 import { refreshRetainedBoard, retainedBoardKeys, retainedBoardReadState, subscribeRetainedBoardReadState } from "./retained-board-read-state";
 import type { RetainedAppView } from "./retained-app-views";
 import { HttpResponseError } from "./backend-availability";
+import { registerRecordIds } from "./ref-registry";
 const view: RetainedAppView = { key: "g", tabId: "g", kind: "global-board", route: { pathname: "/all", search: "", projectSegment: null } };
 
 it.each([view, { ...view, kind: "project-board" as const, route: { pathname: "/projects/p", projectSegment: "p", search: "" } }])("defers $kind notifications while keeping activation snapshots current and ignoring unrelated queries", async (board) => {
@@ -152,4 +153,23 @@ it.each([401, 403, 404])("withdraws a loaded board after a %s refresh and blocks
     await client.fetchQuery({ queryKey: ["me", "board"], queryFn: () => { throw new HttpResponseError("Bad gateway", 503); } }).catch(() => {});
     expect(retainedBoardReadState(client, view)).toBe("error");
   } finally { client.clear(); }
+});
+
+it("follows a project board whose id is learned after the view subscribed", async () => {
+  vi.useFakeTimers();
+  const client = new QueryClient();
+  const id = "5c0ffee1-0000-4000-8000-000000000001";
+  const board: RetainedAppView = { ...view, key: "late", kind: "project-board", route: { pathname: "/projects/late-5c0ffee1", projectSegment: "late-5c0ffee1", search: "" } };
+  const notify = vi.fn(() => retainedBoardReadState(client, board));
+  const stop = subscribeRetainedBoardReadState(client, board, notify);
+  try {
+    // The short code is not known yet: the view's keys name no project.
+    expect(retainedBoardKeys(board)[0]).toEqual(["issues", null]);
+    registerRecordIds({ id });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(notify).toHaveBeenCalled();
+    for (const key of ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"]) client.setQueryData([key, id], []);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(notify.mock.results.at(-1)?.value).toBe("fresh");
+  } finally { stop(); client.clear(); vi.useRealTimers(); }
 });

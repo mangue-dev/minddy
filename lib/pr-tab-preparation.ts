@@ -1,5 +1,6 @@
 import { hashKey, isCancelledError, onlineManager, type Query, type QueryClient, type QueryFunctionContext } from "@tanstack/react-query";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
+import { onFirstContent } from "./first-content";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
 import { appTabPendingIssueSelection, appTabPreparationQueries, appTabSelectionSources, prefetchPullRequestDetail } from "./prefetch-tab-destination";
@@ -82,6 +83,7 @@ export function createPrTabPreparation(
   const visits: string[] = [];
   let available: readonly string[] = [];
   let active = "", disposed = false;
+  let cancelSurfaces = () => {};
   const neighborAttempts = new Map<string, number>();
   const attempted = new Set<string>();
   const parkedForge = new Set<string>();
@@ -588,13 +590,21 @@ export function createPrTabPreparation(
       visits.push(href); if (visits.length > 32) visits.shift();
       attempted.clear(); rebuildManifest();
       // Public code has no account payload and must not wait for query transport.
-      for (const target of available) void prepareAppTabSurface(target)?.catch(() => {});
+      // The destination's own code loads now; the other tabs' code waits for
+      // the first content, so a cold load does not download every open tab's
+      // surface (the page editor among them) before its own (MIN-880).
+      void prepareAppTabSurface(href)?.catch(() => {});
+      cancelSurfaces();
+      const others = available.filter((target) => target !== href);
+      cancelSurfaces = onFirstContent(() => {
+        if (!disposed) for (const target of others) void prepareAppTabSurface(target)?.catch(() => {});
+      });
       syncPriority();
       pagePreparation.visit(href, available);
       enqueue();
     },
     dispose() {
-      disposed = true; activeQueryHashes.clear(); settledReads.clear(); clearIntent(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
+      disposed = true; cancelSurfaces(); activeQueryHashes.clear(); settledReads.clear(); clearIntent(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
       clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", resume);
       if (typeof window !== "undefined") window.removeEventListener("focus", resume);

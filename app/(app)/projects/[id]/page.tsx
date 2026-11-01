@@ -85,6 +85,7 @@ const IssueSidePanel = dynamic(
   { ssr: false },
 );
 import { takeSeedHandoff } from "@/lib/project-seed-handoff";
+import { afterFirstContentIdle } from "@/lib/first-content";
 import { createIssueApi } from "@/lib/issues-api";
 import {
   insertIssueEverywhere,
@@ -292,19 +293,12 @@ function ProjectBoard() {
   // after a safety timeout.
   const { generatingViewIds, beginGenerating } = useGeneratingViews(views);
 
-  useEffect(() => {
-    if (createMounted) return;
-    const run = () => {
-      preloadSurface(loadCreateIssueDialog);
-      startTransition(() => setCreateMounted(true));
-    };
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(run, { timeout: 3_000 });
-      return () => window.cancelIdleCallback(handle);
-    }
-    const handle = window.setTimeout(run, 1_500);
-    return () => window.clearTimeout(handle);
-  }, [createMounted]);
+  // Idle after the first content (MIN-880): on a cold load the main thread
+  // idles while the board's reads are in flight.
+  useEffect(() => createMounted ? undefined : afterFirstContentIdle(() => {
+    preloadSurface(loadCreateIssueDialog);
+    startTransition(() => setCreateMounted(true));
+  }, 3_000, 1_500), [createMounted]);
 
   useEffect(() => {
     if (openIssueId) setSidePanelMounted(true);
@@ -313,19 +307,10 @@ function ProjectBoard() {
   // Mount the closed panel during idle time so its large hook tree and editor
   // preload do not land on the first card click. The transition remains
   // interruptible if the user interacts while the warm-up is rendering.
-  useEffect(() => {
-    if (sidePanelMounted) return;
-    const run = () => {
-      preloadSurface(loadIssueSidePanel);
-      startTransition(() => setSidePanelMounted(true));
-    };
-    if (typeof window.requestIdleCallback === "function") {
-      const handle = window.requestIdleCallback(run, { timeout: 4_000 });
-      return () => window.cancelIdleCallback(handle);
-    }
-    const handle = window.setTimeout(run, 2_000);
-    return () => window.clearTimeout(handle);
-  }, [sidePanelMounted]);
+  useEffect(() => sidePanelMounted ? undefined : afterFirstContentIdle(() => {
+    preloadSurface(loadIssueSidePanel);
+    startTransition(() => setSidePanelMounted(true));
+  }, 4_000, 2_000), [sidePanelMounted]);
 
   useEffect(() => {
     if (importOpen) setImportMounted(true);
