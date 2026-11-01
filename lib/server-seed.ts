@@ -204,9 +204,9 @@ export function takeServerSeed(path: string, owner?: string): Promise<Response |
  * `fetch(path)` for a plain GET read that bypasses `fetchClientRead`: the
  * document's response when it carries one, the network otherwise.
  */
-export async function fetchSeeded(path: string): Promise<Response> {
+export async function fetchSeeded(path: string, init?: RequestInit): Promise<Response> {
   const seeded = takeServerSeed(path);
-  return (seeded && await seeded) || fetch(path);
+  return (seeded && await seeded) || fetch(path, init);
 }
 
 /**

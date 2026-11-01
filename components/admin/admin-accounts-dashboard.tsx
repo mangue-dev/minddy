@@ -35,6 +35,7 @@ import {giftSectionVisible} from "@/lib/admin-tabs";
 import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import {Tooltip, TooltipContent, TooltipTrigger} from "@/components/ui/tooltip";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { fetchSeeded } from "@/lib/server-seed";
 
 /**
  * `/admin` → “Accounts” (MIN-829): how many accounts the instance has, then
@@ -565,7 +566,7 @@ function AccountCount() {
   const { data, isError } = useQuery({
     queryKey: ["admin", "overview"],
     queryFn: async (): Promise<AdminAccountsOverview> => {
-      const response = await fetch("/api/admin/overview", { cache: "no-store" });
+      const response = await fetchSeeded("/api/admin/overview", { cache: "no-store" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return (await response.json()) as AdminAccountsOverview;
     },

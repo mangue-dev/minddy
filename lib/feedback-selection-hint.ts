@@ -1,5 +1,7 @@
 import type { FeedbackSort, FeedbackStateFilter } from "@/components/feedback/feedback-filter-menu";
-import { isFeedbackPostStatus } from "./feedback/types";
+import { collectionFilterParams } from "./collection-filters";
+import type { FeedbackListFilters } from "./feedback-list-filters";
+import { FEEDBACK_OPEN_STATUSES, isFeedbackPostStatus } from "./feedback/types";
 
 /**
  * How the team page will pick the post it opens, sent with its list read so
@@ -16,6 +18,28 @@ export interface FeedbackSelectionHint {
 
 const SORTS: readonly string[] = ["top", "recent", "oldest"];
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** How the team page opens without links, filters or earlier choices. */
+export const DEFAULT_FEEDBACK_STATE: FeedbackStateFilter = "unresolved";
+export const DEFAULT_FEEDBACK_SORT: FeedbackSort = "top";
+
+/** The team list's read: property filters, then statuses, then the hint. */
+export function feedbackListReadPath(projectId: string, filters: FeedbackListFilters,
+  hint: FeedbackSelectionHint | null): string {
+  const params = collectionFilterParams(filters, new URLSearchParams());
+  for (const status of filters.statuses ?? []) params.append("statuses", status);
+  if (hint) writeFeedbackSelectionHint(hint, params);
+  return `/api/projects/${projectId}/feedback${params.size ? `?${params}` : ""}`;
+}
+
+/**
+ * The list read of a team page opened on its bare URL (no `?post=`, filter or
+ * search), as the page builds it; the document can carry it (MIN-880).
+ */
+export function defaultFeedbackListReadPath(projectId: string): string {
+  return feedbackListReadPath(projectId, { statuses: [...FEEDBACK_OPEN_STATUSES] },
+    { state: DEFAULT_FEEDBACK_STATE, sort: DEFAULT_FEEDBACK_SORT, onlyToReview: false });
+}
 
 export function writeFeedbackSelectionHint(hint: FeedbackSelectionHint, params: URLSearchParams): void {
   params.set("prepare", `${hint.state}.${hint.sort}.${hint.onlyToReview ? 1 : 0}`);

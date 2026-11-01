@@ -3,8 +3,10 @@ import { useSyncExternalStore } from "react";
 /**
  * "The page has shown its first content" (MIN-880), for code that would
  * otherwise download or mount optional surfaces while a cold load still
- * waits on its reads: idle preloads (palette, panels, editor) and the
- * always-mounted Numo and notebook shells. On a throttled first visit those
+ * waits on its reads: idle preloads (palette, panels, editor), the
+ * always-mounted Numo and notebook shells, and the other restored tabs' code
+ * and reads (lib/pr-tab-preparation.ts). A page whose first content holds an
+ * editor loads it at mount instead (`useDocumentEditorForFirstContent`). On a throttled first visit those
  * bytes competed with the reads and the page's own code; idle callbacks fire
  * during exactly that wait, because the main thread is idle while the
  * network works.

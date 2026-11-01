@@ -27,7 +27,7 @@ import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, CircleIcon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
-import type { FeedbackSelectionHint } from "@/lib/feedback-selection-hint";
+import { DEFAULT_FEEDBACK_SORT, DEFAULT_FEEDBACK_STATE, type FeedbackSelectionHint } from "@/lib/feedback-selection-hint";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -119,7 +119,7 @@ import { useTitleBodyLink } from "@/lib/use-title-body-link";
 // see components/editor/document-editor-lazy.tsx.
 import {
   LazyDocumentEditor,
-  useIdleDocumentEditorPreload,
+  useDocumentEditorForFirstContent,
 } from "@/components/editor/document-editor-lazy";
 // This page shows an editor on first paint (MIN-875): the description
 // stream module ships with the route, as before, instead of downloading
@@ -659,9 +659,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const timeAgo = useTimeAgo();
-  // Mounts with the page: warm the deferred editor chunk once painted, so a
-  // team reply never waits on tiptap (components/editor/document-editor-lazy.tsx).
-  useIdleDocumentEditorPreload();
+  // The opened post and its reply field are first content: load the editor
+  // now (components/editor/document-editor-lazy.tsx).
+  useDocumentEditorForFirstContent();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const postParam = expandParam(searchParams.get("post"));
@@ -677,7 +677,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [setupOpen, setSetupOpen] = useState(false);
 
   const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
-  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(projectPath(projectId, "feedback"), "state", searchParams.has("objective") ? "all" : "unresolved");
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(projectPath(projectId, "feedback"), "state", searchParams.has("objective") ? "all" : DEFAULT_FEEDBACK_STATE);
   const [onlyToReview, setOnlyToReview] = useMobileCollectionState(projectPath(projectId, "feedback"), "onlyToReview", false);
   const normalListFilters = { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
   const listFilters = feedbackFiltersForRequestedPost(queryClient, projectId, postParam, normalListFilters, onlyToReview);
@@ -724,7 +724,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // archives which buried them.
   const objectiveParam = searchParams.getAll("objective").join(",");
   useEffect(() => { if (objectiveParam) setState("all"); }, [objectiveParam, setState]);
-  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(projectPath(projectId, "feedback"), "sort", "top");
+  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(projectPath(projectId, "feedback"), "sort", DEFAULT_FEEDBACK_SORT);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);

@@ -38,7 +38,7 @@ import { AppContentHeader } from "@/components/app-content-header";
 // see components/editor/document-editor-lazy.tsx. Warmed from idle time in ObjectiveDetail.
 import {
   LazyDocumentEditor,
-  useIdleDocumentEditorPreload,
+  useDocumentEditorForFirstContent,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
@@ -230,8 +230,8 @@ export function ObjectiveDetail({
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
   const { track } = useAnalytics();
-  // Mounts with the objectives page: warm the editor chunk once painted.
-  useIdleDocumentEditorPreload();
+  // Its description and comment field are on screen now.
+  useDocumentEditorForFirstContent();
   // Project readers (MIN-693) read the objective; comments follow their option.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
   // ⇧C (MIN-803): this objective's comment field.

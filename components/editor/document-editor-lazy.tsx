@@ -154,3 +154,14 @@ export function useIdleDocumentEditorPreload() {
     afterFirstContentIdle(preloadDocumentEditor, 3000, 1500);
   }, []);
 }
+
+/**
+ * Fetch the editor chunk at mount, for a page that shows an editor as part of
+ * its first content (an opened objective, triage issue or feedback post).
+ * Waiting for the first content there would wait on the editor itself, and
+ * on a slow network the page appeared later than when the chunk was warmed
+ * at idle after hydration (MIN-880).
+ */
+export function useDocumentEditorForFirstContent() {
+  useEffect(() => preloadDocumentEditor(), []);
+}

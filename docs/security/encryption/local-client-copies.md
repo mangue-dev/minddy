@@ -75,6 +75,11 @@ only browser document navigations; the layout then runs each GET route handler
 with the request's cookies, so authentication, the live session and MFA check,
 authorization, decryption and errors stay those of the route. Only 2xx bodies
 are rendered, into that document only, which is dynamic and not cached. The
+reads are the shell's and those each page needs before its first content: a
+project's issues, members, objectives, categories, relations, views and
+integrations, its page list and the opened page document, the default
+feedback list, the routines list, and for administrators the admin overview
+(a non-administrator's request is refused by the route and carries nothing). The
 browser keeps each response in memory until the first read of that exact path
 for the account the server read for, then drops it, and drops them all at
 sign-out. Nothing is written to storage; what the query cache persists

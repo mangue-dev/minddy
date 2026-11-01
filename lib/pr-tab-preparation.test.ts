@@ -735,6 +735,23 @@ describe("account-owned PR preparation", () => {
     } finally { prepared.preparation.dispose(); prepared.client.clear(); }
   });
 
+  it("holds the tabs' reads until the first content, then prepares them", async () => {
+    const prepared = setup();
+    resetFirstContentForTests();
+    prepared.fetch.mockImplementation(async (url) => fixtureResponse(String(url)));
+    const tabs = ["/projects/new/feedback", "/projects/new/objectives"];
+    try {
+      prepared.preparation.visit(tabs[0], tabs);
+      await drain(prepared);
+      expect(prepared.fetch).not.toHaveBeenCalled();
+      markFirstContent();
+      await drain(prepared);
+      for (const options of appTabPreparationQueries(prepared.client, tabs[1])) {
+        expect(prepared.client.getQueryState(options.queryKey)?.status, JSON.stringify(options.queryKey)).toBe("success");
+      }
+    } finally { prepared.preparation.dispose(); prepared.client.clear(); }
+  });
+
   it("warms every listed bundle even while foreground transport prevents speculative reads", async () => {
     const prepared = setup(); let finish!: () => void;
     const pending = prepared.client.fetchQuery({ queryKey: ["foreground"], queryFn: () => new Promise((resolve) => { finish = () => resolve("ready"); }) });

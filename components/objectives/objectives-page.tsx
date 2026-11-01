@@ -78,6 +78,7 @@ import {
   objectiveStatusOptions,
   sharedCurrent,
 } from "@/components/command-palette-options";
+import { useDocumentEditorForFirstContent } from "@/components/editor/document-editor-lazy";
 
 const ObjectiveDialog = dynamic(
   () => import("@/components/objective-dialog").then((m) => m.ObjectiveDialog),
@@ -1006,6 +1007,8 @@ export function ObjectivesBoardSidebar({ projectId, objectiveId }: { projectId: 
 }
 
 export default function ObjectivesPage() {
+  // The opened objective's description and comment field are first content.
+  useDocumentEditorForFirstContent();
   return (
     <AppTabRouteBoundary><Suspense
       fallback={

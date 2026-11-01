@@ -1,13 +1,14 @@
 import { expandParam } from "./ref-registry";
 import type { QueryClient } from "@tanstack/react-query";
 import { feedbackWrites } from "@/lib/optimistic/feedback-writes";
-import { matchesFeedbackFilters, collectionFilterParams } from "./collection-filters";
+import { matchesFeedbackFilters } from "./collection-filters";
 import { parseFeedbackListFilters, type FeedbackListFilters } from "./feedback-list-filters";
 import { FEEDBACK_OPEN_STATUSES } from "./feedback/types";
 import { feedbackNeedsHumanReview } from "./secondary-view-selection";
 import type { TeamFeedbackListItem } from "./server/feedback/team-queries";
 import type { PreparedFeedbackPost } from "./server/feedback/post-reads";
-import { writeFeedbackSelectionHint, type FeedbackSelectionHint } from "./feedback-selection-hint";
+import { feedbackListReadPath, type FeedbackSelectionHint } from "./feedback-selection-hint";
+import { fetchSeeded } from "./server-seed";
 import { applyFeedbackWritesToPost } from "./optimistic/feedback-writes";
 import { feedbackCommentsOptions, feedbackDetailOptions, feedbackEventsOptions } from "./secondary-view-queries";
 
@@ -40,12 +41,8 @@ export function feedbackQueryOptions(projectId: string, filters: FeedbackListFil
     queryKey: Object.values(filters).some((values) => values?.length) ? ["feedback", projectId, filters] as const : ["feedback", projectId] as const,
     queryFn: async ({ signal }: { signal: AbortSignal }) => {
       const startedAt = Date.now();
-      const params = collectionFilterParams(filters, new URLSearchParams());
-      for (const status of filters.statuses ?? []) params.append("statuses", status);
-      const hint = preparation?.hint() ?? null;
-      if (hint) writeFeedbackSelectionHint(hint, params);
-      const scope = params.size ? `?${params}` : "";
-      const response = await fetch(`/api/projects/${projectId}/feedback${scope}`, { signal, cache: "no-store" });
+      const path = feedbackListReadPath(projectId, filters, preparation?.hint() ?? null);
+      const response = await fetchSeeded(path, { signal, cache: "no-store" });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || "Unable to load feedback");
       // `total` counts the whole project, not the filtered `posts`.

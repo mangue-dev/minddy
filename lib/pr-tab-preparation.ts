@@ -1,6 +1,6 @@
 import { hashKey, isCancelledError, onlineManager, type Query, type QueryClient, type QueryFunctionContext } from "@tanstack/react-query";
 import { prepareAppTabSurface } from "./app-tab-surfaces";
-import { onFirstContent } from "./first-content";
+import { hasReachedFirstContent, onFirstContent } from "./first-content";
 import { preparePageNavigation } from "./use-pages-query";
 import { appTabRoute } from "./app-tab-location";
 import { appTabPendingIssueSelection, appTabPreparationQueries, appTabSelectionSources, prefetchPullRequestDetail } from "./prefetch-tab-destination";
@@ -84,6 +84,7 @@ export function createPrTabPreparation(
   let available: readonly string[] = [];
   let active = "", disposed = false;
   let cancelSurfaces = () => {};
+  let cancelReadsWait: (() => void) | null = null;
   const neighborAttempts = new Map<string, number>();
   const attempted = new Set<string>();
   const parkedForge = new Set<string>();
@@ -209,6 +210,12 @@ export function createPrTabPreparation(
     else priority.release();
   };
   const enqueue = () => {
+    // Like the tabs' code, their reads wait for the first content: on a cold
+    // load they competed with the code the page still needed (MIN-880).
+    if (!disposed && !hasReachedFirstContent()) {
+      cancelReadsWait ??= onFirstContent(() => { cancelReadsWait = null; enqueue(); });
+      return;
+    }
     if (!disposed && [...pendingKeys].some((identity) => !parkedForge.has(identity)) && !cancel && transportSlots() < SCOPED_PREPARATION_CONCURRENCY &&
         visible() && onlineManager.isOnline() && !otherTransport()) cancel = schedule(prepare);
   };
@@ -604,7 +611,7 @@ export function createPrTabPreparation(
       enqueue();
     },
     dispose() {
-      disposed = true; cancelSurfaces(); activeQueryHashes.clear(); settledReads.clear(); clearIntent(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
+      disposed = true; cancelSurfaces(); cancelReadsWait?.(); activeQueryHashes.clear(); settledReads.clear(); clearIntent(); cancelScheduled(); stop(); stopOnline(); stopInsertSettlement();
       clearTimeout(forgeWake); forgeWake = undefined; parkedForge.clear(); deferredForge.clear();
       if (typeof document !== "undefined") document.removeEventListener("visibilitychange", resume);
       if (typeof window !== "undefined") window.removeEventListener("focus", resume);

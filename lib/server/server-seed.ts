@@ -4,7 +4,9 @@ import { NextRequest } from "next/server";
 import { headers as requestHeaders, cookies as requestCookies } from "next/headers";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { verifiedSessionUserId } from "@/lib/server/api-auth";
-import { resolveProjectSegment } from "@/lib/server/route-refs";
+import { resolveProjectSegment, resolveRouteRef } from "@/lib/server/route-refs";
+import { defaultFeedbackListReadPath } from "@/lib/feedback-selection-hint";
+import { PROJECT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
 import { parseTimeZoneCookie, TIME_ZONE_COOKIE } from "@/lib/time-zone-cookie";
 import { SERVER_SEED_PATH_HEADER, type ServerSeedPlan, type ServerSeedResponse } from "@/lib/server-seed";
 
@@ -26,8 +28,8 @@ import { SERVER_SEED_PATH_HEADER, type ServerSeedPlan, type ServerSeedResponse }
 
 export { SERVER_SEED_PATH_HEADER };
 
-// Shell routes take no context; project routes read `params.id`.
-type Handler = (request: NextRequest, context: { params: Promise<{ id: string }> }) => Promise<Response> | Response;
+// Shell routes take no context; project routes read `params.id` (and `pageId`).
+type Handler = (request: NextRequest, context: { params: Promise<{ id: string; pageId: string }> }) => Promise<Response> | Response;
 type RouteModule = { GET?: Handler };
 
 /**
@@ -51,6 +53,10 @@ const ROUTES: { pattern: RegExp; load: () => Promise<RouteModule> }[] = [
   { pattern: /^\/api\/pull-requests\/count$/, load: () => import("@/app/api/pull-requests/count/route") },
   { pattern: /^\/api\/billing$/, load: () => import("@/app/api/billing/route") },
   { pattern: /^\/api\/billing\/usage$/, load: () => import("@/app/api/billing/usage/route") },
+  { pattern: /^\/api\/routines$/, load: () => import("@/app/api/routines/route") },
+  { pattern: /^\/api\/agent\/models$/, load: () => import("@/app/api/agent/models/route") },
+  { pattern: /^\/api\/admin\/capabilities$/, load: () => import("@/app/api/admin/capabilities/route") },
+  { pattern: /^\/api\/admin\/overview$/, load: () => import("@/app/api/admin/overview/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/issues$/, load: () => import("@/app/api/projects/[id]/issues/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/members$/, load: () => import("@/app/api/projects/[id]/members/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/objectives$/, load: () => import("@/app/api/projects/[id]/objectives/route") },
@@ -58,7 +64,25 @@ const ROUTES: { pattern: RegExp; load: () => Promise<RouteModule> }[] = [
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/issue-relations$/, load: () => import("@/app/api/projects/[id]/issue-relations/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/integrations$/, load: () => import("@/app/api/projects/[id]/integrations/route") },
   { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/views$/, load: () => import("@/app/api/projects/[id]/views/route") },
+  { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/feedback$/, load: () => import("@/app/api/projects/[id]/feedback/route") },
+  { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/feedback\/counts$/, load: () => import("@/app/api/projects/[id]/feedback/counts/route") },
+  { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/pull-request-stats$/, load: () => import("@/app/api/projects/[id]/pull-request-stats/route") },
+  { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/pages$/, load: () => import("@/app/api/projects/[id]/pages/route") },
+  { pattern: /^\/api\/projects\/(?<id>[0-9a-f-]{36})\/pages\/(?<pageId>[0-9a-f-]{36})$/, load: () => import("@/app/api/projects/[id]/pages/[pageId]/route") },
 ];
+
+function seedRoute(pathname: string) {
+  for (const { pattern, load } of ROUTES) {
+    const match = pathname.match(pattern);
+    if (match) return { match, load };
+  }
+  return null;
+}
+
+/** Whether `path` names a read the document can carry. */
+export function hasServerSeedRoute(path: string): boolean {
+  return seedRoute(new URL(path, "https://minddy.invalid").pathname) !== null;
+}
 
 /** A response body larger than this is left to the browser's own request. */
 const MAX_SEED_BODY_CHARS = 3 * 1024 * 1024;
@@ -82,10 +106,41 @@ const SHELL_READS = [
   "/api/pull-requests?state=open&limit=100",
 ];
 
-/** A project board's prerequisites (lib/retained-board-read-state.ts). */
-const projectBoardReads = (projectId: string) =>
-  ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"]
-    .map((reader) => `/api/projects/${projectId}/${reader}`);
+/**
+ * What each project page reads before its first content, by section of
+ * `/projects/[id]/…`. The board's are its prerequisites
+ * (lib/retained-board-read-state.ts); the others were mapped from cold loads.
+ */
+const PROJECT_SECTION_READS: Record<string, string[]> = {
+  "": ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"],
+  objectives: ["objectives", "issues", "members", "issue-relations", "pages"],
+  feedback: ["objectives", "issues", "categories", "members", "issue-relations"],
+  triage: ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "pages"],
+  // The general tab's statistics.
+  settings: ["issues", "members", "categories", "objectives", "issue-relations", "pull-request-stats"],
+  pages: ["pages"],
+};
+
+/** The reads a project page's location makes, or none for an unknown section. */
+async function projectReads(projectId: string, section: string, pageRef: string | undefined,
+  params: URLSearchParams): Promise<string[]> {
+  const readers = PROJECT_SECTION_READS[section];
+  if (!readers || (pageRef && section !== "pages")) return [];
+  const api = `/api/projects/${projectId}`;
+  // Every project page shows the feedback counter in the sidebar.
+  const paths = [`${api}/feedback/counts`, ...readers.map((reader) => `${api}/${reader}`)];
+  // A bare team page reads its default list; links and filters change that read.
+  if (section === "feedback" && params.size === 0) paths.push(defaultFeedbackListReadPath(projectId));
+  // Other tabs do not show the statistics.
+  if (section === "settings" && (params.get("tab") ?? PROJECT_SETTINGS_DEFAULT_TAB) !== PROJECT_SETTINGS_DEFAULT_TAB) {
+    return paths.slice(0, 1);
+  }
+  if (pageRef) {
+    const pageId = await resolveRouteRef("pages", pageRef).catch(() => null);
+    if (pageId) paths.push(`${api}/pages/${pageId}`);
+  }
+  return paths;
+}
 
 /**
  * The reads a document load of `location` makes before its first content,
@@ -99,10 +154,14 @@ export async function serverSeedPaths(location: string, timeZone: string | null)
   if (tz) paths.push(`/api/me/cycle${tz}`);
   // The global board's prerequisites (lib/retained-board-read-state.ts).
   if (url.pathname === "/all") paths.push("/api/me/views", ...(tz ? [`/api/me/board${tz}`] : []));
-  const project = url.pathname.match(/^\/projects\/([^/]+)$/);
+  if (url.pathname === "/routines") paths.push("/api/routines", "/api/agent/models");
+  // The route answers non-admins with an error, which is never seeded.
+  if (url.pathname === "/admin") paths.push("/api/admin/capabilities", "/api/admin/overview");
+  const project = url.pathname.match(/^\/projects\/([^/]+)(?:\/([^/]+)(?:\/([^/]+))?)?$/);
   if (project) {
     const projectId = await resolveProjectSegment(decodeURIComponent(project[1])).catch(() => null);
-    if (projectId) paths.push(...projectBoardReads(projectId));
+    const pageRef = project[3] && decodeURIComponent(project[3]);
+    if (projectId) paths.push(...await projectReads(projectId, project[2] ?? "", pageRef, url.searchParams));
   }
   return paths;
 }
@@ -134,8 +193,8 @@ const FORWARDED_HEADERS = ["cookie", "accept-language", "user-agent", "x-forward
  */
 export async function runServerSeed(path: string): Promise<ServerSeedResponse | null> {
   const url = new URL(path, "https://minddy.invalid");
-  const route = ROUTES.map(({ pattern, load }) => ({ match: url.pathname.match(pattern), load })).find(({ match }) => match);
-  if (!route?.match) return null;
+  const route = seedRoute(url.pathname);
+  if (!route) return null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const incoming = await requestHeaders();
@@ -149,7 +208,8 @@ export async function runServerSeed(path: string): Promise<ServerSeedResponse | 
     const request = new NextRequest(new URL(`${url.pathname}${url.search}`, `${protocol}://${host}`), { headers });
     const module = await route.load();
     if (!module.GET) return null;
-    const params = Promise.resolve({ id: route.match.groups?.id ?? "" });
+    const { id = "", pageId = "" } = route.match.groups ?? {};
+    const params = Promise.resolve({ id, pageId });
     const deadline = new Promise<null>((resolve) => { timer = setTimeout(() => resolve(null), SEED_DEADLINE_MS); });
     const read = (async () => {
       const response = await module.GET!(request, { params });

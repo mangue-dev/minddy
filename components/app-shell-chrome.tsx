@@ -251,6 +251,7 @@ TriageNavIcon.displayName = "TriageNavIcon";
 import { countBadge, countBadges } from "@/components/nav-badge";
 import { NotificationBadge } from "@/components/notification-badge";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { fetchSeeded } from "@/lib/server-seed";
 
 /**
  * The mark of a draft project, in the exact place of the “to sort” counter
@@ -541,7 +542,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const { data: feedbackCountData } = useQuery({
     queryKey: ["feedback-count", currentProjectId ?? ""],
     queryFn: async () => {
-      const r = await fetch(`/api/projects/${currentProjectId}/feedback/counts`);
+      const r = await fetchSeeded(`/api/projects/${currentProjectId}/feedback/counts`);
       if (!r.ok) return { count: 0 };
       return (await r.json()) as { count: number };
     },

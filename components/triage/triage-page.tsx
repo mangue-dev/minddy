@@ -53,7 +53,7 @@ import { AskNumoProvider, useAskNumoTarget } from "@/lib/ask-numo-context";
 // see components/editor/document-editor-lazy.tsx. Warmed from idle time in TriagePage.
 import {
   LazyDocumentEditor,
-  useIdleDocumentEditorPreload,
+  useDocumentEditorForFirstContent,
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
@@ -114,8 +114,8 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const tIssue = useTranslations("Issue");
   const tPicker = useTranslations("Picker");
   const format = useFormatter();
-  // Mounts with the page: warm the deferred editor chunk once painted.
-  useIdleDocumentEditorPreload();
+  // The opened issue's description is first content: load the editor now.
+  useDocumentEditorForFirstContent();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const router = useRouter();

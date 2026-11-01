@@ -135,7 +135,7 @@ vi.mock("@/components/auto-textarea", async () => {
 });
 vi.mock("@/components/editor/document-editor-lazy", async () => {
   const { createElement } = await import("react");
-  return { useIdleDocumentEditorPreload: vi.fn(), LazyDocumentEditor: ({ value }: { value: string }) =>
+  return { useIdleDocumentEditorPreload: vi.fn(), useDocumentEditorForFirstContent: vi.fn(), LazyDocumentEditor: ({ value }: { value: string }) =>
     createElement("div", { "data-testid": "feedback-body", contentEditable: true, suppressContentEditableWarning: true }, value) };
 });
 vi.mock("@/components/issue-timeline", async () => {
