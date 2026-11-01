@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { requireFeedbackMember, requireProjectMember } from "@/lib/server/feedback/team-guard";
 import { parseFeedbackListFilters } from "@/lib/feedback-list-filters";
 import { countTeamFeedback, listTeamFeedback } from "@/lib/server/feedback/team-queries";
+import { prepareFeedbackPost } from "@/lib/server/feedback/post-reads";
+import { readFeedbackSelectionHint } from "@/lib/feedback-selection-hint";
 import { createFeedbackPost } from "@/lib/server/feedback/posts";
 import { getBoardForProject } from "@/lib/server/feedback/boards";
 import { upsertFeedbackUser } from "@/lib/server/feedback/identity";
@@ -40,7 +42,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     countTeamFeedback(id),
     getBoardForProject(id),
   ]);
-  return NextResponse.json({ posts, total, board_enabled: board?.enabled ?? false });
+  // The post the page opens on this list, read along (MIN-875).
+  const hint = readFeedbackSelectionHint(request.nextUrl.searchParams);
+  const prepared = hint ? await prepareFeedbackPost(id, guard.userId, posts, hint) : null;
+  return NextResponse.json({ posts, total, board_enabled: board?.enabled ?? false, ...(prepared ? { prepared } : {}) });
 }
 
 export async function POST(request: NextRequest, { params }: RouteContext) {

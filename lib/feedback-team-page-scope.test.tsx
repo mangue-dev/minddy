@@ -200,7 +200,16 @@ const rows = (): TeamFeedbackListItem[] => Array.from({ length: 120 }, (_, index
 } as unknown as TeamFeedbackListItem));
 const detail = (post: TeamFeedbackListItem): TeamFeedbackDetail => ({ ...post, merged_from: [], merge_events: [], issue: null });
 let client: QueryClient, root: Root, container: HTMLDivElement;
-let source: TeamFeedbackListItem[], requests: string[], finishFull: (() => void) | undefined;
+let source: TeamFeedbackListItem[], requests: string[], hints: (string | null)[], finishFull: (() => void) | undefined;
+
+/** The list scope of a request: the page also names the post it will open (`prepare`, MIN-875), which scopes nothing. */
+function listScope(url: string): string {
+  const parsed = new URL(url, "https://minddy.test");
+  hints.push(parsed.searchParams.get("prepare"));
+  parsed.searchParams.delete("prepare");
+  parsed.searchParams.delete("prepare_post");
+  return parsed.pathname + (parsed.search ? parsed.search : "");
+}
 let initialSearch: string;
 
 function Publication() {
@@ -234,7 +243,7 @@ function seedNormal(filters: FeedbackListFilters = normalFilters) {
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   vi.clearAllMocks(); state.skeletonCommits = 0; state.publication = ""; state.controls = null; state.setSearch = null;
-  source = rows(); requests = []; finishFull = undefined; initialSearch = "";
+  source = rows(); requests = []; hints = []; finishFull = undefined; initialSearch = "";
   client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 300_000, gcTime: Infinity } } });
   for (const row of source) client.setQueryData(feedbackDetailOptions(projectId, row.id).queryKey, { post: detail(row) });
   window.history.replaceState(null, "", pathname);
@@ -242,7 +251,8 @@ beforeEach(() => {
     window.history.replaceState(null, "", href);
     state.setSearch?.(new URL(href, "https://minddy.test").search.slice(1));
   });
-  vi.stubGlobal("fetch", vi.fn((url: string) => {
+  vi.stubGlobal("fetch", vi.fn((raw: string) => {
+    const url = listScope(raw);
     requests.push(url);
     if (url === `/api/projects/${projectId}/feedback`) return new Promise<Response>((resolve) => {
       finishFull = () => resolve(Response.json({ posts: source, board_enabled: true }));
@@ -325,7 +335,8 @@ describe("FeedbackTeamPage requested-post query scope", () => {
     client.setQueryData(["feedback", projectId], { posts: source, board_enabled: true });
     if (full === "invalidated") await client.invalidateQueries({ queryKey: ["feedback", projectId], exact: true, refetchType: "none" });
     let finishNormal: (() => void) | undefined;
-    vi.mocked(fetch).mockImplementation((async (url: string) => {
+    vi.mocked(fetch).mockImplementation((async (raw: string) => {
+      const url = listScope(raw);
       requests.push(url);
       if (url === `/api/projects/${projectId}/feedback`) return Response.json({ posts: source, board_enabled: true });
       if (url.startsWith(`/api/projects/${projectId}/feedback?`)) return new Promise<Response>((resolve) => {

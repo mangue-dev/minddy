@@ -27,9 +27,10 @@ import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, CircleIcon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
+import type { FeedbackSelectionHint } from "@/lib/feedback-selection-hint";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -680,8 +681,12 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [onlyToReview, setOnlyToReview] = useMobileCollectionState(projectPath(projectId, "feedback"), "onlyToReview", false);
   const normalListFilters = { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
   const listFilters = feedbackFiltersForRequestedPost(queryClient, projectId, postParam, normalListFilters, onlyToReview);
+  // The post this list will open, read with it (set below, once the view's
+  // sort is known; the read leaves after layout effects).
+  const preparedHint = useRef<FeedbackSelectionHint | null>(null);
+  const preparation = useMemo(() => ({ client: queryClient, hint: () => preparedHint.current }), [queryClient]);
   const { data: listData, isPending } = useQuery({
-    ...feedbackQueryOptions(projectId, listFilters),
+    ...feedbackQueryOptions(projectId, listFilters, preparation),
     // Consuming `?post=` narrows the full list to the normal scope. Keep the
     // full list of this project on screen, filtered as it already was, while
     // that scope loads; a narrower list never stands in for a wider one, and
@@ -728,6 +733,12 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // A search looks through every post, whatever the state, review and
   // property filters: they narrow the resting list, the query finds anything.
   const searching = query.trim() !== "";
+  useLayoutEffect(() => {
+    // Property filters and search select among rows the server does not order:
+    // the page reads the post itself then.
+    preparedHint.current = searching || Object.keys(properties).length ? null
+      : { state, sort, onlyToReview, ...(postParam ? { post: postParam } : {}) };
+  }, [searching, properties, state, sort, onlyToReview, postParam]);
   const visiblePosts = useMemo(() => feedbackSelectionItems(posts, searching
     ? { state: "all", sort }
     : { state, sort, onlyToReview, properties }),

@@ -26,6 +26,7 @@ import { retainPageDocuments, retainedPageDocumentCost } from "@/lib/retained-pa
 import { isDraftPage } from "@/lib/pages-draft";
 import { usePendingNavigation } from "@/lib/pending-navigation";
 import { RouteLoadingSkeleton } from "./route-loading-skeleton";
+import { holdReadsInFlight } from "@/lib/hold-reads-in-flight";
 
 const GlobalBoard = dynamic(() => appTabSurfaceLoaders["global-board"]().then((module) => module.GlobalBoard), { loading: () => <BoardLoadingSkeleton /> });
 const ProjectBoard = dynamic(appTabSurfaceLoaders["project-board"], { loading: () => <BoardLoadingSkeleton /> });
@@ -158,6 +159,17 @@ export function AppTabViewHost({ children }: { children: ReactNode }) {
   const route = useViewHostRoute(tabs);
   const { pathname } = route;
   const retained = !!tabs && !!retainedAppViewKind(pathname);
+  // The startup page moves from the route children into its retained view
+  // when the tab session appears: its reads in flight carry over (MIN-875).
+  // Only that handoff: a navigation between routes keeps cancelling the reads
+  // of the page it leaves.
+  const client = useQueryClient();
+  const hadSession = useRef(!!tabs);
+  useLayoutEffect(() => {
+    const handoff = !!tabs && !hadSession.current && retained;
+    if (tabs) hadSession.current = true;
+    if (handoff) holdReadsInFlight(client);
+  }, [tabs, retained, client]);
   // A destination the router has not committed yet (MIN-843) replaces the
   // page being left at once: its retained view when this tab keeps one, the
   // Home surface this host owns, or the destination's skeleton.

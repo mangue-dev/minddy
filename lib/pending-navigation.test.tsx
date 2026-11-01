@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => ({ pathname: "/home", search: "" }));
@@ -27,12 +28,14 @@ const { AppTabViewHost } = await import("@/components/app-tab-view-host");
 
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;
+// The host carries reads over when the startup page moves into its retained view.
+const queries = new QueryClient();
 
 function Shell() {
-  return <>
+  return <QueryClientProvider client={queries}>
     <nav data-displayed={useDisplayedPathname()} data-objective={useDisplayedSearchParam("objective") ?? ""} />
     <AppTabViewHost><p data-page={h.pathname} /></AppTabViewHost>
-  </>;
+  </QueryClientProvider>;
 }
 const render = () => act(() => root.render(<Shell />));
 /** The router commits a route: the URL and `usePathname` move together. */

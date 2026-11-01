@@ -180,3 +180,74 @@ export function refreshMissedQueries(
   }));
   return Promise.all([now, ...later]).then(() => undefined);
 }
+
+/** Topics with a data change during the window, or null when unknown. */
+export type ChangedTopicsCheck = (topics: string[], windowMs: number) => Promise<ReadonlySet<string> | null>;
+
+/** Margin added to the window: the check runs a round trip after it is measured. */
+export const CHANGED_TOPICS_MARGIN_MS = 5_000;
+
+export interface InitialCatchUp {
+  /** A scope's first join: its resolved topic and the keys it covers. */
+  push(topic: string, keys: QueryKey[]): void;
+  cancel(): void;
+}
+
+/**
+ * The first joins of a page load (MIN-875). Their gap runs from the page's
+ * first reads to the join; instead of re-reading every scope, ask the server
+ * which topics received a change since the page started
+ * (`realtime_topics_changed_since`) and re-read only those scopes. Without an
+ * answer (an older database, a failed request) every scope is re-read, as
+ * before.
+ *
+ * @param elapsedMs time since the page started, the start of every gap here.
+ * @param refresh receives the covered keys' predicate and the latest join.
+ */
+export function createInitialCatchUp({ check, elapsedMs, refresh, delayMs = INITIAL_CATCH_UP_COALESCE_MS }: {
+  check: ChangedTopicsCheck;
+  elapsedMs: () => number;
+  refresh: (matches: (queryKey: readonly unknown[]) => boolean, since: number) => void;
+  delayMs?: number;
+}): InitialCatchUp {
+  let pending = new Map<string, QueryKey[]>();
+  let since = 0;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let generation = 0;
+
+  const flush = async (scopes: Map<string, QueryKey[]>, joinedAt: number, current: number) => {
+    let changed: ReadonlySet<string> | null = null;
+    try {
+      changed = await check([...scopes.keys()], Math.ceil(elapsedMs()) + CHANGED_TOPICS_MARGIN_MS);
+    } catch {
+      changed = null;
+    }
+    if (current !== generation) return;
+    const wanted = new Set<string>();
+    for (const [topic, keys] of scopes) {
+      if (changed && !changed.has(topic)) continue;
+      for (const key of keys) wanted.add(hash(key));
+    }
+    if (wanted.size) refresh((queryKey) => matchesCatchUpScope(queryKey, wanted), joinedAt);
+  };
+
+  return {
+    push(topic, keys) {
+      pending.set(topic, keys);
+      since = Date.now();
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        const scopes = pending;
+        pending = new Map();
+        void flush(scopes, since, generation);
+      }, delayMs);
+    },
+    cancel() {
+      generation += 1;
+      if (timer) clearTimeout(timer);
+      timer = null;
+      pending = new Map();
+    },
+  };
+}

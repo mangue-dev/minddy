@@ -206,14 +206,14 @@
     "file": "app/api/admin/ai-usage/route.ts",
     "operation": "rpc",
     "resource": "get_ai_run_calls",
-    "line": 42,
+    "line": 38,
     "storage": false
   },
   {
     "file": "app/api/admin/ai-usage/route.ts",
     "operation": "rpc",
     "resource": "get_ai_usage_stats",
-    "line": 55,
+    "line": 51,
     "storage": false
   },
   {
@@ -612,7 +612,7 @@
     "file": "app/api/me/triage-counts/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 34,
+    "line": 31,
     "storage": false
   },
   {
@@ -689,7 +689,7 @@
     "file": "app/api/objectives/[id]/resources/route.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 26,
+    "line": 25,
     "storage": false
   },
   {
@@ -794,7 +794,7 @@
     "file": "app/api/projects/[id]/pages/[pageId]/backlinks/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 34,
+    "line": 36,
     "storage": false
   },
   {
@@ -1519,6 +1519,13 @@
     "storage": false
   },
   {
+    "file": "lib/realtime-provider.tsx",
+    "operation": "rpc",
+    "resource": "realtime_topics_changed_since",
+    "line": 107,
+    "storage": false
+  },
+  {
     "file": "lib/realtime-topic.ts",
     "operation": "rpc",
     "resource": "resolve_realtime_topic",
@@ -1851,7 +1858,7 @@
     "file": "lib/server/admin.ts",
     "operation": "rpc",
     "resource": "auth_authorization_state",
-    "line": 71,
+    "line": 98,
     "storage": false
   },
   {
@@ -2971,56 +2978,56 @@
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 122,
+    "line": 127,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 145,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "rpc",
     "resource": "upsert_billing_account_patch",
-    "line": 159,
+    "line": 177,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "rpc",
     "resource": "apply_stripe_billing_event",
-    "line": 192,
+    "line": 210,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 256,
+    "line": 274,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 265,
+    "line": 283,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 343,
+    "line": 373,
     "storage": false
   },
   {
     "file": "lib/server/billing-accounts.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 375,
+    "line": 405,
     "storage": false
   },
   {
@@ -5238,14 +5245,14 @@
   {
     "file": "lib/server/entitlements.ts",
     "operation": "from",
-    "resource": "project_members",
-    "line": 34,
+    "resource": "projects",
+    "line": 39,
     "storage": false
   },
   {
     "file": "lib/server/entitlements.ts",
     "operation": "from",
-    "resource": "projects",
+    "resource": "project_members",
     "line": 44,
     "storage": false
   },
@@ -5253,7 +5260,7 @@
     "file": "lib/server/entitlements.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 79,
+    "line": 77,
     "storage": false
   },
   {
@@ -8648,7 +8655,7 @@
     "file": "lib/server/page-backlinks.ts",
     "operation": "from",
     "resource": null,
-    "line": 185,
+    "line": 188,
     "storage": false
   },
   {
@@ -8753,49 +8760,49 @@
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 88,
+    "line": 82,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 128,
+    "line": 135,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 156,
+    "line": 163,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 166,
+    "line": 173,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 193,
+    "line": 200,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 206,
+    "line": 213,
     "storage": false
   },
   {
     "file": "lib/server/page-database-views.ts",
     "operation": "from",
     "resource": "page_database_views",
-    "line": 219,
+    "line": 226,
     "storage": false
   },
   {
@@ -9495,21 +9502,21 @@
     "file": "lib/server/project-working-set-readers.ts",
     "operation": "from",
     "resource": "project_invitations",
-    "line": 94,
+    "line": 105,
     "storage": false
   },
   {
     "file": "lib/server/project-working-set-readers.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 109,
+    "line": 120,
     "storage": false
   },
   {
     "file": "lib/server/project-working-set-readers.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 111,
+    "line": 122,
     "storage": false
   },
   {
@@ -10230,56 +10237,56 @@
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 532,
+    "line": 543,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 555,
+    "line": 577,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 560,
+    "line": 582,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 571,
+    "line": 593,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 612,
+    "line": 645,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 655,
+    "line": 688,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 683,
+    "line": 716,
     "storage": false
   },
   {
     "file": "lib/server/routines.ts",
     "operation": "from",
     "resource": "agent_routines",
-    "line": 699,
+    "line": 732,
     "storage": false
   },
   {
@@ -10755,21 +10762,21 @@
     "file": "lib/server/usage.ts",
     "operation": "from",
     "resource": "agent_quota_resets",
-    "line": 92,
+    "line": 94,
     "storage": false
   },
   {
     "file": "lib/server/usage.ts",
     "operation": "rpc",
     "resource": "get_user_usage_since",
-    "line": 147,
+    "line": 170,
     "storage": false
   },
   {
     "file": "lib/server/usage.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 243,
+    "line": 266,
     "storage": false
   },
   {

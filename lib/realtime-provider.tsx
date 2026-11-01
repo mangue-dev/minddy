@@ -41,9 +41,11 @@ import {
 } from "./realtime-resume";
 import {
   createCatchUpQueue,
+  createInitialCatchUp,
   refreshMissedQueries,
-  INITIAL_CATCH_UP_COALESCE_MS,
   type CatchUpQueue,
+  type ChangedTopicsCheck,
+  type InitialCatchUp,
 } from "./realtime-catch-up";
 import { refreshBoardIssues } from "./global-issues-api";
 import { trace } from "./desktop/trace";
@@ -98,6 +100,15 @@ import { emitPageHead } from "./page-collaboration-signals";
 const BROADCAST_EVENTS = ["INSERT", "UPDATE", "DELETE"] as const;
 
 const INVALIDATE_COALESCE_MS = 200;
+
+/** The topics among `topics` that received a data change in the last `windowMs` (MIN-875). */
+const checkChangedTopics: ChangedTopicsCheck = async (topics, windowMs) => {
+  const { data, error } = await withClientRequestDeadline(
+    async (signal) => await getSupabase().rpc("realtime_topics_changed_since", { p_topics: topics, p_window_ms: windowMs }).abortSignal(signal),
+    BACKEND_REQUEST_TIMEOUT_MS,
+  );
+  return error || !Array.isArray(data) ? null : new Set(data as string[]);
+};
 
 /**
  * What a project event writes to the caches BEFORE any invalidation.
@@ -236,27 +247,32 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
  * follows a cut only triggers one for everyone (MIN-305).
  */
   const catchUpQueue = useRef<CatchUpQueue | null>(null);
-  const initialCatchUpQueue = useRef<CatchUpQueue | null>(null);
+  const initialCatchUp = useRef<InitialCatchUp | null>(null);
   if (catchUpQueue.current === null) {
     catchUpQueue.current = createCatchUpQueue((matches, since) => {
       void refreshMissedQueries(queryClient, matches, since);
     });
   }
-  if (initialCatchUpQueue.current === null) {
-    initialCatchUpQueue.current = createCatchUpQueue((matches, since) => {
-      void refreshMissedQueries(queryClient, matches, since);
-    }, INITIAL_CATCH_UP_COALESCE_MS);
+  if (initialCatchUp.current === null) {
+    initialCatchUp.current = createInitialCatchUp({
+      check: checkChangedTopics,
+      elapsedMs: () => performance.now(),
+      refresh: (matches, since) => {
+        void refreshMissedQueries(queryClient, matches, since);
+      },
+    });
   }
   useEffect(() => {
     const queue = catchUpQueue.current;
-    const initialQueue = initialCatchUpQueue.current;
+    const initial = initialCatchUp.current;
     return () => {
       queue?.cancel();
-      initialQueue?.cancel();
+      initial?.cancel();
     };
   }, []);
+  /** `initialTopic`: the scope's first join, whose gap the server can rule out. */
   const catchUp = useCallback(
-    (keys: QueryKey[], initialSubscription = false) => {
+    (keys: QueryKey[], initialTopic?: string) => {
       // Trace call point (MIN-307): a `catchUp` line followed by a
       // `longtask` is THE signature of the invalidation wave, and `cache` says
       // how many queries have been searched. No-op trace off.
@@ -267,10 +283,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // No separate all-issue snapshot here: a board covered by the catch-up
       // is refetched by it whenever it is observed, and reading every issue
       // twice doubled the server work of each resume.
-      const queue = initialSubscription
-        ? initialCatchUpQueue.current
-        : catchUpQueue.current;
-      queue?.push(keys);
+      if (keys.length === 0) return;
+      if (initialTopic) initialCatchUp.current?.push(initialTopic, keys);
+      else catchUpQueue.current?.push(keys);
     },
     [queryClient]
   );
@@ -349,7 +364,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
                 hasSubscribed = true;
                 if (needsCatchUp) {
                   needsCatchUp = false;
-                  catchUp(scopeKeys, initialSubscription);
+                  catchUp(scopeKeys, initialSubscription ? resolvedTopic : undefined);
                 }
                 coverage.joined();
               } else if (

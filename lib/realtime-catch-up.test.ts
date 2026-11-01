@@ -6,6 +6,8 @@ import {
   createCatchUpQueue,
   INITIAL_CATCH_UP_COALESCE_MS,
   matchesCatchUpScope,
+  CHANGED_TOPICS_MARGIN_MS,
+  createInitialCatchUp,
   refreshMissedQueries,
   trackFetchStarts,
 } from "./realtime-catch-up";
@@ -297,5 +299,69 @@ describe("refreshMissedQueries", () => {
     await vi.advanceTimersByTimeAsync(INITIAL_CATCH_UP_COALESCE_MS);
     expect(flush).toHaveBeenCalledOnce();
     expect(flush.mock.calls[0][1]).toBe(10_100);
+  });
+});
+
+describe("createInitialCatchUp", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const USER = "user:u1:v:1", PROJECT = "project:p1:v:2", OTHER = "project:p2:v:1";
+  const scopes: [string, unknown[][]][] = [[USER, [["notifications"]]], [PROJECT, [["issues", "p1"], ["comments"]]], [OTHER, [["issues", "p2"]]]];
+
+  async function run(check: (topics: string[], windowMs: number) => Promise<ReadonlySet<string> | null>) {
+    vi.useFakeTimers({ now: 50_000 });
+    const refresh = vi.fn();
+    const initial = createInitialCatchUp({ check: vi.fn(check), elapsedMs: () => 1_234.5, refresh });
+    for (const [topic, keys] of scopes) initial.push(topic, keys);
+    await vi.advanceTimersByTimeAsync(INITIAL_CATCH_UP_COALESCE_MS);
+    const covered = (key: unknown[]) => refresh.mock.calls.some(([matches]) => matches(key));
+    return { refresh, covered };
+  }
+
+  it("re-reads nothing when no topic changed during the load", async () => {
+    const { refresh } = await run(async () => new Set());
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("re-reads only the scopes whose topic changed, since the latest join", async () => {
+    const { refresh, covered } = await run(async () => new Set([PROJECT]));
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(refresh.mock.calls[0][1]).toBe(50_000);
+    expect(covered(["issues", "p1"])).toBe(true);
+    expect(covered(["comments", "i1"])).toBe(true);
+    expect(covered(["notifications"])).toBe(false);
+    expect(covered(["issues", "p2"])).toBe(false);
+  });
+
+  it("asks once for every joined topic, over the whole load plus a margin", async () => {
+    const check = vi.fn(async () => new Set<string>());
+    await run(check);
+    expect(check).toHaveBeenCalledOnce();
+    expect(check.mock.calls[0]).toEqual([[USER, PROJECT, OTHER], 1_235 + CHANGED_TOPICS_MARGIN_MS]);
+  });
+
+  it.each([
+    ["no answer", async () => null],
+    ["a failed request", async () => { throw new Error("PGRST202"); }],
+  ])("re-reads every scope after %s", async (_, check) => {
+    const { covered } = await run(check);
+    expect(covered(["notifications"])).toBe(true);
+    expect(covered(["issues", "p1"])).toBe(true);
+    expect(covered(["issues", "p2"])).toBe(true);
+  });
+
+  it("does nothing once cancelled", async () => {
+    vi.useFakeTimers();
+    const refresh = vi.fn();
+    let answer!: (topics: ReadonlySet<string>) => void;
+    const initial = createInitialCatchUp({ check: () => new Promise((r) => { answer = r; }), elapsedMs: () => 10, refresh });
+    initial.push(USER, [["notifications"]]);
+    await vi.advanceTimersByTimeAsync(INITIAL_CATCH_UP_COALESCE_MS);
+    initial.cancel();
+    answer(new Set([USER]));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refresh).not.toHaveBeenCalled();
   });
 });
