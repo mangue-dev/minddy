@@ -1503,7 +1503,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings: identity (name, key, accent color — the icon itself is set from the project's Settings → General page, you have no tool for it), auto-assign on create, Smart Assign and its per-member rules, Smart Triage's mode ('rules' only — the deterministic board sort; the AI scoring pass was retired), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign is plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
+        "Update the project's own settings: identity (name, key, accent color — the icon itself is set from the project's Settings → General page, you have no tool for it), Smart Assign and its per-member rules, Smart Triage's mode ('rules' only — the deterministic board sort; the AI scoring pass was retired), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign is plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -1517,11 +1517,6 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: ["string", "null"],
             description:
               "Accent color as a hex string like #7c5cff, or null to clear.",
-          },
-          auto_assign_enabled: {
-            type: "boolean",
-            description:
-              "Auto-assignment preference stored on the project (the creation wizard sets it). It currently has NO effect on its own: issues created in this project are auto-assigned to their creator only through each user's account-level auto_assign_created preference. Flip it only when the user asks, and say what it does today.",
           },
           smart_assign_enabled: {
             type: "boolean",

@@ -3348,8 +3348,6 @@
     "wizardNoRepo": "Kein Repository",
     "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Weist automatisch jedes Ticket zu, das die Triage ohne zuständige Person verlässt.",
-    "wizardAutoAssignLabel": "Automatische Zuweisung",
-    "wizardAutoAssignDesc": "Weist dir die Tickets zu, die du in diesem Projekt erstellst.",
     "wizardFinish": "Fertig stellen",
     "wizardBriefPageTitle": "Erstes Briefing",
     "wizardDoneToast": "Projekt „{name}“ ist eingerichtet.",

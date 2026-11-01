@@ -3348,8 +3348,6 @@
     "wizardNoRepo": "no repository",
     "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Automatically assigns any issue that gets past triage without an assignee.",
-    "wizardAutoAssignLabel": "Auto-assignment",
-    "wizardAutoAssignDesc": "Assigns you the issues you create in this project.",
     "wizardFinish": "Finish",
     "wizardBriefPageTitle": "Initial brief",
     "wizardDoneToast": "Project “{name}” is set up.",

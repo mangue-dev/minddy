@@ -240,7 +240,6 @@ export function CreateProjectWizard({
   // “Finishing” stage. Smart Assign is proposed ENABLED: this is the setting
   // that we want by default on a new project, and unchecking it remains one click away.
   const [smartAssignEnabled, setSmartAssignEnabled] = useState(true);
-  const [autoAssignEnabled, setAutoAssignEnabled] = useState(false);
 
   // “Members” stage. Addresses and picked collaborators wait here until the
   // project exists; `inviteeInput` is the name or address being typed.
@@ -301,7 +300,6 @@ export function CreateProjectWizard({
     setCsvFile(null);
     setCsvLost(false);
     setSmartAssignEnabled(true);
-    setAutoAssignEnabled(false);
     setInvitees([]);
     setInviteeUsers([]);
     setInviteeInput("");
@@ -330,7 +328,6 @@ export function CreateProjectWizard({
     setCsvFile(null);
     setCsvLost(draft.seed?.kind === "import");
     setSmartAssignEnabled(draft.smartAssignEnabled);
-    setAutoAssignEnabled(draft.autoAssignEnabled);
     setInvitees(draft.invitees);
     setInviteeUsers(draft.inviteeUsers);
     setInviteeInput("");
@@ -369,7 +366,6 @@ export function CreateProjectWizard({
     icon,
     repo,
     smartAssignEnabled,
-    autoAssignEnabled,
     invitees,
     inviteeUsers,
   });
@@ -795,12 +791,9 @@ export function CreateProjectWizard({
       );
       if (linked) track("project_git_linked", { provider: repo.provider });
     }
-    if (smartAssignEnabled || autoAssignEnabled) {
+    if (smartAssignEnabled) {
       await enrich("assign settings", () =>
-        updateProject(created.id, {
-          smart_assign_enabled: smartAssignEnabled,
-          auto_assign_enabled: autoAssignEnabled,
-        }),
+        updateProject(created.id, { smart_assign_enabled: smartAssignEnabled }),
       );
     }
     // Invitations go out last, one by one: a refusal (plan limit, rate limit,
@@ -857,7 +850,6 @@ export function CreateProjectWizard({
     track("project_wizard_completed", {
       has_git_link: !!repo,
       smart_assign_enabled: smartAssignEnabled,
-      auto_assign_enabled: autoAssignEnabled,
       invitations: toInvite.length,
     });
     toast.success(t("wizardDoneToast", { name: created.name }));
@@ -1467,20 +1459,6 @@ export function CreateProjectWizard({
             <Switch
               checked={smartAssignEnabled}
               onCheckedChange={setSmartAssignEnabled}
-            />
-          </label>
-          <label className="flex items-start justify-between gap-4 rounded-2xl border border-border p-4">
-            <span className="flex min-w-0 flex-col gap-0.5 text-left">
-              <span className="text-sm font-medium">
-                {t("wizardAutoAssignLabel")}
-              </span>
-              <span className="text-xs leading-relaxed text-muted-foreground">
-                {t("wizardAutoAssignDesc")}
-              </span>
-            </span>
-            <Switch
-              checked={autoAssignEnabled}
-              onCheckedChange={setAutoAssignEnabled}
             />
           </label>
         </div>

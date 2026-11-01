@@ -28,7 +28,6 @@ const draft: ProjectDraftInput = {
     fullName: "mangue-dev/comete",
   },
   smartAssignEnabled: false,
-  autoAssignEnabled: true,
   invitees: ["ana@example.com", "li@example.com"],
   inviteeUsers: [{ userId: "u-1", email: "bo@example.com", name: "Bo", avatarSeed: "seed-1" }],
 };
@@ -46,6 +45,13 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     // report nothing, since the wizard reopens anyway.
     const back = projectDraftFromRow(rowFor(draft));
     expect(back).toEqual({ ...draft, updatedAt: "2026-08-04T10:00:00Z" });
+  });
+
+  it("drops the retired auto-assignment switch from an older draft", () => {
+    const row = rowFor(draft);
+    const back = projectDraftFromRow({ ...row, data: { ...row.data, autoAssignEnabled: true } });
+    expect(back).not.toHaveProperty("autoAssignEnabled");
+    expect(projectDraftToRow(back).data).not.toHaveProperty("autoAssignEnabled");
   });
 
   it("falls back to safe defaults when `data` is empty", () => {
@@ -69,7 +75,6 @@ describe("projectDraftFromRow / projectDraftToRow", () => {
     // Smart Assign is proposed ACTIVATED by the wizard: a silent draft must
     // fall back on this default, not on `false`.
     expect(back.smartAssignEnabled).toBe(true);
-    expect(back.autoAssignEnabled).toBe(false);
     // Written before the members step existed: nobody to invite.
     expect(back.invitees).toEqual([]);
     expect(back.inviteeUsers).toEqual([]);

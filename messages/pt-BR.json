@@ -3348,8 +3348,6 @@
     "wizardNoRepo": "sem repositório",
     "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Atribui automaticamente qualquer ticket que saia da triagem sem responsável.",
-    "wizardAutoAssignLabel": "Atribuição automática",
-    "wizardAutoAssignDesc": "Atribui a você os tickets criados neste projeto.",
     "wizardFinish": "Concluir",
     "wizardBriefPageTitle": "Resumo inicial",
     "wizardDoneToast": "Projeto “{name}” está configurado.",

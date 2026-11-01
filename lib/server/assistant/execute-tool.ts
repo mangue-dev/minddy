@@ -2667,7 +2667,6 @@ async function executeToolUnlisted(
               name: result.project.name,
               key: result.project.key,
               color: result.project.color,
-              auto_assign_enabled: result.project.auto_assign_enabled,
               smart_assign_enabled: result.project.smart_assign_enabled,
               smart_assign_rules: result.project.smart_assign_rules,
               smart_triage_mode: result.project.smart_triage_mode,

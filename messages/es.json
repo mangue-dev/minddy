@@ -3348,8 +3348,6 @@
     "wizardNoRepo": "sin repositorio",
     "wizardSmartAssignLabel": "Smart Assign",
     "wizardSmartAssignDesc": "Asigna automáticamente cualquier incidencia que sale de Clasificación sin responsable.",
-    "wizardAutoAssignLabel": "Asignación automática",
-    "wizardAutoAssignDesc": "Te asigna las incidencias que creas en este proyecto.",
     "wizardFinish": "Terminar",
     "wizardBriefPageTitle": "Resumen inicial",
     "wizardDoneToast": "El proyecto «{name}» está listo.",
