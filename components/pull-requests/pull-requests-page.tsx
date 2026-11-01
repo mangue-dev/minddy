@@ -20,7 +20,6 @@ import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-
 import { useFormatter, useTranslations } from "next-intl";
 import { type InfiniteData, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 import { PrDetailSkeleton, PrListSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
@@ -34,7 +33,7 @@ import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
 import { linkedIssues } from "./pr-linked-issues";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import { PrStateBadge } from "@/components/pull-requests/pr-state-badge";
-import { SearchMenu } from "@/components/search-menu";
+import { FilterMenu, filterToggle } from "@/components/filter-menu";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
@@ -46,7 +45,6 @@ import {
   groupPullRequestsBySection,
   type PullRequestSection,
 } from "@/lib/pull-request-sections";
-import { checkedProps } from "@/components/search-select";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { usePrContextActions } from "@/components/pull-requests/pr-context-actions";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -146,15 +144,18 @@ function PrFilterMenu({
   onToggle: (section: PullRequestSection) => void;
 }) {
   const t = useTranslations("PullRequests");
-  const [open, setOpen] = useState(false);
   const active = sections.size !== DEFAULT_PULL_REQUEST_SECTIONS.length ||
     DEFAULT_PULL_REQUEST_SECTIONS.some((section) => !sections.has(section));
   return (
-    <SearchMenu
-      open={open}
-      onOpenChange={setOpen}
-      align="end"
-      tooltip={t("filterSections")}
+    <FilterMenu
+      label={t("filterSections")}
+      actions={PULL_REQUEST_SECTIONS.map((section) => filterToggle({
+        id: section,
+        label: t(SECTION_LABELS[section]),
+        icon: <PrSectionIcon section={section} className="size-4" />,
+        active: sections.has(section),
+        onToggle: () => onToggle(section),
+      }))}
       trigger={
         <Button
           variant="ghost"
@@ -170,22 +171,7 @@ function PrFilterMenu({
           </span>
         </Button>
       }
-    >
-      <CommandGroup heading={t("filterSectionsLabel")}>
-        {PULL_REQUEST_SECTIONS.map((section) => (
-          <CommandItem
-            key={section}
-            value={section}
-            keywords={[t(SECTION_LABELS[section])]}
-            onSelect={() => onToggle(section)}
-            {...checkedProps(sections.has(section))}
-          >
-            <PrSectionIcon section={section} className="size-4" />
-            <span className="truncate">{t(SECTION_LABELS[section])}</span>
-          </CommandItem>
-        ))}
-      </CommandGroup>
-    </SearchMenu>
+    />
   );
 }
 

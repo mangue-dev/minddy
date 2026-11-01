@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { Command, CommandInput, CommandItem, CommandList } from "./command";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { Spinner } from "./spinner";
+import { Skeleton } from "./skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 /**
@@ -331,16 +331,21 @@ export function Combobox({
               </CommandItem>
             ) : null}
             {results.length === 0 && !showFreeText ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                {loading ? (
-                  <>
-                    <Spinner />
-                    {loadingLabel}
-                  </>
-                ) : (
-                  emptyLabel
-                )}
-              </div>
+              loading ? (
+                // Option rows while the results load (MIN-868), not a spinner.
+                <div role="status" aria-busy="true" className="flex flex-col gap-1 p-1">
+                  <span className="sr-only">{loadingLabel}</span>
+                  {["w-2/3", "w-1/2", "w-3/5"].map((width) => (
+                    <div key={width} aria-hidden className="flex h-8 items-center px-2">
+                      <Skeleton className={cn("h-3.5", width)} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                  {emptyLabel}
+                </div>
+              )
             ) : null}
           </CommandList>
           {/* What explains the greyed rows. At the foot of the list and OUTSIDE

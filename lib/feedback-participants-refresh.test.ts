@@ -23,10 +23,6 @@ vi.mock("@/components/ui/confirm-delete-dialog", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   ConfirmDeleteDialog: () => null,
 }));
-vi.mock("@/components/ui/spinner", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  Spinner: () => createElement("div", { "data-spinner": true }),
-}));
 afterEach(() => vi.unstubAllGlobals());
 
 it("keeps participant results during a held refetch and still loads each new search separately", async () => {
@@ -52,7 +48,7 @@ it("keeps participant results during a held refetch and still loads each new sea
     expect(container.textContent).toContain("feedbackParticipantsHint");
     await search("alice");
     await act(async () => { await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1)); });
-    expect(container.querySelector("[data-spinner]")).not.toBeNull();
+    expect(container.querySelector("[aria-busy=\"true\"]")).not.toBeNull();
     await finish("alice@example.test");
     const row = container.querySelector("li")!;
     const button = row.querySelector("button")!;
@@ -63,13 +59,13 @@ it("keeps participant results during a held refetch and still loads each new sea
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(container.querySelector("li")).toBe(row);
     expect(document.activeElement).toBe(button);
-    expect(container.querySelector("[data-spinner]")).toBeNull();
+    expect(container.querySelector("[aria-busy=\"true\"]")).toBeNull();
     await finish("alice-updated@example.test");
     await refresh;
     expect(container.textContent).toContain("alice-updated@example.test");
     await search("bob");
     await act(async () => { await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3)); });
-    expect(container.querySelector("[data-spinner]")).not.toBeNull();
+    expect(container.querySelector("[aria-busy=\"true\"]")).not.toBeNull();
     expect(container.textContent).not.toContain("alice-updated@example.test");
     await finish("bob@example.test");
     expect(container.textContent).toContain("bob@example.test");

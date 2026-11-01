@@ -7,7 +7,7 @@ import { MentionHover } from "@/components/mention-hover";
 import { AgentHoverCard } from "@/components/agent-hover-card";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
-import { createContext, useContext, useMemo, useRef, useState } from "react";
+import { memo, createContext, useContext, useMemo, useRef, useState } from "react";
 import { revealLatestComment, useCommentComposerFocus } from "@/lib/comment-focus";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
@@ -723,9 +723,8 @@ export function CommentBlock({
         // One live line at a time: the current tool, else the text being
         // written, else a plain "Working…" — each update replaces the previous.
         liveTool ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate italic">
+          <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="min-w-0 truncate italic text-shimmer">
               {toolRunningLabel(liveTool, tToolCall)}
             </span>
           </div>
@@ -739,15 +738,13 @@ export function CommentBlock({
             >
               {liveBody}
             </Markdown>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Spinner className="size-3 shrink-0" />
-              <span className="italic">{tAssistant("working")}</span>
+            <div role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="italic text-shimmer">{tAssistant("working")}</span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner className="size-3.5 shrink-0" />
-            <span className="italic">{tAssistant("working")}</span>
+          <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="italic text-shimmer">{tAssistant("working")}</span>
           </div>
         )
       ) : failed ? (
@@ -1251,7 +1248,8 @@ function groupRows(
 }
 
 /** Minimalist activity feed, always visible; only long runs of events collapse. */
-export function IssueActivity({
+// Memoized (MIN-875): the detail panels re-render for each query they read.
+export const IssueActivity = memo(function IssueActivity({
   items,
   readState,
   onRetryRead,
@@ -1375,10 +1373,10 @@ export function IssueActivity({
     </ActivityProject.Provider>
     </CommentPermissionsContext.Provider>
   );
-}
+});
 
 /** Fixed comment composer (panel footer). */
-export function CommentComposer({
+export const CommentComposer = memo(function CommentComposer({
   members,
   projectId,
   onSubmit,
@@ -1539,7 +1537,7 @@ export function CommentComposer({
       </div>
     </div>
   );
-}
+});
 
 /**
  * Who we write to: the team, or the board (MIN-196).

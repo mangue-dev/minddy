@@ -11,7 +11,7 @@
 // from the wiki are recognized by the same sign on both sides.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Book02Icon, Layers01Icon, Link02Icon } from "@hugeicons/core-free-icons";
+import { Book02Icon, Layers01Icon, Link02Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import {
   CYCLE_ICON,
   DATE_ICON,
@@ -28,6 +28,7 @@ import { ObjectiveIconBadge } from "@/components/objective-icon";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { NumoFace } from "@/components/numo-face";
+import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { filterMentionItems } from "@/lib/mention-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { SemanticSearchingHint, type SemanticSearchStatus } from "@/components/semantic-searching-hint";
@@ -36,7 +37,7 @@ import { groupBySection, mentionSection, type MentionSectionId } from "@/lib/sug
 import { SuggestionMenu } from "@/components/editor/suggestion-menu";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
-import type { MentionMeta } from "@/lib/mention-link";
+import { isPlanMention, type MentionMeta } from "@/lib/mention-link";
 
 export interface MentionOption {
   /** Source project for contextual mentions retained across navigation. */
@@ -91,6 +92,12 @@ export interface MentionOption {
   meta?: MentionMeta;
   /** `@date`: the inserted date pill opens its picker at once. */
   openPicker?: boolean;
+  /** MCP servers: the known provider, whose logo replaces the plug glyph,
+      as on the pill once placed (MIN-879). */
+  mcpService?: string;
+  /** Lists the option first, under a contextual section: a sub-page of the
+      page, a relation of the issue, the issue's own due date or plan. */
+  section?: MentionSectionId;
 }
 
 /** The options in the order their menu lists them: by section (people,
@@ -105,6 +112,14 @@ export function useMentionSectionLabel(): (id: string) => string | null {
   const t = useTranslations("Picker");
   return (id) => {
     switch (id as MentionSectionId) {
+      case "subpages":
+        return t("mentionSectionSubpages");
+      case "relations":
+        return t("mentionSectionRelations");
+      case "thisIssue":
+        return t("mentionSectionThisIssue");
+      case "thisObjective":
+        return t("mentionSectionThisObjective");
       case "people":
         return t("mentionSectionPeople");
       case "projects":
@@ -216,6 +231,13 @@ export function MentionFigure({
       </span>
     );
   }
+  if (option.type === "mcp" && option.mcpService) {
+    return (
+      <span className={cn("flex shrink-0 items-center justify-center", className)}>
+        <McpServiceLogo service={option.mcpService} className="size-4" />
+      </span>
+    );
+  }
   if (option.type === "resource") {
     return (
       <span className={cn("flex shrink-0 items-center justify-center", className)}>
@@ -228,6 +250,14 @@ export function MentionFigure({
         ) : (
           <ResourceTypeIcon mime={option.mime ?? "application/octet-stream"} name={option.label} className="size-4" />
         )}
+      </span>
+    );
+  }
+  // An issue's own plan: the plan glyph of the issue card.
+  if (isPlanMention(option.type, option.meta)) {
+    return (
+      <span className={cn("flex shrink-0 items-center justify-center text-muted-foreground", className)}>
+        <HugeiconsIcon icon={TaskDone01Icon} className="size-4" aria-hidden />
       </span>
     );
   }

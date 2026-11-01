@@ -6,6 +6,7 @@ import { AppIcon } from "@/components/icon";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { RedirectingScreen } from "@/components/auth/redirecting-screen";
 
 import { useAuth } from "@/lib/auth-context";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
@@ -98,14 +99,9 @@ export function DesktopAuthBridge() {
   }, [exchange]);
 
   if (exchanging) {
-    // Full-page takeover with the same plain sentence as the login form's
-    // redirect: the session is being exchanged and the app is about to
-    // land — a spinner alone never said what was happening.
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">{t("redirecting")}</p>
-      </div>
-    );
+    // Full-page takeover, the same screen as the login form's redirect: the
+    // session is being exchanged and the app is about to land.
+    return <RedirectingScreen label={t("redirecting")} />;
   }
 
   if (!pending) return null;

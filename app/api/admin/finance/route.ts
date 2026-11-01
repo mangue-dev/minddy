@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
-import { isAdminUser } from "@/lib/server/admin";
+import { getAuthedAdmin } from "@/lib/server/admin";
 import { getFinanceSummary } from "@/lib/server/finance";
 
 /**
@@ -15,11 +14,8 @@ import { getFinanceSummary } from "@/lib/server/finance";
  */
 
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  const auth = await getAuthedAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!(await isAdminUser(auth.user, auth.claims))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
 
   const { searchParams } = new URL(request.url);
   const daysRaw = Number(searchParams.get("days") ?? 30);

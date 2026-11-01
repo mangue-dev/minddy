@@ -48,7 +48,7 @@ const KIND_ORDER: Record<PageBacklink["kind"], number> = {
 
 export async function pageBacklinks(
   client: BacklinkQueryable,
-  { pageId, projectKey }: { pageId: string; projectKey: string }
+  { pageId, projectKey }: { pageId: string; projectKey: string | PromiseLike<string> }
 ): Promise<PageBacklink[]> {
   const [links, resources] = (await Promise.all([
     client.from("page_links").select("source_kind, source_id, created_at").eq("page_id", pageId),
@@ -102,6 +102,9 @@ export async function pageBacklinks(
     fetchIn(client, "pages", "id, project_id, title, icon, deleted_at, encrypted_content, encryption_version", idsOf("page")),
   ])) as [Rows, Rows, Rows];
 
+  // A caller may start the key read beside the queries above; it is needed
+  // only to format ticket identifiers.
+  const keyPrefix = await projectKey;
   const named = new Map<string, Omit<PageBacklink, "at">>();
   for (const stored of (issues.data ?? []) as {
     id: string;
@@ -116,7 +119,7 @@ export async function pageBacklinks(
     named.set(`issue:${row.id}`, {
       kind: "issue",
       id: row.id as string,
-      identifier: issueIdentifier(projectKey, row.number as number),
+      identifier: issueIdentifier(keyPrefix, row.number as number),
       title: row.title as string,
       icon: null,
       color: null,

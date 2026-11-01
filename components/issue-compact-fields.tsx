@@ -12,7 +12,11 @@ import { ArrowDown01Icon, Heading01Icon, Tag01Icon, Target01Icon, TriangleIcon, 
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { Kbd } from "@/components/ui/kbd";
+import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
+import { captureWritingSpot, restoreWritingSpot, type WritingSpot } from "@/lib/keyboard/writing-spot";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 import {
@@ -561,6 +565,10 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
   return actions;
 }
 
+/** ⌘⇧F / Ctrl+Shift+F opens the manual menu while Smart Fill is on (F for
+ *  Fill: P, R, A, L, D and K already belong to the creation dialog). */
+const SMART_FILL_SHORTCUT_KEY = "f";
+
 /**
  * Desktop uses a split badge: the left half turns Smart Fill on or off, the
  * chevron sets one of its properties by hand (MIN-809). Mobile creation uses a
@@ -572,10 +580,14 @@ export function SmartFillCompact({
   fullWidth = false,
   writesTitle = false,
   manual,
+  shortcut = false,
 }: {
   value: boolean;
   onChange: (v: boolean) => void;
   fullWidth?: boolean;
+  /** ⌘⇧F opens the manual menu, shown in the chevron half while Smart Fill
+   *  is on. Closing it returns to the text exactly where the caret was. */
+  shortcut?: boolean;
   /** The account lets Smart Fill write an empty title (MIN-798). */
   writesTitle?: boolean;
   /** Values the chevron menu sets by hand; without it, the badge is a toggle alone. */
@@ -584,8 +596,44 @@ export function SmartFillCompact({
   const t = useTranslations("IssueUI");
   const id = useId();
   const actions = useSmartFillManualActions(manual);
+  const mod = useModKey();
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Set only when the shortcut opened the menu, as for the project picker.
+  const writingSpot = useRef<WritingSpot | null>(null);
+  const shortcutActive = shortcut && value && !!manual && !fullWidth;
+  useEffect(() => {
+    if (!shortcutActive) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || !matchesModShiftCombo(event, SMART_FILL_SHORTCUT_KEY)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setMenuOpen((wasOpen) => {
+        if (!wasOpen) writingSpot.current = captureWritingSpot();
+        return !wasOpen;
+      });
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [shortcutActive]);
   const menu = (trigger: React.ReactNode) => (
-    <IssueActionsMenu trigger={trigger} actions={actions} align="end" searchable />
+    <IssueActionsMenu
+      trigger={trigger}
+      actions={actions}
+      align="end"
+      searchable
+      open={menuOpen}
+      onOpenChange={(next) => {
+        if (next) writingSpot.current = null;
+        setMenuOpen(next);
+      }}
+      onCloseAutoFocus={(event) => {
+        const spot = writingSpot.current;
+        writingSpot.current = null;
+        if (!spot) return;
+        event.preventDefault();
+        restoreWritingSpot(spot);
+      }}
+    />
   );
   if (fullWidth) return <div className="creation-smart-fill">
     <label htmlFor={id} className="flex min-w-0 flex-1 items-center gap-2 text-sm">
@@ -635,6 +683,13 @@ export function SmartFillCompact({
               className={cn(SMART_FILL_PILL, tint, "rounded-l-none px-2")}
             >
               <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+              {shortcutActive && (
+                <span aria-hidden className="inline-flex shrink-0 items-center gap-0.5 opacity-60">
+                  <Kbd size="sm">{mod}</Kbd>
+                  <Kbd size="sm">⇧</Kbd>
+                  <Kbd size="sm">F</Kbd>
+                </span>
+              )}
             </button>
           </TooltipTrigger>,
         )}

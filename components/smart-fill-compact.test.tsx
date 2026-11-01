@@ -190,4 +190,36 @@ describe("SmartFillCompact split button (MIN-809)", () => {
     expect(document.activeElement).not.toBe(chevron());
     expect(onTitleFocus).toHaveBeenCalledOnce();
   });
+
+  it("opens from ⌘⇧F while on, then returns the caret where it was", async () => {
+    const input = document.createElement("input");
+    input.value = "Fix the login";
+    document.body.append(input);
+    render(<SmartFillCompact value shortcut onChange={vi.fn()} manual={manualFields()} />);
+    expect(host.textContent).toContain("F");
+    act(() => {
+      input.focus();
+      input.setSelectionRange(4, 4);
+    });
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "f", metaKey: true, shiftKey: true, bubbles: true, cancelable: true,
+      }));
+    });
+    expect(menuItem("menuitem", en.Field.priority)).toBeTruthy();
+    key(document.activeElement ?? document.body, "Escape");
+    await settle();
+    expect(document.activeElement).toBe(input);
+    expect(input.selectionStart).toBe(4);
+  });
+
+  it("ignores ⌘⇧F while Smart Fill is off", () => {
+    render(<SmartFillCompact value={false} shortcut onChange={vi.fn()} manual={manualFields()} />);
+    const event = new KeyboardEvent("keydown", {
+      key: "f", metaKey: true, shiftKey: true, bubbles: true, cancelable: true,
+    });
+    act(() => { document.body.dispatchEvent(event); });
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+  });
 });

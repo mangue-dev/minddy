@@ -25,6 +25,16 @@ import {useAccountTheme} from "@/lib/use-account-theme";
 import {useDesktopWindowMaterial} from "@/lib/desktop/use-window-material";
 import {ThemePresetPicker} from "@/components/settings/theme-preset-picker";
 import type {ThemeMode, ThemePresetId} from "@/lib/theme-presets";
+import {weekdayLabel} from "@/lib/routine-schedule";
+import {
+  WEEK_START_META_KEY,
+  WEEK_START_OPTIONS,
+  isWeekStartPreference,
+  localeWeekStart,
+  resolveWeekStart,
+  resolveWeekStartPreference,
+} from "@/lib/week-start";
+import type {WeekStartPreference} from "@/lib/week-start";
 
 const LANGUAGE_LABELS: Record<Locale, string> = {
   fr: "Français",
@@ -67,6 +77,10 @@ export function AccountPreferencesSection() {
   const [sendMode, changeSendMode] = useAccountPreference<SendMode>(
     SEND_MODE_META_KEY,
     resolveSendMode,
+  );
+  const [weekStart, changeWeekStart] = useAccountPreference<WeekStartPreference>(
+    WEEK_START_META_KEY,
+    resolveWeekStartPreference,
   );
   const [dictationCleanup, setDictationCleanup, ready] = useAccountPreference(
     DICTATION_CLEANUP_META_KEY,
@@ -133,6 +147,39 @@ export function AccountPreferencesSection() {
                 {locales.map((code) => (
                   <SelectItem key={code} value={code}>
                     {LANGUAGE_LABELS[code]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
+        />
+
+        {/* First day of the week (MIN-881): an account setting, read by the
+            date picker, routines and the activity calendar. */}
+        <SettingsRow
+          anchor={SETTINGS_SECTIONS.accountWeekStart}
+          htmlFor="account-week-start"
+          label={ta("weekStartTitle")}
+          hint={ta("weekStartHint")}
+          control={
+            <Select
+              value={weekStart}
+              onValueChange={(value) => {
+                if (isWeekStartPreference(value)) void changeWeekStart(value);
+              }}
+              disabled={!user}
+            >
+              <SelectTrigger id="account-week-start" className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {WEEK_START_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option === "auto"
+                      ? ta("weekStartAuto", {
+                          day: weekdayLabel(localeWeekStart(currentLocale), currentLocale),
+                        })
+                      : weekdayLabel(resolveWeekStart(option, currentLocale), currentLocale)}
                   </SelectItem>
                 ))}
               </SelectContent>

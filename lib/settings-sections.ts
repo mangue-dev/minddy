@@ -75,6 +75,7 @@ export const SETTINGS_SECTIONS = {
   accountSessions: "account-sessions",
   accountAppearance: "account-appearance",
   accountLanguage: "account-language",
+  accountWeekStart: "account-week-start",
   accountTheme: "account-theme",
   accountThemeLight: "account-theme-light",
   accountThemeDark: "account-theme-dark",
@@ -319,6 +320,18 @@ export function useSettingsSections(): SettingsSection[] {
           "langue", "language", "français", "francais", "english", "anglais",
           "deutsch", "español", "espanol", "italiano", "português", "portugues",
           "traduction", "translation",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountWeekStart,
+        tab: "preferences",
+        icon: CalendarClockIcon,
+        title: tAccount("weekStartTitle"),
+        parentTitle: tNav("appearance"),
+        keywords: [
+          "semaine", "week", "lundi", "monday", "dimanche", "sunday",
+          "samedi", "saturday", "calendrier", "calendar", "woche", "semana",
+          "settimana",
         ],
       }),
       account({

@@ -16,12 +16,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { MentionHover } from "@/components/mention-hover";
 
 export function IssueParentMenu({
+  parentId,
+  projectId,
   parentIdentifier,
   onOpenParent,
   onUnlink,
 }: {
+  /** The parent's id and project: its card shows on hover (MIN-879). */
+  parentId?: string | null;
+  projectId?: string | null;
   parentIdentifier: string | null;
   onOpenParent: () => void;
   /** Absent for project readers: the parent opens but never unlinks. */
@@ -54,15 +60,18 @@ export function IssueParentMenu({
       {parentIdentifier && (
         <>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("subIssueOf", { id: parentIdentifier })}
-                className="inline-flex min-w-0 items-center rounded-md px-1 py-0.5 text-lg font-semibold tracking-tight text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <span className="truncate">{parentIdentifier}</span>
-              </button>
-            </DropdownMenuTrigger>
+            <MentionHover type={parentId ? "issue" : "none"} id={parentId ?? ""} project={projectId ?? null}
+              side="bottom" align="start" onOpen={onOpenParent}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("subIssueOf", { id: parentIdentifier })}
+                  className="inline-flex min-w-0 items-center rounded-md px-1 py-0.5 text-lg font-semibold tracking-tight text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className="truncate">{parentIdentifier}</span>
+                </button>
+              </DropdownMenuTrigger>
+            </MentionHover>
             <DropdownMenuContent align="start">
               <DropdownMenuItem onSelect={onOpenParent}>
                 <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden />

@@ -138,7 +138,9 @@ import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
 import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { commentTarget, requestCommentFocus } from "@/lib/comment-focus";
 import { PlainPreview } from "@/components/typed-mention-chip";
-import { OBJECTIVE_PILL_TRIGGER, ObjectiveBadge } from "@/components/objective-label";
+import { OBJECTIVE_PILL_TRIGGER, ObjectiveBadge, ObjectivePill } from "@/components/objective-label";
+import { AppTooltip } from "@/components/ui/app-tooltip";
+import { MentionHover } from "@/components/mention-hover";
 import {
   Tooltip,
   TooltipContent,
@@ -454,7 +456,9 @@ function AssigneePick({
   const avatar = assignee ? (
     <UserAvatar
       seed={assignee.avatar_seed}
-      title={displayName(assignee)}
+      // The picker's own tooltip already names the field: a second, native
+      // one with the person's name would stack on top of it.
+      title={onChange ? undefined : displayName(assignee)}
       className="size-6"
     />
   ) : (
@@ -566,7 +570,7 @@ function ObjectiveIndicator({ objective, onEdit }: {
   const t = useTranslations("IssueUI");
   // The card's compact line keeps its small text, at the avatar's height,
   // and names the objective alone: no status glyph there.
-  const badge = (
+  if (!onEdit) return (
     <ObjectiveBadge
       objective={{ name: objective.name, color: objective.color }}
       size="sm"
@@ -574,22 +578,29 @@ function ObjectiveIndicator({ objective, onEdit }: {
       tooltip={tField("objectiveLinked")}
     />
   );
-  if (!onEdit) return badge;
+  // Editable: the tooltip names the field and its O shortcut, like the
+  // other property pickers of the card.
   return (
-    <button
-      type="button"
-      aria-label={t("changeObjectiveAria")}
-      className={OBJECTIVE_PILL_TRIGGER}
-      onClick={(event) => {
-        event.stopPropagation();
-        // The picker opens under the pill, where the click landed.
-        const rect = event.currentTarget.getBoundingClientRect();
-        onEdit({ x: rect.left, y: rect.bottom + 4 });
-      }}
-      onPointerDown={(event) => event.stopPropagation()}
-    >
-      {badge}
-    </button>
+    <AppTooltip label={tField("objective")} shortcut={[KEY_FOR_FIELD.objective]}>
+      <button
+        type="button"
+        aria-label={t("changeObjectiveAria")}
+        className={OBJECTIVE_PILL_TRIGGER}
+        onClick={(event) => {
+          event.stopPropagation();
+          // The picker opens under the pill, where the click landed.
+          const rect = event.currentTarget.getBoundingClientRect();
+          onEdit({ x: rect.left, y: rect.bottom + 4 });
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <ObjectivePill
+          objective={{ name: objective.name, color: objective.color }}
+          size="sm"
+          className="h-6"
+        />
+      </button>
+    </AppTooltip>
   );
 }
 
@@ -772,6 +783,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   categoryMap,
   objectiveMap,
   parentNumber,
+  parentId,
   relations,
   onOpenParent,
   onOpenRelated,
@@ -805,6 +817,8 @@ export const IssueCardBody = memo(function IssueCardBody({
   /** Parent issue's number — when set, the card is a sub-issue and shows
       a hierarchy icon before its own identifier. */
   parentNumber?: number;
+  /** Parent issue's id: its card shows on hover over the hierarchy icon. */
+  parentId?: string;
   /** This issue's relations (blocks/blocked-by/related), pre-sorted by priority —
       the highest-signal one shows as a chip after the identifier. */
   relations?: ChipRelation[];
@@ -955,18 +969,17 @@ export const IssueCardBody = memo(function IssueCardBody({
           <IntegrationIndicator issue={issue} iconClassName="size-3" />
           <RemoteIssueIndicator issue={issue} iconClassName="size-3" />
           {parentNumber != null && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" disabled={!onOpenParent}
-                  onClick={(e) => { stop(e); onOpenParent?.(); }} onPointerDown={stop}
-                  aria-label={t("openParentAria", { id: issueIdentifier(projectKey, parentNumber) })}
-                  className="shrink-0 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <HugeiconsIcon icon={HierarchySquare01Icon} className="size-3" aria-hidden />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t("subIssueOf", { id: issueIdentifier(projectKey, parentNumber) })}</TooltipContent>
-            </Tooltip>
+            // The parent's card on hover (MIN-879); the label keeps naming it.
+            <MentionHover type={parentId ? "issue" : "none"} id={parentId ?? ""}
+              project={issue.project_id} onOpen={onOpenParent}>
+              <button type="button" disabled={!onOpenParent}
+                onClick={(e) => { stop(e); onOpenParent?.(); }} onPointerDown={stop}
+                aria-label={t("openParentAria", { id: issueIdentifier(projectKey, parentNumber) })}
+                className="shrink-0 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <HugeiconsIcon icon={HierarchySquare01Icon} className="size-3" aria-hidden />
+              </button>
+            </MentionHover>
           )}
           <span className="shrink-0 whitespace-nowrap">{issueIdentifier(projectKey, issue.number)}</span>
           {relations && relations.length > 0 && (
@@ -1680,6 +1693,7 @@ const IssueCardContent = memo(function IssueCardContent({
             categoryMap={categoryMap}
             objectiveMap={objectiveMap}
             parentNumber={parent?.number}
+            parentId={parent?.id}
             relations={relations}
             onOpenParent={openParent}
             onOpenRelated={onOpenRelated}

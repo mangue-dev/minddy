@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 45,
-  "sourceRevision": 45,
+  "revision": 46,
+  "sourceRevision": 46,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -133,10 +133,10 @@
     ]
   },
   "review": {
-    "revision": 45,
-    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (it sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 46,
+    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken); agent:claude (Smart Fill menu shortcut: source review of components/issue-compact-fields.tsx; sentence added on Command/Ctrl+Shift+F and the restored cursor; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:claude (it sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance); agent:claude (it Smart Fill shortcut sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "feedback",
@@ -181,7 +181,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-21.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -198,7 +198,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo AUR-19 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "La palette dei comandi mostra i ticket che possono bloccare questo, con la domanda della relazione nel campo di ricerca.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -264,7 +264,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Campo per creare un sottoticket in un ticket principale dimostrativo.",
       "caption": "Il campo crea un figlio di questo ticket; ogni figlio conserva stato e discussione propri.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -281,7 +281,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -298,7 +298,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -315,7 +315,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -332,7 +332,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -365,7 +365,7 @@ Un ticket descrive un’attività del progetto, dal lavoro in arrivo alla verifi
 
 Devi essere il proprietario o un Membro del progetto di destinazione; i lettori possono aprire i ticket ma non crearli né modificarli. Apri il progetto e il controllo per creare un ticket. Inserisci un titolo che identifichi il lavoro, poi aggiungi contesto, risultato previsto e vincoli nella descrizione. Titolo e descrizione funzionano come un unico testo: su computer, la freccia giù sull'ultima riga del titolo passa alla prima riga della descrizione, la freccia su torna indietro, e il cursore mantiene più o meno la sua posizione sulla riga. Maiusc+Invio nel titolo passa alla descrizione; anche Invio, a meno che tu non abbia scelto Invio come scorciatoia di invio, nel qual caso crea il ticket. Command/Ctrl+Invio lo crea da entrambi i campi. Le stesse frecce e Invio collegano titolo e descrizione di un ticket, un obiettivo, una pagina o un feedback aperti. Il modulo si apre sul progetto corrente; scegline un altro in **Crea in**, in alto a sinistra del modulo (accanto al titolo **Nuovo ticket** sul telefono), soprattutto quando crei da una vista personale o tra progetti. Su un computer, Command/Ctrl+Maiusc+P apre questo menu anche mentre scrivi il titolo o la descrizione; quando scegli un progetto o chiudi il menu, il cursore torna esattamente dov’era. La pillola mostra questa scorciatoia, che esiste solo quando si può scegliere più di un progetto; sul telefono non viene indicata alcuna scorciatoia. Cambiare progetto rimuove le categorie, l’obiettivo e le relazioni scelti per il precedente. Il pulsante di creazione mostra l’identificativo che riceverà il ticket, ad esempio `MIN-42`, e tiene conto dei ticket creati nel frattempo; il suo menu crea il ticket e copia questo identificativo.
 
-Per creare il ticket manualmente, disattiva Riempimento intelligente se il pulsante è visibile e attivo. Vengono così mostrati i controlli di priorità, impegno, categorie, obiettivo e relazioni, che puoi impostare tu. Per impostare solo alcune di queste proprietà, lascia attivo Riempimento intelligente e apri la freccia accanto al suo pulsante: scegli una proprietà, poi il suo valore. Lì **Relazioni** elenca i tipi di relazione; sceglierne uno apre la palette dei comandi sulle sue possibili destinazioni. Fuori dal titolo e dalla descrizione, il tasto della proprietà apre direttamente il suo selettore: P per la priorità, E per l’impegno, L per le categorie oppure O per l’obiettivo. Il valore scelto resta visibile nel modulo. Riempimento intelligente deduce solo le proprietà lasciate vuote. La scelta vale per questo ticket; riaprendo il modulo di creazione viene ripristinata la preferenza dell’account. È indipendente dagli interruttori di automazione e Smart Assign del progetto. Finché Riempimento intelligente è attivo, dopo il salvataggio [collega anche il ticket ai ticket correlati](#smart-fill-relations), perciò il selettore delle relazioni è nascosto; R lo apre comunque. Le relazioni già scelte restano visibili come pillole nella riga delle proprietà, tra l’assegnatario e la scadenza, e vengono create insieme al ticket.
+Per creare il ticket manualmente, disattiva Riempimento intelligente se il pulsante è visibile e attivo. Vengono così mostrati i controlli di priorità, impegno, categorie, obiettivo e relazioni, che puoi impostare tu. Per impostare solo alcune di queste proprietà, lascia attivo Riempimento intelligente e apri la freccia accanto al suo pulsante: scegli una proprietà, poi il suo valore. Lì **Relazioni** elenca i tipi di relazione; sceglierne uno apre la palette dei comandi sulle sue possibili destinazioni. Fuori dal titolo e dalla descrizione, il tasto della proprietà apre direttamente il suo selettore: P per la priorità, E per l’impegno, L per le categorie oppure O per l’obiettivo. Su un computer, finché Smart Fill è attivo per il ticket, Command/Ctrl+Maiusc+F apre questo menu della freccia anche mentre scrivi il titolo o la descrizione; quando scegli un valore o chiudi il menu, il cursore torna esattamente dove stavi scrivendo, come con Command/Ctrl+Maiusc+P per **Crea in**. Il valore scelto resta visibile nel modulo. Riempimento intelligente deduce solo le proprietà lasciate vuote. La scelta vale per questo ticket; riaprendo il modulo di creazione viene ripristinata la preferenza dell’account. È indipendente dagli interruttori di automazione e Smart Assign del progetto. Finché Riempimento intelligente è attivo, dopo il salvataggio [collega anche il ticket ai ticket correlati](#smart-fill-relations), perciò il selettore delle relazioni è nascosto; R lo apre comunque. Le relazioni già scelte restano visibili come pillole nella riga delle proprietà, tra l’assegnatario e la scadenza, e vengono create insieme al ticket.
 
 Imposta le proprietà utili prima di confermare: stato, priorità, impegno, assegnatario, obiettivo, categorie, scadenza e ricorrenza. L’assegnatario è il proprietario del progetto o un Membro, mai un lettore; un obiettivo raggruppa ticket intorno a un risultato del progetto. Puoi lasciare vuote le proprietà opzionali anziché indovinarle. La priorità è **Non definita** o va da bassa a urgente, passando per media e alta; l’impegno è **Non definito** o usa XS, S, M, L e XL.
 

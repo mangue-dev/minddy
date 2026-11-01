@@ -1,5 +1,5 @@
 import type { AppTabRouteSnapshot } from "./app-tab-route-context";
-import { normalizeAppTabLocation } from "./app-tab-location";
+import { appTabDestinationKey } from "./app-tab-location";
 
 /**
  * Maximum view count, Home included. It matches the restored-tab preparation
@@ -52,9 +52,9 @@ export function retainedAppViewKind(pathname: string): RetainedAppView["kind"] |
 }
 
 export function isRetainedDestination(views: readonly RetainedAppView[], tabId: string | null, href: string): boolean {
-  const normalized = normalizeAppTabLocation(href);
-  return normalized !== null && views.some((view) => view.tabId === tabId &&
-    normalized === normalizeAppTabLocation(view.href ?? `${view.route.pathname}?${view.route.search}`));
+  const destination = appTabDestinationKey(href);
+  return destination !== null && views.some((view) => view.tabId === tabId &&
+    destination === appTabDestinationKey(view.href ?? `${view.route.pathname}?${view.route.search}`));
 }
 
 export function retainAppView(

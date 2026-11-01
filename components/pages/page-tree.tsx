@@ -51,6 +51,7 @@ import {
 import { useNavigationContextActions } from "@/components/navigation-context-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import { commentTarget } from "@/lib/comment-focus";
 
 /** Ligne d'arbre : 28 px de haut, 16 px de retrait par niveau. */
@@ -443,6 +444,7 @@ function PageRow({
         aria-current={active ? "page" : undefined}
         onMouseEnter={() => onPrefetch(page.id)}
         onFocus={() => onPrefetch(page.id)}
+        onPointerDown={() => onPrefetch(page.id)}
         onClick={(event) => {
           // ⇧-click would open the link in a new window: here it selects.
           if (event.shiftKey && onTogglePicked && event.button === 0) {
@@ -461,18 +463,19 @@ function PageRow({
             page.database_schema != null ? <HugeiconsIcon icon={DatabaseIcon} className="size-3.5 text-muted-foreground" /> : <HugeiconsIcon icon={File02Icon} className="size-3.5 text-muted-foreground" />
           )}
         </span>
-        <span
+        {/* A title the sidebar cuts shows in full on hover. */}
+        <TruncatedText
+          text={page.title || untitled}
+          side="right"
           className={cn(
-            "min-w-0 flex-1 truncate text-sm",
+            "flex-1 truncate text-sm",
             active && "font-medium",
             !page.title && "text-muted-foreground"
           )}
-        >
-          {page.title || untitled}
-        </span>
-        {/* Quelqu'un d'autre lit cette page en ce moment (MIN-271). Un point,
-            and not an avatar: at this location the useful information is binary —
-            which, we read it when opening the page. */}
+        />
+        {/* Someone else is reading this page right now (MIN-271). A dot,
+            not an avatar: here the useful information is binary — who it is
+            shows once the page is open. */}
         <PagePresenceDot count={present.length} />
       </Link>
 

@@ -3,6 +3,7 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextIntlClientProvider } from "next-intl";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import messages from "@/messages/en.json";
 
 const auth = vi.hoisted(() => ({
@@ -67,7 +68,8 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
 const fetchMock = vi.fn<typeof fetch>();
 let host: HTMLDivElement;
 let root: Root;
-const flush = async (fn?: () => void) => { await act(async () => { fn?.(); }); };
+// react-query notifies subscribers on a macrotask, so settle one before asserting.
+const flush = async (fn?: () => void) => { await act(async () => { fn?.(); await new Promise((resolve) => setTimeout(resolve, 0)); }); };
 const button = (text: string, scope: ParentNode = document) =>
   Array.from(scope.querySelectorAll("button")).find((b) => b.textContent?.trim() === text)!;
 const type = async (input: HTMLInputElement, value: string) => flush(() => {
@@ -85,7 +87,7 @@ beforeEach(async () => {
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
-  await flush(() => root.render(<NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminInstanceDashboard /></NextIntlClientProvider>));
+  await flush(() => root.render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminInstanceDashboard /></NextIntlClientProvider></QueryClientProvider>));
   await flush();
 });
 afterEach(async () => {
@@ -195,7 +197,7 @@ describe("Instance tab (MIN-847)", () => {
 
   it("an administrator by role may leave the list", async () => {
     auth.user = { email: "me@example.com", app_metadata: { role: "admin" } };
-    await flush(() => root.render(<NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminInstanceDashboard key="role" /></NextIntlClientProvider>));
+    await flush(() => root.render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><NextIntlClientProvider locale="en" messages={messages} timeZone="UTC"><AdminInstanceDashboard key="role" /></NextIntlClientProvider></QueryClientProvider>));
     await flush();
     const row = Array.from(host.querySelectorAll("[data-row]")).find((r) => r.textContent?.includes("ADMIN_EMAILS"))!;
     expect(button("Remove", row).disabled).toBe(false);

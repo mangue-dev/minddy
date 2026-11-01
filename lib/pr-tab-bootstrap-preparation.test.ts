@@ -1,5 +1,6 @@
 import { QueryClient, QueryObserver, type FetchQueryOptions } from "@tanstack/react-query";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { markFirstContent } from "./first-content";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { createProjectBootstrapPair, ProjectBootstrapLimitError } from "./project-bootstrap-api";
 import { navigationPreparationHasRead, subscribeNavigationPreparation } from "./navigation-preparation-priority";
@@ -55,6 +56,8 @@ function setup() {
   return { client, preparation, transport, members, objectives, ordinaryMembers, ordinaryObjectives, flush };
 }
 
+// These cases describe a page that has shown its content (lib/first-content.ts).
+beforeEach(() => markFirstContent());
 afterEach(() => { vi.clearAllMocks(); source.queries = []; source.routes.clear(); });
 
 describe("admitted project bootstrap preparation", () => {

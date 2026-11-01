@@ -5,7 +5,6 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { SendButtonWithCost } from "@/components/ui/send-button-with-cost";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, Cancel01Icon, SquareIcon } from "@hugeicons/core-free-icons";
@@ -81,7 +80,7 @@ export function DocumentationNumo({ open, onClose, articleId, sections, locale, 
           return <Message key={message.id} from={message.role}><MessageContent className="chat-selectable">{usage ? <NumoUsageExhaustedCard details={usage} /> : <DocumentationHelpResponse {...helpContext} references={message.role === "assistant"}>{visibleAssistantContent(message.content ?? "")}</DocumentationHelpResponse>}</MessageContent></Message>;
         })}
         {state.streamingContent && <Message from="assistant"><MessageContent className="chat-selectable"><DocumentationHelpResponse {...helpContext} isAnimating>{visibleAssistantContent(state.streamingContent)}</DocumentationHelpResponse></MessageContent></Message>}
-        {busy && !state.streamingContent && <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner className="size-4" />{t("numoThinking")}</div>}
+        {busy && !state.streamingContent && <div role="status" className="text-sm text-muted-foreground"><span className="text-shimmer">{t("numoThinking")}</span></div>}
         {state.error && <div role="alert" className="space-y-2 text-sm"><p>{state.error}</p><Button variant="outline" size="sm" disabled={!authenticated || busy} onClick={() => {
           if (state.conversationId) { void retry(); return; }
           const message = state.messages.findLast(message => message.role === "user");

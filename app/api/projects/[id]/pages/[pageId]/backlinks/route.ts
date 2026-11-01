@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import {
   pageBacklinks,
   type BacklinkQueryable,
@@ -27,27 +28,36 @@ type RouteContext = { params: Promise<{ id: string; pageId: string }> };
  */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id: projectId, pageId } = await params;
-  const auth = await getAuthedUser(request);
+  // Both RLS reads overlap the live session check, which still gates the
+  // response. The project key only formats identifiers at the end of
+  // `pageBacklinks`, so its read runs beside the backlink queries.
+  const readAll = async (supabase: SupabaseClient) => {
+    const projectRead = Promise.resolve(
+      supabase.from("projects").select("key").eq("id", projectId).maybeSingle()
+    );
+    const backlinks = pageBacklinks(supabase as unknown as BacklinkQueryable, {
+      pageId,
+      projectKey: projectRead.then(({ data }) => (data?.key as string | undefined) ?? ""),
+    });
+    // Keep a failed key read from surfacing as an unhandled rejection.
+    backlinks.catch(() => undefined);
+    return { project: await projectRead, backlinks };
+  };
+  const auth = await getAuthedUserWithRlsReads(request, ({ supabase }) => readAll(supabase));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data: project, error } = await auth.supabase
-    .from("projects")
-    .select("key")
-    .eq("id", projectId)
-    .maybeSingle();
+  const { project: projectResult, backlinks } = await (auth.reads ?? readAll(auth.supabase));
+  const { data: project, error } = projectResult;
   if (error) {
     console.error("[api/pages/:id/backlinks] project failed:", error.message);
+    backlinks.catch(() => undefined);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!project) {
+    backlinks.catch(() => undefined);
     return NextResponse.json({ error: t("projectNotFound") }, { status: 404 });
   }
 
-  return NextResponse.json(
-    await pageBacklinks(auth.supabase as unknown as BacklinkQueryable, {
-      pageId,
-      projectKey: (project.key as string) ?? "",
-    })
-  );
+  return NextResponse.json(await backlinks);
 }

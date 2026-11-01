@@ -33,6 +33,7 @@ Markdown cannot carry: block identities, colors, mention pills.
 | --- | --- |
 | `lib/description-collaboration.ts` | Snapshot and catch-up wire shapes, caret topic names |
 | `lib/use-description-collaboration.ts` | The browser session: one stream, wake-ups, carets, unload guard |
+| `lib/description-collaboration-stream.ts` | The session's ProseMirror half (schema, block catalog, transport), loaded with the snapshot so routes that open no editor at load stay free of it; triage, objectives and feedback import it statically |
 | `lib/document-collaboration-signals.ts` | Head wake-ups from the realtime bridge |
 | `lib/server/description-collaboration.ts` | The authority: access, snapshots, batches, server edits, external writes, materialization |
 | `lib/server/rich-documents.ts` | Storage: heads, commits, journal, sealing; the only module allowed to touch the tables |

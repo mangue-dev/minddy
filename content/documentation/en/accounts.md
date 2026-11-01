@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -69,14 +69,15 @@
       "components/mobile-account.tsx",
       "lib/keyboard/shortcuts.ts",
       "desktop/src/local-installer.ts",
-      "desktop/src/local-account.ts"
+      "desktop/src/local-account.ts",
+      "lib/week-start.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-25"
+    "revision": 18,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "choose-an-instance",
@@ -108,7 +109,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -125,7 +126,7 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile header with the avatar and its edit badge, the name and the read-only email.",
       "caption": "Select the avatar to generate or upload one, or the name to rename yourself; the email address stays read-only.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -142,7 +143,7 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -159,7 +160,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -251,6 +252,8 @@ Uploaded source images must be no larger than 10 MiB. The server validates reada
 In Preferences, select the interface language and theme, then check another page. The account language governs the signed-in product; the public site's language selector controls public navigation separately. The theme is saved to the account across devices.
 
 Theme chooses light, dark or system mode. **Light mode palette** and **Dark mode palette** each set the colors of one mode. **Accent colors** keep minddy's colors and only recolor buttons and the focus ring: minddy (lavender), Black in light mode or White in dark mode, Blue, Green, Orange and Rose; **Full palettes** (Solarized, Catppuccin, Nord) recolor every surface; **High contrast** sits under Accessibility. The palette of the mode on screen applies immediately; the other is saved and appears whenever its mode becomes active, including when System follows an operating-system switch. High contrast raises text and border contrast, outlines fields, menus, dialogs and tabs, marks the current page and selected item, always shows keyboard focus and keeps menus opaque. Turn off **Transparency** to paint menus, popovers and the command palette opaque, without blur. Palettes and transparency are saved to the account; another device applies them the next time it loads a page. In the desktop app on macOS and Windows 11, **Desktop app transparency** lets the sidebar, tabs and window edges show your desktop, blurred, while the content stays opaque. It applies to this device only and takes effect at once. The window stays opaque with a high-contrast palette, or when the system's “Reduce transparency” or high-contrast setting is on; the switch is then disabled. Windows 10 and Linux keep an opaque window and do not show the switch.
+
+**First day of the week** sets the day your weeks start on. The date picker's calendar, the weekdays of a routine and their order in Routines, the rows of the activity grid in your statistics and a date mention such as `@thursday in 2 weeks` follow it. **Language default** keeps the convention of the interface language: Sunday in English and Brazilian Portuguese, Monday in the other languages. Choose Monday, Sunday or Saturday to set it yourself. The choice is saved to the account. [Personal cycles](/docs/personal-cycle) keep their own starting weekday.
 
 Choose the message-send shortcut in Keyboard. This preference governs comments, Numo's composer and Enter in the title of a creation form; a description keeps Command/Ctrl+Enter, and Shift+Enter in a title always moves to the description. Use the send button when a platform intercepts the shortcut; do not assume every OS maps the modifier key identically. Projects you hid are listed in their own **Hidden projects** tab, where you can show them again. **Preferences** also holds the **Desktop app** card: on the web it links to the desktop download, and in the desktop app it shows the connected server and the app version. Issue preferences also belong to the account and do not change another member's settings: automatic assignment is in the **Issues** tab, and the status for issues Numo creates is in **AI & Numo** → **Issues Numo creates**.
 

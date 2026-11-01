@@ -4,6 +4,7 @@ import type { AssistantMention, NumoTurnStatus } from "./assistant-types";
 import type { ReasoningLevel } from "./agent-reasoning";
 import { DEFAULT_MAX_SPEND_PERCENT } from "./routine-budget";
 import type { RoutineFrequency } from "./routine-schedule";
+import { fetchSeeded } from "./server-seed";
 
 /**
  * ROUTINES client (MIN-185) — the HTTP gate, browser side.
@@ -133,7 +134,7 @@ export interface RoutineRunSummary {
 }
 
 export async function fetchRoutinesApi(): Promise<{ routines: Routine[] }> {
-  return parseJson(await fetch("/api/routines"));
+  return parseJson(await fetchSeeded("/api/routines"));
 }
 
 export async function createRoutineApi(

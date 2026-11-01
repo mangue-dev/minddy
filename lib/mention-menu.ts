@@ -6,6 +6,9 @@ export interface MentionSearchItem {
   keywords?: readonly string[];
   /** Issues: their status, which orders them (MIN-726). */
   status?: string;
+  /** A contextual section (a sub-page, a relation, the issue's own due date):
+      listed before every other match. */
+  section?: string;
 }
 
 export interface ActiveMentionQuery {
@@ -64,10 +67,11 @@ export function findActiveTriggerQuery(
 }
 
 /**
- * Stable ordering: put Numo first, preserve source order, and place tickets
- * last. Among tickets, the issue search order applies (MIN-726): work under
- * way first, closed and triage tickets last, and the ticket whose identifier
- * is the query before all.
+ * Stable ordering: put what the surface is tied to first (its contextual
+ * sections), then Numo, preserve source order, and place tickets last.
+ * Among tickets, the issue search order applies (MIN-726): work under way
+ * first, closed and triage tickets last, and the ticket whose identifier is
+ * the query before all.
  */
 /** The targets MIN-872 added, listed after the issues: people, projects,
     objectives, pages and issues stay what a mention is most often for. */
@@ -77,12 +81,14 @@ export function orderMentionItems<T extends MentionSearchItem>(
   items: readonly T[],
   query = "",
 ): T[] {
+  const pinned: T[] = [];
   const numo: T[] = [];
   const other: T[] = [];
   const issues: T[] = [];
   const features: T[] = [];
   for (const item of items) {
-    (item.type === "numo" ? numo
+    (item.section ? pinned
+      : item.type === "numo" ? numo
       : item.type === "issue" ? issues
       : FEATURE_TYPES.has(item.type) ? features
       : other).push(item);
@@ -92,7 +98,7 @@ export function orderMentionItems<T extends MentionSearchItem>(
     (item) => item.status,
     (item) => isExactIssueQuery(query, item.label),
   );
-  return [...numo, ...other, ...orderedIssues, ...features];
+  return [...pinned, ...numo, ...other, ...orderedIssues, ...features];
 }
 
 /** Matches a mention query without imposing an artificial result limit. */

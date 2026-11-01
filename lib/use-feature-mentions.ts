@@ -14,12 +14,14 @@ import { useLocale, useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { SCRATCHPAD_MENTION_ID, type MentionMeta } from "@/lib/mention-link";
 import { useMcpConnections } from "@/lib/use-mcp-connections";
+import { mcpPresetForUrl } from "@/lib/mcp-catalog";
 import { useMyCycleQuery } from "@/lib/use-my-cycle-query";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { useRoutinesQuery } from "@/lib/use-routines-query";
 import type { MentionOption } from "@/components/mention-suggest";
 import type { MentionTargetType } from "@/lib/mention-target";
 import type { CycleInfo } from "@/lib/types";
+import { fetchSeeded } from "./server-seed";
 
 interface MentionPullRequest {
   prId: string;
@@ -30,7 +32,7 @@ interface MentionPullRequest {
 
 /** One page of pull requests in a state, as the Pull requests screen reads it. */
 async function fetchPullRequests(state: "open" | "completed"): Promise<MentionPullRequest[]> {
-  const response = await fetch(`/api/pull-requests?state=${state}${state === "open" ? "&limit=100" : ""}`);
+  const response = await fetchSeeded(`/api/pull-requests?state=${state}${state === "open" ? "&limit=100" : ""}`);
   if (!response.ok) throw new Error("Could not load pull requests");
   const body = (await response.json()) as { pullRequests?: MentionPullRequest[] };
   return body.pullRequests ?? [];
@@ -156,7 +158,10 @@ export function useFeatureMentions(
         meta: { project: projectId as string },
         keywords: [skill.id],
       })),
-      ...connections.map((connection) => ({ type: "mcp" as const, id: connection.id, label: connection.name })),
+      ...connections.map((connection) => {
+        const service = mcpPresetForUrl(connection.url)?.id;
+        return { type: "mcp" as const, id: connection.id, label: connection.name, ...(service ? { mcpService: service } : {}) };
+      }),
       ...pullRequests.map((pr) => ({
         type: "pull_request" as const,
         id: pr.prId,

@@ -26,6 +26,7 @@ import {
 } from "@/lib/theme-presets";
 import { supportedLocaleForTag } from "@/i18n/config";
 import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { isDocumentRequest, SERVER_SEED_PATH_HEADER } from "@/lib/server-seed";
 import {
   isBackendUnavailableError,
   SERVER_UNAVAILABLE_PATH,
@@ -547,6 +548,9 @@ async function routeRequest(request: NextRequest) {
   response = nextClean(request, {
     ...(accountTheme ? { [ACCOUNT_THEME_HEADER]: accountTheme } : {}),
     ...themeAppearanceHeaders(resolveThemeAppearance(userMetadata)),
+    // A document load carries its startup reads (MIN-880, lib/server-seed.ts).
+    ...(request.method === "GET" && isDocumentRequest(request.headers)
+      ? { [SERVER_SEED_PATH_HEADER]: pathname + request.nextUrl.search } : {}),
   });
   for (const { name, value, options } of refreshedCookies) {
     response.cookies.set(name, value, { ...options, ...SESSION_COOKIE_OPTIONS });

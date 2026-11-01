@@ -20,7 +20,7 @@ vi.mock("next-intl/server", () => ({
   getTranslations: async () => (key: string) => key,
 }));
 
-const { getAuthedUser, authorizeUserClient, getAuthedUserWithRlsReads } = await import("./api-auth");
+const { getAuthedUser, authorizeUserClient, getAuthedUserWithRlsReads, withSharedLiveAuthorization } = await import("./api-auth");
 const { supabaseServerFetch, supabaseServerFetchWithTimeout } = await import("./supabase-fetch");
 
 function request(): NextRequest {
@@ -408,5 +408,27 @@ describe("RLS reads overlapped with the live authorization check", () => {
     expect(signals[0].aborted).toBe(true);
     expect(transport).toHaveBeenCalledOnce();
     expect(observed).toBe(false);
+  });
+});
+
+describe("live authorization shared within one document's reads", () => {
+  it("looks the session up once for several handlers, and still applies the answer to each", async () => {
+    authorizationAbortSignal.mockResolvedValue({ data: { sessionActive: false, mfaAllowed: true }, error: null });
+    const results = await withSharedLiveAuthorization(() => Promise.all([getAuthedUser(request()), getAuthedUser(request())]));
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(results.map((result) => result.ok)).toEqual([false, false]);
+  });
+
+  it("does not share a failed lookup, nor across scopes or sessions", async () => {
+    authorizationAbortSignal.mockRejectedValueOnce(new Error("unreachable"));
+    await withSharedLiveAuthorization(async () => {
+      expect((await getAuthedUser(request())).ok).toBe(false);
+      expect((await getAuthedUser(request())).ok).toBe(true);
+      signedClaims({ session_id: "33333333-3333-4333-8333-333333333333" });
+      expect((await getAuthedUser(request())).ok).toBe(true);
+    });
+    expect(rpc).toHaveBeenCalledTimes(3);
+    await getAuthedUser(request());
+    expect(rpc).toHaveBeenCalledTimes(4);
   });
 });

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Toaster } from "sonner";
 import { isTextCut } from "@/components/ui/truncated-text";
 
 /** One toast surface for both breakpoints, anchored outside the scrolling main. */
-export function ContentToaster() {
+// Memoized (MIN-875): the shell re-renders for every query it reads.
+export const ContentToaster = memo(function ContentToaster() {
   const anchor = useRef<HTMLSpanElement>(null);
   const [pane, setPane] = useState<HTMLElement | null>(null);
 
@@ -35,7 +36,7 @@ export function ContentToaster() {
       {pane && <ToastOverflowTooltip pane={pane} />}
     </>
   );
-}
+});
 
 const TOAST_TEXT = ".content-toaster [data-title], .content-toaster [data-description]";
 const VIEWPORT_GUTTER = 10;

@@ -3,7 +3,7 @@
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
@@ -12,17 +12,19 @@ import { NumoIcon } from "@/components/numo-icon";
 import { cn } from "@/lib/utils";
 import { isClosedStatus, issueIdentifier } from "@/lib/issue-constants";
 import { StatusIndicator } from "@/components/issue-indicators";
+import { MentionHover } from "@/components/mention-hover";
 import { useCreateOptional } from "@/lib/create-context";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import type { Issue } from "@/lib/types";
 
+// Memoized (MIN-875): the detail panels re-render for each query they read.
 /**
  * Parent-side view of its children: progress, the list, then "Create a
  * sub-issue", which opens the creation dialog with this issue as parent; its
  * menu asks Numo to split the issue into sub-issues instead.
  */
-export function SubIssuesSection({
+export const SubIssuesSection = memo(function SubIssuesSection({
   issue,
   allIssues,
   projectKey,
@@ -83,9 +85,11 @@ export function SubIssuesSection({
       {children.length > 0 && (
         <div className="mb-2 flex flex-col">
           {children.map((child) => {
+            // The sub-issue's card on hover, as on the relation rows (MIN-879).
             return (
+              <MentionHover key={child.id} type="issue" id={child.id} project={issue.project_id}
+                side="left" onOpen={() => onOpenIssue(child.id)}>
               <button
-                key={child.id}
                 type="button"
                 onClick={() => onOpenIssue(child.id)}
                 className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-muted/60"
@@ -103,6 +107,7 @@ export function SubIssuesSection({
                   )}
                 />
               </button>
+              </MentionHover>
             );
           })}
         </div>
@@ -131,4 +136,4 @@ export function SubIssuesSection({
       )}
     </div>
   );
-}
+});

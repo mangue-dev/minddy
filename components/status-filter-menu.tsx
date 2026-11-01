@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { FilterIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { FilterMenu, MenuToggleRow } from "@/components/filter-menu";
+import { FilterMenu, filterToggle } from "@/components/filter-menu";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { StatusIndicator } from "@/components/issue-indicators";
 import { STATUSES, type IssueStatus } from "@/lib/issue-constants";
 import {
@@ -17,29 +17,19 @@ import { cn } from "@/lib/utils";
 
 /** The status rows of a filter menu — the board toolbar's Status facet and
     the standalone menu below share them. */
-export function StatusFilterRows({
-  status,
-  onChange,
-}: {
-  status: readonly IssueStatus[] | null | undefined;
-  onChange: (next: IssueStatus[] | undefined) => void;
-}) {
+export function useStatusFilterActions(
+  status: readonly IssueStatus[] | null | undefined,
+  onChange: (next: IssueStatus[] | undefined) => void,
+): ContextMenuAction[] {
   const ts = useTranslations("Status");
   const selected = effectiveStatuses(status);
-  return (
-    <>
-      {STATUSES.map((s) => (
-        <MenuToggleRow
-          key={s.value}
-          active={selected.includes(s.value)}
-          onSelect={() => onChange(toggleStatusFilter(status, s.value))}
-        >
-          <StatusIndicator status={s.value} className="size-4" />
-          {ts(s.value)}
-        </MenuToggleRow>
-      ))}
-    </>
-  );
+  return STATUSES.map((s) => filterToggle({
+    id: s.value,
+    label: ts(s.value),
+    icon: <StatusIndicator status={s.value} className="size-4" />,
+    active: selected.includes(s.value),
+    onToggle: () => onChange(toggleStatusFilter(status, s.value)),
+  }));
 }
 
 /** A status-only filter for boards without a saved view: the objective,
@@ -52,14 +42,13 @@ export function StatusFilterMenu({
   status: readonly IssueStatus[] | null | undefined;
   onChange: (next: IssueStatus[] | undefined) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const tf = useTranslations("Field");
   const label = tf("status");
+  const actions = useStatusFilterActions(status, onChange);
   return (
     <FilterMenu
-      open={open}
-      onOpenChange={setOpen}
       label={label}
+      actions={actions}
       trigger={
         <Button variant="ghost" size="icon-sm" aria-label={label}>
           <HugeiconsIcon
@@ -68,8 +57,6 @@ export function StatusFilterMenu({
           />
         </Button>
       }
-    >
-      <StatusFilterRows status={status} onChange={onChange} />
-    </FilterMenu>
+    />
   );
 }

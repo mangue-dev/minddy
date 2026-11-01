@@ -2,17 +2,17 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, FilterIcon, Globe02Icon, SparklesIcon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { FilterItem, FilterMenu, FilterSub, MenuToggleRow } from "@/components/filter-menu";
+import { FilterMenu, filterFacet, filterToggle } from "@/components/filter-menu";
 import { AdminHeaderActions } from "@/components/admin/admin-header-slot";
-import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 import { cn } from "@/lib/utils";
 import { AppIcon } from "@/components/icon";
 import { ModelBadge } from "@/components/model-badge";
@@ -194,14 +194,9 @@ function fmtInt(n: number | null | undefined): string {
 export function AdminCostsDashboard() {
   const t = useTranslations("Admin");
   const tCommon = useTranslations("Common");
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const format = useFormatter();
   const [days, setDays] = useState<number>(30);
   const [filters, setFilters] = useState<CostFilters>(NO_FILTERS);
-  const [finance, setFinance] = useState<AdminFinance | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const featureLabel = useCallback(
     (feature: string) =>
@@ -217,54 +212,30 @@ export function AdminCostsDashboard() {
     [t],
   );
 
-  const load = useCallback(async (window: number, refresh: boolean) => {
-    const [financeRes, statsRes] = await Promise.all([
-      fetch(`/api/admin/finance?days=${window}${refresh ? "&refresh=1" : ""}`),
-      fetch(`/api/admin/ai-usage?days=${window}`),
-    ]);
-    if (!financeRes.ok) throw new Error(`HTTP ${financeRes.status}`);
-    if (!statsRes.ok) throw new Error(`HTTP ${statsRes.status}`);
-    return {
-      financeData: (await financeRes.json()) as AdminFinance,
-      statsData: ((await statsRes.json()) as { stats: Stats }).stats,
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    setLoading(true);
-    setError(null);
-    (async () => {
-      try {
-        const { financeData, statsData } = await load(days, false);
-        if (!alive) return;
-        setFinance(financeData);
-        setStats(statsData);
-      } catch (e) {
-        if (alive) setError((e as Error).message);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [days, load]);
-
-  // Quietly re-read while the tab stays open and visible: a failed background
-  // read keeps the figures already on screen.
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void load(days, false)
-        .then(({ financeData, statsData }) => {
-          setFinance(financeData);
-          setStats(statsData);
-        })
-        .catch(() => {});
-    }, BACKGROUND_REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [days, load]);
+  // Cached per window, so coming back to this tab paints at once. The quiet
+  // re-read keeps the figures on screen when it fails, and only runs while the
+  // page is visible (react-query pauses interval refetches in the background).
+  const costsQuery = useQuery({
+    queryKey: ["admin", "costs", days],
+    queryFn: async () => {
+      const [financeRes, statsRes] = await Promise.all([
+        fetch(`/api/admin/finance?days=${days}`),
+        fetch(`/api/admin/ai-usage?days=${days}`),
+      ]);
+      if (!financeRes.ok) throw new Error(`HTTP ${financeRes.status}`);
+      if (!statsRes.ok) throw new Error(`HTTP ${statsRes.status}`);
+      return {
+        finance: (await financeRes.json()) as AdminFinance,
+        stats: ((await statsRes.json()) as { stats: Stats }).stats,
+      };
+    },
+    staleTime: 60 * 1000,
+    refetchInterval: BACKGROUND_REFRESH_MS,
+  });
+  const finance = costsQuery.data?.finance ?? null;
+  const stats = costsQuery.data?.stats ?? null;
+  const loading = costsQuery.isPending;
+  const error = costsQuery.data ? null : ((costsQuery.error as Error | null)?.message ?? null);
 
   const view = useMemo(() => {
     if (!finance) return null;
@@ -327,46 +298,40 @@ export function AdminCostsDashboard() {
           pane's header, the filters behind one button as on the board. */}
       <AdminHeaderActions>
         <FilterMenu
-          open={filtersOpen}
-          onOpenChange={setFiltersOpen}
           label={tCommon("filters")}
           trigger={
             <Button variant="ghost" size="icon-sm" aria-label={tCommon("filters")}>
               <HugeiconsIcon icon={FilterIcon} className={cn("size-4", filtered && "text-primary")} />
             </Button>
           }
-        >
-          <FilterSub label={t("costs.facetFeature")} count={filters.group === "all" ? 0 : 1}>
-            {ADMIN_COST_GROUPS.map((group) => (
-              <MenuToggleRow
-                key={group}
-                active={filters.group === group}
-                onSelect={() => setFilters((prev) => ({ ...prev, group: prev.group === group ? "all" : group }))}
-              >
-                <AppIcon icon={GROUP_UI[group].icon} className={cn("size-3.5", GROUP_UI[group].text)} strokeWidth={2} />
-                <span className="truncate">{t(GROUP_UI[group].labelKey)}</span>
-              </MenuToggleRow>
-            ))}
-          </FilterSub>
-          {(view?.models.length ?? 0) > 0 && (
-            <FilterSub label={t("costs.facetModel")} count={filters.model === "all" ? 0 : 1}>
-              {(view?.models ?? []).map((model) => (
-                <MenuToggleRow
-                  key={model || "none"}
-                  active={filters.model === model}
-                  onSelect={() => setFilters((prev) => ({ ...prev, model: prev.model === model ? "all" : model }))}
-                >
-                  {model ? <ModelLogo model={model} size={14} /> : null}
-                  <span className="truncate">{modelLabel(model)}</span>
-                </MenuToggleRow>
-              ))}
-            </FilterSub>
-          )}
-          <DropdownMenuSeparator />
-          <FilterItem disabled={!filtered} onSelect={() => setFilters(NO_FILTERS)}>
-            {t("costs.clearFilters")}
-          </FilterItem>
-        </FilterMenu>
+          actions={[
+            filterFacet({
+              id: "feature",
+              label: t("costs.facetFeature"),
+              count: filters.group === "all" ? 0 : 1,
+              children: ADMIN_COST_GROUPS.map((group) => filterToggle({
+                id: group,
+                label: t(GROUP_UI[group].labelKey),
+                icon: <AppIcon icon={GROUP_UI[group].icon} className={cn("size-3.5", GROUP_UI[group].text)} strokeWidth={2} />,
+                active: filters.group === group,
+                onToggle: () => setFilters((prev) => ({ ...prev, group: prev.group === group ? "all" : group })),
+              })),
+            }),
+            ...((view?.models.length ?? 0) > 0 ? [filterFacet({
+              id: "model",
+              label: t("costs.facetModel"),
+              count: filters.model === "all" ? 0 : 1,
+              children: (view?.models ?? []).map((model) => filterToggle({
+                id: model || "none",
+                label: modelLabel(model),
+                icon: model ? <ModelLogo model={model} size={14} /> : undefined,
+                active: filters.model === model,
+                onToggle: () => setFilters((prev) => ({ ...prev, model: prev.model === model ? "all" : model })),
+              })),
+            })] : []),
+            { id: "clear", label: t("costs.clearFilters"), separatorBefore: true, disabled: !filtered, onSelect: () => setFilters(NO_FILTERS) },
+          ]}
+        />
         <Select value={String(days)} onValueChange={(value) => setDays(Number(value))}>
           {/* A pill like every control of the content header, so its ends stay
               concentric with the pane's corner. */}
@@ -780,9 +745,7 @@ function RunRowItem({
       {open ? (
         <div className="bg-muted/20 px-4 pb-3 pl-10">
           {loading ? (
-            <div className="flex items-center gap-2 py-3 text-xs text-muted-foreground">
-              <Spinner className="size-3" /> {t("costs.loadingCalls")}
-            </div>
+            <RowsSkeleton rows={3} label={t("costs.loadingCalls")} className="gap-2 py-3" />
           ) : !calls || calls.length === 0 ? (
             <p className="py-3 text-xs text-muted-foreground">{t("costs.empty")}</p>
           ) : (

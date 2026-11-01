@@ -39,7 +39,7 @@ export interface MentionLinks {
  * `href` remains separate so modified clicks and browser context menus keep a
  * canonical destination.
  */
-  navigate: (type: MentionTargetType, id: string) => void;
+  navigate: (type: MentionTargetType, id: string, meta?: MentionMeta) => void;
   /**
    * The current label of a target these sources already hold (MIN-734), or
    * `null` when they do not: the pill then asks the server, which answers

@@ -14,6 +14,7 @@ import {
   type DayPickerProps,
 } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { useWeekStart } from "@/lib/use-week-start";
 
 export type CalendarProps = DayPickerProps;
 
@@ -24,9 +25,13 @@ export function Calendar({
   ...props
 }: CalendarProps) {
   const defaults = getDefaultClassNames();
+  // The account's first day of the week (MIN-881) overrides the one the
+  // date-fns locale carries; a caller passing `weekStartsOn` still wins.
+  const weekStartsOn = useWeekStart();
   return (
     <DayPicker
       data-calendar=""
+      weekStartsOn={weekStartsOn}
       showOutsideDays={showOutsideDays}
       className={cn("w-fit", className)}
       classNames={{

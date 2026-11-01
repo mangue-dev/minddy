@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { OnboardingProvider } from "@/lib/use-onboarding";
 import { AuthProvider } from "@/lib/auth-context";
@@ -40,6 +40,11 @@ import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
 import { CommentShortcut } from "@/components/comment-shortcut";
 import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
+import { RememberTimeZone } from "@/components/server-seed";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAfterFirstContent, watchFirstContent } from "@/lib/first-content";
+import { useAssistantPanel } from "@/lib/assistant-panel-context";
+import { useScratchpad } from "@/lib/scratchpad-context";
 
 // Deferred: keeps streamdown/shiki (markdown rendering) out of the initial bundle.
 const AssistantPanel = dynamic(
@@ -61,6 +66,34 @@ const KeyboardCheatsheet = dynamic(
   { ssr: false },
 );
 
+/** Marks the page's first content: reads settled, no skeleton left (lib/first-content.ts). */
+function FirstContentWatch() {
+  const client = useQueryClient();
+  useEffect(() => watchFirstContent({
+    isFetching: () => client.isFetching(),
+    subscribe: (notify) => client.getQueryCache().subscribe(notify),
+  }), [client]);
+  return null;
+}
+
+// Numo and the notebook load their code after the first content (MIN-880),
+// or at once when opened earlier. Once mounted they stay mounted.
+function DeferredAssistantPanel() {
+  const { isOpen } = useAssistantPanel();
+  const ready = useAfterFirstContent();
+  const [mounted, setMounted] = useState(false);
+  if ((ready || isOpen) && !mounted) setMounted(true);
+  return mounted ? <AssistantPanel /> : null;
+}
+
+function DeferredScratchpadModal() {
+  const { isOpen } = useScratchpad();
+  const ready = useAfterFirstContent();
+  const [mounted, setMounted] = useState(false);
+  if ((ready || isOpen) && !mounted) setMounted(true);
+  return mounted ? <ScratchpadModal /> : null;
+}
+
 function DeferredKeyboardCheatsheet() {
   const { open } = useCheatsheet();
   // Loaded on first open, then kept mounted so the panel can animate out.
@@ -77,6 +110,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       {/* Adopts the ACCOUNT theme at sign-in (and migrates legacy accounts):
           renders nothing, sits here to see both Auth and Theme providers. */}
       <ThemeAccountSync />
+      <RememberTimeZone />
       {/* The sending shortcut chosen by the account, placed high: all
  composers of the app are below, and none need to know
  Supabase to read it (see lib/keyboard/use-send-mode). */}
@@ -84,6 +118,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         <AccountQueryProvider>
           {/* Mentions show their hover card in the signed-in app only (MIN-879). */}
           <MentionHoverProvider card={MentionHoverCard}>
+          <FirstContentWatch />
           <RealtimeProvider>
             <ProjectsProvider>
               <IssuePanelProvider>
@@ -125,8 +160,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                                   draft in the creation dialogs (MIN-753). */}
                               <AssistantFab />
                             </CreateProvider>
-                            <AssistantPanel />
-                            <ScratchpadModal />
+                            <DeferredAssistantPanel />
+                            <DeferredScratchpadModal />
                             <DeferredKeyboardCheatsheet />
                             {/* ⇧C: an item's comment field (MIN-803). */}
                             <CommentShortcut />

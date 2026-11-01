@@ -5,6 +5,7 @@ import { useAuth } from "./auth-context";
 import { resolveCyclePrefs } from "./cycle-prefs";
 import { browserTimeZone } from "./global-board-api";
 import type { CycleInfo } from "./types";
+import { fetchSeeded } from "./server-seed";
 
 /** Cache key for the current-cycle slice — invalidated by the realtime bridge
     on any `cycles` row change (user topic). */
@@ -22,7 +23,7 @@ interface MyCycleResponse {
 }
 
 async function fetchMyCycleApi(): Promise<MyCycleResponse> {
-  const response = await fetch(`/api/me/cycle?tz=${encodeURIComponent(browserTimeZone())}`);
+  const response = await fetchSeeded(`/api/me/cycle?tz=${encodeURIComponent(browserTimeZone())}`);
   const text = await response.text();
   let data: unknown = null;
   try {

@@ -78,11 +78,16 @@ vi.mock("@/lib/use-agent-models-query", () => ({ useAgentModelsQuery: () => ({ r
 vi.mock("@/lib/use-routines-query", () => ({ useRoutineRunsQuery: () => ({ runs: state.runs, loading: false }), routineRunsQueryKey: (id: string) => ["routines", id, "runs"], routinesQueryKey: () => ["routines"], patchRoutineInCache: vi.fn() }));
 vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: null, scrollProps: {}, edges: { start: false, end: false } }) }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => ({}) }));
+vi.mock("@/lib/use-context-mentions", () => ({ useContextMentions: <T,>(base: T) => base }));
+vi.mock("@/lib/use-issue-relations-query", () => ({ useIssueRelationsQuery: () => ({ relations: [] }) }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
 vi.mock("@/lib/use-repository-skills", () => ({ useRepositorySkills: () => ({ skills: [] }) }));
 vi.mock("@/components/ui/tooltip", () => ({ Tooltip: ({ children }: { children: ReactNode }) => children, TooltipTrigger: ({ children }: { children: ReactNode }) => children, TooltipContent: () => null }));
 vi.mock("@/components/pull-requests/pr-state-badge", () => ({ PR_STATE_STYLES: {}, PrStateBadge: () => null }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) }));
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({ user: { id: "owner" } }),
+  useAuthOptional: () => ({ user: { id: "owner" } }),
+}));
 vi.mock("@/lib/use-objective-resources", () => ({ useObjectiveResources: () => ({ resources: [], add: vi.fn(), remove: vi.fn(), rename: vi.fn() }) }));
 vi.mock("@/lib/use-objective-timeline", () => ({ useObjectiveTimeline: () => ({ items: [], addComment: vi.fn(), updateComment: vi.fn(), deleteComment: vi.fn(), deleteAttachment: vi.fn() }) }));
 vi.mock("@/lib/use-objective-dictation", () => ({ useObjectiveDictation: () => ({ busy: false, onTranscript: vi.fn(), reset: state.reset }) }));
@@ -102,7 +107,7 @@ vi.mock("@/lib/use-description-collaboration", () => ({
 }));
 vi.mock("@/components/editor/document-editor-lazy", async () => {
   const { useState } = await import("react");
-  return { useIdleDocumentEditorPreload: () => {}, LazyDocumentEditor: ({ value, onEdit }: { value: string; onEdit: () => void }) => {
+  return { useIdleDocumentEditorPreload: () => {}, useDocumentEditorForFirstContent: () => {}, LazyDocumentEditor: ({ value, onEdit }: { value: string; onEdit: () => void }) => {
     const [draft, setDraft] = useState(value);
     return <textarea data-objective-description value={draft} onChange={(event) => { setDraft(event.target.value); onEdit(); }} />;
   } };

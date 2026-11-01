@@ -4,7 +4,10 @@ import { expandParam } from "@/lib/ref-registry";
 import { resolveIssueRef } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, FolderAddIcon } from "@hugeicons/core-free-icons";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { afterFirstContentIdle } from "@/lib/first-content";
+import { loadIssueSidePanel, preloadSurface } from "@/lib/lazy-app-surfaces";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { useFormatter, useTranslations } from "next-intl";
@@ -46,7 +49,6 @@ import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { EmptyScene } from "@/components/empty-scene";
 import { GlobalKanbanBoard } from "@/components/global-kanban-board";
 import { BoardToolbar } from "@/components/board-toolbar";
-import { IssueSidePanel } from "@/components/issue-side-panel";
 import { CycleControls, formatCycleRange } from "@/components/cycle/cycle-header";
 import {
   CycleActivationWelcome,
@@ -66,6 +68,10 @@ import type {
   Project,
 } from "@/lib/types";
 import { boardIntegrationFacets } from "@/lib/board-integrations";
+
+// Like the project board: the panel (editor, timeline, Markdown) loads after
+// the first content or on the first opened issue, not with the board (MIN-880).
+const IssueSidePanel = dynamic(() => loadIssueSidePanel().then((m) => m.IssueSidePanel), { ssr: false });
 
 /** Remembered "the Cycle tab is selected" flag — deliberately OUTSIDE the view
     system's storage: useBoardViews self-heals unknown view ids by rewriting
@@ -222,14 +228,15 @@ function GlobalBoardInner() {
     }
   };
 
-  // The filters menu's AI input: hand the typed wish to the Numo conversation
-  // (MIN-592, review — the classifier pass proved unreliable for filter
-  // selection, the agent with its hardened view tools is the reliable path),
-  // carrying the active view as context so "this view" resolves.
+  // The filters menu's “Create with Numo”: hand the typed wish to the Numo
+  // conversation (MIN-592, review — the classifier pass proved unreliable for
+  // filter selection, the agent with its hardened view tools is the reliable
+  // path), carrying the active view as context so "this view" resolves.
+  // Nothing typed opens the composer on that same context.
   const handleAskAI = (wish: string) => {
     openAssistant({
       projectId: null,
-      prompt: tBoard("aiFilterPrompt", { wish }),
+      ...(wish ? { prompt: tBoard("aiFilterPrompt", { wish }) } : { focusComposer: true }),
       pageContext: activeView
         ? { viewId: activeView.id, viewName: activeView.name }
         : undefined,
@@ -237,6 +244,14 @@ function GlobalBoardInner() {
   };
 
   const [openIssueId, setOpenIssueId] = useState<string | null>(null);
+  const [sidePanelMounted, setSidePanelMounted] = useState(false);
+  if (openIssueId && !sidePanelMounted) setSidePanelMounted(true);
+  // Mount the closed panel after the first content, so its hook tree and
+  // editor preload do not land on the first card click.
+  useEffect(() => sidePanelMounted ? undefined : afterFirstContentIdle(() => {
+    preloadSurface(loadIssueSidePanel);
+    startTransition(() => setSidePanelMounted(true));
+  }, 4_000, 2_000), [sidePanelMounted]);
   useAppTabChange(() => setOpenIssueId(null));
   const [openIssueTab, setOpenIssueTab] = useState<"description" | "plan">(
     "description"
@@ -528,7 +543,9 @@ function GlobalBoardInner() {
   const nothingAnywhere = !cycleMode && (projects.length === 0 || scopedIssues.length === 0);
 
   return (
-    <div className="flex h-full flex-col">
+    // A pointer over the board precedes the first card click: the panel's
+    // code starts loading then, if the idle warm-up has not yet.
+    <div className="flex h-full flex-col" onPointerEnter={sidePanelMounted ? undefined : () => preloadSurface(loadIssueSidePanel)}>
       {/* Nothing anywhere: no toolbar above a screen that
  has only one thing to offer. */}
       {!nothingAnywhere && (
@@ -706,7 +723,7 @@ function GlobalBoardInner() {
         </div>
       )}
 
-      <IssueSidePanel
+      {sidePanelMounted && <IssueSidePanel
         issue={openIssue}
         open={!!openIssue}
         onOpenChange={(next) => {
@@ -738,7 +755,7 @@ function GlobalBoardInner() {
           )
         }
         initialTab={openIssueTab}
-      />
+      />}
     </div>
   );
 }

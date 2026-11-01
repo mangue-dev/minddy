@@ -38,6 +38,7 @@ import {
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
 import type { AssistantMention } from "@/lib/assistant-types";
+import { useWeekStart } from "@/lib/use-week-start";
 
 /**
  * Set up a ROUTINE (MIN-185), by hand: where, what, and on what schedule.
@@ -87,6 +88,7 @@ export function CreateRoutineWizard({
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
+  const weekStart = useWeekStart();
   const { user } = useAuth();
   const { projects } = useProjects();
   /**
@@ -190,7 +192,7 @@ export function CreateRoutineWizard({
       const sentence = describeSchedule(
         schedule,
         (key, values) => t(key, values),
-        { locale, weekdayLabel: (d) => weekdayName(d, locale) },
+        { locale, weekdayLabel: (d) => weekdayName(d, locale), weekStart },
       );
       return {
         sentence,

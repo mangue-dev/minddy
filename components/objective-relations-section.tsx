@@ -15,7 +15,7 @@ import { issueHref, objectiveHref } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Link02Icon } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { RelationGroupHeader, RelationRemoveButton, RelationRow } from "@/components/relation-rows";
 import { useOrderedObjectives } from "@/lib/use-ordered-objectives";
 import { useTranslations } from "next-intl";
@@ -45,7 +45,8 @@ import { eventKey } from "@/lib/keyboard/event-key";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 import type { Issue, IssueRelationType, Objective } from "@/lib/types";
 
-export function ObjectiveRelationsSection({
+// Memoized (MIN-875): the detail panels re-render for each query they read.
+export const ObjectiveRelationsSection = memo(function ObjectiveRelationsSection({
   objective,
   projectId,
   projectKey,
@@ -365,4 +366,4 @@ export function ObjectiveRelationsSection({
       />
     </>
   );
-}
+});

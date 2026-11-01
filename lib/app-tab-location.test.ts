@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appTabRoute, normalizeAppTabLocation, sameAppTabDestination } from "./app-tab-location";
+import { appTabDestinationKey, appTabRoute, normalizeAppTabLocation, sameAppTabDestination } from "./app-tab-location";
 
 describe("application tab destinations", () => {
   it("matches equivalent query ordering without dropping destination details", () => {
@@ -66,5 +66,22 @@ describe("application tab destinations", () => {
   it("exposes the cycle sentinel so tabs can name the cycle board", () => {
     expect(appTabRoute("/all?view=cycle").view).toBe("cycle");
     expect(appTabRoute("/all?view=cycle").projectId).toBeNull();
+  });
+});
+
+describe("destination keys", () => {
+  const project = "9e3d0c35-c1d7-4d2a-983d-8190638cc887";
+  const page = "6ea5bcf7-5a2a-4c5e-803d-cb64e52d9db9";
+  it("treat a full id, its short code and a keyed project segment as one destination", () => {
+    const key = appTabDestinationKey(`/projects/${project}?view=${page}`);
+    expect(appTabDestinationKey("/projects/aur-9e3d0c35?view=6ea5bcf7")).toBe(key);
+    expect(appTabDestinationKey("/projects/9e3d0c35?view=6ea5bcf7")).toBe(key);
+    expect(appTabDestinationKey(`/projects/${project}/pages/${page}`)).toBe(appTabDestinationKey("/projects/aur-9e3d0c35/pages/6ea5bcf7"));
+  });
+  it("keep different destinations apart", () => {
+    expect(appTabDestinationKey("/projects/aur-9e3d0c35")).not.toBe(appTabDestinationKey("/projects/aur-9e3d0c35/triage"));
+    expect(appTabDestinationKey("/projects/aur-9e3d0c35")).not.toBe(appTabDestinationKey("/projects/aur-ff02a987"));
+    expect(appTabDestinationKey("/settings?tab=profile")).not.toBe(appTabDestinationKey("/settings?tab=security"));
+    expect(appTabDestinationKey("not a path")).toBeNull();
   });
 });

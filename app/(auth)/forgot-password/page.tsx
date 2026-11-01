@@ -10,7 +10,7 @@ import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
  */
 export default function ForgotPasswordPage() {
   return (
-    <Suspense fallback={<AuthLoading />}>
+    <Suspense fallback={<AuthLoading fields={1} providers={0} />}>
       <ForgotPasswordForm />
     </Suspense>
   );

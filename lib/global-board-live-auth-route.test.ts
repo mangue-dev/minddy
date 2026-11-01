@@ -144,12 +144,18 @@ describe("global board reads overlapped with the live session check", () => {
     } finally { log.mockRestore(); }
   });
 
-  it("keeps cycle reconciliation and the reads after the live check", async () => {
+  it("keeps cycle reconciliation after the live check and the issues read after reconciliation", async () => {
     state.cycles = true;
     const pending = GET(new NextRequest("http://localhost/api/me/board"));
     await settle();
 
-    expect(state.events).toEqual(["service:rpc/auth_authorization_state"]);
+    // Reconciliation writes only cycles and issues: the other RLS reads
+    // overlap the live check, the issues read and every service read wait.
+    expect(state.events).toContain("service:rpc/auth_authorization_state");
+    expect(state.events).toEqual(expect.arrayContaining(RLS_READS.filter((read) => read !== "rls:issues")));
+    expect(state.events).not.toContain("rls:issues");
+    expect(state.events).not.toContain("cycles");
+    expect(state.events).not.toContain("members");
 
     answerLive({ sessionActive: true, mfaAllowed: true });
     const response = await pending;
@@ -216,7 +222,14 @@ describe("overlapped RLS read callbacks", () => {
       .map((path) => join("app", path))
       .filter((path) => readFileSync(join(process.cwd(), path), "utf8").includes("getAuthedUserWithRlsReads("));
 
-    expect(callers.sort()).toEqual(["app/api/me/app-tabs/route.ts", "app/api/me/board/route.ts", "app/api/projects/[id]/issues/route.ts"]);
+    expect(callers.sort()).toEqual([
+      "app/api/me/app-tabs/route.ts", "app/api/me/board/route.ts", "app/api/me/triage-counts/route.ts",
+      "app/api/objectives/[id]/comments/route.ts", "app/api/objectives/[id]/events/route.ts",
+      "app/api/objectives/[id]/feedback/route.ts", "app/api/objectives/[id]/resources/route.ts",
+      "app/api/projects/[id]/categories/route.ts", "app/api/projects/[id]/issues/route.ts",
+      "app/api/projects/[id]/objectives/route.ts", "app/api/projects/[id]/pages/[pageId]/backlinks/route.ts",
+      "app/api/projects/[id]/pages/[pageId]/comments/route.ts", "app/api/projects/[id]/pages/[pageId]/events/route.ts",
+    ]);
     for (const path of callers) {
       expect({ path, ...violations(join(process.cwd(), path)) }).toEqual({ path, callbacks: 1, found: [] });
     }

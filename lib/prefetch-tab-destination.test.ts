@@ -80,15 +80,33 @@ describe("tab destination prefetch", () => {
     }
   });
 
-  it("prepares Pages and Feedback through their actual consumer keys without board reads", async () => {
+  it("prepares Pages through its actual consumer key without board reads", async () => {
     fetchMock.mockImplementation(async () => response({ posts: [], board_enabled: false }));
     prefetchAppTabDestination(client, "/projects/p/pages", new Set());
-    prefetchAppTabDestination(client, "/projects/p/feedback", new Set());
     await vi.waitFor(() => expect(client.isFetching()).toBe(0));
-    expect(requested().sort()).toEqual(["/api/projects/p/feedback", "/api/projects/p/pages"]);
+    expect(requested()).toEqual(["/api/projects/p/pages"]);
+  });
+
+  it("makes a hovered Feedback destination prepared once every prerequisite resolves", async () => {
+    fetchMock.mockImplementation(async () => response({ posts: [], board_enabled: false }));
+    const href = "/projects/p/feedback";
+    expect(isPreparedAppTabDestination(client, href)).toBe(false);
+    prefetchAppTabDestination(client, href, new Set());
+    await vi.waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(requested().sort()).toEqual(["/api/projects/p/categories", "/api/projects/p/feedback", "/api/projects/p/issue-relations",
+      "/api/projects/p/issues", "/api/projects/p/members", "/api/projects/p/objectives", "/api/projects/p/pages"]);
     expect(client.getQueryData(feedbackQueryOptions("p").queryKey)).toEqual({ posts: [], board_enabled: false });
+    expect(isPreparedAppTabDestination(client, href)).toBe(true);
+  });
+
+  it("prefetches the settings destinations' default tab reads", async () => {
     prefetchAppTabDestination(client, "/projects/p/settings", new Set());
-    expect(requested()).toHaveLength(2);
+    await vi.waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(requested().sort()).toEqual(["/api/projects/p/categories", "/api/projects/p/issues", "/api/projects/p/members", "/api/projects/p/objectives"]);
+    fetchMock.mockClear();
+    prefetchAppTabDestination(client, "/settings", new Set());
+    await vi.waitFor(() => expect(requested()).toContain("/api/account/mfa"));
+    expect(client.getQueryState(["mfa-status"])).toBeDefined();
   });
 
   it("warms the routines list and the agent catalog once per destination", async () => {
@@ -258,7 +276,8 @@ describe("tab destination prefetch", () => {
       expect(client.getQueryState(["feedback", "p"])).toBeUndefined();
       prefetchAppTabDestination(client, href, new Set());
       await new Promise((resolve) => setTimeout(resolve, 10));
-      expect(requested()).toEqual([]);
+      // Fresh prerequisites and the accepted list are not read again; only the selected detail's own readers may revalidate.
+      expect(requested().filter((url) => !url.startsWith("/api/projects/p/feedback/target"))).toEqual([]);
       expect(client.getQueryData<{ posts: unknown[] }>(open)?.posts).toHaveLength(2);
     });
 
@@ -277,7 +296,7 @@ describe("tab destination prefetch", () => {
   });
 
   it("leaves unknown destinations alone", () => {
-    prefetchAppTabDestination(client, "/settings", new Set());
+    prefetchAppTabDestination(client, "/unknown-destination", new Set());
     expect(requested()).toEqual([]);
   });
 });

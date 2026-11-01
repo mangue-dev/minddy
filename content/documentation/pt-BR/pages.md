@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 23,
+  "revision": 26,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -108,14 +108,16 @@
       "components/pages/block-drag.ts",
       "components/mention-hover-card.tsx",
       "lib/server/mention-preview.ts",
-      "components/pages/page-backlinks.tsx"
+      "components/pages/page-backlinks.tsx",
+      "lib/use-context-mentions.ts",
+      "components/markdown-link-menu.tsx"
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (pt-BR sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 26,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:claude (pt-BR sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (pt-BR context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "notifications-and-inbox",
@@ -151,7 +153,7 @@
       "src": "/documentation/pt-BR/page-create-menu.png",
       "alt": "Menu de criação com Nova página e Novo banco de dados.",
       "caption": "Use os controles de páginas do projeto para escolher um documento ou um banco de dados.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -167,7 +169,7 @@
       "src": "/documentation/pt-BR/page-editor.png",
       "alt": "Página de demonstração com títulos, parágrafos, caixas de tarefas e menção a um ticket.",
       "caption": "Os títulos, os blocos de tarefas e a menção AUR-2 organizam a página. O conteúdo é um exemplo de demonstração.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -184,7 +186,7 @@
       "src": "/documentation/pt-BR/page-comments.png",
       "alt": "Atividade da página ainda sem eventos e campo de comentário vazio.",
       "caption": "Leia a atividade e escreva um comentário no campo. Nenhum comentário foi enviado neste exemplo.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -201,7 +203,7 @@
       "src": "/documentation/pt-BR/page-file-states.png",
       "alt": "Página de demonstração com um upload incompleto e um arquivo salvo de 67 bytes com a opção Baixar.",
       "caption": "Confira o estado real do arquivo: o segundo anexo está disponível, mas o primeiro upload incompleto não.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -217,7 +219,7 @@
       "src": "/documentation/pt-BR/page-history-preview.png",
       "alt": "Aba Versões com um estado anterior expandido, autor, Restaurar e aviso de retenção por 30 dias.",
       "caption": "Confira a prévia de um estado salvo e compare com a página atual antes de restaurá-lo.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -233,7 +235,7 @@
       "src": "/documentation/pt-BR/page-publish.png",
       "alt": "Janela de publicação com Privado selecionado e opções de senha ou link.",
       "caption": "Privado mantém a página no projeto. Confira quem deve ler o conteúdo antes de mudar a publicação.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -249,7 +251,7 @@
       "src": "/documentation/pt-BR/page-export.png",
       "alt": "Menu de exportação do documento com Markdown (.md) e Imprimir / PDF.",
       "caption": "Escolha Markdown para baixar o documento ou Imprimir / PDF para abrir a visualização de impressão.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -265,7 +267,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -328,7 +330,7 @@ O menu `/` agrupa os blocos em **Blocos básicos**, **Listas** e **Blocos avanç
 
 Use menções para vincular tickets, objetivos, pessoas ou páginas relevantes. Digite `@` seguido de um identificador, um nome ou um título, que pode conter espaços simples; o menu fecha das mesmas formas que o menu `/`, e ao escolher um item. Uma palavra que descreve o trabalho em vez de nomeá-lo também lista tickets encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**, depois das correspondências de texto. Referências inversas ajudam leitores a encontrar páginas que apontam para a atual. Um link fornece contexto, não acesso a um objeto privado de outro projeto. A menção de uma página que ainda não tem título mostra **Sem título**.
 
-Assim que você digita `@`, o menu também lista o caderno de tarefas e seus ciclos atual e próximos em **Planejamento** (os ciclos só quando estão ativados), suas rotinas, as skills do repositório do projeto, seus servidores MCP conectados e as pull requests, as abertas primeiro. Uma menção guarda apenas o que ela aponta, nunca um nome: cada leitor vê o nome atual do destino, e um destino que ele não pode abrir aparece como **Indisponível**. Digite uma data depois de `@`, como `@hoje`, `@amanhã`, `@próxima segunda`, `@em 3 semanas`, `@15 novembro` ou `@amanhã 9h`, e escolha-a em **Datas**. A data fica fixa quando você a escreve: mostra **Hoje**, **Amanhã** ou **Ontem** enquanto está tão perto, depois a data completa. Clique em uma data em um editor para alterá-la ou adicionar um horário. Uma menção de data não envia nenhum lembrete. Acentos e palavras completas são opcionais: `@quinta em 2 semanas`, `@depois de amanha` ou `@15 nov` também funcionam, assim como horários ditos por extenso, como `@amanhã às 8 e meia` ou `@sexta quinze para as 9`. Um erro de digitação por palavra é tolerado, dois numa palavra longa: `@amanah às 8 e meia` é lido mesmo assim. Digite `@data` para abrir o seletor de data na data e hora atuais. Quando uma menção mostra uma data completa, passar o cursor sobre ela indica quanto falta ou quanto passou, como “em 3 semanas”. O compositor do Numo e a instrução das rotinas oferecem as mesmas menções, incluindo datas. Deixe o ponteiro sobre qualquer outra menção para ver mais sem sair do que está lendo: um ticket mostra seu cartão completo, um objetivo seu status, progresso, tickets e relações, uma página, uma rotina, uma skill ou o caderno de tarefas as primeiras linhas, um banco de dados as primeiras entradas, uma pessoa seu e-mail e sua função no projeto, um pull request seu estado e branches, um servidor MCP conectado se está autenticado e quantas ferramentas oferece, um ciclo seu progresso, e um projeto seus membros e suas funções. Clicar no cartão abre o mesmo que a menção. Uma menção que você não pode abrir não mostra nada além. Referências inversas, páginas anexadas a um ticket ou objetivo, relações, o objetivo de um ticket e as pessoas da atividade e das estatísticas mostram o mesmo cartão; um agente MCP na atividade mostra de quem é a chave que ele usou.
+Assim que você digita `@`, o menu também lista o caderno de tarefas e seus ciclos atual e próximos em **Planejamento** (os ciclos só quando estão ativados), suas rotinas, as skills do repositório do projeto, seus servidores MCP conectados e as pull requests, as abertas primeiro. O que está ligado ao texto que você escreve vem primeiro, cada item na sua seção: em uma página, as subpáginas dela em **Subpáginas**; em um ticket ou objetivo, o item pai, os subtickets e os itens que o bloqueiam, que ele bloqueia ou relacionados em **Relações**, e a data de vencimento, ou a data-alvo do objetivo, em **Este ticket** ou **Este objetivo**. Na descrição de um ticket, e só nela, **Este ticket** também oferece o **Plano** do ticket: a pílula mostra o identificador seguido de **Plano**, como `MIN-42 · Plano`, e clicar nela leva o painel do ticket para a aba **Plano**. Servidores MCP mostram o logotipo do provedor, e uma menção cujo nome é mais longo que a linha é encurtada com reticências. Uma menção guarda apenas o que ela aponta, nunca um nome: cada leitor vê o nome atual do destino, e um destino que ele não pode abrir aparece como **Indisponível**. Digite uma data depois de `@`, como `@hoje`, `@amanhã`, `@próxima segunda`, `@em 3 semanas`, `@15 novembro` ou `@amanhã 9h`, e escolha-a em **Datas**. A data fica fixa quando você a escreve: mostra **Hoje**, **Amanhã** ou **Ontem** enquanto está tão perto, depois a data completa. Clique em uma data em um editor para alterá-la ou adicionar um horário. Uma menção de data não envia nenhum lembrete. Acentos e palavras completas são opcionais: `@quinta em 2 semanas`, `@depois de amanha` ou `@15 nov` também funcionam, assim como horários ditos por extenso, como `@amanhã às 8 e meia` ou `@sexta quinze para as 9`. Um erro de digitação por palavra é tolerado, dois numa palavra longa: `@amanah às 8 e meia` é lido mesmo assim. Digite `@data` para abrir o seletor de data na data e hora atuais. Quando uma menção mostra uma data completa, passar o cursor sobre ela indica quanto falta ou quanto passou, como “em 3 semanas”. O compositor do Numo e a instrução das rotinas oferecem as mesmas menções, incluindo datas. Deixe o ponteiro sobre qualquer outra menção para ver mais sem sair do que está lendo: um ticket mostra seu cartão completo, um objetivo seu status, progresso, tickets e relações, uma página, uma rotina, uma skill ou o caderno de tarefas as primeiras linhas, um banco de dados as primeiras entradas, uma pessoa seu e-mail e sua função no projeto, um pull request seu estado e branches, um servidor MCP conectado se está autenticado e quantas ferramentas oferece, um ciclo seu progresso, e um projeto seus membros e suas funções. Clicar no cartão abre o mesmo que a menção. Uma menção que você não pode abrir não mostra nada além. Referências inversas, páginas anexadas a um ticket ou objetivo, relações, o objetivo de um ticket e as pessoas da atividade e das estatísticas mostram o mesmo cartão; um agente MCP na atividade mostra de quem é a chave que ele usou.
 
 Clicar na menção de uma página, em uma referência inversa, em uma página anexada a um ticket ou objetivo, ou em um link para uma página em um comentário ou resposta do Numo abre essa página em um painel lateral sobre o que você estava lendo. Leia ou edite ali, escolha **Expandir** para abrir a página inteira ou feche o painel para voltar. Entre **Expandir** e fechar, o menu **Opções de página** (`…`) do painel oferece as mesmas ações da página inteira; mover a página para a lixeira por ali fecha o painel e deixa você na página que está por baixo. Um banco de dados também abre no painel, com a barra de ferramentas compacta descrita no [guia de bancos de dados](/docs/databases#database-display); um registro aberto da tabela dele toma o seu lugar, e **Voltar**, no canto superior esquerdo do painel, retorna à tabela.
 
@@ -337,7 +339,7 @@ Clicar na menção de uma página, em uma referência inversa, em uma página an
 
 ### Formatar texto e escrever no celular {#editor-formatting}
 
-Páginas, descrições, comentários e o caderno de tarefas compartilham o mesmo editor. Selecione um texto, ou blocos inteiros como descrito abaixo, para abrir a barra de seleção. A primeira linha mostra o tipo do bloco atual: escolha-a para abrir **Transformar em** e mudar o bloco. Em seguida vêm **Cor**, para o texto ou o plano de fundo, **Negrito**, **Itálico**, **Sublinhado**, **Tachado**, **Código**, **Adicionar link** (ou **Remover link** sobre um link), **Equação em linha**, que transforma o texto selecionado em uma equação em linha ou o contrário, **Limpar formatação** e **Copiar**, que copia a seleção. No computador, uma linha **Pergunte ao Numo** envia o trecho ao Numo, como descreve o [guia do Numo](/pt-br/documentacao/numo#work-with-numo), e em uma página uma linha **Comentário** ancora um comentário na seleção. **Transformar em** marca apenas o tipo do bloco em que a seleção está. Nas listas de cores, aqui e no menu do bloco, cada cor aparece pelo nome, escrita nessa cor ou sobre esse fundo. Clicar fora do editor encerra a seleção e oculta a barra, assim como escolher **Comentário**. As dicas mostram os atalhos: Command+B, Command+I, Command+U, Command+Shift+S e Command+E no macOS, ou Ctrl com as mesmas teclas no Windows/Linux. Em um editor, Command/Ctrl+B aplica negrito; fora dele, o atalho continua mostrando ou ocultando a barra lateral. Em um bloco de código, a barra mostra apenas o tipo do bloco, **Cor**, **Copiar**, **Pergunte ao Numo** e **Comentário**: uma cor de texto substitui o realce de sintaxe do código, uma cor de fundo o mantém e a cor padrão o restaura. As cores de texto e de fundo não são mantidas em Markdown. A barra acompanha o trecho selecionado enquanto a página rola e fecha quando o trecho sai da tela.
+Páginas, descrições, comentários e o caderno de tarefas compartilham o mesmo editor. Selecione um texto, ou blocos inteiros como descrito abaixo, para abrir a barra de seleção. A primeira linha mostra o tipo do bloco atual: escolha-a para abrir **Transformar em** e mudar o bloco. Em seguida vêm **Cor**, para o texto ou o plano de fundo, **Negrito**, **Itálico**, **Sublinhado**, **Tachado**, **Código**, **Adicionar link** (ou **Remover link** sobre um link), **Equação em linha**, que transforma o texto selecionado em uma equação em linha ou o contrário, **Limpar formatação** e **Copiar**, que copia a seleção. No computador, uma linha **Pergunte ao Numo** envia o trecho ao Numo, como descreve o [guia do Numo](/pt-br/documentacao/numo#work-with-numo), e em uma página uma linha **Comentário** ancora um comentário na seleção. **Transformar em** marca apenas o tipo do bloco em que a seleção está. Nas listas de cores, aqui e no menu do bloco, cada cor aparece pelo nome, escrita nessa cor ou sobre esse fundo. Clicar fora do editor encerra a seleção e oculta a barra, assim como escolher **Comentário**. As dicas mostram os atalhos: Command+B, Command+I, Command+U, Command+Shift+S e Command+E no macOS, ou Ctrl com as mesmas teclas no Windows/Linux. Em um editor, Command/Ctrl+B aplica negrito; fora dele, o atalho continua mostrando ou ocultando a barra lateral. Em um bloco de código, a barra mostra apenas o tipo do bloco, **Cor**, **Copiar**, **Pergunte ao Numo** e **Comentário**: uma cor de texto substitui o realce de sintaxe do código, uma cor de fundo o mantém e a cor padrão o restaura. As cores de texto e de fundo não são mantidas em Markdown. A barra acompanha o trecho selecionado enquanto a página rola e fecha quando o trecho sai da tela. Clicar em um link em um editor abre um menu com **Editar link**, **Abrir link**, **Copiar link** e, por último, **Remover link**, que remove o link mas mantém o texto; desfazer restaura o link.
 
 Shift+Enter começa uma nova linha dentro do mesmo bloco. Command/Ctrl+Enter não insere quebra de linha: em um comentário ou outro compositor, ele envia, qualquer que seja o atalho de envio escolhido nas suas [preferências](/pt-br/documentacao/accounts#preferences), e, se você escolheu Enter como atalho de envio, Enter também envia.
 

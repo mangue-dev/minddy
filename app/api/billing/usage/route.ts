@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
-import { getUserUsage, segmentizeUsage } from "@/lib/server/usage";
+import { getAuthedUserAlongside } from "@/lib/server/api-auth";
+import { getUserUsage, readUserUsageInputs, segmentizeUsage } from "@/lib/server/usage";
 import { countAccessibleProjects } from "@/lib/server/entitlements";
 import type { UsageSummaryResponse } from "@/lib/billing-types";
 import { managedServices } from "@/lib/managed-services";
@@ -11,13 +11,16 @@ import { managedServices } from "@/lib/managed-services";
  * and structural limits. Feeds the header bar and the page billing.
  */
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
+  // The billing account, the latest quota reset and the project count are
+  // independent side-effect-free reads: they overlap the live session check and
+  // each other. The Stripe re-sync (a possible write) and the usage RPC follow.
+  const auth = await getAuthedUserAlongside(request, ({ user }) =>
+    Promise.all([readUserUsageInputs(user.id), countAccessibleProjects(user.id)]));
   if (!auth.ok) return auth.response;
+  if ("error" in auth.alongside) throw auth.alongside.error;
+  const [inputs, projectsUsed] = auth.alongside.value;
 
-  const [usage, projectsUsed] = await Promise.all([
-    getUserUsage(auth.user.id),
-    countAccessibleProjects(auth.user.id),
-  ]);
+  const usage = await getUserUsage(auth.user.id, inputs);
   const { plan } = usage.billing;
   const services = managedServices();
   const includedUsd = services.ai ? plan.includedUsageUsd : 0;

@@ -282,7 +282,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/cookies",
     },
     namespace: "Cookies",
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-01",
     priority: 0.3,
   },
 ] as const satisfies ReadonlyArray<PublicRoute>;

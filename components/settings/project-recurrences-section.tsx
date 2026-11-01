@@ -4,7 +4,8 @@ import { issueHref } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { Add01Icon, CancelCircleIcon as CircleSlash, RepeatIcon, UserIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useState, type SVGProps } from "react";
+import { useEffect, useState, type SVGProps } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "@/components/app-link";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -77,31 +78,33 @@ export function ProjectRecurrencesSection({
   const { members } = useMembersQuery(projectId, true);
   const { openCreateIssue } = useCreate();
 
-  const [rows, setRows] = useState<RecurringIssue[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      setRows(await fetchRecurrencesApi(projectId));
-    } catch {
-      setRows([]);
-      toast.error(t("loadFailed"));
-    }
-  }, [projectId, t]);
+  const queryClient = useQueryClient();
+  const queryKey = ["project-recurrences", projectId] as const;
+  const { data, isError, refetch } = useQuery({
+    queryKey,
+    queryFn: () => fetchRecurrencesApi(projectId),
+  });
+  const rows: RecurringIssue[] | null = data ?? (isError ? [] : null);
+  const setRows = (update: (rows: RecurringIssue[]) => RecurringIssue[]) =>
+    queryClient.setQueryData<RecurringIssue[]>(queryKey, (previous) => (previous ? update(previous) : previous));
+  const load = () => void refetch();
 
+  // Announce a failed read once per failure, not on every render.
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (isError) toast.error(t("loadFailed"));
+  }, [isError, t]);
 
   const setCadence = async (row: RecurringIssue, recurrence: RecurrenceCadence) => {
     setBusyId(row.id);
     // Optimistic: the line does not move, only its wording changes.
-    setRows((r) => r?.map((x) => (x.id === row.id ? { ...x, recurrence } : x)) ?? r);
+    setRows((r) => r.map((x) => (x.id === row.id ? { ...x, recurrence } : x)));
     try {
       await updateIssueApi(row.id, { recurrence });
     } catch (e) {
       toast.error((e as Error).message);
-      void load();
+      load();
     } finally {
       setBusyId(null);
     }
@@ -112,7 +115,7 @@ export function ProjectRecurrencesSection({
     try {
       await updateIssueApi(row.id, { recurrence: null });
       // The ticket remains, only the recurrence stops: it leaves this list.
-      setRows((r) => r?.filter((x) => x.id !== row.id) ?? r);
+      setRows((r) => r.filter((x) => x.id !== row.id));
       toast.success(t("stopped"));
     } catch (e) {
       toast.error((e as Error).message);

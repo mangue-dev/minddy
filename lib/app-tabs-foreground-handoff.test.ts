@@ -3,6 +3,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { IsRestoringProvider, QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { markFirstContent } from "@/lib/first-content";
 import { AppTabsProvider, useOptionalAppTabs } from "@/lib/app-tabs-context";
 import { createHomeTab, type AppTab } from "@/lib/app-tabs";
 import { invalidateLocalSnapshotWrites } from "@/lib/local-snapshots";
@@ -55,6 +56,8 @@ async function render() {
 }
 const settle = async () => { await act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)); }); };
 
+// These cases describe a page that has shown its content (lib/first-content.ts).
+beforeEach(() => markFirstContent());
 beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   auth.user = { id: "owner" };

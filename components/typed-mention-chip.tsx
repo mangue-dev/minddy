@@ -5,6 +5,7 @@ import { DateMentionChip } from "@/components/date-mention-chip";
 import { MentionChip } from "@/components/mention-chip";
 import { mentionStatus, useMentionLinks, type MentionLinks } from "@/components/mention-links";
 import {
+  isPlanMention,
   mentionMarkdown,
   SCRATCHPAD_MENTION_ID,
   type MentionLinkType,
@@ -105,6 +106,7 @@ export function TypedMentionChip({
   onChangeDate?: (next: MentionDate) => void;
 }) {
   const t = useTranslations("Common");
+  const tPlan = useTranslations("Plan");
   const links = useMentionLinks();
   const scratchpad = useOptionalScratchpad();
   // An MCP pill shows its service's logo, and a page its emoji or the
@@ -141,6 +143,8 @@ export function TypedMentionChip({
     }
   }
   const href = label === undefined ? null : links?.href(type, id) ?? null;
+  // An issue's plan (`?part=plan`) is that issue's pill, named after it.
+  const shown = label && isPlanMention(type, meta) ? `${label} · ${tPlan("tabPlan")}` : label;
   // The notebook opens in place, over the page being read.
   const openNotebook = type === "scratchpad" && scratchpad ? () => scratchpad.open("mention") : undefined;
   return (
@@ -151,9 +155,9 @@ export function TypedMentionChip({
       <MentionChip
         type={type}
         id={id}
-        label={label ?? "…"}
+        label={shown ?? "…"}
         href={href}
-        onNavigate={href ? () => links?.navigate(type, id) : undefined}
+        onNavigate={href ? () => links?.navigate(type, id, meta) : undefined}
         onClick={openNotebook}
         status={status ?? undefined}
         // Once the reader is known to see the target, its hover card says

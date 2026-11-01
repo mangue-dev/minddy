@@ -5,6 +5,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import ObjectivesPage, { ObjectivesCollection } from "./objectives-page";
 import { AppTabRouteProvider } from "@/lib/app-tab-route-context";
 
+const warm = vi.hoisted(() => ({ detail: vi.fn(), snapshot: vi.fn() }));
+vi.mock("@tanstack/react-query", async (importOriginal) => ({ ...(await importOriginal<Record<string, unknown>>()), useQueryClient: () => ({}) }));
+vi.mock("@/lib/secondary-view-queries", () => ({ prefetchObjectiveDetail: warm.detail }));
+vi.mock("@/lib/description-collaboration", () => ({ prefetchDescriptionSnapshot: warm.snapshot }));
 const state = vi.hoisted(() => ({ projects: [{ id: "p", key: "P", name: "Project P" }, { id: "q", key: "Q", name: "Project Q" }],
   rows: { p: [{ id: "first", name: "First", status: "planned" }, { id: "done", name: "Done", status: "done" }],
     q: [{ id: "other", name: "Other project", status: "planned" }] } as Record<string, { id: string; name: string; status: string }[]>,
@@ -26,8 +30,9 @@ vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   toast: { info: vi.fn() },
 }));
-vi.mock("@/components/search-menu", () => ({ SearchMenu: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
-vi.mock("@/components/search-select", () => ({ checkedProps: () => ({}) }));
+vi.mock("@/components/filter-menu", () => ({ FilterMenu: ({ actions }: { actions: { id: string; label: string; onSelect?: () => void }[] }) => (
+  <div>{actions.map((action) => <button key={action.id} data-command={action.id} onClick={action.onSelect}>{action.label}</button>)}</div>
+) }));
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/components/objective-progress", () => ({ ObjectiveProgressStat: () => null }));
 vi.mock("@/components/issue-indicators", () => ({ ObjectiveStatusIndicator: () => null }));
@@ -104,4 +109,14 @@ it("keeps unavailable project handling instead of borrowing another project's ca
   await render({ project: "missing", search: "" });
   expect(host.querySelector("[data-objective]")).toBeNull();
   expect(host.textContent).toContain("projectNotFound");
+});
+
+it("warms an objective's detail reads on row intent and its session snapshot on pointer down", async () => {
+  await render({ search: "" });
+  const row = host.querySelector('[data-objective-id="first"]') as HTMLButtonElement;
+  await act(() => { row.dispatchEvent(new MouseEvent("pointerover", { bubbles: true })); row.dispatchEvent(new FocusEvent("focusin", { bubbles: true })); });
+  expect(warm.detail).toHaveBeenCalledWith(expect.anything(), "p", "first");
+  expect(warm.snapshot).not.toHaveBeenCalled();
+  await act(() => { row.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true })); });
+  expect(warm.snapshot).toHaveBeenCalledWith("objective", "first");
 });

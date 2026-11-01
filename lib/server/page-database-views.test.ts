@@ -17,7 +17,10 @@ vi.mock("server-only", () => ({}));
 vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => h.store }));
 vi.mock("./page-content", () => ({ shouldProtectPages: async () => h.protect }));
 vi.mock("./pages", () => ({ pageWriteRefusal: async () => h.refusal }));
-vi.mock("./project-access", () => ({ getProjectAccess: async () => h.member ? { canWrite: true } : null }));
+vi.mock("./project-access", () => ({
+  getProjectAccess: async () => h.member ? { canWrite: true } : null,
+  hasProjectAccess: async () => h.member ? { canWrite: true } : null,
+}));
 
 /** An in-memory `page_database_views` table behind the query-builder calls the module uses. */
 function table(name: string) {

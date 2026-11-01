@@ -1,3 +1,4 @@
+import { isUuid, projectSegmentCode, shortCode } from "./app-urls";
 import { expandProjectSegment, expandRef } from "./ref-registry";
 
 /** Persist only authenticated destinations and repeatable selection state. */
@@ -54,6 +55,32 @@ export function normalizeAppTabLocation(raw: unknown): string | null {
   // Document anchors are repeatable; other fragments are transient UI instructions.
   const hash = root === "projects" && section === "pages" ? url.hash : "";
   return path + (params.size ? `?${params}` : "") + hash;
+}
+
+/** Record parameters a destination may carry as a full id or as its short code. */
+const RECORD_PARAMS = ["issue", "objective", "open", "post", "routine", "pr", "family", "view", "entry"];
+
+/**
+ * The destination a location names, for comparing a tab's stored href with the
+ * address: every record reference is reduced to its short code, so a stored
+ * full id, its short code and a keyed project segment (`aur-9e3d0c35`) name the
+ * same destination. Navigation writes short codes into the address while a
+ * stored tab may still hold full ids (MIN-875).
+ */
+export function appTabDestinationKey(href: string | null | undefined): string | null {
+  const normalized = normalizeAppTabLocation(href);
+  if (!normalized) return null;
+  const url = new URL(normalized, "https://minddy.invalid");
+  const code = (value: string) => isUuid(value) ? shortCode(value) : value.toLowerCase();
+  const segments = url.pathname.split("/").map((segment, index, all) =>
+    all[1] === "projects" && index === 2 ? code(projectSegmentCode(segment))
+      : all[1] === "projects" && index === 4 ? code(segment) : segment);
+  for (const name of RECORD_PARAMS) {
+    const value = url.searchParams.get(name);
+    if (value) url.searchParams.set(name, code(value));
+  }
+  url.searchParams.sort();
+  return segments.join("/") + url.search + url.hash;
 }
 
 type RefExpander = (ref: string | null) => string | null;

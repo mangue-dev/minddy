@@ -1,7 +1,7 @@
 import { loadProjectObjectives } from "@/lib/server/project-working-set-readers";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
 import { MAX_OBJECTIVE_DESCRIPTION_LENGTH, createObjective } from "@/lib/server/objectives";
 import { takeRichDocumentInput } from "@/lib/server/rich-documents";
 import { seedDescriptionDocument } from "@/lib/server/description-collaboration";
@@ -11,10 +11,10 @@ type RouteContext = { params: Promise<{ id: string }> };
 /** GET /api/projects/[id]/objectives — the project's objectives. */
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
-  const auth = await getAuthedUser(request);
+  // The RLS read overlaps the live session check, which still gates the response.
+  const auth = await getAuthedUserWithRlsReads(request, ({ user, supabase }) => loadProjectObjectives({ supabase, user }, id));
   if (!auth.ok) return auth.response;
-  const t = await getTranslations("ApiErrors");
-  const result = await loadProjectObjectives(auth, id);
+  const [t, result] = await Promise.all([getTranslations("ApiErrors"), auth.reads ?? loadProjectObjectives(auth, id)]);
   if (!result.ok) return NextResponse.json({ error: t(result.errorKey) }, { status: result.status });
   return NextResponse.json(result.data);
 }

@@ -38,6 +38,12 @@ vi.mock("next-intl/server", () => ({
 }));
 vi.mock("@/lib/server/api-auth", () => ({
   getAuthedUser: async () => ({ ok: true, user: { id: USER }, supabase: {} }),
+  getAuthedUserAlongside: async (_request: unknown, alongside: (verified: { user: { id: string } }) => Promise<unknown>) => ({
+    ok: true,
+    user: { id: USER },
+    supabase: {},
+    alongside: await alongside({ user: { id: USER } }).then((value) => ({ value }), (error: unknown) => ({ error })),
+  }),
 }));
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: () => access(),

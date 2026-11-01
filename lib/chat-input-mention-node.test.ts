@@ -31,3 +31,8 @@ it("sends typed mentions as links without a name, and Numo as its text (MIN-872)
   );
   expect(composerText(root)).toBe("Ask [@](mention:member/u1) by [@](mention:date/2026-11-02?time=09:30), @Numo");
 });
+
+it("keeps an MCP server's provider on its composer pill, for its logo", () => {
+  const pill = createMentionNode({ type: "mcp", id: "conn-1", label: "Linear", mcpService: "linear" });
+  expect(mentionFromNode(pill)).toMatchObject({ type: "mcp", id: "conn-1", mcpService: "linear" });
+});

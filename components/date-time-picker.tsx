@@ -202,7 +202,9 @@ export function DateTimePicker({
   const [month, setMonth] = React.useState<Date>(() => selected ?? new Date());
   React.useEffect(() => {
     const next = parseDueDate(value);
-    if (next) setMonth(next);
+    // The same instant keeps its state: a fresh Date re-rendered every
+    // picker of a database on each mount and reveal (MIN-875).
+    if (next) setMonth((current) => current.getTime() === next.getTime() ? current : next);
   }, [value, open]);
 
   // Time is opt-in: a date is stored at midnight (date-only) until the user

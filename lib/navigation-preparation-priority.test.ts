@@ -1,5 +1,6 @@
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { markFirstContent } from "./first-content";
 import { createPrTabPreparation } from "./pr-tab-preparation";
 import { createPrActivityPreparation } from "./pr-activity-preparation";
 import { navigationPreparationHasRead, navigationPreparationOwnsRead, navigationPreparationPending, navigationPreparationPriority } from "./navigation-preparation-priority";
@@ -9,6 +10,8 @@ vi.mock("./app-tab-surfaces", () => ({ prepareAppTabSurface: vi.fn(async () => {
 vi.mock("./supabase", () => ({ getSupabase: () => ({ auth: {
   getSession: async () => ({ data: { session: { user: { id: "owner" } } }, error: null }),
 } }) }));
+// These cases describe a page that has shown its content (lib/first-content.ts).
+beforeEach(() => markFirstContent());
 afterEach(() => vi.unstubAllGlobals());
 
 it("tracks both exact reads of an owner and preserves a replacement against late completion", () => {

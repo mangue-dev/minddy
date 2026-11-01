@@ -47,6 +47,7 @@ import {
   MentionSuggestions,
   filterMentions,
   sectionedMentions,
+  useMentionSectionLabel,
   type MentionOption,
 } from "@/components/mention-suggest";
 import {
@@ -58,7 +59,6 @@ import {
 } from "@/components/assistant/slash-menu";
 import { SkillChip } from "@/components/assistant/skill-chip";
 import { SkillPreviewDialog } from "@/components/assistant/skill-preview-dialog";
-import { McpMenuGroup } from "@/components/assistant/mcp-menu-group";
 import {
   ResourcePills,
   DropOverlay,
@@ -112,6 +112,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useWeekStart } from "@/lib/use-week-start";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
     text-ish) — MIN-24 scope. */
@@ -122,7 +123,7 @@ const ATTACHMENT_SHORTCUT_KEY = "a";
 /** The envelope of a mention in the editor: a NON-editable, empty node, in
  which React carries the real pill (MentionChip). Composing it does not redraw
  so it is not a pill “like” the one in the context — it is the same. */
-const MENTION_SLOT_CLASS = "inline-block align-baseline";
+const MENTION_SLOT_CLASS = "inline-block max-w-full align-baseline";
 const SKILL_SLOT_CLASS = MENTION_SLOT_CLASS;
 
 /** The pill of a “/” command placed at the top of the message: same geometry as
@@ -175,6 +176,7 @@ export function mentionFromNode(node: HTMLElement): MentionOption | null {
     ...(node.dataset.mentionObjectiveStatus
       ? { objectiveStatus: node.dataset.mentionObjectiveStatus as MentionOption["objectiveStatus"] }
       : {}),
+    ...(node.dataset.mentionService ? { mcpService: node.dataset.mentionService } : {}),
   };
 }
 
@@ -254,6 +256,8 @@ export function createMentionNode(option: MentionOption): HTMLSpanElement {
   if (option.color) pill.dataset.mentionColor = option.color;
   if (option.status) pill.dataset.mentionStatus = option.status;
   if (option.objectiveStatus) pill.dataset.mentionObjectiveStatus = option.objectiveStatus;
+  // An MCP server's provider: its logo replaces the plug glyph on the pill.
+  if (option.mcpService) pill.dataset.mentionService = option.mcpService;
   const meta = mentionMetaToAttr(option.meta);
   if (meta) pill.dataset.mentionMeta = meta;
   pill.className = MENTION_SLOT_CLASS;
@@ -318,8 +322,6 @@ export interface ChatInputContextAttachments {
 }
 
 export interface ChatInputProps {
-  /** Close an enclosing panel when the composer opens account settings. */
-  onNavigate?: () => void;
   onSend: (
     message: string,
     attachments: ResourceInput[],
@@ -446,7 +448,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
   function ChatInput(
     {
       onSend,
-      onNavigate,
       onAbort,
       disabled,
       isStreaming,
@@ -481,7 +482,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const modKey = useModKey();
     const tAttach = useTranslations("Resources");
     const tPicker = useTranslations("Picker");
+    const mentionSectionLabel = useMentionSectionLabel();
     const locale = useLocale();
+    const weekStart = useWeekStart();
     const effectivePlaceholder = placeholder ?? t("inputPlaceholder");
     const editorRef = useRef<HTMLDivElement>(null);
     // A long message scrolls inside the field: its hidden lines fade at the
@@ -569,8 +572,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const canAttach = !hideAttach && (!isStreaming || !!sendWhileStreaming);
     const hasMentionMenu = mentionables !== undefined || !!onAddContext;
     const hasSkillMenu = skills !== undefined;
-    const hasMcpMenu = !!userId;
-    const canAdd = canAttach || !!onAddContext || hasSkillMenu || hasMcpMenu;
+    const canAdd = canAttach || !!onAddContext || hasSkillMenu;
     const drop = useFileDrop((files) => {
       if (userId) uploads.addFiles(files);
     });
@@ -744,10 +746,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             const found = filterMentions([...(mentionables ?? []), ...skillMentionables], mentionQuery);
             // Dates come from the query itself, as in every editor (MIN-872),
             // first when the query clearly is one.
-            const dates = dateMentionOptions(mentionQuery, locale);
+            const dates = dateMentionOptions(mentionQuery, locale, new Date(), undefined, weekStart);
             return datesFirst(mentionQuery, locale) ? [...dates, ...found] : [...found, ...dates];
           })(),
-      [mentionQuery, mentionables, skillMentionables, locale],
+      [mentionQuery, mentionables, skillMentionables, locale, weekStart],
     );
     // Issues found by meaning (MIN-718): appended last, and the highlight
     // resets on the query only, so a late answer never moves it.
@@ -1680,6 +1682,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                   ? OBJECTIVE_STATUS_MAP[option.objectiveStatus].issueStatus
                   : undefined)
               }
+              mcpService={option.mcpService ?? null}
               // While composing too, a mention shows its card (MIN-879).
               hoverCard={{ meta: option.meta }}
             />,
@@ -1860,7 +1863,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                       e.target.value = "";
                     }}
                   />
-                  {hasMentionMenu || hasSkillMenu || hasMcpMenu ? (
+                  {hasMentionMenu || hasSkillMenu ? (
                     <div ref={addMenuAnchorRef} className="shrink-0">
                       <SearchMenu
                         open={addMenuOpen}
@@ -1878,7 +1881,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         searchValue={addMenuQuery}
                         onSearchValueChange={setAddMenuQuery}
                         shouldFilter={false}
-                        hideEmpty={hasMcpMenu}
                         contentClassName="w-80"
                         trigger={
                           <Button
@@ -1927,8 +1929,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                         )}
                         {canAttach &&
                           (addContextOptions.length > 0 ||
-                            addMenuSkillOptions.length > 0 ||
-                            hasMcpMenu) && <CommandSeparator />}
+                            addMenuSkillOptions.length > 0) && <CommandSeparator />}
                         {addMenuSkillOptions.length > 0 && (
                           <CommandGroup heading={t("skills")}>
                             {addMenuSkillOptions.map((option) => (
@@ -1949,25 +1950,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                             ))}
                           </CommandGroup>
                         )}
-                        {hasMcpMenu && addMenuSkillOptions.length > 0 && (
-                          <CommandSeparator />
-                        )}
-                        {userId && (
-                          <McpMenuGroup
-                            userId={userId}
-                            query={addMenuQuery}
-                            onNavigate={() => {
-                              setAddMenuOpen(false);
-                              setAddMenuQuery("");
-                              onNavigate?.();
-                            }}
-                          />
-                        )}
-                        {addContextOptions.length > 0 &&
-                          (addMenuSkillOptions.length > 0 || hasMcpMenu) && <CommandSeparator />}
-                        {addContextOptions.length > 0 && (
-                          <CommandGroup>
-                            {addContextOptions.filter((option) => !option.semantic).map((option) => (
+                        {addContextOptions.length > 0 && addMenuSkillOptions.length > 0 && <CommandSeparator />}
+                        {/* The context, in the sections of the "@" menu: people,
+                            issues, pages, MCP servers… each under its header. */}
+                        {sectionedMentions(addContextOptions.filter((option) => !option.semantic)).sections.map((section) => (
+                          <CommandGroup
+                            key={section.id ?? "other"}
+                            heading={section.id ? mentionSectionLabel(section.id) ?? undefined : undefined}
+                          >
+                            {section.items.map((option) => (
                               <CommandItem
                                 key={`${option.type}:${option.id}`}
                                 value={`${option.label} ${option.detail ?? ""} ${(option.keywords ?? []).join(" ")}`}
@@ -1986,7 +1977,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
                               </CommandItem>
                             ))}
                           </CommandGroup>
-                        )}
+                        ))}
                         {addContextOptions.some((option) => option.semantic) && (
                           <CommandGroup heading={tPicker("relatedByMeaning")}>
                             {addContextOptions.filter((option) => option.semantic).map((option) => (

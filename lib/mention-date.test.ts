@@ -92,6 +92,14 @@ it("reads every example the manual gives", () => {
   for (const [query, expected] of Object.entries(examples)) expect(dates(query)[0], query).toEqual(expected);
 });
 
+it("places a weekday in N weeks inside the account's week (MIN-881)", () => {
+  // Two weeks after Friday October 30 is Friday November 13: its week runs
+  // Monday 9 → Sunday 15, or Sunday 8 → Saturday 14 when weeks start on Sunday.
+  expect(parseDateQuery("sunday in 2 weeks", NOW, "en", 1).map((value) => value.date)).toContain("2026-11-15");
+  expect(parseDateQuery("sunday in 2 weeks", NOW, "en", 0).map((value) => value.date)).toContain("2026-11-08");
+  expect(parseDateQuery("thursday in 2 weeks", NOW, "en", 0)[0]).toEqual({ date: "2026-11-12" });
+});
+
 it("reads the phrasings people actually type, with or without accents", () => {
   const examples: Record<string, { date: string; time?: string; end?: string }> = {
     "demain à 9 heures": { date: "2026-10-31", time: "09:00" },

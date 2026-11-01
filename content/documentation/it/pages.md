@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -108,14 +108,16 @@
       "components/pages/block-drag.ts",
       "components/mention-hover-card.tsx",
       "lib/server/mention-preview.ts",
-      "components/pages/page-backlinks.tsx"
+      "components/pages/page-backlinks.tsx",
+      "lib/use-context-mentions.ts",
+      "components/markdown-link-menu.tsx"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (it sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 25,
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:claude (it sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (it context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "notifications-and-inbox",
@@ -152,7 +154,7 @@
       "src": "/documentation/it/page-create-menu.png",
       "alt": "Menu di creazione con Nuova pagina e Nuovo database.",
       "caption": "Usa i controlli delle pagine del progetto per scegliere un documento o un database.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -168,7 +170,7 @@
       "src": "/documentation/it/page-editor.png",
       "alt": "Pagina dimostrativa con titoli, paragrafi, caselle delle attività e una menzione a un ticket.",
       "caption": "Titoli, blocchi di attività e la menzione AUR-2 organizzano la pagina. Il contenuto è un esempio dimostrativo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -185,7 +187,7 @@
       "src": "/documentation/it/page-comments.png",
       "alt": "Attività della pagina ancora senza eventi e campo del commento vuoto.",
       "caption": "Leggi l’attività e scrivi un commento nel campo. In questo esempio non è stato inviato alcun commento.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -202,7 +204,7 @@
       "src": "/documentation/it/page-file-states.png",
       "alt": "Pagina dimostrativa con un caricamento incompleto e un file salvato di 67 byte con il comando Scarica.",
       "caption": "Controlla lo stato effettivo del file: il secondo allegato è disponibile, il primo caricamento incompleto no.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -218,7 +220,7 @@
       "src": "/documentation/it/page-history-preview.png",
       "alt": "Scheda Versioni con uno stato precedente espanso, autore, Ripristina e avviso di conservazione per 30 giorni.",
       "caption": "Esamina l’anteprima di uno stato salvato e confrontalo con la pagina attuale prima di ripristinarlo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -234,7 +236,7 @@
       "src": "/documentation/it/page-publish.png",
       "alt": "Finestra di pubblicazione con Privato selezionato e opzioni con password o link.",
       "caption": "Privato mantiene la pagina nel progetto. Controlla chi deve leggerla prima di cambiare la pubblicazione.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -251,7 +253,7 @@
       "src": "/documentation/it/page-export.png",
       "alt": "Menu di esportazione del documento con Markdown (.md) e Stampa / PDF.",
       "caption": "Scegli Markdown per scaricare il documento oppure Stampa / PDF per aprire la vista di stampa.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -268,7 +270,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -331,7 +333,7 @@ Il menu `/` raggruppa i blocchi in **Blocchi di base**, **Elenchi** e **Blocchi 
 
 Usa le menzioni per collegare ticket, obiettivi, persone o pagine pertinenti. Digita `@` seguito da un identificativo, un nome o un titolo, anche con spazi singoli; il menu si chiude negli stessi modi del menu `/`, e alla scelta di un elemento. Una parola che descrive il lavoro invece di nominarlo mostra anche ticket trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**, dopo le corrispondenze testuali. I rimandi inversi aiutano i lettori a trovare pagine che citano quella attuale. Un collegamento fornisce contesto, non accesso a un oggetto privato di un altro progetto. La menzione di una pagina che non ha ancora un titolo mostra **Senza titolo**.
 
-Appena digiti `@`, il menu mostra anche il taccuino delle attività e il tuo ciclo corrente e quelli in arrivo sotto **Pianificazione** (i cicli solo se sono attivati), le tue routine, le skill del repository del progetto, i tuoi server MCP collegati e le pull request, prima quelle aperte. Una menzione salva solo ciò a cui punta, mai un nome: ogni lettore vede il nome attuale della destinazione, e una destinazione che non può aprire appare come **Non disponibile**. Digita una data dopo `@`, come `@oggi`, `@domani`, `@lunedì prossimo`, `@tra 3 settimane`, `@15 novembre` o `@domani 9:00`, e sceglila sotto **Date**. La data è fissata quando la scrivi: mostra **Oggi**, **Domani** o **Ieri** finché è così vicina, poi la data completa. Fai clic su una data in un editor per cambiarla o aggiungere un orario. Una menzione di data non invia alcun promemoria. Accenti e parole complete sono facoltativi: `@giovedi tra 2 settimane`, `@dopodomani` o `@15 nov` funzionano anche, come gli orari detti a parole, ad esempio `@domani alle 8 e mezza` o `@venerdì alle 9 meno un quarto`. È tollerato un errore di battitura per parola, due in una parola lunga: `@domnai alle 8 e mezza` viene letto lo stesso. Digita `@data` per aprire il selettore di data sulla data e l'ora attuali. Quando una menzione mostra una data completa, passarci sopra indica quanto è lontana da adesso, come «tra 3 settimane». Il compositore di Numo e l'istruzione delle routine offrono le stesse menzioni, date comprese. Lascia il puntatore su qualsiasi altra menzione per vedere di più senza lasciare ciò che stai leggendo: un ticket mostra la sua scheda completa, un obiettivo il suo stato, i progressi, i ticket e le relazioni, una pagina, una routine, una skill o il taccuino delle attività le prime righe, un database le prime voci, una persona la sua email e il suo ruolo nel progetto, una pull request il suo stato e i branch, un server MCP connesso se l'accesso è effettuato e quanti strumenti offre, un ciclo i suoi progressi, e un progetto i suoi membri e i loro ruoli. Un clic sulla scheda apre ciò che apre la menzione. Una menzione che non puoi aprire non mostra altro. I rimandi inversi, le pagine allegate a un ticket o a un obiettivo, le relazioni, l'obiettivo di un ticket e le persone dell'attività e delle statistiche mostrano la stessa scheda; un agente MCP nell'attività mostra di chi è la chiave che ha usato.
+Appena digiti `@`, il menu mostra anche il taccuino delle attività e il tuo ciclo corrente e quelli in arrivo sotto **Pianificazione** (i cicli solo se sono attivati), le tue routine, le skill del repository del progetto, i tuoi server MCP collegati e le pull request, prima quelle aperte. Ciò a cui è legato il testo che stai scrivendo compare per primo, ognuno nella propria sezione: in una pagina, le sue sottopagine sotto **Sottopagine**; in un ticket o in un obiettivo, il suo elemento padre, i suoi sottoticket e gli elementi che lo bloccano, che blocca o correlati sotto **Relazioni**, e la sua data di scadenza, o la data obiettivo dell’obiettivo, sotto **Questo ticket** o **Questo obiettivo**. Nella descrizione di un ticket, e solo lì, **Questo ticket** offre anche il **Piano** del ticket: la sua pillola mostra l’identificativo seguito da **Piano**, come `MIN-42 · Piano`, e un clic su di essa porta il pannello del ticket alla scheda **Piano**. I server MCP mostrano il logo del loro fornitore, e una menzione il cui nome è più lungo della riga viene accorciata con i puntini di sospensione. Una menzione salva solo ciò a cui punta, mai un nome: ogni lettore vede il nome attuale della destinazione, e una destinazione che non può aprire appare come **Non disponibile**. Digita una data dopo `@`, come `@oggi`, `@domani`, `@lunedì prossimo`, `@tra 3 settimane`, `@15 novembre` o `@domani 9:00`, e sceglila sotto **Date**. La data è fissata quando la scrivi: mostra **Oggi**, **Domani** o **Ieri** finché è così vicina, poi la data completa. Fai clic su una data in un editor per cambiarla o aggiungere un orario. Una menzione di data non invia alcun promemoria. Accenti e parole complete sono facoltativi: `@giovedi tra 2 settimane`, `@dopodomani` o `@15 nov` funzionano anche, come gli orari detti a parole, ad esempio `@domani alle 8 e mezza` o `@venerdì alle 9 meno un quarto`. È tollerato un errore di battitura per parola, due in una parola lunga: `@domnai alle 8 e mezza` viene letto lo stesso. Digita `@data` per aprire il selettore di data sulla data e l'ora attuali. Quando una menzione mostra una data completa, passarci sopra indica quanto è lontana da adesso, come «tra 3 settimane». Il compositore di Numo e l'istruzione delle routine offrono le stesse menzioni, date comprese. Lascia il puntatore su qualsiasi altra menzione per vedere di più senza lasciare ciò che stai leggendo: un ticket mostra la sua scheda completa, un obiettivo il suo stato, i progressi, i ticket e le relazioni, una pagina, una routine, una skill o il taccuino delle attività le prime righe, un database le prime voci, una persona la sua email e il suo ruolo nel progetto, una pull request il suo stato e i branch, un server MCP connesso se l'accesso è effettuato e quanti strumenti offre, un ciclo i suoi progressi, e un progetto i suoi membri e i loro ruoli. Un clic sulla scheda apre ciò che apre la menzione. Una menzione che non puoi aprire non mostra altro. I rimandi inversi, le pagine allegate a un ticket o a un obiettivo, le relazioni, l'obiettivo di un ticket e le persone dell'attività e delle statistiche mostrano la stessa scheda; un agente MCP nell'attività mostra di chi è la chiave che ha usato.
 
 Un clic sulla menzione di una pagina, su un rimando inverso, su una pagina allegata a un ticket o a un obiettivo, o su un collegamento a una pagina in un commento o in una risposta di Numo apre quella pagina in un pannello laterale sopra ciò che stavi leggendo. Leggila o modificala lì, scegli **Espandi** per aprire la pagina intera oppure chiudi il pannello per tornare indietro. Tra **Espandi** e la chiusura, il menu **Opzioni di pagina** (`…`) del pannello offre le stesse azioni della pagina intera; spostare la pagina nel cestino da lì chiude il pannello e ti lascia sulla pagina sottostante. Anche un database si apre nel pannello, con la barra degli strumenti compatta descritta nella [guida ai database](/docs/databases#database-display); una voce aperta dalla sua tabella ne prende il posto, e **Indietro**, in alto a sinistra nel pannello, torna alla tabella.
 
@@ -340,7 +342,7 @@ Un clic sulla menzione di una pagina, su un rimando inverso, su una pagina alleg
 
 ### Formattare il testo e scrivere sul telefono {#editor-formatting}
 
-Le pagine, le descrizioni, i commenti e il taccuino delle attività condividono lo stesso editor. Seleziona del testo, o blocchi interi come descritto più avanti, per aprire la barra di selezione. La sua prima riga mostra il tipo del blocco: sceglila per aprire **Trasforma in** e cambiare il blocco. Seguono **Colore**, per il testo o lo sfondo, **Grassetto**, **Corsivo**, **Sottolineato**, **Barrato**, **Codice**, **Aggiungi link** (o **Rimuovi link** su un link), **Equazione in linea**, che trasforma il testo selezionato in un’equazione in linea o viceversa, **Cancella formattazione** e **Copia**, che copia la selezione. Sul computer, una riga **Chiedi a Numo** invia il passaggio a Numo, come descritto nella [guida a Numo](/it/documentazione/numo#work-with-numo), e in una pagina una riga **Commento** ancora un commento alla selezione. **Trasforma in** segna solo il tipo del blocco che contiene la selezione. Negli elenchi dei colori, qui e nel menu del blocco, ogni colore compare con il suo nome, scritto in quel colore o su quello sfondo. Un clic fuori dall’editor termina la selezione e nasconde la barra, così come scegliere **Commento**. I suggerimenti mostrano le scorciatoie: Comando+B, Comando+I, Comando+U, Comando+Maiusc+S e Comando+E su macOS, oppure Ctrl con gli stessi tasti su Windows/Linux. In un editor, Comando/Ctrl+B mette il testo in grassetto; altrove continua a mostrare o nascondere la barra laterale. In un blocco di codice, la barra mostra solo il tipo di blocco, **Colore**, **Copia**, **Chiedi a Numo** e **Commento**: un colore del testo sostituisce l’evidenziazione della sintassi del codice, un colore di sfondo la mantiene e il colore predefinito la ripristina. I colori del testo e dello sfondo non vengono conservati in Markdown. La barra segue il passaggio selezionato mentre la pagina scorre e si chiude quando il passaggio esce dalla vista.
+Le pagine, le descrizioni, i commenti e il taccuino delle attività condividono lo stesso editor. Seleziona del testo, o blocchi interi come descritto più avanti, per aprire la barra di selezione. La sua prima riga mostra il tipo del blocco: sceglila per aprire **Trasforma in** e cambiare il blocco. Seguono **Colore**, per il testo o lo sfondo, **Grassetto**, **Corsivo**, **Sottolineato**, **Barrato**, **Codice**, **Aggiungi link** (o **Rimuovi link** su un link), **Equazione in linea**, che trasforma il testo selezionato in un’equazione in linea o viceversa, **Cancella formattazione** e **Copia**, che copia la selezione. Sul computer, una riga **Chiedi a Numo** invia il passaggio a Numo, come descritto nella [guida a Numo](/it/documentazione/numo#work-with-numo), e in una pagina una riga **Commento** ancora un commento alla selezione. **Trasforma in** segna solo il tipo del blocco che contiene la selezione. Negli elenchi dei colori, qui e nel menu del blocco, ogni colore compare con il suo nome, scritto in quel colore o su quello sfondo. Un clic fuori dall’editor termina la selezione e nasconde la barra, così come scegliere **Commento**. I suggerimenti mostrano le scorciatoie: Comando+B, Comando+I, Comando+U, Comando+Maiusc+S e Comando+E su macOS, oppure Ctrl con gli stessi tasti su Windows/Linux. In un editor, Comando/Ctrl+B mette il testo in grassetto; altrove continua a mostrare o nascondere la barra laterale. In un blocco di codice, la barra mostra solo il tipo di blocco, **Colore**, **Copia**, **Chiedi a Numo** e **Commento**: un colore del testo sostituisce l’evidenziazione della sintassi del codice, un colore di sfondo la mantiene e il colore predefinito la ripristina. I colori del testo e dello sfondo non vengono conservati in Markdown. La barra segue il passaggio selezionato mentre la pagina scorre e si chiude quando il passaggio esce dalla vista. Un clic su un link in un editor apre un menu con **Modifica link**, **Apri collegamento**, **Copia link** e, per ultimo, **Rimuovi link**, che rimuove il link ma ne conserva il testo; annullare ripristina il link.
 
 Maiusc+Invio va a capo nello stesso blocco. Comando/Ctrl+Invio non inserisce un’interruzione di riga: in un commento o in un altro compositore invia, qualunque sia la scorciatoia di invio scelta nelle tue [preferenze](/it/documentazione/accounts#preferences), e se hai scelto Invio come scorciatoia di invio, anche Invio invia.
 

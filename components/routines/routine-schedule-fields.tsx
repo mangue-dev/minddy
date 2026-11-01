@@ -15,6 +15,8 @@ import {
   type RoutineFrequency,
   type RoutineSchedule,
 } from "@/lib/routine-schedule";
+import { useWeekStart } from "@/lib/use-week-start";
+import { orderedWeekdays } from "@/lib/week-start";
 
 /**
  * The fields of a CADENCE (MIN-185): days, time, time zone.
@@ -56,6 +58,7 @@ export function RoutineScheduleFields({
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
+  const weekStart = useWeekStart();
 
   const patch = (fields: Partial<RoutineSchedule>) => onChange({ ...value, ...fields });
 
@@ -75,15 +78,15 @@ export function RoutineScheduleFields({
         frequency === "monthly" ? (value.daysOfMonth?.length ? value.daysOfMonth : [1]) : [],
     });
 
-  // Monday at the top, Sunday at the end: the order of the week, not that of `Intl`.
+  // The account's week order (MIN-881), not that of `Intl`.
   // Capital first: this is a field label, not a word in a sentence.
   const weekdayOptions = useMemo(
     () =>
-      [1, 2, 3, 4, 5, 6, 0].map((d) => ({
+      orderedWeekdays(weekStart).map((d) => ({
         value: String(d),
         label: weekdayLabel(d, locale),
       })),
-    [locale],
+    [locale, weekStart],
   );
 
   const dayOptions = useMemo(
@@ -95,7 +98,7 @@ export function RoutineScheduleFields({
     [],
   );
 
-  const selectedWeekdays = sortedWeekdays(value.weekdays);
+  const selectedWeekdays = sortedWeekdays(value.weekdays, weekStart);
   const selectedDays = [...(value.daysOfMonth ?? [])].sort((a, b) => a - b);
 
   const weekdaysLabel = selectedWeekdays.length

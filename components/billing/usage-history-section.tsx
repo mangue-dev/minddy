@@ -5,7 +5,6 @@ import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
-  LoaderCircleIcon,
   WorkHistoryIcon,
 } from "@hugeicons/core-free-icons";
 import { useState } from "react";
@@ -32,6 +31,8 @@ import { SEGMENT_UI } from "@/components/billing/usage-segment-ui";
 import { UsageLoadError } from "@/components/billing/usage-budget";
 import { AppIcon } from "@/components/icon";
 import { EmptyState } from "@/components/empty-state";
+import { LoadingRegion } from "@/components/loading-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 /** API side page size (get_user_usage_history / usage-history route). */
 const PAGE_SIZE = 25;
@@ -145,12 +146,18 @@ export function UsageHistorySection() {
           {query.isError && !query.data ? (
             <UsageLoadError onRetry={() => void query.refetch()} />
           ) : loading ? (
-            <div className="flex items-center justify-center gap-2 border-t border-border px-4 py-8 text-sm text-muted-foreground">
-              <HugeiconsIcon
-                icon={LoaderCircleIcon}
-                className="size-4 animate-spin"
-              />
-            </div>
+            // The rows of the history while the first page loads (MIN-868).
+            <LoadingRegion className="divide-y divide-border border-t border-border">
+              {["w-40", "w-32", "w-48"].map((width) => (
+                <div key={width} className="flex items-center gap-3 px-4 py-3">
+                  <Skeleton className="size-4 shrink-0 rounded-sm" />
+                  <Skeleton className={cn("h-3.5", width)} />
+                  <span className="flex-1" />
+                  <Skeleton className="hidden h-3 w-20 sm:block" />
+                  <Skeleton className="h-3.5 w-10" />
+                </div>
+              ))}
+            </LoadingRegion>
           ) : total === 0 ? (
             <div className="border-t border-border p-4">
               <EmptyState

@@ -160,7 +160,7 @@ function MentionNodeView({ node, editor, updateAttributes }: NodeViewProps) {
   // the reader's own (legacy).
   if (!node.attrs.legacy && isMentionLinkType(type) && node.attrs.mentionId) {
     return (
-      <NodeViewWrapper as="span" className="inline-block align-baseline">
+      <NodeViewWrapper as="span" className="inline-block max-w-full align-baseline">
         <TypedMentionChip
           type={type}
           id={id}
@@ -178,7 +178,7 @@ function MentionNodeView({ node, editor, updateAttributes }: NodeViewProps) {
   return (
     // `align-baseline`, like the pill she carries: a centered envelope
     // on the height of x would restore the offset that the pill has just corrected.
-    <NodeViewWrapper as="span" className="inline-block align-baseline">
+    <NodeViewWrapper as="span" className="inline-block max-w-full align-baseline">
       <MentionChip
         type={type}
         id={id}

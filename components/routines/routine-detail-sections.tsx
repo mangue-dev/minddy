@@ -23,6 +23,7 @@ import { parseRoutineTrigger, type RoutineTrigger } from "@/lib/routine-triggers
 import { describeSchedule, weekdayName, type RoutineSchedule } from "@/lib/routine-schedule";
 import type { Routine } from "@/lib/routines-api";
 import { cn } from "@/lib/utils";
+import { useWeekStart } from "@/lib/use-week-start";
 
 /** The routine fields a section writes, as `updateRoutineApi` takes them. */
 export type RoutinePatch = Parameters<typeof import("@/lib/routines-api").updateRoutineApi>[1];
@@ -144,6 +145,7 @@ export function RoutineSettings({
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
+  const weekStart = useWeekStart();
   const [open, setOpen] = useState(false);
   const [trigger, setTrigger] = useState<RoutineTrigger>(routine.trigger ?? { type: "schedule" });
   const [draftSchedule, setDraftSchedule] = useState<RoutineSchedule>(schedule);
@@ -179,6 +181,7 @@ export function RoutineSettings({
       return describeSchedule(value, (key, values) => t(key, values), {
         locale,
         weekdayLabel: (day) => weekdayName(day, locale),
+        weekStart,
       });
     } catch {
       return null;

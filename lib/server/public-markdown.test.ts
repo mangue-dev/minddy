@@ -57,7 +57,8 @@ describe("public site Markdown content", () => {
     expect(privacy).toContain("- Account data:");
     const tokens = new MarkdownIt().parse(cookies, {});
     expect(tokens.filter(token => token.type === "table_open")).toHaveLength(3);
-    expect(tokens.filter(token => token.type === "td_open")).toHaveLength(27);
+    expect(tokens.filter(token => token.type === "td_open")).toHaveLength(30);
+    expect(cookies).toContain("minddy-tz");
   });
 
   it("gives the installer its own choices and released procedures", async () => {

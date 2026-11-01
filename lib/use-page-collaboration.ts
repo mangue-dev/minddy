@@ -10,7 +10,7 @@
 // subscriptions, timers and caret presence. A session left behind by an
 // unmounted surface holds no timer once its pending steps are confirmed.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Node as PMNode } from "@tiptap/pm/model";
 import { EditorState, type Transaction } from "@tiptap/pm/state";
 import type { JSONContent } from "@tiptap/core";
@@ -20,6 +20,7 @@ import {
   fetchPageCollaborationApi,
   fetchPageCollaborationStepsApi,
   submitPageCollaborationApi,
+  takeLandedPageCollaboration,
 } from "./pages-api";
 import {
   MAX_PAGE_TITLE_LENGTH,
@@ -289,7 +290,9 @@ export function usePageCollaboration({
   membersRef.current = members;
 
   /* ── Creating the session from a snapshot ──────────────────────────────── */
-  useEffect(() => {
+  // A layout effect: when browsing intent already brought the snapshot, the
+  // session exists before the first paint, so the page shows no skeleton frame.
+  useLayoutEffect(() => {
     if (sessionRef.current?.key === key) {
       setStatus("ready");
       return;
@@ -303,9 +306,8 @@ export function usePageCollaboration({
       }
     }
     sessionRef.current = null;
-    setStatus("loading");
     const controller = new AbortController();
-    void fetchPageCollaborationApi(projectId, pageId, controller.signal).then((snapshot) => {
+    const start = (snapshot: PageCollaborationSnapshot) => {
       if (controller.signal.aborted) return;
       if (snapshot.pageId !== pageId || snapshot.projectId !== projectId) {
         setStatus("unavailable");
@@ -400,9 +402,17 @@ export function usePageCollaboration({
       };
       setTitleValue(title.value);
       setStatus("ready");
-    }).catch(() => {
-      if (!controller.signal.aborted) setStatus("unavailable");
-    });
+    };
+    const landed = takeLandedPageCollaboration(projectId, pageId);
+    if (landed) {
+      // Same outcome as the fetched path when the session cannot be built.
+      try { start(landed); } catch { setStatus("unavailable"); }
+    } else {
+      setStatus("loading");
+      void fetchPageCollaborationApi(projectId, pageId, controller.signal).then(start).catch(() => {
+        if (!controller.signal.aborted) setStatus("unavailable");
+      });
+    }
     return () => controller.abort();
   }, [key, projectId, pageId]);
 

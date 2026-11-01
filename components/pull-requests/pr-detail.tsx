@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 import {
   Tabs,
   TabsContent,
@@ -519,10 +520,7 @@ export function ThreadComment({
                   <Button variant="ghost" size="sm" onClick={() => void history.refetch()}>{t("readRetry")}</Button>
                 </div>
               ) : !edits ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Spinner className="size-3.5 shrink-0" />
-                  {t("previousVersionsLoading")}
-                </div>
+                <RowsSkeleton rows={2} label={t("previousVersionsLoading")} className="gap-4" />
               ) : edits.length > 0 ? (
                 edits.map((edit, index) => {
                   const editedWhen = normalizeForgeInstant(edit.created_at, now);

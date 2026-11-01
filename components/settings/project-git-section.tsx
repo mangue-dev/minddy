@@ -11,6 +11,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { LoadingRegion } from "@/components/loading-skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Github, Gitlab } from "@/components/git/provider-icons";
@@ -265,9 +267,9 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">{t("gitPickRepoDesc")}</p>
         {candidatesLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Spinner /> {t("gitLoadingRepos")}
-          </div>
+          <LoadingRegion label={t("gitLoadingRepos")}>
+            <Skeleton className="h-9 w-44" />
+          </LoadingRegion>
         ) : options.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("gitNoRepos")}</p>
         ) : (

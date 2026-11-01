@@ -3,13 +3,15 @@ import { act, createElement, StrictMode } from "react";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { expect, it, vi } from "vitest";
+
+const stripRenders = vi.hoisted(() => ({ count: 0 }));
 import { AppTopBar } from "@/components/app-top-bar";
 
 vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
 vi.mock("@/lib/use-window-buttons", () => ({ useWideLayout: () => true, useWindowButtonsSlot: () => ({ reserved: false }) }));
 vi.mock("@/components/sidebar-visibility-button", () => ({ SidebarVisibilityButton: () => null }));
 vi.mock("@/components/app-top-actions", () => ({ AppTopActions: () => null }));
-vi.mock("@/components/app-tab-strip", () => ({ AppTabStrip: () => null }));
+vi.mock("@/components/app-tab-strip", () => ({ AppTabStrip: () => { stripRenders.count += 1; return null; } }));
 vi.mock("@/components/app-update-action", () => ({ AppUpdateAction: () => null }));
 vi.mock("@/components/desktop-window-buttons", () => ({ WINDOW_BUTTONS_WIDTH: 80 }));
 
@@ -73,6 +75,26 @@ it("reserves the server-rendered bar through hydration and delayed tab readiness
     expect(errors).toEqual([]);
   } finally {
     await act(async () => root?.unmount());
+    container.remove();
+    document.documentElement.removeAttribute("data-app-top-bar");
+  }
+});
+
+it("keeps the tab strip out of shell re-renders that pass the same props (MIN-875)", async () => {
+  const container = document.createElement("div");
+  document.body.append(container);
+  const root = createRoot(container);
+  const props = { ready: true, hidden: false, inbox: {} as never, onSearch() {}, onSearchWarm() {}, onNewTab() {} };
+  try {
+    await act(async () => root.render(createElement(AppTopBar, { ...props })));
+    const afterMount = stripRenders.count;
+    // The shell renders again for an unrelated query: same values, new props object.
+    await act(async () => root.render(createElement(AppTopBar, { ...props })));
+    expect(stripRenders.count).toBe(afterMount);
+    await act(async () => root.render(createElement(AppTopBar, { ...props, hidden: true })));
+    expect(stripRenders.count).toBe(afterMount + 1);
+  } finally {
+    await act(async () => root.unmount());
     container.remove();
     document.documentElement.removeAttribute("data-app-top-bar");
   }

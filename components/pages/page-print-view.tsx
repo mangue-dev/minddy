@@ -5,7 +5,7 @@ import { File02Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Spinner } from "@/components/ui/spinner";
+import { TextLinesSkeleton } from "@/components/loading-skeletons";
 import type { JSONContent } from "@tiptap/core";
 
 import { pageDatabaseDocument } from "@/lib/page-database-document";
@@ -100,9 +100,7 @@ export function PagePrintView({
 
   if (!ready) {
     return (
-      <div className="flex h-dvh items-center justify-center">
-        <Spinner />
-      </div>
+      <TextLinesSkeleton title lines={6} className="mx-auto w-full max-w-3xl px-8 py-10" />
     );
   }
 

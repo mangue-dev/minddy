@@ -27,9 +27,11 @@ import { AppIcon } from "@/components/icon";
 import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, CircleIcon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
+import { DEFAULT_FEEDBACK_SORT, DEFAULT_FEEDBACK_STATE, type FeedbackSelectionHint } from "@/lib/feedback-selection-hint";
 import { useAppTabChange } from "@/lib/use-app-tab-change";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
@@ -47,8 +49,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { SplitButton } from "@/components/ui/split-button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -77,11 +77,7 @@ import { ObjectivePill, ObjectiveName } from "@/components/objective-label";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
-import { AgentBeamOverlay } from "@/components/agent-beam";
-import { DictateButton } from "@/components/ai-elements/dictate-button";
-import { NumoIcon } from "@/components/numo-icon";
 import { useFeedbackDictation } from "@/lib/use-feedback-dictation";
-import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { UserAvatar } from "@/components/user-avatar";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
@@ -113,12 +109,21 @@ import type {
 } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
+import { FeedbackComposerDialog } from "@/components/feedback/feedback-composer-dialog";
+import { FeedbackRichBody } from "@/components/feedback/feedback-rich-body";
+import { FeedbackDetailSkeleton, FeedbackListSkeleton } from "@/components/feedback/feedback-skeletons";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the feedback route —
 // see components/editor/document-editor-lazy.tsx.
 import {
   LazyDocumentEditor,
-  useIdleDocumentEditorPreload,
+  useDocumentEditorForFirstContent,
 } from "@/components/editor/document-editor-lazy";
+// This page shows an editor on first paint (MIN-875): the description
+// stream module ships with the route, as before, instead of downloading
+// after hydration where it competes with the page's reads on a slow link.
+// Routes that open no editor at load (/all, the board) load it on demand
+// (lib/use-description-collaboration.ts).
+import "@/lib/description-collaboration-stream";
 import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { Dot } from "@/components/ui/color-dot";
 import {
@@ -644,6 +649,9 @@ function FeedbackRow({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export function FeedbackTeamPage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
+  // The opened post and its reply field are first content: load the editor
+  // now (components/editor/document-editor-lazy.tsx).
+  useDocumentEditorForFirstContent();
   return <AppTabRouteBoundary><FeedbackTeamPageInner browse={browse} /></AppTabRouteBoundary>;
 }
 
@@ -651,9 +659,6 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const t = useTranslations("FeedbackBoard");
   const tCommon = useTranslations("Common");
   const timeAgo = useTimeAgo();
-  // Mounts with the page: warm the deferred editor chunk once painted, so a
-  // team reply never waits on tiptap (components/editor/document-editor-lazy.tsx).
-  useIdleDocumentEditorPreload();
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   const postParam = expandParam(searchParams.get("post"));
@@ -669,12 +674,16 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const [setupOpen, setSetupOpen] = useState(false);
 
   const [properties, setProperties] = useCollectionFilters(pathname, searchParams, !!browse);
-  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(projectPath(projectId, "feedback"), "state", searchParams.has("objective") ? "all" : "unresolved");
+  const [state, setState] = useMobileCollectionState<FeedbackStateFilter>(projectPath(projectId, "feedback"), "state", searchParams.has("objective") ? "all" : DEFAULT_FEEDBACK_STATE);
   const [onlyToReview, setOnlyToReview] = useMobileCollectionState(projectPath(projectId, "feedback"), "onlyToReview", false);
   const normalListFilters = { ...properties, statuses: state === "all" ? undefined : state === "unresolved" ? [...FEEDBACK_OPEN_STATUSES] : [state] };
   const listFilters = feedbackFiltersForRequestedPost(queryClient, projectId, postParam, normalListFilters, onlyToReview);
+  // The post this list will open, read with it (set below, once the view's
+  // sort is known; the read leaves after layout effects).
+  const preparedHint = useRef<FeedbackSelectionHint | null>(null);
+  const preparation = useMemo(() => ({ client: queryClient, hint: () => preparedHint.current }), [queryClient]);
   const { data: listData, isPending } = useQuery({
-    ...feedbackQueryOptions(projectId, listFilters),
+    ...feedbackQueryOptions(projectId, listFilters, preparation),
     // Consuming `?post=` narrows the full list to the normal scope. Keep the
     // full list of this project on screen, filtered as it already was, while
     // that scope loads; a narrower list never stands in for a wider one, and
@@ -712,7 +721,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // archives which buried them.
   const objectiveParam = searchParams.getAll("objective").join(",");
   useEffect(() => { if (objectiveParam) setState("all"); }, [objectiveParam, setState]);
-  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(projectPath(projectId, "feedback"), "sort", "top");
+  const [sort, setSort] = useMobileCollectionState<FeedbackSort>(projectPath(projectId, "feedback"), "sort", DEFAULT_FEEDBACK_SORT);
   const toReviewCount = useMemo(() => posts.filter(needsHumanReview).length, [posts]);
   useEffect(() => {
     if (toReviewCount === 0 && onlyToReview) setOnlyToReview(false);
@@ -721,6 +730,12 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // A search looks through every post, whatever the state, review and
   // property filters: they narrow the resting list, the query finds anything.
   const searching = query.trim() !== "";
+  useLayoutEffect(() => {
+    // Property filters and search select among rows the server does not order:
+    // the page reads the post itself then.
+    preparedHint.current = searching || Object.keys(properties).length ? null
+      : { state, sort, onlyToReview, ...(postParam ? { post: postParam } : {}) };
+  }, [searching, properties, state, sort, onlyToReview, postParam]);
   const visiblePosts = useMemo(() => feedbackSelectionItems(posts, searching
     ? { state: "all", sort }
     : { state, sort, onlyToReview, properties }),
@@ -760,7 +775,9 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const { issues, updateIssue, deleteIssue, setCategories } =
     useIssuesQuery(projectId);
   const { relations, addRelation, removeRelation } = useIssueRelationsQuery(projectId);
-  const { members } = useMembersQuery(projectId, !!project);
+  // The route resolved its project under the viewer's RLS (projects/[id]/layout.tsx):
+  // members are read with the issues, not after the project list (MIN-875).
+  const { members } = useMembersQuery(projectId, true);
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
   const categoryMap = useMemo(
@@ -1299,11 +1316,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       >
         <div className="min-h-0 flex-1">
           {isPending ? (
-            <div className="flex flex-col gap-2 p-4">
-              <Skeleton className="h-16 w-full rounded-lg" />
-              <Skeleton className="h-16 w-full rounded-lg" />
-              <Skeleton className="h-16 w-full rounded-lg" />
-            </div>
+            <FeedbackListSkeleton />
           ) : listedPosts.length === 0 ? (
             /* The same scene as the other blank states, at the size of the
                column — including when NOTHING was collected yet: the
@@ -1424,6 +1437,10 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             intent={detailIntent?.postId === selectedId ? detailIntent.intent : null}
             onIntentHandled={() => setDetailIntent(null)}
           />
+        ) : isPending ? (
+          // The list is still loading: the page opens its first post by
+          // default, so the pane holds that post's shape until it arrives.
+          <FeedbackDetailSkeleton />
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">{t("selectPost")}</p>
@@ -1785,6 +1802,11 @@ function FeedbackDetail({
     toast.error(error instanceof Error ? error.message : t("errorGeneric"));
   }, [t]);
   const handleCategoriesChange = useFeedbackCategories(projectId, postId, saveCategories, categoryError);
+  // Stable props for the memoized objective picker and comment composer (MIN-875).
+  const setObjective = useStableCallback((objective_id: string | null) => patch.mutate({ objective_id }));
+  const publicOption = useMemo(() => canWrite
+    ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
+    : undefined, [canWrite, boardEnabled, t]);
 
   // The fade that replaces the border under the top bar: it only appears
   // on the side where there is still something to discover.
@@ -1797,14 +1819,7 @@ function FeedbackDetail({
   // that a project had feedback to display.
   const detailFade = useScrollFade<HTMLDivElement>();
 
-  if (isPending || !post) {
-    return (
-      <div className="flex flex-col gap-4 p-6">
-        <Skeleton className="h-8 w-2/3" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
+  if (isPending || !post) return <FeedbackDetailSkeleton />;
 
   const rawDiffers =
     post.submitted_title !== post.title || post.submitted_body !== post.body;
@@ -2291,7 +2306,7 @@ function FeedbackDetail({
 
           <PropertyRow label={tField("objective")}>
             <ObjectiveValue value={post.objective_id} objectives={objectives} projectId={projectId}
-              onChange={(objective_id) => patch.mutate({ objective_id })} />
+              onChange={setObjective} />
           </PropertyRow>
 
           <PropertyRow label={tField("categories")}>
@@ -2379,11 +2394,7 @@ function FeedbackDetail({
             // Without a published board, a public comment has nowhere to appear.
             // Keep the toggle visible but disabled so the missing setting is explicit.
             // A public reply speaks for the team: readers only comment internally.
-            publicOption={
-              canWrite
-                ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
-                : undefined
-            }
+            publicOption={publicOption}
           />
         </div>
       </div>
@@ -2900,7 +2911,6 @@ function InternalFeedbackDialog({
   onCreated: (postId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
-  const tCommon = useTranslations("Common");
   const tDictate = useTranslations("Dictate");
   const locale = useLocale();
   const tField = useTranslations("Field");
@@ -2912,8 +2922,6 @@ function InternalFeedbackDialog({
     null
   );
   const [title, setTitle] = useState("");
-  // Title and description read as one text on the keyboard (MIN-756).
-  const titleBody = useTitleBodyLink();
   const [isPublic, setIsPublic] = useState(true);
   const [busy, setBusy] = useState(false);
   // The LazyDocumentEditor only commits to blur — the ref always carries the
@@ -3068,152 +3076,85 @@ function InternalFeedbackDialog({
   };
 
   return (
-    <Dialog
+    <FeedbackComposerDialog
+      Body={FeedbackRichBody}
       open={open}
-      onOpenChange={(next) => {
-        if (!next) requestClose();
-        else onOpenChange(true);
+      onOpenChange={onOpenChange}
+      onRequestClose={requestClose}
+      srTitle={t("internalDialogTitle")}
+      title={title}
+      onTitleChange={setTitle}
+      titlePlaceholder={t("postTitlePlaceholder")}
+      bodyKey={editorKey}
+      initialBody={initialBody}
+      onBodyChange={(markdown) => {
+        bodyRef.current = markdown;
       }}
+      bodyPlaceholder={t("postBodyPlaceholder")}
+      dictation={{
+        onTranscription: onTranscript,
+        uploadAudio,
+        onProcessingChange: setTranscribing,
+      }}
+      numoBusy={numoBusy}
+      numoWorkingLabel={tDictate("numoWorking")}
+      submitLabel={t("create")}
+      canSubmit={canSubmit}
+      busy={busy}
+      onSubmit={() => void submit()}
     >
-      {/* ⌘/Ctrl+Enter sends from ANY field in the modal — the title
-          like the body. The shortcut is placed here rather than on each field
-          because the body is a rich editor: the key goes back to it through
-          bubbling. `defaultPrevented` leaves priority to the editor
-          when he uses it himself (exiting a block of code). */}
-      <DialogContent
-        className="top-24 translate-y-0 gap-0 sm:max-w-xl"
-        onKeyDown={(e) => {
-          if (e.defaultPrevented || !isSendShortcut(e)) return;
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <DialogTitle className="sr-only">{t("internalDialogTitle")}</DialogTitle>
-        <AutoTextarea
-          ref={titleBody.titleRef}
-          autoFocus={allowInputAutoFocus()}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            titleBody.onTitleKeyDown(e, { submit: () => void submit() });
-          }}
-          placeholder={t("postTitlePlaceholder")}
-          maxLength={200}
-          className="w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
-        />
-        <div ref={titleBody.bodyRef}>
-        <LazyDocumentEditor
-          key={editorKey}
-          value={initialBody}
-          onLeaveTop={titleBody.leaveBody}
-          onCommit={(markdown) => {
-            bodyRef.current = markdown;
-          }}
-          placeholder={t("postBodyPlaceholder")}
-          className="mt-3 min-h-24"
-        />
-        </div>
+      <div className="mt-4 flex items-center justify-between gap-4">
+        <span className="shrink-0 text-sm font-medium">{t("authorLabel")}</span>
+        {draftAuthor ? (
+          <NewAuthorFields
+            email={draftAuthor.email}
+            name={draftAuthor.name}
+            onEmailChange={(email) => setDraftAuthor((d) => ({ ...d!, email }))}
+            onNameChange={(name) => setDraftAuthor((d) => ({ ...d!, name }))}
+            onCancel={() => setDraftAuthor(null)}
+          />
+        ) : (
+          <AuthorPicker
+            projectId={projectId}
+            members={members}
+            value={author}
+            onChange={setAuthor}
+            // What has been typed is not lost in passing: an email leaves
+            // in the email field, everything else in the name field.
+            onCreateRequested={(typed) => {
+              setAuthor(null);
+              setDraftAuthor(
+                typed.includes("@")
+                  ? { email: typed, name: "" }
+                  : { email: "", name: typed }
+              );
+            }}
+          />
+        )}
+      </div>
 
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <span className="shrink-0 text-sm font-medium">{t("authorLabel")}</span>
-          {draftAuthor ? (
-            <NewAuthorFields
-              email={draftAuthor.email}
-              name={draftAuthor.name}
-              onEmailChange={(email) => setDraftAuthor((d) => ({ ...d!, email }))}
-              onNameChange={(name) => setDraftAuthor((d) => ({ ...d!, name }))}
-              onCancel={() => setDraftAuthor(null)}
-            />
-          ) : (
-            <AuthorPicker
-              projectId={projectId}
-              members={members}
-              value={author}
-              onChange={setAuthor}
-              // What has been typed is not lost in passing: an email leaves
-              // in the email field, everything else in the name field.
-              onCreateRequested={(typed) => {
-                setAuthor(null);
-                setDraftAuthor(
-                  typed.includes("@")
-                    ? { email: typed, name: "" }
-                    : { email: "", name: typed }
-                );
-              }}
-            />
-          )}
-        </div>
+      <PropertyRow label={tField("objective")}>
+        <ObjectiveValue value={objectiveId} objectives={objectives} projectId={projectId} onChange={setObjectiveId} />
+      </PropertyRow>
 
-        <PropertyRow label={tField("objective")}>
-          <ObjectiveValue value={objectiveId} objectives={objectives} projectId={projectId} onChange={setObjectiveId} />
-        </PropertyRow>
-
-        {boardEnabled ? (
-          <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
-            <label
-              htmlFor="internal-feedback-public"
-              className="flex min-w-0 flex-col"
-            >
-              <span className="text-sm font-medium">{t("public")}</span>
-              <span className="text-xs text-muted-foreground">
-                {isPublic ? t("publicHint") : t("privateHint")}
-              </span>
-            </label>
-            <Switch
-              id="internal-feedback-public"
-              checked={isPublic}
-              onCheckedChange={setIsPublic}
-            />
-          </div>
-        ) : null}
-
-        {/* The voice on the left, the creation on the right — the same bar as on the board
-            public and only in the ticket modal. While Numo tidies up, his face
-            takes the place of the microphone. */}
-        <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
-          {numoBusy ? (
-            <span
-              className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
-              aria-hidden
-            >
-              <NumoIcon
-                state="thinking"
-                className="size-6 text-primary animate-in fade-in duration-300"
-              />
+      {boardEnabled ? (
+        <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
+          <label
+            htmlFor="internal-feedback-public"
+            className="flex min-w-0 flex-col"
+          >
+            <span className="text-sm font-medium">{t("public")}</span>
+            <span className="text-xs text-muted-foreground">
+              {isPublic ? t("publicHint") : t("privateHint")}
             </span>
-          ) : (
-            <DictateButton
-              context="feedback_form"
-              onTranscription={onTranscript}
-              uploadAudio={uploadAudio}
-              onProcessingChange={setTranscribing}
-              disabled={busy}
-              shortcutKey="mod+shift+d"
-              className="-ml-2"
-            />
-          )}
-          {numoBusy && (
-            <span className="sr-only" role="status">
-              {tDictate("numoWorking")}
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            <Button type="button" variant="ghost" disabled={busy || numoBusy} onClick={requestClose}>
-              {tCommon("cancel")}
-            </Button>
-            <SendShortcutTooltip scope="form" label={t("create")}>
-              <Button disabled={!canSubmit} onClick={() => void submit()}>
-                {busy && <Spinner />}
-                {t("create")}
-              </Button>
-            </SendShortcutTooltip>
-          </div>
+          </label>
+          <Switch
+            id="internal-feedback-public"
+            checked={isPublic}
+            onCheckedChange={setIsPublic}
+          />
         </div>
-
-        {/* Numo takes over the dictation: the border highlights the edge of the modal during
-            that he is working — same signal as his face, higher up. */}
-        <AgentBeamOverlay active={numoBusy} />
-      </DialogContent>
-    </Dialog>
+      ) : null}
+    </FeedbackComposerDialog>
   );
 }

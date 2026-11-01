@@ -1,4 +1,4 @@
-import { expandProjectSegment } from "./ref-registry";
+import { expandProjectSegment, subscribeRefRegistry } from "./ref-registry";
 import { notifyManager, type QueryClient, type QueryObserverOptions } from "@tanstack/react-query";
 import { isDefinitiveReadError } from "./backend-availability";
 import type { RetainedAppView } from "./retained-app-views";
@@ -8,19 +8,29 @@ export function retainedBoardKeys(view: RetainedAppView): readonly (readonly unk
   return ["issues", "members", "categories", "objectives", "integrations", "issue-relations", "views"].map((prefix) => [prefix, expandProjectSegment(view.route.projectSegment)]);
 }
 
-/** Query observers can emit cache events during render; defer React notifications. */
+/**
+ * Query observers can emit cache events during render; defer React notifications.
+ *
+ * A project board's keys carry the project id its short code expands to, and
+ * a view can mount before the ref registry has learned that id. The keys are
+ * therefore derived again for every event, and a newly learned id notifies
+ * too: keys fixed at subscribe time held the short code and ignored the real
+ * queries, leaving a rendered board on `loading` (MIN-880).
+ */
 export function subscribeRetainedBoardReadState(client: QueryClient, view: RetainedAppView, notify: () => void) {
-  const keys = retainedBoardKeys(view);
   let stopped = false;
   const scheduledNotify = notifyManager.batchCalls(() => {
     if (!stopped) notify();
   });
   const unsubscribe = client.getQueryCache().subscribe((event) => {
+    const keys = retainedBoardKeys(view);
     if (keys.some((key) => key.length === event.query.queryKey.length && key.every((part, index) => part === event.query.queryKey[index]))) scheduledNotify();
   });
+  const stopRegistry = view.kind === "project-board" ? subscribeRefRegistry(scheduledNotify) : () => {};
   return () => {
     stopped = true;
     unsubscribe();
+    stopRegistry();
   };
 }
 

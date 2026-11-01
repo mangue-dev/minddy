@@ -71,6 +71,7 @@ import {
   sectionedSlashItems,
   type PageSlashItem,
 } from "@/components/pages/page-slash-command";
+import { useWeekStart } from "@/lib/use-week-start";
 
 /** The island's height, and the gap it keeps around itself. */
 const TOOLBAR_HEIGHT = 44;
@@ -203,6 +204,7 @@ export function MobileEditorToolbar({
   onComment?: () => void;
 }) {
   const locale = useLocale();
+  const weekStart = useWeekStart();
   const t = useTranslations("Pages");
   const tPicker = useTranslations("Picker");
   const colorName = useTranslations("Categories.colors");
@@ -304,10 +306,10 @@ export function MobileEditorToolbar({
     () => {
       if (sheet !== "mentions" || !mentionItems) return sectionedMentions([]).sections;
       const found = filterMentions(mentionItems(), query);
-      const dates = dateMentionOptions(query, locale, new Date(), tPicker("mentionPickDate"));
+      const dates = dateMentionOptions(query, locale, new Date(), tPicker("mentionPickDate"), weekStart);
       return sectionedMentions(datesFirst(query, locale) ? [...dates, ...found] : [...found, ...dates]).sections;
     },
-    [sheet, mentionItems, query, locale, tPicker],
+    [sheet, mentionItems, query, locale, tPicker, weekStart],
   );
   const mentionSectionLabel = useMentionSectionLabel();
 

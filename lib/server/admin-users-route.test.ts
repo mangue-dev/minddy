@@ -5,8 +5,19 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(), admin: vi.fn(), lookup: vi.fn(), usage: vi.fn(), rpc: vi.fn(), listUsers: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/server/api-auth", () => ({ getAuthedUser: mocks.auth }));
-vi.mock("@/lib/server/admin", () => ({ isAdminUser: mocks.admin }));
+// `getAuthedAdmin` is `getAuthedUser` followed by `isAdminUser`; its single
+// authorization lookup is covered by admin.test.ts.
+vi.mock("@/lib/server/admin", () => ({
+  getAuthedAdmin: async (request: unknown) => {
+    const auth = await mocks.auth(request);
+    if (!auth.ok) return auth;
+    if (!(await mocks.admin(auth.user, auth.claims))) {
+      const { NextResponse } = await import("next/server");
+      return { ok: false, response: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+    }
+    return auth;
+  },
+}));
 vi.mock("@/lib/server/usage", () => ({ getUserUsage: mocks.usage }));
 // `get_admin_account` answers the exact lookup; every other RPC is the month's usage.
 vi.mock("@/lib/supabase-service", () => ({

@@ -3,14 +3,16 @@
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { LinkSquare01Icon, Edit04Icon } from "@hugeicons/core-free-icons";
+import { Copy01Icon, Edit04Icon, LinkSquare01Icon, Unlink04Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useId, useState } from "react";
-import type { Editor } from "@tiptap/core";
+import { getMarkRange, type Editor } from "@tiptap/core";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { pageLinkTarget } from "@/lib/page-link";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 
@@ -28,9 +30,11 @@ function shouldShowLinkMenu({ editor }: { editor: Editor }): boolean {
 
 function MenuItem({
   onClick,
+  destructive = false,
   children,
 }: {
   onClick: () => void;
+  destructive?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -39,7 +43,12 @@ function MenuItem({
       role="menuitem"
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground outline-none transition-colors hover:bg-control focus-visible:bg-control"
+      className={cn(
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors",
+        destructive
+          ? "text-destructive hover:bg-destructive-highlight focus-visible:bg-destructive-highlight"
+          : "text-foreground hover:bg-control focus-visible:bg-control",
+      )}
     >
       {children}
     </button>
@@ -160,6 +169,35 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
   const tResources = useTranslations("Resources");
   const [editOpen, setEditOpen] = useState(false);
   const pagePanel = useOptionalPagePanelActions();
+
+  // A click on a link puts the caret at its END, where the menu then opens,
+  // instead of wherever the pointer landed inside the word.
+  useEffect(() => {
+    if (!editor) return;
+    const onClick = (event: MouseEvent) => {
+      if (event.button !== 0 || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!editor.isEditable || editor.isDestroyed || !editor.state.selection.empty) return;
+      if (!(event.target instanceof Element) || !event.target.closest("a")) return;
+      const { state } = editor;
+      const range = getMarkRange(state.selection.$from, state.schema.marks.link);
+      if (!range || state.selection.from === range.to) return;
+      editor.commands.setTextSelection(range.to);
+    };
+    // The view exists once the editor is created; reading it earlier throws.
+    let dom: HTMLElement | null = null;
+    const attach = () => {
+      if (dom || editor.isDestroyed) return;
+      dom = editor.view.dom;
+      dom.addEventListener("click", onClick);
+    };
+    if (editor.isInitialized) attach();
+    else editor.on("create", attach);
+    return () => {
+      editor.off("create", attach);
+      dom?.removeEventListener("click", onClick);
+    };
+  }, [editor]);
+
   if (!editor) return null;
 
   const currentHref = () => {
@@ -176,6 +214,21 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
     else window.open(href, "_blank", "noopener,noreferrer");
   };
 
+  const copyLink = () => {
+    const href = currentHref();
+    if (!href) return;
+    void navigator.clipboard.writeText(href).then(
+      () => toast.success(t("selectionLinkCopied")),
+      () => undefined,
+    );
+  };
+
+  // Removing the mark is an editor edit that ⌘Z restores, so it needs no
+  // confirmation (DESIGN.md, "Destructive actions ask first").
+  const removeLink = () => {
+    editor.chain().focus().extendMarkRange("link").unsetLink().run();
+  };
+
   return (
     <>
       {!editOpen ? (
@@ -184,9 +237,13 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
           updateDelay={0}
           shouldShow={shouldShowLinkMenu}
           options={{ placement: "bottom-start", offset: 6 }}
+          // On the body, like the selection toolbar: inside the editor, an
+          // ancestor (a dialog, a panel) cuts the backdrop the menu blurs.
+          appendTo={() => document.body}
           role="menu"
+          data-floating-surface
           aria-label={t("selectionLinkActions")}
-          className="min-w-40 rounded-lg border border-border bg-popover p-1 shadow-md"
+          className="pointer-events-auto z-[70] min-w-40 rounded-lg border border-border bg-popover p-1 shadow-md"
         >
           <MenuItem onClick={() => setEditOpen(true)}>
             <HugeiconsIcon icon={Edit04Icon} className="size-4 text-muted-foreground" aria-hidden />
@@ -195,6 +252,15 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
           <MenuItem onClick={openLink}>
             <HugeiconsIcon icon={LinkSquare01Icon} className="size-4 text-muted-foreground" aria-hidden />
             {tResources("openLink")}
+          </MenuItem>
+          <MenuItem onClick={copyLink}>
+            <HugeiconsIcon icon={Copy01Icon} className="size-4 text-muted-foreground" aria-hidden />
+            {t("selectionCopyLink")}
+          </MenuItem>
+          <div role="separator" className="-mx-1 my-1 h-px bg-border" />
+          <MenuItem onClick={removeLink} destructive>
+            <HugeiconsIcon icon={Unlink04Icon} className="size-4" aria-hidden />
+            {t("selectionRemoveLink")}
           </MenuItem>
         </BubbleMenu>
       ) : null}

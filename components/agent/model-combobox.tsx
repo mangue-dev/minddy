@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Command, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { commandFilter } from "@/lib/command-filter";
 import { cn } from "@/lib/utils";
-import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { ModelLogo, ProviderLogo } from "@/components/model-logo";
 import { formatModelName } from "@/lib/model-display";
@@ -486,16 +486,13 @@ export function ModelCombobox({
               </CommandItem>
             ) : null}
             {results.length === 0 && !showFreeText ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                {loading ? (
-                  <>
-                    <Spinner />
-                    {loadingLabel}
-                  </>
-                ) : (
-                  emptyLabel
-                )}
-              </div>
+              loading ? (
+                <RowsSkeleton rows={4} leading="icon" label={loadingLabel} className="gap-1 p-1" rowClassName="h-8 px-2" />
+              ) : (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                  {emptyLabel}
+                </div>
+              )
             ) : null}
           </CommandList>
           {/* Which explains the graying. At the bottom of the list and outside the scroll: a

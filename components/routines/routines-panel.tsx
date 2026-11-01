@@ -32,7 +32,7 @@ import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useOfferedProjects } from "@/lib/use-offered-projects";
-import { routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
+import { prefetchRoutineDetail, routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
@@ -47,9 +47,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useWeekStart } from "@/lib/use-week-start";
+
+// Shared with the row-intent preload: both resolve the same module promise.
+const loadRoutineDetail = () => import("@/components/routines/routine-detail");
 
 const RoutineDetail = dynamic(
-  () => import("@/components/routines/routine-detail").then((m) => m.RoutineDetail),
+  () => loadRoutineDetail().then((m) => m.RoutineDetail),
   {
     ssr: false,
     loading: () => <RoutineDetailSkeleton />,
@@ -99,6 +103,7 @@ export function RoutinesPanel({
   const t = useTranslations("Routines");
   const tCommon = useTranslations("Common");
   const locale = useLocale();
+  const weekStart = useWeekStart();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { projects, loading: projectsLoading } = useProjects();
@@ -138,6 +143,15 @@ export function RoutinesPanel({
     const timer = setTimeout(warm, 2000);
     return () => clearTimeout(timer);
   }, [selectedId, browse]);
+
+  // A selection that arrives with the URL (cold load, link, palette) would
+  // otherwise start its chunk and runs only after the list has resolved and
+  // the pane has mounted. Starting them now overlaps both with the list read.
+  useEffect(() => {
+    if (browse || !selectedId) return;
+    void loadRoutineDetail();
+    prefetchRoutineDetail(queryClient, selectedId);
+  }, [selectedId, browse, queryClient]);
 
   const projectById = useMemo(
     () => new Map(projects.map((p) => [p.id, p])),
@@ -199,6 +213,8 @@ export function RoutinesPanel({
           daysOfMonth: routine.days_of_month,
         })),
         locale,
+        new Date(),
+        weekStart,
       ),
     }));
     if (query.trim()) return ordered;
@@ -231,7 +247,7 @@ export function RoutinesPanel({
       }));
     return [...ordered, ...extra];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, projectById, offeredProjects, query, user?.id, locale]);
+  }, [visible, projectById, offeredProjects, query, user?.id, locale, weekStart]);
 
   const selected = routines.find((r) => r.id === selectedId) ?? null;
   const selectedIsOwner =
@@ -571,6 +587,10 @@ export function RoutinesPanel({
                 routine={routine}
                 selected={routine.id === selectedId}
                 onSelect={() => onSelect(routine.id)}
+                onIntent={() => {
+                  void loadRoutineDetail();
+                  prefetchRoutineDetail(queryClient, routine.id);
+                }}
                 picked={routineSelection.isSelected(routine.id)}
                 onTogglePicked={browse ? undefined : routineSelection.toggle}
               />
@@ -725,6 +745,7 @@ function RoutineRow({
   selected,
   picked = false,
   onSelect,
+  onIntent,
   onTogglePicked,
 }: {
   routine: Routine;
@@ -732,11 +753,14 @@ function RoutineRow({
   /** Taken in the multi-selection (MIN-873). */
   picked?: boolean;
   onSelect: () => void;
+  /** Browsing intent (hover, focus, pointer down): warms the pane's reads. */
+  onIntent?: () => void;
   /** ⇧-click: adds the routine to the selection or takes it out. */
   onTogglePicked?: (routineId: string) => void;
 }) {
   const t = useTranslations("Routines");
   const locale = useLocale();
+  const weekStart = useWeekStart();
   const statusT = useTranslations("Status");
   const cadence = routine.trigger && routine.trigger.type !== "schedule" ? (routine.trigger.type === "database" ? t("trigger_database") : t(`event_${routine.trigger.event.replaceAll(".", "_")}` as "event_issue_created") + (routine.trigger.status ? ` · ${statusT(routine.trigger.status as "triage")}` : "")) : describeSchedule(
     {
@@ -750,7 +774,7 @@ function RoutineRow({
     (key, values) => t(key, values),
     // Without the time zone: on a column line, “(Europe/Paris)” takes more
     // more space than the cadence itself. It reads in the routine.
-    { locale, omitTimezone: true },
+    { locale, omitTimezone: true, weekStart },
   );
 
   return (
@@ -761,6 +785,9 @@ function RoutineRow({
       data-navigation-href={routineHref(routine.id)}
       data-routine-id={routine.id}
       aria-pressed={onTogglePicked ? picked : undefined}
+      onPointerEnter={onIntent}
+      onFocus={onIntent}
+      onPointerDown={onIntent}
       onClick={(event) => {
         if (event.shiftKey && onTogglePicked) {
           event.preventDefault();

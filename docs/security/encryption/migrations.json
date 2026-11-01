@@ -307,5 +307,7 @@
   "20270109200095_role_admin_accounts.sql": "9763a63f61fa2dfaf621a56956eee31196868d845781e03c9df0992c22a8ba5d",
   "20270109200096_numo_turns_without_budget_reservation.sql": "7fe9c249c116d9dc2af46af7107913cf1545e2495be8ae5ea9685d10def20c99",
   "20270109200097_routine_instruction_documents.sql": "53f865f6a0ecf3fdc8cb8cb04d1ddc310274010e907189401b558dd70f4d05c4",
-  "20270109200098_drop_byok_ai_usage.sql": "448c2ae4a94281d596f2c907a6cf2633cb02d06219c3aa9cf96cf4c48f4d30b8"
+  "20270109200098_drop_byok_ai_usage.sql": "448c2ae4a94281d596f2c907a6cf2633cb02d06219c3aa9cf96cf4c48f4d30b8",
+  "20270109200099_comment_history_policy_reads.sql": "28e68692b457d2f6e8fee9c95a1e79e5985d307d1db1c4b94f633cd26e38a840",
+  "20270109200100_realtime_topics_changed_since.sql": "1507ff998bb4af3eabfd24e58b45336acd082624697d85a11b201bdd0cb4e17a"
 }

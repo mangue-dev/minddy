@@ -22,6 +22,7 @@ import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
 import { useAppNavigation } from "@/lib/use-app-router";
 import { useAppTabDeparture } from "@/lib/app-tabs-context";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useStableCallback } from "@/lib/use-stable-callback";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
@@ -71,6 +72,7 @@ import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
+import { useContextMentions } from "@/lib/use-context-mentions";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { PageDatabaseView } from "./page-database-view";
 import { DatabaseSetupBanner } from "./database-setup-banner";
@@ -342,7 +344,15 @@ function PageSurface({
   // The watch heartbeat: while this surface holds the document open, the
   // server knows someone is reading it and stays quiet about agent writes.
   usePageWatch(projectId, pageId);
-  const mentionSources = useDescriptionMentions(projectId, members);
+  // The page's own sub-pages come first in its "@" menu.
+  const subpageIds = useMemo(
+    () => pages.filter((page) => page.parent_id === pageId).map((page) => page.id),
+    [pages, pageId]
+  );
+  const mentionSources = useContextMentions(
+    useDescriptionMentions(projectId, members),
+    { subject: "page", subpages: subpageIds }
+  );
   const mentions = useMemo(
     () => ({
       items: () => mentionSources.options,
@@ -641,6 +651,9 @@ function PageSurface({
     },
     [projectId, onNavigate, openDestination]
   );
+  // A stable handler keeps the memoized database view (150 rows of menus,
+  // tooltips and cell editors) out of this page's own re-renders (MIN-875).
+  const openDatabaseEntry = useStableCallback((id: string) => onNavigate ? onNavigate(id, pageId) : openPage(id));
 
   const lookup = useMemo<PagesLookup>(
     () => ({
@@ -1034,7 +1047,9 @@ function PageSurface({
   // waits for its fresh basis, preserving immediate typing in the local overlay.
   // The editor is built on the session's snapshot: wait for it (or for its
   // failure, which falls back to the snapshot editor) rather than remounting.
-  if (isPending || !page || collaboration.status === "loading") {
+  // A database renders no editor, so it does not wait for the live session.
+  const isDatabase = (page ?? summary)?.database_schema != null;
+  if (isPending || !page || (collaboration.status === "loading" && !isDatabase)) {
     // The same skeleton as the route's loading state: no spinner over it. The
     // page list already says when the page is a database.
     return summary?.database_schema != null
@@ -1156,7 +1171,7 @@ function PageSurface({
               <PageDatabaseProperties projectId={projectId} page={summary ?? page} database={byId.get(page.parent_id)!} />
             </fieldset>
           )}
-          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} compact={panel} onOpen={(id) => onNavigate ? onNavigate(id, pageId) : openPage(id)} /> : <div ref={bodyRef} className="mt-6">
+          {page.database_schema != null ? <PageDatabaseView projectId={projectId} database={summary ?? page} compact={panel} onOpen={openDatabaseEntry} /> : <div ref={bodyRef} className="mt-6">
             {/* What “assign a task” means when it comes off a page
                 rather than the notebook: the prompt names the page, and the navigation
                 waits for what is pending to be written (MIN-274). */}

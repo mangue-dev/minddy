@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import {
   AuthColumn,
+  AuthFormSkeleton,
   Field,
   PasswordRules,
   useInDesktopApp,
@@ -123,9 +124,7 @@ export function ResetPasswordForm() {
   if (loading || mfaStep === "unknown") {
     return (
       <AuthColumn inDesktopApp={inDesktopApp}>
-        <div className="flex justify-center">
-          <Spinner className="size-6" />
-        </div>
+        <AuthFormSkeleton fields={2} />
       </AuthColumn>
     );
   }

@@ -21,6 +21,7 @@ import { createWindowSelectionPersistence } from "./window-selection-persistence
 import { createRestoredTabStartupAdmission } from "./restored-tab-startup-admission";
 import { INITIAL_ACCOUNT_CACHE_SCOPE, nextAccountCacheScope } from "./account-query-provider";
 import { beginPendingNavigation } from "./pending-navigation";
+import { shortenLegacyAppUrl } from "./app-urls";
 
 interface AppTabsValue extends AppTabsSnapshot {
   session: AppTabsSession;
@@ -261,12 +262,19 @@ function AccountTabSync({ owner, session, resumeAtCurrentRoute, onQueryState }: 
       const current = window.location.pathname;
       const next = href.split(/[?#]/)[0];
       const wikiRoot = current.match(/^\/projects\/[^/]+\/pages(?:\/|$)/)?.[0].replace(/\/$/, "");
+      // A stored destination may carry full ids (`?open=<uuid>`). The address
+      // uses short codes: the proxy would answer a full id with a 308, and that
+      // redirected response, racing the page's own URL update, ended the
+      // navigation in a full reload, replayed on every load (MIN-875).
+      const url = new URL(href, window.location.origin);
+      const shortened = shortenLegacyAppUrl(url.pathname, url.search);
+      const address = shortened ? shortened + url.hash : href;
       if (session.isRetainedDestination(session.getSnapshot().activeId, href) || isPreparedAppTabDestination(client, href) ||
-          (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`)))) window.history.pushState(null, "", href);
+          (wikiRoot && (next === wikiRoot || next.startsWith(`${wikiRoot}/`)))) window.history.pushState(null, "", address);
       else {
         // A cold destination waits on the router: the shell shows it now.
-        beginPendingNavigation(href);
-        router.push(href, { scroll: false });
+        beginPendingNavigation(address);
+        router.push(address, { scroll: false });
       }
     };
     session.remember = (id, href) => {

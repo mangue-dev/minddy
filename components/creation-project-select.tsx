@@ -8,6 +8,7 @@ import { SearchSelect } from "@/components/search-select";
 import { Kbd } from "@/components/ui/kbd";
 import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
+import { captureWritingSpot, restoreWritingSpot, type WritingSpot } from "@/lib/keyboard/writing-spot";
 import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { cn } from "@/lib/utils";
@@ -25,35 +26,6 @@ const INTERACTIVE = "hover:bg-control-hover focus-visible:bg-control-hover";
 /** ⌘⇧P / Ctrl+Shift+P: a combo, so it works while writing the title or the
  *  description. The key itself stays free for the browser elsewhere. */
 const SHORTCUT_KEY = "p";
-
-/** Where the writer was when the shortcut opened the menu: the field, and the
- *  caret of a plain input (an editor keeps its own selection across a blur). */
-type WritingSpot = {
-  element: HTMLElement;
-  range: { start: number | null; end: number | null; direction: "forward" | "backward" | "none" | null } | null;
-};
-
-function captureWritingSpot(): WritingSpot | null {
-  const element = document.activeElement;
-  if (!(element instanceof HTMLElement) || element === document.body) return null;
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-    return {
-      element,
-      range: { start: element.selectionStart, end: element.selectionEnd, direction: element.selectionDirection },
-    };
-  }
-  return { element, range: null };
-}
-
-function restoreWritingSpot(spot: WritingSpot) {
-  if (!spot.element.isConnected) return;
-  spot.element.focus({ preventScroll: true });
-  const { element, range } = spot;
-  if (range && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) &&
-      range.start !== null && range.end !== null) {
-    element.setSelectionRange(range.start, range.end, range.direction ?? undefined);
-  }
-}
 
 /**
  * "Create in" control of the creation dialogs (MIN-741): the project the new

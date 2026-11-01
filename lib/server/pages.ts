@@ -1898,6 +1898,9 @@ export async function readPageCollaborationSnapshot(
   pageId: string,
   actorId: string
 ): Promise<{ ok: true; snapshot: PageCollaborationSnapshot; token: string } | CollabFailure> {
+  // A page's short code names no row: answer as for any unknown page rather
+  // than let the id column reject it as a server error.
+  if (!UUID_RE.test(pageId)) return { ok: false, status: 404, errorKey: "pageNotFound" };
   const service = getServiceClient();
   const decision = await decideCollaboration(service, { userId: actorId, pageId, projectId });
   if (!decision) return { ok: false, status: 404, errorKey: "projectNotFound" };

@@ -1110,7 +1110,6 @@ export const AssistantShell = forwardRef<
               )}
               <div className={cn(activeAskUser && "hidden")}>
                 <AssistantChatInput
-                  onNavigate={onClose}
                   ref={chatInputRef}
                   // The composer carries its own legacy 12px click margin
                   // (MIN-167); the shell's concentric 16px gutter replaces it.

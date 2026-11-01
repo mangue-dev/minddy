@@ -8,6 +8,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useWeekStart } from "@/lib/use-week-start";
+import { weekdayRank } from "@/lib/week-start";
 
 // Intensity scale (5 levels) GitHub style, “done” shade (emerald — the
 // color of the Completed status everywhere in the app). Complete literal classes:
@@ -42,8 +44,8 @@ const LABEL_OVERFLOW = 12;
 /** Below this many columns a month label would collide with the next one. */
 const MONTH_LABEL_SPAN = 3;
 
-/** Rows with a day label (the grid starts on a Sunday). */
-const LABELLED_ROWS = new Set([1, 3, 5]); // lundi, mercredi, vendredi
+/** Rows with a day label: every other row, whatever day the week starts on. */
+const LABELLED_ROWS = new Set([1, 3, 5]);
 
 function levelOf(count: number, max: number): number {
   if (count <= 0) return 0;
@@ -57,7 +59,18 @@ function levelOf(count: number, max: number): number {
 
 const parseYmd = (d: string) => new Date(`${d}T00:00:00Z`);
 
-/** Cuts the dense series (start = Sunday) into weeks of 7 days (columns). */
+/**
+ * Leading days to drop so the series starts on the account's first day of the
+ * week (MIN-881). The server window always starts on a Sunday; dropping at most
+ * six of the oldest days keeps the grid aligned without another request.
+ */
+export function heatmapLeadingDays(days: HeatmapDay[], weekStart: number): number {
+  const first = days[0];
+  if (!first) return 0;
+  return weekdayRank(weekStart, parseYmd(first.date).getUTCDay());
+}
+
+/** Cuts the dense series (already aligned on the first day) into weeks of 7 days (columns). */
 function toWeeks(days: HeatmapDay[]): HeatmapDay[][] {
   const weeks: HeatmapDay[][] = [];
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
@@ -130,7 +143,7 @@ function DayDetail({ day, joined }: { day: HeatmapDay; joined: boolean }) {
  * Contribution grid of up to 53 weeks (MIN-85), cropped to the most recent
  * weeks that fit its width (MIN-737).
  *
- * Columns = weeks, rows = days (Sunday → Saturday). Compared to the
+ * Columns = weeks, rows = days from the account's first day of the week. Compared to the
  * previous version: a gutter of day labels on the left, and a real
  * structured tooltip instead of the native `title` attribute (slow to open,
  * not styleable, and which flattened everything into a sentence).
@@ -158,7 +171,12 @@ export function ActivityHeatmap({
     top: number;
   } | null>(null);
 
-  const allWeeks = useMemo(() => toWeeks(heatmap.days), [heatmap.days]);
+  const weekStart = useWeekStart();
+  const leadingDays = heatmapLeadingDays(heatmap.days, weekStart);
+  const allWeeks = useMemo(
+    () => toWeeks(heatmap.days.slice(leadingDays)),
+    [heatmap.days, leadingDays],
+  );
 
   // The grid never scrolls (MIN-737): it keeps the most recent whole weeks
   // that fit the width, so the current period is always on screen and the
@@ -183,7 +201,7 @@ export function ActivityHeatmap({
   const hiddenWeeks = fitWeeks === null ? 0 : Math.max(0, allWeeks.length - fitWeeks);
   const weeks = useMemo(() => allWeeks.slice(hiddenWeeks), [allWeeks, hiddenWeeks]);
   // Index of the first visible day in `heatmap.days`, for the tooltip lookup.
-  const firstDayIndex = hiddenWeeks * 7;
+  const firstDayIndex = leadingDays + hiddenWeeks * 7;
 
   // A month label above the column where a new month begins.
   const monthLabels = useMemo(
@@ -209,8 +227,8 @@ export function ActivityHeatmap({
     [weeks, format],
   );
 
-  // Localized day names, read on the first real week: `start` is
-  // guaranteed Sunday, so row index = day of the week.
+  // Localized day names, read on the first real week: it starts on the
+  // account's first day, so each row is one fixed day of the week.
   const weekdayLabels = useMemo(() => {
     const first = weeks[0];
     if (!first) return [] as string[];
@@ -278,7 +296,7 @@ export function ActivityHeatmap({
               ))}
             </div>
 
-            {/* Grid: columns are weeks, rows are days (Sunday to Saturday). */}
+            {/* Grid: columns are weeks, rows are days from the first day of the week. */}
             <div
               className="relative grid grid-flow-col grid-rows-7 gap-1"
               onPointerMove={onPointerMove}

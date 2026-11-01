@@ -3102,7 +3102,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .app-top-bar { display: none !important; }
 }
 
-/* Apply the running-review sheen to the provider's masked logo. */
+/* The running sheen on a masked logo: a provider's during an AI review, and
+   minddy's own on the post-sign-in redirect screen. */
 .review-logo-shimmer {
   background-image: linear-gradient(90deg, currentColor 35%, var(--muted-foreground) 50%, currentColor 65%);
   background-size: 300% 100%;

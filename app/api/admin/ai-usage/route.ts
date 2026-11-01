@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
-import { isAdminUser } from "@/lib/server/admin";
+import { getAuthedAdmin } from "@/lib/server/admin";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -16,11 +15,8 @@ import { getServiceClient } from "@/lib/supabase-service";
  */
 
 async function requireAdmin(request: NextRequest): Promise<NextResponse | null> {
-  const auth = await getAuthedUser(request);
+  const auth = await getAuthedAdmin(request);
   if (!auth.ok) return auth.response;
-  if (!(await isAdminUser(auth.user, auth.claims))) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
   return null;
 }
 

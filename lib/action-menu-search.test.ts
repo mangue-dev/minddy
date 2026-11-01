@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { searchActionTree } from "@/lib/action-menu-search";
 
-type Action = { id: string; label: string; keywords?: string[]; disabled?: boolean; children?: Action[] };
+type Action = { id: string; label: string; keywords?: string[]; disabled?: boolean; searchFallback?: boolean; children?: Action[] };
 
 const tree: Action[] = [
   { id: "copy", label: "Copy identifier" },
@@ -54,5 +54,14 @@ describe("searchActionTree", () => {
   it("disables an entry whose branch is disabled", () => {
     expect(searchActionTree(tree, "red")[0].disabled).toBe(true);
     expect(searchActionTree(tree, "blocks")[0].disabled).toBe(false);
+  });
+
+  it("keeps a fallback entry first without a query and last behind every match", () => {
+    const withFallback: Action[] = [{ id: "numo", label: "Create with Numo", searchFallback: true }, ...tree];
+    const fallbackIds = (query: string) => searchActionTree(withFallback, query).map(({ action, path }) => [...path, action.id].join(" > "));
+    expect(fallbackIds("")).toEqual(["numo", "copy", "relations", "color"]);
+    expect(fallbackIds("blocked")).toEqual(["Relations > blocked-by", "numo"]);
+    expect(fallbackIds("create")).toEqual(["numo"]);
+    expect(fallbackIds("nothing matches")).toEqual(["numo"]);
   });
 });

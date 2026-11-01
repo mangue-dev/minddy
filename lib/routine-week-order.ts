@@ -1,4 +1,5 @@
 import { nextRunAt, type RoutineSchedule } from "./routine-schedule";
+import { weekdayRank } from "./week-start";
 
 export interface RoutineWeekOrderInput extends RoutineSchedule {
   title: string;
@@ -6,19 +7,14 @@ export interface RoutineWeekOrderInput extends RoutineSchedule {
 }
 
 const WEEKDAY_INDEX = new Map([
-  ["Mon", 0],
-  ["Tue", 1],
-  ["Wed", 2],
-  ["Thu", 3],
-  ["Fri", 4],
-  ["Sat", 5],
-  ["Sun", 6],
+  ["Sun", 0],
+  ["Mon", 1],
+  ["Tue", 2],
+  ["Wed", 3],
+  ["Thu", 4],
+  ["Fri", 5],
+  ["Sat", 6],
 ]);
-
-/** Converts the schedule's Sunday-first weekday to a Monday-first position. */
-function mondayFirst(weekday: number): number {
-  return (weekday + 6) % 7;
-}
 
 /** Reads an instant's local weekday in the routine's own timezone. */
 function weekdayAt(instant: Date, timezone: string): number | null {
@@ -34,10 +30,11 @@ function weekdayAt(instant: Date, timezone: string): number | null {
 }
 
 /**
- * Position of a routine in a Monday-to-Sunday sidebar week.
+ * Position of a routine in the sidebar week, which starts on the account's
+ * first day of the week (MIN-881, Monday by default).
  *
- * Daily routines occupy Monday at their configured time because Monday is their
- * first occurrence in every week. Weekly routines use their earliest configured
+ * Daily routines occupy the first day at their configured time because it is
+ * their first occurrence in every week. Weekly routines use their earliest configured
  * weekday. Monthly routines have no stable weekday, so their next occurrence is
  * projected into its own timezone. Invalid legacy rows sort last rather than
  * making the whole sidebar fail.
@@ -45,6 +42,7 @@ function weekdayAt(instant: Date, timezone: string): number | null {
 export function routineWeekPosition(
   routine: RoutineWeekOrderInput,
   from = new Date(),
+  weekStart: number = 1,
 ): number {
   if (routine.trigger && routine.trigger.type !== "schedule") return Number.POSITIVE_INFINITY;
   if (
@@ -65,10 +63,13 @@ export function routineWeekPosition(
       (day) => Number.isInteger(day) && day >= 0 && day <= 6,
     );
     weekday =
-      weekdays.length > 0 ? Math.min(...weekdays.map(mondayFirst)) : null;
+      weekdays.length > 0
+        ? Math.min(...weekdays.map((day) => weekdayRank(day, weekStart)))
+        : null;
   } else {
     try {
-      weekday = weekdayAt(nextRunAt(routine, from), routine.timezone);
+      const day = weekdayAt(nextRunAt(routine, from), routine.timezone);
+      weekday = day == null ? null : weekdayRank(day, weekStart);
     } catch {
       weekday = null;
     }
@@ -83,10 +84,12 @@ export function orderRoutinesWithinWeek<T extends RoutineWeekOrderInput>(
   routines: readonly T[],
   locale?: string,
   from = new Date(),
+  weekStart: number = 1,
 ): T[] {
   return [...routines].sort((left, right) => {
     const bySchedule =
-      routineWeekPosition(left, from) - routineWeekPosition(right, from);
+      routineWeekPosition(left, from, weekStart) -
+      routineWeekPosition(right, from, weekStart);
     return bySchedule || left.title.localeCompare(right.title, locale);
   });
 }

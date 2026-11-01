@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
+import { fetchSeeded } from "./server-seed";
 
 /**
  * Client-side admin flag — the single source for gating admin-only UI (the
@@ -17,7 +18,7 @@ export function useIsAdmin(): boolean {
     enabled: !!user,
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<{ isAdmin: boolean }> => {
-      const res = await fetch("/api/me/admin");
+      const res = await fetchSeeded("/api/me/admin");
       if (!res.ok) return { isAdmin: false };
       return res.json();
     },
