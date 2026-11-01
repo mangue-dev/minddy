@@ -12,7 +12,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { OBJECTIVE_TEXT, objectiveTextStyle } from "@/components/objective-label";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
 import dynamic from "next/dynamic";
 import { AppTabRouteBoundary, ProjectRouteReady, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
@@ -21,7 +21,6 @@ import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -46,8 +45,7 @@ import { EmptyScene } from "@/components/empty-scene";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { NumoIcon } from "@/components/numo-icon";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
-import { SearchMenu } from "@/components/search-menu";
-import { checkedProps } from "@/components/search-select";
+import { FilterMenu } from "@/components/filter-menu";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { UserAvatar } from "@/components/user-avatar";
@@ -123,8 +121,8 @@ const EMPTY_BY_STATE: Record<
 };
 
 /**
- * The column filter — the same combobox as pull requests and
- * returns, for the same reason: on a line of 320 px there is no space left
+ * The column filter — the same searchable menu as pull requests and
+ * feedback, for the same reason: on a line of 320 px there is no space left
  * only an icon, and what a label would have said goes into the tooltip. A
  * pellet signals from afar that a filter is installed; without it, a list
  * restricted would have nothing left to say about it.
@@ -138,7 +136,6 @@ function ObjectiveFilterMenu({
 }) {
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
-  const [open, setOpen] = useState(false);
 
   const stateLabel =
     state === "active"
@@ -151,17 +148,20 @@ function ObjectiveFilterMenu({
   const active = state !== "active";
   const tooltip = t("filterTooltip", { state: stateLabel });
 
-  const pick = (next: ObjectiveStateFilter) => {
-    onStateChange(next);
-    setOpen(false);
-  };
+  // A lens, not a set of toggles: picking one closes the menu.
+  const choice = (id: string, label: string, value: ObjectiveStateFilter, icon?: ReactNode): ContextMenuAction => ({
+    id, label, icon, checked: state === value, onSelect: () => onStateChange(value),
+  });
 
   return (
-    <SearchMenu
-      open={open}
-      onOpenChange={setOpen}
-      align="end"
-      tooltip={tooltip}
+    <FilterMenu
+      label={tooltip}
+      actions={[
+        choice("state-active", t("filterActive"), "active"),
+        ...OBJECTIVE_STATUSES.map((s) => choice(`state-${s.value}`, tStatus(s.value), s.value,
+          <ObjectiveStatusIndicator status={s.value} className="size-4" />)),
+        choice("state-all", t("filterAll"), "all"),
+      ]}
       trigger={
         <Button
           variant="ghost"
@@ -182,40 +182,7 @@ function ObjectiveFilterMenu({
           </span>
         </Button>
       }
-    >
-      <CommandGroup heading={t("filterStateLabel")}>
-        <CommandItem
-          value="state-active"
-          keywords={[t("filterActive")]}
-          onSelect={() => pick("active")}
-          {...checkedProps(state === "active")}
-        >
-          <span className="truncate">{t("filterActive")}</span>
-        </CommandItem>
-        {OBJECTIVE_STATUSES.map((s) => {
-          return (
-            <CommandItem
-              key={s.value}
-              value={`state-${s.value}`}
-              keywords={[tStatus(s.value)]}
-              onSelect={() => pick(s.value)}
-              {...checkedProps(state === s.value)}
-            >
-              <ObjectiveStatusIndicator status={s.value} className="size-4" />
-              <span className="truncate">{tStatus(s.value)}</span>
-            </CommandItem>
-          );
-        })}
-        <CommandItem
-          value="state-all"
-          keywords={[t("filterAll")]}
-          onSelect={() => pick("all")}
-          {...checkedProps(state === "all")}
-        >
-          <span className="truncate">{t("filterAll")}</span>
-        </CommandItem>
-      </CommandGroup>
-    </SearchMenu>
+    />
   );
 }
 

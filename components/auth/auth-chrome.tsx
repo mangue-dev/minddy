@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Github } from "@/components/git/provider-icons";
 import { MinddyLogo } from "@/components/minddy-logo";
@@ -51,14 +52,68 @@ export function SubmitArrow() {
 }
 
 /**
- * What an auth page shows while its form loads: the spinner in the middle of
- * the form's column. The auth shell lays full-bleed screens out as a row (the
- * form, then the showcase), so a bare spinner would sit in the top-left corner.
+ * The shape of an auth form while it loads (MIN-868): the heading and its
+ * subtitle, the provider buttons when the form has them, the fields and the
+ * main button, at their real heights so the form lands where they stood.
  */
-export function AuthLoading() {
+export function AuthFormSkeleton({
+  fields = 2,
+  providers = 0,
+}: {
+  fields?: number;
+  providers?: number;
+}) {
+  const t = useTranslations("Common");
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <Spinner className="size-6" />
+    <div role="status" aria-busy="true" className="space-y-8">
+      <span className="sr-only">{t("loading")}</span>
+      <div aria-hidden className="space-y-2.5">
+        <Skeleton className="h-7 w-48" />
+        <Skeleton className="h-4 w-64 max-w-full" />
+      </div>
+      {providers > 0 && (
+        <div aria-hidden className="space-y-2.5">
+          {Array.from({ length: providers }, (_, index) => (
+            <Skeleton key={index} className="h-11 w-full rounded-lg" />
+          ))}
+        </div>
+      )}
+      <div aria-hidden className="space-y-4">
+        {Array.from({ length: fields }, (_, index) => (
+          <div key={index} className="space-y-1.5">
+            <Skeleton className="h-3.5 w-20" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        ))}
+        <Skeleton className="h-12 w-full rounded-full" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * What an auth page shows while its form loads: the form's column with the
+ * brand in place and the form's shape below it. The auth shell lays
+ * full-bleed screens out as a row (the form, then the showcase), so this
+ * fills the column like the form will.
+ */
+export function AuthLoading({
+  fields = 2,
+  providers = 2,
+}: {
+  fields?: number;
+  providers?: number;
+} = {}) {
+  return (
+    <div className="flex w-full flex-1 flex-col p-8">
+      <div className="auth-logo-row flex">
+        <LogoMark asLink={false} />
+      </div>
+      <div className="flex flex-1 items-center justify-center py-10">
+        <div className="w-full max-w-[380px]">
+          <AuthFormSkeleton fields={fields} providers={providers} />
+        </div>
+      </div>
     </div>
   );
 }

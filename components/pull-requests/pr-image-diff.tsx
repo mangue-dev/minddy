@@ -6,7 +6,7 @@ import { useEffect, useId, useState } from "react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { IMAGE_HERO_TRANSITION, ImageViewer } from "@/components/image-viewer";
 import { prFileRawUrl, type PrEndpoint, type PullRequestFile } from "@/lib/agent-api";
 
@@ -122,6 +122,7 @@ function ImagePane({
 }) {
   const t = useTranslations("PullRequests");
   const tResources = useTranslations("Resources");
+  const tCommon = useTranslations("Common");
   // Keyed by the image it opened: a new version of the side closes the reader.
   const [openedUrl, setOpenedUrl] = useState<string | null>(null);
   const previewLabel = `${fileName} · ${label}`;
@@ -168,7 +169,7 @@ function ImagePane({
         )}
       >
         {version.status === "loading" ? (
-          <Spinner className="size-4 text-muted-foreground" />
+          <Skeleton role="status" aria-busy="true" aria-label={tCommon("loading")} className="h-24 w-full rounded-sm" />
         ) : version.status === "ready" && version.url ? (
           <LayoutGroup id={heroId}>
             <button

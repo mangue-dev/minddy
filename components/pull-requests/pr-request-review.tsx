@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ForgeUserAvatar } from "@/components/git/forge-user-avatar";
@@ -75,9 +76,7 @@ export function PrRequestReview({
         />
         <div className="max-h-72 overflow-y-auto">
           {loading && canRequestHuman ? (
-            <div className="flex justify-center py-6">
-              <Spinner />
-            </div>
+            <RowsSkeleton rows={4} leading="avatar-sm" className="gap-1" rowClassName="h-9 px-4" />
           ) : candidates.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               {t("noReviewersFound")}

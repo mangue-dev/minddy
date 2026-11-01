@@ -3,6 +3,7 @@
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { SearchMenu } from "@/components/search-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { actionMenuItems } from "@/lib/visible-overlays";
 
 // Ticket actions menu: a real Radix dropdown (the same as dropdowns
@@ -71,8 +72,18 @@ export interface ContextMenuAction {
   /** Renders the label (e.g. an objective's name in its color); `label`
    *  stays the searched and accessible text. */
   labelNode?: React.ReactNode;
+  /** Muted detail at the end of the row, before the check or the submenu
+   *  chevron (e.g. how many values of a filter facet are selected). */
+  trailing?: React.ReactNode;
+  /** Answers any query (e.g. hand the typed text to Numo): listed whatever
+   *  is typed, after every match while a query is typed (top level only). */
+  searchFallback?: boolean;
   onSelect?: () => void;
 }
+
+/** The actions of a menu, or a builder that reads the current search query
+ *  (an entry can then carry the typed text, such as “Create with Numo”). */
+export type ContextMenuActions = ContextMenuAction[] | ((query: string) => ContextMenuAction[]);
 
 /**
  * The label of a search result found inside a submenu: the branches leading
@@ -204,6 +215,16 @@ export function ActionMenuSearchField({ search }: { search: ReturnType<typeof us
   );
 }
 
+/** The `trailing` detail, right-aligned like a shortcut (so a submenu
+ *  chevron sits right after it). */
+function TrailingDetail({ children }: { children: React.ReactNode }) {
+  return (
+    <DropdownMenuShortcut className="flex items-center tracking-normal tabular-nums">
+      {children}
+    </DropdownMenuShortcut>
+  );
+}
+
 /** Sheet: a clickable item, possibly with a shortcut on the right. A search
  *  result found in a submenu carries its `path`. */
 function LeafItem({
@@ -237,7 +258,8 @@ function LeafItem({
       {path.length > 0
         ? <ActionPathLabel path={path} label={action.labelNode ?? action.label} />
         : <span className="truncate">{action.labelNode ?? action.label}</span>}
-      {action.checked && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
+      {action.trailing != null && <TrailingDetail>{action.trailing}</TrailingDetail>}
+      {action.checked && <HugeiconsIcon icon={CheckIcon} className={action.trailing != null ? "size-4" : "ml-auto size-4"} />}
       {action.shortcut && (
         <DropdownMenuShortcut>
           <Kbd size="sm">{action.shortcut}</Kbd>
@@ -262,6 +284,7 @@ function ActionNode({
         <DropdownMenuSubTrigger className="[&>[data-slot=dropdown-menu-shortcut]+svg]:ml-0">
           {action.icon}
           <span className="truncate">{action.label}</span>
+          {action.trailing != null && <TrailingDetail>{action.trailing}</TrailingDetail>}
           {action.shortcut && (
             <DropdownMenuShortcut>
               <Kbd size="sm">{action.shortcut}</Kbd>
@@ -288,15 +311,18 @@ function ActionMenuBody({
   open,
   searchable,
   onActionSelect,
+  onQueryChange,
 }: {
-  actions: ContextMenuAction[];
+  actions: ContextMenuActions;
   open: boolean;
   searchable: boolean;
   onActionSelect?: (action: ContextMenuAction) => void;
+  onQueryChange?: (query: string) => void;
 }) {
   const t = useTranslations("Picker");
   const search = useActionMenuSearch(open, searchable);
-  const visible = searchActionTree(actions, search.query);
+  useQueryNotice(search.query, onQueryChange);
+  const visible = searchActionTree(resolveActions(actions, search.query), search.query);
 
   // The options leave the caret in the search field (DropdownMenuSearchScope).
   const Scope = searchable ? DropdownMenuSearchScope : React.Fragment;
@@ -324,22 +350,57 @@ function ActionMenuBody({
   );
 }
 
+function resolveActions(actions: ContextMenuActions, query: string) {
+  return typeof actions === "function" ? actions(query) : actions;
+}
+
+/** Tells the owner of the menu what is typed (e.g. to search a remote list). */
+function useQueryNotice(query: string, onQueryChange?: (query: string) => void) {
+  const notify = React.useRef(onQueryChange);
+  React.useEffect(() => { notify.current = onQueryChange; });
+  React.useEffect(() => { notify.current?.(query); }, [query]);
+}
+
 /** Mobile actions stay in one searchable sheet, including nested groups. */
-function MobileActionMenu({ actions, onSelect, ...props }: {
-  actions: ContextMenuAction[];
+function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: {
+  actions: ContextMenuActions;
   onSelect: (action: ContextMenuAction) => void;
-} & Omit<React.ComponentProps<typeof SearchMenu>, "children">) {
-  const rows = (items: ContextMenuAction[], parentLabel = "", parentDisabled = false): React.ReactNode =>
-    items.map((action) => action.children?.length ? <CommandGroup key={action.id} heading={action.label}>
-      {rows(action.children, action.label, parentDisabled || !!action.disabled)}
-    </CommandGroup> : <CommandItem key={action.id} value={action.id}
-      keywords={[action.label, parentLabel, ...(action.keywords ?? [])]}
-      disabled={parentDisabled || action.disabled} onSelect={() => onSelect(action)}>
-      <span className={action.variant === "destructive" ? "flex items-center gap-2 text-destructive [&_svg]:text-destructive" : "flex items-center gap-2"}>
-        {action.icon}<span>{action.labelNode ?? action.label}</span>
+  onQueryChange?: (query: string) => void;
+} & Omit<React.ComponentProps<typeof SearchMenu>, "children" | "searchValue" | "onSearchValueChange">) {
+  // The sheet holds its query so a builder can read it; it starts empty on
+  // every opening, as the desktop menu does.
+  const [query, setQuery] = React.useState("");
+  React.useEffect(() => { if (!open) setQuery(""); }, [open]);
+  useQueryNotice(query, onQueryChange);
+  const all = resolveActions(actions, query);
+  const row = (action: ContextMenuAction, keywords: string[], disabled: boolean, forceMount?: boolean) =>
+    <CommandItem key={action.id} value={action.id} keywords={keywords} forceMount={forceMount}
+      disabled={disabled} onSelect={() => onSelect(action)}
+      {...(action.checked ? { "data-checked": "true" } : {})}>
+      <span className={action.variant === "destructive" ? "flex min-w-0 flex-1 items-center gap-2 text-destructive [&_svg]:text-destructive" : "flex min-w-0 flex-1 items-center gap-2"}>
+        {action.icon}<span className="truncate">{action.labelNode ?? action.label}</span>
+        {action.trailing != null && <span className="ml-auto flex shrink-0 items-center text-xs tabular-nums text-muted-foreground">{action.trailing}</span>}
       </span>
-    </CommandItem>);
-  return <SearchMenu {...props}><CommandGroup>{rows(actions)}</CommandGroup></SearchMenu>;
+    </CommandItem>;
+  const rows = (items: ContextMenuAction[], parentLabel = "", parentDisabled = false): React.ReactNode =>
+    items.map((action) => action.children?.length ? <CommandGroup key={action.id} heading={
+      action.trailing != null ? <span className="flex items-center gap-2">{action.label}<span className="tabular-nums">{action.trailing}</span></span> : action.label
+    }>
+      {rows(action.children, action.label, parentDisabled || !!action.disabled)}
+    </CommandGroup> : row(action, [action.label, parentLabel, ...(action.keywords ?? [])], parentDisabled || !!action.disabled));
+  // A fallback entry answers any query: first while nothing is typed, then
+  // after every match (cmdk would otherwise filter it out).
+  const fallbacks = all.filter((action) => action.searchFallback);
+  const fallbackGroup = fallbacks.length > 0 &&
+    <CommandGroup forceMount>{fallbacks.map((action) => row(action, [], !!action.disabled, true))}</CommandGroup>;
+  const searching = query.trim() !== "";
+  // With a fallback, an unmatched query still has its answer: no “No results”.
+  return <SearchMenu {...props} open={open} searchValue={query} onSearchValueChange={setQuery}
+    hideEmpty={props.hideEmpty || fallbacks.length > 0}>
+    {!searching && fallbackGroup}
+    <CommandGroup>{rows(all.filter((action) => !action.searchFallback))}</CommandGroup>
+    {searching && fallbackGroup}
+  </SearchMenu>;
 }
 
 /** Pointer-anchored actions menu (right click on a card, tab, sidebar row…). */
@@ -352,7 +413,7 @@ export function IssueContextMenu({
   /** Right-click viewport coordinates; null = menu closed. */
   position: { x: number; y: number } | null;
   onClose: () => void;
-  actions: ContextMenuAction[];
+  actions: ContextMenuActions;
   /** Search field at the top. To cut on menus of two or three
  entries (view pills), where it would only make noise. */
   searchable?: boolean;
@@ -427,12 +488,20 @@ export function IssueActionsMenu({
   actions,
   align = "end",
   searchable = false,
+  tooltip,
+  onQueryChange,
+  open: controlledOpen,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   trigger: React.ReactNode;
-  actions: ContextMenuAction[];
+  actions: ContextMenuActions;
   align?: "start" | "center" | "end";
   searchable?: boolean;
+  /** Label shown on hovering the trigger (an icon-only button's name). */
+  tooltip?: string;
+  /** Notified of the typed search query, e.g. to search a remote list. */
+  onQueryChange?: (query: string) => void;
   /**
    * Notified each time it opens/closes. The state remains INTERNAL: the caller
    * doesn't have to hold it to know, and the only known need is to keep
@@ -440,24 +509,33 @@ export function IssueActionsMenu({
    * would disappear under the menu it has just opened).
    */
   onOpenChange?: (open: boolean) => void;
+  /** Opens the menu from outside (a keyboard shortcut); `onOpenChange` then
+   *  receives every change. Uncontrolled when omitted. */
+  open?: boolean;
+  /** Runs on close unless the chosen action hands focus to another surface:
+   *  a shortcut that opened the menu returns the caret to the text with it. */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   const mobile = useMobileLayout() === true;
-  const [open, setOpen] = React.useState(false);
+  const [uncontrolledOpen, setOpen] = React.useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
   const transferringFocus = React.useRef(false);
   const change = (next: boolean) => {
-    setOpen(next);
+    if (controlledOpen === undefined) setOpen(next);
     onOpenChange?.(next);
   };
-  if (mobile && searchable) return <MobileActionMenu trigger={trigger} open={open}
-    onOpenChange={change} actions={actions}
+  if (mobile && searchable) return <MobileActionMenu trigger={trigger} open={open} tooltip={tooltip}
+    onOpenChange={change} actions={actions} onQueryChange={onQueryChange}
     onSelect={(action) => {
       if (action.keepOpen) return void action.onSelect?.();
       change(false);
       requestAnimationFrame(() => action.onSelect?.());
     }} />;
-  return (
+  const menu = (
     <DropdownMenu open={open} onOpenChange={change}>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>
+        {tooltip === undefined ? trigger : <TooltipTrigger asChild>{trigger}</TooltipTrigger>}
+      </DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
         side="bottom"
@@ -466,13 +544,16 @@ export function IssueActionsMenu({
           if (transferringFocus.current) {
             event.preventDefault();
             transferringFocus.current = false;
+            return;
           }
+          onCloseAutoFocus?.(event);
         }}
       >
         <ActionMenuBody
           actions={actions}
           open={open}
           searchable={searchable}
+          onQueryChange={onQueryChange}
           onActionSelect={(action) => {
             // Finish closing before a field picker or dialog takes focus.
             transferringFocus.current = action.transfersFocus === true;
@@ -482,5 +563,14 @@ export function IssueActionsMenu({
         />
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+  // Whether a menu has a tooltip is fixed per call site, so the element type
+  // at this position never changes while it is mounted.
+  if (tooltip === undefined) return menu;
+  return (
+    <Tooltip>
+      {menu}
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }

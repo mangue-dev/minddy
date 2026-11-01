@@ -55,8 +55,15 @@ export function stepSuggestion(current: number, count: number, direction: "up" |
   return direction === "down" ? (current + 1) % rows : (current - 1 + rows) % rows;
 }
 
-/** The section of a mention list, by the type of what it cites. */
+/** The section of a mention list, by the type of what it cites. The first
+    four hold what the surface being written is tied to, listed before the
+    rest: its sub-pages, its relations, and the due date or plan of the very
+    issue or objective being written. */
 export type MentionSectionId =
+  | "subpages"
+  | "relations"
+  | "thisIssue"
+  | "thisObjective"
   | "people"
   | "projects"
   | "issues"
@@ -73,7 +80,8 @@ export type MentionSectionId =
 
 /** Numo, members and forge accounts are all people one can cite; issues
     found by meaning keep their own "Related by meaning" section. */
-export function mentionSection(option: { type: string; semantic?: boolean }): MentionSectionId | null {
+export function mentionSection(option: { type: string; semantic?: boolean; section?: MentionSectionId }): MentionSectionId | null {
+  if (option.section) return option.section;
   if (option.semantic) return "semantic";
   switch (option.type) {
     case "numo":

@@ -1,11 +1,11 @@
 "use client";
 
-import { FilterMenu, FilterItem, FilterSub, MenuToggleRow } from "@/components/filter-menu";
+import { FilterMenu, filterFacet, filterToggle } from "@/components/filter-menu";
 import { ObjectivePill } from "@/components/objective-label";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, CheckIcon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowDown01Icon, ArrangeByLettersAZIcon, AiAutoRotateIcon as CycleIcon, ArrowUpRight01Icon, Delete02Icon, FilterIcon, FloppyDiskIcon, LinkSquare01Icon, LoaderCircleIcon, LockIcon, MoreHorizontalIcon, Edit04Icon, Plug01Icon, Share01Icon, TriangleIcon, UserCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -49,7 +49,6 @@ import {
 import { UserAvatar } from "@/components/user-avatar";
 import { NumoIcon } from "@/components/numo-icon";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
-import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { SearchSelect } from "@/components/search-select";
 import { AppContentHeader } from "@/components/app-content-header";
 import { ProjectOrb } from "@/components/project-orb";
@@ -72,7 +71,7 @@ import {
   isDirectionalSort,
   reverseSortDirection,
 } from "@/lib/view-filter";
-import { StatusFilterRows } from "@/components/status-filter-menu";
+import { useStatusFilterActions } from "@/components/status-filter-menu";
 import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
 import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
@@ -214,16 +213,12 @@ function FiltersPopover({
   groupFacetsByName: boolean;
   /** System view: the assignee facet is pinned to "@me" and not editable. */
   lockedToMe: boolean;
-  /** The AI input rides when the board has an AI scope (MIN-592). */
+  /** “Create with Numo” rides when the board has an AI scope (MIN-592). */
   withAI: boolean;
-  /** Hand the typed wish to the AI (the Numo conversation, view context
-      attached) — the entry point of the filter request. */
+  /** Hand the typed wish to Numo (the conversation, view context attached);
+      an empty wish opens the Numo composer instead. */
   onAskAI: (wish: string) => void;
 }) {
-  const mobile = useMobileLayout() === true;
-  const Separator = mobile ? () => <hr className="my-2 border-border" /> : DropdownMenuSeparator;
-  const [open, setOpen] = useState(false);
-  const [aiWish, setAiWish] = useState("");
   const f = config.filters;
   const setFilters = (next: ViewFilters) =>
     onChange({ ...config, filters: next });
@@ -240,6 +235,7 @@ function FiltersPopover({
   );
   const tSort = useTranslations("Sort");
   const tp = useTranslations("Priority");
+  const statusActions = useStatusFilterActions(f.status, (status) => setFilters({ ...f, status }));
 
   const categoryOptions = useMemo(
     () => buildFacetOptions(categories, groupFacetsByName, (c) => c.color),
@@ -260,204 +256,133 @@ function FiltersPopover({
 
   const sortDirection: SortDirection = config.display.sortDirection ?? "asc";
 
-  // The AI hand-off (MIN-592, review): the wish rides to the Numo
-  // conversation — the classifier pass proved unreliable for filter
-  // selection, the conversation agent (with its hardened view tools) is the
-  // reliable path. The menu closes and the assistant opens with the view
-  // context attached.
-  const submitAiWish = () => {
-    const wish = aiWish.trim();
-    if (!wish) return;
-    setOpen(false);
-    setAiWish("");
-    onAskAI(wish);
-  };
+  const assigneeOptions: ContextMenuAction[] = lockedToMe
+    ? [{
+        // System view: nothing else to pick — one inert locked row.
+        id: "me",
+        label: tf("assignedToMe"),
+        icon: myAvatar,
+        disabled: true,
+        trailing: <HugeiconsIcon icon={LockIcon} className="size-3.5 shrink-0 text-muted-foreground" />,
+      }]
+    : [
+        filterToggle({
+          id: "me",
+          label: tf("assignedToMe"),
+          icon: myAvatar,
+          active: !!f.assignee?.includes(ME_ASSIGNEE),
+          onToggle: () => setFilters({ ...f, assignee: toggle(f.assignee, ME_ASSIGNEE) }),
+        }),
+        filterToggle({
+          id: "unassigned",
+          label: tf("unassigned"),
+          active: !!f.assignee?.includes(null),
+          onToggle: () => setFilters({ ...f, assignee: toggle(f.assignee, null) }),
+        }),
+        ...members.map((m) => filterToggle({
+          id: m.user_id,
+          label: displayName(m),
+          active: !!f.assignee?.includes(m.user_id),
+          onToggle: () => setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) }),
+        })),
+      ];
 
-  const trigger = <Button variant="ghost" size="icon-sm" aria-label={tc("filters")}>
-    <HugeiconsIcon icon={FilterIcon} className={cn(count > 0 && "text-primary")} />
-  </Button>;
-  const body = <>
-        {withAI && (
-          <>
-            {/* The AI input (MIN-592): write the wish, press Enter, the
-                request opens the AI conversation carrying this board's view
-                context. The keydown is stopped so the menu's own navigation
-                never eats a keystroke. */}
-            <div
-              className="p-1"
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  submitAiWish();
-                }}
-                className="flex items-center gap-1.5 rounded-md border bg-background px-2 focus-within:ring-1 focus-within:ring-ring"
-              >
-                <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />
-                <Input
-                  autoFocus={allowInputAutoFocus()}
-                  value={aiWish}
-                  onChange={(event) => setAiWish(event.target.value)}
-                  placeholder={t("aiFilterInput")}
-                  aria-label={t("aiFilterInput")}
-                  className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-              </form>
-            </div>
-            <Separator />
-          </>
-        )}
-        {projects.length > 0 && (
-          <FilterSub label={tf("project")} count={f.project?.length ?? 0}>
-            {projects.map((p) => (
-              <MenuToggleRow
-                key={p.id}
-                active={!!f.project?.includes(p.id)}
-                onSelect={() =>
-                  setFilters({ ...f, project: toggle<string>(f.project, p.id) })
-                }
-              >
-                <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4 shrink-0" />
-                <span className="truncate">{p.name}</span>
-              </MenuToggleRow>
-            ))}
-          </FilterSub>
-        )}
-        <FilterSub
-          label={tf("status")}
-          count={isDefaultStatusFilter(f.status) ? 0 : f.status?.length ?? 0}
-        >
-          <StatusFilterRows
-            status={f.status}
-            onChange={(status) => setFilters({ ...f, status })}
-          />
-        </FilterSub>
-        <FilterSub label={tf("priority")} count={f.priority?.length ?? 0}>
-          {PRIORITIES.map((p) => (
-            <MenuToggleRow
-              key={p.value}
-              active={!!f.priority?.includes(p.value)}
-              onSelect={() =>
-                setFilters({
-                  ...f,
-                  priority: toggle<IssuePriority>(f.priority, p.value),
-                })
-              }
-            >
-              <PriorityIndicator priority={p.value} className="size-4" />
-              {tp(p.value)}
-            </MenuToggleRow>
-          ))}
-        </FilterSub>
-        <FilterSub label={tf("assignee")} count={f.assignee?.length ?? 0}>
-          {lockedToMe ? (
-            /* System view: nothing else to pick — one non-interactive locked row. */
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm"
-                  aria-disabled
-                >
-                  <span className="flex min-w-0 flex-1 items-center gap-2">
-                    {myAvatar}
-                    {tf("assignedToMe")}
-                  </span>
-                  <HugeiconsIcon icon={LockIcon} className="size-3.5 shrink-0 text-muted-foreground" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>{t("myViewLockedHint")}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <>
-              <MenuToggleRow
-                active={!!f.assignee?.includes(ME_ASSIGNEE)}
-                onSelect={() =>
-                  setFilters({ ...f, assignee: toggle(f.assignee, ME_ASSIGNEE) })
-                }
-              >
-                {myAvatar}
-                {tf("assignedToMe")}
-              </MenuToggleRow>
-              <MenuToggleRow
-                active={!!f.assignee?.includes(null)}
-                onSelect={() => setFilters({ ...f, assignee: toggle(f.assignee, null) })}
-              >
-                {tf("unassigned")}
-              </MenuToggleRow>
-              {members.map((m) => (
-                <MenuToggleRow
-                  key={m.user_id}
-                  active={!!f.assignee?.includes(m.user_id)}
-                  onSelect={() =>
-                    setFilters({ ...f, assignee: toggle(f.assignee, m.user_id) })
-                  }
-                >
-                  <span className="truncate">{displayName(m)}</span>
-                </MenuToggleRow>
-              ))}
-            </>
-          )}
-        </FilterSub>
-        <FilterSub label={tf("effort")} count={f.effort?.length ?? 0}>
-          <MenuToggleRow
-            active={!!f.effort?.includes(null)}
-            onSelect={() => setFilters({ ...f, effort: toggle(f.effort, null) })}
-          >
-            {tf("effortNone")}
-          </MenuToggleRow>
-          {EFFORTS.map((e) => (
-            <MenuToggleRow
-              key={e.value}
-              active={!!f.effort?.includes(e.value)}
-              onSelect={() =>
-                setFilters({ ...f, effort: toggle<IssueEffort | null>(f.effort, e.value) })
-              }
-            >
-              <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />
-              {e.label}
-            </MenuToggleRow>
-          ))}
-        </FilterSub>
-        {categoryOptions.length > 0 && (
-          <FilterSub label={tf("categories")} count={f.category?.length ?? 0}>
-            {categoryOptions.map((o) => (
-              <MenuToggleRow
-                key={o.key}
-                active={facetActive(f.category, o.ids)}
-                onSelect={() =>
-                  setFilters({ ...f, category: toggleFacet(f.category, o.ids) })
-                }
-              >
-                <span
-                  className="size-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
-                  aria-hidden
-                />
-                <span className="truncate">{o.label}</span>
-              </MenuToggleRow>
-            ))}
-          </FilterSub>
-        )}
-        {objectiveOptions.length > 0 && (
-          <FilterSub label={tf("objective")} count={f.objective?.length ?? 0}>
-            <MenuToggleRow
-              active={!!f.objective?.includes(null)}
-              onSelect={() =>
-                setFilters({ ...f, objective: toggle(f.objective, null) })
-              }
-            >
-              {tf("noObjective")}
-            </MenuToggleRow>
-            {objectiveOptions.map((o) => (
-              <MenuToggleRow
-                key={o.key}
-                active={facetActive(f.objective, o.ids)}
-                onSelect={() =>
-                  setFilters({ ...f, objective: toggleFacet(f.objective, o.ids) })
-                }
-              >
-                {/* The objective's pill, as everywhere it is named (MIN-785). */}
+  const facets: ContextMenuAction[] = [
+    ...(projects.length > 0
+      ? [filterFacet({
+          id: "project",
+          label: tf("project"),
+          count: f.project?.length ?? 0,
+          children: projects.map((p) => filterToggle({
+            id: p.id,
+            label: p.name,
+            icon: <ProjectOrb seed={projectOrbSeed(p)} iconUrl={p.icon_url} className="size-4 shrink-0" />,
+            active: !!f.project?.includes(p.id),
+            onToggle: () => setFilters({ ...f, project: toggle<string>(f.project, p.id) }),
+          })),
+        })]
+      : []),
+    filterFacet({
+      id: "status",
+      label: tf("status"),
+      count: isDefaultStatusFilter(f.status) ? 0 : f.status?.length ?? 0,
+      children: statusActions,
+    }),
+    filterFacet({
+      id: "priority",
+      label: tf("priority"),
+      count: f.priority?.length ?? 0,
+      children: PRIORITIES.map((p) => filterToggle({
+        id: p.value,
+        label: tp(p.value),
+        icon: <PriorityIndicator priority={p.value} className="size-4" />,
+        active: !!f.priority?.includes(p.value),
+        onToggle: () => setFilters({ ...f, priority: toggle<IssuePriority>(f.priority, p.value) }),
+      })),
+    }),
+    filterFacet({
+      id: "assignee",
+      label: tf("assignee"),
+      count: f.assignee?.length ?? 0,
+      children: assigneeOptions,
+    }),
+    filterFacet({
+      id: "effort",
+      label: tf("effort"),
+      count: f.effort?.length ?? 0,
+      children: [
+        filterToggle({
+          id: "none",
+          label: tf("effortNone"),
+          active: !!f.effort?.includes(null),
+          onToggle: () => setFilters({ ...f, effort: toggle(f.effort, null) }),
+        }),
+        ...EFFORTS.map((e) => filterToggle({
+          id: e.value,
+          label: e.label,
+          icon: <HugeiconsIcon icon={TriangleIcon} className="size-4 text-muted-foreground" />,
+          active: !!f.effort?.includes(e.value),
+          onToggle: () => setFilters({ ...f, effort: toggle<IssueEffort | null>(f.effort, e.value) }),
+        })),
+      ],
+    }),
+    ...(categoryOptions.length > 0
+      ? [filterFacet({
+          id: "category",
+          label: tf("categories"),
+          count: f.category?.length ?? 0,
+          children: categoryOptions.map((o) => filterToggle({
+            id: o.key,
+            label: o.label,
+            icon: (
+              <span
+                className="size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: o.color ?? "var(--muted-foreground)" }}
+                aria-hidden
+              />
+            ),
+            active: facetActive(f.category, o.ids),
+            onToggle: () => setFilters({ ...f, category: toggleFacet(f.category, o.ids) }),
+          })),
+        })]
+      : []),
+    ...(objectiveOptions.length > 0
+      ? [filterFacet({
+          id: "objective",
+          label: tf("objective"),
+          count: f.objective?.length ?? 0,
+          children: [
+            filterToggle({
+              id: "none",
+              label: tf("noObjective"),
+              active: !!f.objective?.includes(null),
+              onToggle: () => setFilters({ ...f, objective: toggle(f.objective, null) }),
+            }),
+            ...objectiveOptions.map((o) => filterToggle({
+              id: o.key,
+              label: o.label,
+              // The objective's pill, as everywhere it is named (MIN-785).
+              labelNode: (
                 <ObjectivePill
                   objective={{
                     name: o.label,
@@ -465,109 +390,130 @@ function FiltersPopover({
                     status: objectiveStatusById.get(o.ids[0]),
                   }}
                 />
-              </MenuToggleRow>
-            ))}
-          </FilterSub>
-        )}
-        {integrationOptions.length > 0 && (
-          <FilterSub label={tf("integration")} count={f.integration?.length ?? 0}>
-            <MenuToggleRow
-              active={!!f.integration?.includes(null)}
-              onSelect={() =>
-                setFilters({ ...f, integration: toggle(f.integration, null) })
-              }
-            >
-              {tf("noIntegration")}
-            </MenuToggleRow>
-            {integrationOptions.map((o) => (
-              <MenuToggleRow
-                key={o.key}
-                active={facetActive(f.integration, o.ids)}
-                onSelect={() =>
-                  setFilters({ ...f, integration: toggleFacet(f.integration, o.ids) })
-                }
-              >
-                <HugeiconsIcon icon={Plug01Icon} className="size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />
-                <span className="truncate">{o.label}</span>
-              </MenuToggleRow>
-            ))}
-          </FilterSub>
-        )}
-
-        <Separator />
-        <MenuToggleRow
-          active={!!config.display.hideDone}
-          onSelect={() =>
+              ),
+              active: facetActive(f.objective, o.ids),
+              onToggle: () => setFilters({ ...f, objective: toggleFacet(f.objective, o.ids) }),
+            })),
+          ],
+        })]
+      : []),
+    ...(integrationOptions.length > 0
+      ? [filterFacet({
+          id: "integration",
+          label: tf("integration"),
+          count: f.integration?.length ?? 0,
+          children: [
+            filterToggle({
+              id: "none",
+              label: tf("noIntegration"),
+              active: !!f.integration?.includes(null),
+              onToggle: () => setFilters({ ...f, integration: toggle(f.integration, null) }),
+            }),
+            ...integrationOptions.map((o) => filterToggle({
+              id: o.key,
+              label: o.label,
+              icon: <HugeiconsIcon icon={Plug01Icon} className="size-3.5 shrink-0 text-blue-500 dark:text-blue-400" />,
+              active: facetActive(f.integration, o.ids),
+              onToggle: () => setFilters({ ...f, integration: toggleFacet(f.integration, o.ids) }),
+            })),
+          ],
+        })]
+      : []),
+    filterToggle({
+      id: "hide-done",
+      label: t("hideDone"),
+      separatorBefore: true,
+      active: !!config.display.hideDone,
+      onToggle: () => onChange({
+        ...config,
+        display: { ...config.display, hideDone: !config.display.hideDone },
+      }),
+    }),
+    filterToggle({
+      id: "hide-recurring",
+      label: t("hideRecurring"),
+      active: !!config.display.hideRecurring,
+      onToggle: () => onChange({
+        ...config,
+        display: { ...config.display, hideRecurring: !config.display.hideRecurring },
+      }),
+    }),
+    // Order — moved into the menu (MIN-592), with the direction invert right
+    // under the sort list. The invert reads like a checked option (MIN-592
+    // review): the check marks that the direction is the reversed one. Not
+    // available for "smart" and "manual" — they carry their own order.
+    filterFacet({
+      id: "order",
+      label: tf("order"),
+      count: 0,
+      separatorBefore: true,
+      children: [
+        ...SORTS.map((s) => filterToggle({
+          id: s,
+          label: tSort(s),
+          active: config.sort === s,
+          onToggle: () => onChange({ ...config, sort: s }),
+        })),
+        filterToggle({
+          id: "reverse",
+          label: t("reverseOrder"),
+          separatorBefore: true,
+          icon: <HugeiconsIcon icon={ArrangeByLettersAZIcon} className="text-muted-foreground" />,
+          disabled: !isDirectionalSort(config.sort),
+          active: sortDirection === "desc",
+          onToggle: () => {
+            if (!isDirectionalSort(config.sort)) return;
             onChange({
               ...config,
-              display: { ...config.display, hideDone: !config.display.hideDone },
-            })
-          }
-        >
-          {t("hideDone")}
-        </MenuToggleRow>
-        <MenuToggleRow
-          active={!!config.display.hideRecurring}
-          onSelect={() =>
-            onChange({
-              ...config,
-              display: {
-                ...config.display,
-                hideRecurring: !config.display.hideRecurring,
-              },
-            })
-          }
-        >
-          {t("hideRecurring")}
-        </MenuToggleRow>
+              display: { ...config.display, sortDirection: reverseSortDirection(sortDirection) },
+            });
+          },
+        }),
+      ],
+    }),
+  ];
 
-        {/* Order — moved into the menu (MIN-592), with the direction invert
-            right under the sort list. The invert button does not apply to
-            "smart" and "manual": they carry their own order. */}
-        <Separator />
-        <FilterSub label={tf("order")} count={0}>
-          {SORTS.map((s) => (
-            <FilterItem
-              key={s}
-              onSelect={(event) => {
-                event.preventDefault();
-                onChange({ ...config, sort: s });
-              }}
-            >
-              {tSort(s)}
-              {config.sort === s && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
-            </FilterItem>
-          ))}
-          <Separator />
-          {/* The invert action reads like a checked option (MIN-592 review):
-              the icon shows the CURRENT direction (A→Z vs Z→A) and the check
-              marks that the direction is the reversed one. Not available for
-              "smart" and "manual" — they carry their own order. */}
-          <FilterItem
-            disabled={!isDirectionalSort(config.sort)}
-            onSelect={(event) => {
-              event.preventDefault();
-              if (!isDirectionalSort(config.sort)) return;
-              onChange({
-                ...config,
-                display: {
-                  ...config.display,
-                  sortDirection: reverseSortDirection(sortDirection),
-                },
-              });
-            }}
-          >
-            {sortDirection === "asc" ? (
-              <HugeiconsIcon icon={ArrangeByLettersAZIcon} className="text-muted-foreground" />
-            ) : (
-              <HugeiconsIcon icon={ArrangeByLettersAZIcon} className="text-muted-foreground" />
-            )}
-            {t("reverseOrder")}
-            {sortDirection === "desc" && <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4" />}
-          </FilterItem>
-        </FilterSub>
-  </>;
-  return <FilterMenu open={open} onOpenChange={setOpen} label={tc("filters")} trigger={trigger}>{body}</FilterMenu>;
+  // “Create with Numo” (MIN-592): the first row of the menu while nothing is
+  // typed, the last one once a search is typed. With a query, it hands that
+  // text to the Numo conversation (the classifier pass proved unreliable for
+  // filter selection; the conversation agent, with its hardened view tools,
+  // is the reliable path) with the view context attached; with none, it
+  // opens the Numo composer.
+  const actions = (query: string): ContextMenuAction[] => {
+    const wish = query.trim();
+    if (!withAI) return facets;
+    const label = t("createWithNumo");
+    const numo: ContextMenuAction = {
+      id: "create-with-numo",
+      label,
+      searchFallback: true,
+      separatorBefore: true,
+      transfersFocus: true,
+      icon: <NumoIcon animated={false} className="size-4 shrink-0 text-primary" />,
+      labelNode: wish ? (
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0">{label}</span>
+          <span className="truncate text-muted-foreground">{wish}</span>
+        </span>
+      ) : undefined,
+      onSelect: () => onAskAI(wish),
+    };
+    // The facets open under a separator while the Numo row leads the list.
+    const [first, ...rest] = facets;
+    return [numo, { ...first, separatorBefore: !wish }, ...rest];
+  };
+
+  return (
+    <FilterMenu
+      label={tc("filters")}
+      actions={actions}
+      trigger={
+        <Button variant="ghost" size="icon-sm" aria-label={tc("filters")}>
+          <HugeiconsIcon icon={FilterIcon} className={cn(count > 0 && "text-primary")} />
+        </Button>
+      }
+    />
+  );
 }
 
 function ViewNameDialog({

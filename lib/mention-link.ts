@@ -60,6 +60,14 @@ export interface MentionLink {
   meta?: MentionMeta;
 }
 
+/** The metadata of a mention of an issue's plan: the issue's own mention,
+    read as its plan (offered in its description, see use-context-mentions). */
+export const PLAN_MENTION_META: MentionMeta = { part: "plan" };
+
+export function isPlanMention(type: string, meta: MentionMeta | null | undefined): boolean {
+  return type === "issue" && meta?.part === "plan";
+}
+
 /** The fixed id of the task notebook's mention. */
 export const SCRATCHPAD_MENTION_ID = "notebook";
 

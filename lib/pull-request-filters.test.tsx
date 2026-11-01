@@ -7,7 +7,6 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PullRequestsPage } from "@/components/pull-requests/pull-requests-page";
 import type { PrDetail } from "@/components/pull-requests/pr-detail";
-import type { SearchMenuProps } from "@/components/search-menu";
 import { AppTabRouteProvider } from "./app-tab-route-context";
 import { nextReadActivationSequence } from "./read-activation-sequence";
 import { allPullRequestsQueryKey, PULL_REQUESTS_PAGE, useCompletedPullRequestsQuery } from "./use-agent-runs";
@@ -67,15 +66,25 @@ vi.mock("@/components/ui/app-tooltip", () => ({
 vi.mock("@/components/secondary-sidebar", () => ({
   CollectionSidebar: ({ actions, children }: { actions: ReactNode; children: ReactNode }) => <aside>{actions}{children}</aside>,
 }));
-// Keep real command options and the page's controlled menu state; omit portal positioning.
-vi.mock("@/components/search-menu", async () => {
-  const { Command, CommandList } = await vi.importActual<typeof import("@/components/ui/command")>("@/components/ui/command");
-  return { SearchMenu: ({ open, onOpenChange, trigger, children }: SearchMenuProps) => (
-    <div>
-      <div onClick={() => onOpenChange(!open)}>{trigger}</div>
-      {open ? <Command><CommandList>{children}</CommandList></Command> : null}
-    </div>
-  ) };
+// Keep the page's real filter actions; render them as plain options instead
+// of the positioned dropdown.
+vi.mock("@/components/filter-menu", async (importOriginal) => {
+  const { useState } = await import("react");
+  const actual = await importOriginal<typeof import("@/components/filter-menu")>();
+  return { ...actual, FilterMenu: ({ trigger, actions }: ComponentProps<typeof actual.FilterMenu>) => {
+    const [open, setOpen] = useState(false);
+    const list = typeof actions === "function" ? actions("") : actions;
+    return (
+      <div>
+        <div onClick={() => setOpen(!open)}>{trigger}</div>
+        {open ? list.map((action) => (
+          <button key={action.id} role="option" data-checked={action.checked ? "true" : undefined} onClick={action.onSelect}>
+            {action.label}
+          </button>
+        )) : null}
+      </div>
+    );
+  } };
 });
 
 function item(state: PullRequestListItem["pr_state"] = "open", prId = "pr"): PullRequestListItem {

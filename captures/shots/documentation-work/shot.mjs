@@ -2,11 +2,13 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { openPage, shoot, CAPTURE, CAPTURE_LOCALES } from '../../lib/browser.mjs';
+import { PREVIEW_AURORA_PROJECT_ID } from '../../lib/config.mjs';
 import { captureDocumentationControl, settleDocumentationPage } from '../../lib/documentation-frame.mjs';
 import { catalog } from '../../lib/messages.mjs';
 import { demoProse, translateDemo } from '../../lib/demo-prose.mjs';
-// The preview and production demo worlds give Aurora different ids.
-const project=process.env.DOC_CAPTURE_PROJECT??'6cd36606-c297-4920-8ce3-31b5f3697be8';
+// The preview and production demo worlds give Aurora different ids. A local
+// candidate reads the preview database: its Aurora is the default.
+const project=process.env.DOC_CAPTURE_PROJECT??PREVIEW_AURORA_PROJECT_ID;
 if(!['localhost','127.0.0.1'].includes(new URL(CAPTURE.baseUrl).hostname))throw new Error('Use a local candidate for documentation captures.');
 const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
 const captureDate=new Date().toISOString().slice(0,10);

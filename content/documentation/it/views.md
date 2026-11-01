@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 11,
+  "revision": 13,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -41,14 +41,15 @@
       "lib/public-board-projection.ts",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "components/share-view-dialog.tsx"
+      "components/share-view-dialog.tsx",
+      "components/filter-menu.tsx"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of views-and-filters-steps, share-a-view-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (it figure alt text and caption with catalog UI labels; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "navigation",
@@ -68,14 +69,14 @@
       "id": "views-and-filters-steps",
       "kind": "screenshot",
       "src": "/documentation/it/work-view-filters.png",
-      "alt": "Filtri manuali di una vista e menu di ordinamento.",
-      "caption": "Filtra per proprietà dei ticket o scegli un ordine. Il campo IA è facoltativo per questi comandi manuali.",
-      "revision": 12,
+      "alt": "Menu Filtri con il campo di ricerca, Crea con Numo, i sottomenu delle proprietà e Ordina.",
+      "caption": "Cerca un valore di filtro, apri il sottomenu di una proprietà o scegli un ordine. Con Crea con Numo descrivi invece i filtri che vuoi.",
+      "revision": 13,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-01",
       "viewport": [
-        288,
-        393
+        304,
+        448
       ],
       "theme": "light",
       "padding": 24,
@@ -87,7 +88,7 @@
       "src": "/documentation/it/work-share-view.png",
       "alt": "Finestra di condivisione di una vista con accesso privato selezionato.",
       "caption": "Accesso privato, protetto da password e pubblico sono scelte distinte. In questa schermata la vista rimane privata.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -114,9 +115,11 @@ Parti dal tabellone di un progetto o da un elenco personale di ticket tra proget
 
 Filtra per proprietà supportate, come stato, assegnatario, priorità, categorie o obiettivo. Ordina il risultato per rendere chiara la prossima azione. Nel kanban, i ticket restano raggruppati per stato; cambiare una vista non ne modifica stato o assegnazione. Senza un proprio filtro di stato, un tabellone mostra solo **Backlog**, **Da fare**, **In corso** e **In revisione**. Seleziona **Completato** o **Annullato** nel filtro **Stato** per mostrare queste colonne; una vista conserva il filtro di stato salvato con essa.
 
+Nel menu **Filtri**, ogni proprietà apre un sottomenu. Scrivi nel campo di ricerca del menu per trovare un valore in qualsiasi proprietà; ogni risultato indica la proprietà a cui appartiene, ad esempio **Priorità › Alta**. Su un tabellone in cui Numo è disponibile, **Crea con Numo** compare per primo nel menu e passa in fondo all’elenco appena scrivi: sceglilo per inviare a Numo ciò che hai scritto, e Numo aggiorna i filtri della vista corrente. Se lo scegli senza aver scritto nulla, apre il campo di scrittura di Numo.
+
 Salva la vista con un nome che ne descriva lo scopo, selezionala di nuovo nella barra delle viste in cima al tabellone (un menu su uno schermo stretto) e verifica i filtri. Modifica o rimuovi la vista salvata quando cambia il suo scopo. **Elimina vista** chiede una conferma, e un tabellone conserva sempre almeno una vista propria. Condividere una vista è un’operazione di pubblicazione separata con proprie regole di permessi e revoca.
 
-![Filtri manuali di una vista e menu di ordinamento.](/documentation/it/work-view-filters.png)
+![Menu Filtri con il campo di ricerca, Crea con Numo, i sottomenu delle proprietà e Ordina.](/documentation/it/work-view-filters.png)
 
 ### Risolvere risultati vuoti o inattesi {#view-recovery}
 

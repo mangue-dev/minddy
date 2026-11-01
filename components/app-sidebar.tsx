@@ -164,6 +164,12 @@ const WhatsNewDialog = dynamic(
   { ssr: false },
 );
 
+// The app's rich description for the "Share feedback" dialog; tiptap itself
+// stays deferred behind LazyDocumentEditor.
+const FeedbackRichBody = dynamic(
+  () => import("@/components/feedback/feedback-rich-body").then((m) => m.FeedbackRichBody),
+  { ssr: false },
+);
 const ProductFeedbackDialog = dynamic(
   () => import("@/components/product-feedback-dialog").then((m) => m.ProductFeedbackDialog),
   { ssr: false },
@@ -880,7 +886,7 @@ function ChangelogButton({
       </DialogContent>
     </Dialog>
     {dialogMounted && <WhatsNewDialog open={dialogOpen} onOpenChange={setDialogOpen} />}
-    {feedbackDialogMounted && <ProductFeedbackDialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen} />}
+    {feedbackDialogMounted && <ProductFeedbackDialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen} Body={FeedbackRichBody} />}
   </>;
 
   return (
@@ -960,6 +966,7 @@ function ChangelogButton({
         <ProductFeedbackDialog
           open={feedbackDialogOpen}
           onOpenChange={setFeedbackDialogOpen}
+          Body={FeedbackRichBody}
         />
       ) : null}
     </>

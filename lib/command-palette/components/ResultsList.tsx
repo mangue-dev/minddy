@@ -17,6 +17,9 @@ import { ResultItem } from "./ResultItem";
 import styles from "../styles/ResultsList.module.css";
 import type { PaletteItem } from "../types";
 
+/** Line widths of the loading rows, varied so they do not read as a block. */
+const LOADING_ROW_WIDTHS = ["58%", "42%", "66%", "36%"];
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -369,12 +372,18 @@ export function ResultsList({
     }
   }, [activeIndex, rows, rowOffsets, listHeight, listRef, getRowHeight]);
 
-  // Loading state
+  // Loading state: placeholder rows shaped like the results (MIN-868), with
+  // the label kept for screen readers.
   if (isLoading) {
     return (
-      <div className={styles.loading}>
-        <div className={styles.loadingSpinner} />
-        <span className={styles.loadingText}>{t("results.loading")}</span>
+      <div className={styles.loading} role="status" aria-busy="true">
+        <span className={styles.srOnly}>{t("results.loading")}</span>
+        {LOADING_ROW_WIDTHS.map((width) => (
+          <div key={width} className={styles.loadingRow} aria-hidden>
+            <span className={styles.loadingIcon} />
+            <span className={styles.loadingLine} style={{ width }} />
+          </div>
+        ))}
       </div>
     );
   }

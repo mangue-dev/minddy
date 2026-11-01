@@ -16,6 +16,13 @@ export const DEMO_EMAIL = "captures-demo@minddy.app";
 export const DEMO_EMAIL_PATTERN = /^captures-demo(\+[a-z0-9-]+)?@minddy\.app$/;
 
 /**
+ * The demo world's Aurora project on the PREVIEW database, which a local
+ * candidate reads (docs/database-environments.md). Production's Aurora has
+ * another id; the landing captures, taken on www.minddy.app, keep theirs.
+ */
+export const PREVIEW_AURORA_PROJECT_ID = "9e3d0c35-c1d7-4d2a-983d-8190638cc887";
+
+/**
  * The capture administrator: a dedicated account for the instance
  * administration figures, never a real administrator. Its address, password
  * and TOTP secret live in the local `.env` only (`CAPTURES_ADMIN_*`), and the

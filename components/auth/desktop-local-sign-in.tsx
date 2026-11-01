@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Spinner } from "@/components/ui/spinner";
+import { RedirectingScreen } from "@/components/auth/redirecting-screen";
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { LOCAL_INSTANCE_ORIGIN } from "@/lib/desktop/local-account";
@@ -56,10 +56,5 @@ export function DesktopLocalSignIn() {
   }, [router]);
 
   if (state === "idle") return null;
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-3 bg-background" role="status">
-      <Spinner className="size-6" />
-      <p className="text-sm text-muted-foreground">{t("localSignIn")}</p>
-    </div>
-  );
+  return <RedirectingScreen label={t("localSignIn")} className="z-[60]" />;
 }

@@ -1,46 +1,54 @@
 "use client";
 
-import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { LoaderCircleIcon, SentIcon } from "@hugeicons/core-free-icons";
-import { useId, useState } from "react";
+import { useRef, useState, type ComponentProps } from "react";
 import { useTranslations } from "next-intl";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FormDialog } from "@/components/form-dialog";
+import { FeedbackComposerDialog } from "@/components/feedback/feedback-composer-dialog";
 import { useResetAfterClose } from "@/lib/use-dialog-close-content";
-import type { DocumentationFeedbackContext } from "@/lib/documentation-feedback";
-import { DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX } from "@/lib/documentation-feedback";
-import {
-  FEEDBACK_BODY_MAX,
-  FEEDBACK_TITLE_MAX,
-} from "@/lib/feedback/types";
+import { DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX, type DocumentationFeedbackContext } from "@/lib/documentation-feedback";
+import { FEEDBACK_BODY_MAX } from "@/lib/feedback/types";
 
+/**
+ * “Share feedback” from the help menu (and “Report an error” in the
+ * documentation): the Feedback page's composer reduced to a title, a
+ * description and the microphone. It is sent to minddy's own board through
+ * `/api/product-feedback`, which signs it with the reader's account.
+ */
 export function ProductFeedbackDialog({
   open,
   onOpenChange,
   source = "product",
   documentationContext,
+  Body,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   source?: "product" | "documentation";
   documentationContext?: DocumentationFeedbackContext;
+  /** The rich description, where the app provides it (feedback-rich-body). */
+  Body?: ComponentProps<typeof FeedbackComposerDialog>["Body"];
 }) {
   const t = useTranslations("Nav");
-  const tc = useTranslations("Common");
-  const titleId = useId();
-  const descriptionId = useId();
+  const tDictate = useTranslations("Dictate");
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  // The rich editor commits on blur: the ref carries the last committed
+  // Markdown, and `submit` forces the blur before reading it.
+  const bodyRef = useRef("");
+  const [initialBody, setInitialBody] = useState("");
+  const [editorKey, setEditorKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+
+  const loadBody = (markdown: string) => {
+    bodyRef.current = markdown;
+    setInitialBody(markdown);
+    setEditorKey((key) => key + 1);
+  };
 
   // The fields stay filled while the dialog fades out, then clear.
   const { scheduleReset } = useResetAfterClose(open, () => {
     setTitle("");
-    setDescription("");
+    loadBody("");
   });
   const close = () => {
     scheduleReset();
@@ -48,23 +56,39 @@ export function ProductFeedbackDialog({
   };
 
   const requestClose = () => {
-    if (submitting || transcribing) return;
+    if (submitting) return;
+    // A dictation in flight lands in this form: closing it would throw it away.
+    if (transcribing) {
+      toast.info(tDictate("inFlight"), { id: "dictation-in-flight" });
+      return;
+    }
     close();
   };
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (submitting || transcribing) return;
-    if (!nextOpen) close();
-    else onOpenChange(true);
-  };
+  // The server's limit; the documentation's report leaves room for its context.
+  const bodyMax = source === "documentation" ? DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX : FEEDBACK_BODY_MAX;
 
   const submit = async () => {
+    if (submitting || transcribing || !title.trim()) return;
     setSubmitting(true);
     try {
+      (document.activeElement as HTMLElement | null)?.blur();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      // The rich editor has no length cap of its own: say what is wrong
+      // before the server refuses it with a generic error.
+      if (bodyRef.current.length > bodyMax) {
+        toast.error(t("feedbackDescriptionTooLong", { max: bodyMax }));
+        return;
+      }
       const response = await fetch("/api/product-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, source, documentationContext }),
+        body: JSON.stringify({
+          title,
+          description: bodyRef.current,
+          source,
+          documentationContext,
+        }),
       });
       if (!response.ok) {
         toast.error(
@@ -84,64 +108,39 @@ export function ProductFeedbackDialog({
   };
 
   return (
-    <FormDialog
+    <FeedbackComposerDialog
+      Body={Body}
+      bodyMaxLength={bodyMax}
       open={open}
-      onOpenChange={handleOpenChange}
-      title={t("shareFeedback")}
-      description={t("feedbackDialogDescription")}
-      onSubmit={submit}
-      submitLabel={t("shareFeedback")}
-      submitDisabled={!title.trim() || transcribing}
-      submitting={submitting}
-      submitIcon={
-        submitting ? (
-          <HugeiconsIcon icon={LoaderCircleIcon} className="size-4 animate-spin" aria-hidden />
-        ) : (
-          <HugeiconsIcon icon={SentIcon} className="size-4" aria-hidden />
-        )
-      }
-      cancelLabel={tc("cancel")}
-      onCancel={requestClose}
-      className="sm:max-w-lg"
+      onOpenChange={onOpenChange}
+      onRequestClose={requestClose}
+      srTitle={t("shareFeedback")}
+      srDescription={t("feedbackDialogDescription")}
+      title={title}
+      onTitleChange={setTitle}
+      titlePlaceholder={t("feedbackTitlePlaceholder")}
+      titleAriaLabel={t("feedbackTitleLabel")}
+      bodyKey={editorKey}
+      initialBody={initialBody}
+      onBodyChange={(markdown) => {
+        bodyRef.current = markdown;
+      }}
+      bodyPlaceholder={t("feedbackDescriptionPlaceholder")}
+      bodyAriaLabel={t("feedbackDescriptionLabel")}
       dictation={{
-        context: "feedback_form",
         feature: "feedback_voice",
+        // The transcript joins the description: there is no project here for
+        // Numo to file it against, so the words land as spoken.
         onTranscription: (text) => {
-          setDescription((value) => `${value}${value ? "\n\n" : ""}${text}`);
+          const current = bodyRef.current;
+          loadBody(`${current}${current ? "\n\n" : ""}${text}`);
         },
-        disabled: submitting,
         onProcessingChange: setTranscribing,
       }}
-    >
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={titleId} className="text-sm font-medium">
-          {t("feedbackTitleLabel")}
-        </label>
-        <Input
-          id={titleId}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder={t("feedbackTitlePlaceholder")}
-          maxLength={FEEDBACK_TITLE_MAX}
-          disabled={submitting}
-          autoFocus={allowInputAutoFocus()}
-          required
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={descriptionId} className="text-sm font-medium">
-          {t("feedbackDescriptionLabel")}
-        </label>
-        <Textarea
-          id={descriptionId}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          placeholder={t("feedbackDescriptionPlaceholder")}
-          maxLength={source === "documentation" ? DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX : FEEDBACK_BODY_MAX}
-          disabled={submitting}
-          rows={6}
-        />
-      </div>
-    </FormDialog>
+      submitLabel={t("shareFeedback")}
+      canSubmit={!submitting && !transcribing && !!title.trim()}
+      busy={submitting}
+      onSubmit={() => void submit()}
+    />
   );
 }

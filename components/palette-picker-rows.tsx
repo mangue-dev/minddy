@@ -9,7 +9,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { File02Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon } from "@hugeicons/core-free-icons";
 import { useMemo, useRef, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Spinner } from "@/components/ui/spinner";
 import { ObjectiveStatusIndicator, StatusIndicator } from "@/components/issue-indicators";
 import { OBJECTIVE_TEXT, objectiveTextStyle } from "@/components/objective-label";
 import type { PaletteItem } from "@/lib/command-palette/types";
@@ -104,8 +103,7 @@ export function pagePickerRow(
 /** The status line of a picker whose rows are still loading. */
 export function PickerLoading({ label }: { label: string }): ReactNode {
   return (
-    <span role="status" className="flex items-center gap-2">
-      <Spinner className="size-3.5" />
+    <span role="status" className="text-shimmer">
       {label}
     </span>
   );

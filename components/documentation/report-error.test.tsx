@@ -4,6 +4,8 @@ import { createRoot } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
+import { toast } from "sonner";
+import { DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX } from "@/lib/documentation-feedback";
 import { DocumentationErrorReport } from "./report-error";
 
 const h = vi.hoisted(() => ({ configured: true, authenticated: false, loading: false }));
@@ -13,23 +15,19 @@ vi.mock("next/dynamic", async () => {
   const { ProductFeedbackDialog } = await import("@/components/product-feedback-dialog");
   return { default: () => ProductFeedbackDialog };
 });
-vi.mock("@/lib/mobile-sheet-focus", () => ({ allowInputAutoFocus: () => false }));
-vi.mock("@/components/form-dialog", () => ({
-  FormDialog: ({ open, title, children, onSubmit, submitDisabled, onCancel }: {
-    open: boolean; title: string; children: React.ReactNode; onSubmit: () => Promise<void>; submitDisabled: boolean; onCancel: () => void;
-  }) => open ? <div role="dialog" aria-label={title}>{children}<button disabled={submitDisabled} onClick={() => void onSubmit()}>Submit</button><button onClick={onCancel}>Cancel</button></div> : null,
-}));
-vi.mock("@/components/ui/input", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} onInput={props.onChange as never} />,
-}));
-vi.mock("@/components/ui/textarea", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  Textarea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
+vi.mock("@/components/feedback/feedback-composer-dialog", () => ({
+  FeedbackComposerDialog: ({ open, srTitle, title, onTitleChange, initialBody, onBodyChange, onSubmit, canSubmit, onRequestClose }: {
+    open: boolean; srTitle: string; title: string; onTitleChange: (title: string) => void; initialBody: string;
+    onBodyChange: (markdown: string) => void; onSubmit: () => void; canSubmit: boolean; onRequestClose: () => void;
+  }) => open ? <div role="dialog" aria-label={srTitle}>
+    <input value={title} onInput={event => onTitleChange(event.currentTarget.value)} onChange={() => {}} />
+    <textarea defaultValue={initialBody} onInput={event => onBodyChange(event.currentTarget.value)} />
+    <button disabled={!canSubmit} onClick={onSubmit}>Submit</button><button onClick={onRequestClose}>Cancel</button>
+  </div> : null,
 }));
 vi.mock("sonner", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }));
 
 let host: HTMLDivElement;
@@ -82,7 +80,11 @@ it("keeps article context separate from the editable submission", async () => {
     input.value = "The example has a typo";
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
-  await act(async () => [...host.querySelectorAll("button")].find(button => button.textContent === "Submit")!.click());
+  await act(async () => {
+    [...host.querySelectorAll("button")].find(button => button.textContent === "Submit")!.click();
+    // The dialog blurs the editor and waits a tick for its commit before sending.
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
   expect(fetch).toHaveBeenCalledWith("/api/product-feedback", expect.objectContaining({
     body: JSON.stringify({ title: "The example has a typo", description: "", source: "documentation", documentationContext: { articleId: "issues", locale: "fr" } }),
   }));
@@ -93,4 +95,23 @@ it("does not offer mail or general feedback as a fallback when reporting is unco
   expect(host.querySelector<HTMLButtonElement>("button")!.disabled).toBe(true);
   expect(host.querySelector("a")).toBeNull();
   expect(host.textContent).toContain("Error reporting is unavailable on this instance.");
+});
+
+it("refuses a description over the limit with its own message, without sending", async () => {
+  h.authenticated = true; render();
+  act(() => host.querySelector<HTMLButtonElement>("button")!.click());
+  const input = host.querySelector<HTMLInputElement>("input")!;
+  const body = host.querySelector<HTMLTextAreaElement>("textarea")!;
+  act(() => {
+    input.value = "Long report";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    body.value = "x".repeat(DOCUMENTATION_FEEDBACK_DESCRIPTION_MAX + 1);
+    body.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await act(async () => {
+    [...host.querySelectorAll("button")].find(button => button.textContent === "Submit")!.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+  });
+  expect(fetch).not.toHaveBeenCalled();
+  expect(toast.error).toHaveBeenCalledWith(expect.stringContaining("too long"));
 });

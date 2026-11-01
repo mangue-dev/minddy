@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
+import { TextLinesSkeleton } from "@/components/loading-skeletons";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { removeSettledTasks } from "@/lib/scratchpad";
@@ -256,9 +257,7 @@ function ScratchpadBody() {
       >
         <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
           {isLoading || noteDocument === undefined ? (
-            <div className="flex justify-center py-16 text-muted-foreground">
-              <Spinner />
-            </div>
+            <TextLinesSkeleton lines={5} />
           ) : (
             <ScratchpadEditor
               initialValue={content}

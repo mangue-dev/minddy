@@ -1084,6 +1084,7 @@ export function CreateIssueDialog({
                 {smartFillAvailable && (
                   <SmartFillCompact
                       fullWidth={mobile}
+                      shortcut
                       writesTitle={resolveSmartFillTitle(user?.user_metadata)}
                       value={smartFill}
                       onChange={(value) => {

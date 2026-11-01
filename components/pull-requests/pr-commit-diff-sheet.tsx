@@ -2,7 +2,8 @@
 
 import type { ComponentProps } from "react";
 import { useTranslations } from "next-intl";
-import { Spinner } from "@/components/ui/spinner";
+import { PrFilesSkeleton } from "@/components/pull-requests/pr-loading-skeleton";
+import { LoadingRegion } from "@/components/loading-skeletons";
 import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { PrDiff } from "@/components/pull-requests/pr-diff";
 import { ShaButton } from "@/components/pull-requests/pr-sha-button";
@@ -71,9 +72,9 @@ export function PrCommitDiffSheet({
             branch, where it scrolls with the content. */}
         <SidePanelBody className="min-h-0 px-4 pt-0 pb-4">
           {loading ? (
-            <div className="flex h-full items-center justify-center">
-              <Spinner className="size-5 text-muted-foreground" />
-            </div>
+            <LoadingRegion className="pt-4">
+              <PrFilesSkeleton />
+            </LoadingRegion>
           ) : !diff ? (
             <p className="pt-4 text-sm text-muted-foreground">{t("commitDiffUnavailable")}</p>
           ) : diff.files.length === 0 ? (

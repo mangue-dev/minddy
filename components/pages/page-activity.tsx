@@ -35,7 +35,7 @@ import { useMemo } from "react";
 import { AppIcon } from "@/components/icon";
 import { LinkOffIcon as Link2Off } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
-import { Spinner } from "@/components/ui/spinner";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -167,9 +167,7 @@ export function PageActivity({
 
   if (events.isPending) {
     return (
-      <div className="flex justify-center py-8">
-        <Spinner className="size-4 text-muted-foreground" />
-      </div>
+      <RowsSkeleton rows={3} leading="avatar-sm" secondLine className="gap-5 py-4" />
     );
   }
   if (events.error) {

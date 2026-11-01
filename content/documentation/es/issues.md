@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 45,
-  "sourceRevision": 45,
+  "revision": 46,
+  "sourceRevision": 46,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-01",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -133,10 +133,10 @@
     ]
   },
   "review": {
-    "revision": 45,
-    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (es sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 46,
+    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken); agent:claude (Smart Fill menu shortcut: source review of components/issue-compact-fields.tsx; sentence added on Command/Ctrl+Shift+F and the restored cursor; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "language": "agent:claude (es sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance); agent:claude (es Smart Fill shortcut sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
+    "date": "2026-11-01"
   },
   "related": [
     "feedback",
@@ -181,7 +181,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-27",
       "viewport": [
@@ -198,7 +198,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -265,7 +265,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -282,7 +282,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -299,7 +299,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -315,7 +315,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -332,7 +332,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 45,
+      "revision": 46,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -365,7 +365,7 @@ Una incidencia registra una unidad de trabajo del proyecto, desde la solicitud i
 
 Debes ser el propietario o un Miembro del proyecto de destino; los lectores pueden abrir incidencias, pero no crearlas ni editarlas. Abre el proyecto y su control para crear una incidencia. Escribe un título que identifique el trabajo y añade contexto, resultado esperado y restricciones en la descripción. El título y la descripción funcionan como un solo texto: en un ordenador, la flecha abajo en la última línea del título pasa a la primera línea de la descripción, la flecha arriba vuelve, y el cursor conserva más o menos su posición en la línea. Mayús+Intro en el título pasa a la descripción; Intro también, salvo si elegiste Intro como atajo de envío, en cuyo caso crea la incidencia. Command/Ctrl+Intro la crea desde cualquiera de los dos campos. Las mismas flechas e Intro enlazan el título y la descripción de una incidencia, un objetivo, una página o una solicitud abiertos. El formulario se abre en el proyecto actual; elige otro en **Crear en**, arriba a la izquierda del formulario (junto al título **Nueva incidencia** en el teléfono), sobre todo cuando crees desde una vista personal o entre proyectos. En un ordenador, Command/Ctrl+Mayús+P abre ese menú incluso mientras escribes el título o la descripción; al elegir un proyecto o cerrar el menú, el cursor vuelve exactamente donde estaba. La píldora muestra este atajo, que solo existe cuando se puede elegir más de un proyecto; en el teléfono no se muestra ningún atajo. Cambiar de proyecto borra las categorías, el objetivo y las relaciones elegidos para el anterior. El botón de creación muestra el identificador que recibirá la incidencia, como `MIN-42`, y tiene en cuenta las incidencias creadas mientras tanto; su menú crea la incidencia y copia ese identificador.
 
-Para crear la incidencia manualmente, desactiva Smart Fill si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías, objetivo y relaciones para que los establezcas. Para fijar solo algunas de estas propiedades, deja Smart Fill activado y abre la flecha junto a su botón: elige una propiedad y luego su valor. Allí, **Relaciones** enumera los tipos de relación; elegir uno abre la paleta de comandos con sus destinos posibles. Fuera del título y la descripción, la tecla de la propiedad abre directamente su selector: P para la prioridad, E para el esfuerzo, L para las categorías u O para el objetivo. El valor que elijas sigue visible en el formulario. Smart Fill solo deduce las propiedades que dejaste vacías. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de Smart Assign y las rutinas. Mientras Smart Fill está activado, también [vincula la incidencia con incidencias relacionadas](#smart-fill-relations) una vez guardada, por lo que el selector de relaciones queda oculto; R lo abre de todos modos. Las relaciones que ya elegiste siguen visibles como píldoras en la fila de propiedades, entre el responsable y la fecha límite, y se crean con la incidencia.
+Para crear la incidencia manualmente, desactiva Smart Fill si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías, objetivo y relaciones para que los establezcas. Para fijar solo algunas de estas propiedades, deja Smart Fill activado y abre la flecha junto a su botón: elige una propiedad y luego su valor. Allí, **Relaciones** enumera los tipos de relación; elegir uno abre la paleta de comandos con sus destinos posibles. Fuera del título y la descripción, la tecla de la propiedad abre directamente su selector: P para la prioridad, E para el esfuerzo, L para las categorías u O para el objetivo. En un ordenador, mientras Smart Fill está activado para la incidencia, Command/Ctrl+Mayús+F abre ese menú de la flecha incluso mientras escribes el título o la descripción; al elegir un valor o cerrar el menú, el cursor vuelve exactamente donde escribías, como con Command/Ctrl+Mayús+P para **Crear en**. El valor que elijas sigue visible en el formulario. Smart Fill solo deduce las propiedades que dejaste vacías. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de Smart Assign y las rutinas. Mientras Smart Fill está activado, también [vincula la incidencia con incidencias relacionadas](#smart-fill-relations) una vez guardada, por lo que el selector de relaciones queda oculto; R lo abre de todos modos. Las relaciones que ya elegiste siguen visibles como píldoras en la fila de propiedades, entre el responsable y la fecha límite, y se crean con la incidencia.
 
 Configura las propiedades útiles antes de confirmar: estado, prioridad, esfuerzo, responsable, objetivo, categorías, fecha límite y recurrencia. La persona responsable es el propietario del proyecto o un Miembro, nunca un lector; un objetivo agrupa incidencias alrededor de un resultado del proyecto. Puedes dejar las propiedades opcionales sin valor en lugar de adivinar. La prioridad queda **Sin definir** o va de baja a urgente, pasando por media y alta; el esfuerzo queda **Sin definir** o utiliza XS, S, M, L y XL.
 

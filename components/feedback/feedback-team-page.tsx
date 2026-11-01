@@ -49,8 +49,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { SplitButton } from "@/components/ui/split-button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
@@ -79,11 +77,7 @@ import { ObjectivePill, ObjectiveName } from "@/components/objective-label";
 import { CommentComposer, IssueActivity } from "@/components/issue-timeline";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import { CreateIssueDialog } from "@/components/create-issue-dialog";
-import { AgentBeamOverlay } from "@/components/agent-beam";
-import { DictateButton } from "@/components/ai-elements/dictate-button";
-import { NumoIcon } from "@/components/numo-icon";
 import { useFeedbackDictation } from "@/lib/use-feedback-dictation";
-import { SendShortcutTooltip, isSendShortcut } from "@/components/send-shortcut";
 import { UserAvatar } from "@/components/user-avatar";
 import { Markdown } from "@/components/markdown";
 import { displayName } from "@/lib/display-name";
@@ -115,6 +109,9 @@ import type {
 } from "@/lib/types";
 import { AutoTextarea } from "@/components/auto-textarea";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
+import { FeedbackComposerDialog } from "@/components/feedback/feedback-composer-dialog";
+import { FeedbackRichBody } from "@/components/feedback/feedback-rich-body";
+import { FeedbackDetailSkeleton, FeedbackListSkeleton } from "@/components/feedback/feedback-skeletons";
 // Deferred editor: keeps tiptap (~1.5 MB) out of the feedback route —
 // see components/editor/document-editor-lazy.tsx.
 import {
@@ -1319,11 +1316,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       >
         <div className="min-h-0 flex-1">
           {isPending ? (
-            <div className="flex flex-col gap-2 p-4">
-              <Skeleton className="h-16 w-full rounded-lg" />
-              <Skeleton className="h-16 w-full rounded-lg" />
-              <Skeleton className="h-16 w-full rounded-lg" />
-            </div>
+            <FeedbackListSkeleton />
           ) : listedPosts.length === 0 ? (
             /* The same scene as the other blank states, at the size of the
                column — including when NOTHING was collected yet: the
@@ -1444,6 +1437,10 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             intent={detailIntent?.postId === selectedId ? detailIntent.intent : null}
             onIntentHandled={() => setDetailIntent(null)}
           />
+        ) : isPending ? (
+          // The list is still loading: the page opens its first post by
+          // default, so the pane holds that post's shape until it arrives.
+          <FeedbackDetailSkeleton />
         ) : (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">{t("selectPost")}</p>
@@ -1822,14 +1819,7 @@ function FeedbackDetail({
   // that a project had feedback to display.
   const detailFade = useScrollFade<HTMLDivElement>();
 
-  if (isPending || !post) {
-    return (
-      <div className="flex flex-col gap-4 p-6">
-        <Skeleton className="h-8 w-2/3" />
-        <Skeleton className="h-24 w-full" />
-      </div>
-    );
-  }
+  if (isPending || !post) return <FeedbackDetailSkeleton />;
 
   const rawDiffers =
     post.submitted_title !== post.title || post.submitted_body !== post.body;
@@ -2921,7 +2911,6 @@ function InternalFeedbackDialog({
   onCreated: (postId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
-  const tCommon = useTranslations("Common");
   const tDictate = useTranslations("Dictate");
   const locale = useLocale();
   const tField = useTranslations("Field");
@@ -2933,8 +2922,6 @@ function InternalFeedbackDialog({
     null
   );
   const [title, setTitle] = useState("");
-  // Title and description read as one text on the keyboard (MIN-756).
-  const titleBody = useTitleBodyLink();
   const [isPublic, setIsPublic] = useState(true);
   const [busy, setBusy] = useState(false);
   // The LazyDocumentEditor only commits to blur — the ref always carries the
@@ -3089,152 +3076,85 @@ function InternalFeedbackDialog({
   };
 
   return (
-    <Dialog
+    <FeedbackComposerDialog
+      Body={FeedbackRichBody}
       open={open}
-      onOpenChange={(next) => {
-        if (!next) requestClose();
-        else onOpenChange(true);
+      onOpenChange={onOpenChange}
+      onRequestClose={requestClose}
+      srTitle={t("internalDialogTitle")}
+      title={title}
+      onTitleChange={setTitle}
+      titlePlaceholder={t("postTitlePlaceholder")}
+      bodyKey={editorKey}
+      initialBody={initialBody}
+      onBodyChange={(markdown) => {
+        bodyRef.current = markdown;
       }}
+      bodyPlaceholder={t("postBodyPlaceholder")}
+      dictation={{
+        onTranscription: onTranscript,
+        uploadAudio,
+        onProcessingChange: setTranscribing,
+      }}
+      numoBusy={numoBusy}
+      numoWorkingLabel={tDictate("numoWorking")}
+      submitLabel={t("create")}
+      canSubmit={canSubmit}
+      busy={busy}
+      onSubmit={() => void submit()}
     >
-      {/* ⌘/Ctrl+Enter sends from ANY field in the modal — the title
-          like the body. The shortcut is placed here rather than on each field
-          because the body is a rich editor: the key goes back to it through
-          bubbling. `defaultPrevented` leaves priority to the editor
-          when he uses it himself (exiting a block of code). */}
-      <DialogContent
-        className="top-24 translate-y-0 gap-0 sm:max-w-xl"
-        onKeyDown={(e) => {
-          if (e.defaultPrevented || !isSendShortcut(e)) return;
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <DialogTitle className="sr-only">{t("internalDialogTitle")}</DialogTitle>
-        <AutoTextarea
-          ref={titleBody.titleRef}
-          autoFocus={allowInputAutoFocus()}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            titleBody.onTitleKeyDown(e, { submit: () => void submit() });
-          }}
-          placeholder={t("postTitlePlaceholder")}
-          maxLength={200}
-          className="w-full title-field bg-transparent text-xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
-        />
-        <div ref={titleBody.bodyRef}>
-        <LazyDocumentEditor
-          key={editorKey}
-          value={initialBody}
-          onLeaveTop={titleBody.leaveBody}
-          onCommit={(markdown) => {
-            bodyRef.current = markdown;
-          }}
-          placeholder={t("postBodyPlaceholder")}
-          className="mt-3 min-h-24"
-        />
-        </div>
+      <div className="mt-4 flex items-center justify-between gap-4">
+        <span className="shrink-0 text-sm font-medium">{t("authorLabel")}</span>
+        {draftAuthor ? (
+          <NewAuthorFields
+            email={draftAuthor.email}
+            name={draftAuthor.name}
+            onEmailChange={(email) => setDraftAuthor((d) => ({ ...d!, email }))}
+            onNameChange={(name) => setDraftAuthor((d) => ({ ...d!, name }))}
+            onCancel={() => setDraftAuthor(null)}
+          />
+        ) : (
+          <AuthorPicker
+            projectId={projectId}
+            members={members}
+            value={author}
+            onChange={setAuthor}
+            // What has been typed is not lost in passing: an email leaves
+            // in the email field, everything else in the name field.
+            onCreateRequested={(typed) => {
+              setAuthor(null);
+              setDraftAuthor(
+                typed.includes("@")
+                  ? { email: typed, name: "" }
+                  : { email: "", name: typed }
+              );
+            }}
+          />
+        )}
+      </div>
 
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <span className="shrink-0 text-sm font-medium">{t("authorLabel")}</span>
-          {draftAuthor ? (
-            <NewAuthorFields
-              email={draftAuthor.email}
-              name={draftAuthor.name}
-              onEmailChange={(email) => setDraftAuthor((d) => ({ ...d!, email }))}
-              onNameChange={(name) => setDraftAuthor((d) => ({ ...d!, name }))}
-              onCancel={() => setDraftAuthor(null)}
-            />
-          ) : (
-            <AuthorPicker
-              projectId={projectId}
-              members={members}
-              value={author}
-              onChange={setAuthor}
-              // What has been typed is not lost in passing: an email leaves
-              // in the email field, everything else in the name field.
-              onCreateRequested={(typed) => {
-                setAuthor(null);
-                setDraftAuthor(
-                  typed.includes("@")
-                    ? { email: typed, name: "" }
-                    : { email: "", name: typed }
-                );
-              }}
-            />
-          )}
-        </div>
+      <PropertyRow label={tField("objective")}>
+        <ObjectiveValue value={objectiveId} objectives={objectives} projectId={projectId} onChange={setObjectiveId} />
+      </PropertyRow>
 
-        <PropertyRow label={tField("objective")}>
-          <ObjectiveValue value={objectiveId} objectives={objectives} projectId={projectId} onChange={setObjectiveId} />
-        </PropertyRow>
-
-        {boardEnabled ? (
-          <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
-            <label
-              htmlFor="internal-feedback-public"
-              className="flex min-w-0 flex-col"
-            >
-              <span className="text-sm font-medium">{t("public")}</span>
-              <span className="text-xs text-muted-foreground">
-                {isPublic ? t("publicHint") : t("privateHint")}
-              </span>
-            </label>
-            <Switch
-              id="internal-feedback-public"
-              checked={isPublic}
-              onCheckedChange={setIsPublic}
-            />
-          </div>
-        ) : null}
-
-        {/* The voice on the left, the creation on the right — the same bar as on the board
-            public and only in the ticket modal. While Numo tidies up, his face
-            takes the place of the microphone. */}
-        <div className="mt-3 flex items-center justify-between gap-4 border-t pt-3">
-          {numoBusy ? (
-            <span
-              className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center"
-              aria-hidden
-            >
-              <NumoIcon
-                state="thinking"
-                className="size-6 text-primary animate-in fade-in duration-300"
-              />
+      {boardEnabled ? (
+        <div className="mt-3 flex items-center justify-between gap-4 rounded-lg border px-3 py-2.5">
+          <label
+            htmlFor="internal-feedback-public"
+            className="flex min-w-0 flex-col"
+          >
+            <span className="text-sm font-medium">{t("public")}</span>
+            <span className="text-xs text-muted-foreground">
+              {isPublic ? t("publicHint") : t("privateHint")}
             </span>
-          ) : (
-            <DictateButton
-              context="feedback_form"
-              onTranscription={onTranscript}
-              uploadAudio={uploadAudio}
-              onProcessingChange={setTranscribing}
-              disabled={busy}
-              shortcutKey="mod+shift+d"
-              className="-ml-2"
-            />
-          )}
-          {numoBusy && (
-            <span className="sr-only" role="status">
-              {tDictate("numoWorking")}
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            <Button type="button" variant="ghost" disabled={busy || numoBusy} onClick={requestClose}>
-              {tCommon("cancel")}
-            </Button>
-            <SendShortcutTooltip scope="form" label={t("create")}>
-              <Button disabled={!canSubmit} onClick={() => void submit()}>
-                {busy && <Spinner />}
-                {t("create")}
-              </Button>
-            </SendShortcutTooltip>
-          </div>
+          </label>
+          <Switch
+            id="internal-feedback-public"
+            checked={isPublic}
+            onCheckedChange={setIsPublic}
+          />
         </div>
-
-        {/* Numo takes over the dictation: the border highlights the edge of the modal during
-            that he is working — same signal as his face, higher up. */}
-        <AgentBeamOverlay active={numoBusy} />
-      </DialogContent>
-    </Dialog>
+      ) : null}
+    </FeedbackComposerDialog>
   );
 }
