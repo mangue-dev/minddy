@@ -18,7 +18,7 @@ import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { captureWritingSpot, restoreWritingSpot, type WritingSpot } from "@/lib/keyboard/writing-spot";
 import { DateTimePicker } from "@/components/date-time-picker";
-import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
+import { DATE_ICON, SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
 import {
   SearchSelect,
   SearchMultiSelect,
@@ -426,9 +426,22 @@ export function ObjectiveCompact({
 /**
  * What the Smart Fill menu sets by hand (MIN-809). Smart Fill only fills what
  * is still empty, so a value chosen here wins and brings its property back
- * into the form row (MIN-746).
+ * into the form row (MIN-746). Status, assignee and due date stay in the row
+ * whatever Smart Fill does; the menu offers them too, so one shortcut reaches
+ * every property.
  */
 export interface SmartFillManualFields {
+  status?: IssueStatus;
+  onStatusChange?: (v: IssueStatus) => void;
+  assigneeId?: string | null;
+  members?: Member[];
+  onAssigneeChange?: (id: string | null) => void;
+  /** The project's Smart Assign fills an empty assignee (MIN-811): the empty
+   *  entry reads "Smart Assign" instead of "Unassigned", as in the row. */
+  smartAssign?: boolean;
+  /** Opens the due date picker; runs once the menu has closed, so the
+   *  calendar keeps the focus. */
+  onDueDateRequest?: () => void;
   priority: IssuePriority;
   onPriorityChange: (v: IssuePriority) => void;
   effort: IssueEffort | null;
@@ -466,6 +479,7 @@ export interface SmartFillManualFields {
 function useSmartFillManualActions(manual: SmartFillManualFields | undefined): ContextMenuAction[] {
   const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
+  const tStatus = useTranslations("Status");
   const tRelations = useTranslations("Relations");
   const t = useTranslations("IssueUI");
   const orderedObjectives = useOrderedObjectives(manual?.objectives ?? []);
@@ -482,6 +496,21 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
         manual.onTitleRequest?.();
         requestAnimationFrame(() => manual.onTitleFocus?.());
       },
+    });
+  }
+  const { onStatusChange, onAssigneeChange, onDueDateRequest } = manual;
+  if (onStatusChange) {
+    actions.push({
+      id: "smart-fill-status",
+      label: tField("status"),
+      icon: <StatusIndicator status={manual.status ?? "todo"} className="size-4" />,
+      children: ALL_STATUSES.map((s) => ({
+        id: `smart-fill-status-${s.value}`,
+        label: tStatus(s.value),
+        icon: <StatusIndicator status={s.value} className="size-4" />,
+        checked: manual.status === s.value,
+        onSelect: () => onStatusChange(s.value),
+      })),
     });
   }
   actions.push(
@@ -531,19 +560,39 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
           }),
     },
   );
-  if (orderedObjectives.length > 0) {
+  if (onAssigneeChange && manual.members && manual.members.length > 0) {
+    // Same faces and empty entry as the row's picker: unlike the properties
+    // Smart Fill infers, an empty assignee is a choice (Smart Assign or nobody).
+    const current = manual.members.find((m) => m.user_id === manual.assigneeId) ?? null;
+    const emptyIcon = (
+      <HugeiconsIcon
+        icon={manual.smartAssign ? SMART_ASSIGN_ICON : UserCircleIcon}
+        strokeWidth={1.75}
+        className="size-4 text-muted-foreground"
+      />
+    );
     actions.push({
-      id: "smart-fill-objective",
-      label: tField("objective"),
-      icon: <HugeiconsIcon icon={Target01Icon} className="size-4 text-muted-foreground" />,
-      children: orderedObjectives.map((o) => ({
-        id: `smart-fill-objective-${o.id}`,
-        label: o.name,
-        labelNode: <ObjectiveName objective={o} />,
-        icon: <ObjectiveStatusIndicator status={o.status} className="size-4" />,
-        checked: manual.objectiveId === o.id,
-        onSelect: () => manual.onObjectiveChange(o.id),
-      })),
+      id: "smart-fill-assignee",
+      label: tField("assignee"),
+      icon: current ? <UserAvatar seed={current.avatar_seed} className="size-4" /> : emptyIcon,
+      children: [
+        {
+          id: "smart-fill-assignee-none",
+          label: manual.smartAssign ? tField("smartAssign") : tField("unassigned"),
+          icon: emptyIcon,
+          checked: !current,
+          onSelect: () => onAssigneeChange(null),
+        },
+        ...manual.members.map((m, index) => ({
+          id: `smart-fill-assignee-${m.user_id}`,
+          label: displayName(m),
+          keywords: m.email ? [m.email] : undefined,
+          icon: <UserAvatar seed={m.avatar_seed} className="size-4" />,
+          separatorBefore: index === 0,
+          checked: current?.user_id === m.user_id,
+          onSelect: () => onAssigneeChange(m.user_id),
+        })),
+      ],
     });
   }
   const relations = manual.relations;
@@ -559,6 +608,32 @@ function useSmartFillManualActions(manual: SmartFillManualFields | undefined): C
         // The palette opens on this type's targets once the menu has closed.
         transfersFocus: true,
         onSelect: () => relations.onRequest(kind),
+      })),
+    });
+  }
+  if (onDueDateRequest) {
+    actions.push({
+      id: "smart-fill-due-date",
+      label: tField("dueDate"),
+      icon: <HugeiconsIcon icon={DATE_ICON} className="size-4 text-muted-foreground" />,
+      // The calendar opens once the menu has closed.
+      transfersFocus: true,
+      onSelect: onDueDateRequest,
+    });
+  }
+  // The objective comes last, as in the form row.
+  if (orderedObjectives.length > 0) {
+    actions.push({
+      id: "smart-fill-objective",
+      label: tField("objective"),
+      icon: <HugeiconsIcon icon={Target01Icon} className="size-4 text-muted-foreground" />,
+      children: orderedObjectives.map((o) => ({
+        id: `smart-fill-objective-${o.id}`,
+        label: o.name,
+        labelNode: <ObjectiveName objective={o} />,
+        icon: <ObjectiveStatusIndicator status={o.status} className="size-4" />,
+        checked: manual.objectiveId === o.id,
+        onSelect: () => manual.onObjectiveChange(o.id),
       })),
     });
   }

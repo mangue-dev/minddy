@@ -1094,6 +1094,18 @@ export function CreateIssueDialog({
                       // Sets one property by hand without turning Smart Fill
                       // off: the value wins and its field returns (MIN-809).
                       manual={{
+                        // Always in the row too; here so ⌘⇧F reaches them.
+                        status: fields.status,
+                        onStatusChange: (status) => setFields((f) => ({ ...f, status })),
+                        assigneeId: fields.assignee_id,
+                        members: scopedMembers,
+                        onAssigneeChange: (assignee_id) =>
+                          setFields((f) => ({ ...f, assignee_id })),
+                        smartAssign: smartAssignFillsEmptyAssignee(
+                          activeProject?.smart_assign_enabled,
+                          fields.status,
+                        ),
+                        onDueDateRequest: () => setOpenPicker("dueDate"),
                         priority: fields.priority,
                         onPriorityChange: (priority) => setFields((f) => ({ ...f, priority })),
                         effort: fields.effort,
