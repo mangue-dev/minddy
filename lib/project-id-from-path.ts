@@ -29,8 +29,15 @@ const PROJECT_TABS = new Set<string>([
  *
  * Deeper paths identify records that do not belong to the target project, so
  * switching context keeps only the tab and deliberately drops the remainder.
+ * The objective board (`?objective=`) belongs to the objectives list, so it
+ * lands on the target's objectives rather than its whole board.
  */
-export function projectTabHref(pathname: string, target: ProjectRefSource): string {
+export function projectTabHref(
+  pathname: string,
+  target: ProjectRefSource,
+  objectiveBoard = false,
+): string {
+  if (objectiveBoard) return projectPath(target, "objectives");
   const tab = pathname.match(/^\/projects\/[^/]+\/([^/]+)/)?.[1];
   return tab && PROJECT_TABS.has(tab)
     ? projectPath(target, tab as ProjectTab)
