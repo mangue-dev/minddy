@@ -29,20 +29,20 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
   {
     titleKey: "footerColProduct",
     links: [
-      // Order of the new landing plan. `#numo`, `#voice`, `#scratchpad`
-      // and `#workflow` are no longer sections but remain anchors, placed
-      // on the blocks which absorbed them: these links — and those already shared —
-      // still land at the right place.
-      { href: "/#tracker", labelKey: "navMenu_tracker_title" },
+      // The landing's sections in their order. `#numo`, `#voice`, `#workflow`,
+      // `#scratchpad` and `#feedback` are cards inside them: each link follows
+      // its section, and links already shared still land at the right place.
+      { href: "/#ai", labelKey: "navMenu_ai_title" },
+      { href: "/#numo", labelKey: "footerNumo" },
+      { href: "/#voice", labelKey: "footerVoice" },
       { href: "/#agents", labelKey: "footerAgents" },
       { href: "/#workflow", labelKey: "navHowItWorks" },
-      { href: "/#numo", labelKey: "footerNumo" },
-      { href: "/#speed", labelKey: "footerSpeed" },
-      { href: "/#voice", labelKey: "footerVoice" },
-      { href: "/#scratchpad", labelKey: "footerScratchpad" },
+      { href: "/#tracker", labelKey: "navMenu_tracker_title" },
       { href: "/#pages", labelKey: "navMenu_pages_title" },
-      { href: "/#feedback", labelKey: "footerFeedback" },
+      { href: "/#speed", labelKey: "footerSpeed" },
       { href: "/#more", labelKey: "footerMore" },
+      { href: "/#scratchpad", labelKey: "footerScratchpad" },
+      { href: "/#feedback", labelKey: "footerFeedback" },
       { href: "/download", labelKey: "footerDownload" },
       { href: "/pricing", labelKey: "navPricing" },
     ],
@@ -80,6 +80,14 @@ const COLUMNS: ReadonlyArray<FooterColumn> = [
     ],
   },
 ];
+
+/**
+ * Footer links read at full contrast at rest; hovering or focusing one dims
+ * every other link of the grid, so the pointed one stands out (MIN-805). The
+ * `!` keeps the pointed link bright although the group rule also matches it.
+ */
+const FOOTER_LINK =
+  "text-sm text-foreground transition-colors duration-200 group-has-[a:hover]/footer-links:text-muted-foreground group-has-[a:focus-visible]/footer-links:text-muted-foreground hover:text-foreground! focus-visible:text-foreground!";
 
 /**
  * The language selector is ONLY loaded when you arrive at the footer
@@ -148,7 +156,7 @@ export function MarketingFooter() {
   return (
     <footer className="relative overflow-hidden border-t border-border">
       <div className="mx-auto w-full max-w-6xl px-6 pt-16 pb-8 sm:px-8">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.5fr_repeat(3,1fr)] md:gap-x-8">
+        <div className="group/footer-links grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-[1.5fr_repeat(3,1fr)] md:gap-x-8">
           <div className="col-span-2 flex flex-col gap-5 md:col-span-1">
             <Link
               href={localizedHref("/", locale)}
@@ -182,7 +190,7 @@ export function MarketingFooter() {
             >
               <p
                 id={`footer-col-${column.titleKey}`}
-                className="text-xs font-medium tracking-wide text-foreground/90"
+                className="text-xs font-medium tracking-wide text-muted-foreground"
               >
                 {t(column.titleKey)}
               </p>
@@ -194,14 +202,14 @@ export function MarketingFooter() {
                         href={link.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        className={FOOTER_LINK}
                       >
                         {t(link.labelKey)}
                       </a>
                     ) : (
                       <Link
                         href={link.href.startsWith("/") ? localizedHref(link.href, locale) : link.href}
-                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                        className={FOOTER_LINK}
                       >
                         {t(link.labelKey)}
                       </Link>

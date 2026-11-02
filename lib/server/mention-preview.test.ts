@@ -106,7 +106,18 @@ vi.mock("@/lib/server/pages-projection", () => ({ pageBodyToMarkdownServer: asyn
 vi.mock("@/lib/server/page-content", () => ({ decodePageProjection: async (row: unknown) => row }));
 vi.mock("@/lib/server/routines", () => ({ getRoutineForUser: vi.fn() }));
 vi.mock("@/lib/server/scratchpad", () => ({ getScratchpad: vi.fn() }));
-vi.mock("@/lib/server/agent/pull-requests", () => ({ findPullRequestsWithProjects: async () => [] }));
+const PR = "cccccccc-cccc-4ccc-8ccc-ccccccccccc1";
+vi.mock("@/lib/server/agent/pull-requests", () => ({
+  findPullRequestsWithProjects: async (ids: string[]) => ids.includes(PR) ? [{
+    projectIds: [PROJECT],
+    pullRequest: {
+      id: PR, provider: "gitlab", repo_full_name: "aurora/web", number: 128, title: " Rotate keys ", state: "open",
+      head_branch: "rotate-keys", base_branch: "main", author_login: null, author_avatar_url: null,
+      opened_at: "2026-10-30T10:00:00Z", merged_at: null,
+    },
+  }] : [],
+  rowProvider: (row: { provider: string }) => row.provider === "gitlab" ? "gitlab" : "github",
+}));
 vi.mock("@/lib/server/repository-skills", () => ({
   listProjectRepositorySkills: async () => [],
   loadProjectRepositorySkills: async () => null,
@@ -117,7 +128,7 @@ const { previewMentionTarget } = await import("./mention-preview");
 beforeEach(() => {
   h.reads = [];
   h.resolved = [];
-  h.visible = new Set([ISSUE, OBJECTIVE, MEMBER, CYCLE, MCP]);
+  h.visible = new Set([ISSUE, OBJECTIVE, MEMBER, CYCLE, MCP, PR]);
   h.tables = {
     projects: [
       { id: PROJECT, key: "MIN", name: "Minddy", owner_id: OWNER, orb_seed: null, icon_url: null },
@@ -250,6 +261,14 @@ describe("previewMentionTarget", () => {
     const preview = await previewMentionTarget("reader", { type: "mcp", id: MCP }, null, service);
     expect(preview).toEqual({
       type: "mcp", id: MCP, name: "Linear", service: "linear", enabled: true, auth: "oauth", connected: false,
+    });
+  });
+
+  it("names a pull request's forge for the chip's card", async () => {
+    expect(await previewMentionTarget("reader", { type: "pull_request", id: PR }, null, service)).toEqual({
+      type: "pull_request", number: 128, title: "Rotate keys", state: "open", provider: "gitlab",
+      repository: "aurora/web", headBranch: "rotate-keys", baseBranch: "main", author: null,
+      openedAt: "2026-10-30T10:00:00Z", mergedAt: null,
     });
   });
 });

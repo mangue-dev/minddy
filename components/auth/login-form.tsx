@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { RedirectingScreen } from "@/components/auth/redirecting-screen";
 import { toast } from "sonner";
@@ -276,9 +277,8 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             </Field>
 
             <Field id="password" label={t("password")}>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 className="h-10 bg-control"
                 autoComplete="current-password"
                 required

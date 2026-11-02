@@ -1,7 +1,8 @@
 "use client";
 
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, GitMergeIcon as GitMerge, GitPullRequestClosedIcon as GitPullRequestClosed, GitPullRequestDraftIcon as GitPullRequestDraft, GitPullRequestIcon as GitPullRequest } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { PR_STATE_ICONS, PR_STATE_STYLES } from "@/components/pull-requests/pr-state-styles";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,41 +13,14 @@ import type { PullRequestListItem } from "@/lib/agent-api";
 
 /**
  * Status badge of a pull request — only one place, for the list as for
- * the detail (both painted it separately, and not the same).
+ * the detail (both painted it separately, and not the same). Its colors and
+ * icons come from `pr-state-styles.ts`.
  *
- * COLORS are those of GitHub: open green, merged purple, red
- * closed, gray draft. It's not a palette that an app customizes —
- * it's a code that the user already reads elsewhere, and translating it to them into
- * house colors would cost them a round trip for each glance. The icon
- * follows the same logic: GitHub has one per state, and it carries the information
- * without the color (so without excluding who does not distinguish it).
- *
- * The SHAPE, for its part, remains that of minddy's badges: tint at 10%, no
- * border — the borderless badge that the landing-page page illustrations use.
- *
- * `PR_STATE_STYLES` is exported because the status of a PR reads ELSEWHERE than
- * in this badge — the list of agent sessions, the header of a conversation —
- * and that these places in turn repainted in green the “merged” that
- * GitHub puts in purple. A single table, and the code remains readable everywhere.
+ * The SHAPE remains that of minddy's badges: tint at 10%, no border — the
+ * borderless badge that the landing-page page illustrations use.
  */
 
 type PrState = PullRequestListItem["pr_state"];
-
-export const PR_STATE_STYLES: Record<PrState, string> = {
-  open: "bg-green-600/10 text-green-700 dark:bg-green-500/15 dark:text-green-400",
-  merged:
-    "bg-violet-600/10 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400",
-  closed: "bg-destructive/10 text-destructive dark:bg-destructive/15",
-  // The draft keeps the gray of `secondary`: it is already that of GitHub.
-  draft: "",
-};
-
-const STATE_ICONS: Record<PrState, AppIcon> = {
-  open: GitPullRequest,
-  merged: GitMerge,
-  closed: GitPullRequestClosed,
-  draft: GitPullRequestDraft,
-};
 
 const STATE_LABELS = {
   open: "stateOpen",
@@ -72,7 +46,7 @@ export function PrStateBadge({
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
-  const Icon = STATE_ICONS[state];
+  const Icon = PR_STATE_ICONS[state];
 
   return (
     <Badge
@@ -97,12 +71,12 @@ export function PrStateControl({ state, canChange, disabled, onChange, inMenu = 
   const options = (["draft", "open", "closed"] as const).map((next) => (
     <DropdownMenuItem key={next} disabled={next === state || disabled}
       onSelect={() => onChange(next)} data-testid={`pr-state-${next}`}>
-      <AppIcon icon={STATE_ICONS[next]} className={cn(PR_STATE_STYLES[next], "bg-transparent dark:bg-transparent")} />
+      <AppIcon icon={PR_STATE_ICONS[next]} className={cn(PR_STATE_STYLES[next], "bg-transparent dark:bg-transparent")} />
       {t(STATE_LABELS[next])}
     </DropdownMenuItem>
   ));
   if (inMenu) {
-    const label = <><AppIcon icon={STATE_ICONS[state]} className={cn(PR_STATE_STYLES[state], "bg-transparent dark:bg-transparent")} />{t(STATE_LABELS[state])}</>;
+    const label = <><AppIcon icon={PR_STATE_ICONS[state]} className={cn(PR_STATE_STYLES[state], "bg-transparent dark:bg-transparent")} />{t(STATE_LABELS[state])}</>;
     if (state === "merged" || !canChange) return <DropdownMenuItem disabled className="app-desktop:hidden">{label}</DropdownMenuItem>;
     return <DropdownMenuSub>
       <DropdownMenuSubTrigger className="app-desktop:hidden" disabled={disabled} data-testid="pr-state-menu">{label}</DropdownMenuSubTrigger>
@@ -120,7 +94,7 @@ export function PrStateControl({ state, canChange, disabled, onChange, inMenu = 
           data-testid="pr-state-control"
           className={cn(PR_STATE_STYLES[state], STATE_CONTROL_STYLES[state], "h-8 gap-1.5")}
         >
-          <AppIcon icon={STATE_ICONS[state]} />
+          <AppIcon icon={PR_STATE_ICONS[state]} />
           {t(STATE_LABELS[state])}
           <AppIcon icon={ArrowDown01Icon} className="size-3.5" />
         </Button>

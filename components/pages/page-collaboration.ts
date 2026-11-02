@@ -17,6 +17,7 @@ import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 
 import { collabPlugin, type CollabStream } from "@/lib/page-collaboration-stream";
+import { caretColor } from "@/lib/page-caret-colors";
 
 /** A collaborator's caret as the editor draws it. */
 export interface CaretView {
@@ -48,18 +49,7 @@ export interface BodyCollaboration {
 
 export const pageCaretsKey = new PluginKey("pageCollaborationCarets");
 
-/** Up to 10 distinct, legible hues; white labels pass contrast on each. */
-const CARET_COLORS = [
-  "#2563eb", "#db2777", "#047857", "#b45309", "#7c3aed",
-  "#dc2626", "#0e7490", "#4f46e5", "#a21caf", "#15803d",
-];
-
-/** A stable color per account: the same person keeps it on every screen. */
-export function caretColor(userId: string): string {
-  let hash = 0;
-  for (let i = 0; i < userId.length; i += 1) hash = (hash * 31 + userId.charCodeAt(i)) | 0;
-  return CARET_COLORS[Math.abs(hash) % CARET_COLORS.length];
-}
+export { caretColor };
 
 function caretWidget(caret: CaretView): HTMLElement {
   const caretEl = document.createElement("span");

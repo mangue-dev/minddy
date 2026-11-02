@@ -71,6 +71,7 @@ import {
 } from "@/components/resources";
 import {
   usePullRequestQuery,
+  usePullRequestDeploymentQuery,
   usePrCommentsQuery,
   usePrCommitsQuery,
   usePrReviewCommentsQuery,
@@ -659,10 +660,7 @@ export function PrDetail({
     prFetchedAt,
     files,
     checks,
-    deploymentUrl,
-    deploymentStatus,
-    deploymentStartedAt,
-    deploymentDurationMs,
+    deploymentUrl: checkDeploymentUrl,
     viewer,
     mergePolicy,
     readiness,
@@ -672,6 +670,12 @@ export function PrDetail({
     readError,
     refetch: refetchPr,
   } = usePullRequestQuery(item.prId, true);
+  const {
+    deploymentUrl,
+    deploymentStatus,
+    deploymentStartedAt,
+    deploymentDurationMs,
+  } = usePullRequestDeploymentQuery(item.prId, pr?.headSha ?? null, checkDeploymentUrl);
   const {
     comments,
     timeline,
@@ -1472,12 +1476,22 @@ export function PrDetail({
           <Button variant="ghost" size="sm" onClick={() => void refetchPr()}>{t("readRetry")}</Button>
         </div>
       ) : <div className="flex h-full min-h-0 flex-col">
-        <AppContentHeader>
+        {/* The list row already names the PR: a first read shows which one is
+            opening rather than an anonymous skeleton (MIN-889). */}
+        <AppContentHeader contentClassName="gap-2">
+          {item.project ? (
+            <ProjectOrb
+              seed={projectOrbSeed(item.project)}
+              iconUrl={item.project.icon_url}
+              className={`size-4 shrink-0 ${APP_CONTENT_HEADER_LEADING_INSET}`}
+            />
+          ) : null}
+          <span className="shrink-0 font-mono text-sm text-foreground">{identifier}</span>
           <PrHeaderActionsSkeleton />
         </AppContentHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
           <div data-testid="pr-detail-loading-content" className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-6" aria-hidden>
-            <PrMetadataSkeleton />
+            <PrMetadataSkeleton title={item.title ?? item.issue?.title} />
             <PrStatusSkeleton />
             <PrActivitySkeleton />
           </div>

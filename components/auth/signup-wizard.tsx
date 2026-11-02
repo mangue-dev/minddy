@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { UserAvatarPicker } from "@/components/user-avatar-picker";
@@ -420,9 +421,8 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                       hidden
                     />
                     <Field id="password" label={t("password")}>
-                      <Input
+                      <PasswordInput
                         id="password"
-                        type="password"
                         className="h-10 bg-control"
                         autoComplete="new-password"
                         autoFocus
@@ -435,9 +435,8 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                     </Field>
                     <PasswordRules password={password} />
 
-                    <Input
+                    <PasswordInput
                       id="confirm-password"
-                      type="password"
                       className="h-10 bg-control"
                       autoComplete="new-password"
                       required

@@ -196,10 +196,11 @@ function MentionChipBody({
   const hasImage = type === "member" || type === "forge" || type === "project";
 
   // The figure stays inline with the label so the chip keeps a text baseline.
-  // `align-middle` targets the x-height; the small upward offset aligns it with
-  // the capitals and stems that dominate mention labels.
+  // `self-center` centers it on the label's line box, which in Inter at this
+  // line height is the middle of the capitals: no offset on top of it (a
+  // former -0.1em one set every icon about 1.5 px above the text).
   const figure = (
-    <span className="relative -top-[0.1em] mr-[0.3em] inline-flex size-[1.05em] shrink-0 items-center justify-center self-center">
+    <span className="mr-[0.3em] inline-flex size-[1.05em] shrink-0 items-center justify-center self-center">
       {type === "member" ? (
         <UserAvatar seed={avatarSeed ?? id} className="size-full" />
       ) : type === "forge" ? (

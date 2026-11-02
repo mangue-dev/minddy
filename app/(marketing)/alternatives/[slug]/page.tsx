@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, BotIcon, BubbleChatDelayIcon, CodeSimpleIcon as Code2, Download01Icon, File02Icon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, Target01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, CodeSimpleIcon as Code2, File02Icon, ImportIcon as Import, LinkSquare01Icon, MessageMultiple01Icon, Mic01Icon, Target01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,23 +12,32 @@ import { COMPARISONS, COMPARISON_FEATURES, COMPARISON_POINTS, COMPARISON_ROWS, C
 import { localizedHref } from "@/lib/locale-href";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import { SectionHeading } from "@/components/marketing/section-heading";
-import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
-import type { ScreenshotSlotId } from "@/components/marketing/screenshot-slots";
-import { TrackedCta } from "@/components/marketing/tracked-cta";
+import type { ReactNode } from "react";
+import { FigureScope } from "@/components/marketing/figure-scope";
+import { PointGrid } from "@/components/marketing/feature-chapter";
+import { AgentTerminal } from "@/components/marketing/figures/agent-figures";
+import { DictationPill, FeedbackRows, MentionBento, NumoComposer, RoutineExcerpt } from "@/components/marketing/figures/card-figures";
+import { MCP_ICON, ROUTINE_ICON } from "@/components/feature-icons";
+import { NumoFace } from "@/components/numo-face";
+import { PlatformDownloadLink } from "@/components/marketing/platform-download-link";
 import { Github } from "@/components/git/provider-icons";
 import { AppIcon } from "@/components/icon";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
-const FEATURES = {
-  agents: { icon: BotIcon, tone: CARD_TONES.lavender, screenshot: "workflowPr" },
-  pages: { icon: File02Icon, tone: CARD_TONES.sky, screenshot: "pagesEditor" },
-  numo: { icon: BotIcon, tone: CARD_TONES.butter },
-  routines: { icon: BubbleChatDelayIcon, tone: CARD_TONES.peach },
-  planning: { icon: Target01Icon, tone: CARD_TONES.sage },
-  feedback: { icon: MessageMultiple01Icon, tone: CARD_TONES.sky },
-  capture: { icon: Mic01Icon, tone: CARD_TONES.lavender },
-  openSource: { icon: Code2, tone: CARD_TONES.sage },
-} as const satisfies Record<(typeof COMPARISON_FEATURES)[number], { icon: AppIcon; tone: string; screenshot?: ScreenshotSlotId }>;
+/** The features shown with the landing's illustrations; the others are told in text. */
+const ILLUSTRATED = [
+  { key: "agents", icon: MCP_ICON, figure: <AgentTerminal /> },
+  { key: "numo", icon: NumoFace, figure: <NumoComposer /> },
+  { key: "capture", icon: Mic01Icon, figure: <DictationPill /> },
+  { key: "pages", icon: File02Icon, figure: <MentionBento /> },
+  { key: "routines", icon: ROUTINE_ICON, figure: <RoutineExcerpt /> },
+  { key: "feedback", icon: MessageMultiple01Icon, figure: <FeedbackRows /> },
+] as const satisfies readonly { key: (typeof COMPARISON_FEATURES)[number]; icon: AppIcon; figure: ReactNode }[];
+
+const TEXT_FEATURES = [
+  { key: "planning", icon: Target01Icon, tone: CARD_TONES.sage },
+  { key: "openSource", icon: Code2, tone: CARD_TONES.lavender },
+] as const satisfies readonly { key: (typeof COMPARISON_FEATURES)[number]; icon: AppIcon; tone: string }[];
 
 export function generateStaticParams() {
   return COMPARISONS.map(comparison => ({ slug: comparison.slug }));
@@ -45,7 +54,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
   const comparison = comparisonBySlug((await params).slug);
   if (!comparison) notFound();
   const locale = (await getLocale()) as Locale;
-  const [t, tc, tl] = await Promise.all([getTranslations("Alternatives"), getTranslations(comparison.namespace), getTranslations("Landing")]);
+  const [t, tc] = await Promise.all([getTranslations("Alternatives"), getTranslations(comparison.namespace)]);
   const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${COMPARISON_REVIEWED_AT}T12:00:00Z`));
   const downloadHref = localizedHref("/download", locale);
 
@@ -65,7 +74,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
           <p className="mt-7 max-w-2xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">{tc("heroSubtitle")}</p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Button asChild size="lg" className="rounded-full">
-              <TrackedCta href={downloadHref} location="comparison">{tl("downloadMinddy")}<HugeiconsIcon icon={Download01Icon} data-icon="inline-end" /></TrackedCta>
+              <PlatformDownloadLink href={downloadHref} location="comparison" />
             </Button>
             <a href="#comparison" className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium transition-colors hover:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
               {t("compareTitle")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden />
@@ -131,18 +140,27 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
       <section id="product" className="bg-[#f4f6f9] px-4 py-16 sm:px-6 sm:py-20 dark:bg-[#12171d]">
         <div className="mx-auto max-w-6xl">
           <SectionHeading title={t("productTitle")} description={t("productSubtitle")} />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
-            {COMPARISON_FEATURES.map(feature => {
-              const item = FEATURES[feature];
-              const screenshot = "screenshot" in item ? item.screenshot : null;
-              return <article key={feature} className={cn("flex min-w-0 flex-col rounded-2xl p-6 sm:p-8", item.tone, screenshot ? "md:col-span-3" : "md:col-span-2")}>
-                <AppIcon icon={item.icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
-                <h3 className="text-2xl leading-tight font-medium tracking-tight">{t(`feature_${feature}_title`)}</h3>
-                <p className="mt-3 text-sm leading-relaxed opacity-80">{t(`feature_${feature}_body`)}</p>
-                {feature === "openSource" && <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex min-h-11 w-fit items-center gap-2 rounded-sm pt-5 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"><Github className="size-4" aria-hidden />{t("viewSource")}<HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5" aria-hidden /></a>}
-                {screenshot && <div className="mt-auto pt-7"><ScreenshotSlot id={screenshot} expandable sizes="(min-width: 1024px) 500px, (min-width: 768px) 45vw, 100vw" className="w-full shadow-lg shadow-black/5" /></div>}
-              </article>;
-            })}
+          <FigureScope>
+            <PointGrid
+              className="mt-0"
+              tone={["lavender", "butter", "peach", "sky", "sage", "sky"]}
+              points={ILLUSTRATED.map(feature => ({
+                icon: feature.icon,
+                title: t(`feature_${feature.key}_title`),
+                body: t(`feature_${feature.key}_body`),
+                shot: { node: feature.figure },
+              }))}
+            />
+          </FigureScope>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {TEXT_FEATURES.map(feature => (
+              <article key={feature.key} className={cn("flex min-w-0 flex-col rounded-2xl p-6 sm:p-8", feature.tone)}>
+                <AppIcon icon={feature.icon} className="mb-5 size-6" strokeWidth={1.5} aria-hidden />
+                <h3 className="text-2xl leading-tight font-medium tracking-tight">{t(`feature_${feature.key}_title`)}</h3>
+                <p className="mt-3 text-sm leading-relaxed opacity-80">{t(`feature_${feature.key}_body`)}</p>
+                {feature.key === "openSource" && <a href={MINDDY_REPOSITORY_URL} target="_blank" rel="noopener noreferrer" className="mt-auto inline-flex min-h-11 w-fit items-center gap-2 rounded-sm pt-5 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current"><Github className="size-4" aria-hidden />{t("viewSource")}<HugeiconsIcon icon={LinkSquare01Icon} className="size-3.5" aria-hidden /></a>}
+              </article>
+            ))}
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("aiNote")}</p>
         </div>
@@ -173,7 +191,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
           <h2 className="max-w-3xl text-3xl leading-tight font-medium tracking-[-0.035em] sm:text-4xl">{t("migrationTitle")}</h2>
           <p className="mt-4 max-w-2xl text-base leading-relaxed opacity-80">{t("migrationBody", { name: comparison.name })}</p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Button asChild size="lg" className="rounded-full"><TrackedCta href={downloadHref} location="comparison">{tl("downloadMinddy")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></TrackedCta></Button>
+            <Button asChild size="lg" className="rounded-full"><PlatformDownloadLink href={downloadHref} location="comparison" /></Button>
             <Link href={localizedHref("/mcp", locale)} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm font-medium hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current">{t("seeMcp")}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4" aria-hidden /></Link>
           </div>
         </div>

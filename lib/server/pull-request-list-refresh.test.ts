@@ -139,3 +139,20 @@ it("caps completed PRs at ten and requests the next ten independently of open PR
   });
   expect(mocks.queue).not.toHaveBeenCalled();
 });
+
+it("reads review queues during the catch-up and sweeps from the previous stamp", async () => {
+  mocks.identities.mockResolvedValue([{ provider: "github", account_login: "ada" }]);
+  const previous = { synced_at: "old" };
+  mocks.syncs.mockResolvedValue(new Map([["github:acme/app", previous]]));
+  mocks.list.mockResolvedValue([row]);
+  let release!: (truncated: boolean) => void;
+  mocks.sweep.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+  const response = GET(new NextRequest("http://localhost/api/pull-requests"));
+  await vi.waitFor(() => expect(mocks.sweep).toHaveBeenCalledOnce());
+  // The queue does not wait for the sweep, and is not read twice.
+  await vi.waitFor(() => expect(mocks.queue).toHaveBeenCalledOnce());
+  expect(mocks.sweep).toHaveBeenCalledWith("owner", expect.objectContaining({ repoFullName: "acme/app" }), previous);
+  release(false);
+  expect((await response).status).toBe(200);
+  expect(mocks.queue).toHaveBeenCalledOnce();
+});

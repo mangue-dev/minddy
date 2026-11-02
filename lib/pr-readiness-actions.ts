@@ -1,4 +1,4 @@
-import type { AgentRunPrResponse, PullRequestCheck } from "./agent-api";
+import type { AgentRunPrResponse, PullRequestCheck, PullRequestDeploymentResponse } from "./agent-api";
 import type { PullRequestReadiness, ReadinessBlocker } from "./pr-readiness";
 import type { PullRequestReadinessBatchResponse } from "./agent-api";
 
@@ -46,12 +46,17 @@ export function pullRequestRefetchInterval(
   ) {
     return PULL_REQUEST_POLL_MS;
   }
-  // The environment is being built: the card must settle within a poll, not
-  // freeze on "running" until something else reopens the feed (MIN-548).
-  if (response?.deploymentStatus === "in_progress") {
-    return PULL_REQUEST_POLL_MS;
-  }
   return false;
+}
+
+/**
+ * The environment is being built: the card must settle within a poll, not
+ * freeze on "running" until something else reopens the feed (MIN-548).
+ */
+export function pullRequestDeploymentRefetchInterval(
+  response: Pick<PullRequestDeploymentResponse, "deploymentStatus"> | undefined,
+): number | false {
+  return response?.deploymentStatus === "in_progress" ? PULL_REQUEST_POLL_MS : false;
 }
 
 export function pullRequestReadinessRefetchInterval(

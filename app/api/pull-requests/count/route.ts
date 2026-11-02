@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         if (seen.has(key)) continue;
         seen.add(key);
         if (!needsRepoSync(syncs.get(key), BADGE_REPO_SYNC_TTL_MS)) continue;
-        sweeps.push(sweepRepo(userId, repo));
+        sweeps.push(sweepRepo(userId, repo, syncs.get(key)));
       }
       // Every sweep keeps the invocation alive; a failure is still reported.
       const failed = (await Promise.allSettled(sweeps))

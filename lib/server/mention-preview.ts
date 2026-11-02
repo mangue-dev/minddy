@@ -33,7 +33,7 @@ import { decodePageProjection } from "@/lib/server/page-content";
 import type { JSONContent } from "@tiptap/core";
 import { decodeProject } from "@/lib/server/project-content";
 import { accessibleProjectIds } from "@/lib/server/project-access";
-import { findPullRequestsWithProjects } from "@/lib/server/agent/pull-requests";
+import { findPullRequestsWithProjects, rowProvider } from "@/lib/server/agent/pull-requests";
 import { listProjectRepositorySkills, loadProjectRepositorySkills } from "@/lib/server/repository-skills";
 import { getRoutineForUser } from "@/lib/server/routines";
 import { getScratchpad } from "@/lib/server/scratchpad";
@@ -484,6 +484,7 @@ async function pullRequestPreview(id: string, service: SupabaseClient): Promise<
     number: pr.number,
     title: pr.title?.trim() || null,
     state: pr.state,
+    provider: rowProvider(pr),
     repository: pr.repo_full_name,
     headBranch: pr.head_branch,
     baseBranch: pr.base_branch,

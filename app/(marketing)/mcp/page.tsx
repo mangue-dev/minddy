@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, CheckListIcon, Key02Icon, MessageAdd01Icon, ShieldCheckIcon as ShieldCheck, SparklesIcon, TaskDone01Icon, TerminalIcon as Terminal, CheckIcon, UserCheck01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, CheckListIcon, Key02Icon, MessageAdd01Icon, ShieldCheckIcon as ShieldCheck, SparklesIcon, TaskDone01Icon, TerminalIcon as Terminal, CheckIcon, UserCheck01Icon, Copy01Icon, SquareTerminalIcon, GitMergeIcon, Comment01Icon, CommentAdd01Icon, ApiIcon } from "@hugeicons/core-free-icons";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
@@ -17,10 +17,13 @@ import { FaqAskBox } from "@/components/marketing/faq-ask-box";
 import { MCP_FAQ_KEYS } from "@/components/marketing/faq-keys";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { SectionHeading } from "@/components/marketing/section-heading";
-import { ScreenshotSlot } from "@/components/marketing/screenshot-slot";
+import { FigureScope } from "@/components/marketing/figure-scope";
+import { PointGrid } from "@/components/marketing/feature-chapter";
+import { AgentTerminal, MergedPullRequest, PromptMenu } from "@/components/marketing/figures/agent-figures";
+import { IssueCommentFollowUp, IssuePullRequest, WebhookLog } from "@/components/marketing/figures/card-figures";
 import { StructuredData } from "@/components/marketing/structured-data";
-import { TrackedCta } from "@/components/marketing/tracked-cta";
-import { signupHref } from "@/lib/env";
+import { PlatformDownloadLink } from "@/components/marketing/platform-download-link";
+import { localizedHref } from "@/lib/locale-href";
 
 /** Public MCP setup and workflows; all configuration artifacts remain in server HTML. */
 export async function generateMetadata(): Promise<Metadata> {
@@ -50,6 +53,7 @@ export default async function McpPage() {
     getTranslations("Landing"),
     getTranslations("Account"),
   ]);
+  const locale = (await getLocale()) as Locale;
   const faqItems = MCP_FAQ_KEYS.map(key => ({
     key,
     question: t(`faq_${key}_q`),
@@ -123,21 +127,34 @@ export default async function McpPage() {
       <section id="tools" className="scroll-mt-24 bg-[#f4f6f9] px-4 py-16 sm:px-6 sm:py-20 dark:bg-[#12171d]">
         <div className="mx-auto max-w-6xl">
           <SectionHeading title={t("toolsTitle")} description={t("toolsSubtitle")} />
-          <div className="grid gap-4 lg:grid-cols-5">
-            <div className={cn("flex items-center rounded-2xl p-4 sm:p-6 lg:col-span-3", CARD_TONES.sage)}>
-              <ScreenshotSlot id="heroBoard" expandable sizes="(min-width: 1024px) 650px, 100vw" className="w-full shadow-lg shadow-black/5" />
-            </div>
-            <div className={cn("rounded-2xl p-6 sm:p-8 lg:col-span-2", CARD_TONES.lavender)}>
-              <ul className="flex h-full flex-col justify-between gap-5">
-                {CAPABILITY_KEYS.map(key => (
-                  <li key={key} className="flex items-start gap-3 text-sm leading-relaxed">
-                    <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden />
-                    {tl(`agentsCapability_${key}`)}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <FigureScope>
+            <PointGrid
+              className="mt-0"
+              tone="sky"
+              points={[
+                { icon: Copy01Icon, title: tl("toolsScene_prompt_title"), body: tl("toolsScene_prompt_body"), shot: { node: <PromptMenu /> } },
+                { icon: SquareTerminalIcon, title: tl("toolsScene_work_title"), body: tl("toolsScene_work_body"), shot: { node: <AgentTerminal /> } },
+                { icon: GitMergeIcon, title: tl("toolsScene_merge_title"), body: tl("toolsScene_merge_body"), shot: { node: <MergedPullRequest /> } },
+              ]}
+            />
+            <PointGrid
+              className="mt-12"
+              tone="sky"
+              points={[
+                { icon: Comment01Icon, title: tl("tools_review_title"), body: tl("tools_review_body"), shot: { node: <IssuePullRequest /> } },
+                { icon: CommentAdd01Icon, title: tl("tools_followUp_title"), body: tl("tools_followUp_body"), shot: { node: <IssueCommentFollowUp /> } },
+                { icon: ApiIcon, title: tl("tools_api_title"), body: tl("tools_api_body"), shot: { node: <WebhookLog /> } },
+              ]}
+            />
+          </FigureScope>
+          <ul className={cn("mt-4 grid gap-x-8 gap-y-4 rounded-2xl p-6 sm:grid-cols-2 sm:p-8", CARD_TONES.lavender)}>
+            {CAPABILITY_KEYS.map(key => (
+              <li key={key} className="flex items-start gap-3 text-sm leading-relaxed">
+                <HugeiconsIcon icon={CheckIcon} className="mt-0.5 size-4 shrink-0" aria-hidden />
+                {tl(`agentsCapability_${key}`)}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -160,7 +177,7 @@ export default async function McpPage() {
             ))}
           </ul>
           <Button asChild size="lg" className="mt-8 rounded-full">
-            <TrackedCta href={signupHref()} location="mcp_page">{tl("ctaButton")}<HugeiconsIcon icon={ArrowRight01Icon} data-icon="inline-end" /></TrackedCta>
+            <PlatformDownloadLink href={localizedHref("/download", locale)} location="mcp_page" />
           </Button>
         </div>
       </section>

@@ -33,7 +33,9 @@ export function readReviewQueue(userId: string, repo: VisibleRepo): Promise<Snap
   operation = (async () => {
     const target = await resolveRepoCloneTargetForRepo({ userId, provider: repo.provider, repoFullName: repo.repoFullName });
     if (!target) return new Map<number, string[]>();
-    const { pulls } = await forgeFor(repo.provider).listPullRequests({ token: target.token, repoFullName: repo.repoFullName, includeReviewRequests: true });
+    // Only open PRs wait for a review: reading every state cost five pages
+    // (MIN-889).
+    const { pulls } = await forgeFor(repo.provider).listPullRequests({ token: target.token, repoFullName: repo.repoFullName, includeReviewRequests: true, state: "open" });
     if (pending.get(key) === operation) return rememberReviewQueue(userId, repo, pulls);
     return new Map(pulls.map((pr) => [pr.number, (pr.requestedReviewers ?? []).map((reviewer) => reviewer.login)]));
   })().finally(() => { if (pending.get(key) === operation) pending.delete(key); });

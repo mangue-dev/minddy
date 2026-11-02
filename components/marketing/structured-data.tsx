@@ -42,7 +42,7 @@ import { MINDDY_LICENSE_URL, MINDDY_REPOSITORY_URL } from "@/lib/brand-constants
  */
 
 /** The six areas of the product, as the nav already names them — same order. */
-const FEATURE_KEYS = ["tracker", "agents", "numo", "speed", "feedback", "more"] as const;
+const FEATURE_KEYS = ["ai", "agents", "tracker", "pages", "speed", "numo"] as const;
 
 const LANG_TAG: Record<Locale, string> = { en: "en-US", fr: "fr-FR",
   de: "de-DE",

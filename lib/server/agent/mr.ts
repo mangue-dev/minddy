@@ -803,10 +803,13 @@ export async function listPullRequests(opts: {
   token: string;
   repoFullName: string;
   includeReviewRequests?: boolean;
+  state?: "open" | "all";
+  updatedSince?: string;
 }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }> {
+  const since = opts.updatedSince ? `&updated_after=${encodeURIComponent(opts.updatedSince)}` : "";
   const raw = await glPaged<RawMr>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests` +
-      `?state=all&order_by=updated_at&sort=desc`,
+      `?state=${opts.state === "open" ? "opened" : "all"}&order_by=updated_at&sort=desc${since}`,
     opts.token,
     MAX_MR_PAGES,
   );
@@ -1249,7 +1252,7 @@ export async function listMergeRequestChecks(opts: {
   token: string;
   repoFullName: string;
   number: number;
-  checksRequired?: boolean | null;
+  checksRequired?: boolean | null | PromiseLike<boolean | null>;
 }): Promise<ChecksSummary> {
   const pipelines = await glJson<RawPipeline[]>(
     `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/pipelines`,
@@ -1262,7 +1265,7 @@ export async function listMergeRequestChecks(opts: {
         opts.token,
       ).catch(() => latest)
     : latest;
-  return summarizeGitlabPipelines(detailed ? [detailed] : [], opts.checksRequired ?? null);
+  return summarizeGitlabPipelines(detailed ? [detailed] : [], (await opts.checksRequired) ?? null);
 }
 
 export async function closeMergeRequest(opts: {

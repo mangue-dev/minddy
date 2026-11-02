@@ -8,6 +8,7 @@ import {
   foldPath,
   positionAtEnd,
   positionBetween,
+  revealedAncestorsOf,
   splitFavoritePageTree,
   wouldCreateCycle,
   type Page,
@@ -141,6 +142,35 @@ describe("ancestorsOf", () => {
 
     expect(ancestorsOf(pages, "c").map((p) => p.id)).toEqual(["b", "a"]);
     expect(ancestorsOf(pages, "a")).toEqual([]);
+  });
+});
+
+describe("revealedAncestorsOf", () => {
+  const pages = (favorites: string[]) =>
+    [
+      page({ id: "a" }),
+      page({ id: "b", parent_id: "a" }),
+      page({ id: "c", parent_id: "b" }),
+      page({ id: "d", parent_id: "c" }),
+    ].map((item) => ({ ...item, favorite: favorites.includes(item.id) }));
+  const ids = (favorites: string[], pageId: string) =>
+    revealedAncestorsOf(pages(favorites), pageId).map((item) => item.id);
+
+  it("unfolds the whole chain of a page outside the favorites", () => {
+    expect(ids([], "d")).toEqual(["c", "b", "a"]);
+  });
+
+  it("leaves the non-favorite parents of a favorite closed", () => {
+    expect(ids(["c"], "c")).toEqual([]);
+  });
+
+  it("unfolds a favorite's descendant up to that favorite only", () => {
+    expect(ids(["b"], "d")).toEqual(["c", "b"]);
+  });
+
+  it("stops at the outermost favorite, which roots the favorites row", () => {
+    expect(ids(["b", "c"], "d")).toEqual(["c", "b"]);
+    expect(ids(["b", "c"], "c")).toEqual(["b"]);
   });
 });
 

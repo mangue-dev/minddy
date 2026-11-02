@@ -38,3 +38,22 @@ it("releases failed operations and stamps the failure backoff", async () => {
     expect(mocks.sync).toHaveBeenCalledTimes(2);
   } finally { log.mockRestore(); }
 });
+
+it("rereads only the window since the previous sweep, without overwriting the review queue", async () => {
+  mocks.sync.mockResolvedValue({ truncated: false });
+  await sweepRepo("owner", repo, {
+    provider: "github", repo_full_name: "acme/app", synced_at: "2026-11-02T12:00:00.000Z", truncated: true,
+  });
+  expect(mocks.sync).toHaveBeenCalledWith(expect.objectContaining({
+    updatedSince: "2026-11-02T11:00:00.000Z",
+    onObserved: undefined,
+  }));
+});
+
+it("scans the whole history of a repository never swept", async () => {
+  mocks.sync.mockResolvedValue({ truncated: false });
+  await sweepRepo("owner", repo);
+  const [opts] = mocks.sync.mock.calls[0];
+  expect(opts.updatedSince).toBeUndefined();
+  expect(opts.onObserved).toEqual(expect.any(Function));
+});

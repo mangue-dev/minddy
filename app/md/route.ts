@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { NextRequest } from "next/server";
 import { resolvePublicMarkdownDelivery } from "@/lib/public-markdown-delivery";
 import { renderLegalContent, isLegalContentKey } from "@/lib/server/legal-markdown";
@@ -149,49 +150,33 @@ function header(
 async function renderLanding(locale: Locale, canonical: string): Promise<string> {
   const t = await getTranslations({ locale, namespace: "Landing" });
 
+  // The landing's chapters, in page order: title, lede, then their points.
+  type Key = MessageKey<"Landing">;
+  // `stems` name each item's `<stem>_title` and `<stem>_body` keys: a figure's scenes, then its points.
+  const chapter = (title: Key, lede: Key, stems: readonly string[]): [string, string, Array<[string, string]>] =>
+    [t(title), t(lede), stems.map((k) => [t(`${k}_title` as Key), t(`${k}_body` as Key)])];
+  const stems = (prefix: string, keys: readonly string[]) => keys.map((k) => `${prefix}_${k}`);
+
   const sections: Array<[string, string, Array<[string, string]>]> = [
-    [
-      t("featuresTitle"),
-      t("featuresSubtitle"),
-      (["board", "all", "inbox", "objectives", "cycles", "triage"] as const).map(
-        (k) => [t(`feature_${k}_title`), t(`feature_${k}_body`)],
-      ),
-    ],
-    [t("pagesTitle"), t("pagesSubtitle"), (["write", "link", "agents", "publish"] as const).map(
-      (k) => [t(`pages_${k}_title`), t(`pages_${k}_body`)],
-    )],
-    [t("navMenu_feedback_title"), t("feedbackSubtitle"), (["post", "moderate", "decide", "status"] as const).map(
-      (k) => [t(`feedback_${k}_title`), t(`feedback_${k}_body`)],
-    )],
-    [t("feature_palette_title"), t("feature_palette_body"), (["search", "actions", "shortcuts"] as const).map(
-      (k) => [t(`palette_${k}_title`), t(`palette_${k}_body`)],
-    )],
-    [t("scratchpadTitle"), t("scratchpadSubtitle"), (["write", "prompt", "agent", "promote", "mcp"] as const).map(
-      (k) => ["", t(`scratchpadPoint_${k}`)],
-    )],
-    [t("voiceTitle"), t("voiceSubtitle"), []],
-    [
-      t("agentsTitle"),
-      t("agentsSubtitle"),
-      (["write", "run", "review"] as const).map(
-        (k) => [t(`workflow_${k}_title`), t(`workflow_${k}_body`)],
-      ),
-    ],
-    [t("numoTitle"), t("numoSubtitle"), (["find", "act", "context"] as const).map(
-      (k) => [t(`numoCapability_${k}_title`), t(`numoCapability_${k}_body`)],
-    )],
-    [t("agentsCompatible"), [t("agentsMcpRoles"), t("agentsPlanNote"), t("agentsByokNote")].join("\n\n"),
-      (["read", "plan", "track", "create", "comment", "wiki", "review", "beyond"] as const).map(
-        (k) => ["", t(`agentsCapability_${k}`)],
-      ),
-    ],
-    [
-      t("moreTitle"),
-      t("moreSubtitle"),
-      (["share", "import", "api"] as const).map(
-        (k) => [t(`more_${k}_title`), t(`more_${k}_body`)] as [string, string],
-      ),
-    ],
+    chapter("aiTitle", "aiLede", stems("ai", ["fill", "assign", "numo", "routines", "voice", "models"])),
+    chapter("toolsTitle", "toolsLede", [
+      ...stems("toolsScene", ["prompt", "work", "merge"]),
+      ...stems("tools", ["mcp", "apps", "pr", "review", "followUp", "api"]),
+    ]),
+    chapter("trackerTitle", "trackerLede", [
+      "tracker_all",
+      ...stems("tracker", ["views", "objectives", "dependencies", "triage", "stats", "import"]),
+    ]),
+    chapter("pagesHeadline", "pagesLede", [
+      ...stems("pages", ["live", "mentions", "numo"]),
+      ...stems("pages", ["wiki", "db", "history"]),
+    ]),
+    [t("speedHeadline"), [t("speedLede"), t("speedNote")].join(" "), [
+      ...(["switch", "issue", "back"] as const).map((k, i): [string, string] =>
+        [t("speedMs", { ms: [60, 85, 90][i] }), t(`speed_${k}`)]),
+      [t("speedPlatforms"), "macOS, Windows, Linux, iPhone, Android"],
+    ]],
+    chapter("detailsTitle", "detailsLede", stems("details", ["scratchpad", "feedback", "share", "inbox", "openSource", "themes"])),
     [t("editionsTitle"), t("editionsSubtitle"), [
       [t("cloudTitle"), [t("cloudBody"), t("cloudPointOne"), t("cloudPointTwo"), t("cloudPointThree")].join(" ")],
       [t("selfHostedTitle"), [t("selfHostedBody"), t("selfHostedPointOne"), t("selfHostedPointTwo"), t("selfHostedPointThree")].join(" ")],
@@ -201,8 +186,8 @@ async function renderLanding(locale: Locale, canonical: string): Promise<string>
 
   return [
     header(t("metaTitle"), t("metaDescription"), canonical, locale),
-    `## ${t("heroTitleBefore")} ${t("heroTitleAccent")}`,
-    t("heroSubtitle"),
+    `## ${t("heroTitle")}`,
+    t("heroLede"),
     ...sections.flatMap(([title, subtitle, items]) => [
       `## ${title}`,
       subtitle,

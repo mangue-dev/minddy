@@ -7,7 +7,7 @@ import { prCommentsQueryOptions, prCommitsQueryOptions, prReviewCommentsQueryOpt
 
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestReadState, pullRequestDisplayReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
+import { assertPullRequestReadBudget, pullRequestAccountRetryAt, pullRequestReadRetryAt, pullRequestReadRetry, pullRequestQueryOptions, pullRequestDeploymentQueryOptions, pullRequestReadState, pullRequestDisplayReadState, pullRequestReadPrecedesActivation } from "./pull-request-query";
 import { nextReadActivationSequence } from "./read-activation-sequence";
 import {
   fetchAllPullRequestsApi,
@@ -83,9 +83,6 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     checks: data?.checks ?? null,
     checksError: data?.checksError ?? null,
     deploymentUrl: data?.deploymentUrl ?? null,
-    deploymentStatus: data?.deploymentStatus ?? null,
-    deploymentStartedAt: data?.deploymentStartedAt ?? null,
-    deploymentDurationMs: data?.deploymentDurationMs ?? null,
     reviews: data?.reviews ?? null,
     // Who I am for this PR (MIN-144). `null` as long as the GET has not
     // answered: the UI then does not offer any writing gesture, rather than
@@ -102,6 +99,27 @@ export function usePullRequestQuery(prId: string, enabled: boolean) {
     /** Why the last read failed, for the error screen's explanation. */
     readError: query.error,
     refetch,
+  };
+}
+
+/**
+ * The deployment card of the PR on screen, once its detail has named the
+ * head (MIN-889). A preview advertised by a check stays preferred: it is the
+ * stable branch URL, where the walk may only find an immutable commit URL.
+ */
+export function usePullRequestDeploymentQuery(prId: string, headSha: string | null, checkUrl: string | null) {
+  const active = useAppTabActive();
+  const { data } = useQuery({
+    ...pullRequestDeploymentQueryOptions(prId, headSha),
+    enabled: active && !!headSha,
+  });
+  // A response for another head is a previous environment: not this card.
+  const current = data && data.headSha === headSha ? data : null;
+  return {
+    deploymentUrl: checkUrl ?? current?.deploymentUrl ?? null,
+    deploymentStatus: current?.deploymentStatus ?? null,
+    deploymentStartedAt: current?.deploymentStartedAt ?? null,
+    deploymentDurationMs: current?.deploymentDurationMs ?? null,
   };
 }
 

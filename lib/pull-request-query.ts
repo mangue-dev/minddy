@@ -1,7 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { ApiError, fetchPullRequestApi } from "./agent-api";
+import { ApiError, fetchPullRequestApi, fetchPullRequestDeploymentApi } from "./agent-api";
 import { isDefinitiveReadError } from "./backend-availability";
-import { pullRequestRefetchInterval } from "./pr-readiness-actions";
+import { pullRequestDeploymentRefetchInterval, pullRequestRefetchInterval } from "./pr-readiness-actions";
 import { nextReadActivationSequence, readActivationSession } from "./read-activation-sequence";
 
 type ReadQuotaState = { error: unknown; errorUpdatedAt: number; data?: unknown };
@@ -95,6 +95,23 @@ export function pullRequestQueryOptions(prId: string) {
       const delay = pullRequestReadRetryAt(query.state) - Date.now();
       return delay > 0 ? delay : pullRequestRefetchInterval(query.state.data);
     },
+  };
+}
+
+/**
+ * The deployment card, read after the detail for the head it shows (MIN-889).
+ * A new head is a new key, so the previous environment's card never lingers.
+ */
+export function pullRequestDeploymentQueryOptions(prId: string, headSha: string | null) {
+  return {
+    queryKey: ["pull-request-deployment", prId, headSha] as const,
+    queryFn: ({ signal, client }: { signal: AbortSignal; client?: QueryClient }) => {
+      if (client) assertPullRequestReadBudget(client);
+      return fetchPullRequestDeploymentApi(prId, signal);
+    },
+    retry: pullRequestReadRetry,
+    refetchInterval: (query: { state: { data?: Awaited<ReturnType<typeof fetchPullRequestDeploymentApi>> } }) =>
+      pullRequestDeploymentRefetchInterval(query.state.data),
   };
 }
 
