@@ -4,14 +4,18 @@ import { publicPageMetadata } from "@/lib/seo";
 import type { Locale } from "@/i18n/config";
 import { Hero } from "@/components/marketing/hero";
 import { SectionEditions } from "@/components/marketing/section-editions";
-import { SectionWorkspace } from "@/components/marketing/section-workspace";
-import { SectionAgents } from "@/components/marketing/section-agents";
-import { SectionMore } from "@/components/marketing/section-more";
+import { SectionAi } from "@/components/marketing/section-ai";
+import { SectionTools } from "@/components/marketing/section-tools";
+import { SectionTracker } from "@/components/marketing/section-tracker";
+import { SectionPages } from "@/components/marketing/section-pages";
+import { SectionSpeed } from "@/components/marketing/section-speed";
+import { SectionDetails } from "@/components/marketing/section-details";
 import { SectionPricingTeaser } from "@/components/marketing/section-pricing-teaser";
 import { SectionFaq } from "@/components/marketing/section-faq";
 import { SectionCta } from "@/components/marketing/section-cta";
 import { StructuredData } from "@/components/marketing/structured-data";
 import { LandingViewed } from "@/components/marketing/landing-viewed";
+import { FigureScope } from "@/components/marketing/figure-scope";
 
 export async function generateMetadata(): Promise<Metadata> {
   return publicPageMetadata({ routeKey: "home", locale: (await getLocale()) as Locale });
@@ -33,10 +37,17 @@ export default async function LandingPage() {
     <>
       <StructuredData />
       <LandingViewed />
-      <Hero />
-      <SectionWorkspace />
-      <SectionAgents />
-      <SectionMore />
+      {/* The figures render real app components: one scope serves them all. */}
+      <FigureScope>
+        <Hero />
+        {/* What sets minddy apart first, then the foundations it rests on. */}
+        <SectionAi />
+        <SectionTools />
+        <SectionTracker />
+        <SectionPages />
+        <SectionSpeed />
+        <SectionDetails />
+      </FigureScope>
       <SectionEditions />
       <SectionPricingTeaser />
       <SectionFaq />

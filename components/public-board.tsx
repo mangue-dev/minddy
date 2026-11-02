@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ComponentProps } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { BOARD_COLUMN_CLASS } from "@/lib/board-layout";
 import { visibleStatuses } from "@/lib/view-filter";
-import { IssueCardBody } from "@/components/issue-card";
+import { IssueCardFace } from "@/components/issue-card-face";
+import { useIssueCardRichSlots } from "@/components/issue-card-rich-slots";
 import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
 import type {
@@ -32,8 +33,7 @@ export interface PublicCard {
  * Read-only kanban of a shared view (MIN-26) — the presentational subset of
  * KanbanBoard: same columns and card body, no DnD, no create/edit, no side
  * panel. Props are plain JSON (RSC boundary): maps and visible statuses are
- * derived here, and IssueCardBody gets no callbacks so every indicator
- * renders static.
+ * derived here, and IssueCardFace renders every indicator statically.
  */
 export function PublicBoard({
   cards,
@@ -94,7 +94,7 @@ export function PublicBoard({
 
           <div className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto rounded-xl p-2">
             {items.map((card) => (
-              <IssueCardBody
+              <PublicCardFace
                 key={card.issue.id}
                 issue={card.issue}
                 projectKey={projectKey}
@@ -110,4 +110,11 @@ export function PublicBoard({
       ))}
     </div>
   );
+}
+
+/** One shared card: the face, with the integration's name and the
+    description's typed mentions the board resolves. */
+function PublicCardFace(props: ComponentProps<typeof IssueCardFace>) {
+  const slots = useIssueCardRichSlots(props.issue);
+  return <IssueCardFace {...props} slots={slots} />;
 }

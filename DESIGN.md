@@ -284,6 +284,10 @@ Exceptions, which need no dialog:
 
 ## Copy
 
+- How to write any visible text (emphasis budget, length, tells to remove) is
+  set by [`.claude/skills/no-slop-writing/SKILL.md`](.claude/skills/no-slop-writing/SKILL.md).
+  The rules below are this product's conventions on top of it, and win where
+  they differ.
 - Interface copy goes through `next-intl` in all six catalogs (`en`, `fr`,
   `de`, `es`, `it`, `pt-BR`); see the i18n section of `AGENTS.md`.
 - Sentence case, short, in the user's words. Name the object, not the

@@ -1745,6 +1745,28 @@ html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scrol
    end up waiting a second after the first element. */
 .reveal-group > *:nth-child(n + 7) { --reveal-i: 6; }
 
+/* ─── Landing figure scenes (components/marketing/figures/story.tsx) ───
+   The active scene's progress bar. Its duration and play state are set
+   inline: it pauses with the figure's clock when the figure leaves the screen. */
+@keyframes story-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.story-progress {
+  animation-name: story-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-progress {
+    animation: none;
+  }
+}
+
 /* ─── Section titles, verbatim (<RevealHeading>) ─────────────────────
    Same principle: observe on the title, the offset per word in CSS via
    `--reveal-i` placed inline. The readable text is carried by aria-label, the

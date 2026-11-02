@@ -5,6 +5,7 @@ import {
   PUBLIC_CLIENT_NAMESPACES,
   publicClientMessages,
 } from "./public-client-messages";
+import { LANDING_FIGURE_NAMESPACES } from "./landing-figure-messages";
 import enMessages from "../messages/en.json";
 import frMessages from "../messages/fr.json";
 
@@ -53,19 +54,39 @@ interface Scan {
   /** calls that static analysis cannot resolve */
   undecidable: string[];
   clientFiles: Set<string>;
+  /** landing figures reached from the roots: scanned on their own, against their scoped catalog */
+  figures: Map<string, Set<string>>;
 }
+
+/** Landing figures render real app components under `FigureScope`, which
+ serves them `LANDING_FIGURE_NAMESPACES` (see `lib/landing-figure-messages.ts`). */
+const FIGURE_CLIENT_SCOPE = path.join("components", "marketing", "figure-client-scope.tsx");
+const FIGURES_DIR = path.join("components", "marketing", "figures") + path.sep;
 
 /** Tracks imports from the roots and notes translated namespaces in
  files marked `"use client"`. */
-function scanEntries(entries: readonly string[]): Scan {
+function scanEntries(entries: readonly string[], options: { figures?: boolean } = {}): Scan {
   const seen = new Set<string>();
-  const scan: Scan = { namespaces: new Map(), undecidable: [], clientFiles: new Set() };
+  const scan: Scan = {
+    namespaces: new Map(),
+    undecidable: [],
+    clientFiles: new Set(),
+    figures: new Map(),
+  };
 
-  const walk = (file: string) => {
+  const walk = (file: string, importer?: string) => {
+    const relative = path.relative(REPO_ROOT, file);
+    // A figure brings its own provider: note who renders it and stop there,
+    // unless this scan is the figures' own.
+    if (!options.figures && relative.startsWith(FIGURES_DIR) && importer) {
+      const importers = scan.figures.get(relative) ?? new Set<string>();
+      importers.add(path.relative(REPO_ROOT, importer));
+      scan.figures.set(relative, importers);
+      return;
+    }
     if (seen.has(file)) return;
     seen.add(file);
     const source = readFileSync(file, "utf8");
-    const relative = path.relative(REPO_ROOT, file);
 
     // The directive must be the first instruction of the module: look for it at
     // start only avoids taking a comment for it.
@@ -83,7 +104,9 @@ function scanEntries(entries: readonly string[]): Scan {
       if (/useTranslations\(\s*(\)|[^"'`)\s])/.test(source)) {
         scan.undecidable.push(`${relative}: useTranslations() has no literal namespace`);
       }
-      if (/\buseMessages\(/.test(source)) {
+      // The figure scope merges its namespaces into the inherited catalog:
+      // the one place on the public site that reads it whole on purpose.
+      if (/\buseMessages\(/.test(source) && relative !== FIGURE_CLIENT_SCOPE) {
         scan.undecidable.push(`${relative}: useMessages() reads the full catalog`);
       }
     }
@@ -95,12 +118,12 @@ function scanEntries(entries: readonly string[]): Scan {
     // to the browser contain — a false positive we could only correct
     // than by declaring public a namespace which is not.
     const runtime = source.replace(
-      /^[ \t]*(?:import|export)[ \t]+type[ \t][^;\n]*(?:\n[^;]*)*?;/gm,
+      /^[ \t]*(?:import|export)[ \t]+type[ \t][^;]*;/gm,
       ""
     );
     for (const match of runtime.matchAll(/(?:from\s*|import\s*\(\s*)["']([^"']+)["']/g)) {
       const next = resolveImport(match[1], file);
-      if (next) walk(next);
+      if (next) walk(next, file);
     }
   };
 
@@ -141,6 +164,30 @@ describe("public site messages", () => {
 
   it("finds no undecidable call", () => {
     expect(scan.undecidable).toEqual([]);
+  });
+
+  it("mounts FigureScope on every page that renders a landing figure", () => {
+    expect(scan.figures.size).toBeGreaterThan(0);
+    for (const entry of PUBLIC_ENTRIES) {
+      if (scanEntries([entry]).figures.size === 0) continue;
+      expect(
+        readFileSync(path.join(REPO_ROOT, entry), "utf8"),
+        `${entry} renders landing figures without FigureScope`,
+      ).toMatch(/from\s*["']@\/components\/marketing\/figure-scope["']/);
+    }
+  });
+
+  it("serves landing figures every namespace they translate, and no other", () => {
+    const figureScan = scanEntries([...scan.figures.keys()], { figures: true });
+    const available = new Set<string>([...PUBLIC_CLIENT_NAMESPACES, ...LANDING_FIGURE_NAMESPACES]);
+    const missing = [...figureScan.namespaces]
+      .filter(([namespace]) => !available.has(namespace))
+      .map(([namespace, users]) => `${namespace} (${[...users].join(", ")})`);
+    expect(missing, `Namespaces missing from LANDING_FIGURE_NAMESPACES: ${missing.join(" · ")}`)
+      .toEqual([]);
+    const unused = LANDING_FIGURE_NAMESPACES.filter((ns) => !figureScan.namespaces.has(ns));
+    expect(unused, `Unused figure namespaces: ${unused.join(", ")}`).toEqual([]);
+    expect(figureScan.undecidable).toEqual([]);
   });
 
   it("exist in both catalogs", () => {

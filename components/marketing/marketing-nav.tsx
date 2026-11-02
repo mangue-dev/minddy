@@ -2,11 +2,12 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowUpRight01Icon, Cancel01Icon, Download01Icon, EqualIcon as Equal } from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon, Cancel01Icon, EqualIcon as Equal } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { PlatformDownloadLink } from "./platform-download-link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,6 @@ import { WordmarkLetters } from "./wordmark-letters";
 import { NavProductMenu, type ProductEntry } from "./nav-product-menu";
 import { PreviewEnvBanner } from "@/components/preview-env-banner";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
-import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -38,15 +38,17 @@ type NavLink = {
 
 /** Shared destinations for the desktop product menu and mobile drawer. */
 const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
-  { key: "tracker", href: "/#tracker" },
+  // The landing's sections, in its order, then the product's own pages.
+  { key: "ai", href: "/#ai" },
   { key: "agents", href: "/#agents" },
-  { key: "numo", href: "/#numo" },
-  { key: "speed", href: "/#speed" },
+  { key: "tracker", href: "/#tracker" },
   { key: "pages", href: "/#pages" },
-  { key: "feedback", href: "/#feedback" },
+  { key: "speed", href: "/#speed" },
   { key: "more", href: "/#more" },
   { key: "mcp", href: "/mcp" },
   { key: "selfHosting", href: "/self-hosting/install" },
+  { key: "compare", href: "/alternatives/linear" },
+  { key: "changelog", href: "/changelog" },
   // The desktop app is last because it describes where Minddy runs rather than
   // what it does. It remains discoverable without displacing the product story.
   { key: "download", href: "/download" },
@@ -55,7 +57,7 @@ const PRODUCT_ENTRIES: ReadonlyArray<ProductEntry> = [
 /** Direct navigation complements the product menu with an overview and pricing. */
 const LINKS: ReadonlyArray<NavLink> = [
   { href: "/docs", key: "navDocumentation" },
-  { href: "/#workspace", key: "navHowItWorks" },
+  { href: "/#ai", key: "navHowItWorks" },
   { href: "/pricing", key: "navPricing" },
   { href: "https://github.com/mangue-dev/minddy", key: "navOpenSource", external: true },
 ];
@@ -94,7 +96,6 @@ function useSession(): [boolean, boolean, (v: boolean) => void] {
 }
 
 export function MarketingNav() {
-  const { track } = useAnalytics();
   const t = useTranslations("Landing");
   // Links are written once in canonical English; on `/fr` they must
   // point to French URLs, otherwise the first click returns to English.
@@ -188,10 +189,7 @@ export function MarketingNav() {
                 </Link>
               </Button>
               <Button asChild size="sm" className="px-4">
-                <Link href={href("/download")}
-                  onClick={() => track("landing_cta_clicked", { location: "nav" })}>
-                  {t("downloadMinddy")}
-                </Link>
+                <PlatformDownloadLink href={href("/download")} location="nav" />
               </Button>
             </div>
           </div>
@@ -248,7 +246,7 @@ export function MarketingNav() {
           </ul>
           <p className="mt-7 mb-3 text-sm text-muted-foreground">{t("navProduct")}</p>
           <ul>
-            {PRODUCT_ENTRIES.filter(entry => entry.key !== "download").map(entry => (
+            {PRODUCT_ENTRIES.filter(entry => entry.key !== "download" && entry.key !== "compare").map(entry => (
               <li key={entry.href}>
                 <SheetClose asChild>
                   <a href={href(entry.href)} className={MOBILE_ROW}>
@@ -263,11 +261,7 @@ export function MarketingNav() {
         <div className="flex shrink-0 flex-col gap-2 border-t border-border bg-[#f3f5ef] px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:bg-[#252b27]">
           <SheetClose asChild>
             <Button asChild size="lg" className="min-h-11 w-full rounded-full">
-              <Link href={href("/download")}
-                onClick={() => track("landing_cta_clicked", { location: "nav" })}>
-                {t("downloadMinddy")}
-                <HugeiconsIcon icon={Download01Icon} data-icon="inline-end" />
-              </Link>
+              <PlatformDownloadLink href={href("/download")} location="nav" />
             </Button>
           </SheetClose>
           <SheetClose asChild>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
@@ -182,9 +182,8 @@ export function ResetPasswordForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Field id="password" label={t("newPassword")}>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               className="h-10 bg-control"
               autoComplete="new-password"
               autoFocus
@@ -199,9 +198,8 @@ export function ResetPasswordForm() {
           <PasswordRules password={password} />
 
           <Field id="confirmPassword" label={t("confirmPassword")}>
-            <Input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               className="h-10 bg-control"
               autoComplete="new-password"
               required

@@ -1,10 +1,9 @@
 "use client";
 
 import { objectiveHref, pullRequestHref } from "@/lib/app-urls";
-import { TruncatedText } from "@/components/ui/truncated-text";
 import { prefetchDescriptionSnapshot } from "@/lib/description-collaboration";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AiAutoRotateIcon, Comment01Icon, HierarchySquare01Icon, GitMergeIcon, GitPullRequestDraftIcon, GitPullRequestIcon, RepeatIcon, TaskDone01Icon, TriangleIcon, UserIcon } from "@hugeicons/core-free-icons";
+import { HierarchySquare01Icon, TriangleIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -15,12 +14,11 @@ import {
   type ComponentProps,
 } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { useTranslations, useFormatter } from "next-intl";
+import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { AppIcon } from "@/components/icon";
 import { useIssueMenuActionsWithNavigation, type IssueMenuSelection } from "@/components/use-issue-menu-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useAgentMenuActions } from "@/components/agent/use-agent-menu-actions";
@@ -36,12 +34,9 @@ import {
 } from "@/lib/issue-constants";
 import { displayName } from "@/lib/display-name";
 import { UserAvatar } from "@/components/user-avatar";
-import { IntegrationIndicator } from "@/components/integration-indicator";
-import { RemoteIssueIndicator } from "@/components/remote-issue-indicator";
 import {
   StatusIndicator,
   PriorityIndicator,
-  EffortIndicator,
 } from "@/components/issue-indicators";
 import { RelationChips, type ChipRelation } from "@/components/relation-chips";
 import { RelationPalettePicker } from "@/components/palette-picker-rows";
@@ -68,7 +63,7 @@ import { useIssuePr, useIssuePrReadiness, useIssuePrStore } from "@/components/i
 import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
-import { DATE_ICON, SMART_ASSIGN_ICON } from "@/components/feature-icons";
+import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
 import {
   isPrWorthShowing,
@@ -86,8 +81,6 @@ import type {
   Objective,
   Project,
 } from "@/lib/types";
-import { ProjectOrb } from "@/components/project-orb";
-import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { DateTimePicker } from "@/components/date-time-picker";
 import {
   SearchSelect,
@@ -131,16 +124,32 @@ import {
   resolvePromptCopyAutoStart,
   shouldAutoStartOnPromptCopy,
 } from "@/lib/prompt-copy-auto-start";
-import { dueDateFormat, parseDueDate } from "@/lib/due-date";
+import { parseDueDate } from "@/lib/due-date";
 import type { RecurrenceCadence } from "@/lib/recurrence";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { hasPlanTasks, planProgress, type PlanProgress } from "@/lib/plan";
-import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { commentTarget, requestCommentFocus } from "@/lib/comment-focus";
-import { PlainPreview } from "@/components/typed-mention-chip";
-import { OBJECTIVE_PILL_TRIGGER, ObjectiveBadge, ObjectivePill } from "@/components/objective-label";
+import { OBJECTIVE_PILL_TRIGGER, ObjectivePill } from "@/components/objective-label";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { MentionHover } from "@/components/mention-hover";
+import {
+  COMMENT_FOLLOW_UP_CLASS,
+  IssueCardAssigneeAvatar,
+  IssueCardCategories,
+  IssueCardCommentFollowUp,
+  IssueCardCommentFollowUpContent,
+  IssueCardDueDate,
+  IssueCardEffort,
+  IssueCardFace,
+  IssueCardObjectiveDisplay,
+  IssueCardPlanContent,
+  IssueCardPriority,
+  IssueCardPullRequestContent,
+  IssueCardStatus,
+  pullRequestChip,
+} from "@/components/issue-card-face";
+import { useIssueCardRichSlots } from "@/components/issue-card-rich-slots";
+
 import {
   Tooltip,
   TooltipContent,
@@ -176,13 +185,6 @@ const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 // The tint also stays while one of the card's menus or pickers is open
 // (`data-menu-open`, or a pill whose picker is open), pointer on it or not:
 // the card reads as the one the open surface acts on.
-const CARD_HOVER =
-  "pointer-fine:hover:border-foreground/20 pointer-fine:hover:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:pointer-fine:hover:border-foreground/25 " +
-  "data-menu-open:border-foreground/20 data-menu-open:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:data-menu-open:border-foreground/25 " +
-  "has-[[aria-expanded=true]]:border-foreground/20 has-[[aria-expanded=true]]:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:has-[[aria-expanded=true]]:border-foreground/25";
-const CARD_HELD =
-  "data-held:cursor-grabbing data-held:border-foreground/20 data-held:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] data-held:shadow-md dark:data-held:border-foreground/25";
-
 /** Closed menu: stable identity, so a new array is not created on every render. */
 const NO_ACTIONS: ContextMenuAction[] = [];
 
@@ -196,7 +198,7 @@ function StatusPick({
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tStatus = useTranslations("Status");
-  if (!onChange) return <StatusIndicator status={value} />;
+  if (!onChange) return <IssueCardStatus value={value} />;
   const options: PickerOption[] = ALL_STATUSES.map((s) => ({
     value: s.value,
     label: tStatus(s.value),
@@ -237,7 +239,7 @@ function PriorityPick({
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   const tPriority = useTranslations("Priority");
-  if (!onChange) return <PriorityIndicator priority={value} />;
+  if (!onChange) return <IssueCardPriority value={value} />;
   const options: PickerOption[] = PRIORITIES.map((p) => ({
     value: p.value,
     label: tPriority(p.value),
@@ -277,14 +279,7 @@ function EffortPick({
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
-  const display = value ? (
-    <EffortIndicator effort={value} />
-  ) : (
-    <span className="inline-flex items-center gap-1 text-muted-foreground/60">
-      <HugeiconsIcon icon={TriangleIcon} className="size-[18px] shrink-0" />
-      <span className="text-sm font-medium leading-none">–</span>
-    </span>
-  );
+  const display = <IssueCardEffort value={value} />;
   if (!onChange) return display;
   const options: PickerOption[] = EFFORTS.map((e) => ({
     value: e.value,
@@ -317,38 +312,6 @@ function EffortPick({
   );
 }
 
-/** The pills as they appear on the card — without a menu. This is all the
- *  PUBLIC board renders (no callbacks), and it has neither react-query nor
- *  creation dialogs: the menu, with its hooks, lives in the sibling component
- *  and is mounted only when the card is editable. */
-function CategoryDisplay({
-  categories,
-  selectedIds,
-}: {
-  categories: IssueCardCategory[];
-  selectedIds: string[];
-}) {
-  const t = useTranslations("IssueUI");
-  const selected = categories.filter((c) => selectedIds.includes(c.id));
-  const first = selected[0];
-  const extra = Math.max(0, selected.length - 1);
-  return first ? (
-    <span className="flex min-w-0 items-center gap-1.5 text-xs">
-      <span
-        className="size-2.5 shrink-0 rounded-full"
-        style={{ backgroundColor: first.color }}
-        aria-hidden
-      />
-      <span className="truncate">{first.name}</span>
-      {extra > 0 && (
-        <span className="shrink-0 text-muted-foreground">+{extra}</span>
-      )}
-    </span>
-  ) : (
-    <span className="text-xs text-muted-foreground/60">{t("noneFem")}</span>
-  );
-}
-
 function CategoryPick({
   categories,
   selectedIds,
@@ -361,9 +324,7 @@ function CategoryPick({
   /** Card project — anything quick-add creates belongs to it. */
   projectId?: string | null;
 }) {
-  const display = (
-    <CategoryDisplay categories={categories} selectedIds={selectedIds} />
-  );
+  const display = <IssueCardCategories categories={categories} selectedIds={selectedIds} />;
   if (!onChange) return display;
   return (
     <CategoryPickMenu
@@ -453,23 +414,15 @@ function AssigneePick({
   // state and the picker's clear option name it, as in the issue panel.
   const smartAssign = useSmartAssignFillsEmpty(projectId, status);
   const emptyLabel = tField(smartAssign ? "smartAssign" : "unassigned");
-  const avatar = assignee ? (
-    <UserAvatar
-      seed={assignee.avatar_seed}
+  const avatar = (
+    <IssueCardAssigneeAvatar
+      assignee={assignee}
+      smartAssign={smartAssign}
+      emptyLabel={emptyLabel}
       // The picker's own tooltip already names the field: a second, native
       // one with the person's name would stack on top of it.
-      title={onChange ? undefined : displayName(assignee)}
-      className="size-6"
+      named={!onChange}
     />
-  ) : (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/60">
-          <HugeiconsIcon icon={smartAssign ? SMART_ASSIGN_ICON : UserIcon} className="size-3.5" />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{emptyLabel}</TooltipContent>
-    </Tooltip>
   );
   if (!onChange) return avatar;
   const options: PickerOption[] = members.map((m) => ({
@@ -525,23 +478,11 @@ function DueDatePick({
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
-  const format = useFormatter();
   const parsed = parseDueDate(value);
   if (!parsed) return null;
 
   // Read-only (e.g. inside the drag overlay): plain label, no picker.
-  if (!onChange) {
-    return (
-      <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-        {recurrence ? (
-          <HugeiconsIcon icon={RepeatIcon} className="size-3 shrink-0" />
-        ) : (
-          <HugeiconsIcon icon={DATE_ICON} className="size-3 shrink-0" />
-        )}
-        {format.dateTime(parsed, dueDateFormat(parsed, { compact: true }))}
-      </span>
-    );
-  }
+  if (!onChange) return <IssueCardDueDate value={value} recurrence={recurrence} />;
 
   return (
     <DateTimePicker
@@ -570,14 +511,7 @@ function ObjectiveIndicator({ objective, onEdit }: {
   const t = useTranslations("IssueUI");
   // The card's compact line keeps its small text, at the avatar's height,
   // and names the objective alone: no status glyph there.
-  if (!onEdit) return (
-    <ObjectiveBadge
-      objective={{ name: objective.name, color: objective.color }}
-      size="sm"
-      className="h-6"
-      tooltip={tField("objectiveLinked")}
-    />
-  );
+  if (!onEdit) return <IssueCardObjectiveDisplay objective={objective} />;
   // Editable: the tooltip names the field and its O shortcut, like the
   // other property pickers of the card.
   return (
@@ -615,14 +549,7 @@ function PlanPick({
   onOpen?: () => void;
 }) {
   const t = useTranslations("IssueUI");
-  const content = (
-    <>
-      <HugeiconsIcon icon={TaskDone01Icon} className="size-3.5 shrink-0" />
-      <span className="tabular-nums">
-        {progress.done}/{progress.total}
-      </span>
-    </>
-  );
+  const content = <IssueCardPlanContent progress={progress} />;
   if (!onOpen) {
     return (
       <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
@@ -664,34 +591,24 @@ function CommentFollowUpPick({
 }) {
   const t = useTranslations("IssueUI");
   const label = t("commentsPendingLabel", { count: followUp.count });
-  const content = (
-    <>
-      <HugeiconsIcon icon={Comment01Icon} className="size-3.5 shrink-0" />
-      <span className="tabular-nums">{followUp.count}</span>
-    </>
-  );
-  const className = "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium text-brand";
+  if (!onCopy) return <IssueCardCommentFollowUp followUp={followUp} />;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        {onCopy ? (
-          <button
-            type="button"
-            aria-label={t("commentsPromptAction")}
-            onClick={(e) => {
-              stop(e);
-              onCopy();
-            }}
-            onPointerDown={stop}
-            className={cn(className, "outline-none transition-colors hover:bg-muted focus-visible:bg-muted")}
-          >
-            {content}
-          </button>
-        ) : (
-          <span className={className} aria-label={label}>{content}</span>
-        )}
+        <button
+          type="button"
+          aria-label={t("commentsPromptAction")}
+          onClick={(e) => {
+            stop(e);
+            onCopy();
+          }}
+          onPointerDown={stop}
+          className={cn(COMMENT_FOLLOW_UP_CLASS, "outline-none transition-colors hover:bg-muted focus-visible:bg-muted")}
+        >
+          <IssueCardCommentFollowUpContent count={followUp.count} />
+        </button>
       </TooltipTrigger>
-      <TooltipContent>{onCopy ? `${label} · ${t("commentsPromptAction")}` : label}</TooltipContent>
+      <TooltipContent>{`${label} · ${t("commentsPromptAction")}`}</TooltipContent>
     </Tooltip>
   );
 }
@@ -713,32 +630,11 @@ function PrPick({
   onOpen?: () => void;
 }) {
   const t = useTranslations("Agent");
-  const merged = state === "merged";
-  const draft = state === "draft";
-  const Icon = merged ? GitMergeIcon : draft ? GitPullRequestDraftIcon : GitPullRequestIcon;
-  const stateLabel = merged ? t("prMerged") : draft ? t("prBadge") : t("prOpen");
-  const content = (
-    <>
-      <AppIcon icon={Icon} className="size-3.5 shrink-0" />
-      <span className="truncate tabular-nums">#{number}</span>
-      <span className="sr-only">{stateLabel}</span>
-    </>
-  );
-  const tone = merged
-    ? "text-violet-700 dark:text-violet-400"
-    : draft
-      ? "text-foreground/80"
-      : "text-emerald-600 dark:text-emerald-500";
-  const hover = merged
-    ? "hover:bg-violet-500/10 focus-visible:bg-violet-500/10"
-    : draft
-      ? "hover:bg-muted focus-visible:bg-muted"
-      : "hover:bg-emerald-500/10 focus-visible:bg-emerald-500/10";
+  const { label: stateLabel, tone, hover } = pullRequestChip(state, t);
+  const content = <IssueCardPullRequestContent state={state} number={number} />;
   if (!onOpen) {
     return (
-      <span
-        className={cn("flex items-center gap-1 text-[11px] font-medium", tone)}
-      >
+      <span className={cn("flex items-center gap-1 text-[11px] font-medium", tone)}>
         {content}
       </span>
     );
@@ -863,7 +759,6 @@ export const IssueCardBody = memo(function IssueCardBody({
   menuOpen?: boolean;
 }) {
   const t = useTranslations("IssueUI");
-  const tCycles = useTranslations("Cycles");
   const plan = planProgress(issue.plan);
   const assignee = issue.assignee_id
     ? (memberMap.get(issue.assignee_id) ?? null)
@@ -872,21 +767,12 @@ export const IssueCardBody = memo(function IssueCardBody({
     issue.objective_id && objectiveMap
       ? (objectiveMap.get(issue.objective_id) ?? null)
       : null;
-  // Memoized, and limited to the first 400 characters: three truncated lines
-  // need no more, and the rest of the body is never read (MIN-316).
   // Picker lists are memoized (MIN-316): `[...map.values()]` is a new array on
   // every render, which creates new `options` for every picker and rebuilds all
   // their JSX icons — even for CLOSED menus.
   const memberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
-
-  // Typed mentions stay apart, so the preview never prints their stored
-  // label (MIN-734).
-  const description = useMemo(
-    () =>
-      issue.description ? plainMarkdownParts(issue.description.slice(0, 400)) : [],
-    [issue.description],
-  );
+  const rich = useIssueCardRichSlots(issue);
 
   const setStatus = onUpdate
     ? (status: IssueStatus) => onUpdate({ status })
@@ -912,163 +798,91 @@ export const IssueCardBody = memo(function IssueCardBody({
     : undefined;
 
   return (
-    <div
-      data-card-surface=""
-      data-menu-open={menuOpen ? "" : undefined}
-      className={cn(
-        // Cards sit flat on the column, outlined by their border alone; only
-        // the drag overlay lifts. Concentric corners: the 24px radius sits
-        // 12px around the 24px avatar (12px radius) in the top-right corner.
-        // Text in the other corners is centered in 24px lines, so it sits
-        // 18px from the top and bottom edges: an 18px side inset puts it as
-        // far from the left edge, on the same arc.
-        // A firmer edge than the app's light borders: cards sit side by side
-        // on the column and must read as separate objects.
-        "flex flex-col gap-2 rounded-2xl border border-foreground/10 px-[18px] py-3 text-left transition-colors duration-150",
-        // Bulk selection (MIN-75): blue-tinted background instead of an outline.
-        selected ? "bg-primary/10" : "bg-card",
-        // Hovered, and held while it is dragged, the card firms up its edge
-        // and takes a faint tint: the drag overlay keeps the hovered look.
-        CARD_HOVER,
-        CARD_HELD,
-        selected && "pointer-fine:hover:bg-primary/15 data-menu-open:bg-primary/15 has-[[aria-expanded=true]]:bg-primary/15 data-held:bg-primary/15",
-      )}
-    >
-      {/* Cross-project boards only: the issue's origin project (orb + name). */}
-      {project && (
-        <div className="-mb-0.5 flex h-6 items-center gap-1.5 text-[11px] text-muted-foreground">
-          <ProjectOrb
-            seed={projectOrbSeed(project)}
-            iconUrl={project.icon_url}
-            // A rounded square at this size, as the project's pill: the orb's
-            // default 5px radius makes a 14px icon a disc.
-            className="size-3.5 rounded-[3px]"
+    <IssueCardFace
+      issue={issue}
+      projectKey={projectKey}
+      project={project}
+      memberMap={memberMap}
+      categoryMap={categoryMap}
+      objectiveMap={objectiveMap}
+      parentNumber={parentNumber}
+      relations={relations}
+      inCurrentCycle={inCurrentCycle}
+      pr={pr}
+      selected={selected}
+      menuOpen={menuOpen}
+      commentFollowUp={commentFollowUp}
+      slots={{
+        ...rich,
+        parent: parentNumber != null && (
+          // The parent's card on hover (MIN-879); the label keeps naming it.
+          <MentionHover type={parentId ? "issue" : "none"} id={parentId ?? ""}
+            project={issue.project_id} onOpen={onOpenParent}>
+            <button type="button" disabled={!onOpenParent}
+              onClick={(e) => { stop(e); onOpenParent?.(); }} onPointerDown={stop}
+              aria-label={t("openParentAria", { id: issueIdentifier(projectKey, parentNumber) })}
+              className="shrink-0 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <HugeiconsIcon icon={HierarchySquare01Icon} className="size-3" aria-hidden />
+            </button>
+          </MentionHover>
+        ),
+        relations: relations && relations.length > 0 && (
+          <RelationChips
+            relations={relations}
+            projectKey={projectKey}
+            onOpen={onOpenRelated}
+            onOpenObjective={onOpenObjective}
+            onRemove={onRemoveRelation}
+            className="shrink-0"
           />
-          <span className="truncate">{project.name}</span>
-        </div>
-      )}
-
-      {/* Identifier (prefixed by cycle / integration icons when applicable) + assignee */}
-      {/* One 24px line: the identifier, the plan or PR chip and the avatar
-          share its center. */}
-      <div className="flex h-6 items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-1 font-mono text-[11px] leading-4 text-muted-foreground">
-          {inCurrentCycle && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex shrink-0 items-center text-blue-500 dark:text-blue-400">
-                  <AppIcon icon={AiAutoRotateIcon}
-                    className="size-3"
-                    aria-label={tCycles("inCurrentCycle")}
-                  />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{tCycles("inCurrentCycle")}</TooltipContent>
-            </Tooltip>
-          )}
-          <IntegrationIndicator issue={issue} iconClassName="size-3" />
-          <RemoteIssueIndicator issue={issue} iconClassName="size-3" />
-          {parentNumber != null && (
-            // The parent's card on hover (MIN-879); the label keeps naming it.
-            <MentionHover type={parentId ? "issue" : "none"} id={parentId ?? ""}
-              project={issue.project_id} onOpen={onOpenParent}>
-              <button type="button" disabled={!onOpenParent}
-                onClick={(e) => { stop(e); onOpenParent?.(); }} onPointerDown={stop}
-                aria-label={t("openParentAria", { id: issueIdentifier(projectKey, parentNumber) })}
-                className="shrink-0 rounded-sm hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <HugeiconsIcon icon={HierarchySquare01Icon} className="size-3" aria-hidden />
-              </button>
-            </MentionHover>
-          )}
-          <span className="shrink-0 whitespace-nowrap">{issueIdentifier(projectKey, issue.number)}</span>
-          {relations && relations.length > 0 && (
-            <RelationChips
-              relations={relations}
-              projectKey={projectKey}
-              onOpen={onOpenRelated}
-              onOpenObjective={onOpenObjective}
-              onRemove={onRemoveRelation}
-              className="shrink-0"
-            />
-          )}
-        </span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          {commentFollowUp && (
-            <CommentFollowUpPick followUp={commentFollowUp} onCopy={onCopyCommentsPrompt} />
-          )}
-          {/* An actionable PR takes the place of plan progress. */}
-          {pr && isPrWorthShowing(pr) ? (
-            <span className="flex items-center gap-0.5">
-              <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
-              {prReadiness && pr.state === "open" ? (
-                <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable}
-                  autoMerge={!!prReadiness.flow?.active} />
-              ) : null}
-            </span>
-          ) : plan.total > 0 ? (
-            <PlanPick progress={plan} onOpen={onOpenPlan} />
-          ) : null}
-          {/* Back in the corner, 12px from both edges: concentric with it. */}
-          <span className="-mr-1.5 flex">
-            <AssigneePick
-              assignee={assignee}
-              members={memberList}
-              onChange={setAssignee}
-              projectId={issue.project_id}
-              status={issue.status}
-            />
+        ),
+        commentFollowUp: commentFollowUp && (
+          <CommentFollowUpPick followUp={commentFollowUp} onCopy={onCopyCommentsPrompt} />
+        ),
+        // An actionable PR takes the place of plan progress.
+        activity: pr && isPrWorthShowing(pr) ? (
+          <span className="flex items-center gap-0.5">
+            <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
+            {prReadiness && pr.state === "open" ? (
+              <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable}
+                autoMerge={!!prReadiness.flow?.active} />
+            ) : null}
           </span>
-        </span>
-      </div>
-
-      {/* Title + description (tight spacing between them, and to the row above) */}
-      <div className="-mt-1 flex flex-col gap-0.5">
-        <TruncatedText
-          text={issue.title}
-          className="line-clamp-2 text-sm font-semibold leading-snug"
-        />
-        {description.length > 0 && (
-          <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-            <PlainPreview parts={description} />
-          </p>
-        )}
-      </div>
-
-      {/* Indicators — spread edge-to-edge: status · priority · effort · category */}
-      {/* Last line of a card without objective or due date: 4px more keeps
-          its icons as far from the bottom edge as from the left one. */}
-      <div className="flex items-center justify-between pt-0.5 last:pb-1">
-        <StatusPick value={issue.status} onChange={setStatus} />
-        <PriorityPick value={issue.priority} onChange={setPriority} />
-        <EffortPick value={issue.effort} onChange={setEffort} />
-        <CategoryPick
-          categories={categoryList}
-          selectedIds={issue.category_ids}
-          onChange={onSetCategories}
-          projectId={issue.project_id}
-        />
-      </div>
-
-      {/* Bottom line — linked objective (left) + due date (right) */}
-      {(objective || issue.due_date) && (
-        <div className="flex items-center justify-between gap-2 pt-0.5">
-          <div className="flex min-w-0 flex-1 items-center">
-            {objective && <ObjectiveIndicator objective={objective} onEdit={onEditObjective} />}
-          </div>
-          {issue.due_date && (
-            <div className="shrink-0">
-              <DueDatePick
-                value={issue.due_date}
-                onChange={setDueDate}
-                recurrence={issue.recurrence}
-                onRecurrenceChange={setRecurrence}
-              />
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+        ) : plan.total > 0 ? (
+          <PlanPick progress={plan} onOpen={onOpenPlan} />
+        ) : null,
+        assignee: (
+          <AssigneePick
+            assignee={assignee}
+            members={memberList}
+            onChange={setAssignee}
+            projectId={issue.project_id}
+            status={issue.status}
+          />
+        ),
+        status: <StatusPick value={issue.status} onChange={setStatus} />,
+        priority: <PriorityPick value={issue.priority} onChange={setPriority} />,
+        effort: <EffortPick value={issue.effort} onChange={setEffort} />,
+        categories: (
+          <CategoryPick
+            categories={categoryList}
+            selectedIds={issue.category_ids}
+            onChange={onSetCategories}
+            projectId={issue.project_id}
+          />
+        ),
+        objective: objective && <ObjectiveIndicator objective={objective} onEdit={onEditObjective} />,
+        dueDate: issue.due_date && (
+          <DueDatePick
+            value={issue.due_date}
+            onChange={setDueDate}
+            recurrence={issue.recurrence}
+            onRecurrenceChange={setRecurrence}
+          />
+        ),
+      }}
+    />
   );
 });
 

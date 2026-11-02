@@ -1,5 +1,6 @@
 "use client";
 
+import type { IssuePr } from "@/lib/issue-pr";
 import { fetchClientRead } from "./client-read";
 
 import type { RepoProviderId } from "@/lib/repo-providers";
@@ -77,27 +78,9 @@ async function parseJson<T>(response: Response): Promise<T> {
   return data as T;
 }
 
-/**
- * The pull request for a ticket, as the cards and sign read it.
- *
- * It was read on Numo's runs — which made it invisible as soon as
- * no one had launched an agent (human PR, or PR attached to the hand), and as soon
- * that it was CLOSED. It now comes from `pull_requests`, all states
- * confused: “See the pull request” should lead to a closed PR as well as to a
- * other. The chip is silent on `closed` — this is the only state that does not call
- * plus rien.
- */
-export interface IssuePr {
-  /** Id minddy — `?pr=` opens the PR whatever its state (the page pins it). */
-  prId: string;
-  prNumber: number;
-  state: "draft" | "open" | "merged" | "closed";
-}
-
-/** A PR still alive or delivered: everything but refused. */
-export function isPrWorthShowing(pr: IssuePr | null): boolean {
-  return !!pr && pr.state !== "closed";
-}
+// The issue's pull request lives in a pure module, so the card face can read
+// it without this API client.
+export { isPrWorthShowing, type IssuePr } from "@/lib/issue-pr";
 
 export async function fetchIssuePullRequestApi(
   issueId: string,

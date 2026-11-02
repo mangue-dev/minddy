@@ -206,6 +206,24 @@ Angle-bracket syntax such as `<word>` is a rich-text tag in ICU messages. Use
 plain notation such as `HMAC-SHA256(body)` for technical text unless a rich-text
 formatter is intended.
 
+## Writing user-facing text
+
+Read [`.claude/skills/no-slop-writing/SKILL.md`](.claude/skills/no-slop-writing/SKILL.md)
+and its `references/` before writing or changing any text a person reads: UI
+strings and catalog values, the landing and marketing pages, emails,
+notifications, error messages, the manual, changelogs and CLI output. This
+applies when the text is only a small part of a code task. Claude Code loads it
+as the `no-slop-writing` skill; other agents open the file at that path.
+
+Where the skill and this repository disagree, the repository wins:
+
+- Update every catalog in the same change, reviewed key by key, rather than
+  leaving the other locales for later translation (see the next section).
+- The register is set per locale by
+  [docs/localization-and-copy.md](docs/localization-and-copy.md): formal in
+  French, informal in the other languages.
+- Product names (minddy, Numo, Smart Fill, Smart Assign) keep their casing.
+
 ## Interface copy and translations
 
 [docs/localization-and-copy.md](docs/localization-and-copy.md) is the contract
