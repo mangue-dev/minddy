@@ -731,12 +731,17 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   // being resolved, with nothing on screen, waits for its response before
   // taking the first PR.
   const waitingForDeepLink = !!deepLink && fetching && !clicked;
-  const selectedId =
+  // A link to a PR the list does not hold yet (a new one, typically) waits
+  // for its row on a skeleton: the previous PR stayed on screen meanwhile, as
+  // if the link had done nothing (MIN-889).
+  const linkTargetPending = waitingForDeepLink && !pullRequests.some((p) => p.prId === prParam);
+  const selectedId = linkTargetPending ? null :
     clicked ??
     held ??
     heldOutsideLens?.prId ??
     (waitingForDeepLink ? null : (filtered[0]?.prId ?? null));
-  const selected = filtered.find((p) => p.prId === selectedId) ?? heldOutsideLens;
+  const selected = linkTargetPending ? null
+    : filtered.find((p) => p.prId === selectedId) ?? heldOutsideLens;
   selectedIdRef.current = selectedId;
   if (selected) selectedRowRef.current = selected;
 
@@ -1026,7 +1031,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
             mergeIntent={mergeIntentPrId === selected.prId}
             onMergeIntentConsumed={() => setMergeIntentPrId(null)}
           />
-        ) : loading ? (
+        ) : loading || linkTargetPending ? (
           <PrDetailSkeleton />
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">

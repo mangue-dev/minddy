@@ -49,7 +49,6 @@ import {
 import { linkPullRequestToIssue, type PrLinkRefusal } from "./pr-link";
 import type {
   CommitExtras,
-  DeploymentOutcome,
   PullRequestCommit,
   PullRequestFile,
   PullRequestRef,
@@ -433,44 +432,70 @@ const READINESS_BATCH_CONCURRENCY = 4;
 /** Read the merge-readiness data without loading a pull request diff. */
 async function readPullRequestReadiness(
   scope: PrScope,
-  pr: PullRequestRef,
+  prInput: PullRequestRef | Promise<PullRequestRef>,
   batch?: ReadinessBatchReadControl,
+  /**
+   * The base and head stored for the PR. The policy and check reads start
+   * from them instead of waiting for the live PR, and are read again when
+   * the live PR disagrees (MIN-889).
+   */
+  stored?: { base: string | null; headSha: string | null },
 ): Promise<PullRequestReadinessResult> {
   batch?.beforeRead();
   const { forge, call } = scope;
-  // Policy and its dependent checks do not depend on reviews or actor lookup.
-  const policyAndChecks = async () => {
-    let mergePolicy: RepositoryMergePolicy;
+  const live = Promise.resolve(prInput);
+  const readPolicy = async (base: string | null | undefined): Promise<RepositoryMergePolicy> => {
     try {
       batch?.beforeRead();
-      mergePolicy = pr.base
-        ? await forge.getRepositoryMergePolicy({ ...call, base: pr.base })
+      return base
+        ? await forge.getRepositoryMergePolicy({ ...call, base })
         : unavailableMergePolicy(scope.target.provider, "unknown");
     } catch (error) {
       batch?.onError(error);
-      mergePolicy = unavailableMergePolicy(
+      return unavailableMergePolicy(
         scope.target.provider,
         isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown",
       );
     }
-
-    let checks: ChecksSummary | null = null;
-    let checksError: "forbidden" | "unknown" | null = null;
-    if (pr.headSha) {
-      try {
-        batch?.beforeRead();
-        checks = await forge.listChecks({
-          ...call,
-          sha: pr.headSha,
-          requiredCheckNames: mergePolicy.requiredCheckNames,
-          checksRequired: mergePolicy.checksMustPass,
-        });
-      } catch (error) {
-        batch?.onError(error);
-        checksError = isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown";
-      }
+  };
+  // Only the summary of the checks depends on the policy, not their requests:
+  // for the PR on screen both reads run together. A batch keeps them in turn,
+  // so a quota met by the policy stops it before the checks spend more.
+  const readChecks = async (
+    sha: string | null | undefined,
+    policy: Promise<RepositoryMergePolicy>,
+  ): Promise<{ checks: ChecksSummary | null; checksError: "forbidden" | "unknown" | null }> => {
+    if (!sha) return { checks: null, checksError: null };
+    if (batch) await policy;
+    try {
+      batch?.beforeRead();
+      const checks = await forge.listChecks({
+        ...call,
+        sha,
+        requiredCheckNames: policy.then((mergePolicy) => mergePolicy.requiredCheckNames),
+        checksRequired: policy.then((mergePolicy) => mergePolicy.checksMustPass),
+      });
+      return { checks, checksError: null };
+    } catch (error) {
+      batch?.onError(error);
+      return { checks: null, checksError: isForgeApiError(error) && error.status === 403 ? "forbidden" : "unknown" };
     }
-    return { mergePolicy, checks, checksError };
+  };
+  // Policy and its dependent checks do not depend on reviews or actor lookup.
+  const policyAndChecks = async () => {
+    const guess = stored?.base && stored.headSha ? { base: stored.base, headSha: stored.headSha } : null;
+    const refs: { base: string | null; headSha: string | null } = guess ??
+      (await live.then((pr) => ({ base: pr.base ?? null, headSha: pr.headSha ?? null })));
+    let policy = readPolicy(refs.base);
+    let checks = readChecks(refs.headSha, policy);
+    if (guess) {
+      const pr = await live;
+      const baseMoved = (pr.base ?? null) !== guess.base;
+      if (baseMoved) policy = readPolicy(pr.base);
+      if (baseMoved || (pr.headSha ?? null) !== guess.headSha) checks = readChecks(pr.headSha, policy);
+    }
+    const [mergePolicy, read] = await Promise.all([policy, checks]);
+    return { mergePolicy, ...read };
   };
   const [reviews, reviewThreads, viewer, { mergePolicy, checks, checksError }] = await Promise.all([
     forge.listReviews(call).catch((error) => { batch?.onError(error); return null; }),
@@ -478,6 +503,7 @@ async function readPullRequestReadiness(
     resolveViewer(scope),
     policyAndChecks(),
   ]);
+  const pr = await live;
 
   const baseReadiness = reducePullRequestReadiness({
     state: pr.state === "closed" ? "closed" : "open",
@@ -533,50 +559,67 @@ async function readPullRequestReadiness(
 export async function prDetailResponse(scope: PrScope): Promise<NextResponse> {
   const { forge, call } = scope;
   try {
-    const pr = await forge.getPullRequest(call);
-    const [diff, readinessData, outcome] = await Promise.all([
+    // The files only need the PR number, and the readiness starts from the
+    // stored head and base: none of them waits for the live PR. The
+    // deployment card has its own route (`prDeploymentResponse`): its walk
+    // through the forge's deployments took several sequential calls and held
+    // the whole detail back for a badge (MIN-889).
+    const prRead = forge.getPullRequest(call);
+    const [pr, diff, readinessData] = await Promise.all([
+      prRead,
       forge.listPullRequestFiles(call),
-      readPullRequestReadiness(scope, pr),
-      // Deployment is tied to the live head, independent of files and checks.
-      pr.headSha ? forge.getPullRequestDeployment({
-        token: call.token,
-        repoFullName: call.repoFullName,
-        number: call.number,
-        branch: pr.headFromBaseRepository ? pr.head : undefined,
-        sha: pr.headSha,
-      }).catch(() => {
-        console.error("[pr-actions] deployment_unreadable");
-        return null;
-      }) : Promise.resolve(null),
+      readPullRequestReadiness(scope, prRead, undefined, {
+        base: scope.pr.base_branch ?? null,
+        headSha: scope.pr.head_sha ?? null,
+      }),
     ]);
-    const files = diff.files;
-    let deploymentUrl = readinessData.checks?.deploymentUrl ?? null;
-    let deploymentDurationMs: number | null = null;
-    let deploymentStatus: DeploymentOutcome["status"] | null = null;
-    let deploymentStartedAt: string | null = null;
-    if (outcome && outcome.status !== "none") {
-      deploymentUrl ??= outcome.url;
-      deploymentStatus = outcome.status;
-      if (outcome.status === "success") deploymentDurationMs = outcome.durationMs;
-      else if (outcome.status === "in_progress") deploymentStartedAt = outcome.startedAt;
-    }
 
     return NextResponse.json({
       pr,
-      files,
+      files: diff.files,
       provider: scope.target.provider,
       checks: readinessData.checks,
       checksError: readinessData.checksError,
-      deploymentUrl,
-      deploymentStatus,
-      deploymentStartedAt,
-      deploymentDurationMs,
+      deploymentUrl: readinessData.checks?.deploymentUrl ?? null,
       reviews: readinessData.reviews,
       reviewThreads: readinessData.reviewThreads,
       viewer: readinessData.viewer,
       mergeMethods: readinessData.mergePolicy.methods,
       mergePolicy: readinessData.mergePolicy,
       readiness: readinessData.readiness,
+    });
+  } catch (err) {
+    return forgeErrorResponse(err);
+  }
+}
+
+/**
+ * GET the deployment card of a pull request: the environment built from its
+ * live head. Read after the detail has painted, since resolving it walks the
+ * forge's deployments one reference at a time (MIN-889).
+ */
+export async function prDeploymentResponse(scope: PrScope): Promise<NextResponse> {
+  const { forge, call } = scope;
+  try {
+    const pr = await forge.getPullRequest(call);
+    // Deployment is tied to the live head.
+    const outcome = pr.headSha ? await forge.getPullRequestDeployment({
+      token: call.token,
+      repoFullName: call.repoFullName,
+      number: call.number,
+      branch: pr.headFromBaseRepository ? pr.head : undefined,
+      sha: pr.headSha,
+    }).catch(() => {
+      console.error("[pr-actions] deployment_unreadable");
+      return null;
+    }) : null;
+    const settled = outcome && outcome.status !== "none" ? outcome : null;
+    return NextResponse.json({
+      headSha: pr.headSha ?? null,
+      deploymentUrl: settled?.url ?? null,
+      deploymentStatus: settled?.status ?? null,
+      deploymentStartedAt: settled?.status === "in_progress" ? settled.startedAt : null,
+      deploymentDurationMs: settled?.status === "success" ? settled.durationMs : null,
     });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -904,27 +947,34 @@ export async function prCommitFileBytesResponse(
  */
 export async function prCommentsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const [comments, timeline, actor] = await Promise.all([
-      scope.forge.listPullRequestComments(scope.call),
+    const actorRead = scope.actor();
+    const commentsRead = scope.forge.listPullRequestComments(scope.call);
+    const readReactions = (commentIds: number[]) => actorRead.then((actor) => {
+      const viewerIsActor = actor.kind === "actor";
+      return scope.forge.listConversationReactions({
+        ...(viewerIsActor ? actorCall(actor, scope) : scope.call),
+        commentIds,
+        viewerIsActor,
+      });
+    }).catch(() => {
+      console.error("[pr-actions] conversation_reactions_unreadable");
+      return [];
+    });
+    // The PR body belongs to the conversation and accepts reactions like a
+    // thread message. GitLab queries each subject, so it waits for the
+    // comments; GitHub reads them from the PR and starts at once (MIN-889).
+    const reactionsRead = scope.target.provider === "github"
+      ? readReactions([PR_BODY_COMMENT_ID])
+      : commentsRead.then((comments) => readReactions([PR_BODY_COMMENT_ID, ...comments.map((c) => c.id)]));
+    const [comments, timeline, , reactions] = await Promise.all([
+      commentsRead,
       scope.forge.listTimeline(scope.call).catch(() => {
         console.error("[pr-actions] timeline_unreadable");
         return [];
       }),
-      scope.actor(),
+      actorRead,
+      reactionsRead,
     ]);
-    const viewerIsActor = actor.kind === "actor";
-    const reactions = await scope.forge
-      .listConversationReactions({
-        ...(viewerIsActor ? actorCall(actor, scope) : scope.call),
-        // The PR body belongs to the conversation and accepts reactions like a
-        // thread message. GitLab queries each subject; GitHub ignores this list.
-        commentIds: [PR_BODY_COMMENT_ID, ...comments.map((c) => c.id)],
-        viewerIsActor,
-      })
-      .catch(() => {
-        console.error("[pr-actions] conversation_reactions_unreadable");
-        return [];
-      });
     return NextResponse.json({ comments, timeline, reactions });
   } catch (err) {
     return forgeErrorResponse(err);
@@ -1229,35 +1279,40 @@ export async function startNumoPrReview(input: {
  */
 export async function prReviewCommentsResponse(scope: PrScope): Promise<NextResponse> {
   try {
-    const [comments, threads, actor] = await Promise.all([
-      scope.forge.listPullRequestReviewComments(scope.call),
-      scope.forge.listReviewThreads(scope.call).catch(() => {
-        console.error("[pr-actions] review_threads_unreadable");
-        return [];
-      }),
-      scope.actor(),
-    ]);
-    // Read reactions afterwards because GitLab queries them note by note and we
-    // must first know which notes exist. With no comments there is nothing to
-    // query, so a PR without a review costs nothing. This is best-effort, like
-    // threads: an unreadable reaction must not empty the entire view.
+    const actorRead = scope.actor();
+    const commentsRead = scope.forge.listPullRequestReviewComments(scope.call);
+    // Best-effort, like threads: an unreadable reaction must not empty the
+    // entire view.
     //
     // Without an actor we can still read counts; hiding them would suggest there
     // are no reactions. Use `viewerIsActor: false`, though, because the
     // installation token's “I reacted” state belongs to the bot, not the viewer.
-    const viewerIsActor = actor.kind === "actor";
-    const reactions = comments.length
-      ? await scope.forge
-          .listReviewCommentReactions({
-            ...(viewerIsActor ? actorCall(actor, scope) : scope.call),
-            commentIds: comments.map((c) => c.id),
-            viewerIsActor,
-          })
-          .catch(() => {
-            console.error("[pr-actions] review_reactions_unreadable");
-            return [];
-          })
-      : [];
+    const readReactions = (commentIds: number[]) => actorRead.then((actor) => {
+      const viewerIsActor = actor.kind === "actor";
+      return scope.forge.listReviewCommentReactions({
+        ...(viewerIsActor ? actorCall(actor, scope) : scope.call),
+        commentIds,
+        viewerIsActor,
+      });
+    }).catch(() => {
+      console.error("[pr-actions] review_reactions_unreadable");
+      return [];
+    });
+    // GitLab queries reactions note by note, so it must first know which notes
+    // exist, and a PR without a review costs nothing. GitHub reads them from
+    // the PR's threads and starts at once (MIN-889).
+    const reactionsRead = scope.target.provider === "github"
+      ? readReactions([])
+      : commentsRead.then((comments) => comments.length ? readReactions(comments.map((c) => c.id)) : []);
+    const [comments, threads, , reactions] = await Promise.all([
+      commentsRead,
+      scope.forge.listReviewThreads(scope.call).catch(() => {
+        console.error("[pr-actions] review_threads_unreadable");
+        return [];
+      }),
+      actorRead,
+      reactionsRead,
+    ]);
     return NextResponse.json({ comments, threads, reactions });
   } catch (err) {
     return forgeErrorResponse(err);

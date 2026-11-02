@@ -10,65 +10,68 @@ import {
 const PR = "8f14e45f-ceea-467a-9a67-1c8dcbc4b2d3";
 
 describe("pullRequestTopic", () => {
-  it("nomme le topic comme les autres topics privés", () => {
+  it("names the topic like the other private topics", () => {
     expect(pullRequestTopic(PR)).toBe(`pull-request:${PR}`);
   });
 });
 
 describe("prLiveQueryKeys", () => {
-  it("mappe chaque partie sur le cache que l'écran lit", () => {
+  it("maps each part to the cache the screen reads", () => {
     expect(prLiveQueryKeys(PR, ["pr"])).toEqual([
       ["pull-request", PR],
+      ["pull-request-deployment", PR],
       ["pull-request-readiness"],
     ]);
     expect(prLiveQueryKeys(PR, ["conversation"])).toEqual([["pr-comments", PR]]);
     expect(prLiveQueryKeys(PR, ["commits"])).toEqual([["pr-commits", PR]]);
   });
 
-  it("rend les remarques de ligne en PRÉFIXE, sans endpoint", () => {
+  it("returns line comments as a PREFIX, without an endpoint", () => {
     // Two endpoint forms read the same comments — the PR page
-    // (`prEndpoint`) and the diff view of a session (`runPrEndpoint`). Appoint
-    // one of the two would leave the other obsolete.
+    // (`prEndpoint`) and the diff view of a session (`runPrEndpoint`). Naming
+    // one of the two would leave the other stale.
     expect(prLiveQueryKeys(PR, ["reviewComments"])).toEqual([["pr-review-comments"]]);
   });
 
-  it("garde l'ordre des parties du message", () => {
+  it("keeps the order of the message parts", () => {
     expect(prLiveQueryKeys(PR, ["conversation", "pr"])).toEqual([
       ["pr-comments", PR],
       ["pull-request", PR],
+      ["pull-request-deployment", PR],
       ["pull-request-readiness"],
     ]);
   });
 
-  it("dédoublonne les clés d'un même message", () => {
-    // A review moves the thread, the comments AND the header; two parties can
-    // aiming at the same key, and invalidating twice would trigger two refetches.
+  it("deduplicates the keys of one message", () => {
+    // A review moves the thread, the comments AND the header; two parts can
+    // target the same key, and invalidating twice would trigger two refetches.
     expect(
       prLiveQueryKeys(PR, ["pr", "conversation", "reviewComments", "pr", "reviewComments"]),
     ).toEqual([
       ["pull-request", PR],
+      ["pull-request-deployment", PR],
       ["pull-request-readiness"],
       ["pr-comments", PR],
       ["pr-review-comments"],
     ]);
   });
 
-  it("ne rend rien pour un message sans partie", () => {
+  it("returns nothing for a message without parts", () => {
     expect(prLiveQueryKeys(PR, [])).toEqual([]);
   });
 
-  it("couvre les quatre parties du type", () => {
+  it("covers the four parts of the type", () => {
     const all: PrLivePart[] = ["pr", "conversation", "commits", "reviewComments"];
-    expect(prLiveQueryKeys(PR, all)).toHaveLength(5);
+    expect(prLiveQueryKeys(PR, all)).toHaveLength(6);
   });
 });
 
 describe("parsePrLiveParts", () => {
-  it("garde les parties connues et jette le reste", () => {
+  it("keeps known parts and drops the rest", () => {
     expect(parsePrLiveParts(["pr", "nope", 3, null, "commits"])).toEqual(["pr", "commits"]);
   });
 
-  it("répond vide sur ce qui n'est pas une liste", () => {
+  it("answers empty for anything that is not a list", () => {
     expect(parsePrLiveParts(undefined)).toEqual([]);
     expect(parsePrLiveParts("pr")).toEqual([]);
     expect(parsePrLiveParts({ parts: ["pr"] })).toEqual([]);

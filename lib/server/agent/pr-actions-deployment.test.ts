@@ -1,19 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { prDetailResponse, type PrScope } from "./pr-actions";
+import { prDeploymentResponse, prDetailResponse, type PrScope } from "./pr-actions";
 
-describe("pull request detail deployment", () => {
-  it("starts independent forge reads together while preserving policy-before-checks", async () => {
+describe("pull request detail and deployment reads", () => {
+  it("starts independent forge reads together, the checks with the policy", async () => {
     let releaseReviews!: (value: null) => void;
     let releasePolicy!: (value: unknown) => void;
     const reviews = new Promise<null>((resolve) => { releaseReviews = resolve; });
     const policy = new Promise((resolve) => { releasePolicy = resolve; });
     const listReviews = vi.fn(() => reviews);
     const getRepositoryMergePolicy = vi.fn(() => policy);
-    const listChecks = vi.fn(async () => ({ checks: [], deploymentUrl: null }));
+    const listChecks = vi.fn(async (opts: { requiredCheckNames: PromiseLike<unknown>; checksRequired: PromiseLike<unknown> }) => {
+      // Only the summary waits for the policy.
+      expect(await opts.requiredCheckNames).toEqual(["build"]);
+      expect(await opts.checksRequired).toBe(true);
+      return { checks: [], deploymentUrl: null };
+    });
     const getPullRequestDeployment = vi.fn(async () => ({ status: "none" }));
     const listPullRequestFiles = vi.fn(async () => ({ files: [], truncated: false }));
     const scope = {
+      pr: { base_branch: "main", head_sha: "live-head" },
       target: { provider: "gitlab" },
       call: { token: "token", repoFullName: "acme/app", number: 42 },
       actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
@@ -27,16 +33,70 @@ describe("pull request detail deployment", () => {
     await vi.waitFor(() => {
       expect(listReviews).toHaveBeenCalledOnce();
       expect(getRepositoryMergePolicy).toHaveBeenCalledOnce();
-      expect(getPullRequestDeployment).toHaveBeenCalledOnce();
       expect(listPullRequestFiles).toHaveBeenCalledOnce();
+      expect(listChecks).toHaveBeenCalledWith(expect.objectContaining({ sha: "live-head" }));
     });
-    expect(listChecks).not.toHaveBeenCalled();
+    // The deployment card has its own route and never holds the detail back.
+    expect(getPullRequestDeployment).not.toHaveBeenCalled();
     releasePolicy({ methods: [], requiredCheckNames: ["build"], checksMustPass: true });
-    await vi.waitFor(() => expect(listChecks).toHaveBeenCalledWith(expect.objectContaining({
-      sha: "live-head", requiredCheckNames: ["build"], checksRequired: true,
-    })));
     releaseReviews(null);
     expect((await result).status).toBe(200);
+    expect(listChecks).toHaveBeenCalledOnce();
+  });
+
+  it("starts every read from the stored PR while the live one is still loading", async () => {
+    let releasePr!: (value: unknown) => void;
+    const listPullRequestFiles = vi.fn(async () => ({ files: [], truncated: false }));
+    const getRepositoryMergePolicy = vi.fn(async () => ({ methods: [], requiredCheckNames: [], checksMustPass: false }));
+    const listChecks = vi.fn(async () => ({ checks: [], state: "success" }));
+    const scope = {
+      pr: { base_branch: "main", head_sha: "stored-head" },
+      target: { provider: "github" },
+      call: { token: "token", repoFullName: "acme/app", number: 42 },
+      actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
+      forge: {
+        getPullRequest: () => new Promise((resolve) => { releasePr = resolve; }),
+        listPullRequestFiles,
+        listReviews: async () => null,
+        listReviewThreads: async () => null,
+        getRepositoryMergePolicy,
+        listChecks,
+      },
+    } as unknown as PrScope;
+    const result = prDetailResponse(scope);
+    expect(listPullRequestFiles).toHaveBeenCalledOnce();
+    await vi.waitFor(() => {
+      expect(getRepositoryMergePolicy).toHaveBeenCalledWith(expect.objectContaining({ base: "main" }));
+      expect(listChecks).toHaveBeenCalledWith(expect.objectContaining({ sha: "stored-head" }));
+    });
+    releasePr({ state: "open", base: "main", headSha: "stored-head" });
+    expect((await result).status).toBe(200);
+    expect(getRepositoryMergePolicy).toHaveBeenCalledOnce();
+    expect(listChecks).toHaveBeenCalledOnce();
+  });
+
+  it("reads the checks again when the live head moved past the stored one", async () => {
+    const getRepositoryMergePolicy = vi.fn(async () => ({ methods: [], requiredCheckNames: [], checksMustPass: false }));
+    const listChecks = vi.fn(async ({ sha }: { sha: string }) => ({ checks: [], state: "success", sha }));
+    const scope = {
+      pr: { base_branch: "main", head_sha: "old-head" },
+      target: { provider: "github" },
+      call: { token: "token", repoFullName: "acme/app", number: 42 },
+      actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
+      forge: {
+        getPullRequest: async () => ({ state: "open", base: "main", headSha: "new-head" }),
+        listPullRequestFiles: async () => ({ files: [], truncated: false }),
+        listReviews: async () => null,
+        listReviewThreads: async () => null,
+        getRepositoryMergePolicy,
+        listChecks,
+      },
+    } as unknown as PrScope;
+    const body = await (await prDetailResponse(scope)).json();
+    expect(body.checks.sha).toBe("new-head");
+    expect(listChecks.mock.calls.map(([opts]) => opts.sha)).toEqual(["old-head", "new-head"]);
+    // The base did not move: its policy is kept.
+    expect(getRepositoryMergePolicy).toHaveBeenCalledOnce();
   });
 
   it("resolves the deployment from the live forge head", async () => {
@@ -79,11 +139,17 @@ describe("pull request detail deployment", () => {
       },
     } as unknown as PrScope;
 
-    const response = await prDetailResponse(scope);
+    const response = await prDeploymentResponse(scope);
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.deploymentUrl).toBe("https://preview.example.com/live");
+    expect(body).toEqual({
+      headSha: "live-head",
+      deploymentUrl: "https://preview.example.com/live",
+      deploymentStatus: "success",
+      deploymentStartedAt: null,
+      deploymentDurationMs: 124_000,
+    });
     expect(getPullRequestDeployment).toHaveBeenCalledWith({
       token: "token",
       repoFullName: "acme/app",
@@ -91,12 +157,11 @@ describe("pull request detail deployment", () => {
       branch: "feature/preview",
       sha: "live-head",
     });
-    expect(listChecks).toHaveBeenCalledWith(
-      expect.objectContaining({ sha: "live-head" }),
-    );
+    // The card needs the head only: no checks are read for it.
+    expect(listChecks).not.toHaveBeenCalled();
   });
 
-  it("prefers a stable preview advertised by a successful check", async () => {
+  it("answers the detail with the preview a successful check advertises", async () => {
     const scope = {
       pr: { head_sha: "stored-head" },
       target: { provider: "github" },
@@ -177,7 +242,7 @@ describe("pull request detail deployment", () => {
       },
     } as unknown as PrScope;
 
-    const response = await prDetailResponse(scope);
+    const response = await prDeploymentResponse(scope);
     const body = await response.json();
 
     expect(body.deploymentUrl).toBe("https://immutable-head.example.com/");

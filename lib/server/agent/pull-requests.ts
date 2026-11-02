@@ -701,6 +701,9 @@ export async function syncRepoPullRequests(opts: {
   repoFullName: string;
   token: string;
   includeReviewRequests?: boolean;
+  /** Read only the PRs updated since this instant, not the whole history
+      (MIN-889). The stored truncation then stays the last full scan's. */
+  updatedSince?: string;
   onObserved?: (pulls: PullRequestRef[]) => void;
 }): Promise<{ count: number; truncated: boolean }> {
   const forge = forgeFor(opts.provider);
@@ -708,6 +711,7 @@ export async function syncRepoPullRequests(opts: {
     token: opts.token,
     repoFullName: opts.repoFullName,
     ...(opts.includeReviewRequests ? { includeReviewRequests: true } : {}),
+    ...(opts.updatedSince ? { updatedSince: opts.updatedSince } : {}),
   });
   opts.onObserved?.(pulls);
 
@@ -865,7 +869,9 @@ export async function syncRepoPullRequests(opts: {
       provider: opts.provider,
       repo_full_name: storedName,
       synced_at: new Date().toISOString(),
-      truncated,
+      // An incremental sweep only saw a window: it says nothing about how far
+      // the whole history goes, unless the window itself overflowed.
+      ...(opts.updatedSince && !truncated ? {} : { truncated }),
     },
     { onConflict: "provider,repo_full_name" },
   );

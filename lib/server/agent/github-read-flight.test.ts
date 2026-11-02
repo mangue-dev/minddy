@@ -40,17 +40,24 @@ describe("authorized GitHub reads in flight", () => {
   it("shares identical reads only until settlement and gives consumers independent objects", async () => {
     const { fetch, releases } = heldFetch();
     const call = { token: "token-1", repoFullName: "acme/app", number: 1 };
+    // Each PR read is two requests: the pull request and its merge flow.
+    const release = (from: number, pull: unknown) => {
+      for (let i = from; i < from + 2; i++) {
+        releases[i](String(fetch.mock.calls[i][0]).endsWith("/graphql")
+          ? Response.json({ data: { repository: null } }) : Response.json(pull));
+      }
+    };
     const first = withGithubReadScope(identity, () => getPullRequest(call));
     const second = withGithubReadScope(identity, () => getPullRequest(call));
-    expect(fetch).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
     expect(fetch.mock.calls[0][1]).toEqual(expect.objectContaining({ cache: "no-store" }));
-    releases[0](Response.json({ number: 1, state: "open", title: "Current" }));
+    release(0, { number: 1, state: "open", title: "Current" });
     const [a, b] = await Promise.all([first, second]);
     a.title = "Changed locally";
     expect(b.title).toBe("Current");
     const third = withGithubReadScope(identity, () => getPullRequest(call));
-    expect(fetch).toHaveBeenCalledTimes(2);
-    releases[1](Response.json({ number: 1, state: "closed" }));
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(4));
+    release(2, { number: 1, state: "closed" });
     expect((await third).state).toBe("closed");
   });
 
@@ -144,13 +151,14 @@ describe("authorized GitHub reads in flight", () => {
   });
 
   it("keeps rate advice on malformed REST bodies and GraphQL errors returned with HTTP 200", async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>()
-      .mockResolvedValueOnce(new Response("Not JSON", { status: 429, headers: { "Retry-After": "90" } }))
-      .mockResolvedValueOnce(Response.json({ errors: [{ message: "Rate limited" }] }, { headers: { "Retry-After": "120" } }));
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => String(input).endsWith("/graphql")
+      ? Response.json({ errors: [{ message: "Rate limited" }] }, { headers: { "Retry-After": "120" } })
+      : new Response("Not JSON", { status: 429, headers: { "Retry-After": "90" } }));
     vi.stubGlobal("fetch", fetch);
     const call = { token: "token", repoFullName: "acme/app", number: 1 };
     await expect(getPullRequest(call)).rejects.toMatchObject({ status: 429, retryAfter: "90" });
     await expect(listPullRequestReviewThreads(call)).rejects.toMatchObject({ status: 422, retryAfter: "120" });
-    expect(fetch).toHaveBeenCalledTimes(2);
+    // The PR, its merge flow, then the review threads.
+    expect(fetch).toHaveBeenCalledTimes(3);
   });
 });

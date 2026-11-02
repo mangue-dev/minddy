@@ -8,6 +8,7 @@ import {
   findRerunnableChecks,
   pullRequestReadinessBatchRefetchInterval,
   pullRequestReadinessRefetchInterval,
+  pullRequestDeploymentRefetchInterval,
   pullRequestRefetchInterval,
   settleMergeFlowOverride,
 } from "./pr-readiness-actions";
@@ -132,22 +133,10 @@ describe("pull request readiness interactions", () => {
     ).toBe(PULL_REQUEST_POLL_MS);
   });
 
-  it("keeps polling while the deployment is in progress", () => {
-    expect(
-      pullRequestRefetchInterval({
-        pr: null,
-        files: [],
-        readiness: {
-          state: "ready",
-          blockers: [],
-          passed: [],
-          mergeAllowed: true,
-          methods: ["squash"],
-          preferredMethod: "squash",
-        },
-        deploymentStatus: "in_progress",
-      }),
-    ).toBe(PULL_REQUEST_POLL_MS);
+  it("polls the deployment card while its environment builds", () => {
+    expect(pullRequestDeploymentRefetchInterval({ deploymentStatus: "in_progress" })).toBe(PULL_REQUEST_POLL_MS);
+    expect(pullRequestDeploymentRefetchInterval({ deploymentStatus: "success" })).toBe(false);
+    expect(pullRequestDeploymentRefetchInterval(undefined)).toBe(false);
   });
 
   it("stops polling after checks and mergeability settle", () => {
