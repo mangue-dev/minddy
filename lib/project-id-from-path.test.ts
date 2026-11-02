@@ -36,6 +36,12 @@ describe("project routes", () => {
     );
   });
 
+  it("sends an objective board to the target's objectives list", () => {
+    expect(projectTabHref("/projects/min-3f2a9c81", target, true)).toBe(
+      "/projects/web-7b11c0de/objectives",
+    );
+  });
+
   it("falls back to the target board outside a known project tab", () => {
     expect(projectTabHref("/projects/min-3f2a9c81", target)).toBe("/projects/web-7b11c0de");
     expect(projectTabHref("/projects/min-3f2a9c81/unknown", target)).toBe(

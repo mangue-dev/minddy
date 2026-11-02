@@ -41,3 +41,18 @@ it("shows an alert without a count as a bare dot, and nothing when nothing waits
   await render({ count: 0, label: "" });
   expect(badge()).toBeNull();
 });
+
+it("sets a trailing control beside the back button, outside its click target", async () => {
+  const onBack = vi.fn();
+  await act(() => root.render(
+    <SidebarBackRow label="Objectives" onBack={onBack} trailing={<button type="button" data-switcher>Project</button>} />,
+  ));
+  const back = host.querySelector<HTMLButtonElement>("[data-sidebar-back]")!;
+  const switcher = host.querySelector<HTMLButtonElement>("[data-switcher]")!;
+  expect(back.textContent).toBe("Objectives");
+  expect(back.nextElementSibling).toBe(switcher);
+  await act(() => switcher.click());
+  expect(onBack).not.toHaveBeenCalled();
+  await act(() => back.click());
+  expect(onBack).toHaveBeenCalledOnce();
+});

@@ -26,11 +26,19 @@ describe("primary sidebar project context", () => {
 
   it("shows the split context control (home + current project)", () => {
     const contextRow = sidebar.slice(sidebar.indexOf("function ProjectContextRow"));
-    expect(contextRow).toContain("<ProjectOrb");
     expect(contextRow).toContain("icon={ArrowLeft01Icon}");
-    expect(contextRow).toContain("icon={ArrowDown01Icon}");
-    expect(contextRow).toContain("<ProjectTrigger");
-    expect(contextRow).toContain('onProjectSelect ? "button" : DropdownMenuTrigger');
+    expect(contextRow).toContain("<ProjectTriggerContent project={currentProject} />");
+    // Desktop picks from the shared switcher; the mobile sheet from a dialog.
+    expect(contextRow).toContain("<ProjectSwitcher currentProject={currentProject}");
+    expect(contextRow).toContain("<Dialog open={pickerOpen}");
+  });
+
+  it("puts the project switcher beside the back row of a project's pages", () => {
+    const backRow = sidebar.slice(sidebar.indexOf("<SidebarBackRow label={back.label}"));
+    expect(backRow).toMatch(/trailing=\{currentProject && projectSegmentFromPath\(pathname\)/);
+    expect(backRow).toContain("objectiveBoard={objectiveBoard}");
+    // The back button keeps its label whole next to the switcher.
+    expect(sidebar).toContain('trailing != null ? "max-w-1/2 shrink-0" : "w-full"');
   });
 
   it("keeps project data and menu state wired through the persistent sidebar", () => {
@@ -41,7 +49,8 @@ describe("primary sidebar project context", () => {
     // Two nav panels share the wiring: the project panel of the route, and
     // the home panel the back rows lift to from a project page.
     expect(sidebar.match(/<SidebarNav\s/g)).toHaveLength(2);
-    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(2);
+    // …plus the switcher beside the back row of a project's pages.
+    expect(sidebar.match(/onMenuOpenChange=\{handleMenuOpenChange\}/g)).toHaveLength(3);
     expect(sidebar).toContain("<SidebarFrame id={railId} onLayerOpenChange={handleMenuOpenChange}>");
     expect(sidebar).toContain("<SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange}");
     expect(shell).toContain("pinned={sidebarLayerOpen}");
@@ -63,6 +72,6 @@ describe("primary sidebar project context", () => {
   });
 
   it("keeps the current project tab when building switch destinations", () => {
-    expect(sidebar).toContain("projectTabHref(pathname, project)");
+    expect(sidebar).toContain("projectTabHref(pathname, project, objectiveBoard)");
   });
 });

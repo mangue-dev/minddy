@@ -66,7 +66,7 @@ import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { transitions } from "@/lib/motion";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { useSecondarySidebar, sidebarPanelForRoute } from "@/lib/secondary-sidebar-context";
-import { projectIdFromPath, projectTabHref } from "@/lib/project-id-from-path";
+import { projectIdFromPath, projectSegmentFromPath, projectTabHref } from "@/lib/project-id-from-path";
 import { usePrefetchProject } from "@/lib/use-prefetch-project";
 import { usePrefetchPages } from "@/lib/use-pages-query";
 import { useQueryClient } from "@tanstack/react-query";
@@ -405,6 +405,116 @@ function SidebarNav({
   );
 }
 
+/** The project switcher's trigger: the current project's orb and name. */
+const PROJECT_TRIGGER_CLASS = cn(
+  "flex h-9 items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
+  "min-w-0 flex-1 gap-2 px-2.5 text-left",
+);
+
+function ProjectTriggerContent({ project }: { project: Project }) {
+  return <>
+    <ProjectOrb
+      seed={projectOrbSeed(project)}
+      iconUrl={project.icon_url}
+      className="size-[18px] rounded-[5px]"
+    />
+    <span className="min-w-0 flex-1 truncate">{project.name}</span>
+    <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-sidebar-foreground/45" aria-hidden />
+  </>;
+}
+
+/** The project's own menu on a right click of the switcher (MIN-685). */
+function useProjectTriggerMenu(project: Project) {
+  const navigationActions = useNavigationContextActions(projectPath(project.id));
+  const objectActions = useProjectRowActions(project);
+  const actions = composeSidebarContextActions(objectActions, navigationActions);
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const onContextMenu = actions.length ? (event: MouseEvent) => {
+    event.preventDefault();
+    setPosition({ x: event.clientX, y: event.clientY });
+  } : undefined;
+  const menu = <IssueContextMenu
+    position={position}
+    onClose={() => setPosition(null)}
+    actions={actions}
+    searchable={false}
+  />;
+  return { onContextMenu, menu };
+}
+
+/**
+ * The desktop project switcher: picking a project keeps the page's project
+ * tab (objectives stay objectives, feedback stays feedback). Shared by the
+ * project panel's context row and the back row of a project's level-2 pages
+ * (MIN-884).
+ */
+export function ProjectSwitcher({
+  currentProject,
+  projects,
+  onMenuOpenChange,
+  objectiveBoard = false,
+}: {
+  currentProject: Project;
+  projects: Project[];
+  onMenuOpenChange?: (open: boolean) => void;
+  /** The board shows one objective: switching lands on the objectives. */
+  objectiveBoard?: boolean;
+}) {
+  const pathname = useDisplayedPathname();
+  const prefetchProject = usePrefetchProject();
+  const queryClient = useQueryClient();
+  const session = useOptionalAppTabSession();
+  const projectMenu = useProjectTriggerMenu(currentProject);
+  return (
+    <>
+    <DropdownMenu onOpenChange={onMenuOpenChange}>
+      <DropdownMenuTrigger
+        type="button"
+        data-sidebar-project-switcher
+        aria-label={currentProject.name}
+        onContextMenu={projectMenu.onContextMenu}
+        className={PROJECT_TRIGGER_CLASS}
+      >
+        <ProjectTriggerContent project={currentProject} />
+      </DropdownMenuTrigger>
+
+      {/* No label above the switcher list: the row itself names the project,
+            the menu holds nothing but projects. */}
+      <DropdownMenuContent data-project-picker-menu side="right" align="start" sideOffset={6} className="w-60 data-[state=closed]:pointer-events-none">
+        {projects.map((project) => {
+          const href = projectTabHref(pathname, project, objectiveBoard);
+          const current = project.id === currentProject.id;
+          return (
+            <DropdownMenuItem key={project.id} asChild>
+              <Link
+                href={href}
+                aria-current={current ? "page" : undefined}
+                onMouseEnter={() => prefetchProject(project.id)}
+                onFocus={() => prefetchProject(project.id)}
+                onNavigate={(event) => {
+                  if (!session || !(isPreparedAppTabDestination(queryClient, href) ||
+                    session.isRetainedDestination(session.getSnapshot().activeId, href))) return;
+                  if (session.reuseDestination(href) || session.navigateInCurrentTab(href)) event.preventDefault();
+                }}
+              >
+                <ProjectOrb
+                  seed={projectOrbSeed(project)}
+                  iconUrl={project.icon_url}
+                  className="size-[18px] rounded-[5px]"
+                />
+                <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                {current ? <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4 shrink-0" /> : null}
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+    {projectMenu.menu}
+    </>
+  );
+}
+
 export function ProjectContextRow({
   homeItem,
   currentProject,
@@ -422,49 +532,15 @@ export function ProjectContextRow({
 }) {
   const tk = useTranslations("Keyboard");
   const tNav = useTranslations("Nav");
-  const pathname = useDisplayedPathname();
-  const prefetchProject = usePrefetchProject();
-  const queryClient = useQueryClient();
-  const session = useOptionalAppTabSession();
   const homeActions = useNavigationContextActions(homeItem.href);
   const [homeMenuPosition, setHomeMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  // The project trigger answers a right click with the project's own menu
-  // (MIN-685), the same one its row offers in the home panel. A left click
-  // still opens the project switcher.
-  const projectNavigationActions = useNavigationContextActions(projectPath(currentProject.id));
-  const projectObjectActions = useProjectRowActions(currentProject);
-  const projectActions = composeSidebarContextActions(projectObjectActions, projectNavigationActions);
-  const [projectMenuPosition, setProjectMenuPosition] = useState<{ x: number; y: number } | null>(null);
-
+  // The mobile sheet browses to the picked project's panel instead of
+  // navigating, through a dialog rather than a side menu.
+  const projectMenu = useProjectTriggerMenu(currentProject);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const ProjectTrigger = onProjectSelect ? "button" : DropdownMenuTrigger;
-  const projectTrigger = (
-    <ProjectTrigger
-      type="button"
-      onClick={onProjectSelect ? () => setPickerOpen(true) : undefined}
-      aria-haspopup={onProjectSelect ? "dialog" : undefined}
-      aria-expanded={onProjectSelect ? pickerOpen : undefined}
-      aria-label={currentProject.name}
-      onContextMenu={projectActions.length ? (event: MouseEvent) => {
-        event.preventDefault();
-        setProjectMenuPosition({ x: event.clientX, y: event.clientY });
-      } : undefined}
-      className={cn(
-        "flex h-9 items-center rounded-lg text-sm font-medium text-sidebar-foreground/70 outline-none transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
-        "min-w-0 flex-1 gap-2 px-2.5 text-left",
-      )}
-    >
-      <ProjectOrb
-        seed={projectOrbSeed(currentProject)}
-        iconUrl={currentProject.icon_url}
-        className="size-[18px] rounded-[5px]"
-      />
-      <span className="min-w-0 flex-1 truncate">{currentProject.name}</span>
-      <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-sidebar-foreground/45" aria-hidden />
-    </ProjectTrigger>
-  );
 
-  const contextRow = (
+  return (
+    <>
       <div data-sidebar-project-context className="flex items-center gap-1">
         <Tooltip delayDuration={SIDEBAR_TOOLTIP_DELAY_MS} disableHoverableContent>
           <TooltipTrigger asChild>
@@ -513,82 +589,43 @@ export function ProjectContextRow({
             ) : null}
           </TooltipContent>
         </Tooltip>
-        {projectTrigger}
+        {onProjectSelect ? (
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={pickerOpen}
+            aria-label={currentProject.name}
+            onContextMenu={projectMenu.onContextMenu}
+            className={PROJECT_TRIGGER_CLASS}
+          >
+            <ProjectTriggerContent project={currentProject} />
+          </button>
+        ) : (
+          <ProjectSwitcher currentProject={currentProject} projects={projects} onMenuOpenChange={onMenuOpenChange} />
+        )}
       </div>
-  );
-  if (onProjectSelect) return <>
-    {contextRow}
-    <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-      <DialogContent aria-describedby={undefined}>
-        <DialogTitle>{tNav("switchProject")}</DialogTitle>
-        <MobileSheetScrollArea>
-          {projects.map((project) => <button key={project.id} type="button"
-            onClick={() => { setPickerOpen(false); onProjectSelect(project); }}
-            className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
-            <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-[18px] rounded-[5px]" />
-            <span className="min-w-0 flex-1 truncate">{project.name}</span>
-            {project.id === currentProject.id && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
-          </button>)}
-        </MobileSheetScrollArea>
-      </DialogContent>
-    </Dialog>
-    <IssueContextMenu
-      position={projectMenuPosition}
-      onClose={() => setProjectMenuPosition(null)}
-      actions={projectActions}
-      searchable={false}
-    />
-  </>;
-
-  return (
-    <>
-    <DropdownMenu onOpenChange={onMenuOpenChange}>
-      {contextRow}
-
-      {/* No label above the switcher list: the row itself names the project,
-            the menu holds nothing but projects. */}
-      <DropdownMenuContent data-project-picker-menu side="right" align="start" sideOffset={6} className="w-60 data-[state=closed]:pointer-events-none">
-        {projects.map((project) => {
-          const href = projectTabHref(pathname, project);
-          const current = project.id === currentProject.id;
-          return (
-            <DropdownMenuItem key={project.id} asChild>
-              <Link
-                href={href}
-                aria-current={current ? "page" : undefined}
-                onMouseEnter={() => prefetchProject(project.id)}
-                onFocus={() => prefetchProject(project.id)}
-                onNavigate={(event) => {
-                  if (!session || !(isPreparedAppTabDestination(queryClient, href) ||
-                    session.isRetainedDestination(session.getSnapshot().activeId, href))) return;
-                  if (session.reuseDestination(href) || session.navigateInCurrentTab(href)) event.preventDefault();
-                }}
-              >
-                <ProjectOrb
-                  seed={projectOrbSeed(project)}
-                  iconUrl={project.icon_url}
-                  className="size-[18px] rounded-[5px]"
-                />
-                <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                {current ? <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4 shrink-0" /> : null}
-              </Link>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-    <IssueContextMenu
-      position={homeMenuPosition}
-      onClose={() => setHomeMenuPosition(null)}
-      actions={homeActions}
-      searchable={false}
-    />
-    <IssueContextMenu
-      position={projectMenuPosition}
-      onClose={() => setProjectMenuPosition(null)}
-      actions={projectActions}
-      searchable={false}
-    />
+      {onProjectSelect && <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogTitle>{tNav("switchProject")}</DialogTitle>
+          <MobileSheetScrollArea>
+            {projects.map((project) => <button key={project.id} type="button"
+              onClick={() => { setPickerOpen(false); onProjectSelect(project); }}
+              className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
+              <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-[18px] rounded-[5px]" />
+              <span className="min-w-0 flex-1 truncate">{project.name}</span>
+              {project.id === currentProject.id && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
+            </button>)}
+          </MobileSheetScrollArea>
+        </DialogContent>
+      </Dialog>}
+      {onProjectSelect && projectMenu.menu}
+      <IssueContextMenu
+        position={homeMenuPosition}
+        onClose={() => setHomeMenuPosition(null)}
+        actions={homeActions}
+        searchable={false}
+      />
     </>
   );
 }
@@ -1087,16 +1124,22 @@ function AppVersions({
 export type SidebarBackBadge = { count: number; label: string; alert?: boolean };
 
 /** The secondary-level browse row uses the same geometry in both layouts. */
-export function SidebarBackRow({ label, onBack, ariaLabel, badge }: {
+export function SidebarBackRow({ label, onBack, ariaLabel, badge, trailing }: {
   label: string; onBack: () => void; ariaLabel?: string;
   /** The badge of the level this row returns to, worn by the chevron. */
   badge?: SidebarBackBadge;
+  /** A control beside the back button (a project's switcher, MIN-884): the
+      button then shrinks to its label and the control takes the rest. */
+  trailing?: ReactNode;
 }) {
   const shown = badge && (badge.count > 0 || badge.alert) ? badge : undefined;
   return <div className="shrink-0 pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2">
-    <div className={GUTTER}>
+    <div className={cn(GUTTER, trailing != null && "flex items-center gap-1")}>
       <button type="button" data-sidebar-back onClick={onBack} aria-label={ariaLabel}
-        className={cn("relative flex h-9 w-full min-w-0 items-center rounded-lg text-sm font-medium transition-colors", ROW_PL, "pr-3 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground")}>
+        className={cn("relative flex h-9 min-w-0 items-center rounded-lg text-sm font-medium transition-colors", ROW_PL, "pr-3 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground focus-visible:bg-sidebar-accent focus-visible:text-sidebar-foreground",
+          // The label stays whole; only a label wider than half the row
+          // gives way, so the switcher always keeps room for its name.
+          trailing != null ? "max-w-1/2 shrink-0" : "w-full")}>
         <span className="absolute left-[9px] top-1/2 flex size-[18px] -translate-y-1/2">
           <HugeiconsIcon icon={ArrowLeft01Icon} className="size-[18px] shrink-0" aria-hidden />
           {shown && (
@@ -1112,8 +1155,9 @@ export function SidebarBackRow({ label, onBack, ariaLabel, badge }: {
             </span>
           )}
         </span>
-        <span className="min-w-0 flex-1 truncate text-center">{label}</span>
+        <span className={cn("min-w-0 truncate", trailing != null ? "pl-6" : "flex-1 text-center")}>{label}</span>
       </button>
+      {trailing}
     </div>
   </div>;
 }
@@ -1310,7 +1354,13 @@ export const AppSidebar = memo(function AppSidebar({
             direction={1}
             transition={shellTransition}
           >
-            <SidebarBackRow label={back.label} onBack={goBack} badge={backBadgeFor?.(back.href)} />
+            <SidebarBackRow label={back.label} onBack={goBack} badge={backBadgeFor?.(back.href)}
+              // A project's pages switch project in place (MIN-884): the
+              // picked project opens on the same tab.
+              trailing={currentProject && projectSegmentFromPath(pathname) ? (
+                <ProjectSwitcher currentProject={currentProject} projects={projects}
+                  onMenuOpenChange={handleMenuOpenChange} objectiveBoard={objectiveBoard} />
+              ) : undefined} />
           </SidebarPanelTransition>
         )}
       </AnimatePresence>
