@@ -518,25 +518,33 @@ export async function getPullRequest(opts: {
   number: number;
 }): Promise<PullRequestRef> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const pr = await ghJson<RawPull>(
-    `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
-    opts.token,
-  );
-  const ref = toRef(pr, opts.repoFullName);
-  if (pr.node_id) {
-    const flow = await ghGraphql<{
-      node?: {
-        mergeQueueEntry?: { id?: string } | null;
-        autoMergeRequest?: { enabledAt?: string } | null;
-        reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  // The merge flow is addressed by repository and number rather than by the
+  // REST node id, so both reads run together instead of one after the other
+  // (MIN-889). It stays best effort: a failure leaves the REST view intact.
+  const [pr, flow] = await Promise.all([
+    ghJson<RawPull>(
+      `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls/${opts.number}`,
+      opts.token,
+    ),
+    ghGraphql<{
+      repository?: {
+        pullRequest?: {
+          mergeQueueEntry?: { id?: string } | null;
+          autoMergeRequest?: { enabledAt?: string } | null;
+          reviewDecision?: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+        } | null;
       } | null;
     }>(
       opts.token,
-      "query($id:ID!){node(id:$id){... on PullRequest{mergeQueueEntry{id} autoMergeRequest{enabledAt} reviewDecision}}}",
-      { id: pr.node_id },
-    ).catch(() => null);
-    ref.mergeFlowActive = !!(flow?.node?.mergeQueueEntry || flow?.node?.autoMergeRequest);
-    ref.reviewDecision = flow?.node?.reviewDecision ?? null;
+      "query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){mergeQueueEntry{id} autoMergeRequest{enabledAt} reviewDecision}}}",
+      { owner, name: repo, number: opts.number },
+    ).catch(() => null),
+  ]);
+  const ref = toRef(pr, opts.repoFullName);
+  const node = flow?.repository?.pullRequest;
+  if (node) {
+    ref.mergeFlowActive = !!(node.mergeQueueEntry || node.autoMergeRequest);
+    ref.reviewDecision = node.reviewDecision ?? null;
     ref.mergeabilityReason = refineGithubMergeabilityReason(
       ref.mergeabilityReason,
       ref.reviewDecision,
@@ -597,6 +605,8 @@ const FILES_PER_PAGE = 100;
  * He who ignores what he has not seen concludes on what he has seen.
  */
 const FILES_MAX_PAGES = 30;
+/** Pages read together once a PR has more than one. */
+const FILES_PAGES_PER_WAVE = 4;
 
 /**
  * PR files with their patches (unified diff) — feeds the review
@@ -614,9 +624,7 @@ export async function listPullRequestFiles(opts: {
   number: number;
 }): Promise<{ files: PullRequestFile[]; truncated: boolean }> {
   const { owner, repo } = splitRepo(opts.repoFullName);
-  const files: PullRequestFile[] = [];
-  let truncated = false;
-  for (let page = 1; page <= FILES_MAX_PAGES; page++) {
+  const readPage = async (page: number): Promise<PullRequestFile[]> => {
     const batch = await ghJson<
       Array<{
         filename: string;
@@ -631,21 +639,38 @@ export async function listPullRequestFiles(opts: {
         `?per_page=${FILES_PER_PAGE}&page=${page}`,
       opts.token,
     );
-    files.push(
-      ...batch.map((f) => ({
-        filename: f.filename,
-        status: f.status,
-        additions: f.additions,
-        deletions: f.deletions,
-        patch: f.patch,
-        previous_filename: f.previous_filename,
-      })),
+    return batch.map((f) => ({
+      filename: f.filename,
+      status: f.status,
+      additions: f.additions,
+      deletions: f.deletions,
+      patch: f.patch,
+      previous_filename: f.previous_filename,
+    }));
+  };
+  const files = await readPage(1);
+  // Incomplete page = last page.
+  let complete = files.length < FILES_PER_PAGE;
+  // A full page announces more: the next ones are read several at a time
+  // rather than one round trip each (MIN-889). Pages past the end come back
+  // empty.
+  let read = 1;
+  while (!complete && read < FILES_MAX_PAGES) {
+    const pages = Array.from(
+      { length: Math.min(FILES_PAGES_PER_WAVE, FILES_MAX_PAGES - read) },
+      (_, i) => read + 1 + i,
     );
-    // Incomplete page = last page.
-    if (batch.length < FILES_PER_PAGE) break;
-    if (page === FILES_MAX_PAGES) truncated = true;
+    const batches = await Promise.all(pages.map(readPage));
+    read += pages.length;
+    for (const batch of batches) {
+      files.push(...batch);
+      if (batch.length < FILES_PER_PAGE) {
+        complete = true;
+        break;
+      }
+    }
   }
-  return { files, truncated };
+  return { files, truncated: !complete };
 }
 
 interface RawCommit {
@@ -959,21 +984,35 @@ const MAX_PR_PAGES = 5;
 export async function listPullRequests(opts: {
   token: string;
   repoFullName: string;
+  /** `open` reads only the live PRs (a review queue); `all` by default. */
+  state?: "open" | "all";
+  /** Only the PRs updated since this instant: the listing is sorted by
+      update, so it stops at the first older one (MIN-889). */
+  updatedSince?: string;
 }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }> {
   const { owner, repo } = splitRepo(opts.repoFullName);
+  const since = opts.updatedSince ? Date.parse(opts.updatedSince) : Number.NaN;
+  // A window usually holds a handful of PRs: small pages answer much faster
+  // than a hundred full PRs, for the same ceiling of 500.
+  const perPage = Number.isFinite(since) ? 20 : 100;
+  const maxPages = (MAX_PR_PAGES * 100) / perPage;
   const pulls: PullRequestRef[] = [];
   let truncated = false;
-  for (let page = 1; page <= MAX_PR_PAGES; page++) {
+  for (let page = 1; page <= maxPages; page++) {
     const batch = await ghJson<RawPull[]>(
       `${GITHUB_API_BASE}/repos/${owner}/${repo}/pulls` +
-        `?state=all&sort=updated&direction=desc&per_page=100&page=${page}`,
+        `?state=${opts.state ?? "all"}&sort=updated&direction=desc&per_page=${perPage}&page=${page}`,
       opts.token,
     );
     // The *list* endpoint does not return `merged`: `toRef` falls back to
     // `merged_at`, only signal available here to distinguish merged/refused.
-    pulls.push(...batch.map((pull) => toRef(pull, opts.repoFullName)));
-    if (batch.length < 100) break;
-    if (page === MAX_PR_PAGES) truncated = true;
+    const refs = batch.map((pull) => toRef(pull, opts.repoFullName));
+    const fresh = Number.isFinite(since)
+      ? refs.filter((pr) => !pr.updatedAt || Date.parse(pr.updatedAt) >= since)
+      : refs;
+    pulls.push(...fresh);
+    if (fresh.length < refs.length || batch.length < perPage) break;
+    if (page === maxPages) truncated = true;
   }
   return { pulls, truncated };
 }
@@ -1558,18 +1597,19 @@ export async function listPullRequestChecks(opts: {
   token: string;
   repoFullName: string;
   sha: string;
-  requiredCheckNames?: readonly string[] | null;
+  requiredCheckNames?: readonly string[] | null | PromiseLike<readonly string[] | null>;
 }): Promise<ChecksSummary> {
   const { owner, repo } = splitRepo(opts.repoFullName);
   const base = `${GITHUB_API_BASE}/repos/${owner}/${repo}/commits/${opts.sha}`;
-  const [runs, statuses] = await Promise.all([
+  const [runs, statuses, requiredCheckNames] = await Promise.all([
     ghJson<{ check_runs?: RawCheckRun[] }>(`${base}/check-runs?per_page=100`, opts.token),
     ghJson<{ statuses?: RawCommitStatus[] }>(`${base}/status?per_page=100`, opts.token),
+    opts.requiredCheckNames,
   ]);
   return summarizeGithubChecks(
     runs.check_runs ?? [],
     statuses.statuses ?? [],
-    opts.requiredCheckNames ?? null,
+    requiredCheckNames ?? null,
   );
 }
 

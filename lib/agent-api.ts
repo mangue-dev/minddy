@@ -218,13 +218,9 @@ export interface AgentRunPrResponse {
   provider?: RepoProviderId;
   checks?: ChecksSummary | null;
   checksError?: "forbidden" | "unknown" | null;
+  /** The preview a check advertises; the deployment card comes from
+      `fetchPullRequestDeploymentApi`. */
   deploymentUrl?: string | null;
-  /** Time the environment took to settle, when the forge dates it. */
-  deploymentDurationMs?: number | null;
-  /** Lifecycle of the head environment as the forge reports it. */
-  deploymentStatus?: "success" | "in_progress" | null;
-  /** Created date of the deployment in flight — the card ticks from it. */
-  deploymentStartedAt?: string | null;
   reviews?: PullRequestReviewSummary | null;
   viewer?: PrViewer;
   mergeMethods?: MergeMethod[];
@@ -248,6 +244,30 @@ export async function fetchPullRequestApi(
   signal?: AbortSignal,
 ): Promise<AgentRunPrResponse> {
   return parseJson(await fetchClientRead(`/api/pull-requests/${prId}`, { signal, cache: "no-store" }));
+}
+
+/** The environment built from a pull request's live head (MIN-889). */
+export interface PullRequestDeploymentResponse {
+  /** The head the deployment was resolved for. */
+  headSha: string | null;
+  deploymentUrl: string | null;
+  /** Lifecycle of the head environment as the forge reports it. */
+  deploymentStatus: "success" | "in_progress" | null;
+  /** Created date of the deployment in flight — the card ticks from it. */
+  deploymentStartedAt: string | null;
+  /** Time the environment took to settle, when the forge dates it. */
+  deploymentDurationMs: number | null;
+}
+
+/**
+ * Read apart from the detail: resolving it walks the forge's deployments one
+ * reference at a time, which used to hold the whole detail back.
+ */
+export async function fetchPullRequestDeploymentApi(
+  prId: string,
+  signal?: AbortSignal,
+): Promise<PullRequestDeploymentResponse> {
+  return parseJson(await fetchClientRead(`/api/pull-requests/${prId}/deployment`, { signal, cache: "no-store" }));
 }
 
 export interface PullRequestReadinessResponse {

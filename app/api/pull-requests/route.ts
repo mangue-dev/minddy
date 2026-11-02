@@ -166,12 +166,44 @@ export async function GET(request: NextRequest) {
     if (!needsRepoSync(state)) continue;
     staleRepos.push(repo);
   }
+  // Only authorized repositories with visible active PRs need review metadata.
+  // Discovery sweeps populate the same cache, avoiding a second forge scan.
+  const reviewQueues = new Map<string, Map<number, string[]>>();
+  const reviewQueueAttempts = new Set<string>();
+  const reviewRepos = (rows: PullRequestWithIssue[]) => [...new Map(repos.filter((repo) =>
+    viewerLogins.has(repo.provider) && rows.some((row) =>
+      rowProvider(row) === repo.provider && row.repo_full_name === repo.repoFullName &&
+      (row.state === "open" || row.state === "draft"),
+    )).map((repo) => [repoSyncKey(repo.provider, repo.repoFullName), repo])).values()];
+  const readReviewQueues = async (targets: VisibleRepo[]) => {
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(3, targets.length) }, async () => {
+      while (next < targets.length) {
+        const repo = targets[next++];
+        reviewQueueAttempts.add(repoSyncKey(repo.provider, repo.repoFullName));
+        try {
+          reviewQueues.set(repoSyncKey(repo.provider, repo.repoFullName), await readReviewQueue(auth.user.id, repo));
+        } catch {
+          // A forge outage must not hide the cached list or its team queue.
+          console.error("[pull-requests] review queue unavailable");
+        }
+      }
+    }));
+  };
+  // The rows read before the catch-up already name the repositories with
+  // active PRs: their queues are read alongside it rather than after it
+  // (MIN-889). Only a repository the catch-up revealed is read afterwards.
+  const earlyReviewQueues = rowsBeforeSweep instanceof Error
+    ? Promise.resolve()
+    : readReviewQueues(reviewRepos(rowsBeforeSweep));
+
   // Keep catch-up latency bounded without flooding the forge with scans.
   let nextRepo = 0;
   await Promise.all(Array.from({ length: Math.min(3, staleRepos.length) }, async () => {
     while (nextRepo < staleRepos.length) {
       const repo = staleRepos[nextRepo++];
-      if (await sweepRepo(auth.user.id, repo)) sweptTruncated = true;
+      const key = repoSyncKey(repo.provider, repo.repoFullName);
+      if (await sweepRepo(auth.user.id, repo, syncs.get(key))) sweptTruncated = true;
     }
   }));
   // ── PR ──────────────────────────────── ────────────────────────────────
@@ -207,28 +239,9 @@ export async function GET(request: NextRequest) {
     repos.map((r) => [repoSyncKey(r.provider, r.repoFullName), r.project]),
   );
 
-  // Only authorized repositories with visible active PRs need review metadata.
-  // Discovery sweeps populate the same cache, avoiding a second forge scan.
-  const reviewQueues = new Map<string, Map<number, string[]>>();
-  const activeRepos = repos.filter((repo) => viewerLogins.has(repo.provider) && page.some((row) =>
-    rowProvider(row) === repo.provider && row.repo_full_name === repo.repoFullName &&
-    (row.state === "open" || row.state === "draft"),
-  ));
-  const uniqueRepos = [...new Map(activeRepos.map((repo) =>
-    [repoSyncKey(repo.provider, repo.repoFullName), repo],
-  )).values()];
-  let nextReviewRepo = 0;
-  await Promise.all(Array.from({ length: Math.min(3, uniqueRepos.length) }, async () => {
-    while (nextReviewRepo < uniqueRepos.length) {
-      const repo = uniqueRepos[nextReviewRepo++];
-      try {
-        reviewQueues.set(repoSyncKey(repo.provider, repo.repoFullName), await readReviewQueue(auth.user.id, repo));
-      } catch {
-        // A forge outage must not hide the cached list or its team queue.
-        console.error("[pull-requests] review queue unavailable");
-      }
-    }
-  }));
+  await earlyReviewQueues;
+  await readReviewQueues(reviewRepos(page).filter((repo) =>
+    !reviewQueueAttempts.has(repoSyncKey(repo.provider, repo.repoFullName))));
 
   const pullRequests: PullRequestListItem[] = page.map((row) => {
     const provider = rowProvider(row);

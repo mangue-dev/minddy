@@ -120,6 +120,10 @@ export interface Forge {
     token: string;
     repoFullName: string;
     includeReviewRequests?: boolean;
+    /** `open` reads only the live PRs; `all` by default. */
+    state?: "open" | "all";
+    /** Only the PRs updated since this instant (an incremental sweep). */
+    updatedSince?: string;
   }): Promise<{ pulls: PullRequestRef[]; truncated: boolean }>;
   /** Delete a remote branch. `"already-gone"` (and not an error) when
  the reference no longer exists: replaying a household is not a failure. */
@@ -319,8 +323,10 @@ export interface Forge {
     repoFullName: string;
     number: number;
     sha: string;
-    requiredCheckNames?: readonly string[] | null;
-    checksRequired?: boolean | null;
+    /** May still be pending: the check requests start without the policy,
+        which only their summary needs. */
+    requiredCheckNames?: readonly string[] | null | PromiseLike<readonly string[] | null>;
+    checksRequired?: boolean | null | PromiseLike<boolean | null>;
   }): Promise<ChecksSummary>;
   /** Draft → ready for review. `nodeId` is only read by GitHub (key from
  GraphQL mutation); GitLab removes the `Draft:` prefix from the title. */

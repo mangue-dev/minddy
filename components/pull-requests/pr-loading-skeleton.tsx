@@ -100,10 +100,13 @@ export function PrFilesSkeleton() {
   );
 }
 
-export function PrMetadataSkeleton() {
+/** `title`: the list row's title, already known while the detail loads. */
+export function PrMetadataSkeleton({ title }: { title?: string | null } = {}) {
   return (
     <div aria-hidden data-testid="pr-metadata-skeleton" className="flex flex-col gap-3">
-      <Skeleton className="h-7 w-4/5" />
+      {title ? (
+        <h1 className="min-w-0 font-display text-2xl leading-tight font-semibold break-words">{title}</h1>
+      ) : <Skeleton className="h-7 w-4/5" />}
       <div className="flex flex-wrap items-center gap-2">
         <Skeleton className="size-4 rounded-full" />
         <Skeleton className="h-3 w-20" />
