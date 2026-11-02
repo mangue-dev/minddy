@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
-import { ancestorsOf, splitFavoritePageTree } from "@/lib/pages";
+import { revealedAncestorsOf, splitFavoritePageTree } from "@/lib/pages";
 import type { PageDropMode } from "@/lib/pages-move";
 import { usePageTreeDrag } from "@/components/pages/page-tree-drag";
 import { matchesFilter } from "@/components/sidebar-filter-field";
@@ -150,10 +150,11 @@ export function PageTree({
   // The open page is ALWAYS visible: open a subpage from the
   // search or a block link unfolds its parent chain. Without that, the line
   // selected is folded under a closed parent, and nothing on the screen says where
-  // we are.
+  // we are. A favorite unfolds only within the favorites section: its
+  // non-favorite parents in the regular tree stay closed.
   useEffect(() => {
     if (!activePageId) return;
-    const chain = ancestorsOf(pages, activePageId).map((page) => page.id);
+    const chain = revealedAncestorsOf(pages, activePageId).map((page) => page.id);
     if (chain.length === 0) return;
     setExpanded((current) => {
       if (chain.every((id) => current.has(id))) return current;
@@ -226,7 +227,7 @@ export function PageTree({
         {tCommon("noFilterMatch")}
       </p>
     ) : (
-      <div className="flex flex-col gap-0.5 px-2 pt-2 pb-4">
+      <div className="flex flex-col gap-0.5 pt-2 pb-4">
         {filtered.map((page) => (
           <PageRow
             key={page.id}
@@ -292,7 +293,7 @@ export function PageTree({
   const regularRows = renderRows(regular, false);
 
   return (
-    <div className="flex flex-col gap-0.5 px-2 pt-2 pb-4">
+    <div className="flex flex-col gap-0.5 pt-2 pb-4">
       {favorites.length > 0 && (
         <>
           {favoriteRows}

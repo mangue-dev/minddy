@@ -346,6 +346,23 @@ export function ancestorsOf<T extends { id: string; parent_id: string | null }>(
 }
 
 /**
+ * The ancestors to unfold so the sidebar shows a page, from its parent upward.
+ *
+ * A favorite or a page below one is shown in the favorites section, rooted at
+ * its outermost favorite (see `splitFavoritePageTree`). Only the ancestors up
+ * to that root need to unfold; the non-favorite pages above it belong to the
+ * regular tree, which stays as the reader left it.
+ */
+export function revealedAncestorsOf<
+  T extends { id: string; parent_id: string | null; favorite: boolean },
+>(pages: readonly T[], pageId: string): T[] {
+  const chain = ancestorsOf(pages, pageId);
+  const root = chain.findLastIndex((page) => page.favorite);
+  if (root >= 0) return chain.slice(0, root + 1);
+  return pages.find((page) => page.id === pageId)?.favorite ? [] : chain;
+}
+
+/**
  * Beyond this number of levels, the breadcrumb folds its MIDDLE.
  *
  * Three, because this is the point where folding saves space: at three
