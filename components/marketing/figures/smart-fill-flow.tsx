@@ -143,24 +143,24 @@ function Composer({ text, typed, number }: { text: string; typed: number; number
   const tc = useTranslations("Creation");
   const tf = useTranslations("Field");
   return (
-    <div className="relative flex w-full max-w-2xl flex-col rounded-[2rem] bg-card px-[1.625rem] pt-15 pb-4 text-left text-sm shadow-lg shadow-black/5 ring-1 ring-border max-sm:px-5">
-      <div className="absolute top-4 left-4 flex h-7 min-w-0 items-center gap-1.5 rounded-full bg-control px-2.5 text-sm text-foreground">
+    <div className="relative flex w-full max-w-2xl flex-col rounded-[2rem] bg-card px-[1.625rem] pt-15 pb-4 text-left text-sm shadow-lg shadow-black/5 ring-1 ring-border max-sm:rounded-3xl max-sm:px-4 max-sm:pt-13 max-sm:pb-3">
+      <div className="absolute top-4 left-4 flex h-7 max-sm:top-3 max-sm:left-3 min-w-0 items-center gap-1.5 rounded-full bg-control px-2.5 text-sm text-foreground">
         <span className="shrink-0 text-muted-foreground">{tc("createIn")}</span>
         <ProjectOrb seed={AURORA_ORB} className="size-4 shrink-0" />
         <span className="truncate">Aurora</span>
         <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
         <Shortcut letter="P" />
       </div>
-      <span className="absolute top-4 right-4 flex size-7 items-center justify-center rounded-full bg-control text-muted-foreground">
+      <span className="absolute top-4 right-4 flex size-7 max-sm:top-3 max-sm:right-3 items-center justify-center rounded-full bg-control text-muted-foreground">
         <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
       </span>
 
       <div className="flex flex-col">
-        <p className="min-h-16 text-base leading-normal">
+        <p className="min-h-16 text-base leading-normal max-sm:min-h-12 max-sm:text-[15px]">
           {text.slice(0, typed)}
           <span className="ml-px inline-block h-[1.1em] w-px translate-y-[0.2em] animate-pulse bg-foreground" aria-hidden />
         </p>
-        <div className="mt-4 -ml-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        <div className="mt-4 -ml-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 max-sm:mt-3 max-sm:gap-x-1">
           <span className={BARE}>
             <StatusIndicator status="backlog" />
           </span>
@@ -169,7 +169,8 @@ function Composer({ text, typed, number }: { text: string; typed: number; number
           </span>
           <span className={cn(BARE, "text-muted-foreground")}>
             <HugeiconsIcon icon={DATE_ICON} className="size-4 shrink-0" />
-            {tf("dueDate")}
+            {/* On a phone the icon alone, so Smart Fill stays on the same row. */}
+            <span className="max-sm:hidden">{tf("dueDate")}</span>
           </span>
           {/* Smart Fill on: the toggle and its chevron share one tint. */}
           <span className="inline-flex gap-px">
@@ -185,7 +186,7 @@ function Composer({ text, typed, number }: { text: string; typed: number; number
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
+      <div className="mt-6 flex flex-wrap items-center gap-3 max-sm:mt-4 max-sm:gap-2 sm:mt-8">
         <span className="-ml-2 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground">
           <HugeiconsIcon icon={Mic01Icon} className="size-4" />
         </span>
@@ -196,7 +197,7 @@ function Composer({ text, typed, number }: { text: string; typed: number; number
           <span className="text-sm text-foreground">{ti("createMore")}</span>
           <Switch checked={false} tabIndex={-1} />
         </div>
-        <div className="ml-1 -mr-2.5 flex items-center justify-end gap-2 max-sm:ml-auto">
+        <div className="ml-1 -mr-2.5 flex items-center justify-end gap-2 max-sm:mr-0 max-sm:ml-auto">
           <SplitButton
             type="button"
             tabIndex={-1}
