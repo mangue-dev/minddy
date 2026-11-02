@@ -1099,6 +1099,8 @@ async function fetchCollabRow(
   projectId: string | null,
   { includeTrashed = false }: { includeTrashed?: boolean } = {}
 ): Promise<Record<string, unknown> | null> {
+  // A short code from a page URL names no row; the id column would reject it.
+  if (!UUID_RE.test(pageId)) return null;
   let query = service.from("pages").select(COLLAB_PAGE_COLUMNS).eq("id", pageId);
   if (projectId !== null) query = query.eq("project_id", projectId);
   if (!includeTrashed) query = query.is("deleted_at", null);
@@ -1955,6 +1957,7 @@ export async function readPageCollaborationSteps({
   field: CollabField;
   since: number;
 }): Promise<{ ok: true; catchUp: CollabCatchUp; token: string } | CollabFailure> {
+  if (!UUID_RE.test(pageId)) return { ok: false, status: 404, errorKey: "pageNotFound" };
   const service = getServiceClient();
   // The head and the journal are fetched while access is decided, sealed;
   // nothing is decrypted before access is confirmed, and a denial aborts both.
@@ -2048,6 +2051,7 @@ export async function submitPageCollaboration({
   submission: CollabSubmission;
   token?: string | null;
 }): Promise<{ ok: true; result: CollabSubmitResult; token: string | null } | CollabFailure> {
+  if (!UUID_RE.test(pageId)) return { ok: false, status: 404, errorKey: "pageNotFound" };
   const service = getServiceClient();
   const ids = { userId: actorId, pageId, projectId };
   const { field } = submission;
