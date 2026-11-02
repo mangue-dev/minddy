@@ -191,7 +191,7 @@ function faceImportGraph() {
     if (seen.has(file)) return;
     seen.add(file);
     const source = readFileSync(file, "utf8");
-    const runtime = source.replace(/^[ \t]*(?:import|export)[ \t]+type[ \t][^;\n]*(?:\n[^;]*)*?;/gm, "");
+    const runtime = source.replace(/^[ \t]*(?:import|export)[ \t]+type[ \t][^;]*;/gm, "");
     for (const match of runtime.matchAll(/(?:from\s*|import\(\s*)["']([^"']+)["']/g)) {
       const specifier = match[1];
       if (

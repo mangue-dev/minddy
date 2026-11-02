@@ -118,7 +118,7 @@ function scanEntries(entries: readonly string[], options: { figures?: boolean } 
     // to the browser contain — a false positive we could only correct
     // than by declaring public a namespace which is not.
     const runtime = source.replace(
-      /^[ \t]*(?:import|export)[ \t]+type[ \t][^;\n]*(?:\n[^;]*)*?;/gm,
+      /^[ \t]*(?:import|export)[ \t]+type[ \t][^;]*;/gm,
       ""
     );
     for (const match of runtime.matchAll(/(?:from\s*|import\s*\(\s*)["']([^"']+)["']/g)) {
