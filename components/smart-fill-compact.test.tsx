@@ -5,7 +5,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "@/messages/en.json";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import type { Category, Objective } from "@/lib/types";
+import type { Category, Member, Objective } from "@/lib/types";
 
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: keyof typeof en) => (key: string) =>
@@ -22,6 +22,7 @@ vi.mock("@/components/objective-label", () => ({
 }));
 vi.mock("@/components/search-select", () => ({ SearchSelect: () => null, SearchMultiSelect: () => null }));
 vi.mock("@/components/date-time-picker", () => ({ DateTimePicker: () => null }));
+vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/lib/use-picker-create", () => ({ useCategoryCreateOption: () => null, useObjectiveCreateOption: () => null }));
 
 import { SmartFillCompact, type SmartFillManualFields } from "@/components/issue-compact-fields";
@@ -29,6 +30,7 @@ import { SmartFillCompact, type SmartFillManualFields } from "@/components/issue
 const bug = { id: "cat-bug", name: "Bug", color: "red" } as Category;
 const ux = { id: "cat-ux", name: "UX", color: "blue" } as Category;
 const launch = { id: "obj-launch", name: "Launch", project_id: "p1", status: "planned" } as Objective;
+const camille = { user_id: "user-camille", full_name: "Camille Roy", email: "camille@example.com" } as Member;
 
 let host: HTMLDivElement;
 let root: Root;
@@ -211,6 +213,73 @@ describe("SmartFillCompact split button (MIN-809)", () => {
     await settle();
     expect(document.activeElement).toBe(input);
     expect(input.selectionStart).toBe(4);
+  });
+
+  it("sets the status, which Smart Fill never fills", async () => {
+    const fields = manualFields({ status: "todo", onStatusChange: vi.fn() });
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    openSubmenu(en.Field.status);
+    expect(menuItem("menuitem", en.Status.todo).hasAttribute("data-checked")).toBe(true);
+    key(menuItem("menuitem", en.Status.in_progress), "Enter");
+    await settle();
+    expect(fields.onStatusChange).toHaveBeenCalledWith("in_progress");
+  });
+
+  it("assigns a member or hands the ticket back to Smart Assign, and hides the assignee without members", async () => {
+    const fields = manualFields({ assigneeId: null, members: [camille], onAssigneeChange: vi.fn() });
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    openSubmenu(en.Field.assignee);
+    expect(menuItem("menuitem", en.Field.unassigned).hasAttribute("data-checked")).toBe(true);
+    key(menuItem("menuitem", "Camille Roy"), "Enter");
+    await settle();
+    expect(fields.onAssigneeChange).toHaveBeenCalledWith(camille.user_id);
+
+    act(() => root.unmount());
+    root = createRoot(host);
+    const assigned = manualFields({
+      assigneeId: camille.user_id, members: [camille], onAssigneeChange: vi.fn(), smartAssign: true,
+    });
+    render(<SmartFillCompact value onChange={vi.fn()} manual={assigned} />);
+    openSubmenu(en.Field.assignee);
+    expect(menuItem("menuitem", "Camille Roy").hasAttribute("data-checked")).toBe(true);
+    key(menuItem("menuitem", en.Field.smartAssign), "Enter");
+    await settle();
+    expect(assigned.onAssigneeChange).toHaveBeenCalledWith(null);
+
+    act(() => root.unmount());
+    root = createRoot(host);
+    render(<SmartFillCompact value onChange={vi.fn()} manual={manualFields({ members: [], onAssigneeChange: vi.fn() })} />);
+    key(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!, "Enter");
+    expect(() => menuItem("menuitem", en.Field.assignee)).toThrow();
+  });
+
+  it("opens the due date picker once the menu has closed", async () => {
+    const fields = manualFields({ onDueDateRequest: vi.fn() });
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    key(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!, "Enter");
+    key(menuItem("menuitem", en.Field.dueDate), "Enter");
+    expect(fields.onDueDateRequest).not.toHaveBeenCalled();
+    await settle();
+    expect(fields.onDueDateRequest).toHaveBeenCalledOnce();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  it("lists the properties in the order of the form row", () => {
+    const fields = manualFields({
+      onTitleRequest: vi.fn(),
+      status: "todo", onStatusChange: vi.fn(),
+      assigneeId: null, members: [camille], onAssigneeChange: vi.fn(),
+      relations: { kinds: ["blocks"], onRequest: vi.fn() },
+      onDueDateRequest: vi.fn(),
+    });
+    render(<SmartFillCompact value onChange={vi.fn()} manual={fields} />);
+    key(host.querySelector(`[aria-label="${en.IssueUI.smartFillManualAria}"]`)!, "Enter");
+    const labels = [...document.querySelectorAll('[role="menu"] [role="menuitem"]')]
+      .map((item) => item.textContent?.trim());
+    expect(labels).toEqual([
+      en.Field.title, en.Field.status, en.Field.priority, en.Field.effort, en.Field.categories,
+      en.Field.assignee, en.Relations.relations, en.Field.dueDate, en.Field.objective,
+    ]);
   });
 
   it("ignores ⌘⇧F while Smart Fill is off", () => {
