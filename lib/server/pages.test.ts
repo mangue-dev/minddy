@@ -2173,9 +2173,22 @@ describe("live collaboration authority (MIN-688)", () => {
   });
 
   it("answers a page's short code as an unknown page, not a server error", async () => {
-    const { id } = await livePage([paragraph("Body", "b1")]);
-    expect(await readPageCollaborationSnapshot(PROJECT, id.slice(0, 8), ACTOR))
-      .toEqual({ ok: false, status: 404, errorKey: "pageNotFound" });
+    const { id, snapshot } = await livePage([paragraph("Body", "b1")]);
+    const code = id.slice(0, 8);
+    const unknown = { ok: false, status: 404, errorKey: "pageNotFound" };
+    h.trace = [];
+    expect(await readPageCollaborationSnapshot(PROJECT, code, ACTOR)).toEqual(unknown);
+    expect(await readPageCollaborationSteps({ projectId: PROJECT, pageId: code, actorId: ACTOR, field: "body", since: 0 }))
+      .toEqual(unknown);
+    expect(await submitPageCollaboration({
+      projectId: PROJECT,
+      pageId: code,
+      actorId: ACTOR,
+      submission: submission(0, bodySteps(snapshot.body.doc, (tr) => tr.insert(5, pageBodySchema().text("!")))),
+    })).toEqual(unknown);
+    // Postgres rejects a code in a uuid column (MIN-886): nothing reads with it.
+    expect(h.trace).toEqual([]);
+    expect(h.batches).toHaveLength(0);
   });
 
   it("journals an accepted batch without rewriting the page, and the materialization signs it once", async () => {
@@ -2582,7 +2595,7 @@ describe("live collaboration authority (MIN-688)", () => {
 
   it("materializes every pending page of a project, past the first thousand", async () => {
     for (let i = 0; i < 1_100; i += 1) {
-      h.heads.push({ page_id: `gone-${String(i).padStart(5, "0")}`, field: "body", project_id: PROJECT,
+      h.heads.push({ page_id: `44444444-4444-4444-8444-${String(i).padStart(12, "0")}`, field: "body", project_id: PROJECT,
         revision: 1, pending_since: "2026-10-17T00:00:00Z" });
     }
     h.trace = [];
