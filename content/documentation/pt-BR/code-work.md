@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-02",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -54,14 +54,16 @@
       "lib/use-link-issues-to-pull-request.ts",
       "lib/pr-issue-status.ts",
       "lib/pr-merge-intent.ts",
-      "components/issue-pr-context.tsx"
+      "components/issue-pr-context.tsx",
+      "components/issue-pr-chip.tsx",
+      "components/pull-requests/pr-hover-card.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (card right-click menu: linked pull request entries grouped under a Pull request submenu with View pull request in its own tab, Merge, Enable/Disable auto-merge, Link to a pull request and Unlink from pull request; Link the other issues to #N from a selected card; cards move to the status the pull request implies when linked; auto-merge named in the readiness tooltip; checked against components/use-issue-menu-actions.tsx, lib/use-link-issues-to-pull-request.ts, lib/pr-issue-status.ts, lib/pr-merge-intent.ts and components/issue-pr-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card menu)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
+    "language": "agent:claude-code (pt-BR changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-02"
   },
   "related": [
     "issues",
@@ -84,7 +86,7 @@
       "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
       "alt": "Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.",
       "caption": "PR de demonstração que permanece aberto, sem mesclagem. O diff remove os espaços ao redor do nome e usa World quando o valor é vazio. Esta instância não pode solicitar autorização de usuário do GitHub; a indicação de prontidão não concede permissão de mesclagem nem comprova que a CI do provedor passou.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -121,7 +123,7 @@ O conteúdo do prompt, a sugestão de branch e as regras de idioma estão descri
 
 Quando o repositório estiver vinculado ao projeto, mantenha o identificador do ticket no nome da branch, no título do pull request ou em uma linha `Fixes MIN-42`. Assim o Minddy anexa o pull request ao ticket, e os prompts seguintes pedem ao agente que continue o pull request aberto na branch dele. Para anexar um ticket manualmente, use **Vincular um ticket** no pull request: a paleta de comandos abre com os tickets do projeto, e o escolhido é vinculado após a confirmação. A busca aceita um identificador ou palavras do título, e uma descrição também lista tickets do projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
 
-Em um quadro, clique com o botão direito em um ticket sem pull request aberto e escolha **Vincular a um pull request** para escolher na paleta de comandos um dos pull requests abertos do projeto, incluindo rascunhos. A opção só aparece quando esse projeto tem pelo menos um pull request para vincular. Com vários tickets selecionados, **Ações** oferece a mesma opção para toda a seleção, além de **Vincular os outros tickets a #N** quando alguns já têm o pull request N; o clique direito em um dos tickets selecionados também oferece **Vincular os outros tickets a #N**. **Vincular a um pull request** deixa de ser oferecido assim que um ticket selecionado tem algum pull request vinculado; **Desvincular N tickets dos seus pull requests** remove primeiro todos os vínculos da seleção, depois que você confirma. Os vínculos aparecem na hora nos cartões, e cada cartão passa na hora para o status que o pull request implica, por exemplo **Em revisão** para um pull request aberto; um vínculo recusado some quando o quadro é atualizado. Um cartão com um pull request aberto mostra o número dele, colorido conforme o estado, e sua prontidão para mesclagem, o mesmo indicador da **Revisão de código**; quando a mesclagem automática está ativada, a dica do indicador acrescenta **Mesclagem automática** depois do estado.
+Em um quadro, clique com o botão direito em um ticket sem pull request aberto e escolha **Vincular a um pull request** para escolher na paleta de comandos um dos pull requests abertos do projeto, incluindo rascunhos. A opção só aparece quando esse projeto tem pelo menos um pull request para vincular. Com vários tickets selecionados, **Ações** oferece a mesma opção para toda a seleção, além de **Vincular os outros tickets a #N** quando alguns já têm o pull request N; o clique direito em um dos tickets selecionados também oferece **Vincular os outros tickets a #N**. **Vincular a um pull request** deixa de ser oferecido assim que um ticket selecionado tem algum pull request vinculado; **Desvincular N tickets dos seus pull requests** remove primeiro todos os vínculos da seleção, depois que você confirma. Os vínculos aparecem na hora nos cartões, e cada cartão passa na hora para o status que o pull request implica, por exemplo **Em revisão** para um pull request aberto; um vínculo recusado some quando o quadro é atualizado. Um cartão com um pull request aberto mostra o número dele, colorido conforme o estado, e sua prontidão para mesclagem, o mesmo indicador da **Revisão de código**; quando a mesclagem automática está ativada, a dica do indicador acrescenta **Mesclagem automática** depois do estado. Passe o ponteiro sobre o número, ou sobre a etiqueta do pull request no topo do painel do ticket, para ver o repositório, o estado e o título do pull request e, enquanto ele estiver aberto ou em rascunho, a situação das verificações. Clique no cartão para abrir o pull request.
 
 Quando um ticket tem um pull request vinculado, o menu do clique direito reúne as ações desse pull request em um submenu **Pull request**. **Ver pull request** abre o pull request em uma aba própria, ou muda para a aba que já o mostra. **Mesclar** aparece quando o pull request está aberto e pode ser mesclado e sua conta no provedor pode escrever no repositório; ele abre o pull request na confirmação de mesclagem habitual, onde você escolhe o método e a mensagem de commit, ou usa **Mesclar com o Numo**. **Ativar mesclagem automática** aparece enquanto o pull request ainda não pode ser mesclado e o repositório permite a mesclagem automática; **Desativar mesclagem automática** a substitui quando a mesclagem automática está ativada. Quando o pull request vinculado está mesclado ou fechado, **Vincular a um pull request** vincula o ticket a outro pull request aberto do projeto. **Desvincular do pull request**, à parte e em vermelho no fim do submenu, remove o vínculo depois que você confirma.
 

@@ -4,9 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  CheckmarkCircle02Icon,
   Edit01Icon,
-  GitMergeIcon,
   Search01Icon,
   SourceCodeIcon,
   TaskDone01Icon,
@@ -14,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { IssueCardFace } from "@/components/issue-card-face";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
-import { Github } from "@/components/git/provider-icons";
+import { PullRequestPreviewFace } from "@/components/pull-requests/pr-preview-face";
 import { CARD_FADE } from "../card-fade";
 import { FIGURE_CATEGORIES, FIGURE_MEMBERS, FIGURE_PROJECT_KEY, figureIssue, useFigureMaps } from "./figure-world";
 
@@ -107,21 +105,16 @@ export function MergedPullRequest() {
   return (
     <div aria-hidden className={cn("relative h-full w-full select-none [&_*]:pointer-events-none", CARD_FADE)}>
       <div className="absolute top-0 left-0 z-10 w-[19rem] rounded-xl bg-background p-3.5 text-sm shadow-sm ring-1 ring-border">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Github className="size-3.5" />
-          aurora/web
-          <span className="ml-auto inline-flex items-center gap-1 rounded-md bg-violet-600/10 px-1.5 py-0.5 text-[11px] font-medium text-violet-700 dark:bg-violet-500/15 dark:text-violet-400">
-            <HugeiconsIcon icon={GitMergeIcon} className="size-3" />
-            {t("toolsFigure_prMerged")}
-          </span>
-        </div>
-        <p className="mt-2 truncate font-medium">
-          {t("toolsFigure_prTitle")} <span className="font-normal text-muted-foreground">#{PR_NUMBER}</span>
-        </p>
-        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <HugeiconsIcon icon={CheckmarkCircle02Icon} className="size-3.5 text-green-600 dark:text-green-500" />
-          {t("toolsFigure_checks")}
-        </p>
+        <PullRequestPreviewFace
+          provider="github"
+          repository="aurora/web"
+          state="merged"
+          title={t("toolsFigure_prTitle")}
+          number={PR_NUMBER}
+          checks={{ status: "passed", count: 0, names: [] }}
+          checksLabel={t("toolsFigure_checks")}
+          oneLineTitle
+        />
       </div>
       <div className="absolute top-24 left-10 w-[19rem] rounded-2xl bg-background shadow-lg shadow-black/5">
         <IssueCardFace

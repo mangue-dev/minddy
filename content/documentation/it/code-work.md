@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-02",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -54,14 +54,16 @@
       "lib/use-link-issues-to-pull-request.ts",
       "lib/pr-issue-status.ts",
       "lib/pr-merge-intent.ts",
-      "components/issue-pr-context.tsx"
+      "components/issue-pr-context.tsx",
+      "components/issue-pr-chip.tsx",
+      "components/pull-requests/pr-hover-card.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (card right-click menu: linked pull request entries grouped under a Pull request submenu with View pull request in its own tab, Merge, Enable/Disable auto-merge, Link to a pull request and Unlink from pull request; Link the other issues to #N from a selected card; cards move to the status the pull request implies when linked; auto-merge named in the readiness tooltip; checked against components/use-issue-menu-actions.tsx, lib/use-link-issues-to-pull-request.ts, lib/pr-issue-status.ts, lib/pr-merge-intent.ts and components/issue-pr-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card menu)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
+    "language": "agent:claude-code (it changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-02"
   },
   "related": [
     "issues",
@@ -84,7 +86,7 @@
       "src": "/documentation/it/review-pull-requests-workflow.png",
       "alt": "Scheda Modifiche della PR dimostrativa aperta, con il diff di greeting e l’avviso di autorizzazione GitHub non disponibile.",
       "caption": "PR dimostrativa che rimane aperta, non unita. Il diff rimuove gli spazi intorno al nome e usa World quando il valore è vuoto. Questa istanza non può richiedere l’autorizzazione dell’utente su GitHub: lo stato di disponibilità non concede il permesso di unione né dimostra che la CI del fornitore sia riuscita.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -121,7 +123,7 @@ Il contenuto del prompt, il nome di branch suggerito e le regole di lingua sono 
 
 Quando il repository è collegato al progetto, inserisci l’identificatore del ticket nel nome del branch, nel titolo della pull request o in una riga `Fixes MIN-42`. Minddy collega allora la pull request al ticket, e i prompt successivi chiedono all’agente di proseguire la pull request aperta sul suo branch. Per collegare un ticket a mano, usa **Collega un ticket** sulla pull request: la palette dei comandi si apre sui ticket del progetto e quello scelto viene collegato dopo la conferma. La sua ricerca accetta un identificatore o parole del titolo, e una descrizione mostra anche ticket del progetto trovati [per significato](/docs/navigation#search-by-meaning) sotto **Correlati per significato**.
 
-Da una board, fai clic con il tasto destro su un ticket senza pull request aperta e scegli **Collega a una pull request** per selezionare nella palette dei comandi una delle pull request aperte del suo progetto, bozze comprese. La voce compare solo quando quel progetto ha almeno una pull request da collegare. Con più ticket selezionati, **Azioni** offre la stessa scelta per l’intera selezione, e **Collega gli altri ticket a #N** quando alcuni hanno già la pull request N; anche il clic destro su uno dei ticket selezionati offre **Collega gli altri ticket a #N**. **Collega a una pull request** non viene più proposto appena un ticket selezionato ha una pull request collegata; **Scollega N ticket dalle loro pull request** rimuove prima tutti i collegamenti della selezione, dopo la tua conferma. I collegamenti compaiono subito sulle schede, e ogni scheda passa subito allo stato che la sua pull request implica, per esempio **In revisione** per una pull request aperta; un collegamento rifiutato scompare quando la board si aggiorna. Una scheda con una pull request aperta mostra il suo numero, colorato in base allo stato, e il suo stato di unione, lo stesso indicatore di **Revisione del codice**; quando l’unione automatica è attiva, il suo tooltip aggiunge **Unione automatica** dopo lo stato.
+Da una board, fai clic con il tasto destro su un ticket senza pull request aperta e scegli **Collega a una pull request** per selezionare nella palette dei comandi una delle pull request aperte del suo progetto, bozze comprese. La voce compare solo quando quel progetto ha almeno una pull request da collegare. Con più ticket selezionati, **Azioni** offre la stessa scelta per l’intera selezione, e **Collega gli altri ticket a #N** quando alcuni hanno già la pull request N; anche il clic destro su uno dei ticket selezionati offre **Collega gli altri ticket a #N**. **Collega a una pull request** non viene più proposto appena un ticket selezionato ha una pull request collegata; **Scollega N ticket dalle loro pull request** rimuove prima tutti i collegamenti della selezione, dopo la tua conferma. I collegamenti compaiono subito sulle schede, e ogni scheda passa subito allo stato che la sua pull request implica, per esempio **In revisione** per una pull request aperta; un collegamento rifiutato scompare quando la board si aggiorna. Una scheda con una pull request aperta mostra il suo numero, colorato in base allo stato, e il suo stato di unione, lo stesso indicatore di **Revisione del codice**; quando l’unione automatica è attiva, il suo tooltip aggiunge **Unione automatica** dopo lo stato. Passa il puntatore sul numero, o sull’etichetta della pull request in cima al pannello del ticket, per vedere repository, stato e titolo della pull request e, finché è aperta o in bozza, lo stato dei suoi controlli. Fai clic sulla scheda per aprire la pull request.
 
 Quando un ticket ha una pull request collegata, il suo menu del clic destro raccoglie le azioni di quella pull request in un sottomenu **Pull request**. **Visualizza pull request** apre la pull request in una propria scheda dell’app, o passa alla scheda che la mostra già. **Unisci** compare quando la pull request è aperta e pronta per l’unione e il tuo account del fornitore può scrivere nel repository; apre la pull request sulla sua consueta conferma di unione, dove scegli il metodo e il messaggio di commit, oppure usi **Unisci con Numo**. **Abilita unione automatica** compare finché la pull request non può ancora essere unita e il repository consente l’unione automatica; **Disabilita unione automatica** la sostituisce quando l’unione automatica è attiva. Quando la pull request collegata è unita o chiusa, **Collega a una pull request** collega il ticket a un’altra pull request aperta del progetto. **Scollega dalla pull request**, separata e in rosso in fondo al sottomenu, rimuove il collegamento dopo la tua conferma.
 

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 21,
+  "revision": 23,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-02",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -54,14 +54,16 @@
       "lib/use-link-issues-to-pull-request.ts",
       "lib/pr-issue-status.ts",
       "lib/pr-merge-intent.ts",
-      "components/issue-pr-context.tsx"
+      "components/issue-pr-context.tsx",
+      "components/issue-pr-chip.tsx",
+      "components/pull-requests/pr-hover-card.tsx"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (card right-click menu: linked pull request entries grouped under a Pull request submenu with View pull request in its own tab, Merge, Enable/Disable auto-merge, Link to a pull request and Unlink from pull request; Link the other issues to #N from a selected card; cards move to the status the pull request implies when linked; auto-merge named in the readiness tooltip; checked against components/use-issue-menu-actions.tsx, lib/use-link-issues-to-pull-request.ts, lib/pr-issue-status.ts, lib/pr-merge-intent.ts and components/issue-pr-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card menu)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
+    "language": "agent:claude-code (es changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-02"
   },
   "related": [
     "issues",
@@ -84,7 +86,7 @@
       "src": "/documentation/es/review-pull-requests-workflow.png",
       "alt": "Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.",
       "caption": "PR de demostración que sigue abierta, sin fusionar. Las diferencias eliminan los espacios alrededor del nombre y usan World para un valor vacío. Esta instancia no puede solicitar autorización de usuario de GitHub; la indicación de disponibilidad no concede permisos para fusionar ni demuestra que la CI del proveedor haya pasado.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -121,7 +123,7 @@ El contenido del prompt, la rama sugerida y las reglas de idioma se describen en
 
 Cuando el repositorio está vinculado al proyecto, mantén el identificador de la incidencia en el nombre de la rama, en el título de la pull request o en una línea `Fixes MIN-42`. Minddy vincula entonces la pull request a la incidencia, y los prompts siguientes indican al agente que continúe la pull request abierta en su rama. Para vincular una incidencia a mano, usa **Vincular una incidencia** en la pull request: la paleta de comandos se abre con las incidencias del proyecto y la elegida se vincula tras confirmar. Su búsqueda acepta un identificador o palabras del título, y una descripción también muestra incidencias del proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
 
-Desde un tablero, haz clic derecho en una incidencia sin pull request abierta y elige **Vincular a una pull request** para escoger en la paleta de comandos una de las pull requests abiertas de su proyecto, incluidos los borradores. La opción solo aparece cuando ese proyecto tiene al menos una pull request que vincular. Con varias incidencias seleccionadas, **Acciones** ofrece la misma opción para toda la selección, y **Vincular las demás incidencias a #N** cuando algunas ya tienen la pull request N; al hacer clic derecho en una de las incidencias seleccionadas también aparece **Vincular las demás incidencias a #N**. **Vincular a una pull request** deja de ofrecerse en cuanto una incidencia seleccionada tiene alguna pull request vinculada; **Desvincular N incidencias de sus pull requests** quita primero todos los vínculos de la selección, después de que lo confirmes. Los vínculos aparecen al instante en las tarjetas, y cada tarjeta pasa enseguida al estado que implica su pull request, por ejemplo **En revisión** para una pull request abierta; un vínculo rechazado desaparece cuando el tablero se actualiza. Una tarjeta con una pull request abierta muestra su número, coloreado según su estado, y su preparación para la fusión, el mismo indicador que en **Revisión de código**; cuando el auto-merge está activado, su descripción emergente añade **Auto-merge** tras el estado.
+Desde un tablero, haz clic derecho en una incidencia sin pull request abierta y elige **Vincular a una pull request** para escoger en la paleta de comandos una de las pull requests abiertas de su proyecto, incluidos los borradores. La opción solo aparece cuando ese proyecto tiene al menos una pull request que vincular. Con varias incidencias seleccionadas, **Acciones** ofrece la misma opción para toda la selección, y **Vincular las demás incidencias a #N** cuando algunas ya tienen la pull request N; al hacer clic derecho en una de las incidencias seleccionadas también aparece **Vincular las demás incidencias a #N**. **Vincular a una pull request** deja de ofrecerse en cuanto una incidencia seleccionada tiene alguna pull request vinculada; **Desvincular N incidencias de sus pull requests** quita primero todos los vínculos de la selección, después de que lo confirmes. Los vínculos aparecen al instante en las tarjetas, y cada tarjeta pasa enseguida al estado que implica su pull request, por ejemplo **En revisión** para una pull request abierta; un vínculo rechazado desaparece cuando el tablero se actualiza. Una tarjeta con una pull request abierta muestra su número, coloreado según su estado, y su preparación para la fusión, el mismo indicador que en **Revisión de código**; cuando el auto-merge está activado, su descripción emergente añade **Auto-merge** tras el estado. Pasa el puntero por el número, o por la etiqueta de la pull request en la parte superior del panel de la incidencia, para ver el repositorio, el estado y el título de la pull request y, mientras esté abierta o en borrador, cómo van sus comprobaciones. Haz clic en la tarjeta para abrir la pull request.
 
 Cuando una incidencia tiene una pull request vinculada, su menú del clic derecho agrupa las acciones de esa pull request en un submenú **Pull request**. **Ver pull request** abre la pull request en una pestaña propia, o cambia a la pestaña que ya la muestra. **Fusionar** aparece cuando la pull request está abierta y puede fusionarse, y tu cuenta del proveedor puede escribir en el repositorio; abre la pull request en su confirmación de fusión habitual, donde eliges el método y el mensaje del commit, o usas **Fusionar con Numo**. **Activar auto-merge** aparece mientras la pull request todavía no puede fusionarse y el repositorio permite el auto-merge; **Desactivar auto-merge** lo sustituye cuando el auto-merge está activado. Cuando la pull request vinculada está fusionada o cerrada, **Vincular a una pull request** vincula la incidencia a otra pull request abierta del proyecto. **Desvincular de la pull request**, aparte y en rojo al final del submenú, quita el vínculo después de que lo confirmes.
 

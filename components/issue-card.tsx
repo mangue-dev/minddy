@@ -62,6 +62,7 @@ import {
 import { useIssuePr, useIssuePrReadiness, useIssuePrStore } from "@/components/issue-pr-context";
 import { bulkPullRequestLinks } from "@/lib/bulk-pull-request-links";
 import { PrReadinessIcon } from "@/components/pull-requests/pr-readiness";
+import { PullRequestHoverCard } from "@/components/pull-requests/pr-hover-card";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
 import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
@@ -614,24 +615,25 @@ function CommentFollowUpPick({
 }
 
 /** The pull request in the card header, in place of the plan. Clicking opens
-    its review. Read-only (a span without a handler) in the drag overlay / public board.
+    its review; hovering shows where it stands (MIN-888). Read-only (a span
+    without a handler) in the drag overlay / public board.
 
     The colors are GitHub's, as everywhere else: GREEN when open,
     PURPLE when merged, NEUTRAL when the PR is still a draft. The color and
     icon already say the state, so the chip shows the PR's number (MIN-735);
-    the state words stay in the tooltip and for screen readers. */
+    the state words stay in the hover card and for screen readers. */
 function PrPick({
-  state,
-  number,
+  pr,
+  readiness,
   onOpen,
 }: {
-  state: IssuePr["state"];
-  number: number;
+  pr: IssuePr;
+  readiness?: IssuePrReadiness | null;
   onOpen?: () => void;
 }) {
   const t = useTranslations("Agent");
-  const { label: stateLabel, tone, hover } = pullRequestChip(state, t);
-  const content = <IssueCardPullRequestContent state={state} number={number} />;
+  const { label: stateLabel, tone, hover } = pullRequestChip(pr.state, t);
+  const content = <IssueCardPullRequestContent state={pr.state} number={pr.prNumber} />;
   if (!onOpen) {
     return (
       <span className={cn("flex items-center gap-1 text-[11px] font-medium", tone)}>
@@ -640,27 +642,24 @@ function PrPick({
     );
   }
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-label={`${t("viewPullRequest")} #${number}, ${stateLabel}`}
-          onClick={(e) => {
-            stop(e);
-            onOpen();
-          }}
-          onPointerDown={stop}
-          className={cn(
-            "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium outline-none transition-colors",
-            tone,
-            hover,
-          )}
-        >
-          {content}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent>{`${t("viewPullRequest")} · ${stateLabel}`}</TooltipContent>
-    </Tooltip>
+    <PullRequestHoverCard pr={pr} readiness={readiness} onOpen={onOpen}>
+      <button
+        type="button"
+        aria-label={`${t("viewPullRequest")} #${pr.prNumber}, ${stateLabel}`}
+        onClick={(e) => {
+          stop(e);
+          onOpen();
+        }}
+        onPointerDown={stop}
+        className={cn(
+          "flex items-center gap-1 rounded-md px-1 py-0.5 text-[11px] font-medium outline-none transition-colors",
+          tone,
+          hover,
+        )}
+      >
+        {content}
+      </button>
+    </PullRequestHoverCard>
   );
 }
 
@@ -843,7 +842,7 @@ export const IssueCardBody = memo(function IssueCardBody({
         // An actionable PR takes the place of plan progress.
         activity: pr && isPrWorthShowing(pr) ? (
           <span className="flex items-center gap-0.5">
-            <PrPick state={pr.state} number={pr.prNumber} onOpen={onOpenPr} />
+            <PrPick pr={pr} readiness={prReadiness} onOpen={onOpenPr} />
             {prReadiness && pr.state === "open" ? (
               <PrReadinessIcon readiness={prReadiness.readiness} unavailable={prReadiness.unavailable}
                 autoMerge={!!prReadiness.flow?.active} />
