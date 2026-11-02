@@ -54,6 +54,7 @@ import {
 } from "@/lib/issue-hierarchy";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssuePullRequestQuery } from "@/lib/use-agent-runs";
+import { useIssuePrReadiness } from "@/components/issue-pr-context";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import {
   buildIssueCommentsPrompt,
@@ -321,6 +322,8 @@ export function IssueSidePanel({
   // the board's PR provider does not exist (Pull requests page, feedback
   // board). A ticket can carry one opened by anyone.
   const pullRequest = useIssuePullRequestQuery(issue?.id ?? null);
+  // Over a board, the readiness it already read; elsewhere the card reads it.
+  const prReadiness = useIssuePrReadiness(issue?.id ?? "");
 
   // Cycle (MIN-32): the panel reads the current cycle itself rather than
   // brought down by its four callers — the hook is already spoiled by the
@@ -992,7 +995,7 @@ export function IssueSidePanel({
               </SidePanelTitle>
               {/* A PR to reread: the only state that deserves the header —
                   the rest is in the “⋯” menu. */}
-              <IssuePrChip pr={pullRequest} onOpenPr={openPr} />
+              <IssuePrChip pr={pullRequest} readiness={prReadiness} onOpenPr={openPr} />
               {/* Voice editing — Numo turns dictated commands into field updates */}
               {readOnly ? null : numoBusy ? (
                 <>

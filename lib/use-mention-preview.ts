@@ -9,7 +9,7 @@ const FRESH_MS = 60_000;
 /** Bumped when a card's shape changes, so no cache answers in the old one.
     Cards are never persisted (lib/query-provider.tsx); this covers the ones a
     snapshot saved before that rule. */
-const SHAPE = 3;
+const SHAPE = 4;
 
 export const mentionPreviewKey = (type: PreviewMentionType, id: string, project: string | null) =>
   ["mention-preview", SHAPE, type, id, project ?? ""] as const;

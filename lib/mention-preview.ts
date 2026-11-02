@@ -3,6 +3,7 @@ import type { MentionLinkType } from "@/lib/mention-link";
 import type { DatabasePropertyType } from "@/lib/page-databases";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 import type { ProjectRole } from "@/lib/project-roles";
+import type { RepoProviderId } from "@/lib/repo-providers";
 import type { DisplayRelation } from "@/lib/relation-constants";
 import type { IssueCardCategory, IssueCardIssue, IssueCardObjective, Member } from "@/lib/types";
 
@@ -160,6 +161,8 @@ export interface PullRequestPreview {
   number: number;
   title: string | null;
   state: "draft" | "open" | "merged" | "closed";
+  /** The forge, for its logo on the issue chip's card (MIN-888). */
+  provider: RepoProviderId;
   repository: string;
   headBranch: string | null;
   baseBranch: string | null;

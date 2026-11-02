@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 21,
+  "revision": 22,
+  "sourceRevision": 22,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-02",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -54,14 +54,16 @@
       "lib/use-link-issues-to-pull-request.ts",
       "lib/pr-issue-status.ts",
       "lib/pr-merge-intent.ts",
-      "components/issue-pr-context.tsx"
+      "components/issue-pr-context.tsx",
+      "components/issue-pr-chip.tsx",
+      "components/pull-requests/pr-hover-card.tsx"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (card right-click menu: linked pull request entries grouped under a Pull request submenu with View pull request in its own tab, Merge, Enable/Disable auto-merge, Link to a pull request and Unlink from pull request; Link the other issues to #N from a selected card; cards move to the status the pull request implies when linked; auto-merge named in the readiness tooltip; checked against components/use-issue-menu-actions.tsx, lib/use-link-issues-to-pull-request.ts, lib/pr-issue-status.ts, lib/pr-merge-intent.ts and components/issue-pr-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card menu)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
+    "language": "agent:claude-code (fr changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-02"
   },
   "related": [
     "issues",
@@ -84,7 +86,7 @@
       "src": "/documentation/fr/review-pull-requests-workflow.png",
       "alt": "Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.",
       "caption": "PR de démonstration qui reste ouverte, sans fusion. Le diff supprime les espaces autour du nom et utilise World pour une valeur vide. Cette instance ne peut pas demander l’autorisation utilisateur GitHub ; le libellé de disponibilité ne donne pas le droit de fusionner et ne prouve pas que la CI du fournisseur a réussi.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -121,7 +123,7 @@ Le contenu du prompt, la suggestion de branche et les règles de langue sont dé
 
 Lorsque le dépôt est lié au projet, conservez l’identifiant du ticket dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42`. Minddy rattache alors la pull request au ticket, et les prompts suivants demandent à l’agent de poursuivre la pull request ouverte sur sa branche. Pour rattacher un ticket à la main, utilisez **Lier un ticket** sur la pull request : la palette de commandes s’ouvre sur les tickets du projet, et le ticket choisi est lié après confirmation. Sa recherche accepte un identifiant ou des mots du titre, et une description liste aussi des tickets du projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**.
 
-Depuis un board, faites un clic droit sur un ticket sans pull request ouverte et choisissez **Lier à une pull request** pour choisir dans la palette de commandes l’une des pull requests ouvertes de son projet, brouillons compris. L’entrée n’apparaît que si ce projet en a au moins une à lier. Avec plusieurs tickets sélectionnés, **Actions** propose le même choix pour toute la sélection, ainsi que **Lier les autres tickets à #N** quand certains ont déjà la pull request N ; le clic droit sur l’un des tickets sélectionnés propose aussi **Lier les autres tickets à #N**. **Lier à une pull request** n’est plus proposé dès qu’un ticket sélectionné a une pull request liée ; **Délier N tickets de leurs pull requests** retire d’abord tous les liens de la sélection, après votre confirmation. Les liens s’affichent tout de suite sur les cartes, et chaque carte passe aussitôt au statut qu’implique sa pull request, par exemple **En revue** pour une pull request ouverte ; un lien refusé disparaît au rafraîchissement du board. Une carte avec une pull request ouverte affiche son numéro, coloré selon son état, et son état de fusion, le même indicateur que dans **Code review** ; quand l’auto-merge est activé, son infobulle ajoute **Auto-merge** après l’état.
+Depuis un board, faites un clic droit sur un ticket sans pull request ouverte et choisissez **Lier à une pull request** pour choisir dans la palette de commandes l’une des pull requests ouvertes de son projet, brouillons compris. L’entrée n’apparaît que si ce projet en a au moins une à lier. Avec plusieurs tickets sélectionnés, **Actions** propose le même choix pour toute la sélection, ainsi que **Lier les autres tickets à #N** quand certains ont déjà la pull request N ; le clic droit sur l’un des tickets sélectionnés propose aussi **Lier les autres tickets à #N**. **Lier à une pull request** n’est plus proposé dès qu’un ticket sélectionné a une pull request liée ; **Délier N tickets de leurs pull requests** retire d’abord tous les liens de la sélection, après votre confirmation. Les liens s’affichent tout de suite sur les cartes, et chaque carte passe aussitôt au statut qu’implique sa pull request, par exemple **En revue** pour une pull request ouverte ; un lien refusé disparaît au rafraîchissement du board. Une carte avec une pull request ouverte affiche son numéro, coloré selon son état, et son état de fusion, le même indicateur que dans **Code review** ; quand l’auto-merge est activé, son infobulle ajoute **Auto-merge** après l’état. Survolez le numéro, ou la pastille de la pull request en haut du panneau du ticket, pour voir le dépôt, l’état et le titre de la pull request et, tant qu’elle est ouverte ou en brouillon, où en sont ses checks. Cliquez sur la carte pour ouvrir la pull request.
 
 Quand un ticket a une pull request liée, son menu du clic droit regroupe les actions de cette pull request dans un sous-menu **Pull request**. **Voir la pull request** ouvre la pull request dans un onglet à part, ou bascule sur l’onglet qui l’affiche déjà. **Fusionner** apparaît lorsque la pull request est ouverte et peut être fusionnée, et que votre compte fournisseur peut écrire dans le dépôt ; l’action ouvre la pull request sur sa confirmation de fusion habituelle, où vous choisissez la méthode et le message de commit, ou **Fusionner avec Numo**. **Activer l’auto-merge** apparaît tant que la pull request ne peut pas encore être fusionnée et que le dépôt autorise l’auto-merge ; **Désactiver l’auto-merge** le remplace une fois l’auto-merge activé. Quand la pull request liée est fusionnée ou fermée, **Lier à une pull request** lie le ticket à une autre pull request ouverte du projet. **Délier de la pull request**, à part et en rouge en bas du sous-menu, retire le lien après votre confirmation.
 
