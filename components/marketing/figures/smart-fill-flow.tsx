@@ -214,14 +214,14 @@ function Composer({ text, typed, number }: { text: string; typed: number; number
   );
 }
 
-/** A value Smart Fill just set: it fades in where it lands. */
+/** A value Smart Fill or Smart Assign just set: it fades in where it is, without moving. */
 function Landed({ value, children }: { value: string; children: ReactNode }) {
   return (
     <motion.span
       key={value}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
       className="flex"
     >
       {children}
