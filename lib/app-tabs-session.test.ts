@@ -446,6 +446,63 @@ describe("application tab sessions", () => {
     expect(rows().find((row) => row.id === admin.id)?.href).toBe("/admin");
     session.dispose();
   });
+  describe("a reload whose address carries short codes where the row holds full ids", () => {
+    // Navigation writes short codes into the address while a stored row, and
+    // the window's memory, may still hold full ids (MIN-875). Both name the
+    // same destination: comparing them raw read the reload as an unmatched
+    // deep link and claimed a duplicate row on every reload (MIN-887).
+    const project = "3f2a9c81-1111-4222-8333-444455556666";
+    const objective = "ab12cd34-1111-4222-8333-444455556666";
+    const stored = `/projects/${project}?objective=${objective}`;
+    const address = "/projects/min-3f2a9c81?objective=ab12cd34";
+
+    it("restores the remembered tab", async () => {
+      const home = { ...createHomeTab("owner"), href: "/home" };
+      const board = { ...createHomeTab("owner", undefined, 1), href: stored };
+      const { session, transport, navigate, rows } = setup([home, board]);
+      try {
+        await session.initialize(address, { id: board.id, href: stored });
+        expect(session.getSnapshot().activeId).toBe(board.id);
+        expect(session.getSnapshot().tabs).toHaveLength(2);
+        expect(navigate).not.toHaveBeenCalled();
+        expect(transport.create).not.toHaveBeenCalled();
+        expect(rows().find((row) => row.id === home.id)?.href).toBe("/home");
+      } finally { session.dispose(); }
+    });
+
+    it("restores the row that displays it when the remembered row was closed elsewhere", async () => {
+      const home = { ...createHomeTab("owner"), href: "/home" };
+      const board = { ...createHomeTab("owner", undefined, 1), href: stored };
+      const { session, transport } = setup([home, board]);
+      try {
+        await session.initialize(address, { id: "closed-elsewhere", href: stored });
+        expect(session.getSnapshot().activeId).toBe(board.id);
+        expect(transport.create).not.toHaveBeenCalled();
+      } finally { session.dispose(); }
+    });
+
+    it("finds the row without a window memory", async () => {
+      const home = { ...createHomeTab("owner"), href: "/home" };
+      const board = { ...createHomeTab("owner", undefined, 1), href: stored };
+      const { session, transport } = setup([home, board]);
+      try {
+        await session.initialize(address);
+        expect(session.getSnapshot().activeId).toBe(board.id);
+        expect(session.getSnapshot().tabs).toHaveLength(2);
+        expect(transport.create).not.toHaveBeenCalled();
+      } finally { session.dispose(); }
+    });
+
+    it("still claims a row for another record of the same page", async () => {
+      const board = { ...createHomeTab("owner"), href: stored };
+      const { session } = setup([board]);
+      try {
+        await session.initialize("/projects/min-3f2a9c81?objective=99999999", { id: board.id, href: stored });
+        expect(session.getSnapshot().tabs).toHaveLength(2);
+        expect(session.getSnapshot().activeId).not.toBe(board.id);
+      } finally { session.dispose(); }
+    });
+  });
   it("restores every surface whose selection is kept out of the address", async () => {
     // The same prefix rule must hold wherever a page publishes the href that
     // reconstructs it while cleaning its address: the boards consume ?view=,
