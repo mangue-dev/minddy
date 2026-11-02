@@ -1,61 +1,58 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUpRight01Icon, Download01Icon } from "@hugeicons/core-free-icons";
+import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Github } from "@/components/git/provider-icons";
-import { TrackedCta } from "./tracked-cta";
-import { ScreenshotSlot } from "./screenshot-slot";
+import { PlatformDownloadLink } from "./platform-download-link";
+import { HeroBoard } from "./figures/hero-board";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
 
-/** Lead with the workspace itself, using the visitor's language and system theme. */
+/** Lead with what minddy does for you, over the real board running on its own. */
 export async function Hero() {
   const t = await getTranslations("Landing");
   const locale = await getLocale() as Locale;
 
   return (
-    <section className="px-4 pt-30 pb-12 sm:px-6 sm:pt-40 sm:pb-16">
-      <div className="mx-auto w-full max-w-6xl">
-        <div className="max-w-5xl">
-          <h1 className="text-[clamp(2.5rem,5.8vw,5rem)] leading-[1.06] font-medium tracking-[-0.055em] text-balance">
-            {t("heroTitleBefore")}
-            <span className="mt-1 block text-muted-foreground">{t("heroTitleAccent")}</span>
-          </h1>
-          <div className="mt-7 flex flex-col gap-7">
-            <p className="max-w-xl text-base leading-relaxed text-pretty text-muted-foreground sm:text-lg">
-              {t("heroSubtitle")}
-            </p>
-            <div className="shrink-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <Button asChild size="lg" className="rounded-full">
-                  <TrackedCta href={localizedHref("/download", locale)} location="hero">
-                    {t("downloadMinddy")}
-                    <HugeiconsIcon icon={Download01Icon} data-icon="inline-end" />
-                  </TrackedCta>
-                </Button>
-                <a
-                  href={MINDDY_REPOSITORY_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-medium transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
-                >
-                  <Github className="size-4" aria-hidden />
-                  {t("heroCtaSecondary")}
-                  <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" aria-hidden />
-                </a>
-              </div>
-            </div>
-          </div>
+    <section className="relative isolate flex min-h-[min(calc(100svh-4rem),56rem)] flex-col overflow-hidden px-4 pt-16 pb-10 sm:px-6 sm:pt-20 sm:pb-12">
+      {/* The board, tilted away and filling the whole hero behind the copy. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-20 flex justify-center">
+        <div className="mt-[30rem] origin-top [transform:perspective(1800px)_rotateX(26deg)_scale(var(--board-scale))] [--board-scale:0.62] sm:mt-[19rem] sm:[--board-scale:0.85] lg:mt-[18.5rem] lg:[--board-scale:1.05] 2xl:mt-[19rem] 2xl:[--board-scale:1.3]">
+          <HeroBoard />
         </div>
-
-        <figure className="mt-10 sm:mt-14">
-          <div className="rounded-xl border border-border bg-[#e9ede4] p-2 sm:p-5 dark:bg-[#252c25]">
-            <ScreenshotSlot id="heroBoard" priority sizes="(min-width: 1200px) 1108px, calc(100vw - 64px)" className="shadow-lg shadow-black/5" />
-          </div>
-        </figure>
       </div>
+      {/* A veil: soft behind the copy and the buttons, clear over the board, faded into the next section. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_42%_24%_at_50%_24%,color-mix(in_oklab,var(--background)_90%,transparent)_55%,transparent_100%),radial-gradient(ellipse_30%_14%_at_50%_100%,var(--background)_40%,transparent_100%),linear-gradient(to_bottom,transparent_88%,var(--background))]"
+      />
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center text-center">
+        <h1 className="text-[clamp(2.25rem,4.8vw,4rem)] leading-[1.05] font-medium tracking-[-0.05em] text-balance">
+          {t("heroTitle")}
+        </h1>
+        <p className="mt-4 max-w-lg text-base leading-relaxed text-pretty text-muted-foreground sm:text-[17px]">
+          {t("heroLede")}
+        </p>
+      </div>
+      {/* From sm, at the bottom under the two middle columns, which the board keeps short; on a phone, under the copy. */}
+      <div className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:mt-auto sm:pt-10">
+        <Button asChild size="lg" className="rounded-full shadow-lg shadow-primary/20">
+          <PlatformDownloadLink href={localizedHref("/download", locale)} location="hero" />
+        </Button>
+        <a
+          href={MINDDY_REPOSITORY_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-background/80 px-4 text-sm font-medium shadow-sm ring-1 ring-border backdrop-blur transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+        >
+          <Github className="size-4" aria-hidden />
+          {t("heroCtaSecondary")}
+          <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5" aria-hidden />
+        </a>
+      </div>
+      <p className="sr-only">{t("heroFlow_alt")}</p>
     </section>
   );
 }

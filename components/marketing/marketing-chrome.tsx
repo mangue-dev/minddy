@@ -8,5 +8,6 @@ import { routeByPath } from "@/lib/public-routes";
 export function MarketingChrome({ children, navigation, footer }: { children: ReactNode; navigation: ReactNode; footer: ReactNode }) {
   const route = routeByPath(usePathname())?.key;
   if (route === "selfHosting" || route === "selfHostingInstall") return children;
-  return <>{navigation}<main className="flex-1">{children}</main>{footer}</>;
+  // Product images on the public pages are pictures, not content to drag or select.
+  return <>{navigation}<main className="flex-1 [&_img]:select-none [&_img]:[-webkit-user-drag:none]">{children}</main>{footer}</>;
 }

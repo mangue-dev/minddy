@@ -227,10 +227,12 @@ interface DictationWaveProps {
   stream: MediaStream | null;
   /** The take is being transcribed: a fixed, repeating wave. */
   busy?: boolean;
+  /** Hold the wave still, as under reduced motion: a picture of it (the landing). */
+  still?: boolean;
   className?: string;
 }
 
-export function DictationWave({ stream, busy = false, className }: DictationWaveProps) {
+export function DictationWave({ stream, busy = false, still = false, className }: DictationWaveProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fallback, setFallback] = useState(
     () => typeof window !== "undefined" && typeof WebGLRenderingContext === "undefined",
@@ -321,7 +323,7 @@ export function DictationWave({ stream, busy = false, className }: DictationWave
       }
     }
     const frequencies = new Uint8Array(analyser?.frequencyBinCount ?? 0);
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const reducedMotion = still || (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
 
     let low = 0;
     let mid = 0;
@@ -379,7 +381,7 @@ export function DictationWave({ stream, busy = false, className }: DictationWave
       gl.deleteShader(fs);
       gl.deleteBuffer(buffer);
     };
-  }, [stream, busy, fallback]);
+  }, [stream, busy, still, fallback]);
 
   if (fallback) return <DictateWaveform stream={stream} className={className} barClassName="bg-foreground" />;
   return <canvas ref={canvasRef} aria-hidden className={cn("block h-10 w-full", className)} />;

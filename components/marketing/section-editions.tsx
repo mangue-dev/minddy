@@ -1,9 +1,10 @@
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, ArrowUpRight01Icon, CloudIcon, ServerIcon as Server, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, ArrowUpRight01Icon, ServerIcon as Server, CheckIcon } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Github } from "@/components/git/provider-icons";
 import { AppIcon } from "@/components/icon";
+import { MinddyLogo } from "@/components/minddy-logo";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
@@ -15,7 +16,7 @@ export async function SectionEditions() {
   const [t, locale, td] = await Promise.all([getTranslations("Landing"), getLocale(), getTranslations("Documentation")]);
   const href = (path: string) => localizedHref(path, locale as Locale);
   const editions = [
-    { title: t("cloudTitle"), body: t("cloudBody"), icon: CloudIcon, tone: CARD_TONES.sky,
+    { title: t("cloudTitle"), body: t("cloudBody"), icon: "minddy" as const, tone: CARD_TONES.sky,
       points: [t("cloudPointOne"), t("cloudPointTwo"), t("cloudPointThree")], href: href("/pricing"), cta: t("cloudCta") },
     { title: t("selfHostedTitle"), body: t("selfHostedBody"), icon: Server, tone: CARD_TONES.lavender,
       points: [t("selfHostedPointOne"), t("selfHostedPointTwo"), t("selfHostedPointThree")], href: href("/self-hosting/install"), cta: t("selfHostedCta"), referenceHref: href("/docs/installation") },
@@ -27,7 +28,11 @@ export async function SectionEditions() {
         <div className="grid gap-4 md:grid-cols-2">
           {editions.map(edition => (
             <article key={edition.title} className={`flex flex-col rounded-2xl p-7 sm:p-9 ${edition.tone}`}>
-              <AppIcon icon={edition.icon} className="mb-8 size-8" strokeWidth={1.5} aria-hidden />
+              {edition.icon === "minddy" ? (
+                <MinddyLogo className="mb-8 size-8" />
+              ) : (
+                <AppIcon icon={edition.icon} className="mb-8 size-8" strokeWidth={1.5} aria-hidden />
+              )}
               <h3 className="text-3xl font-medium tracking-tight">{edition.title}</h3>
               <p className="mt-4 max-w-lg leading-relaxed opacity-80">{edition.body}</p>
               <ul className="my-8 space-y-4 text-sm leading-relaxed">

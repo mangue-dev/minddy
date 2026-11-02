@@ -5,32 +5,36 @@ import { ArrowDown01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { COMPARISONS } from "@/lib/comparisons";
 import { localizedHref } from "@/lib/locale-href";
 import type { Locale } from "@/i18n/config";
+import { PlatformLogo } from "./download-platform-cards";
+import { PLATFORM_NAMES, useInstallPlatform } from "./platform-download-link";
 
 export type ProductEntryKey =
+  | "ai"
   | "tracker"
   | "speed"
   | "agents"
-  | "numo"
   | "pages"
-  | "feedback"
   | "more"
   | "mcp"
   | "selfHosting"
+  | "compare"
+  | "changelog"
   | "download";
 
 export type ProductEntry = {
-  /** Translation keys use `navMenu_<key>_title` and `navMenu_<key>_desc`. */
+  /** Translation keys use `navMenu_<key>_title`, and `navMenu_<key>_desc` in the first two groups. */
   key: ProductEntryKey;
   href: string;
 };
 
+/** The landing's six sections in its order, three by three, then the product's own pages. */
 const GROUPS: ReadonlyArray<ReadonlyArray<ProductEntryKey>> = [
-  ["tracker", "pages", "feedback"],
-  // Numo first: it is the main entry of its landing section, the connections follow.
-  ["numo", "agents", "speed"],
-  ["more", "mcp", "selfHosting"],
+  ["ai", "agents", "tracker"],
+  ["pages", "speed", "more"],
+  ["mcp", "selfHosting", "compare", "changelog"],
 ];
 const CLOSE_DELAY_MS = 140;
 
@@ -52,6 +56,7 @@ export function NavProductMenu({
   const pointerType = useRef("");
   const closeTimer = useRef<number | null>(null);
   const download = entries.find(entry => entry.key === "download");
+  const platform = useInstallPlatform();
 
   const cancelClose = useCallback(() => {
     if (closeTimer.current !== null) {
@@ -136,12 +141,28 @@ export function NavProductMenu({
                 {group.map(key => {
                   const entry = entries.find(item => item.key === key);
                   if (!entry) return null;
+                  if (key === "compare") {
+                    // One row, one link per comparison page.
+                    return (
+                      <li key={key} className="px-3 py-3">
+                        <span className="block text-sm leading-snug font-medium text-foreground">{t("navMenu_compare_title")}</span>
+                        <span className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[13px]">
+                          {COMPARISONS.map(comparison => (
+                            <a key={comparison.slug} href={localizedHref(`/alternatives/${comparison.slug}`, locale)} onClick={() => setOpen(false)}
+                              className="rounded-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                              {comparison.name}
+                            </a>
+                          ))}
+                        </span>
+                      </li>
+                    );
+                  }
                   return (
                     <li key={key}>
                       <a href={localizedHref(entry.href, locale)} onClick={() => setOpen(false)}
                         className="block rounded-lg px-3 py-3 transition-colors hover:bg-background/65 focus-visible:bg-background/65 focus-visible:outline-2 focus-visible:outline-ring">
                         <span className="block text-sm leading-snug font-medium text-foreground">{t(`navMenu_${key}_title`)}</span>
-                        {index < 2 && <span className="mt-1.5 block text-[13px] leading-relaxed text-pretty text-muted-foreground">{t(`navMenu_${key}_desc`)}</span>}
+                        {index < 2 && key !== "changelog" && <span className="mt-1.5 block text-[13px] leading-relaxed text-pretty text-muted-foreground">{t(`navMenu_${key}_desc`)}</span>}
                       </a>
                     </li>
                   );
@@ -149,11 +170,14 @@ export function NavProductMenu({
               </ul>
             ))}
           </div>
-          {download && <a href={localizedHref(download.href, locale)} onClick={() => setOpen(false)}
+          {download && <a href={localizedHref(download.href, locale) + (platform === "unsupported" ? "" : `#${platform}`)} onClick={() => setOpen(false)}
             className="mt-2 flex items-center justify-between gap-6 rounded-xl px-7 py-4 transition-colors hover:bg-[#eaf0f4] focus-visible:bg-[#eaf0f4] focus-visible:outline-2 focus-visible:outline-ring dark:hover:bg-[#283139] dark:focus-visible:bg-[#283139]">
-            <span className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className="text-sm font-medium text-foreground">{t("downloadMinddy")}</span>
-              <span className="text-[13px] text-muted-foreground">{t("navMenu_download_desc")}</span>
+            <span className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
+              <span className="flex items-center gap-2 text-sm leading-none font-medium text-foreground">
+                {platform !== "unsupported" && <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden><PlatformLogo platform={platform} /></span>}
+                {platform === "unsupported" ? t("downloadMinddy") : t("downloadFor", { platform: PLATFORM_NAMES[platform] })}
+              </span>
+              <span className="text-[13px] leading-none text-muted-foreground">{t("navMenu_download_desc")}</span>
             </span>
             <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-foreground" aria-hidden />
           </a>}

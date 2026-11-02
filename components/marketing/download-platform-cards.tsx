@@ -46,8 +46,9 @@ function PlatformCard({ platform, title, body, tone, children, featured }: {
   featured: boolean;
 }) {
   return (
-    <article data-platform={platform} data-featured={featured || undefined}
-      className={`min-w-0 rounded-2xl p-6 sm:p-8 ${featured ? "flex min-h-[420px] flex-col gap-8 md:col-span-2 md:min-h-[380px] md:flex-row md:items-center md:justify-between md:p-10" : "flex min-h-[340px] flex-col"} ${tone}`}>
+    // `id`: the landing's platform links land on their card (`/download#ios`).
+    <article id={platform} data-platform={platform} data-featured={featured || undefined}
+      className={`min-w-0 scroll-mt-24 rounded-2xl p-6 sm:p-8 ${featured ? "flex min-h-[420px] flex-col gap-8 md:col-span-2 md:min-h-[380px] md:flex-row md:items-center md:justify-between md:p-10" : "flex min-h-[340px] flex-col"} ${tone}`}>
       <div className={featured ? "min-w-0 md:max-w-lg" : ""}>
         <span className={`mb-7 block shrink-0 ${featured ? "size-16" : "size-10"}`}><PlatformLogo platform={platform} /></span>
         <h2 className={`font-medium tracking-[-0.035em] ${featured ? "text-4xl sm:text-5xl" : "text-2xl sm:text-3xl"}`}>{title}</h2>
@@ -146,7 +147,7 @@ export function DownloadPlatformCards({ copy, macRelease, linuxRelease, mobileGu
   );
 }
 
-function PlatformLogo({ platform }: { platform: SupportedInstallPlatform }) {
+export function PlatformLogo({ platform }: { platform: SupportedInstallPlatform }) {
   if (platform === "windows") {
     return (
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">

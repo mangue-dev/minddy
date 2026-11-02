@@ -8,3 +8,22 @@ export const CARD_TONES = {
   rose: "bg-[#f5e7eb] text-[#583642] dark:bg-[#35262d] dark:text-[#f2dfe7]",
   butter: "bg-[#f3f0da] text-[#514b28] dark:bg-[#302e22] dark:text-[#eeebce]",
 } as const;
+
+/**
+ * The same families, lighter: feature cards, where the illustration carries
+ * the color. Each also sets `--point-card`, so what sits on the card (the fade
+ * under its description) can paint with the card's own color. Not `--card`:
+ * that is the theme token `bg-card` reads, which the app's components on the
+ * card (an issue card) need to keep.
+ */
+export const SOFT_TONES = {
+  sage: "bg-(--point-card) [--point-card:#f1f4ee] dark:[--point-card:#1b201c]",
+  mint: "bg-(--point-card) [--point-card:#edf5f1] dark:[--point-card:#18211e]",
+  lavender: "bg-(--point-card) [--point-card:#f4f1f8] dark:[--point-card:#1f1b25]",
+  peach: "bg-(--point-card) [--point-card:#f9f2ea] dark:[--point-card:#231e19]",
+  sky: "bg-(--point-card) [--point-card:#eef2f8] dark:[--point-card:#181e26]",
+  rose: "bg-(--point-card) [--point-card:#f9eff2] dark:[--point-card:#241c20]",
+  butter: "bg-(--point-card) [--point-card:#f7f5e8] dark:[--point-card:#222018]",
+} as const;
+
+export type SoftTone = keyof typeof SOFT_TONES;
