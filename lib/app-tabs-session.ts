@@ -10,7 +10,7 @@ import { AppTabRequestError } from "./app-tabs-api";
  *  destinations. */
 function reopensRemembered(url: string, remembered: string): boolean {
   const parts = (href: string) => {
-    const [body = "", ...hash] = href.split("#");
+    const [body = "", ...hash] = destinationKey(href).split("#");
     const [path = "", query = ""] = body.split("?");
     return { path, params: new URLSearchParams(query), hash: hash.join("#") };
   };
@@ -22,6 +22,13 @@ function reopensRemembered(url: string, remembered: string): boolean {
     if (to.params.get(key) !== value) return false;
   }
   return true;
+}
+
+/** The destination an href names. The address carries short codes while a
+ *  stored row or the window's memory may still hold full ids (MIN-875): raw,
+ *  the two read as different pages and a reload claimed a duplicate row. */
+function destinationKey(href: string): string {
+  return appTabDestinationKey(href) ?? href;
 }
 
 export interface AppTabsTransport {
@@ -205,8 +212,8 @@ export class AppTabsSession {
         // first one under the load URL.
         restoredTab =
           this.snapshot.tabs.find((tab) => {
-            const current = normalizeAppTabLocation(tab.href);
-            return current !== null && current === restoredHref;
+            const current = appTabDestinationKey(tab.href);
+            return current !== null && current === destinationKey(restoredHref);
           }) ?? null;
       }
       // Several surfaces keep their selection out of the address and publish
@@ -223,10 +230,10 @@ export class AppTabsSession {
       // richer one, it reconstructs the selection the URL keeps out of the
       // address (?pr=…).
       const loadWins = Boolean(restoredHref && reopensRemembered(restoredHref, normalized));
-      const remembered = restoredTab && (!explicit || restoredHref === normalized || reloaded || loadWins)
+      const remembered = restoredTab && (!explicit || (restoredHref !== null && destinationKey(restoredHref) === destinationKey(normalized)) || reloaded || loadWins)
         ? restoredTab
         : null;
-      const exact = explicit ? this.snapshot.tabs.find((tab) => tab.href === normalized) ?? null : null;
+      const exact = explicit ? this.snapshot.tabs.find((tab) => destinationKey(tab.href) === destinationKey(normalized)) ?? null : null;
       // A refresh can precede sealing the active-window snapshot. Surfaces
       // publish richer selections than their bare URL, so a unique server row
       // is enough to recover identity without creating another tab. Explicit
