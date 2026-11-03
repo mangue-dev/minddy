@@ -4,6 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { downloadAttachment, signedAttachmentUrl } from "@/lib/server/attachments";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import type { ChatContentPart } from "./loop";
+import { mapWithConcurrency } from "@/lib/map-with-concurrency";
+
+const ATTACHMENT_CONCURRENCY = 3;
 
 // ── Attachments → OpenRouter content parts ───────────────────────────────
 // Shared by the two Numo entry points (assistant shell, @Numo comments).
@@ -215,5 +218,6 @@ export async function buildAttachmentParts(
     return note(a, "not viewable");
   };
 
-  return Promise.all(attachments.map(partFor));
+  // A few downloads at a time keeps several large PDFs from sitting in memory at once.
+  return mapWithConcurrency(attachments, ATTACHMENT_CONCURRENCY, partFor);
 }

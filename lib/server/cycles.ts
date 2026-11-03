@@ -178,8 +178,7 @@ async function reconcileCycles({
   // 1. Close every past cycle that was never closed: snapshot the points
   //    actually completed (done issues keep their cycle_id as history).
   const unclosed = rows
-    .filter((r) => r.end_date <= today && r.completed_points === null)
-    .sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
+    .filter((r) => r.end_date <= today && r.completed_points === null);
   await Promise.all(unclosed.map(async (cycle) => {
     const { data: cycleIssues } = await issueStore(service).select("effort, status")
       .eq("cycle_id", cycle.id)

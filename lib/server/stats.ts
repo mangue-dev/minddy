@@ -254,11 +254,9 @@ export async function getUserStats(
     }
     return names;
   };
-  // The three name reads are independent; a failure is reported in this order.
-  const settled = await Promise.allSettled([readProjectNames(), readObjectiveNames(), readCategoryNames()]);
-  for (const result of settled) if (result.status === "rejected") throw result.reason;
-  const [projectNames, objectiveNames, categoryNames] = settled.map((result) =>
-    (result as PromiseFulfilledResult<Map<string, string>>).value);
+  const [projectNames, objectiveNames, categoryNames] = await Promise.all([
+    readProjectNames(), readObjectiveNames(), readCategoryNames(),
+  ]);
 
   // Best-effort: an error in the RPC cycles (e.g. function not yet deployed)
   // does not invalidate the page — we land on an empty cycles section.

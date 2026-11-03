@@ -152,9 +152,11 @@ export async function GET(request: NextRequest) {
   const myProjectsRead = Promise.resolve(
     auth.supabase.from("projects").select("id").is("deleted_at", null)
   );
-  const newFeedbackPromise = myProjectsRead.then((res) =>
-    loadNewFeedback(((res.data ?? []) as { id: string }[]).map((p) => p.id))
-  );
+  const newFeedbackPromise = myProjectsRead.then((res) => res.error
+    ? { posts: [], total: 0 }
+    : loadNewFeedback(((res.data ?? []) as { id: string }[]).map((p) => p.id)));
+  // An early error response leaves this read unawaited; it must not reject unhandled.
+  newFeedbackPromise.catch(() => undefined);
 
   const prefs = resolveCyclePrefs(
     (auth.user.user_metadata ?? null) as Record<string, unknown> | null

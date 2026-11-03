@@ -23,6 +23,7 @@ import type { AttachmentInput } from "@/lib/types";
 import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getProjectAccess } from "@/lib/server/project-access";
+import { BULK_WRITE_CONCURRENCY, mapWithConcurrency } from "@/lib/map-with-concurrency";
 import { resolveAiRuntime, type ResolvedAiRuntime } from "@/lib/server/ai-runtime";
 import { recordAiUsage, spentFromNumoOperation } from "@/lib/server/ai-usage";
 import { getUserUsage } from "@/lib/server/usage";
@@ -547,8 +548,10 @@ async function buildExecutionInput(input: {
       : [],
   );
 
-  // Each message resolves its mentions and attachments independently.
-  const historyMessages = await Promise.all(history.map(async (message, index): Promise<ChatMessage | null> => {
+  // Each message resolves its mentions and attachments independently; a
+  // bounded number at a time keeps a long history from flooding storage.
+  const historyMessages = await mapWithConcurrency(history, BULK_WRITE_CONCURRENCY,
+    async (message, index): Promise<ChatMessage | null> => {
     const recoveringPendingMessage = message.turn_id === turn.id && (
       (message.role === "assistant" && message.id === recoveringAssistantMessageId)
       || (message.role === "tool" && recoveringToolCallIds.has(message.tool_call_id ?? ""))
@@ -584,7 +587,7 @@ async function buildExecutionInput(input: {
       tool_call_id: message.tool_call_id ?? undefined,
       name: message.tool_name ?? undefined,
     };
-  }));
+  });
   for (const message of historyMessages) if (message) messages.push(message);
   let tools: AssistantToolDef[] = adminGrant
     ? [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS]

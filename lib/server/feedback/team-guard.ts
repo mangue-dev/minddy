@@ -3,7 +3,7 @@ import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getAuthedUserAlongside } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserAlongside } from "@/lib/server/api-auth";
 import {
   accessAllows,
   getProjectAccess,
@@ -36,13 +36,10 @@ export async function requireProjectMember(
   projectId: string,
   capability: Exclude<ProjectCapability, "admin"> = "read"
 ): Promise<TeamGuardResult> {
-  // A side-effect-free service read keyed on the verified claims: it overlaps
-  // the live session check, and a denial discards it.
-  const auth = await getAuthedUserAlongside(request, ({ user }) => getProjectAccess(user.id, projectId));
+  const auth = await getAuthedUser(request);
   if (!auth.ok) return { ok: false, response: auth.response };
-  if ("error" in auth.alongside) throw auth.alongside.error;
-  const access = auth.alongside.value;
   const t = await getTranslations("ApiErrors");
+  const access = await getProjectAccess(auth.user.id, projectId);
   if (!access) {
     return {
       ok: false,

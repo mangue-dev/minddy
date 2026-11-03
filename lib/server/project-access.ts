@@ -219,7 +219,8 @@ export async function getProjectAccess(
 ): Promise<ProjectAccess | null> {
   const supabase = getServiceClient();
 
-  // The membership row is only consulted once the project proves readable.
+  // Both rows are read together: owners discard the membership row, and
+  // members save a round trip. Neither is returned unless the project exists.
   const [{ data: project }, { data: membership }] = await Promise.all([
     supabase
       .from("projects")

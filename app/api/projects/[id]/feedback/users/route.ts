@@ -46,19 +46,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     if (error) return NextResponse.json({ error: "Unable to load feedback users" },
       { status: 500 });
     const rows = data ?? [];
-    // Decode only as many rows at once as places remain, so an unfiltered
-    // list still decrypts exactly the identities it returns.
-    for (let start = 0; start < rows.length && users.length < LIMIT;) {
-      const batch = rows.slice(start, start + LIMIT - users.length);
-      start += batch.length;
-      const decoded = await Promise.all(batch.map((row) =>
-        decodeFeedbackIdentityRow(row, id, guard.userId)));
-      for (const plain of decoded) {
-        if (!needle || plain.email?.toLocaleLowerCase().includes(needle) ||
-            plain.name?.toLocaleLowerCase().includes(needle)) {
-          users.push({ id: plain.id, email: plain.email, name: plain.name,
-            pseudonym: plain.pseudonym });
-        }
+    for (const row of rows) {
+      const plain = await decodeFeedbackIdentityRow(row, id, guard.userId);
+      if (!needle || plain.email?.toLocaleLowerCase().includes(needle) ||
+          plain.name?.toLocaleLowerCase().includes(needle)) {
+        users.push({ id: plain.id, email: plain.email, name: plain.name,
+          pseudonym: plain.pseudonym });
+        if (users.length === LIMIT) break;
       }
     }
     if (rows.length < 200) break;
