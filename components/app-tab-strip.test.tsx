@@ -39,7 +39,7 @@ vi.mock("@/lib/use-invitations-query", () => ({ useMyInvitations: () => ({ invit
 vi.mock("@/lib/use-smart-assign-warnings-query", () => ({ useSmartAssignWarningsQuery: () => ({ warnings: mocks.none }) }));
 vi.mock("@/lib/use-triage-counts-query", () => ({ useTriageCountsQuery: () => ({ counts: mocks.noCounts }) }));
 vi.mock("@/lib/keyboard/use-mod-shortcut", () => ({ useModKey: () => "⌘" }));
-vi.mock("@/lib/use-drag-announcements", () => ({ useDragAnnouncements: () => ({}) }));
+vi.mock("@/lib/use-drag-announcements", () => ({ useDragAnnouncements: () => ({}), useStripInstructions: () => ({ draggable: "" }) }));
 vi.mock("@/lib/app-tab-location", () => ({ appTabRoute: (href: string) => ({ section: href.slice(1) }) }));
 vi.mock("@/components/drag-cursor", () => ({ DragCursor: () => null }));
 vi.mock("@/components/app-tab-icon", () => ({ AppTabIcon: () => null }));

@@ -506,6 +506,7 @@
   },
   "Assistant": {
     "title": "Ask Numo",
+    "replyAnnouncement": "Numo replied.",
     "inputPlaceholder": "Ask Numo anything…",
     "providerUnavailableTitle": "No AI provider is configured",
     "providerUnavailableDescription": "This instance does not include a minddy AI quota. Connect your own API key to use Numo.",
@@ -1992,6 +1993,10 @@
     "actionCustomPrompt": "Custom…",
     "actionLinkObjective": "Link an objective",
     "actionSetDueDate": "Add a due date",
+    "actionReorder": "Reorder",
+    "actionMoveUp": "Move up",
+    "actionMoveDown": "Move down",
+    "actionMoveToTop": "Move to top",
     "promptCopied": "Prompt copied. Paste it into your coding agent.",
     "verifyPromptCopied": "Prompt copied. Paste it into your coding agent to have it verify the implementation.",
     "commentsPromptButton": "Copy prompt for {count, plural, one {# new comment} other {# new comments}}",
@@ -5881,7 +5886,9 @@
     "ai_models_body": "Pick the model Numo uses in each conversation, or bring your own key (BYOK).",
     "navMenu_ai_title": "Built-in AI",
     "navMenu_ai_desc": "Smart Fill, Smart Assign and Numo, your assistant",
-    "navLabel": "Main navigation"
+    "navLabel": "Main navigation",
+    "pauseAnimations": "Pause animations",
+    "playAnimations": "Play animations"
   },
   "Pricing": {
     "metaTitle": "minddy Cloud pricing and plans",
@@ -7285,8 +7292,10 @@
     "droppedNowhere": "{item} was dropped.",
     "cancelled": "Moving {item} was cancelled.",
     "unnamedItem": "Item",
-    "cardInstructions": "Press Enter to open the issue. Its buttons change its status, priority and other fields.",
-    "cardRole": "issue card"
+    "cardInstructions": "Press Enter to open the issue, or Shift+F10 for its menu. Its buttons change its status, priority and other fields.",
+    "cardRole": "issue card",
+    "tabInstructions": "Alt+Shift+Left or Right Arrow moves the tab.",
+    "viewInstructions": "Drag with the mouse to reorder the views."
   },
   "DesktopWelcome": {
     "back": "Back",

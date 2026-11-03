@@ -695,6 +695,11 @@ function ProjectBoard() {
 
   return (
     <div className="flex h-full flex-col">
+      {/* The view's name for headings navigation (WCAG 1.3.1, 2.4.6): the
+          breadcrumb above shows it, but outside <main>. */}
+      <h1 className="sr-only">
+        {activeFamily ? activeFamily.parent.title : activeObjective ? activeObjective.name : project.name}
+      </h1>
       {/* An objective's board stays in the objectives list: its bar takes
           the sidebar's place, with this objective highlighted. */}
       {objectiveParam && !activeFamily ? (

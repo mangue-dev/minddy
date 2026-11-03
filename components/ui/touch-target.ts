@@ -66,3 +66,13 @@ export const COARSE_INSET_HIT_AREA =
   "pointer-coarse:after:absolute pointer-coarse:after:inset-[min(0px,calc((100%_-_48px)*0.5))]"
 export const COARSE_BUTTON_INSET_HIT_AREA =
   "data-[slot=button]:pointer-coarse:after:absolute data-[slot=button]:pointer-coarse:after:inset-[min(0px,calc((100%_-_48px)*0.5))]"
+
+/**
+ * WCAG 2.5.8 under any pointer: a 16–20 px control drawn inside a dense row
+ * (a tab's close cross, a tree toggle, a pill's remove button) reaches 24 px
+ * of target the same way, through a centered `::after`, without moving the
+ * layout. The coarse-pointer variant above, when present, still wins on touch.
+ * The element must be a containing block.
+ */
+export const MIN_HIT_AREA =
+  "after:absolute after:top-1/2 after:left-1/2 after:-translate-1/2 after:w-[max(100%,24px)] after:h-[max(100%,24px)]"

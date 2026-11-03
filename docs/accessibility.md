@@ -19,6 +19,11 @@ also needs the manual pass below.
 | `lib/mobile-touch.test.ts` | Touch targets on coarse pointers, zoom left enabled in the viewport |
 | `components/ui/button.test.tsx`, `components/ui/close-button.test.tsx` | Icon-only buttons name themselves |
 | `lib/i18n-contract.test.ts` | Every catalog has the accessible-name keys |
+| `lib/board-drag.test.ts`, `components/use-board-reorder-actions.test.tsx` | A card's menu moves it up, down or to the top of its column under manual sort, with the position a drop would write |
+| `components/app-shell.test.tsx` | A navigation from the sidebar or the palette moves focus to `<main>`; one started in the content leaves it there |
+| `components/notification-badge.test.tsx` | The unread count is spoken by one status that stays mounted, not by the badge |
+| `components/ui/segmented-control.test.tsx` | The segmented control is a named radio group with one Tab stop and arrow keys |
+| `lib/use-document-title.test.ts` | An open page names the browser tab and gives the route's title back when it closes |
 
 jsdom computes neither layout nor color, so contrast, reflow and focus
 visibility are checked in a browser.
@@ -31,17 +36,23 @@ Run it on the surfaces a change touches, in light and dark mode.
    Enter moves to the page. Tab through the sidebar, the view and an open
    panel: every stop shows the ring outline, none is skipped or trapped, and
    Escape closes only the top layer. On a board, Enter opens a focused card
-   and S, P, E or A opens that card's picker.
+   and S, P, E or A opens that card's picker. Shift+F10 opens the card's
+   menu; under manual sort its **Reorder** entry moves the card without a
+   drag. After choosing a sidebar or palette destination, the next Tab
+   lands in the new view.
 2. **Screen reader.** VoiceOver with Safari on macOS, NVDA with Firefox or
    Chrome on Windows. Check the landmarks rotor (main navigation, main),
    that pickers read their value (“Status: In progress”), that editors read
    their name and “edit text, multi-line”, that a failed sign-in is spoken,
-   and that a page save failure is announced.
+   that a page save failure is announced, that a Numo reply is announced
+   once when it ends rather than token by token, and that a new unread
+   notification is spoken once.
 3. **Zoom and reflow.** Browser zoom at 200 % and a 320 px wide window: no
    text cut off, no horizontal scroll outside boards and tables, nothing
    hidden behind the bottom navigation.
 4. **Motion and contrast.** With “Reduce motion” on, panels and dialogs
-   appear without sliding. With a high-contrast palette, and with Windows
+   appear without sliding. On the landing, the pause button on a looping
+   figure stops every figure where it is. With a high-contrast palette, and with Windows
    forced colors, controls keep a visible edge and focus.
 
 ## Known gaps

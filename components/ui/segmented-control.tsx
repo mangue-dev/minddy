@@ -1,5 +1,6 @@
 "use client";
 
+import { useId, useRef, type KeyboardEvent } from "react";
 import { Button } from "./button";
 import { ButtonGroup } from "./button-group";
 import { cn } from "@/lib/utils";
@@ -18,11 +19,18 @@ interface SegmentedControlProps<T extends string> {
   ariaLabel?: string;
 }
 
+const NEXT_KEYS = new Set(["ArrowRight", "ArrowDown"]);
+const PREVIOUS_KEYS = new Set(["ArrowLeft", "ArrowUp"]);
+
 /**
  * Segmented selector built on top of `ButtonGroup`. Mirrors the
  * light/dark/auto theme picker from the studio composition editor —
  * extracted here so other surfaces (background mode, etc.) can reuse the
  * same affordance.
+ *
+ * One value among several, so it is a radio group (WCAG 4.1.2): a single Tab
+ * stop on the chosen option, arrows move and choose, Home and End jump to
+ * the ends, as the native radio buttons do.
  */
 export function SegmentedControl<T extends string>({
   options,
@@ -32,25 +40,55 @@ export function SegmentedControl<T extends string>({
   className,
   ariaLabel,
 }: SegmentedControlProps<T>) {
+  const labelId = useId();
+  const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const selected = Math.max(0, options.findIndex((option) => option.value === value));
+
+  const choose = (index: number) => {
+    const option = options[(index + options.length) % options.length];
+    if (!option) return;
+    onChange(option.value);
+    refs.current[options.indexOf(option)]?.focus();
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let target: number | null = null;
+    if (NEXT_KEYS.has(event.key)) target = index + 1;
+    else if (PREVIOUS_KEYS.has(event.key)) target = index - 1;
+    else if (event.key === "Home") target = 0;
+    else if (event.key === "End") target = options.length - 1;
+    if (target === null) return;
+    event.preventDefault();
+    choose(target);
+  };
+
   return (
     <div className={cn("space-y-1.5", className)}>
       {label && (
-        <label className="text-[12px] font-medium text-foreground">
+        <span id={labelId} className="block text-[12px] font-medium text-foreground">
           {label}
-        </label>
+        </span>
       )}
-      <ButtonGroup className="w-full" aria-label={ariaLabel ?? label}>
-        {options.map((option) => {
-          const active = option.value === value;
+      <ButtonGroup
+        role="radiogroup"
+        className="w-full"
+        aria-label={ariaLabel}
+        aria-labelledby={!ariaLabel && label ? labelId : undefined}
+      >
+        {options.map((option, index) => {
+          const active = index === selected;
           return (
             <Button
               key={option.value}
+              ref={(node) => { refs.current[index] = node; }}
               type="button"
+              role="radio"
+              aria-checked={active}
+              tabIndex={active ? 0 : -1}
               variant={active ? "default" : "outline"}
               size="sm"
               className="flex-1"
-              aria-pressed={active}
               onClick={() => onChange(option.value)}
+              onKeyDown={(event) => onKeyDown(event, index)}
             >
               {option.label}
             </Button>

@@ -22,7 +22,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useDragAnnouncements } from "@/lib/use-drag-announcements";
+import { useDragAnnouncements, useStripInstructions } from "@/lib/use-drag-announcements";
 import { useStableCallback } from "@/lib/use-stable-callback";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -219,7 +219,11 @@ export function AppTabStrip({ onNewTab, onNewTabWarm }: { onNewTab: () => void; 
   const described = tabs.map((tab) => ({ tab, view: describe(tab) }));
   const tabAnnouncements = useDragAnnouncements((id) =>
     described.find(({ tab }) => tab.id === id)?.view.label);
-  const accessibility = useMemo(() => ({ announcements: tabAnnouncements }), [tabAnnouncements]);
+  const tabInstructions = useStripInstructions("tab");
+  const accessibility = useMemo(
+    () => ({ announcements: tabAnnouncements, screenReaderInstructions: tabInstructions }),
+    [tabAnnouncements, tabInstructions],
+  );
   const startDrag = useCallback((event: DragStartEvent) => setDragged(String(event.active.id)), []);
   const cancelDrag = useCallback(() => setDragged(null), []);
   const moveWithKeys = useStableCallback((tab: AppTab, event: React.KeyboardEvent<HTMLDivElement>) => {

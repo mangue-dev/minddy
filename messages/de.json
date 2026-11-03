@@ -506,6 +506,7 @@
   },
   "Assistant": {
     "title": "Numo fragen",
+    "replyAnnouncement": "Numo hat geantwortet.",
     "inputPlaceholder": "Frag Numo etwas…",
     "providerUnavailableTitle": "Kein KI-Anbieter ist konfiguriert",
     "providerUnavailableDescription": "Diese Instanz enthält kein KI-Kontingent von minddy. Verbinde deinen eigenen API-Schlüssel, um Numo zu verwenden.",
@@ -1992,6 +1993,10 @@
     "actionCustomPrompt": "Benutzerdefiniert…",
     "actionLinkObjective": "Ziel verknüpfen",
     "actionSetDueDate": "Fälligkeitsdatum hinzufügen",
+    "actionReorder": "Neu anordnen",
+    "actionMoveUp": "Nach oben",
+    "actionMoveDown": "Nach unten",
+    "actionMoveToTop": "Ganz nach oben",
     "promptCopied": "Prompt kopiert. Füge ihn in deinen Coding-Agenten ein.",
     "verifyPromptCopied": "Prompt kopiert. Füge ihn in deinen Coding-Agenten ein, damit dieser die Implementierung überprüft.",
     "commentsPromptButton": "Prompt für {count, plural, one {# neuen Kommentar} other {# neue Kommentare}} kopieren",
@@ -5881,7 +5886,9 @@
     "ai_models_body": "Wähle das Modell, das Numo in jeder Unterhaltung nutzt, oder verwende deinen eigenen Schlüssel (BYOK).",
     "navMenu_ai_title": "Eingebaute KI",
     "navMenu_ai_desc": "Smart Fill, Smart Assign und Numo, dein Assistent",
-    "navLabel": "Hauptnavigation"
+    "navLabel": "Hauptnavigation",
+    "pauseAnimations": "Animationen pausieren",
+    "playAnimations": "Animationen abspielen"
   },
   "Pricing": {
     "metaTitle": "minddy Cloud-Preise und -Pläne",
@@ -7285,8 +7292,10 @@
     "droppedNowhere": "{item} wurde abgelegt.",
     "cancelled": "Verschieben von {item} abgebrochen.",
     "unnamedItem": "Element",
-    "cardInstructions": "Drücke Enter, um das Ticket zu öffnen. Mit seinen Schaltflächen änderst du Status, Priorität und weitere Felder.",
-    "cardRole": "Ticketkarte"
+    "cardInstructions": "Drücke Enter, um das Ticket zu öffnen, oder Umschalt+F10 für sein Menü. Mit seinen Schaltflächen änderst du Status, Priorität und weitere Felder.",
+    "cardRole": "Ticketkarte",
+    "tabInstructions": "Alt+Umschalt+Pfeil nach links oder rechts verschiebt den Tab.",
+    "viewInstructions": "Zieh mit der Maus, um die Ansichten neu anzuordnen."
   },
   "DesktopWelcome": {
     "back": "Zurück",

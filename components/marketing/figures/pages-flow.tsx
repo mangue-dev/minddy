@@ -11,6 +11,7 @@ import { caretColor } from "@/lib/page-caret-colors";
 import { displayName } from "@/lib/display-name";
 import { FIGURE_MEMBERS } from "./figure-world";
 import { useStory } from "./use-story";
+import { MotionPauseButton } from "./motion-pause";
 
 /**
  * The pages chapter: two teammates write in the same page at once. The body
@@ -70,7 +71,7 @@ export function PagesFlow() {
 
   return (
     // A fixed height: typing a line, or a caret's name tag, never moves the page.
-    <div ref={ref} className="h-[25rem] overflow-hidden rounded-xl bg-background px-5 pt-6 pb-9 shadow-sm sm:h-[23rem] sm:px-10 sm:pt-9 sm:pb-12">
+    <div ref={ref} className="relative h-[25rem] overflow-hidden rounded-xl bg-background px-5 pt-6 pb-9 shadow-sm sm:h-[23rem] sm:px-10 sm:pt-9 sm:pb-12">
       <div className="mb-6 flex items-start justify-between gap-4">
         <h3 className="font-display text-[2rem] leading-tight font-semibold tracking-tight">
           {t("pagesFigure_title")}
@@ -103,6 +104,7 @@ export function PagesFlow() {
           <MentionChip type="issue" id="figure-43" label={`AUR-43 ${t("aiFigure_issue1")}`} status="todo" />
         </p>
       </div>
+      <MotionPauseButton className="absolute right-3 bottom-3 z-10" />
     </div>
   );
 }

@@ -57,7 +57,7 @@ import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { ShareViewDialog, prefetchViewShare } from "@/components/share-view-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/form-dialog";
-import { useDragAnnouncements } from "@/lib/use-drag-announcements";
+import { useDragAnnouncements, useStripInstructions } from "@/lib/use-drag-announcements";
 import {
   PRIORITIES,
   EFFORTS,
@@ -751,6 +751,7 @@ export function BoardToolbar({
     return () => window.clearTimeout(timer);
   }, [dropOrder, savedTabOrder, savedTabKeys.length]);
   const tabKeys = dropOrder && dropOrder.length === savedTabKeys.length ? dropOrder : savedTabKeys;
+  const viewInstructions = useStripInstructions("view");
   const tabAnnouncements = useDragAnnouncements((id) => {
     if (id === CYCLE_TAB_KEY) return t("cycleTab");
     const view = viewById.get(String(id));
@@ -865,7 +866,7 @@ export function BoardToolbar({
         <div className="hidden shrink-0 items-center gap-1 app-desktop:flex">
           <DndContext
             sensors={tabSensors}
-            accessibility={{ announcements: tabAnnouncements }}
+            accessibility={{ announcements: tabAnnouncements, screenReaderInstructions: viewInstructions }}
             collisionDetection={closestCenter}
             // Along the strip only, like the app's tabs.
             modifiers={HORIZONTAL_DRAG}
@@ -1156,10 +1157,13 @@ export function BoardToolbar({
 function useTabSortable(id: string) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id });
+  // A pill is a button: dnd-kit's English "draggable" role description would
+  // replace that role's name for screen readers (3.1.2, 4.1.2).
+  const { "aria-roledescription": _roleDescription, ...buttonAttributes } = attributes;
   return {
     setNodeRef,
     style: { transform: CSS.Translate.toString(transform), transition },
-    attributes,
+    attributes: buttonAttributes,
     listeners,
     isDragging,
   };

@@ -28,6 +28,7 @@ import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MIN_HIT_AREA } from "@/components/ui/touch-target";
 import type { PageSummary } from "@/lib/pages-api";
 import type { PageTreeNode } from "@/lib/pages";
 import { revealedAncestorsOf, splitFavoritePageTree } from "@/lib/pages";
@@ -426,7 +427,8 @@ function PageRow({
           aria-label={t("toggleChildren")}
           tabIndex={hasChildren ? 0 : -1}
           className={cn(
-            "flex size-5 shrink-0 items-center justify-center rounded outline-none",
+            "relative flex size-5 shrink-0 items-center justify-center rounded outline-none",
+            MIN_HIT_AREA,
             !hasChildren && "invisible"
           )}
         >

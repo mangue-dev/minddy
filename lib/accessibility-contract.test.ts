@@ -34,14 +34,10 @@ const CONDITIONAL_PARAGRAPH = /(?:&&|\?)\s*\(?\s*<p\b([^>]*)>/g;
 
 /** Literal `aria-label`s that are proper names, the same in every language. */
 const LITERAL_NAMES = new Set(["minddy", "Claude Code, Codex, Cursor"]);
-/** Known gap (MIN-783): the spinner's default name is English; callers in a
-    live region override it. Remove the exception once it is translated. */
-const LITERAL_EXCEPTIONS = new Set(["components/ui/spinner.tsx"]);
 
 describe("accessibility contract", () => {
   it("translates every accessible name that is not a proper name (3.1.2, 4.1.2)", () => {
     const offenders = trackedComponents()
-      .filter((file) => !LITERAL_EXCEPTIONS.has(file))
       .flatMap((file) => {
         const source = readFileSync(file, "utf8");
         return [...source.matchAll(/aria-label="([^"]*)"/g)]

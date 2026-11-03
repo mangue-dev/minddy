@@ -18,8 +18,9 @@ import { isHierarchyRelation, type HierarchyRelation } from "@/lib/issue-hierarc
 import type { IssueRelationType } from "@/lib/types";
 
 /* ── Status ─────────────────────────────────────────────────────────────
-   Linear-style ring: dashed (backlog), empty (todo), a pie fill for progress
-   (in_progress / in_review). done / canceled / duplicate are filled discs with
+   Linear-style ring: dashed (backlog), empty (todo), a half pie for
+   in_progress and a full inner disc for in_review, so the steps differ by
+   shape and not only by color. done / canceled / duplicate are filled discs with
    the glyph (check / cross / equals) knocked out as a real hole via an SVG mask,
    so the background shows through. Colors come from the Figma design.
 
@@ -53,7 +54,9 @@ function Pie({
   return (
     <svg viewBox="0 0 16 16" fill="none" className={cn("size-[19px] shrink-0", className)}>
       <circle cx="8" cy="8" r="6" stroke={color} strokeWidth="1.5" />
-      <path d={piePath(8, 8, 3.5, fraction)} fill={color} />
+      {fraction >= 1
+        ? <circle cx="8" cy="8" r="3.5" fill={color} />
+        : <path d={piePath(8, 8, 3.5, fraction)} fill={color} />}
     </svg>
   );
 }
@@ -105,7 +108,9 @@ export function StatusIndicator({
         />
       );
     case "in_review":
-      return <Pie color="#AA41FF" fraction={0.7} className={className} />;
+      // A full inner disc, not a larger slice: next to the half of "in
+      // progress", the shape alone tells them apart (WCAG 1.4.1).
+      return <Pie color="#AA41FF" fraction={1} className={className} />;
     case "done":
       return (
         <svg viewBox="0 0 16 16" fill="none" className={base}>

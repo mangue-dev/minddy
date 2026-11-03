@@ -13,6 +13,7 @@ import type { IssueStatus } from "@/lib/issue-constants";
 import type { IssuePr } from "@/lib/issue-pr";
 import type { IssueCardIssue } from "@/lib/types";
 import { FIGURE_CATEGORIES, FIGURE_MEMBERS, FIGURE_PROJECT_KEY, figureIssue, useFigureMaps } from "./figure-world";
+import { useLandingMotionPaused } from "./motion-pause";
 
 /**
  * The hero's backdrop: the real board, running on its own behind the headline
@@ -214,6 +215,7 @@ export function HeroBoard() {
   const ts = useTranslations("Status");
   const { memberMap, categoryMap } = useFigureMaps();
   const reduced = useReducedMotion();
+  const paused = useLandingMotionPaused();
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [board, step] = useReducer(advance, INITIAL);
@@ -230,10 +232,10 @@ export function HeroBoard() {
   }, []);
 
   useEffect(() => {
-    if (reduced || !visible) return;
+    if (reduced || paused || !visible) return;
     const id = window.setInterval(step, TICK_MS);
     return () => window.clearInterval(id);
-  }, [reduced, visible]);
+  }, [reduced, paused, visible]);
 
   return (
     <div ref={ref} aria-hidden className="grid w-[76rem] grid-cols-4 gap-5 select-none [&_*]:pointer-events-none">

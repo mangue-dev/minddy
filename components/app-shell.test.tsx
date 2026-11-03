@@ -7,7 +7,7 @@ import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { AppShell, MAIN_CONTENT_ID, SkipToContentLink } from "./app-shell";
+import { AppShell, MAIN_CONTENT_ID, SkipToContentLink, requestMainFocusOnNavigation, useMainFocusOnNavigation } from "./app-shell";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 
@@ -55,4 +55,41 @@ it("moves focus to the content region and leaves the URL alone", async () => {
   expect(main.tagName).toBe("MAIN");
   expect(document.activeElement).toBe(main);
   expect(window.location.href).toBe(before);
+});
+
+function Navigator({ location }: { location: string }) {
+  useMainFocusOnNavigation(location);
+  return createElement(AppShell, {
+    sidebar: createElement("aside", { "data-sidebar-navigation": "" }, createElement("a", { href: "/inbox" }, "Inbox")),
+    children: createElement("button", null, location),
+  });
+}
+
+async function navigate(location: string) {
+  await act(async () => root.render(createElement(Navigator, { location })));
+  await act(async () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+}
+
+it("moves focus to the content after a navigation from the sidebar (2.4.3)", async () => {
+  await navigate("/home");
+  host.querySelector<HTMLAnchorElement>("aside a")!.focus();
+  await navigate("/inbox");
+  expect(document.activeElement?.id).toBe(MAIN_CONTENT_ID);
+});
+
+it("leaves focus in the content when the navigation started there", async () => {
+  await navigate("/home");
+  const button = host.querySelector<HTMLButtonElement>("main button")!;
+  button.focus();
+  await navigate("/inbox");
+  expect(document.activeElement).toBe(button);
+});
+
+it("moves focus to the content after a navigation from the palette", async () => {
+  await navigate("/home");
+  const outside = document.body.appendChild(document.createElement("button"));
+  outside.focus();
+  requestMainFocusOnNavigation();
+  await navigate("/inbox");
+  expect(document.activeElement?.id).toBe(MAIN_CONTENT_ID);
 });

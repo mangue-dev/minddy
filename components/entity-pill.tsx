@@ -22,6 +22,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { MIN_HIT_AREA } from "@/components/ui/touch-target";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 
 export type PillRadius = "full" | "md";
@@ -144,7 +145,7 @@ export function EntityPill({
                   e.stopPropagation();
                   command.onClick();
                 }}
-                className="pointer-events-auto flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none"
+                className={cn("pointer-events-auto relative flex size-4 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none", MIN_HIT_AREA)}
               >
                 {command.icon}
               </button>

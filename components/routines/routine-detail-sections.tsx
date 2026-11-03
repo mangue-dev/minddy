@@ -23,6 +23,7 @@ import { parseRoutineTrigger, type RoutineTrigger } from "@/lib/routine-triggers
 import { describeSchedule, weekdayName, type RoutineSchedule } from "@/lib/routine-schedule";
 import type { Routine } from "@/lib/routines-api";
 import { cn } from "@/lib/utils";
+import { MIN_HIT_AREA } from "@/components/ui/touch-target";
 import { useWeekStart } from "@/lib/use-week-start";
 
 /** The routine fields a section writes, as `updateRoutineApi` takes them. */
@@ -95,7 +96,7 @@ export function RoutineInstruction({
             <button
               type="button"
               aria-label={t("sectionAgent")}
-              className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn("relative flex size-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", MIN_HIT_AREA)}
             >
               <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
             </button>

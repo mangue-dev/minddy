@@ -43,6 +43,8 @@ import {
 import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import type { PageMenuTarget } from "@/components/pages/page-document-actions";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { useProjects } from "@/lib/projects-context";
+import { useDocumentTitle } from "@/lib/use-document-title";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
@@ -101,6 +103,12 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
       retainedPageDocumentCost(state.data) === 1;
   }).map((page) => page.id));
   const [query, setQuery] = useMobileCollectionState(base, "query", "");
+  // Each page names the browser tab, not "Pages · Acme" for all of them.
+  const { projects } = useProjects();
+  const activePage = activePageId ? byId.get(activePageId) : undefined;
+  useDocumentTitle(activePage
+    ? [activePage.title || t("untitled"), projects.find((project) => project.id === projectId)?.name]
+    : null);
 
   const previewId = expandParam(searchParams.get("entry"));
   const preview = previewId ? byId.get(previewId) : undefined;
@@ -387,6 +395,9 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
+        {/* The view's name for headings navigation (WCAG 1.3.1, 2.4.6): the
+            tree's title sits in the secondary sidebar, outside <main>. */}
+        <h1 className="sr-only">{activePage ? activePage.title || t("untitled") : t("title")}</h1>
         <RetainedPageDocuments projectId={projectId} pageId={activePageId} eligible={eligible} active={!validPreview}
           renderPage={(id, active) => !isUuid(id) && awaitingTree
             // A cold URL carries the page's short code, which only the tree

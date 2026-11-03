@@ -29,7 +29,7 @@ import { usePendingNavigation } from "@/lib/pending-navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations, useLocale } from "next-intl";
-import { AppShell, SkipToContentLink } from "@/components/app-shell";
+import { AppShell, SkipToContentLink, requestMainFocusOnNavigation, useMainFocusOnNavigation } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 import { toast } from "sonner";
@@ -249,7 +249,7 @@ const TriageNavIcon = ({ className }: { className?: string }) => (
 TriageNavIcon.displayName = "TriageNavIcon";
 
 import { countBadge, countBadges } from "@/components/nav-badge";
-import { NotificationBadge } from "@/components/notification-badge";
+import { NotificationBadge, UnreadCountAnnouncer } from "@/components/notification-badge";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { fetchSeeded } from "@/lib/server-seed";
 
@@ -344,6 +344,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     closeIssuePanel();
     closePagePanel();
   }, [closeIssuePanel, closePagePanel]);
+  useMainFocusOnNavigation(routePathname);
   const previousPathname = useRef(pathname);
   useEffect(() => {
     if (previousPathname.current !== pathname) closeTransientPanels();
@@ -1668,10 +1669,14 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     onOpenChange: handlePaletteOpenChange,
     onNewTab: openDestinationPalette,
   });
+  // A palette entry that navigates closes the palette first; the route
+  // change that follows then focuses the content (WCAG 2.4.3).
   const handlePaletteContentOpenChange = useCallback((next: boolean) => {
+    if (!next) requestMainFocusOnNavigation();
     setPaletteOpen(next);
   }, []);
   const handleDestinationSelect = useCallback((href: string) => {
+    requestMainFocusOnNavigation();
     setPaletteOpen(false);
     void appTabSession?.create(href);
   }, [appTabSession]);
@@ -1758,6 +1763,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />
+      <UnreadCountAnnouncer count={inboxCount} label={t("inboxBadge", { count: inboxCount })} />
       <GlobalIssuePanelHost />
       <GlobalPagePanelHost />
       {/* CSV export opened from the palette — mounted here for the same reason:

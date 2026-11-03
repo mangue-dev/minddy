@@ -618,6 +618,19 @@ function CommentFollowUpPick({
   );
 }
 
+/** Opens a card's menu from its focus stop, at the card's top-left corner. */
+function openCardMenuFromKeyboard(focusStop: HTMLElement) {
+  const surface = focusStop.firstElementChild;
+  if (!(surface instanceof HTMLElement)) return;
+  const rect = surface.getBoundingClientRect();
+  surface.dispatchEvent(new MouseEvent("contextmenu", {
+    bubbles: true,
+    cancelable: true,
+    clientX: rect.left + 16,
+    clientY: rect.top + 16,
+  }));
+}
+
 /** The pull request in the card header, in place of the plan. Clicking opens
     its review; hovering shows where it stands (MIN-888). Read-only (a span
     without a handler) in the drag overlay / public board.
@@ -1663,9 +1676,25 @@ export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
       // same (WCAG 2.1.1). It replaces the listeners' keydown, which only a
       // KeyboardSensor would use; the boards register none.
       onKeyDown={(event) => {
-        if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+        if (event.target !== event.currentTarget) return;
+        // Shift+F10 opens the card menu, where Windows has it; macOS browsers
+        // fire no context menu for it.
+        if (event.key === "F10" && event.shiftKey) {
+          event.preventDefault();
+          openCardMenuFromKeyboard(event.currentTarget);
+          return;
+        }
+        if (event.key !== "Enter" && event.key !== " ") return;
         event.preventDefault();
         (event.currentTarget.firstElementChild as HTMLElement | null)?.click();
+      }}
+      // The Menu key and a screen reader's menu command reach this focus
+      // stop, not the inner surface that builds the menu: hand them over,
+      // anchored on the card rather than at the viewport's corner.
+      onContextMenu={(event) => {
+        if (event.target !== event.currentTarget) return;
+        event.preventDefault();
+        openCardMenuFromKeyboard(event.currentTarget);
       }}
       className={cn(
         "rounded-2xl transition-opacity duration-150 ease-out motion-reduce:transition-none",

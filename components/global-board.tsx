@@ -105,6 +105,7 @@ const NUMO_GENERATION_TIMEOUT_MS = 120_000;
  */
 function GlobalBoardInner() {
   const t = useTranslations("GlobalBoard");
+  const tMeta = useTranslations("Meta");
   const tBoard = useTranslations("Board");
   const tProjects = useTranslations("Projects");
   const format = useFormatter();
@@ -554,6 +555,8 @@ function GlobalBoardInner() {
     // A pointer over the board precedes the first card click: the panel's
     // code starts loading then, if the idle warm-up has not yet.
     <div className="flex h-full flex-col" onPointerEnter={sidePanelMounted ? undefined : () => preloadSurface(loadIssueSidePanel)}>
+      {/* The view's name for headings navigation (WCAG 1.3.1, 2.4.6). */}
+      <h1 className="sr-only">{tMeta("all")}</h1>
       {/* Nothing anywhere: no toolbar above a screen that
  has only one thing to offer. */}
       {!nothingAnywhere && (
