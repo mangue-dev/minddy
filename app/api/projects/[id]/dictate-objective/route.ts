@@ -344,18 +344,21 @@ export async function POST(
     : [];
 
   // RLS scopes the project read; an inaccessible project reads as not found.
-  const { data: project } = await auth.supabase
-    .from("projects")
-    .select("id, name, key, owner_id, encrypted_content, encryption_version")
-    .eq("id", projectId)
-    .is("deleted_at", null)
-    .single();
+  const [{ data: project }, access] = await Promise.all([
+    auth.supabase
+      .from("projects")
+      .select("id, name, key, owner_id, encrypted_content, encryption_version")
+      .eq("id", projectId)
+      .is("deleted_at", null)
+      .single(),
+    hasProjectAccess(auth.user.id, projectId),
+  ]);
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
   // A dictated draft only feeds a creation or edit form, which readers cannot
   // submit: refuse before spending on the model (MIN-693).
-  if (!(await hasProjectAccess(auth.user.id, projectId))?.canWrite) {
+  if (!access?.canWrite) {
     const errors = await getTranslations("ApiErrors");
     return NextResponse.json({ error: errors("readOnlyProject") }, { status: 403 });
   }

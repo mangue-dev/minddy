@@ -212,28 +212,33 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
   }
 
-  const link = await getProjectLink(id);
+  const linkRead = getProjectLink(id);
   // In parallel with providers: it's a GitHub call, it has no reason
   // to wait for the connection lookups to complete.
-  const writeMissing = issueSyncWriteMissingUrl(id, link, access.isOwner);
+  const writeMissing = linkRead.then((link) =>
+    issueSyncWriteMissingUrl(id, link, access.isOwner));
 
   // Providers configured + possible reusable connection (owner only).
-  const providers = await Promise.all(
-    ACTIVE_PROVIDERS.map(async (p) => {
-      const configured = isProviderConfigured(p.id);
-      const connection =
-        access.isOwner && configured
-          ? await findReusableConnection(auth.user.id, p.id)
-          : null;
-      return { id: p.id, configured, connection };
-    }),
-  );
+  const [link, providers, writeMissingUrl] = await Promise.all([
+    linkRead,
+    Promise.all(
+      ACTIVE_PROVIDERS.map(async (p) => {
+        const configured = isProviderConfigured(p.id);
+        const connection =
+          access.isOwner && configured
+            ? await findReusableConnection(auth.user.id, p.id)
+            : null;
+        return { id: p.id, configured, connection };
+      }),
+    ),
+    writeMissing,
+  ]);
 
   return NextResponse.json({
     link,
     isOwner: access.isOwner,
     providers,
-    writeMissingUrl: await writeMissing,
+    writeMissingUrl,
   });
 }
 

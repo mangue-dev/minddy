@@ -225,11 +225,15 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: t("invalidRequest") }, { status: 400 });
   }
 
-  const board = await getBoardForProject(id);
+  const [board, sharedViews, publishedPages] = await Promise.all([
+    getBoardForProject(id),
+    listSharedViews(id),
+    listPublishedPages(id),
+  ]);
   return NextResponse.json({
     board: boardPayload(board, true, true),
-    shared_views: await listSharedViews(id),
-    published_pages: await listPublishedPages(id),
+    shared_views: sharedViews,
+    published_pages: publishedPages,
   });
 }
 

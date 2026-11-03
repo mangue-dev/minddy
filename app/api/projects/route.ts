@@ -1,7 +1,8 @@
 import { projectForClient } from "@/lib/server/project-content";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
-import { getAuthedUser } from "@/lib/server/api-auth";
+import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 import {
   canUseSmartAssign,
@@ -28,30 +29,39 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /** GET /api/projects — list the caller's accessible (owned + member) projects. */
 export async function GET(request: NextRequest) {
-  const auth = await getAuthedUser(request);
-  if (!auth.ok) return auth.response;
-  const t = await getTranslations("ApiErrors");
-
-  // RLS "projects_select" already scopes this to owner ∪ member.
-  const { data, error } = await auth.supabase
+  // RLS "projects_select" already scopes this to owner ∪ member. The read
+  // overlaps the live session check, which still gates the response.
+  const listProjects = (supabase: SupabaseClient) => supabase
     .from("projects")
     .select("*")
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
+  const auth = await getAuthedUserWithRlsReads(request, async ({ supabase }) => listProjects(supabase));
+  if (!auth.ok) return auth.response;
+  const t = await getTranslations("ApiErrors");
+
+  const { data, error } = await (auth.reads ?? listProjects(auth.supabase));
 
   if (error) {
     console.error("[api/projects] list failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  const projects = await Promise.all((data ?? []).map((row) =>
+  const rows = (data ?? []) as Array<Record<string, unknown> & { id: string; owner_id: string }>;
+  // The role read only needs the plaintext ids, so it runs while the rows decode.
+  const roles = withViewerRoles(auth.user.id,
+    rows.map(({ id, owner_id }) => ({ id, owner_id }))).catch(() => null);
+  const projects = await Promise.all(rows.map((row) =>
     decodeProject(row, auth.user.id).then(projectForClient)));
-  try {
-    return NextResponse.json(await withViewerRoles(auth.user.id,
-      projects as unknown as Array<{ id: string; owner_id: string }>));
-  } catch {
+  const withRoles = await roles;
+  if (!withRoles) {
     console.error("[api/projects] role read failed");
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
+  return NextResponse.json(projects.map((project, index) => ({
+    ...project,
+    my_role: withRoles[index].my_role,
+    my_can_comment: withRoles[index].my_can_comment,
+  })));
 }
 
 /** POST /api/projects — create a project owned by the caller. */
