@@ -344,7 +344,9 @@ export function BlockGutter({
         }
       }
       // A list item's buttons stand left of its list, past its marker: the
-      // indentation between the item and its list is shifted back.
+      // indentation between the item and its list is shifted back. The shift
+      // applies at once, never as a transition: the fade above is the only
+      // motion, so the buttons do not slide in from the previous block.
       const list = node && LIST_ITEM_TYPES.has(node.type.name) ? dom.parentElement : null;
       const shift = list ? Math.max(0, dom.getBoundingClientRect().left - list.getBoundingClientRect().left) : 0;
       element.style.transform = shift ? `translateX(${-Math.round(shift)}px)` : "";
@@ -451,7 +453,7 @@ export function BlockGutter({
         <div
           ref={gutter}
           style={{ width: GUTTER_WIDTH }}
-          className="flex items-center justify-end pr-1 transition-transform"
+          className="flex items-center justify-end pr-1"
         >
           <Tooltip delayDuration={TOOLTIP_DELAY_MS} disableHoverableContent>
             <TooltipTrigger asChild>
