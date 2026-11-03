@@ -815,6 +815,8 @@ export function CommandPalette({
           priority: 5,
           execute: async (): Promise<ActionResult> => {
             const project = projects.find((p) => p.id === issue.project_id);
+            // Never rejects: an unavailable context is part of the result.
+            const forgeContext = loadOneIssuePromptContext(issue.id);
             // The prompt describes the ENTIRE ticket (description, deadline, etc.): a
             // index line does not have one, so we go and get the ticket.
             let full: Issue;
@@ -841,7 +843,7 @@ export function CommandPalette({
               categories: promptCategories,
               // Unresolved relationships here (board data) — block omitted from prompt
               resourceCount: full.resource_count,
-              ...(await loadOneIssuePromptContext(full.id)),
+              ...(await forgeContext),
             });
             await navigator.clipboard.writeText(prompt);
             if (autoStart) {
