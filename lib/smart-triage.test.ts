@@ -276,7 +276,37 @@ describe("boardComparatorFactory (MIN-576)", () => {
     expect(sorted(issues, "manual")).toEqual(["b", "a"]);
   });
 
-  it("keeps a member blocked by its own objective below actionable work until the objective closes", () => {
+  /** Fold the stored rows the way the boards and the server do, with every
+      ticket open and each objective in the given status. */
+  function foldedContext(
+    issues: Issue[],
+    storedRelations: IssueRelation[],
+    objectives: Record<string, "planned" | "in_progress" | "done" | "canceled">,
+  ) {
+    const issuesByObjective = new Map<string, string[]>();
+    for (const issue of issues) {
+      if (!issue.objective_id) continue;
+      issuesByObjective.set(issue.objective_id, [
+        ...(issuesByObjective.get(issue.objective_id) ?? []),
+        issue.id,
+      ]);
+    }
+    const { relations, objectiveStatuses } = cycleBlockingRelations(
+      storedRelations,
+      issuesByObjective,
+      new Map(Object.entries(objectives)),
+    );
+    const statusById = new Map<string, IssueStatus>([
+      ...issues.map((issue) => [issue.id, "todo"] as const),
+      ...objectiveStatuses,
+    ]);
+    return { relations, statusById };
+  }
+
+  it("reads an objective blocking its own ticket as resolved, whatever the objective's status (MIN-890)", () => {
+    // The member only waits for the rest of its objective, which cannot close
+    // before it does: it ranks as if the edge were gone, so its own block on
+    // `target` lifts it to the top tier.
     const issues = [
       boardTicket({ id: "member", objective_id: "obj-1", priority: "urgent", effort: "xs", position: 10 }),
       boardTicket({ id: "target", priority: "high", position: 20 }),
@@ -287,22 +317,45 @@ describe("boardComparatorFactory (MIN-576)", () => {
       { id: "member-block", source_id: "member", target_id: "target", type: "blocks" },
     ];
     for (const status of ["planned", "in_progress", "done", "canceled"] as const) {
-      const { relations, objectiveStatuses } = cycleBlockingRelations(
-        storedRelations,
-        new Map([["obj-1", ["member"]]]),
-        new Map([["obj-1", status]]),
-      );
-      const statusById = new Map<string, IssueStatus>([
-        ...issues.map((issue) => [issue.id, "todo"] as const),
-        ...objectiveStatuses,
-      ]);
-      const result = sorted(issues, "smart", { relations, statusById });
-      if (status === "planned" || status === "in_progress") {
-        expect(result).toEqual(["free", "member", "target"]);
-      } else {
-        expect(result).toEqual(["member", "free", "target"]);
-      }
+      const ctx = foldedContext(issues, storedRelations, { "obj-1": status });
+      expect(sorted(issues, "smart", ctx)).toEqual(["member", "free", "target"]);
     }
+  });
+
+  it("lets the general rules order several tickets blocked by their own objective (MIN-890)", () => {
+    // `last-a` and `last-b` both close obj-1 and `last-a` blocks `last-b`:
+    // the issue-to-issue edge still applies, so `last-a` comes first and
+    // `last-b` sinks. Without that edge they would rank on their quick wins.
+    const issues = [
+      boardTicket({ id: "last-b", objective_id: "obj-1", priority: "urgent", position: 10 }),
+      boardTicket({ id: "last-a", objective_id: "obj-1", priority: "low", position: 20 }),
+      boardTicket({ id: "step", objective_id: "obj-1", priority: "medium", position: 30 }),
+      boardTicket({ id: "free", priority: "high", position: 40 }),
+    ];
+    const storedRelations: IssueRelation[] = [
+      { id: "o-a", source_id: "obj-1", source_type: "objective", target_id: "last-a", type: "blocks" },
+      { id: "o-b", source_id: "obj-1", source_type: "objective", target_id: "last-b", type: "blocks" },
+      { id: "a-b", source_id: "last-a", target_id: "last-b", type: "blocks" },
+    ];
+    const ctx = foldedContext(issues, storedRelations, { "obj-1": "in_progress" });
+    expect(sorted(issues, "smart", ctx)).toEqual(["last-a", "free", "step", "last-b"]);
+
+    const unchained = foldedContext(issues, storedRelations.slice(0, 2), { "obj-1": "in_progress" });
+    expect(sorted(issues, "smart", unchained)).toEqual(["last-b", "step", "last-a", "free"]);
+  });
+
+  it("still sinks a ticket blocked by ANOTHER open objective (MIN-890)", () => {
+    const issues = [
+      boardTicket({ id: "member", objective_id: "obj-1", priority: "urgent", position: 10 }),
+      boardTicket({ id: "free", priority: "low", position: 20 }),
+    ];
+    const storedRelations: IssueRelation[] = [
+      { id: "foreign-block", source_id: "obj-2", source_type: "objective", target_id: "member", type: "blocks" },
+    ];
+    const open = foldedContext(issues, storedRelations, { "obj-1": "planned", "obj-2": "in_progress" });
+    expect(sorted(issues, "smart", open)).toEqual(["free", "member"]);
+    const closed = foldedContext(issues, storedRelations, { "obj-1": "planned", "obj-2": "done" });
+    expect(sorted(issues, "smart", closed)).toEqual(["member", "free"]);
   });
 
   it("sinks a self-block created by folding a member's block on its own objective", () => {

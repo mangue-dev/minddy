@@ -62,7 +62,10 @@ export interface TriageIssue {
  *    blocker), even if it also blocks other work. A closed end changes
  *    nothing: a done blocker no longer blocks,
  *    and a blocker whose targets all closed stops earning its lift — the same
- *    semantics the "smart" view sort already applies.
+ *    semantics the "smart" view sort already applies. An objective blocking
+ *    one of its OWN tickets reads as resolved (MIN-890): that ticket only
+ *    waits for the rest of the objective, which cannot close before it does,
+ *    so it ranks as if the edge were gone and the other rules decide.
  * 2. **Quick wins inside a tier.** Priority minus the effort discount (xs
  *    buys back more than xl costs), minus the due-date lift (overdue and
  *    imminent dates read as urgent). Same PRIORITY_ORDER as the view sort.
@@ -121,32 +124,21 @@ function edgeActive(
   return true;
 }
 
-/** Ids of the open tickets that still block at least one open ticket. */
-function activeBlockers(
+/** The "blocks" edges that still order the column: both ends open, and not
+    an objective blocking one of its own tickets (MIN-890) — that ticket is
+    the objective's last step, so the edge reads as resolved. */
+function orderingEdges(
   relations: IssueRelation[] | undefined,
-  statusById: Map<string, IssueStatus> | undefined
-): Set<string> {
-  const ids = new Set<string>();
-  if (!relations?.length) return ids;
-  for (const r of relations) {
-    if (r.type !== "blocks") continue;
-    if (edgeActive(r.source_id, r.target_id, statusById)) ids.add(r.source_id);
-  }
-  return ids;
-}
-
-/** Ids of the open tickets held back by at least one open blocker. */
-function activelyBlocked(
-  relations: IssueRelation[] | undefined,
-  statusById: Map<string, IssueStatus> | undefined
-): Set<string> {
-  const ids = new Set<string>();
-  if (!relations?.length) return ids;
-  for (const r of relations) {
-    if (r.type !== "blocks") continue;
-    if (edgeActive(r.source_id, r.target_id, statusById)) ids.add(r.target_id);
-  }
-  return ids;
+  statusById: Map<string, IssueStatus> | undefined,
+  objectiveById: Map<string, string | null>
+): IssueRelation[] {
+  if (!relations?.length) return [];
+  return relations.filter(
+    (r) =>
+      r.type === "blocks" &&
+      objectiveById.get(r.target_id) !== r.source_id &&
+      edgeActive(r.source_id, r.target_id, statusById)
+  );
 }
 
 /** Sooner due date first, undated last — the tie-break under equal ranks. */
@@ -162,8 +154,15 @@ export function triageIssueComparator(
 ): (a: TriageIssue, b: TriageIssue) => number {
   const now = ctx.now ?? Date.now();
   const { issues } = ctx;
-  const blockers = activeBlockers(ctx.relations, ctx.statusById);
-  const blocked = activelyBlocked(ctx.relations, ctx.statusById);
+  const edges = orderingEdges(
+    ctx.relations,
+    ctx.statusById,
+    new Map(issues.map((issue) => [issue.id, issue.objective_id]))
+  );
+  // Blockers: open tickets that still block an open ticket. Blocked: open
+  // tickets held back by at least one open blocker.
+  const blockers = new Set(edges.map((r) => r.source_id));
+  const blocked = new Set(edges.map((r) => r.target_id));
   const tierOf = (id: string): 0 | 1 | 2 =>
     blocked.has(id) ? 2 : blockers.has(id) ? 0 : 1;
   const rank = new Map<string, number>();
