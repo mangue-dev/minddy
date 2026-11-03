@@ -48,6 +48,14 @@ test("every full-profile route to Supabase targets the gateway service the overl
   assert.match(proxy, new RegExp(`host: "${gateway}", port: 8000`));
 });
 
+test("the full profile turns off the Storage S3 protocol and refuses its public route", () => {
+  const profile = readFileSync(resolve(root, "deploy/self-hosted/compose.full.yml"), "utf8");
+  const caddy = readFileSync(resolve(root, "deploy/self-hosted/Caddyfile.full"), "utf8");
+  assert.match(profile, /^  storage:\n    environment:\n      S3_PROTOCOL_ENABLED: "false"$/m);
+  // The refusal must precede the Supabase gateway proxy in the same site block.
+  assert.match(caddy, /\{\$SUPABASE_SITE_ADDRESS\}[\s\S]*?respond \/storage\/v1\/s3\* 404\n\s+reverse_proxy api-gw:8000/);
+});
+
 test("the full profile enforces the application password policy and leaked-password checks", () => {
   const profile = readFileSync(resolve(root, "deploy/self-hosted/compose.full.yml"), "utf8");
   assert.match(profile, /GOTRUE_PASSWORD_MIN_LENGTH: "8"/);

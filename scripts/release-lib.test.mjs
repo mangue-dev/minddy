@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   assertOfficialSupabaseImages,
   assertReleaseCompatibility,
+  assertStorageS3ProtocolMitigation,
   assertVersion,
   isVersionAtLeast,
 } from "./release-lib.mjs";
@@ -112,5 +113,26 @@ test("the pinned upstream Compose file must ship patched Realtime and Storage im
   assert.throws(
     () => assertOfficialSupabaseImages("services:\n  realtime:\n    image: supabase/realtime:v2.143.3\n"),
     /does not declare supabase\/storage-api/,
+  );
+});
+
+test("a pinned Storage image below the S3 replay fix requires the overlay to disable the S3 protocol", () => {
+  const upstream = (storage) => `services:\n  storage:\n    image: supabase/storage-api:${storage}\n`;
+  const overlay = (value) =>
+    `services:\n  db:\n    ports: !reset []\n\n  storage:\n    environment:\n      S3_PROTOCOL_ENABLED: ${value}\n\n  minddy:\n    image: x\n`;
+  assert.doesNotThrow(() => assertStorageS3ProtocolMitigation(upstream("v1.81.0"), overlay('"false"')));
+  assert.doesNotThrow(() => assertStorageS3ProtocolMitigation(upstream("v1.84.14"), "services:\n"));
+  assert.throws(
+    () => assertStorageS3ProtocolMitigation(upstream("v1.84.13"), "services:\n"),
+    /storage-api:v1\.84\.13, below 1\.84\.14; compose\.full\.yml must set S3_PROTOCOL_ENABLED/,
+  );
+  assert.throws(() => assertStorageS3ProtocolMitigation(upstream("v1.81.0"), overlay('"true"')), /S3_PROTOCOL_ENABLED/);
+  // The setting only counts on the storage service, not on a neighbour.
+  assert.throws(
+    () => assertStorageS3ProtocolMitigation(
+      upstream("v1.81.0"),
+      'services:\n  storage:\n    restart: always\n  minddy:\n    environment:\n      S3_PROTOCOL_ENABLED: "false"\n',
+    ),
+    /S3_PROTOCOL_ENABLED/,
   );
 });

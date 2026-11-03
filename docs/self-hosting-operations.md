@@ -220,6 +220,12 @@ upstream change then share one outage and one sealed backup. The PostgreSQL
 major version must stay the same; a major upgrade requires a separate logical
 migration.
 
+`self-hosted/v0.8.3` still ships Storage 1.81.0, affected by
+GHSA-2p28-q2vx-mw6w, so the full overlay turns off the Storage S3 protocol,
+which minddy does not use. On v0.20.1, add the same
+`S3_PROTOCOL_ENABLED: "false"` entry under `storage` in the release's
+`compose.full.yml` and run `compose up -d --wait storage`.
+
 Never check out the new commit in the existing upstream directory: it holds the
 live database and Storage bytes. Fetch the target checkout into a new directory
 with the target release tooling, then move the data directories into it after

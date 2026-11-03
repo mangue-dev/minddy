@@ -65,6 +65,13 @@ GHSA-8rrf-w776-x75g affects private buckets even though minddy never issues
 signed upload URLs, because the vulnerable route ships with every Storage
 server. Upgrade by moving to a newer official Supabase release as a whole.
 
+Storage up to 1.84.13 also lets a captured signed S3 request be replayed after
+it expires (GHSA-2p28-q2vx-mw6w, fixed in 1.84.14). No official Supabase
+release ships the fix yet, and minddy never uses the Storage S3 protocol, so
+the full profile sets `S3_PROTOCOL_ENABLED: "false"` on `storage` and Caddy
+answers 404 on `/storage/v1/s3`. An operator-run Supabase behind the managed
+profile needs Storage 1.84.14 or later, or the same setting.
+
 GitHub integration targets `github.com` and GitLab integration targets
 `gitlab.com`. GitHub Enterprise Server and self-managed GitLab are not silently
 substituted and are currently unsupported by these adapters.

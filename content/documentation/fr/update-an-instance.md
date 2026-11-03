@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-23",
+  "updatedAt": "2026-11-03",
   "compatibility": {
-    "version": "0.20.1 (MIN-788 Supabase self-hosted/v0.8.3)",
+    "version": "0.20.1 (MIN-891 Storage S3 protocol off)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-23"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-891: GHSA-2p28-q2vx-mw6w ranges read on the GitHub advisory, storage-api v1.81.0 read in the pinned self-hosted/v0.8.3 Compose file, S3_PROTOCOL_ENABLED merge checked with docker compose config against the overlay; no operator rehearsal; no screenshot in scope)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-891 changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-03"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/fr/update-an-instance-flow.svg",
       "alt": "Schéma: Arrêter écritures et jobs. Sceller la sauvegarde complète avant update. Migrations cibles, puis application cible. Vérifier récupération et rouvrir.",
       "caption": "Lisez les étapes dans cet ordre. Arrêter écritures et jobs. Sceller la sauvegarde complète avant update. Migrations cibles, puis application cible. Vérifier récupération et rouvrir.",
-      "revision": 7,
+      "revision": 8,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -175,6 +175,15 @@ export CURRENT_RELEASE_DIR="$TARGET_RELEASE_DIR"
 ```
 
 Exécutez ensuite la séquence de mise à jour du profil full. Conservez l’ancien répertoire amont jusqu’à ce que l’instance rouverte passe ses vérifications. Pour revenir en arrière, restaurez la sauvegarde scellée avec la version précédente et son commit amont enregistré.
+
+Les versions officielles de Supabase jusqu’à `self-hosted/v0.8.3` incluse fournissent une version de Storage touchée par GHSA-2p28-q2vx-mw6w : une requête S3 signée interceptée peut être rejouée après son expiration. minddy n’utilise pas l’endpoint S3 de Storage ; les versions publiées après v0.20.1 le désactivent donc dans le profil full et refusent `/storage/v1/s3` dans Caddy. En v0.20.1 ou antérieure, ajoutez ce bloc au `compose.full.yml` de votre répertoire de release actuel, puis lancez `compose up -d --wait storage`. Si vous exploitez votre propre Supabase pour le profil managed, passez Storage en 1.84.14 ou ultérieure, ou définissez-y `S3_PROTOCOL_ENABLED=false`. Un projet Supabase Cloud reçoit le correctif de Supabase.
+
+```yaml
+services:
+  storage:
+    environment:
+      S3_PROTOCOL_ENABLED: "false"
+```
 
 ## Distinguer les opérations managed et source {#managed-source}
 
