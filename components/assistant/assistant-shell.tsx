@@ -409,6 +409,14 @@ export const AssistantShell = forwardRef<
     state.status === "streaming" || state.status === "executing_tool";
   const isGeneratingServer = state.status === "generating_server";
   const isBusy = isStreaming || isGeneratingServer;
+  // One announcement per reply, once it has ended (see the log below).
+  const [replyStatus, setReplyStatus] = useState("");
+  const wasBusy = useRef(isBusy);
+  useEffect(() => {
+    if (wasBusy.current && !isBusy) setReplyStatus(t("replyAnnouncement"));
+    else if (isBusy) setReplyStatus("");
+    wasBusy.current = isBusy;
+  }, [isBusy, t]);
   const hasMessages = state.messages.length > 0 || isBusy;
   // The suggestions follow the page under the composer and step aside as soon
   // as the user starts writing their own message.
@@ -879,13 +887,17 @@ export const AssistantShell = forwardRef<
  message would unmount it, the focus would go to <body> and the
  FocusScope of the Sheet would place it on the shell (focus halo). */
           <>
+            <span role="status" className="sr-only">{replyStatus}</span>
             {hasMessages ? (
               <Conversation
                 className="min-h-0 flex-1"
                 anchor={scrollAnchor}
-                // The log is polite: busy holds its announcements until the
-                // reply ends instead of reading each streamed token (4.1.3).
+                // Silent while a reply streams: screen readers differ on
+                // whether `aria-busy` holds a log's announcements, and none
+                // should read each token. The status below says when the
+                // reply has ended (4.1.3).
                 aria-busy={isBusy}
+                aria-live={isBusy ? "off" : "polite"}
               >
                 <ConversationContent
                    className={

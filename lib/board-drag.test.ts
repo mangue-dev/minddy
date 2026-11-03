@@ -3,6 +3,7 @@ import {
   dragBundle,
   displayRank,
   planBoardMove,
+  planKeyboardMove,
   previewBoardMove,
   readDropTarget,
   sameDropPreview,
@@ -380,5 +381,34 @@ describe("l'égalité de deux repères", () => {
     expect(sameDropPreview(p, { ...p, count: 2 })).toBe(false);
     expect(sameDropPreview(p, { ...p, status: "done" })).toBe(false);
     expect(sameDropPreview(p, null)).toBe(false);
+  });
+});
+
+describe("moving a card from its menu", () => {
+  const column = [issue("a", "todo", 0), issue("b", "todo", 10), issue("c", "todo", 20)];
+  const order = (moved: { issue: Issue; patch: { position: number } }) =>
+    column
+      .map((i) => (i.id === moved.issue.id ? { ...i, position: moved.patch.position } : i))
+      .sort((x, y) => x.position - y.position)
+      .map((i) => i.id);
+
+  it("swaps a card with the one above or below it", () => {
+    const up = planKeyboardMove({ issue: column[1], direction: "up", columnItems: column });
+    expect(up && order(up)).toEqual(["b", "a", "c"]);
+    const down = planKeyboardMove({ issue: column[1], direction: "down", columnItems: column });
+    expect(down && order(down)).toEqual(["a", "c", "b"]);
+  });
+
+  it("puts a card first in its column", () => {
+    const top = planKeyboardMove({ issue: column[2], direction: "top", columnItems: column });
+    expect(top && order(top)).toEqual(["c", "a", "b"]);
+  });
+
+  it("keeps the status and writes nothing at an edge", () => {
+    const down = planKeyboardMove({ issue: column[0], direction: "down", columnItems: column });
+    expect(down?.patch).toEqual({ position: 15 });
+    expect(planKeyboardMove({ issue: column[0], direction: "up", columnItems: column })).toBeNull();
+    expect(planKeyboardMove({ issue: column[0], direction: "top", columnItems: column })).toBeNull();
+    expect(planKeyboardMove({ issue: column[2], direction: "down", columnItems: column })).toBeNull();
   });
 });

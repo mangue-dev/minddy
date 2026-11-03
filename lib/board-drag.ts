@@ -202,6 +202,42 @@ export function planBoardMove({
   }));
 }
 
+/** A reorder step offered from a card's menu, the keyboard twin of a drag. */
+export type KeyboardMoveDirection = "up" | "down" | "top";
+
+/**
+ * The move a card's "Move up", "Move down" or "Move to top" entry writes
+ * (WCAG 2.5.7): one card, in its own column, under manual sort. It reads its
+ * neighbor and hands the result to `planBoardMove`, so the menu and a drop on
+ * that neighbor write the same position. `null` = the card is already there.
+ */
+export function planKeyboardMove({
+  issue,
+  direction,
+  columnItems,
+}: {
+  issue: Issue;
+  direction: KeyboardMoveDirection;
+  /** The card's column, sorted by position, as the board shows it. */
+  columnItems: Issue[];
+}): PlannedMove | null {
+  const index = columnItems.findIndex((i) => i.id === issue.id);
+  if (index < 0) return null;
+  const target =
+    direction === "down" ? columnItems[index + 1] : direction === "up" ? columnItems[index - 1] : columnItems[0];
+  if (!target || target.id === issue.id) return null;
+  const [move] = planBoardMove({
+    bundle: [issue],
+    targetStatus: issue.status,
+    overIssueId: target.id,
+    dropAfter: direction === "down",
+    columnItems,
+    manual: true,
+    now: 0,
+  });
+  return move ?? null;
+}
+
 /** The deposit mark to draw: a line, in a column, in a place. */
 export interface DropPreview {
   status: IssueStatus;

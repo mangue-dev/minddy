@@ -41,3 +41,15 @@ export function useBoardCardInstructions(): { draggable: string } {
   const t = useTranslations("DragAnnouncements");
   return useMemo(() => ({ draggable: t("cardInstructions") }), [t]);
 }
+
+/**
+ * Localized instructions for a strip's `DndContext`, in place of dnd-kit's
+ * English default that a sortable's `aria-describedby` points to (3.1.2).
+ * Each strip says what it actually offers: tabs move with Alt+Shift+arrows,
+ * views only by mouse.
+ */
+export function useStripInstructions(kind: "tab" | "view"): { draggable: string } {
+  const t = useTranslations("DragAnnouncements");
+  const text = kind === "tab" ? t("tabInstructions") : t("viewInstructions");
+  return useMemo(() => ({ draggable: text }), [text]);
+}

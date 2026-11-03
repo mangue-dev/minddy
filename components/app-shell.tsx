@@ -29,6 +29,43 @@ export function SkipToContentLink() {
   );
 }
 
+/** When the command palette last asked for the next navigation to focus the content. */
+let mainFocusRequestedAt = Number.NEGATIVE_INFINITY;
+/** How long a palette request waits for the navigation it started. */
+const MAIN_FOCUS_REQUEST_TTL_MS = 5_000;
+
+/** The palette is about to navigate: focus the content once the route changes. */
+export function requestMainFocusOnNavigation() {
+  mainFocusRequestedAt = performance.now();
+}
+
+/**
+ * WCAG 2.4.3: after a navigation started from the sidebar or the command
+ * palette, focus moves to `<main>`, so the next Tab reaches the new view
+ * instead of the rest of the sidebar. Focus already inside the content, in
+ * the tab strip or in a surface the view opened is left where it is.
+ */
+export function useMainFocusOnNavigation(location: string) {
+  const previous = React.useRef(location);
+  React.useEffect(() => {
+    if (previous.current === location) return;
+    previous.current = location;
+    const requested = performance.now() - mainFocusRequestedAt < MAIN_FOCUS_REQUEST_TTL_MS;
+    mainFocusRequestedAt = Number.NEGATIVE_INFINITY;
+    const active = document.activeElement;
+    const fromNavigation = !active || active === document.body || active.closest("[data-sidebar-navigation]") !== null;
+    if (!requested && !fromNavigation) return;
+    const frame = requestAnimationFrame(() => {
+      const main = document.getElementById(MAIN_CONTENT_ID);
+      const current = document.activeElement;
+      // The new view focused a field of its own: keep it.
+      if (!main || (current && current !== main && current !== active && main.contains(current))) return;
+      main.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location]);
+}
+
 export interface AppShellProps {
   /** A <Sidebar/>. Automatically hidden below the `desktop` breakpoint. */
   sidebar?: React.ReactNode;

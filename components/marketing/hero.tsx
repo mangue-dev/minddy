@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Github } from "@/components/git/provider-icons";
 import { PlatformDownloadLink } from "./platform-download-link";
 import { HeroBoard } from "./figures/hero-board";
+import { MotionPauseButton } from "./figures/motion-pause";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
 
 import { localizedHref } from "@/lib/locale-href";
@@ -53,6 +54,8 @@ export async function Hero() {
         </a>
       </div>
       <p className="sr-only">{t("heroFlow_alt")}</p>
+      {/* The board behind the copy loops on its own (WCAG 2.2.2). */}
+      <MotionPauseButton className="absolute right-4 bottom-4 sm:right-6" />
     </section>
   );
 }

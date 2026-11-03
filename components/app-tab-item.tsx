@@ -4,6 +4,7 @@ import { Cancel01Icon, Edit04Icon, PinIcon, PinOffIcon } from "@hugeicons/core-f
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { MIN_HIT_AREA } from "@/components/ui/touch-target";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { IssueContextMenu } from "@/components/issue-context-menu";
 import type { AppTab } from "@/lib/app-tabs";
@@ -93,7 +94,7 @@ export function AppTabItem({ tab, label, icon, active, focusable, busy, last, co
       {(tab.pinned || truncated) && <TooltipContent side="bottom">{label}</TooltipContent>}
     </Tooltip>
     {!tab.pinned && <Tooltip delayDuration={500} disableHoverableContent><TooltipTrigger asChild><button type="button" aria-label={t("closeNamed", { name: label })} disabled={last || busy}
-      tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className="absolute right-[7px] flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 touch:not-disabled:opacity-100 disabled:opacity-0">
+      tabIndex={-1} onPointerDown={(event) => event.stopPropagation()} onClick={onClose} className={cn("absolute right-[7px] flex size-5 items-center justify-center rounded-full opacity-0 hover:bg-background/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 touch:not-disabled:opacity-100 disabled:opacity-0", MIN_HIT_AREA)}>
       <HugeiconsIcon icon={Cancel01Icon} className="size-3" aria-hidden />
     </button></TooltipTrigger>{!last && <TooltipContent side="bottom">{t("close")}</TooltipContent>}</Tooltip>}
     <IssueContextMenu position={menu} searchable={false} onClose={() => { setMenu(null); ref.current?.focus(); }} actions={[

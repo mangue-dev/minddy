@@ -11,6 +11,7 @@ import {
 } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { MotionPauseButton, useLandingMotionPaused } from "./motion-pause";
 
 /**
  * A chapter figure told in scenes the visitor can pick. The scenes play on
@@ -90,11 +91,12 @@ export function StoryStepper({
   children: ReactNode;
 }) {
   const reduced = useReducedMotion();
+  const paused = useLandingMotionPaused();
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [scene, setScene] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const running = visible && !reduced;
+  const running = visible && !reduced && !paused;
 
   useEffect(() => {
     const el = ref.current;
@@ -183,6 +185,7 @@ export function StoryStepper({
       </ol>
       <div className={cn("relative overflow-hidden select-none", frameClassName)}>
         <SceneContext.Provider value={clock}>{children}</SceneContext.Provider>
+        <MotionPauseButton className="absolute right-3 bottom-3 z-10" />
       </div>
     </div>
   );

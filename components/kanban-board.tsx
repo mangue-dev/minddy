@@ -77,6 +77,7 @@ import {
 } from "@/components/marquee-selection";
 import { splitCycleSelection } from "@/components/cycle/use-cycle-menu-actions";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
+import { useBoardReorderActions } from "@/components/use-board-reorder-actions";
 import {
   restoreBoardScroll,
   type BoardScrollPosition,
@@ -331,6 +332,13 @@ export const KanbanBoard = memo(function KanbanBoard({
     manual: sort === "manual",
     issueMap,
     selectedIds,
+  });
+  // The menu's keyboard twin of a reorder drag (WCAG 2.5.7).
+  const cardMenuActions = useBoardReorderActions({
+    columns,
+    enabled: sort === "manual",
+    move: (planned) => onMove(planned.issue.id, planned.patch),
+    extra: buildMenuActions,
   });
   const { preview, draggingIds, activeId } = drop;
   const [landingPreview, setLandingPreview] =
@@ -601,7 +609,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                       onAddRelation={onAddRelation}
                       onRemoveRelation={onRemoveRelation}
                       onDeleteIssue={onDeleteIssue}
-                      buildMenuActions={buildMenuActions}
+                      buildMenuActions={cardMenuActions}
                       currentCycleId={currentCycleId}
                       selectedIds={selectedIds}
                       draggingIds={draggingIds}

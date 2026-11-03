@@ -421,6 +421,17 @@ export function IssueContextMenu({
   const mobile = useMobileLayout() === true;
   const lastPosition = React.useRef({ x: 0, y: 0 });
   if (position) lastPosition.current = position;
+  // The element that had focus when the menu opened (the card, tab or row
+  // a right click or the Menu key focused): it gets focus back on close,
+  // since the invisible trigger cannot take it (WCAG 2.4.3).
+  const returnFocus = React.useRef<HTMLElement | null>(null);
+  const wasOpen = React.useRef(false);
+  if (position && !wasOpen.current && typeof document !== "undefined") {
+    const active = document.activeElement;
+    returnFocus.current = active instanceof HTMLElement && active !== document.body ? active : null;
+  }
+  wasOpen.current = !!position;
+  const transferringFocus = React.useRef(false);
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
   // Portals have no server markup. Keep the first client render identical
@@ -458,8 +469,18 @@ export function IssueContextMenu({
         side="bottom"
         className="min-w-64"
         // The trigger is invisible and out of flow: do not return the focus to it
-        // closing (avoids a scroll jump to the point of the click).
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        // closing (avoids a scroll jump to the point of the click), but to
+        // where it was, unless the chosen action opens a surface of its own.
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          const target = returnFocus.current;
+          returnFocus.current = null;
+          if (transferringFocus.current) {
+            transferringFocus.current = false;
+            return;
+          }
+          if (target?.isConnected) target.focus({ preventScroll: true });
+        }}
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.stopPropagation()}
       >
@@ -472,6 +493,7 @@ export function IssueContextMenu({
             // close cycle first. Otherwise Radix's focus restoration dismisses
             // the freshly opened picker, which made due dates and objectives
             // appear to do nothing from a card's context menu.
+            transferringFocus.current = action.transfersFocus === true;
             onClose();
             requestAnimationFrame(() => action.onSelect?.());
           }}

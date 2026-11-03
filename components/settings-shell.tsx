@@ -413,8 +413,13 @@ function SettingsTabs({
       <div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
-        {/* Navigation already names the active tab; keep the shared spacing. */}
+        {/* Navigation already names the active tab; keep the shared spacing.
+            The screen's name heads <main> for headings navigation (WCAG
+            1.3.1, 2.4.6): the rail's title sits in the secondary sidebar. */}
         <AppContentHeader />
+        <h1 className="sr-only">
+          {[title, visibleTabs.find((tab) => tab.value === activeTab)?.label].filter(Boolean).join(" · ")}
+        </h1>
 
         <div
           ref={contentFade.ref}

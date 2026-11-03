@@ -23,7 +23,7 @@ import { SearchSelect } from "@/components/search-select";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { cn } from "@/lib/utils";
-import { useDragAnnouncements } from "@/lib/use-drag-announcements";
+import { useDragAnnouncements, useStripInstructions } from "@/lib/use-drag-announcements";
 import {
   MAX_DATABASE_VIEWS,
   MAX_DATABASE_VIEW_NAME,
@@ -42,10 +42,13 @@ function ViewPill({ view, active, sortable, onSelect, onContextMenu }: {
 }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } =
     useSortable({ id: view.id, disabled: !sortable });
+  // A pill is a button: dnd-kit's English "draggable" role description would
+  // replace that role's name for screen readers (3.1.2, 4.1.2).
+  const { "aria-roledescription": _roleDescription, ...buttonAttributes } = attributes;
   return (
     <button type="button" ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      {...attributes} {...listeners} onClick={onSelect} onContextMenu={onContextMenu}
+      {...buttonAttributes} {...listeners} onClick={onSelect} onContextMenu={onContextMenu}
       aria-pressed={active}
       // The moving copy is the drag overlay; this pill marks the slot.
       className={cn(PILL_CLASS, pillTone(active), isDragging && "opacity-50")}>
@@ -120,6 +123,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   // A plain click selects; only a drag of more than 6px reorders.
   const sensors = useSensors(useSensor(MouseSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }));
   const announcements = useDragAnnouncements((id) => views.find((view) => view.id === id)?.name);
+  const viewInstructions = useStripInstructions("view");
   const active = views.find((view) => view.id === activeId) ?? null;
   const name = active?.name ?? t("defaultView");
   // Rename and delete live on the pill's right-click menu, like the board's.
@@ -237,7 +241,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   return (
     <div role="group" aria-label={t("views")} className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
       {views.length ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements }} modifiers={HORIZONTAL_DRAG}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements, screenReaderInstructions: viewInstructions }} modifiers={HORIZONTAL_DRAG}
           onDragStart={({ active: dragged }) => setDraggedId(String(dragged.id))}
           onDragCancel={() => setDraggedId(null)}
           onDragEnd={({ active: dragged, over }) => {

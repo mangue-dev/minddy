@@ -506,6 +506,7 @@
   },
   "Assistant": {
     "title": "Chiedi a Numo",
+    "replyAnnouncement": "Numo ha risposto.",
     "inputPlaceholder": "Chiedi a Numo qualsiasi cosa...",
     "providerUnavailableTitle": "Nessun provider di IA è configurato",
     "providerUnavailableDescription": "Questa istanza non include una quota IA di minddy. Collega la tua chiave API per utilizzare Numo.",
@@ -1992,6 +1993,10 @@
     "actionCustomPrompt": "Personalizzato…",
     "actionLinkObjective": "Collega un obiettivo",
     "actionSetDueDate": "Aggiungi una scadenza",
+    "actionReorder": "Riordina",
+    "actionMoveUp": "Sposta su",
+    "actionMoveDown": "Sposta giù",
+    "actionMoveToTop": "Sposta in cima",
     "promptCopied": "Prompt copiato. Incollalo nel tuo agente di codice.",
     "verifyPromptCopied": "Prompt copiato. Incollalo nel tuo agente di codice per fargli verificare l'implementazione.",
     "commentsPromptButton": "Copia il prompt per {count, plural, one {# nuovo commento} other {# nuovi commenti}}",
@@ -5881,7 +5886,9 @@
     "ai_models_body": "Scegli il modello che Numo usa in ogni conversazione, oppure usa la tua chiave (BYOK).",
     "navMenu_ai_title": "IA integrata",
     "navMenu_ai_desc": "Smart Fill, Smart Assign e Numo, il tuo assistente",
-    "navLabel": "Navigazione principale"
+    "navLabel": "Navigazione principale",
+    "pauseAnimations": "Metti in pausa le animazioni",
+    "playAnimations": "Riprendi le animazioni"
   },
   "Pricing": {
     "metaTitle": "Prezzi e piani di minddy Cloud",
@@ -7285,8 +7292,10 @@
     "droppedNowhere": "{item} è stato rilasciato.",
     "cancelled": "Spostamento di {item} annullato.",
     "unnamedItem": "Elemento",
-    "cardInstructions": "Premi Invio per aprire il ticket. I suoi pulsanti ne cambiano lo stato, la priorità e gli altri campi.",
-    "cardRole": "scheda di ticket"
+    "cardInstructions": "Premi Invio per aprire il ticket, o Maiusc+F10 per il suo menu. I suoi pulsanti ne cambiano lo stato, la priorità e gli altri campi.",
+    "cardRole": "scheda di ticket",
+    "tabInstructions": "Alt+Maiusc+Freccia sinistra o destra sposta la scheda.",
+    "viewInstructions": "Trascina con il mouse per riordinare le viste."
   },
   "DesktopWelcome": {
     "back": "Indietro",

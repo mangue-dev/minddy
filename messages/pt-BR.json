@@ -506,6 +506,7 @@
   },
   "Assistant": {
     "title": "Pergunte ao Numo",
+    "replyAnnouncement": "Numo respondeu.",
     "inputPlaceholder": "Pergunte qualquer coisa ao Numo…",
     "providerUnavailableTitle": "Nenhum provedor de IA está configurado",
     "providerUnavailableDescription": "Esta instância não inclui uma cota de IA do minddy. Conecte sua própria chave de API para usar o Numo.",
@@ -1992,6 +1993,10 @@
     "actionCustomPrompt": "Personalizado…",
     "actionLinkObjective": "Vincular um objetivo",
     "actionSetDueDate": "Adicionar uma data de vencimento",
+    "actionReorder": "Reordenar",
+    "actionMoveUp": "Mover para cima",
+    "actionMoveDown": "Mover para baixo",
+    "actionMoveToTop": "Mover para o topo",
     "promptCopied": "Prompt copiado. Cole-o em seu agente de codificação.",
     "verifyPromptCopied": "Prompt copiado. Cole-o em seu agente de codificação para que ele verifique a implementação.",
     "commentsPromptButton": "Copiar prompt para {count, plural, =0 {# novos comentários} one {# novo comentário} other {# novos comentários}}",
@@ -5881,7 +5886,9 @@
     "ai_models_body": "Escolha o modelo que o Numo usa em cada conversa, ou use sua própria chave (BYOK).",
     "navMenu_ai_title": "IA integrada",
     "navMenu_ai_desc": "Smart Fill, Smart Assign e Numo, seu assistente",
-    "navLabel": "Navegação principal"
+    "navLabel": "Navegação principal",
+    "pauseAnimations": "Pausar as animações",
+    "playAnimations": "Retomar as animações"
   },
   "Pricing": {
     "metaTitle": "Preços e planos do minddy Cloud",
@@ -7285,8 +7292,10 @@
     "droppedNowhere": "{item} foi solto.",
     "cancelled": "A movimentação de {item} foi cancelada.",
     "unnamedItem": "Item",
-    "cardInstructions": "Pressione Enter para abrir o ticket. Os botões dele alteram o status, a prioridade e os outros campos.",
-    "cardRole": "cartão de ticket"
+    "cardInstructions": "Pressione Enter para abrir o ticket, ou Shift+F10 para o menu dele. Os botões dele alteram o status, a prioridade e os outros campos.",
+    "cardRole": "cartão de ticket",
+    "tabInstructions": "Alt+Shift+Seta para a esquerda ou para a direita move a aba.",
+    "viewInstructions": "Arraste com o mouse para reordenar as visualizações."
   },
   "DesktopWelcome": {
     "back": "Voltar",

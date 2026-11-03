@@ -113,6 +113,8 @@ Start from a project board or a personal cross-project issue surface. Use its fi
 
 Filter on supported properties such as status, assignee, priority, categories or objective. Sort the result to make the next action clear. In kanban, issues remain grouped by status; changing a view does not edit their status or assignment. Without a status filter of its own, a board shows only **Backlog**, **Todo**, **In progress** and **In review**. Select **Done** or **Canceled** in the **Status** filter to show those columns; a view keeps the status filter you save with it.
 
+With the **Manual** sort, drag a card within its column to change its place. From the keyboard, focus the card and press Shift+F10, or right-click it: **Reorder** offers **Move up**, **Move down** and **Move to top**. **All issues** offers the same entry, except on the **Cycle** tab, whose order is set for you.
+
 In the **Filters** menu, each property opens a submenu. Type in the menu's search field to find a value in any property; a match shows the property it belongs to, such as **Priority › High**. On a board where Numo is available, **Create with Numo** comes first in the menu, then moves to the end of the list while you type: choose it to send what you typed to Numo, which updates the current view's filters. Chosen with nothing typed, it opens the Numo composer.
 
 Save the view with a name describing its purpose, then select it again in the view bar at the top of the board (a menu on a narrow screen) and verify its filters. Edit or remove it when its purpose changes. **Delete view** asks for confirmation, and a board always keeps at least one view of its own. For publication permissions and revocation, see [sharing a view](#share-a-view).

@@ -506,6 +506,7 @@
   },
   "Assistant": {
     "title": "Pregúntale a Numo",
+    "replyAnnouncement": "Numo ha respondido.",
     "inputPlaceholder": "Pregúntale lo que quieras a Numo…",
     "providerUnavailableTitle": "No se ha configurado ningún proveedor de IA",
     "providerUnavailableDescription": "Esta instancia no incluye una cuota de IA de minddy. Conecta tu propia clave de API para usar Numo.",
@@ -1992,6 +1993,10 @@
     "actionCustomPrompt": "Personalizado…",
     "actionLinkObjective": "Vincular un objetivo",
     "actionSetDueDate": "Añadir una fecha límite",
+    "actionReorder": "Reordenar",
+    "actionMoveUp": "Subir",
+    "actionMoveDown": "Bajar",
+    "actionMoveToTop": "Mover al principio",
     "promptCopied": "Prompt copiado. Pégalo en tu agente de programación.",
     "verifyPromptCopied": "Prompt copiado. Pégalo en tu agente de programación para que verifique la implementación.",
     "commentsPromptButton": "Copiar prompt para {count, plural, one {# comentario nuevo} other {# comentarios nuevos}}",
@@ -5881,7 +5886,9 @@
     "ai_models_body": "Elige el modelo que usa Numo en cada conversación, o usa tu propia clave (BYOK).",
     "navMenu_ai_title": "IA integrada",
     "navMenu_ai_desc": "Smart Fill, Smart Assign y Numo, tu asistente",
-    "navLabel": "Navegación principal"
+    "navLabel": "Navegación principal",
+    "pauseAnimations": "Pausar las animaciones",
+    "playAnimations": "Reanudar las animaciones"
   },
   "Pricing": {
     "metaTitle": "Precios y planes de minddy Cloud",
@@ -7285,8 +7292,10 @@
     "droppedNowhere": "{item} se soltó.",
     "cancelled": "Se canceló el movimiento de {item}.",
     "unnamedItem": "Elemento",
-    "cardInstructions": "Pulsa Intro para abrir la incidencia. Sus botones cambian el estado, la prioridad y los demás campos.",
-    "cardRole": "tarjeta de incidencia"
+    "cardInstructions": "Pulsa Intro para abrir la incidencia, o Mayús+F10 para su menú. Sus botones cambian el estado, la prioridad y los demás campos.",
+    "cardRole": "tarjeta de incidencia",
+    "tabInstructions": "Alt+Mayús+Flecha izquierda o derecha mueve la pestaña.",
+    "viewInstructions": "Arrastra con el ratón para reordenar las vistas."
   },
   "DesktopWelcome": {
     "back": "Volver",
