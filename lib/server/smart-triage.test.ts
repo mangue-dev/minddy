@@ -226,11 +226,11 @@ describe("runSmartTriage — rules mode", () => {
   });
 });
 
-describe("runSmartTriage — objective blocking (MIN-604)", () => {
+describe("runSmartTriage — objective blocking (MIN-604, MIN-890)", () => {
   it.each([
     ["rules", "planned"], ["rules", "in_progress"], ["rules", "done"], ["rules", "canceled"],
     ["jev", "planned"], ["jev", "in_progress"], ["jev", "done"], ["jev", "canceled"],
-  ])("%s: respects a member's blocking objective when it is %s", async (mode, status) => {
+  ])("%s: reads a member's own blocking objective as resolved when it is %s", async (mode, status) => {
     DB.project.smart_triage_mode = mode;
     DB.objectives = [{ id: "obj-1", name: "Release", description: null, status }];
     DB.issues = [
@@ -251,9 +251,9 @@ describe("runSmartTriage — objective blocking (MIN-604)", () => {
     const ordered = DB.issues.slice()
       .sort((a, b) => positionOf(a.id as string) - positionOf(b.id as string))
       .map((row) => row.id);
-    expect(ordered).toEqual(status === "planned" || status === "in_progress"
-      ? ["free", "member", "target"]
-      : ["member", "free", "target"]);
+    // The member is its objective's last step, so the edge never holds it
+    // back: its own block on `target` lifts it to the top tier.
+    expect(ordered).toEqual(["member", "free", "target"]);
   });
 
   it.each(["rules", "jev"])("%s: sinks a member blocking its own objective", async (mode) => {
