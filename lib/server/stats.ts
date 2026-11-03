@@ -221,32 +221,42 @@ export async function getUserStats(
   const raw = (statsRes.data ?? {}) as RawStats;
   const projectIds = (raw.per_project ?? []).flatMap((row) =>
     typeof row.id === "string" ? [row.id] : []);
-  const projectNames = new Map<string, string>();
-  if (projectIds.length) {
+  const readProjectNames = async () => {
+    const names = new Map<string, string>();
+    if (!projectIds.length) return names;
     const { data, error } = await supabase.from("projects")
       .select("id, name, encrypted_content, encryption_version")
       .in("id", projectIds);
     if (error) throw new Error(error.message);
-    for (const project of data ?? []) {
-      projectNames.set(project.id, await decodeProjectName(project, userId));
-    }
-  }
+    await Promise.all((data ?? []).map(async (project) => {
+      names.set(project.id, await decodeProjectName(project, userId));
+    }));
+    return names;
+  };
   const objectiveIds = (raw.per_objective ?? []).map((row) => row.id);
-  const objectiveNames = new Map<string, string>();
-  if (objectiveIds.length) {
+  const readObjectiveNames = async () => {
+    const names = new Map<string, string>();
+    if (!objectiveIds.length) return names;
     const { data, error } = await objectiveStore(supabase, userId)
       .select("id, name").in("id", objectiveIds);
     if (error) throw new Error(error.message);
-    for (const objective of data ?? []) objectiveNames.set(objective.id, objective.name);
-  }
+    for (const objective of data ?? []) names.set(objective.id, objective.name);
+    return names;
+  };
   const categoryIds = (raw.per_category ?? []).flatMap((row) => typeof row.id === "string" ? [row.id] : []);
-  const categoryNames = new Map<string, string>();
-  for (let offset = 0; offset < categoryIds.length; offset += 500) {
-    const { data, error } = await categoryStore(supabase, userId)
-      .select("id, name").in("id", categoryIds.slice(offset, offset + 500));
-    if (error) throw new Error(error.message);
-    for (const category of data ?? []) categoryNames.set(category.id as string, category.name as string);
-  }
+  const readCategoryNames = async () => {
+    const names = new Map<string, string>();
+    for (let offset = 0; offset < categoryIds.length; offset += 500) {
+      const { data, error } = await categoryStore(supabase, userId)
+        .select("id, name").in("id", categoryIds.slice(offset, offset + 500));
+      if (error) throw new Error(error.message);
+      for (const category of data ?? []) names.set(category.id as string, category.name as string);
+    }
+    return names;
+  };
+  const [projectNames, objectiveNames, categoryNames] = await Promise.all([
+    readProjectNames(), readObjectiveNames(), readCategoryNames(),
+  ]);
 
   // Best-effort: an error in the RPC cycles (e.g. function not yet deployed)
   // does not invalidate the page — we land on an empty cycles section.

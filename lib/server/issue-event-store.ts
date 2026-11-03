@@ -15,21 +15,20 @@ const parents = { issue_id: "issues", objective_id: "objectives", feedback_post_
 export async function storeIssueEvents(service: SupabaseClient, rows: EventRow[]): Promise<void> {
   let stored: Record<string, unknown>[] = rows.map((row) => ({ ...row }));
   if (!canWriteLegacyHistory()) {
-    const owners = new Map<string, string>();
-    stored = [];
-    for (const row of rows) {
+    const identities = rows.map((row) => {
       const keys = (Object.keys(parents) as (keyof typeof parents)[]).filter((key) => row[key] != null);
       if (keys.length !== 1) throw new Error("Invalid activity parent");
-      const key = keys[0];
-      const parent = row[key]!;
-      const identity = `${key}:${parent}`;
-      let projectId = owners.get(identity);
-      if (!projectId) {
-        const { data, error } = await service.from(parents[key]).select("project_id").eq("id", parent).single();
-        if (error || typeof data?.project_id !== "string") throw new Error("Unable to resolve activity owner");
-        projectId = data.project_id as string;
-        owners.set(identity, projectId);
-      }
+      return { key: keys[0], parent: row[keys[0]]!, identity: `${keys[0]}:${row[keys[0]]}` };
+    });
+    const distinct = new Map(identities.map((entry) => [entry.identity, entry]));
+    const owners = new Map(await Promise.all([...distinct.values()].map(async ({ key, parent, identity }) => {
+      const { data, error } = await service.from(parents[key]).select("project_id").eq("id", parent).single();
+      if (error || typeof data?.project_id !== "string") throw new Error("Unable to resolve activity owner");
+      return [identity, data.project_id as string] as const;
+    })));
+    stored = [];
+    for (const [index, row] of rows.entries()) {
+      const projectId = owners.get(identities[index].identity)!;
       stored.push(await encodeHistoryRow("issue_events", {
         ...row, id: randomUUID(), project_id: projectId,
         from_value: row.from_value ?? null, to_value: row.to_value ?? null,

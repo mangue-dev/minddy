@@ -116,8 +116,9 @@ describe("conversation file references", () => {
     tables.assistant_messages = Array.from({ length: 201 }, (_, i) => message(
       `33333333-3333-4333-8333-${String(i).padStart(12, "0")}`));
     const result = await listConversationAttachments(ctx(), 190);
-    // Two pages of user messages, then one page of Numo's create_file results.
-    expect(ranges).toEqual([0, 200, 0]);
+    // Two pages of user messages and one page of Numo's create_file results,
+    // scanned concurrently.
+    expect([...ranges].sort((a, b) => a - b)).toEqual([0, 0, 200]);
     expect(result).toMatchObject({ total: 201, next_offset: null });
     expect(result.attachments).toHaveLength(11);
     const first = await listConversationAttachments(ctx());

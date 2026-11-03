@@ -453,23 +453,26 @@ export async function listTrash(
     (row) => !isBlankTrashPage(row, pageRootsWithDescendants.has(row.id)),
   );
 
-  const actors = await resolveActors(service, [
-    ...issueRows,
-    ...objectiveRows,
-    ...feedbackRows,
-    ...routineRows,
-    ...visiblePageRows,
-    ...projectRows,
-  ]);
-  const readableRoutineRows = await Promise.all(routineRows.map(async (row) =>
-    ({ ...row, title: await decodeRoutineTitle(
-      row as unknown as Record<string, unknown>, userId) })));
-  const readableIssueRows = await Promise.all(issueRows.map(async (row) =>
-    await decodeIssue(row as unknown as Record<string, unknown>, userId) as unknown as TrashRow));
-  const readableObjectiveRows = await Promise.all(objectiveRows.map(async (row) =>
-    await decodeObjective(row as unknown as Record<string, unknown>, userId) as unknown as TrashRow));
-  const readableProjectRows = await Promise.all(projectRows.map(async (row) =>
-    ({ ...row, name: await decodeProjectName(row as unknown as Record<string, unknown>, userId) })));
+  const [actors, readableRoutineRows, readableIssueRows, readableObjectiveRows, readableProjectRows] =
+    await Promise.all([
+      resolveActors(service, [
+        ...issueRows,
+        ...objectiveRows,
+        ...feedbackRows,
+        ...routineRows,
+        ...visiblePageRows,
+        ...projectRows,
+      ]),
+      Promise.all(routineRows.map(async (row) =>
+        ({ ...row, title: await decodeRoutineTitle(
+          row as unknown as Record<string, unknown>, userId) }))),
+      Promise.all(issueRows.map(async (row) =>
+        await decodeIssue(row as unknown as Record<string, unknown>, userId) as unknown as TrashRow)),
+      Promise.all(objectiveRows.map(async (row) =>
+        await decodeObjective(row as unknown as Record<string, unknown>, userId) as unknown as TrashRow)),
+      Promise.all(projectRows.map(async (row) =>
+        ({ ...row, name: await decodeProjectName(row as unknown as Record<string, unknown>, userId) }))),
+    ]);
 
   /** What a type has in common: parent, timestamp, author. */
   const base = (row: TrashRow) => ({

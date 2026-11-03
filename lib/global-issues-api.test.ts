@@ -10,7 +10,8 @@ import {
   refreshGlobalIssueSnapshot,
   GLOBAL_ISSUES_KEY,
 } from "./global-issues-api";
-import { globalBoardQueryFn } from "./global-board-api";
+import { globalBoardQueryFn, mergeDeferredBoardIssues } from "./global-board-api";
+import { DEFERRED_BOARD_ISSUES_PATH } from "./global-board-reads";
 import { objectiveProgress } from "./use-objectives-query";
 import type { GlobalBoardResponse, Issue } from "./types";
 
@@ -194,11 +195,13 @@ describe("Kanban cache reconciliation", () => {
     const refreshed = rows.map((row, index) => index === rows.length - 1 ? { ...row, status: "done" as const } : row);
     client.setQueryData(GLOBAL_BOARD_KEY, board(rows)); client.setQueryData(["issues", "p1"], rows.slice(536));
     let finish!: (response: Response) => void;
+    // The board's other statuses (lib/global-board-reads.ts) answer at once.
     const fetch = vi.fn((path: string) => path === "/api/me/issues" ? Promise.resolve(Response.json(refreshed))
-      : new Promise<Response>((resolve) => { finish = resolve; })); vi.stubGlobal("fetch", fetch);
+      : path === DEFERRED_BOARD_ISSUES_PATH ? Promise.resolve(Response.json(refreshed.filter((row) => row.status === "done")))
+        : new Promise<Response>((resolve) => { finish = resolve; })); vi.stubGlobal("fetch", fetch);
     try {
       const aggregate = client.fetchQuery({ queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: 0 });
-      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect(fetch.mock.calls.filter(([path]) => path.startsWith("/api/me/board"))).toHaveLength(1));
       await refreshGlobalIssueSnapshot(client);
       finish(Response.json(board(rows)));
       await aggregate;
@@ -400,13 +403,15 @@ describe("refreshBoardIssues", () => {
     let finish!: (response: Response) => void;
     const fetch = vi.fn((path: string) => path.startsWith("/api/me/board")
       ? new Promise<Response>((resolve) => { finish = resolve; })
-      : Promise.resolve(Response.json({ ...issue("x", "p1", "done", 1), updated_at: later })));
+      : path === DEFERRED_BOARD_ISSUES_PATH ? Promise.resolve(Response.json([]))
+        : Promise.resolve(Response.json({ ...issue("x", "p1", "done", 1), updated_at: later })));
     vi.stubGlobal("fetch", fetch);
+    const ticketReads = () => fetch.mock.calls.filter(([path]) => path.startsWith("/api/issues/"));
     try {
       void client.refetchQueries({ queryKey: GLOBAL_BOARD_KEY });
-      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect(fetch.mock.calls.filter(([path]) => path.startsWith("/api/me/board"))).toHaveLength(1));
       const refresh = refreshBoardIssues(client, ["x"]);
-      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(ticketReads()).toHaveLength(1));
       // The in-flight read predates the change and still answers with the old row.
       finish(Response.json(board([issue("x", "p1", "todo", 1)])));
       await refresh;
@@ -422,5 +427,69 @@ describe("refreshBoardIssues", () => {
     await refreshBoardIssues(idle, ["x"]);
     expect(idle.getQueryState(GLOBAL_BOARD_KEY)?.isInvalidated).toBe(true);
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("progressive global board read", () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+  const done = (id: string, position: number) => issue(id, "p1", "done", position);
+
+  function deferredLater(open: Issue[], deferred: Issue[]) {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const fetch = vi.fn(async (path: string) => {
+      if (path.startsWith("/api/me/board")) return Response.json(board(open));
+      expect(path).toBe(DEFERRED_BOARD_ISSUES_PATH);
+      await gate;
+      return Response.json(deferred);
+    });
+    vi.stubGlobal("fetch", fetch);
+    return { fetch, release };
+  }
+
+  it("paints the open columns first, then lands the other statuses in board order", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { fetch, release } = deferredLater([issue("b", "p1", "todo", 2)], [done("a", 1)]);
+    try {
+      await client.fetchQuery({ queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn });
+      const first = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!;
+      expect(first.issues.map((row) => row.id)).toEqual(["b"]);
+      expect(first.deferred_pending).toBe(true);
+      expect(fetch.mock.calls.map(([path]) => path)).toContain(DEFERRED_BOARD_ISSUES_PATH);
+      release();
+      await vi.waitFor(() => expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.deferred_pending).toBeUndefined());
+      expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues.map((row) => row.id)).toEqual(["a", "b"]);
+    } finally { client.clear(); }
+  });
+
+  it("keeps a complete board's other statuses on screen while they are read again", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(GLOBAL_BOARD_KEY, board([done("a", 1), done("gone", 3), issue("b", "p1", "todo", 2)]));
+    const { release } = deferredLater([issue("b", "p1", "todo", 2)], [done("a", 1)]);
+    try {
+      await client.fetchQuery({ queryKey: GLOBAL_BOARD_KEY, queryFn: globalBoardQueryFn, staleTime: 0 });
+      const refetched = client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!;
+      expect(refetched.deferred_pending).toBeUndefined();
+      expect(refetched.issues.map((row) => row.id)).toEqual(["a", "b", "gone"]);
+      release();
+      await vi.waitFor(() => expect(client.getQueryData<GlobalBoardResponse>(GLOBAL_BOARD_KEY)!.issues.map((row) => row.id)).toEqual(["a", "b"]));
+    } finally { client.clear(); }
+  });
+
+  it("reads both halves to completion without a client to land the second", async () => {
+    const { release } = deferredLater([issue("b", "p1", "todo", 2)], [done("a", 1)]);
+    release();
+    const result = await globalBoardQueryFn();
+    expect(result.issues.map((row) => row.id)).toEqual(["a", "b"]);
+    expect(result.deferred_pending).toBeUndefined();
+  });
+
+  it("keeps rows reopened or written after the deferred read started", () => {
+    const startedAt = Date.parse("2026-08-26T12:00:00.000Z");
+    const reopened = issue("reopened", "p1", "todo", 1);
+    const edited = { ...done("edited", 2), updated_at: "2026-08-26T12:00:05.000Z" };
+    const stale = done("stale", 3);
+    const merged = mergeDeferredBoardIssues([reopened, edited, stale], [], startedAt);
+    expect(merged.map((row) => row.id)).toEqual(["reopened", "edited"]);
   });
 });

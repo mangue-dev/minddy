@@ -313,8 +313,10 @@ export async function instanceAdminRecipients(actorId: string, previousAdminEmai
   const recipients = new Map<string, { id: string; email: string | null }>();
   const actor = await service.auth.admin.getUserById(actorId);
   if (actor.data?.user) recipients.set(actorId, { id: actorId, email: actor.data.user.email ?? null });
-  for (const email of emails) {
-    const { data } = await service.rpc("get_admin_account", { p_email: email, p_user_id: null });
+  // Independent lookups, read together and applied in list order.
+  const accounts = await Promise.all([...emails].map((email) =>
+    service.rpc("get_admin_account", { p_email: email, p_user_id: null })));
+  for (const { data } of accounts) {
     const row = (data as Array<{ user_id: string; email: string | null; email_confirmed: boolean }> | null)?.[0];
     if (row?.email_confirmed) recipients.set(row.user_id, { id: row.user_id, email: row.email });
   }

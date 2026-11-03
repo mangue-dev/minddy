@@ -153,15 +153,20 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const service = getServiceClient();
-  const { data } = await service
-    .from("user_ai_keys")
-    .select(STORED)
-    .eq("user_id", auth.user.id)
-    .order("created_at", { ascending: false });
-  const { data: assignments } = await service
-    .from("user_ai_capability_assignments")
-    .select("ai_key_id, capability")
-    .eq("user_id", auth.user.id);
+  // A call type's credential is its route now (MIN-826); `enabled_surfaces`
+  // reports the surfaces with at least one call type on each credential.
+  const [{ data }, { data: assignments }, routed] = await Promise.all([
+    service
+      .from("user_ai_keys")
+      .select(STORED)
+      .eq("user_id", auth.user.id)
+      .order("created_at", { ascending: false }),
+    service
+      .from("user_ai_capability_assignments")
+      .select("ai_key_id, capability")
+      .eq("user_id", auth.user.id),
+    routedUsagesByKey(auth.user.id),
+  ]);
   const assignedByKey = new Map<string, ModelCatalogCapability[]>();
   for (const assignment of Array.isArray(assignments) ? assignments : []) {
     const row = assignment as { ai_key_id: string; capability: string };
@@ -171,9 +176,6 @@ export async function GET(request: NextRequest) {
       row.capability,
     ]);
   }
-  // A call type's credential is its route now (MIN-826); `enabled_surfaces`
-  // reports the surfaces with at least one call type on each credential.
-  const routed = await routedUsagesByKey(auth.user.id);
   const keys = await Promise.all(
     (data ?? []).map(async (row) => ({
       ...await decorateAiKey(

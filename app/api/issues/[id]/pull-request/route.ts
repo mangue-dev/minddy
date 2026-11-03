@@ -19,10 +19,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
 
-  // RLS: the caller must be able to see the issue.
+  // RLS: the caller must be able to see the issue. The link read uses the same
+  // RLS client and runs beside it; its outcome is only used once the issue is.
+  const prsRead = listIssuePullRequests(auth.supabase, { issueId: id });
+  prsRead.catch(() => {});
   const { data: issue } = await issueStore(auth.supabase).select("id").eq("id", id).maybeSingle();
   if (!issue) return NextResponse.json({ error: "Issue not found" }, { status: 404 });
 
-  const prs = await listIssuePullRequests(auth.supabase, { issueId: id });
+  const prs = await prsRead;
   return NextResponse.json({ pullRequest: pickIssuePullRequests(prs)[id] ?? null });
 }

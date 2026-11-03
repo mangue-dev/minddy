@@ -4,6 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { downloadAttachment, signedAttachmentUrl } from "@/lib/server/attachments";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
 import type { ChatContentPart } from "./loop";
+import { mapWithConcurrency } from "@/lib/map-with-concurrency";
+
+const ATTACHMENT_CONCURRENCY = 3;
 
 // ── Attachments → OpenRouter content parts ───────────────────────────────
 // Shared by the two Numo entry points (assistant shell, @Numo comments).
@@ -139,37 +142,32 @@ export async function buildAttachmentParts(
     includeHeavy,
   }: { modalities: Set<string>; includeHeavy: boolean }
 ): Promise<ChatContentPart[]> {
-  const parts: ChatContentPart[] = [];
-
-  for (const stored of attachments) {
+  const partFor = async (stored: PromptAttachment): Promise<ChatContentPart> => {
     const a = stored.id && stored.project_id
       ? await decodeAttachmentRow("attachments", stored as
         PromptAttachment & Record<string, unknown>) : stored;
     if (isLink(a)) {
-      parts.push({
+      return {
         type: "text",
         text: a.url
           ? `[Link: ${a.file_name} — ${a.url}]`
           : `[Link: ${a.file_name}]`,
-      });
-      continue;
+      };
     }
 
     if (isPage(a)) {
-      parts.push({
+      return {
         type: "text",
         text: a.page_id
           ? `[Page of this project cited: "${a.file_name}" (page id: ${a.page_id}) — read it with get_page if you need its content]`
           : `[Page of this project cited: "${a.file_name}"]`,
-      });
-      continue;
+      };
     }
 
     // A file with no object in the bucket: nothing to download, and especially not
     // a `download(null)` which would raise (see PromptAttachment).
     if (!a.storage_path) {
-      parts.push(note(a));
-      continue;
+      return note(a);
     }
 
     if (a.mime_type.startsWith("image/")) {
@@ -178,30 +176,26 @@ export async function buildAttachmentParts(
           expiresIn: 600,
         });
         if (url) {
-          parts.push({ type: "image_url", image_url: { url } });
-          continue;
+          return { type: "image_url", image_url: { url } };
         }
       }
-      parts.push(note(a));
-      continue;
+      return note(a);
     }
 
     if (a.mime_type === "application/pdf") {
       if (includeHeavy && modalities.has("file") && a.size_bytes <= MAX_PDF_BYTES) {
         const buf = await download(service, a.storage_path);
         if (buf) {
-          parts.push({
+          return {
             type: "file",
             file: {
               filename: a.file_name,
               file_data: `data:application/pdf;base64,${buf.toString("base64")}`,
             },
-          });
-          continue;
+          };
         }
       }
-      parts.push(note(a));
-      continue;
+      return note(a);
     }
 
     if (isTextLike(a.mime_type, a.file_name)) {
@@ -212,19 +206,18 @@ export async function buildAttachmentParts(
           if (text.length > MAX_TEXT_CHARS) {
             text = `${text.slice(0, MAX_TEXT_CHARS)}\n… [truncated]`;
           }
-          parts.push({
+          return {
             type: "text",
             text: `[Attachment: ${a.file_name}]\n"""\n${text}\n"""`,
-          });
-          continue;
+          };
         }
       }
-      parts.push(note(a));
-      continue;
+      return note(a);
     }
 
-    parts.push(note(a, "not viewable"));
-  }
+    return note(a, "not viewable");
+  };
 
-  return parts;
+  // A few downloads at a time keeps several large PDFs from sitting in memory at once.
+  return mapWithConcurrency(attachments, ATTACHMENT_CONCURRENCY, partFor);
 }

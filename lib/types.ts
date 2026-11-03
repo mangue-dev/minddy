@@ -802,6 +802,9 @@ export interface GlobalBoardResponse {
       relation chips and the side panel. */
   relations: IssueRelation[];
   cycles: BoardCycles;
+  /** Client-only: the board painted its open columns and the other statuses
+      (lib/global-board-reads.ts) have not landed yet, with none cached before. */
+  deferred_pending?: true;
 }
 
 /* ── Command-palette search index (MIN-91) ─────────────────────────────────

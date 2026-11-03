@@ -1,4 +1,4 @@
-import { loadGlobalBoardIssues } from "@/lib/server/global-board-issues";
+import { loadGlobalBoardIssues, parseIssueStatusesParam } from "@/lib/server/global-board-issues";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
@@ -13,13 +13,18 @@ import { mapIssueRow } from "@/lib/server/issue-mapper";
  * that is useful reconciliation work, but it can take several seconds and must
  * not leave stale card positions visible in the meantime. This route performs
  * a complete RLS-scoped issue read needed to make both Kanban caches trustworthy.
+ *
+ * `?statuses=` narrows it to some statuses: the global board reads its open
+ * columns with the aggregate and the remaining statuses here, concurrently.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+  const filter = parseIssueStatusesParam(new URL(request.url).searchParams);
+  if (!filter) return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
 
-  const { data, error } = await loadGlobalBoardIssues(auth.supabase, auth.user.id);
+  const { data, error } = await loadGlobalBoardIssues(auth.supabase, auth.user.id, undefined, filter.statuses);
 
   if (error) {
     console.error("[api/me/issues] load failed:", error.message);

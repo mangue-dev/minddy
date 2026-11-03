@@ -728,9 +728,7 @@ async function broadcastChecksChanged(
 ): Promise<void> {
   if (!repoFullName) return;
   if (numbers.length > 0) {
-    for (const number of numbers) {
-      await broadcastGithubPr(repoFullName, number, ["pr"]);
-    }
+    await Promise.all(numbers.map((number) => broadcastGithubPr(repoFullName, number, ["pr"])));
     return;
   }
   if (!headSha) return;

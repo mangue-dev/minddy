@@ -137,6 +137,27 @@ export async function GET(request: NextRequest) {
   const tz = request.nextUrl.searchParams.get("tz");
   const today = todayInTz(tz);
 
+  // The total count and the project list read no cycle-owned column, so they
+  // (and the feedback read that follows the project list) overlap the cycle
+  // reconciliation below instead of waiting for it.
+  const totalRead = Promise.resolve(
+    // All statuses combined: onboarding asks “have you already created a
+    // ticket? ”, to which a completed ticket answers yes (lib/use-onboarding.ts).
+    issueStore(auth.supabase).select("id, projects!inner(deleted_at)", { count: "exact", head: true })
+      .is("projects.deleted_at", null)
+      .is("deleted_at", null)
+  );
+  // My projects, for the sole purpose of limiting the service-role reading of feedback
+  // (loadNewFeedback): RLS `projects_select` = owner ∪ member.
+  const myProjectsRead = Promise.resolve(
+    auth.supabase.from("projects").select("id").is("deleted_at", null)
+  );
+  const newFeedbackPromise = myProjectsRead.then((res) => res.error
+    ? { posts: [], total: 0 }
+    : loadNewFeedback(((res.data ?? []) as { id: string }[]).map((p) => p.id)));
+  // An early error response leaves this read unawaited; it must not reject unhandled.
+  newFeedbackPromise.catch(() => undefined);
+
   const prefs = resolveCyclePrefs(
     (auth.user.user_metadata ?? null) as Record<string, unknown> | null
   );
@@ -165,11 +186,7 @@ export async function GET(request: NextRequest) {
   // shows lines to act on rather than numbers.
   const [totalRes, cycleIssuesRes, dueSoonRes, triageRes, myProjectsRes] =
     await Promise.all([
-      // All statuses combined: onboarding asks “have you already created a
-      // ticket? ”, to which a completed ticket answers yes (lib/use-onboarding.ts).
-      issueStore(auth.supabase).select("id, projects!inner(deleted_at)", { count: "exact", head: true })
-        .is("projects.deleted_at", null)
-        .is("deleted_at", null),
+      totalRead,
       currentCycleId
         ? issueStore(auth.supabase).select(SUMMARY_ISSUE_COLUMNS)
             .is("projects.deleted_at", null)
@@ -197,9 +214,7 @@ export async function GET(request: NextRequest) {
         .eq("status", "triage")
         .order("created_at", { ascending: true })
         .limit(TRIAGE_LIMIT),
-      // My projects, for the sole purpose of limiting the service-role reading of feedback
-      // (loadNewFeedback) : RLS `projects_select` = owner ∪ membre.
-      auth.supabase.from("projects").select("id").is("deleted_at", null),
+      myProjectsRead,
     ]);
 
   const firstError =
@@ -212,12 +227,6 @@ export async function GET(request: NextRequest) {
     console.error("[api/me/summary] load failed:", firstError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-
-  // Leaves now (the call starts the request) and waits at the bottom: she
-  // thus covers the sequential pass of the cycle relations.
-  const newFeedbackPromise = loadNewFeedback(
-    ((myProjectsRes.data ?? []) as { id: string }[]).map((p) => p.id)
-  );
 
   const cycleIssues: HomeSummaryIssue[] = (
     (cycleIssuesRes.data ?? []) as SummaryRow[]

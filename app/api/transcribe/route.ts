@@ -121,15 +121,17 @@ export async function POST(request: NextRequest) {
   const spellings = vocabularyTerms(vocabulary);
 
   // Model is DB-configured (app_config), like the assistant model.
-  const cfg = await getAppConfigValues([
-    ...modelConfigKeys("transcription_model"),
-    "transcription_model_provider",
+  const [cfg, runtime] = await Promise.all([
+    getAppConfigValues([
+      ...modelConfigKeys("transcription_model"),
+      "transcription_model_provider",
+    ]),
+    resolveAiRuntime({
+      userId: user.id,
+      modelKey: "transcription_model",
+      surface: "voice",
+    }),
   ]);
-  const runtime = await resolveAiRuntime({
-    userId: user.id,
-    modelKey: "transcription_model",
-    surface: "voice",
-  });
   const model = runtime.model;
   // The Model ACTUALLY Called: Routing Shortcut Fallback (MIN-263)
   // can remove the suffix, and it is this value which goes to the ledger.

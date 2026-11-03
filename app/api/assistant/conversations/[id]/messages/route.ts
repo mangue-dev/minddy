@@ -19,23 +19,26 @@ export async function GET(
   if (!NUMO_UUID.test(conversationId)) return Response.json({ error: "Invalid conversation ID" }, { status: 400 });
 
   // The legacy renderer only accepts assistant messages from the common identity.
-  const { data: conversation } = await supabase
-    .from("numo_conversation_history")
-    .select("id, source")
-    .eq("id", conversationId)
-    .single();
+  // Both RLS reads start together; the messages are discarded when the
+  // conversation is not visible.
+  const [{ data: conversation }, { data, error }] = await Promise.all([
+    supabase
+      .from("numo_conversation_history")
+      .select("id, source")
+      .eq("id", conversationId)
+      .single(),
+    supabase
+      .from("numo_messages")
+      .select("*")
+      .eq("conversation_id", conversationId)
+      .eq("source", "assistant")
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true }),
+  ]);
 
   if (!conversation) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
-
-  const { data, error } = await supabase
-    .from("numo_messages")
-    .select("*")
-    .eq("conversation_id", conversationId)
-    .eq("source", "assistant")
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
 
   if (error) {
     return Response.json({ error: error.message }, { status: 500 });

@@ -115,12 +115,14 @@ export async function forgeAuthorMemberId(params: {
 }): Promise<string | null> {
   const login = params.authorLogin?.trim().toLowerCase();
   if (!login) return null;
-  for (const projectId of params.projectIds) {
-    const index = await buildForgeAssigneeIndex({
-      projectId,
-      provider: params.provider,
-    });
-    const userId = index.get(login);
+  // The indexes are database reads, built together; they are then walked in
+  // project order, so the first match (or the first failure) is unchanged.
+  const indexes = await Promise.allSettled(params.projectIds.map((projectId) =>
+    buildForgeAssigneeIndex({ projectId, provider: params.provider })));
+  for (const [position, projectId] of params.projectIds.entries()) {
+    const built = indexes[position];
+    if (built.status === "rejected") throw built.reason;
+    const userId = built.value.get(login);
     if (userId && (await hasProjectAccess(userId, projectId))?.canWrite) return userId;
   }
   return null;

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
+import { mapWithConcurrency } from "@/lib/map-with-concurrency";
 
 /**
  * Objects in a project that do NOT live in the bucket `attachments`
@@ -21,6 +22,17 @@ import { FORGE_ATTACHMENTS_BUCKET } from "@/lib/forge-image-assets";
 const LIST_PAGE = 1000;
 /** Stay below the default PostgREST row cap when collecting deletion metadata. */
 const QUERY_PAGE = 500;
+/**
+ * Prefix listings in flight at once. Each listing only reads and never throws,
+ * so running several keeps the result (gathered back in input order).
+ */
+const LIST_CONCURRENCY = 4;
+
+async function listPrefixes(service: SupabaseClient, bucket: string,
+  prefixes: readonly string[]): Promise<string[]> {
+  return (await mapWithConcurrency(prefixes, LIST_CONCURRENCY,
+    (prefix) => listStoragePrefix(service, bucket, prefix))).flat();
+}
 
 /**
  * Recursively lists objects under a prefix. Storage does not descend, and
@@ -62,10 +74,7 @@ export async function projectIconPaths(
   service: SupabaseClient,
   projectIds: string[]
 ): Promise<string[]> {
-  const paths: string[] = [];
-  for (const id of projectIds) {
-    paths.push(...(await listStoragePrefix(service, "project-icons", id)));
-  }
+  const paths = await listPrefixes(service, "project-icons", projectIds);
   const ids = new Set(projectIds);
   for (let offset = 0; ; offset += LIST_PAGE) {
     const { data, error } = await service.storage.from("project-icons")
@@ -93,11 +102,8 @@ export async function forgeAttachmentPathsForProjects(
 ): Promise<string[]> {
   if (projectIds.length === 0) return [];
 
-  const paths = new Set<string>();
-  for (const id of projectIds) {
-    for (const path of await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET,
-      `projects/${id}`)) paths.add(path);
-  }
+  const paths = new Set(await listPrefixes(service, FORGE_ATTACHMENTS_BUCKET,
+    projectIds.map((id) => `projects/${id}`)));
 
   type Link = {
     project_id: string;
@@ -155,10 +161,7 @@ export async function forgeAttachmentPathsForProjects(
         }
         if ((data ?? []).length < QUERY_PAGE) break;
       }
-      const historical: string[] = [];
-      for (const id of ids) {
-        historical.push(...(await listStoragePrefix(service, FORGE_ATTACHMENTS_BUCKET, id)));
-      }
+      const historical = await listPrefixes(service, FORGE_ATTACHMENTS_BUCKET, [...ids]);
       if (!survivors.has(key(link))) {
         for (const path of historical) paths.add(path);
         continue;

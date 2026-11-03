@@ -210,9 +210,27 @@ export async function resolveMentionTargets(
     resolution.set(`objective:${row.id}`, row.name);
     if (isObjectiveStatus(row.status)) objectiveStatuses?.set(`objective:${row.id}`, row.status);
   }
-  for (const stored of pages) {
-    if (!readable(stored)) continue;
-    const row = await decodePageProjection(stored, userId);
+  const visibleMembers = new Set<string>(
+    memberships.filter((row) => allowed.has(String(row.project_id))).map((row) => String(row.user_id))
+  );
+  if (idsOf("member").includes(userId)) visibleMembers.add(userId);
+  // Each family decodes under its own project scope; resolve them together.
+  const [decodedPages, decodedResources, projectNames, routineTitles, connections, users] = await Promise.all([
+    Promise.all(pages.filter(readable).map((stored) => decodePageProjection(stored, userId))),
+    Promise.all(resources.filter((stored) => allowed.has(String(stored.project_id)))
+      .map((stored) => decodeAttachmentRow("attachments", stored, userId))),
+    Promise.all(projects.filter((row) => !row.deleted_at && allowed.has(String(row.id)))
+      .map(async (row) => [row.id, await decodeProjectName(row, userId)] as const)),
+    // A title that does not decode resolves as unavailable, not as a failure
+    // of every other mention on the screen.
+    Promise.all(routines.filter(readable)
+      .map(async (row) => [row.id, await decodeRoutineTitle(row, userId).catch(() => null)] as const)),
+    // A connection is read under its owner's id: another account's reads as none.
+    Promise.all(idsOf("mcp")
+      .map(async (id) => [id, await getMcpConnection(userId, id).catch(() => null)] as const)),
+    visibleMembers.size ? fetchAuthUsersById(service, [...visibleMembers]) : null,
+  ]);
+  for (const row of decodedPages) {
     const title = typeof row.title === "string" ? row.title.trim() : "";
     // A page the reader may see but nobody titled yet (a subpage just
     // created): untitled, not unavailable.
@@ -222,25 +240,15 @@ export async function resolveMentionTargets(
       database: Array.isArray(row.database_schema),
     });
   }
-  for (const stored of resources) {
-    if (!allowed.has(String(stored.project_id))) continue;
-    // The attachment's own name, decoded like every attachment read. A page
-    // resource keeps the title snapshot taken when it was added.
-    const row = await decodeAttachmentRow("attachments", stored, userId);
+  // The attachment's own name, decoded like every attachment read. A page
+  // resource keeps the title snapshot taken when it was added.
+  for (const row of decodedResources) {
     const name = typeof row.file_name === "string" ? row.file_name.trim() : "";
     resolution.set(`resource:${row.id}`, name || null);
   }
-  for (const row of projects) {
-    if (!row.deleted_at && allowed.has(String(row.id))) {
-      resolution.set(`project:${row.id}`, await decodeProjectName(row, userId));
-    }
-  }
-  for (const row of routines) {
-    if (!readable(row)) continue;
-    // A title that does not decode resolves as unavailable, not as a failure
-    // of every other mention on the screen.
-    const title = await decodeRoutineTitle(row, userId).catch(() => null);
-    if (title) resolution.set(`routine:${row.id}`, title);
+  for (const [id, name] of projectNames) resolution.set(`project:${id}`, name);
+  for (const [id, title] of routineTitles) {
+    if (title) resolution.set(`routine:${id}`, title);
   }
   for (const row of cycles) {
     resolution.set(`cycle:${row.id}`, `Cycle ${String(row.start_date)} → ${String(row.end_date)}`);
@@ -253,20 +261,13 @@ export async function resolveMentionTargets(
   for (const [key, ref] of skills) {
     if (allowed.has(ref.meta!.project)) resolution.set(key, ref.id);
   }
-  // A connection is read under its owner's id: another account's reads as none.
-  for (const id of idsOf("mcp")) {
-    const connection = await getMcpConnection(userId, id).catch(() => null);
+  for (const [id, connection] of connections) {
     if (!connection?.name) continue;
     resolution.set(`mcp:${id}`, connection.name);
     const known = mcpPresetForUrl(connection.url)?.id;
     if (known) mcpServices?.set(`mcp:${id}`, known);
   }
-  const visibleMembers = new Set<string>(
-    memberships.filter((row) => allowed.has(String(row.project_id))).map((row) => String(row.user_id))
-  );
-  if (idsOf("member").includes(userId)) visibleMembers.add(userId);
-  if (visibleMembers.size) {
-    const users = await fetchAuthUsersById(service, [...visibleMembers]);
+  if (users) {
     for (const id of visibleMembers) {
       const user = users.get(id);
       if (user) resolution.set(`member:${id}`, displayName(toNamed(user), "User"));

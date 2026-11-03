@@ -18,7 +18,8 @@ const board: GlobalBoardResponse = { issues: [], members: {}, categories: {}, ob
   integrations: {}, relations: [], cycles: { enabled: false, current: null, upcoming: [], past: [] } };
 const viewsKey = ["views", "global"];
 const response = (data: unknown = board) => Response.json(data);
-const responseFor = (url: string) => response(url.split("?")[0] === "/api/me/views" ? [] : board);
+// The views and the board's other statuses (lib/global-board-reads.ts) are lists.
+const responseFor = (url: string) => response(["/api/me/views", "/api/me/issues"].includes(url.split("?")[0]) ? [] : board);
 let root: Root;
 let container: HTMLDivElement;
 let client: QueryClient;
@@ -63,7 +64,7 @@ afterEach(async () => {
 describe("cold retained-board request scheduling", () => {
   it("starts before parent shell reads without waiting for the lazy screen or adding an observer", async () => {
     await render({ shell: true });
-    expect(fetchMock.mock.calls.map(([url]) => String(url).split("?")[0])).toEqual(["/api/me/board", "/api/me/views", "/api/shell-fixture"]);
+    expect(fetchMock.mock.calls.map(([url]) => String(url).split("?")[0])).toEqual(["/api/me/board", "/api/me/issues", "/api/me/views", "/api/shell-fixture"]);
     expect(client.getQueryCache().find({ queryKey: GLOBAL_BOARD_KEY })?.getObserversCount()).toBe(0);
     expect(client.getQueryCache().find({ queryKey: viewsKey })?.getObserversCount()).toBe(0);
     await settle();
@@ -85,13 +86,13 @@ describe("cold retained-board request scheduling", () => {
   });
 
   it.each([
-    { cachedKey: GLOBAL_BOARD_KEY, cachedData: board, requestedPath: "/api/me/views" },
-    { cachedKey: viewsKey, cachedData: [], requestedPath: "/api/me/board" },
-  ])("independently skips cached data while requesting $requestedPath", async ({ cachedKey, cachedData, requestedPath }) => {
+    { cachedKey: GLOBAL_BOARD_KEY, cachedData: board, requestedPath: "/api/me/views", requested: ["/api/me/views"] },
+    { cachedKey: viewsKey, cachedData: [], requestedPath: "/api/me/board", requested: ["/api/me/board", "/api/me/issues"] },
+  ])("independently skips cached data while requesting $requestedPath", async ({ cachedKey, cachedData, requested }) => {
     client.setQueryData(cachedKey, cachedData);
     await render();
     await settle();
-    expect(fetchMock.mock.calls.map(([url]) => String(url).split("?")[0])).toEqual([requestedPath]);
+    expect(fetchMock.mock.calls.map(([url]) => String(url).split("?")[0])).toEqual(requested);
   });
 
   it("joins both in-flight reads when the real board and saved-views hooks mount", async () => {
@@ -100,14 +101,15 @@ describe("cold retained-board request scheduling", () => {
     await render({ restoring: true });
     await render();
     await render({ consume: true });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // The board's two halves and the views.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     await act(async () => { finishes.forEach((finish) => finish()); });
     await settle();
     expect(container.textContent).toBe("Ready");
     await render({ active: false });
     expect(client.getQueryCache().find({ queryKey: GLOBAL_BOARD_KEY })?.getObserversCount()).toBe(0);
     expect(client.getQueryCache().find({ queryKey: viewsKey })?.getObserversCount()).toBe(0);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("uses query cancellation so a cleared account cache cannot receive a late response", async () => {
@@ -120,7 +122,7 @@ describe("cold retained-board request scheduling", () => {
     await render();
     const previousClient = client;
     await act(() => previousClient.clear());
-    expect(signals).toHaveLength(2);
+    expect(signals).toHaveLength(3);
     expect(signals.every((signal) => signal.aborted)).toBe(true);
     client = makeClient();
     await render({ active: false });
@@ -139,7 +141,8 @@ describe("cold retained-board request scheduling", () => {
     expect(client.getQueryState(GLOBAL_BOARD_KEY)?.status).toBe("error");
     await render({ consume: true });
     await settle();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // The failed board read and its other half, the views, then both halves again.
+    expect(fetchMock).toHaveBeenCalledTimes(5);
     expect(container.textContent).toBe("Ready");
   });
 });
