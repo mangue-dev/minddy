@@ -7,6 +7,9 @@
  * Without option, the check reads the entire index (CI). With `--staged`, it only
  * reads additions and modifications ready to be committed, for a local hook.
  * `--worktree` applies the same rules to files not yet indexed.
+ * `--new-since <commit>` keeps the index check but limits the history scan to
+ * objects reachable from HEAD and not from that commit: a pull request's
+ * additions on top of an already-scanned base branch.
  */
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -21,8 +24,16 @@ const remoteName = remoteFlag === -1 ? null : process.argv[remoteFlag + 1];
 if (remoteFlag !== -1 && (!remoteName || remoteName.startsWith("-"))) {
   throw new Error("--remote requires the name of a configured Git remote");
 }
+const sinceFlag = process.argv.indexOf("--new-since");
+const since = sinceFlag === -1 ? null : process.argv[sinceFlag + 1];
+if (sinceFlag !== -1 && (!since || since.startsWith("-"))) {
+  throw new Error("--new-since requires a commit");
+}
 if ([staged, worktree, Boolean(remoteName)].filter(Boolean).length > 1) {
   throw new Error("--staged, --worktree and --remote are mutually exclusive");
+}
+if (since && (staged || remoteName)) {
+  throw new Error("--new-since cannot be combined with --staged or --remote");
 }
 const textExtensions = new Set([".cjs", ".css", ".html", ".js", ".json", ".md", ".mjs", ".sh", ".ts", ".tsx", ".txt", ".yml", ".yaml"]);
 const fixturePath = /(?:^|\/)(?:fixtures?|__tests__)(?:\/|$)|\.test\.[cm]?[jt]sx?$/;
@@ -167,51 +178,10 @@ function scanText(path, text, failures, prefix = "") {
 }
 
 /**
- * Analyzes each blob reachable from a publishable ref (branches, tags and
- * refs `origin/*`). This detects a secret removed from HEAD but still present
- * in a commit that would be made public. Local tooling private refs
- * (e.g. `refs/codex/*`) are not part of a standard push and should not cause the post to fail. Inaccessible objects are not pushed by Git: the purge procedure is documented in the audit.
+ * Reads blobs through one `git cat-file --batch` process per 64 MiB instead of
+ * one process per object; thousands of `git show` calls took most of a run.
  */
-function refInventory(includeAllRefs) {
-  const prefixes = includeAllRefs
-    ? ["refs"]
-    : ["refs/heads", "refs/tags", "refs/remotes/origin", "refs/pull", "refs/replace", "refs/notes"];
-  return git(["for-each-ref", "--format=%(refname)%00%(objectname)%00%(objecttype)", ...prefixes])
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => {
-      const [name, object, type] = line.split("\0");
-      return { name, object, type };
-    });
-}
-
-function scanReachableHistory(failures, includeAllRefs = false) {
-  const refs = refInventory(includeAllRefs);
-  const entries = checkedGit(["rev-list", "--objects", "--stdin"], `${refs.map(({ object }) => object).join("\n")}\n`)
-    .toString("utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => {
-      const separator = line.indexOf(" ");
-      return separator === -1 ? [line, "<Git object without path>"] : [line.slice(0, separator), line.slice(separator + 1)];
-    });
-  const pathByObject = new Map(entries);
-  for (const path of new Set(pathByObject.values())) {
-    if (historicalForbiddenPaths.some((pattern) => pattern.test(path))) {
-      failures.push(`history ${path}: internal path is forbidden`);
-    }
-  }
-  const objectIds = [...pathByObject.keys()];
-  const metadata = checkedGit(["cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"], `${objectIds.join("\n")}\n`)
-    .toString("utf8")
-    .trim()
-    .split("\n");
-  const blobs = metadata
-    .map((line) => line.split(" "))
-    .filter(([, type]) => type === "blob")
-    .map(([id, , rawSize]) => ({ id, size: Number(rawSize) }));
-  if (blobs.length === 0) return { refs, objects: objectIds.length, blobs: 0 };
-
+function* readBlobs(blobs) {
   const batches = [];
   let current = [];
   let currentSize = 0;
@@ -238,16 +208,69 @@ function scanReachableHistory(failures, includeAllRefs = false) {
       if (type !== "blob" || !Number.isSafeInteger(size) || offset + size > batch.length) {
         throw new Error(`invalid response from git cat-file for ${id}`);
       }
-      const body = batch.subarray(offset, offset + size);
+      yield { id, body: batch.subarray(offset, offset + size) };
       offset += size + 1; // git adds a newline after each blob.
-      if (body.includes(0x00) || size > 5 * 1024 * 1024) continue;
-      scanText(
-        pathByObject.get(id) ?? "<unknown historical path>",
-        body.toString("utf8"),
-        failures,
-        "history ",
-      );
     }
+  }
+}
+
+/**
+ * Analyzes each blob reachable from a publishable ref (branches, tags and
+ * refs `origin/*`). This detects a secret removed from HEAD but still present
+ * in a commit that would be made public. Local tooling private refs
+ * (e.g. `refs/codex/*`) are not part of a standard push and should not cause the post to fail. Inaccessible objects are not pushed by Git: the purge procedure is documented in the audit.
+ */
+function refInventory(includeAllRefs) {
+  const prefixes = includeAllRefs
+    ? ["refs"]
+    : ["refs/heads", "refs/tags", "refs/remotes/origin", "refs/pull", "refs/replace", "refs/notes"];
+  return git(["for-each-ref", "--format=%(refname)%00%(objectname)%00%(objecttype)", ...prefixes])
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [name, object, type] = line.split("\0");
+      return { name, object, type };
+    });
+}
+
+function scanReachableHistory(failures, includeAllRefs = false, sinceCommit = null) {
+  const refs = sinceCommit ? [] : refInventory(includeAllRefs);
+  const revisions = sinceCommit
+    ? ["HEAD", "--not", git(["rev-parse", "--verify", "--end-of-options", `${sinceCommit}^{commit}`]).trim()]
+    : refs.map(({ object }) => object);
+  const entries = checkedGit(["rev-list", "--objects", "--stdin"], `${revisions.join("\n")}\n`)
+    .toString("utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const separator = line.indexOf(" ");
+      return separator === -1 ? [line, "<Git object without path>"] : [line.slice(0, separator), line.slice(separator + 1)];
+    });
+  const pathByObject = new Map(entries);
+  for (const path of new Set(pathByObject.values())) {
+    if (historicalForbiddenPaths.some((pattern) => pattern.test(path))) {
+      failures.push(`history ${path}: internal path is forbidden`);
+    }
+  }
+  const objectIds = [...pathByObject.keys()];
+  const metadata = checkedGit(["cat-file", "--batch-check=%(objectname) %(objecttype) %(objectsize)"], `${objectIds.join("\n")}\n`)
+    .toString("utf8")
+    .trim()
+    .split("\n");
+  const blobs = metadata
+    .map((line) => line.split(" "))
+    .filter(([, type]) => type === "blob")
+    .map(([id, , rawSize]) => ({ id, size: Number(rawSize) }));
+  if (blobs.length === 0) return { refs, objects: objectIds.length, blobs: 0 };
+
+  for (const { id, body } of readBlobs(blobs)) {
+    if (body.includes(0x00) || body.length > 5 * 1024 * 1024) continue;
+    scanText(
+      pathByObject.get(id) ?? "<unknown historical path>",
+      body.toString("utf8"),
+      failures,
+      "history ",
+    );
   }
   return { refs, objects: objectIds.length, blobs: blobs.length };
 }
@@ -303,6 +326,35 @@ const rawPaths = staged
     : git(["ls-files", "-z"]);
 const paths = rawPaths.split("\0").filter((path) => !worktree || existsSync(path));
 const failures = [];
+const textByPath = worktree ? null : readIndexText(paths);
+
+// Reads the index content (stage 0) of every text path in one batch. The
+// index is the content published by the CI as well as that which will be
+// committed by a local hook; never reread HEAD, which may still contain a file
+// which we have just removed.
+function readIndexText(selected) {
+  const wanted = new Set(selected.filter((path) => textExtensions.has(extname(path))));
+  const idByPath = new Map();
+  for (const entry of git(["ls-files", "--stage", "-z"]).split("\0")) {
+    const match = /^(\d+) ([0-9a-f]+) 0\t(.*)$/s.exec(entry);
+    if (match && match[1] !== "160000" && wanted.has(match[3])) idByPath.set(match[3], match[2]);
+  }
+  const ids = [...new Set(idByPath.values())];
+  const sizes = new Map(
+    checkedGit(["cat-file", "--batch-check=%(objectname) %(objectsize)"], `${ids.join("\n")}\n`)
+      .toString("utf8")
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => line.split(" "))
+      .map(([id, size]) => [id, Number(size)]),
+  );
+  const bodies = new Map();
+  for (const { id, body } of readBlobs(ids.map((id) => ({ id, size: sizes.get(id) ?? 0 })))) {
+    bodies.set(id, body.toString("utf8"));
+  }
+  return new Map([...idByPath].map(([path, id]) => [path, bodies.get(id)]));
+}
 
 for (const path of paths) {
   if ([...historicalForbiddenPaths, ...privateSurfacePaths].some((pattern) => pattern.test(path))) {
@@ -320,16 +372,14 @@ for (const path of paths) {
     continue;
   }
 
-  // The index is the content published by the CI as well as that which will be committed by
-  // a local hook; never reread HEAD, which may still contain a file
-  // which we have just removed. `--worktree` is used to check the diff
-  // local before adding it to the index.
-  const text = worktree ? readFileSync(path, "utf8") : git(["show", `:${path}`]);
+  // `--worktree` checks the local diff before adding it to the index.
+  const text = worktree ? readFileSync(path, "utf8") : textByPath.get(path);
+  if (text === undefined) throw new Error(`${path} has no stage-0 index entry to read`);
 
   scanText(path, text, failures);
 }
 
-const history = staged ? null : scanReachableHistory(failures);
+const history = staged ? null : scanReachableHistory(failures, false, since);
 
 if (failures.length) {
   console.error("The public repository cannot contain:");
@@ -337,4 +387,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Public repository check passed (${paths.length} files${staged ? " staged" : worktree ? " in the worktree" : " tracked"}${history ? `, ${history.blobs} blobs in ${history.objects} reachable Git objects` : ""}).`);
+console.log(`Public repository check passed (${paths.length} files${staged ? " staged" : worktree ? " in the worktree" : " tracked"}${history ? `, ${history.blobs} blobs in ${history.objects} ${since ? `Git objects new since ${since}` : "reachable Git objects"}` : ""}).`);

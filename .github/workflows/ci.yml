@@ -42,33 +42,103 @@ env:
   # are pure, and the page projection build (see below) too.
   CI: "true"
 
+# The repository is public, so standard GitHub-hosted runners are not billed:
+# wall time, not runner minutes, is what this layout optimizes. Every job below
+# starts at once, and the required gate waits for all of them.
 jobs:
-  validation:
-    name: Lint, typecheck & edition builds
+  # The history scans run beside the Node jobs because they need no
+  # dependencies. A push to main scans every reachable object. The `Protect
+  # main` ruleset admits changes only through a pull request, with no bypass,
+  # so a pull request scans just what it adds on top of main: its merge commit
+  # minus the first parent. It therefore skips downloading every historical
+  # file (about two minutes), fetching only the blobs its own diffs read. A
+  # pull request that changes the scanning rules rescans the whole history,
+  # because a new rule must also hold for commits already on main.
+  guards:
+    name: Publication & secret guards
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          filter: ${{ github.event_name == 'pull_request' && 'blob:none' || '' }}
           persist-credentials: false
 
       - name: Enforce immutable workflow and container references
         run: node scripts/check-workflow-action-pins.mjs
 
+      # Tree comparisons and `--raw` diffs read object ids only, so they work
+      # before any historical blob is present. From here on, a blob the fetch
+      # missed must fail the scan rather than be fetched one by one or skipped.
+      - name: Choose and fetch the history scan scope
+        id: scope
+        shell: bash
+        env:
+          GIT_NO_LAZY_FETCH: "1"
+        run: |
+          set -euo pipefail
+          blobs="$RUNNER_TEMP/history-blobs"
+          since=""
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            # A pull request is checked out as its merge commit; its first
+            # parent is the current tip of the base branch.
+            base="$(git rev-parse --verify 'HEAD^1^{commit}')"
+            rules_changed="$(git diff-tree -r --name-only --no-renames "$base" HEAD -- .gitleaks.toml scripts/check-public-repo.mjs)"
+            if [ -z "$rules_changed" ]; then since="$base"; fi
+          fi
+          if [ -n "$since" ]; then
+            {
+              git rev-list --objects --missing=print HEAD --not "$since" | sed -n 's/^?//p'
+              git log --raw -m --no-renames --no-abbrev --format= "$since..HEAD" | awk 'NF { print $3; print $4 }'
+            } | { grep -v '^0*$' || true; } | sort -u > "$blobs"
+            echo "since=$since" >> "$GITHUB_OUTPUT"
+            echo "log_opts=$since..HEAD" >> "$GITHUB_OUTPUT"
+          else
+            git rev-list --objects --all --missing=print | sed -n 's/^?//p' > "$blobs"
+            echo "log_opts=--all" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -s "$blobs" ]; then
+            git -c fetch.negotiationAlgorithm=noop fetch --quiet --no-tags --no-write-fetch-head \
+              --filter=blob:none --stdin origin < "$blobs"
+          fi
+          # Every diff gitleaks will read must now be complete offline.
+          if [ -n "$since" ]; then
+            git log -p -U0 -m --format= "$since..HEAD" > /dev/null
+          fi
+          if [ -n "$since" ]; then scope="pull request"; else scope=full; fi
+          echo "Fetched $(wc -l < "$blobs") historical blobs for the $scope scan."
+
       # No internal documents, production identifiers or secrets should be
       # reach the forge, even if a contributor bypasses their .gitignore.
       - name: Public repository check
-        run: node scripts/check-public-repo.mjs
+        env:
+          GIT_NO_LAZY_FETCH: "1"
+          SINCE: ${{ steps.scope.outputs.since }}
+        run: node scripts/check-public-repo.mjs ${SINCE:+--new-since "$SINCE"}
 
       - name: Scan secrets and publication data markers
+        env:
+          LOG_OPTS: ${{ steps.scope.outputs.log_opts }}
         run: >-
           docker run --rm
+          --env GIT_NO_LAZY_FETCH=1
           --volume "$GITHUB_WORKSPACE:/repo:ro"
           --workdir /repo
           ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
           git --config /repo/.gitleaks.toml --no-banner --redact=100
-          --log-opts="--all"
+          --log-opts="$LOG_OPTS"
+
+  validation:
+    name: Lint, typecheck & contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # None of these steps reads Git history; the tooling tests that exercise
+      # Git build their own temporary repositories.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # pnpm is the manager that ACTUALLY installs this repository (node_modules
       # is a pnpm store); `package-lock.json` is held second for
@@ -162,9 +232,8 @@ jobs:
           grep -F 'server → `api.stripe.com`: stripe is not enabled' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
           ! grep -F '/v1/customers' "$RUNNER_TEMP/self-hosted-egress-blocked.md"
 
-      # Keep the edition coverage on this already-initialized runner. Seven
-      # separate matrix jobs repeated checkout, Node setup, and dependency
-      # installation, which consumed more billed minutes than the tests.
+      # The seven contract checks take seconds each, so they share this runner
+      # rather than repeating checkout and installation per edition.
       # Subshells prevent one fixture's exported values from leaking into the
       # next scenario.
       - name: Check all edition contracts
@@ -187,37 +256,6 @@ jobs:
             )
           done
 
-      # Deployable editions must compile and open an HTTP port with the exact
-      # fixture checked above. Partial variants remain covered by their contract
-      # diagnostics and intentionally cannot start.
-      - name: Build and start deployable editions
-        shell: bash
-        run: |
-          for edition in self-hosted-minimal minddy-cloud managed-forge; do
-            (
-              set -a
-              source "test/fixtures/editions/$edition.env"
-              set +a
-              pnpm run build
-              log_file="$RUNNER_TEMP/minddy-$edition-start.log"
-              pnpm exec next start -p 3100 > "$log_file" 2>&1 &
-              server_pid=$!
-              trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
-              ready=0
-              for attempt in {1..30}; do
-                if curl --silent --show-error --output /dev/null http://127.0.0.1:3100/; then
-                  ready=1
-                  break
-                fi
-                sleep 1
-              done
-              if [ "$ready" -ne 1 ]; then
-                sed -n '1,240p' "$log_file"
-                exit 1
-              fi
-            )
-          done
-
       - name: Upload self-hosted egress reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -227,14 +265,65 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Deployable editions must compile and open an HTTP port with the exact
+  # fixture the contract step checks. Partial variants remain covered by their
+  # contract diagnostics and intentionally cannot start. Each build takes about
+  # a minute, so one runner per edition keeps them off the critical path.
+  editions:
+    name: Build & start (${{ matrix.edition }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [self-hosted-minimal, minddy-cloud, managed-forge]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 10.28.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build and start the edition
+        shell: bash
+        env:
+          EDITION: ${{ matrix.edition }}
+        run: |
+          set -a
+          source "test/fixtures/editions/$EDITION.env"
+          set +a
+          pnpm run build
+          log_file="$RUNNER_TEMP/minddy-$EDITION-start.log"
+          pnpm exec next start -p 3100 > "$log_file" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --silent --show-error --output /dev/null http://127.0.0.1:3100/; then
+              exit 0
+            fi
+            sleep 1
+          done
+          sed -n '1,240p' "$log_file"
+          exit 1
+
   tests:
-    name: Unit tests (${{ matrix.shard }}/2)
+    name: Unit tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -257,9 +346,11 @@ jobs:
 
       # Each shard builds its own projection artifact through globalSetup and
       # retains per-file isolation. Every discovered file runs on one shard.
+      # Most of a shard's time is module import and transform rather than test
+      # bodies, so more shards shorten the run almost linearly.
       - name: Tests
         run: >-
-          pnpm exec vitest run --shard=${{ matrix.shard }}/2
+          pnpm exec vitest run --shard=${{ matrix.shard }}/4
           --reporter=default --reporter=json
           --outputFile="${{ runner.temp }}/vitest-${{ matrix.shard }}.json"
 
@@ -272,20 +363,23 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # Preserve the required check name. A failed or cancelled shard or validation
-  # job must fail this gate; a skipped dependency must never produce a green PR.
+  # Preserve the required check name. A failed or cancelled guard, validation,
+  # edition or shard job must fail this gate; a skipped dependency must never
+  # produce a green PR.
   checks:
     name: Tests & typecheck
     if: always()
-    needs: [validation, tests]
+    needs: [guards, validation, editions, tests]
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
       - name: Require all checks to pass
         env:
+          GUARDS_RESULT: ${{ needs.guards.result }}
           VALIDATION_RESULT: ${{ needs.validation.result }}
+          EDITIONS_RESULT: ${{ needs.editions.result }}
           TEST_RESULT: ${{ needs.tests.result }}
-        run: test "$VALIDATION_RESULT" = success && test "$TEST_RESULT" = success
+        run: test "$GUARDS_RESULT" = success && test "$VALIDATION_RESULT" = success && test "$EDITIONS_RESULT" = success && test "$TEST_RESULT" = success
 
   audit:
     name: Dependencies audit

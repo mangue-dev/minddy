@@ -18,14 +18,17 @@ test("Gitleaks extends maintained rules and adds publication-specific markers", 
   assert.doesNotMatch(policy, /paths\s*=\s*\[\s*'''(?:\.\*|\(\?:\^\|\/\)\.\*)/s);
 });
 
-test("CI scans all Git history with the checked-in policy and redacts findings", () => {
+test("CI scans Git history with the checked-in policy and redacts findings", () => {
   const workflow = read(".github/workflows/ci.yml");
   assert.match(
     workflow,
     /ghcr\.io\/gitleaks\/gitleaks:v8\.30\.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f/,
   );
   assert.match(workflow, /--config \/repo\/\.gitleaks\.toml/);
-  assert.match(workflow, /--log-opts="--all"/);
+  // Pushes scan every ref; a pull request scans its own range (see
+  // ci-history-scope.test.mjs for the scope decision).
+  assert.match(workflow, /--log-opts="\$LOG_OPTS"/);
+  assert.match(workflow, /echo "log_opts=--all"/);
   assert.match(workflow, /--redact=100/);
 });
 

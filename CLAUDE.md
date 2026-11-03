@@ -340,8 +340,11 @@ must be reported separately from the default suite's skipped cases.
 
 `test:tooling` discovers deterministic Node tests under `scripts` and
 `captures/lib`; `*.integration.test.mjs` suites keep their explicit prerequisites
-and commands. CI runs two complete Vitest shards alongside validation and keeps
-the required `Tests & typecheck` gate dependent on both.
+and commands. CI starts its jobs in parallel: the publication and secret guards
+(the pull request's own commits on a pull request, the whole history on
+`main`), lint/typecheck/contract validation, one build-and-start job per
+deployable edition, and four Vitest shards. The required `Tests & typecheck`
+gate fails unless every one of them succeeds.
 
 ## Database environments and migrations
 

@@ -126,3 +126,100 @@ test("remote check scans pull-request refs unavailable from the ordinary fetch",
     rmSync(root, { force: true, recursive: true });
   }
 });
+
+function runSinceCheck(cwd, since, env = {}) {
+  return spawnSync(process.execPath, [script, "--new-since", since], {
+    cwd,
+    encoding: "utf8",
+    timeout: 30_000,
+    env: { ...process.env, ...env },
+  });
+}
+
+test("a pull request scan reads its own history but not the already-scanned base", () => {
+  const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
+  try {
+    git(root, ["init", "--initial-branch=main"]);
+    writeFileSync(join(root, "README.md"), "# Base\n");
+    writeFileSync(join(root, "dev.log"), "retired local log\n");
+    commit(root, "base with a retired path");
+    git(root, ["rm", "-q", "dev.log"]);
+    const base = commit(root, "remove the retired path");
+
+    writeFileSync(join(root, "feature.md"), "# Feature\n");
+    commit(root, "clean pull request commit");
+    const clean = runSinceCheck(root, base);
+    assert.equal(clean.status, 0, clean.stderr);
+    assert.match(clean.stdout, new RegExp(`Git objects new since ${base}`));
+    assert.equal(spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8" }).status, 1);
+
+    writeFileSync(join(root, "problems.md"), "# Internal notes\n");
+    commit(root, "add internal notes");
+    git(root, ["rm", "-q", "problems.md"]);
+    commit(root, "hide internal notes");
+    const rejected = runSinceCheck(root, base);
+    assert.equal(rejected.status, 1);
+    assert.match(rejected.stderr, /history problems\.md: internal path is forbidden/);
+    assert.doesNotMatch(rejected.stderr, /dev\.log/);
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("a partial clone fails the history scan when a blob was never fetched", () => {
+  const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
+  const source = join(root, "source");
+  const clone = join(root, "clone");
+  try {
+    mkdirSync(source);
+    git(source, ["init", "--initial-branch=main"]);
+    git(source, ["config", "uploadpack.allowFilter", "true"]);
+    writeFileSync(join(source, "README.md"), "# Base\n");
+    const base = commit(source, "base");
+    writeFileSync(join(source, "draft.md"), "# Draft\n");
+    commit(source, "add a draft");
+    git(source, ["rm", "-q", "draft.md"]);
+    commit(source, "remove the draft");
+
+    git(root, ["clone", "-q", "--filter=blob:none", `file://${source}`, clone]);
+    const result = runSinceCheck(clone, base, { GIT_NO_LAZY_FETCH: "1" });
+    assert.equal(result.status, 1);
+    // Git refuses to describe a blob it never fetched, so an incomplete
+    // pull request fetch cannot pass for a clean history.
+    assert.match(result.stderr, /missing blob object/);
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+});
+
+test("--new-since rejects a missing commit and incompatible modes", () => {
+  for (const args of [["--new-since"], ["--new-since", "--staged"], ["--new-since", "HEAD", "--staged"]]) {
+    const result = spawnSync(process.execPath, [script, ...args], { encoding: "utf8" });
+    assert.notEqual(result.status, 0, args.join(" "));
+  }
+});
+
+test("the index check reads staged content, not the working tree", () => {
+  const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
+  const awsKey = ["AKIA", "ABCDEFGHIJKLMNOP"].join("");
+  try {
+    git(root, ["init", "--initial-branch=main"]);
+    writeFileSync(join(root, "README.md"), "# Clean\n");
+    writeFileSync(join(root, "notes.md"), "# Clean\n");
+    commit(root, "clean base");
+
+    writeFileSync(join(root, "config.ts"), `export const key = "${awsKey}";\n`);
+    git(root, ["add", "config.ts"]);
+    writeFileSync(join(root, "config.ts"), "export const key = process.env.KEY;\n");
+    const staged = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8" });
+    assert.equal(staged.status, 1);
+    assert.match(staged.stderr, /config\.ts: AWS key identifier/);
+    assert.doesNotMatch(staged.stderr, /README\.md|notes\.md/);
+
+    git(root, ["add", "config.ts"]);
+    const cleaned = spawnSync(process.execPath, [script], { cwd: root, encoding: "utf8" });
+    assert.equal(cleaned.status, 0, cleaned.stderr);
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+});

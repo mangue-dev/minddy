@@ -172,12 +172,9 @@ test("the actual workflow gate accepts current reviews and rejects stale or inco
   }
 });
 
-test("daily CI reuses the checks runner for every edition", () => {
+test("daily CI checks every edition contract and builds each deployable edition in parallel", () => {
   const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
-  assert.doesNotMatch(workflow, /^  editions:/m);
-  assert.doesNotMatch(workflow, /matrix\.edition/);
   assert.match(workflow, /name: Check all edition contracts/);
-  assert.match(workflow, /name: Build and start deployable editions/);
   for (const edition of [
     "self-hosted-minimal",
     "self-hosted-byok",
@@ -189,6 +186,26 @@ test("daily CI reuses the checks runner for every edition", () => {
   ]) {
     assert.match(workflow, new RegExp(edition));
   }
+  const editions = workflow.match(/^  editions:\n([\s\S]*?)(?=^  \w+:)/m)?.[1];
+  assert.ok(editions, "the deployable edition matrix must remain present");
+  assert.match(editions, /edition: \[self-hosted-minimal, minddy-cloud, managed-forge\]/);
+  assert.match(editions, /fail-fast: false/);
+  assert.match(editions, /pnpm run build/);
+  assert.match(editions, /pnpm exec next start -p 3100/);
+});
+
+test("daily CI scans Git history beside the dependency jobs", () => {
+  const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const guards = workflow.match(/^  guards:\n([\s\S]*?)(?=^  \w+:)/m)?.[1];
+  assert.ok(guards, "the history guard job must remain present");
+  assert.match(guards, /fetch-depth: 0/);
+  // Only pull requests skip historical file contents; pushes keep a full clone.
+  assert.match(guards, /filter: \$\{\{ github\.event_name == 'pull_request' && 'blob:none' \|\| '' \}\}/);
+  assert.match(guards, /node scripts\/check-workflow-action-pins\.mjs/);
+  assert.match(guards, /node scripts\/check-public-repo\.mjs \$\{SINCE:\+--new-since "\$SINCE"\}/);
+  assert.match(guards, /--log-opts="\$LOG_OPTS"/);
+  // Scanners must fail on a blob the scope step did not fetch.
+  assert.equal(guards.match(/GIT_NO_LAZY_FETCH/g)?.length, 3);
 });
 
 test("daily CI validates every main push, including release records, without repeating production", () => {
@@ -198,31 +215,31 @@ test("daily CI validates every main push, including release records, without rep
   assert.doesNotMatch(workflow, /^    paths(?:-ignore)?:/m);
 });
 
-test("the required CI gate rejects failed, cancelled, and skipped validation or test shards", () => {
+test("the required CI gate rejects failed, cancelled, and skipped guard, validation, edition or test jobs", () => {
   const workflow = readFileSync(new URL("../.github/workflows/ci.yml", import.meta.url), "utf8");
   const gate = workflow.match(/^  checks:\n([\s\S]*?)(?=^  \w+:)/m)?.[1];
   assert.ok(gate, "the required check must remain present");
   assert.match(gate, /name: Tests & typecheck/);
   assert.match(gate, /if: always\(\)/);
-  assert.match(gate, /needs: \[validation, tests\]/);
+  assert.match(gate, /needs: \[guards, validation, editions, tests\]/);
   const script = gate.match(/^        run: (.+)$/m)?.[1];
   assert.ok(script, "the gate must execute its dependency result checks");
 
   const shards = workflow.match(/^  tests:\n([\s\S]*?)(?=^  \w+:)/m)?.[1];
   assert.ok(shards, "the unit test matrix must remain present");
-  assert.match(shards, /shard: \[1, 2\]/);
-  assert.match(shards, /--shard=\$\{\{ matrix.shard \}\}\/2/);
+  assert.match(shards, /shard: \[1, 2, 3, 4\]/);
+  assert.match(shards, /--shard=\$\{\{ matrix.shard \}\}\/4/);
   assert.match(shards, /pnpm exec vitest run --shard=/);
   assert.doesNotMatch(shards, /pnpm run test -- /);
   assert.match(shards, /fail-fast: false/);
 
-  for (const validation of ["success", "failure", "cancelled", "skipped"]) {
-    for (const tests of ["success", "failure", "cancelled", "skipped"]) {
-      const run = spawnSync("bash", ["-e", "-c", script], {
-        env: { PATH: process.env.PATH, VALIDATION_RESULT: validation, TEST_RESULT: tests },
-      });
-      assert.equal(run.status === 0, validation === "success" && tests === "success",
-        `validation=${validation}, tests=${tests}`);
+  const results = ["success", "failure", "cancelled", "skipped"];
+  const jobs = ["GUARDS_RESULT", "VALIDATION_RESULT", "EDITIONS_RESULT", "TEST_RESULT"];
+  for (const failing of jobs) {
+    for (const result of results) {
+      const env = Object.fromEntries(jobs.map((job) => [job, job === failing ? result : "success"]));
+      const run = spawnSync("bash", ["-e", "-c", script], { env: { PATH: process.env.PATH, ...env } });
+      assert.equal(run.status === 0, result === "success", `${failing}=${result}`);
     }
   }
 });
