@@ -146,7 +146,8 @@ The repository provides:
 - schema and authorization tests in the normal test suite;
 - `scripts/security-probe.mjs` for fixture-driven live boundary checks;
 - `npm run check:public-repo` for current and reachable-history publication
-  checks;
+  checks (pull requests limit the history scan to their own commits with
+  `--new-since`, while every push to `main` scans the whole history);
 - `npm run check:public-repo:remote` for a fresh canonical mirror, including
   server-advertised pull-request refs;
 - dependency, container, workflow-pin, and release-policy gates;

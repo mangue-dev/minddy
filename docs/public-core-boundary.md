@@ -23,11 +23,18 @@ consumer is the team that operates `minddy.app` must live out of this repository
 
 ## Verifiable contract
 
-`npm run check:public-repo` is the release barrier. She rejects
+`npm run check:public-repo` is the release barrier. It rejects
 paths, secrets and prohibited exploit markers in the index. The
-CI runs it before any dependency installation. During development,
+CI runs it in a job without dependency installation. During development,
 `node scripts/check-public-repo.mjs --worktree` applies the same rule to
 working directory before adding to the index.
+
+A push to `main` scans every reachable object. A pull request runs
+`--new-since <base>`, which limits the history scan to what the pull request
+adds on top of the base branch: the `Protect main` ruleset admits changes only
+through a pull request, so the base was already scanned. A pull request that
+changes `.gitleaks.toml` or `scripts/check-public-repo.mjs` rescans the whole
+history, because a new rule must also hold for commits already on `main`.
 
 The barrier does not rewrite Git history: before the first release,
 the maintainer must publish a sanitized story (or a new branch) if a
