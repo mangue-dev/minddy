@@ -709,12 +709,11 @@ export async function updateIssueFields({
       const touched = [updates.cycle_id, before.cycle_id].filter(
         (id): id is string => typeof id === "string",
       );
-      for (const cycleId of new Set(touched)) {
-        await service
+      await Promise.all([...new Set(touched)].map((cycleId) =>
+        service
           .from("cycles")
           .update({ updated_at: new Date().toISOString() })
-          .eq("id", cycleId);
-      }
+          .eq("id", cycleId)));
     }
 
     // Stats ledger: a “finished” contribution in the name of the actor, only

@@ -689,12 +689,12 @@ export async function getIssue(
   // Resolve author display names (auth admin — best effort). MCP comments are
   // attributed to their acting API key (agent), not the key's owner.
   const authorIds = (comments ?? []).map((c) => c.author_id as string);
-  const [users, keyActors] = await Promise.all([
+  const [users, keyActors, decodedGithubComments] = await Promise.all([
     fetchAuthUsersById(ctx.service, authorIds),
     resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
+    Promise.all((githubCommentSyncs ?? []).map((row) =>
+      decodeGithubCommentUrl(issue.project_id as string, row, ctx.actorId ?? null))),
   ]);
-  const decodedGithubComments = await Promise.all((githubCommentSyncs ?? []).map((row) =>
-    decodeGithubCommentUrl(issue.project_id as string, row, ctx.actorId ?? null)));
   const githubCommentById = new Map(
     decodedGithubComments.map((row) => [(row as Record<string, unknown>).comment_id as string, row]),
   );

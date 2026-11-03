@@ -219,12 +219,21 @@ export async function getProjectAccess(
 ): Promise<ProjectAccess | null> {
   const supabase = getServiceClient();
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("id", projectId)
-    .is("deleted_at", null)
-    .maybeSingle();
+  // The membership row is only consulted once the project proves readable.
+  const [{ data: project }, { data: membership }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("*")
+      .eq("id", projectId)
+      .is("deleted_at", null)
+      .maybeSingle(),
+    supabase
+      .from("project_members")
+      .select("role, can_comment")
+      .eq("project_id", projectId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
 
   if (!project) return null;
 
@@ -245,13 +254,6 @@ export async function getProjectAccess(
       canComment: true,
     };
   }
-
-  const { data: membership } = await supabase
-    .from("project_members")
-    .select("role, can_comment")
-    .eq("project_id", projectId)
-    .eq("user_id", userId)
-    .maybeSingle();
 
   if (!membership) return null;
 

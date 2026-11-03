@@ -4371,8 +4371,13 @@ export function registerMinddyTools(
 
       const added: string[] = [];
       const failed: Array<{ issue: string; error: string }> = [];
-      for (const ref of args.issues) {
-        const resolved = await resolveIssueRef(project.access, ref);
+      const resolvedRefs = await mapWithConcurrency(
+        args.issues,
+        BULK_WRITE_CONCURRENCY,
+        (ref) => resolveIssueRef(project.access, ref),
+      );
+      for (const [index, ref] of args.issues.entries()) {
+        const resolved = resolvedRefs[index];
         if ("error" in resolved) {
           failed.push({
             issue: ref,
@@ -4430,8 +4435,13 @@ export function registerMinddyTools(
 
       const failed: Array<{ issue: string; code?: string; error: string }> = [];
       const identifiersById = new Map<string, string>();
-      for (const ref of args.issues) {
-        const resolved = await resolveIssueRef(project.access, ref);
+      const resolvedRefs = await mapWithConcurrency(
+        args.issues,
+        BULK_WRITE_CONCURRENCY,
+        (ref) => resolveIssueRef(project.access, ref),
+      );
+      for (const [index, ref] of args.issues.entries()) {
+        const resolved = resolvedRefs[index];
         if ("error" in resolved) {
           failed.push({
             issue: ref,
@@ -4508,8 +4518,13 @@ export function registerMinddyTools(
 
       const removed: string[] = [];
       const failed: Array<{ issue: string; error: string }> = [];
-      for (const ref of args.issues) {
-        const resolved = await resolveIssueRef(project.access, ref);
+      const resolvedRefs = await mapWithConcurrency(
+        args.issues,
+        BULK_WRITE_CONCURRENCY,
+        (ref) => resolveIssueRef(project.access, ref),
+      );
+      for (const [index, ref] of args.issues.entries()) {
+        const resolved = resolvedRefs[index];
         if ("error" in resolved) {
           failed.push({
             issue: ref,

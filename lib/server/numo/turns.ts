@@ -508,10 +508,6 @@ async function buildExecutionInput(input: {
   // first complete message boundary instead of sending a malformed history.
   const firstCompleteMessage = recentHistory.findIndex((message) => message.role !== "tool");
   const history = firstCompleteMessage < 0 ? [] : recentHistory.slice(firstCompleteMessage);
-  const historySkillNotes = await authorizedSkillsNotes(
-    readClient,
-    history.map((message) => message.role === "user" ? message.metadata : null),
-  );
 
   const supportsCache = runtime.provider === "openrouter"
     && await modelSupportsCaching(runtime.model, runtime.apiKey);
@@ -533,9 +529,15 @@ async function buildExecutionInput(input: {
     (last, message, index) => message.role === "user" ? index : last,
     -1,
   );
-  const modalities = history.some((message) => rowAttachments(message).length > 0)
-    ? await providerInputModalities(runtime, runtime.model)
-    : null;
+  const [historySkillNotes, modalities] = await Promise.all([
+    authorizedSkillsNotes(
+      readClient,
+      history.map((message) => message.role === "user" ? message.metadata : null),
+    ),
+    history.some((message) => rowAttachments(message).length > 0)
+      ? providerInputModalities(runtime, runtime.model)
+      : null,
+  ]);
   const recoveringAssistantMessageId = turn.checkpoint?.phase === "tools"
     ? turn.checkpoint.assistantMessageId
     : null;
@@ -545,12 +547,13 @@ async function buildExecutionInput(input: {
       : [],
   );
 
-  for (const [index, message] of history.entries()) {
+  // Each message resolves its mentions and attachments independently.
+  const historyMessages = await Promise.all(history.map(async (message, index): Promise<ChatMessage | null> => {
     const recoveringPendingMessage = message.turn_id === turn.id && (
       (message.role === "assistant" && message.id === recoveringAssistantMessageId)
       || (message.role === "tool" && recoveringToolCallIds.has(message.tool_call_id ?? ""))
     );
-    if (recoveringPendingMessage) continue;
+    if (recoveringPendingMessage) return null;
     // A typed mention (MIN-872) reaches the model named as the conversation's
     // user may see it: the current label, or "unavailable".
     const text = sanitizeAssistantMessageContent(message.content);
@@ -574,14 +577,15 @@ async function buildExecutionInput(input: {
         }),
       ];
     }
-    messages.push({
+    return {
       role: message.role,
       content,
       tool_calls: message.tool_calls ?? undefined,
       tool_call_id: message.tool_call_id ?? undefined,
       name: message.tool_name ?? undefined,
-    });
-  }
+    };
+  }));
+  for (const message of historyMessages) if (message) messages.push(message);
   let tools: AssistantToolDef[] = adminGrant
     ? [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS]
     : CONVERSATION_ASSISTANT_TOOLS;

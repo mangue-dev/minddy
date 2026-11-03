@@ -172,9 +172,14 @@ export async function serverSeedPlan(): Promise<ServerSeedPlan | null> {
   const location = headers.get(SERVER_SEED_PATH_HEADER);
   if (!location) return null;
   try {
-    const owner = await verifiedSessionUserId(await createServerSupabase());
+    // The paths are read through the session's RLS client and discarded
+    // without a verified owner, so both reads start together.
+    const [owner, paths] = await Promise.all([
+      createServerSupabase().then(verifiedSessionUserId),
+      serverSeedPaths(location, parseTimeZoneCookie(cookies.get(TIME_ZONE_COOKIE)?.value)),
+    ]);
     if (!owner) return null;
-    return { owner, paths: await serverSeedPaths(location, parseTimeZoneCookie(cookies.get(TIME_ZONE_COOKIE)?.value)) };
+    return { owner, paths };
   } catch {
     return null;
   }

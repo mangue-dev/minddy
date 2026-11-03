@@ -3506,22 +3506,14 @@ async function linkOneRelation(
   if (sourceKind === targetKind && sourceId === targetId) {
     return toolError("An entity cannot be related to itself.");
   }
-  for (const [id, kind] of [
+  const scopes = await Promise.all(([
     [sourceId, sourceKind],
     [targetId, targetKind],
-  ] as const) {
-    const scoped =
-      kind === "objective"
-        ? await assertObjectiveInProject(
-            ctx.supabase,
-            id,
-            projectId,
-          )
-        : await assertIssueInProject(
-            ctx.supabase,
-            id,
-            projectId,
-          );
+  ] as const).map(([id, kind]) =>
+    kind === "objective"
+      ? assertObjectiveInProject(ctx.supabase, id, projectId)
+      : assertIssueInProject(ctx.supabase, id, projectId)));
+  for (const scoped of scopes) {
     if (!scoped.ok) return toolError(scoped.error);
   }
 

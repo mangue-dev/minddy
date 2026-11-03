@@ -499,8 +499,10 @@ export async function loadSmartAssignConfigWarnings(
     }
 
     const warnings: SmartAssignConfigWarning[] = [];
-    for (const storedProject of projects) {
-      const project = await decodeProject(storedProject, userId);
+    const decodedProjects = await Promise.all(
+      projects.map((storedProject) => decodeProject(storedProject, userId)),
+    );
+    for (const project of decodedProjects) {
       const team = teamByProject.get(project.id as string) ?? new Set([userId]);
       if (team.size <= 1) continue;
       const rules = (project.smart_assign_rules ?? {}) as Record<string, string>;

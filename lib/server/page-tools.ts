@@ -304,14 +304,35 @@ export async function readPageForAgent({
   const page = result.page;
   if (projectId && page.project_id !== projectId) return refuse("pageNotFound");
 
-  const markdown = await pageBodyToMarkdownServer(
-    (page.content as JSONContent | null) ?? null
-  );
+  // The KEY to the project, so ticket trackbacks read “MIN-42”
+  // and not in UUID — it is in this form that the agent will pass them on to others
+  // tools. SERVICE client for the reading itself: the access guard comes
+  // to be made by `getPage`, and RLS does not apply here.
+  // The WIRES (MIN-282), under the same care as the trackbacks: both
+  // answer “what does this text commit to?” ”, and internal readings
+  // (add a block, correct a passage) don't want any.
+  const related = withBacklinks
+    ? Promise.all([
+        getProjectAccess(actorId, page.project_id).then((projectAccess) => pageBacklinks(
+          getServiceClient() as unknown as BacklinkQueryable,
+          {
+            pageId: page.id,
+            projectKey: (projectAccess?.project.key as string | undefined) ?? "",
+          }
+        )),
+        readThreads(page.id, actorId),
+      ])
+    : Promise.resolve([[], []] as [PageBacklink[], PageThreadForAgent[]]);
 
   // The children come from the project LIST: one more request, but it
   // is already indexed and without a body, and it saves the agent from a second call
   // just to know if the page has descendants.
-  const siblings = await listPages(page.project_id, actorId);
+  const [markdown, siblings, [backlinks, threads], lastEditedBy] = await Promise.all([
+    pageBodyToMarkdownServer((page.content as JSONContent | null) ?? null),
+    listPages(page.project_id, actorId),
+    related,
+    lastWriterName(page),
+  ]);
   const subpages = siblings.ok
     ? siblings.pages
         .filter((p) => p.parent_id === page.id)
@@ -325,32 +346,11 @@ export async function readPageForAgent({
         }))
     : [];
 
-  // The KEY to the project, so ticket trackbacks read “MIN-42”
-  // and not in UUID — it is in this form that the agent will pass them on to others
-  // tools. SERVICE client for the reading itself: the access guard comes
-  // to be made by `getPage`, and RLS does not apply here.
-  let backlinks: PageBacklink[] = [];
-  let threads: PageThreadForAgent[] = [];
-  if (withBacklinks) {
-    const projectAccess = await getProjectAccess(actorId, page.project_id);
-    backlinks = await pageBacklinks(
-      getServiceClient() as unknown as BacklinkQueryable,
-      {
-        pageId: page.id,
-        projectKey: (projectAccess?.project.key as string | undefined) ?? "",
-      }
-    );
-    // The WIRES (MIN-282), under the same care as the trackbacks: both
-    // answer “what does this text commit to?” ”, and internal readings
-    // (add a block, correct a passage) don't want any.
-    threads = await readThreads(page.id, actorId);
-  }
-
   return {
     ok: true,
     data: {
       ...entry(page),
-      last_edited_by: await lastWriterName(page),
+      last_edited_by: lastEditedBy,
       last_edited_kind: page.updated_kind ?? "human",
       is_database: page.database_schema != null,
       markdown,

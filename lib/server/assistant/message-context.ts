@@ -39,14 +39,17 @@ export async function validateMessageContext(
   };
   const next = context ? { ...context } : null;
   if (next?.projectId && !(await visibleProject(next.projectId))) return null;
-  for (const [field, kind] of [
+  // Each resource is looked up independently; the project checks apply in order.
+  const resources = await Promise.all(([
     ["issueId", "issue"],
     ["objectiveId", "objective"],
     ["pageId", "page"],
-  ] as const) {
+  ] as const).map(([field, kind]) => {
     const id = next?.[field];
-    if (!next || !id) continue;
-    const item = await bind({ kind, id, label: id });
+    return next && id ? bind({ kind, id, label: id }) : undefined;
+  }));
+  for (const item of resources) {
+    if (!next || item === undefined) continue;
     if (!item || (next.projectId && next.projectId !== item.projectId)) return null;
     // Resource identity determines its project, even when the project chip was hidden.
     next.projectId = item.projectId;

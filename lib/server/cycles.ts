@@ -180,7 +180,7 @@ async function reconcileCycles({
   const unclosed = rows
     .filter((r) => r.end_date <= today && r.completed_points === null)
     .sort((a, b) => (a.start_date < b.start_date ? -1 : 1));
-  for (const cycle of unclosed) {
+  await Promise.all(unclosed.map(async (cycle) => {
     const { data: cycleIssues } = await issueStore(service).select("effort, status")
       .eq("cycle_id", cycle.id)
       .is("deleted_at", null);
@@ -194,7 +194,7 @@ async function reconcileCycles({
       .eq("id", cycle.id)
       .is("completed_points", null);
     cycle.completed_points = completed;
-  }
+  }));
 
   // 2. Create the missing windows: the one containing today, plus the upcoming
   //    ones. If a row with a DIFFERENT geometry already covers today (prefs
@@ -276,17 +276,17 @@ async function reconcileCycles({
     //    matching its OWN duration (a still-running fortnight stays ×2 even
     //    if the pref moved to weekly). Idempotent: the next reconcile
     //    recomputes the same targets and writes nothing.
-    for (const row of [current, ...upcoming]) {
+    await Promise.all([current, ...upcoming].map(async (row) => {
       const rowWeeks = Math.max(1, Math.round(diffDays(row.start_date, row.end_date) / 7));
       const rowTarget = computeTargetPoints(prefs.intensity, factor, rowWeeks);
-      if (row.intensity === prefs.intensity && row.target_points === rowTarget) continue;
+      if (row.intensity === prefs.intensity && row.target_points === rowTarget) return;
       await service
         .from("cycles")
         .update({ intensity: prefs.intensity, target_points: rowTarget })
         .eq("id", row.id);
       row.intensity = prefs.intensity;
       row.target_points = rowTarget;
-    }
+    }));
 
     // 5. One-shot deterministic auto-fill of the current cycle. The claim on
     //    filled_at guarantees a single winner across concurrent reads.

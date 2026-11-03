@@ -119,6 +119,9 @@ async function occurrenceContext(
   ownerId: string,
 ): Promise<OccurrenceContext> {
   const conversationIds = occurrences.map((occurrence) => occurrence.conversation_id);
+  // Started beside the turn read; a turn read failure is still reported first.
+  const spendRead = routineOccurrenceSpend(service, conversationIds);
+  void spendRead.catch(() => {});
   const turnResult = conversationIds.length
     ? await service
         .from("numo_assistant_turns")
@@ -137,7 +140,7 @@ async function occurrenceContext(
       error_message: await decodeNumoError(ownerId, "numo_assistant_turns",
         turn.id as string, turn.error_message as string | null),
     })));
-  const spend = await routineOccurrenceSpend(service, conversationIds);
+  const spend = await spendRead;
   return { turns, spend };
 }
 
