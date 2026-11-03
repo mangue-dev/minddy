@@ -601,8 +601,9 @@ function ReauthDialog({ request, onClose }: { request: ReauthRequest | null; onC
           disabled={busy}
           autoFocus
           aria-label={t("instance.reauthCode")}
+          errorId={error ? "instance-reauth-code-error" : undefined}
         />
-        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+        {error ? <p id="instance-reauth-code-error" role="alert" className="text-sm text-destructive">{error}</p> : null}
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>
             {t("instance.cancel")}

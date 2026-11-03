@@ -17,6 +17,7 @@ import {
 import {
   ALL_STATUSES,
   PRIORITIES,
+  EFFORT_MAP,
   EFFORTS,
   type IssueStatus,
   type IssuePriority,
@@ -93,7 +94,7 @@ export const StatusValue = memo(function StatusValue({
       tooltip={tField("status")}
       shortcutHint={KEY_FOR_FIELD.status}
       trigger={
-        <button type="button" aria-label={t("changeStatusAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("fieldValueAria", { field: tField("status"), value: tStatus(value) })} className={TRIGGER}>
           <StatusIndicator status={value} />
         </button>
       }
@@ -125,7 +126,7 @@ export const PriorityValue = memo(function PriorityValue({
       tooltip={tField("priority")}
       shortcutHint={KEY_FOR_FIELD.priority}
       trigger={
-        <button type="button" aria-label={t("changePriorityAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("fieldValueAria", { field: tField("priority"), value: tPriority(value) })} className={TRIGGER}>
           <PriorityIndicator priority={value} />
         </button>
       }
@@ -157,7 +158,7 @@ export const EffortValue = memo(function EffortValue({
       tooltip={tField("effort")}
       shortcutHint={KEY_FOR_FIELD.effort}
       trigger={
-        <button type="button" aria-label={t("changeEffortAria")} className={TRIGGER}>
+        <button type="button" aria-label={t("fieldValueAria", { field: tField("effort"), value: value ? EFFORT_MAP[value].label : tField("effortNone") })} className={TRIGGER}>
           {value ? (
             <EffortIndicator effort={value} className="text-foreground" />
           ) : (
@@ -222,7 +223,14 @@ export const AssigneeValue = memo(function AssigneeValue({
       onOpenChange={onOpenChange}
       shortcutHint={shortcutHint}
       trigger={
-        <button type="button" aria-label={t("changeAssigneeAria")} className={TRIGGER}>
+        <button
+          type="button"
+          aria-label={t("fieldValueAria", {
+            field: tField("assignee"),
+            value: current ? displayName(current) : tField(smartAssign ? "smartAssign" : "unassigned"),
+          })}
+          className={TRIGGER}
+        >
           {current ? (
             <>
               <UserAvatar
@@ -283,7 +291,13 @@ export const CategoryValue = memo(function CategoryValue({
       shortcutHint={KEY_FOR_FIELD.category}
       emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
       trigger={
-        <button type="button" aria-label={t("editCategoriesAria")} className={TRIGGER}>
+        <button
+          type="button"
+          aria-label={t("fieldValueAria", {
+            field: tField("categories"),
+            value: selected.length ? selected.map((c) => c.name).join(", ") : tField("noCategories"),
+          })}
+          className={TRIGGER}>
           {first ? (
             <>
               <Dot color={first.color} />
@@ -377,7 +391,7 @@ export const ObjectiveValue = memo(function ObjectiveValue({
       trigger={
         <button
           type="button"
-          aria-label={t("changeObjectiveAria")}
+          aria-label={t("fieldValueAria", { field: tField("objective"), value: current ? current.name : tCommon("none") })}
           className={current ? OBJECTIVE_PILL_TRIGGER : TRIGGER}
         >
           {current ? (

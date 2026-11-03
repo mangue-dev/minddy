@@ -121,6 +121,7 @@ export function MfaChallenge({
               disabled={busy}
               autoFocus
               aria-label={t("mfaCodeLabel")}
+              errorId={error ? "mfa-code-error" : undefined}
               // Six digits entered (or pasted, or filled in by the manager
               // password entry) = intent to validate. Wait for a click from
               // more adds nothing: there is no other field to fill in.
@@ -128,7 +129,7 @@ export function MfaChallenge({
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p id="mfa-code-error" role="alert" className="text-sm text-destructive">{error}</p>}
 
           <Button
             type="submit"
@@ -158,7 +159,7 @@ export function MfaChallenge({
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
           <Button
             type="submit"

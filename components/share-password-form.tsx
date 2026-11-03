@@ -57,7 +57,7 @@ export function SharePasswordForm({
         autoFocus
         required
       />
-      {state?.error && <p className="text-sm text-destructive">{t(state.error)}</p>}
+      {state?.error && <p role="alert" className="text-sm text-destructive">{t(state.error)}</p>}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Spinner />}
         {t("unlock")}

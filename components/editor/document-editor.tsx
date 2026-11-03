@@ -310,13 +310,6 @@ export function DocumentEditor({
     });
   }, [editor, isSend]);
 
-  useEffect(() => {
-    if (!editor || editor.isDestroyed || !ariaLabel) return;
-    return onEditorDom(editor, (dom) => {
-      dom.setAttribute("aria-label", ariaLabel);
-    });
-  }, [editor, ariaLabel]);
-
   return (
     <div
       className={cn("relative cursor-text", className)}
@@ -342,6 +335,7 @@ export function DocumentEditor({
         mentionLinks={mentions?.links ?? null}
         editable={!readOnly}
         placeholder={placeholder}
+        ariaLabel={ariaLabel}
         slashActions={slashActions}
         extensions={extensions}
         autoFocus={autoFocus}

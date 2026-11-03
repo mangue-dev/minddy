@@ -27,6 +27,7 @@ import {
 import {
   ALL_STATUSES,
   PRIORITIES,
+  EFFORT_MAP,
   EFFORTS,
   type IssueStatus,
   type IssuePriority,
@@ -106,7 +107,7 @@ export function StatusCompact({
       onOpenChange={onOpenChange}
       shortcutHint={shortcutHint}
       trigger={
-        <button type="button" aria-label={t("changeStatusAria")} className={BARE}>
+        <button type="button" aria-label={t("fieldValueAria", { field: tField("status"), value: tStatus(value) })} className={BARE}>
           <StatusIndicator status={value} />
           {showValue && <span>{tStatus(value)}</span>}
         </button>
@@ -144,7 +145,7 @@ export function PriorityCompact({
       onOpenChange={onOpenChange}
       shortcutHint={shortcutHint}
       trigger={
-        <button type="button" aria-label={t("changePriorityAria")} className={BARE}>
+        <button type="button" aria-label={t("fieldValueAria", { field: tField("priority"), value: tPriority(value) })} className={BARE}>
           <PriorityIndicator priority={value} />
           {showValue && <span>{tPriority(value)}</span>}
         </button>
@@ -182,7 +183,7 @@ export function EffortCompact({
       onOpenChange={onOpenChange}
       shortcutHint={shortcutHint}
       trigger={
-        <button type="button" aria-label={t("changeEffortAria")} className={BARE}>
+        <button type="button" aria-label={t("fieldValueAria", { field: tField("effort"), value: value ? EFFORT_MAP[value].label : tField("effortNone") })} className={BARE}>
           {value ? (
             <EffortIndicator effort={value} className="text-foreground" />
           ) : (
@@ -238,7 +239,13 @@ export function CategoriesCompact({
       shortcutHint={shortcutHint}
       emptyText={categories.length === 0 ? t("noCategoriesHint") : undefined}
       trigger={
-        <button type="button" aria-label={t("editCategoriesAria")} className={BARE}>
+        <button
+          type="button"
+          aria-label={t("fieldValueAria", {
+            field: tField("categories"),
+            value: selected.length ? selected.map((c) => c.name).join(", ") : tField("noCategories"),
+          })}
+          className={BARE}>
           {first ? (
             <>
               <Dot color={first.color} />
@@ -309,7 +316,11 @@ export function AssigneeCompact({
       onOpenChange={onOpenChange}
       shortcutHint={shortcutHint}
       trigger={
-        <button type="button" aria-label={t("changeAssigneeAria")} className={BARE}>
+        <button
+          type="button"
+          aria-label={t("fieldValueAria", { field: tField("assignee"), value: current ? displayName(current) : emptyLabel })}
+          className={BARE}
+        >
           {current ? (
             <UserAvatar
               seed={current.avatar_seed}
@@ -401,7 +412,7 @@ export function ObjectiveCompact({
       trigger={
         <button
           type="button"
-          aria-label={t("changeObjectiveAria")}
+          aria-label={t("fieldValueAria", { field: tField("objective"), value: current ? current.name : tCommon("none") })}
           className={current ? cn(OBJECTIVE_PILL_TRIGGER, "max-w-48") : BARE}
         >
           {current ? (

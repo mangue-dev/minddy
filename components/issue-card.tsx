@@ -26,6 +26,7 @@ import { CustomPromptDialog } from "@/components/agent/custom-prompt-dialog";
 import {
   ALL_STATUSES,
   PRIORITIES,
+  EFFORT_MAP,
   EFFORTS,
   issueIdentifier,
   type IssueStatus,
@@ -218,7 +219,7 @@ function StatusPick({
       trigger={
         <button
           type="button"
-          aria-label={t("changeStatusAria")}
+          aria-label={t("fieldValueAria", { field: tField("status"), value: tStatus(value) })}
           onClick={stop}
           onPointerDown={stop}
           className={TRIGGER_CLASS}
@@ -259,7 +260,7 @@ function PriorityPick({
       trigger={
         <button
           type="button"
-          aria-label={t("changePriorityAria")}
+          aria-label={t("fieldValueAria", { field: tField("priority"), value: tPriority(value) })}
           onClick={stop}
           onPointerDown={stop}
           className={TRIGGER_CLASS_LG}
@@ -301,7 +302,7 @@ function EffortPick({
       trigger={
         <button
           type="button"
-          aria-label={t("changeEffortAria")}
+          aria-label={t("fieldValueAria", { field: tField("effort"), value: value ? EFFORT_MAP[value].label : tField("effortNone") })}
           onClick={stop}
           onPointerDown={stop}
           className={TRIGGER_CLASS_LG}
@@ -384,7 +385,10 @@ function CategoryPickMenu({
       trigger={
         <button
           type="button"
-          aria-label={t("editCategoriesAria")}
+          aria-label={t("fieldValueAria", {
+            field: tField("categories"),
+            value: categories.filter((c) => selectedIds.includes(c.id)).map((c) => c.name).join(", ") || tField("noCategories"),
+          })}
           onClick={stop}
           onPointerDown={stop}
           className={TRIGGER_CLASS_LG}
@@ -451,7 +455,7 @@ function AssigneePick({
       trigger={
         <button
           type="button"
-          aria-label={t("changeAssigneeAria")}
+          aria-label={t("fieldValueAria", { field: tField("assignee"), value: assignee ? displayName(assignee) : emptyLabel })}
           onClick={stop}
           onPointerDown={stop}
           className="rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
@@ -519,7 +523,7 @@ function ObjectiveIndicator({ objective, onEdit }: {
     <AppTooltip label={tField("objective")} shortcut={[KEY_FOR_FIELD.objective]}>
       <button
         type="button"
-        aria-label={t("changeObjectiveAria")}
+        aria-label={t("fieldValueAria", { field: tField("objective"), value: objective.name })}
         className={OBJECTIVE_PILL_TRIGGER}
         onClick={(event) => {
           event.stopPropagation();
@@ -1633,9 +1637,14 @@ export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
   const { landingOutOfFlow = false, ...contentProps } = props;
   // Readers cannot move tickets: their cards never start a drag.
   const { canWrite } = useProjectCapabilities(props.issue.project_id);
+  const tDrag = useTranslations("DragAnnouncements");
+  // A group, not dnd-kit's default `button`: the card holds its own buttons
+  // (status, priority, assignee…), which a button's children would hide from
+  // screen readers (WCAG 4.1.2). The role description is localized.
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: props.issue.id,
     disabled: !canWrite,
+    attributes: { role: "group", roleDescription: tDrag("cardRole") },
   });
   // The drag sensor activates only after pointer movement crosses its threshold.
 
@@ -1646,7 +1655,18 @@ export const IssueCard = memo(function IssueCard(props: IssueCardProps) {
       data-column-status={props.issue.status}
       data-board-landing-source={landingOutOfFlow ? "" : undefined}
       {...attributes}
+      // A reader's card cannot be dragged but still opens: not disabled.
+      aria-disabled={undefined}
       {...listeners}
+      // dnd-kit makes this wrapper the card's focus stop, but the card opens
+      // from its inner surface's click: Enter and Space on the wrapper do the
+      // same (WCAG 2.1.1). It replaces the listeners' keydown, which only a
+      // KeyboardSensor would use; the boards register none.
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+        event.preventDefault();
+        (event.currentTarget.firstElementChild as HTMLElement | null)?.click();
+      }}
       className={cn(
         "rounded-2xl transition-opacity duration-150 ease-out motion-reduce:transition-none",
         landingOutOfFlow

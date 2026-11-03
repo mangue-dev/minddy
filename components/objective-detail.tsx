@@ -125,6 +125,7 @@ const ObjectiveStatusValue = memo(function ObjectiveStatusValue({
 } & PickerControl) {
   const t = useTranslations("Objectives");
   const tStatus = useTranslations("ObjectiveStatus");
+  const tIssueUI = useTranslations("IssueUI");
   const meta = OBJECTIVE_STATUS_MAP[value];
   const options: PickerOption[] = OBJECTIVE_STATUSES.map((s) => {
     return {
@@ -142,7 +143,12 @@ const ObjectiveStatusValue = memo(function ObjectiveStatusValue({
       tooltip={t("statusFieldLabel")}
       {...control}
       trigger={
-        <button type="button" aria-label={t("statusFieldLabel")} className={TRIGGER}>
+        // The name keeps the visible value (WCAG 2.5.3).
+        <button
+          type="button"
+          aria-label={tIssueUI("fieldValueAria", { field: t("statusFieldLabel"), value: tStatus(meta.value) })}
+          className={TRIGGER}
+        >
           <ObjectiveStatusIndicator status={meta.value} className="size-4" />
           <span className="truncate">{tStatus(meta.value)}</span>
         </button>

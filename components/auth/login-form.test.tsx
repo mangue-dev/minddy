@@ -51,6 +51,7 @@ vi.mock("@/components/auth/auth-chrome", () => ({
 }));
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: ReactNode }) => children,
+  MotionConfig: ({ children }: { children: ReactNode }) => children,
   motion: { div: ({ children }: { children: ReactNode }) => <div>{children}</div> },
 }));
 vi.mock("@/components/wizard/wizard-stepper", () => ({ WizardStepper: () => null }));

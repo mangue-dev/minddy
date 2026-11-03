@@ -389,7 +389,7 @@ export function CreateRoutineWizard({
               really follow. This is the only way to check a spindle before
               to endure it — and the only place that catches a poorly typed spindle. */}
           {"error" in preview ? (
-            <p className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
               {t(preview.error as "error_unknownTimezone")}
             </p>
           ) : (

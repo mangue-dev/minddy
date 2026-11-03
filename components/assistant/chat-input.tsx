@@ -1814,6 +1814,8 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               contentEditable={!disabled}
               role="textbox"
               aria-multiline="true"
+              // `aria-placeholder` is a hint, not a name (WCAG 4.1.2).
+              aria-label={effectivePlaceholder}
               aria-placeholder={effectivePlaceholder}
               suppressContentEditableWarning
               onInput={handleInput}

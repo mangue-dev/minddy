@@ -381,7 +381,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
           ...members.filter((m) => m.role !== "reader").map((m) => ({
             id: `objective-lead-${m.user_id}`,
             label: displayName(m),
-            icon: <UserAvatar seed={m.avatar_seed} title={displayName(m)} className="size-4" />,
+            icon: <UserAvatar seed={m.avatar_seed} className="size-4" />,
             checked: objective.lead_user_id === m.user_id,
             onSelect: () => update({ lead_user_id: m.user_id }),
           })),

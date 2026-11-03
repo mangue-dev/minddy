@@ -175,6 +175,7 @@ export function ObjectiveBoardHeader({
             <UserAvatar
               seed={lead.avatar_seed}
               title={displayName(lead)}
+              alt=""
               className="size-7"
             />
             <div className="flex min-w-0 flex-col leading-tight">

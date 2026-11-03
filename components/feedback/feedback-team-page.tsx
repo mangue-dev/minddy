@@ -1925,7 +1925,7 @@ function FeedbackDetail({
           ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-sm" aria-label="…">
+              <Button variant="ghost" size="icon-sm" aria-label={tCommon("moreActions")}>
                 <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />
               </Button>
             </DropdownMenuTrigger>

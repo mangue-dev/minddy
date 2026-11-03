@@ -101,7 +101,7 @@ export function FaqAsk({
           </p>
         ) : null}
         {status.kind === "failed" ? (
-          <p className="pb-6 text-sm leading-relaxed text-destructive">
+          <p role="alert" className="pb-6 text-sm leading-relaxed text-destructive">
             {strings.error}
           </p>
         ) : null}

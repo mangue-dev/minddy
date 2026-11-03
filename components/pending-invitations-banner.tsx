@@ -29,6 +29,7 @@ export function PendingInvitationsBanner() {
               seed={inv.inviter_avatar_seed}
               className="size-8"
               title={inviter}
+              alt=""
             />
             {/* The name of the project, and nothing else: its key means nothing to anyone who doesn't already know the project. */}
             <p className="min-w-0 flex-1 text-sm">

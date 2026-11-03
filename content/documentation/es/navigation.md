@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-03",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -69,14 +69,17 @@
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
       "components/mobile-nav-actions.tsx",
-      "lib/keyboard/typeahead.ts"
+      "lib/keyboard/typeahead.ts",
+      "components/app-shell.tsx",
+      "lib/keyboard-modality.ts",
+      "lib/keyboard/hover-keys.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 24,
+    "fact": "agent:claude-code (new keyboard-navigation subsection: skip link, keyboard focus outline and Enter on a focused issue card, checked against components/app-shell.tsx, lib/keyboard-modality.ts, components/issue-card.tsx and lib/keyboard/hover-keys.ts; covered by jsdom tests, not checked in the running app; rest of the article unchanged; no figure added, existing figures do not show this behavior)",
+    "language": "agent:claude-code (es new subsection translated from en with the locale's catalog labels and article terms; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-03"
   },
   "related": [
     "views",
@@ -97,7 +100,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -206,6 +209,10 @@ La búsqueda por el sentido tiene estos límites:
 - Una consulta `@` cuyo texto ya coincide con una persona, un proyecto o una página no se busca por el sentido. En un proyecto con más de 3000 incidencias indexadas, solo se comparan las 3000 indexadas más recientemente; las demás se encuentran por sus palabras.
 
 Cada búsqueda nueva usa una llamada de IA, que cuenta en tu parte **Automatizaciones** y aparece en el historial de uso como **Búsqueda de incidencias**. Una búsqueda repetida en unos 15 minutos normalmente no se cobra de nuevo.
+
+### Moverse con el teclado {#keyboard-navigation}
+
+La primera pulsación de Tab en una página muestra **Ir al contenido**: pulsa Intro para saltar la barra lateral y llegar a la página. Mientras te mueves con Tab, el control enfocado tiene un contorno del color de acento, que desaparece al hacer clic. En un tablero, Tab llega a cada tarjeta de incidencia: Intro abre la incidencia, y las acciones de una tecla descritas arriba (S, P, E…) actúan sobre la tarjeta enfocada igual que sobre una tarjeta bajo el puntero.
 
 ### Usar un control visible equivalente {#shortcut-alternatives}
 

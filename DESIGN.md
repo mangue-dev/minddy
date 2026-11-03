@@ -310,13 +310,39 @@ Exceptions, which need no dialog:
 
 ## Accessibility
 
+WCAG 2.2 AA is the target. [docs/accessibility.md](docs/accessibility.md)
+holds the automated checks and the manual test protocol.
+
 - Every control has an accessible name; icon-only controls carry it in
-  `aria-label` (`IconButton` requires it).
-- Focus is visible from the keyboard; high contrast forces a focus ring.
+  `aria-label` (`IconButton` requires it). Names come from the catalogs;
+  only proper names such as “minddy” are written literally (the spinner's
+  English default is the one open exception).
+- A control that shows a value names it too: a field trigger (status,
+  priority, assignee, date…) reads “Status: In progress”, never only “Change
+  status” (`IssueUI.fieldValueAria`). A glyph that is the value's only trace
+  is an image named by it.
+- Focus is visible from the keyboard. While Tab drives focus,
+  `data-input-modality="keyboard"` on `<html>` draws the ring outline around
+  the focused control (`lib/keyboard-modality.ts`, `app/globals.css`); a click
+  clears it. A component may draw its own focus on top of it, but never
+  relies on removing it. High contrast also forces a focus ring.
+- The signed-in shell starts with a **Skip to content** link to its
+  `<main id="main-content">` (`components/app-shell.tsx`).
+- Every editing surface is a named multi-line text box: `RichEditor` takes
+  `ariaLabel`, else the text placeholder, else “Text editor”.
+- A message that appears after an action, away from focus, is announced:
+  `role="alert"` for errors, `role="status"` for progress. A field's own
+  error marks it `aria-invalid` and describes it (`aria-describedby`).
 - Text keeps 4.5:1 contrast and focus rings 3:1 in every palette (7:1 for
   high-contrast text), as `lib/theme-presets.test.ts` checks.
 - Don't convey state by color alone: pair it with an icon, a label or a
   shape (status indicators do).
+- framer-motion animations follow `prefers-reduced-motion`, through
+  `<MotionConfig reducedMotion="user">` or `useReducedMotion`; a surface
+  mounted outside the app providers handles it itself.
+- A new drag needs an equivalent without dragging, and the screen-reader
+  instructions of a `DndContext` describe the keys that actually work. The
+  manual order of a board does not have its equivalent yet.
 
 ## Checks that enforce this guide
 
@@ -333,3 +359,8 @@ Exceptions, which need no dialog:
 - `lib/placeholder-copy.test.ts`: input placeholders hold no sample values
   and no hardcoded strings.
 - `lib/ui-components-ownership.test.ts`: the primitives stay owned here.
+- `lib/accessibility-contract.test.ts`: translated accessible names,
+  announced errors, image alternatives, the keyboard focus rule and
+  reduced motion. `components/app-shell.test.tsx`,
+  `lib/keyboard-modality.test.ts` and `components/editor/document-editor.test.tsx`
+  cover the skip link, keyboard focus and editor names at runtime.

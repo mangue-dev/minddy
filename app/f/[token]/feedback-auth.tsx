@@ -149,7 +149,7 @@ export function FeedbackAuthDialog({
           {/* The error code comes from the server response: key assembled at
  execution. */}
           {error && (
-            <p className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive">
               {t(`errors.${error}` as MessageKey<"PublicFeedback">)}
             </p>
           )}

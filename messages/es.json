@@ -1585,7 +1585,9 @@
     "notFoundBody": "El enlace es incorrecto o la página se ha movido.",
     "notFoundCta": "Volver al inicio",
     "botAccount": "Bot",
-    "hexColorPlaceholder": "Color hexadecimal"
+    "hexColorPlaceholder": "Color hexadecimal",
+    "textEditor": "Editor de texto",
+    "moreActions": "Más acciones"
   },
   "DatePicker": {
     "placeholder": "Elige una fecha",
@@ -2007,7 +2009,8 @@
     "githubRawMetadata": "Ver todos los metadatos de GitHub conservados",
     "githubYes": "Sí",
     "githubNo": "No",
-    "descriptionEmptyReadOnly": "Sin descripción."
+    "descriptionEmptyReadOnly": "Sin descripción.",
+    "fieldValueAria": "{field}: {value}"
   },
   "Language": {
     "title": "Idioma",
@@ -2335,7 +2338,9 @@
     "hideProject": "Ocultar proyecto",
     "hideProjectConfirmTitle": "¿Ocultar «{name}»?",
     "hideProjectConfirmDescription": "Desaparece de tu barra lateral y de tu inicio. Solo te afecta a ti: los demás miembros lo siguen viendo, y sus rutinas y notificaciones siguen funcionando. Puedes volver a mostrarlo desde Ajustes de la cuenta → Proyectos ocultos.",
-    "showProject": "Mostrar proyecto"
+    "showProject": "Mostrar proyecto",
+    "skipToContent": "Ir al contenido",
+    "mainNavigation": "Navegación principal"
   },
   "CommandPaletteActions": {
     "copied": "Copiado",
@@ -2802,7 +2807,8 @@
     "findReplace": "Reemplazar",
     "findReplaceAll": "Reemplazar todo",
     "findReplaced": "{count, plural, one {# resultado reemplazado} other {# resultados reemplazados}}",
-    "promotePagesPrompt": "Convierte cada una de estas {count} páginas de mi proyecto en su propia incidencia: {pages}.\n\nLee primero cada página: su título, su contenido y, si es una entrada de base de datos, sus propiedades. Hazme preguntas antes de crear una incidencia cuando una página no sea lo bastante clara para hacer una buena. Cuando exista cada incidencia, adjúntale su página; las páginas se quedan donde están."
+    "promotePagesPrompt": "Convierte cada una de estas {count} páginas de mi proyecto en su propia incidencia: {pages}.\n\nLee primero cada página: su título, su contenido y, si es una entrada de base de datos, sus propiedades. Hazme preguntas antes de crear una incidencia cuando una página no sea lo bastante clara para hacer una buena. Cuando exista cada incidencia, adjúntale su página; las páginas se quedan donde están.",
+    "contentLabel": "Contenido de la página"
   },
   "Picker": {
     "relatedByMeaning": "Relacionadas por significado",
@@ -5874,7 +5880,8 @@
     "ai_models_title": "Modelos de IA",
     "ai_models_body": "Elige el modelo que usa Numo en cada conversación, o usa tu propia clave (BYOK).",
     "navMenu_ai_title": "IA integrada",
-    "navMenu_ai_desc": "Smart Fill, Smart Assign y Numo, tu asistente"
+    "navMenu_ai_desc": "Smart Fill, Smart Assign y Numo, tu asistente",
+    "navLabel": "Navegación principal"
   },
   "Pricing": {
     "metaTitle": "Precios y planes de minddy Cloud",
@@ -7277,7 +7284,9 @@
     "dropped": "{item} se soltó sobre {target}.",
     "droppedNowhere": "{item} se soltó.",
     "cancelled": "Se canceló el movimiento de {item}.",
-    "unnamedItem": "Elemento"
+    "unnamedItem": "Elemento",
+    "cardInstructions": "Pulsa Intro para abrir la incidencia. Sus botones cambian el estado, la prioridad y los demás campos.",
+    "cardRole": "tarjeta de incidencia"
   },
   "DesktopWelcome": {
     "back": "Volver",

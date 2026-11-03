@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { MotionConfig } from "framer-motion";
 import { OnboardingProvider } from "@/lib/use-onboarding";
 import { AuthProvider } from "@/lib/auth-context";
 import { AccountQueryProvider } from "@/lib/account-query-provider";
@@ -104,8 +105,12 @@ function DeferredKeyboardCheatsheet() {
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    // Provider buttons only appear on the auth screens, which mount their own
-    // AuthProvider.
+    // `prefers-reduced-motion` stops CSS animations in app/tokens.css, but
+    // framer-motion animates from script: "user" drops its transform and layout
+    // animations for the whole signed-in app when the system asks (MIN-783).
+    <MotionConfig reducedMotion="user">
+    {/* Provider buttons only appear on the auth screens, which mount their own
+        AuthProvider. */}
     <AuthProvider discoverOAuthProviders={false}>
       {/* Adopts the ACCOUNT theme at sign-in (and migrates legacy accounts):
           renders nothing, sits here to see both Auth and Theme providers. */}
@@ -199,5 +204,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         </AccountQueryProvider>
       </SendModeBoundary>
     </AuthProvider>
+    </MotionConfig>
   );
 }

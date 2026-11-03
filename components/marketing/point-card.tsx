@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type MouseEvent, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,8 @@ export function PointCard({
   };
 
   return (
+    // Its title and body slide in; with reduced motion they only fade.
+    <MotionConfig reducedMotion="user">
     <li
       id={anchor}
       onClick={toggleFromCard}
@@ -101,5 +103,6 @@ export function PointCard({
         </p>
       )}
     </li>
+    </MotionConfig>
   );
 }

@@ -1585,7 +1585,9 @@
     "notFoundBody": "Der Link ist falsch oder die Seite wurde verschoben.",
     "notFoundCta": "Zurück zur Startseite",
     "botAccount": "Bot",
-    "hexColorPlaceholder": "Hex-Farbe"
+    "hexColorPlaceholder": "Hex-Farbe",
+    "textEditor": "Texteditor",
+    "moreActions": "Weitere Aktionen"
   },
   "DatePicker": {
     "placeholder": "Datum wählen",
@@ -2007,7 +2009,8 @@
     "githubRawMetadata": "Alle erhaltenen GitHub-Metadaten anzeigen",
     "githubYes": "Ja",
     "githubNo": "Nein",
-    "descriptionEmptyReadOnly": "Keine Beschreibung."
+    "descriptionEmptyReadOnly": "Keine Beschreibung.",
+    "fieldValueAria": "{field}: {value}"
   },
   "Language": {
     "title": "Sprache",
@@ -2335,7 +2338,9 @@
     "hideProject": "Projekt ausblenden",
     "hideProjectConfirmTitle": "„{name}“ ausblenden?",
     "hideProjectConfirmDescription": "Das Projekt verschwindet aus deiner Seitenleiste und deiner Startseite. Nur du bist betroffen: Andere Mitglieder sehen es weiterhin, und seine Routinen und Benachrichtigungen laufen weiter. Du kannst es unter Kontoeinstellungen → Ausgeblendete Projekte wieder einblenden.",
-    "showProject": "Projekt einblenden"
+    "showProject": "Projekt einblenden",
+    "skipToContent": "Zum Inhalt springen",
+    "mainNavigation": "Hauptnavigation"
   },
   "CommandPaletteActions": {
     "copied": "Kopiert",
@@ -2802,7 +2807,8 @@
     "findReplace": "Ersetzen",
     "findReplaceAll": "Alle ersetzen",
     "findReplaced": "{count, plural, one {# Treffer ersetzt} other {# Treffer ersetzt}}",
-    "promotePagesPrompt": "Mach aus jeder dieser {count} Seiten meines Projekts ein eigenes Ticket: {pages}.\n\nLies zuerst jede Seite: ihren Titel, ihren Inhalt und bei einem Datenbankeintrag seine Eigenschaften. Stell mir Fragen, bevor du ein Ticket erstellst, wenn eine Seite nicht klar genug für ein gutes Ticket ist. Hänge jedem Ticket nach dem Erstellen seine Seite an; die Seiten bleiben, wo sie sind."
+    "promotePagesPrompt": "Mach aus jeder dieser {count} Seiten meines Projekts ein eigenes Ticket: {pages}.\n\nLies zuerst jede Seite: ihren Titel, ihren Inhalt und bei einem Datenbankeintrag seine Eigenschaften. Stell mir Fragen, bevor du ein Ticket erstellst, wenn eine Seite nicht klar genug für ein gutes Ticket ist. Hänge jedem Ticket nach dem Erstellen seine Seite an; die Seiten bleiben, wo sie sind.",
+    "contentLabel": "Seiteninhalt"
   },
   "Picker": {
     "relatedByMeaning": "Inhaltlich verwandt",
@@ -5874,7 +5880,8 @@
     "ai_models_title": "KI-Modelle",
     "ai_models_body": "Wähle das Modell, das Numo in jeder Unterhaltung nutzt, oder verwende deinen eigenen Schlüssel (BYOK).",
     "navMenu_ai_title": "Eingebaute KI",
-    "navMenu_ai_desc": "Smart Fill, Smart Assign und Numo, dein Assistent"
+    "navMenu_ai_desc": "Smart Fill, Smart Assign und Numo, dein Assistent",
+    "navLabel": "Hauptnavigation"
   },
   "Pricing": {
     "metaTitle": "minddy Cloud-Preise und -Pläne",
@@ -7277,7 +7284,9 @@
     "dropped": "{item} wurde auf {target} abgelegt.",
     "droppedNowhere": "{item} wurde abgelegt.",
     "cancelled": "Verschieben von {item} abgebrochen.",
-    "unnamedItem": "Element"
+    "unnamedItem": "Element",
+    "cardInstructions": "Drücke Enter, um das Ticket zu öffnen. Mit seinen Schaltflächen änderst du Status, Priorität und weitere Felder.",
+    "cardRole": "Ticketkarte"
   },
   "DesktopWelcome": {
     "back": "Zurück",

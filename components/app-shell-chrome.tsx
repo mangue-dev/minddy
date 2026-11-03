@@ -29,7 +29,7 @@ import { usePendingNavigation } from "@/lib/pending-navigation";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations, useLocale } from "next-intl";
-import { AppShell } from "@/components/app-shell";
+import { AppShell, SkipToContentLink } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
 import { useRetainedWhileClosing } from "@/lib/use-retained-while-closing";
 import { toast } from "sonner";
@@ -1684,6 +1684,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   return (
     <ProjectContextActionsProvider value={projectContext.projectActions}>
     <div className="app-workspace relative flex h-dvh w-full min-w-0 flex-col overflow-hidden">
+      {/* First in the document, before the top bar and its tabs. */}
+      <SkipToContentLink />
       <AppTopBar
         ready={Boolean(appTabSession)}
         hidden={sidebarHidden}

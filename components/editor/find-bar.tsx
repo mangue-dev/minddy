@@ -474,7 +474,7 @@ export function FindBar({ editor, editable }: { editor: Editor; editable: boolea
         </Button>
       </div>
       {invalid && (
-        <p id={errorId} className="px-8 pb-1 text-xs text-destructive">
+        <p role="status" id={errorId} className="px-8 pb-1 text-xs text-destructive">
           {t("findInvalidRegex")}
         </p>
       )}

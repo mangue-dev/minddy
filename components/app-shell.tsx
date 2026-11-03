@@ -1,8 +1,33 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 import { cn } from "@/lib/utils";
+
+/** Target of the skip link: the shell's scrollable content region. */
+export const MAIN_CONTENT_ID = "main-content";
+
+/**
+ * WCAG 2.4.1: the first Tab stop of the signed-in app, before the top bar and
+ * the sidebar, jumps to the content. Focus moves without touching the URL
+ * hash, which the tab router and `?issue=` links own.
+ */
+export function SkipToContentLink() {
+  const t = useTranslations("Nav");
+  return (
+    <a
+      href={`#${MAIN_CONTENT_ID}`}
+      onClick={(event) => {
+        event.preventDefault();
+        document.getElementById(MAIN_CONTENT_ID)?.focus();
+      }}
+      className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-lg focus:outline-2 focus:outline-ring"
+    >
+      {t("skipToContent")}
+    </a>
+  );
+}
 
 export interface AppShellProps {
   /** A <Sidebar/>. Automatically hidden below the `desktop` breakpoint. */
@@ -88,8 +113,11 @@ export function AppShell({
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {header}
         <main
+          id={MAIN_CONTENT_ID}
+          // Focusable by script only, for the skip link.
+          tabIndex={-1}
           className={cn(
-            "min-h-0 flex-1 overflow-y-auto",
+            "min-h-0 flex-1 overflow-y-auto outline-none",
             // Reserve space at the bottom on mobile so page content clears the
             // floating <MobileNav> pill instead of scrolling under it. Only when
             // a mobileNav is actually provided, and only below the desktop

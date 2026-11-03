@@ -128,6 +128,7 @@ export function DateTimePicker({
 }) {
   const t = useTranslations("DatePicker");
   const tRec = useTranslations("Recurrence");
+  const tIssueUI = useTranslations("IssueUI");
   const format = useFormatter();
   const locale = useLocale();
   // Locale objects come from a tiny standalone subpath — only DayPicker itself
@@ -227,6 +228,11 @@ export function DateTimePicker({
       )
     : null;
   const placeholderText = placeholder ?? t("placeholder");
+  // The trigger shows the date: its name keeps it (WCAG 2.5.3, 4.1.2), after
+  // the field the tooltip names, or the caller's label.
+  const triggerLabel = ariaLabel
+    ? tIssueUI("fieldValueAria", { field: tooltip ?? ariaLabel, value: label ?? placeholderText })
+    : undefined;
 
   /* ── Recurrence (MIN-136) ─────────────────────── ──────────────────────── */
 
@@ -347,7 +353,7 @@ export function DateTimePicker({
   let trigger: React.ReactNode;
   if (variant === "value") {
     trigger = (
-      <button type="button" aria-label={ariaLabel} className={cn(VALUE_TRIGGER, className)}>
+      <button type="button" aria-label={triggerLabel} className={cn(VALUE_TRIGGER, className)}>
         {isRecurring && (
           <HugeiconsIcon icon={RepeatIcon} className="size-3.5 shrink-0 text-muted-foreground" />
         )}
@@ -360,7 +366,7 @@ export function DateTimePicker({
     trigger = (
       <button
         type="button"
-        aria-label={ariaLabel}
+        aria-label={triggerLabel}
         onClick={stop}
         onPointerDown={stop}
         className={cn(
@@ -376,7 +382,7 @@ export function DateTimePicker({
     trigger = (
       <button
         type="button"
-        aria-label={ariaLabel}
+        aria-label={triggerLabel}
         className={cn(
           "flex h-9 items-center gap-2 rounded-lg bg-control px-3 text-sm text-foreground outline-none transition-colors hover:bg-control-hover focus-visible:bg-control-hover aria-expanded:bg-control-hover",
           className,
@@ -392,7 +398,7 @@ export function DateTimePicker({
     trigger = (
       <button
         type="button"
-        aria-label={ariaLabel}
+        aria-label={triggerLabel}
         className={cn(
           "flex items-center gap-1.5 rounded-md p-1.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:bg-muted max-sm:p-2",
           className,
