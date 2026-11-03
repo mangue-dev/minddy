@@ -78,6 +78,11 @@ export async function GET(request: NextRequest) {
     ? projects.filter((p) => p.id === projectId)
     : projects.filter((p) => !hidden.has(p.id));
   const projectById = new Map(scoped.map((p) => [p.id, p]));
+  // Personal names: those of members of EXPORTED projects only. The lookup
+  // needs the scope alone, so it runs beside the issue reads.
+  const membersRead = buildMembersByProject(getServiceClient(), scoped);
+  // An issue read failure answers 500 below; nothing awaits `membersRead` then.
+  membersRead.catch(() => {});
 
   // Nothing accessible under this scope: an empty file (header only) rather
   // than an error — the user requested an export, he receives one.
@@ -137,8 +142,7 @@ export async function GET(request: NextRequest) {
     ((categoriesRes.data ?? []) as { id: string; name: string }[]).map((c) => [c.id, c.name])
   );
 
-  // Personal names: those of members of EXPORTED projects only.
-  const { members } = await buildMembersByProject(getServiceClient(), scoped);
+  const { members } = await membersRead;
   const memberName = new Map<string, string>();
   for (const list of Object.values(members)) {
     for (const m of list) memberName.set(m.user_id, displayName(m));

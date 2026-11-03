@@ -109,18 +109,19 @@ export async function GET(request: NextRequest) {
 
   const issues = stripJoin<SearchIndexIssue>(issuesRes.data);
   const objectives = stripJoin<SearchIndexObjective>(objectivesRes.data);
-  const pages = await Promise.all(stripJoin<Record<string, unknown>>(
-    pagesRes.data).map((row) => decodePageProjection(row, auth.user.id))) as unknown as SearchIndexPage[];
+  const [pages, { members }] = await Promise.all([
+    Promise.all(stripJoin<Record<string, unknown>>(pagesRes.data)
+      .map((row) => decodePageProjection(row, auth.user.id))) as unknown as Promise<SearchIndexPage[]>,
+    buildMembersByProject(
+      service,
+      (projectsRes.data ?? []) as { id: string; owner_id: string }[]
+    ),
+  ]);
 
   const categories: Record<string, Category[]> = {};
   for (const c of (categoriesRes.data ?? []) as unknown as Category[]) {
     (categories[c.project_id] ??= []).push(c);
   }
-
-  const { members } = await buildMembersByProject(
-    service,
-    (projectsRes.data ?? []) as { id: string; owner_id: string }[]
-  );
 
   return NextResponse.json({
     issues,

@@ -68,9 +68,9 @@ export async function GET(request: NextRequest) {
       .select("id, name, encrypted_content, encryption_version")
       .in("id", projectIds).is("deleted_at", null);
     if (projectError) return Response.json({ error: projectError.message }, { status: 500 });
-    for (const project of projects ?? []) {
-      projectNames.set(project.id, await decodeProjectName(project, auth.user.id));
-    }
+    const names = await Promise.all((projects ?? []).map(async (project) =>
+      [project.id, await decodeProjectName(project, auth.user.id)] as const));
+    for (const [id, name] of names) projectNames.set(id, name);
   }
 
   const response: UsageHistoryResponse = {

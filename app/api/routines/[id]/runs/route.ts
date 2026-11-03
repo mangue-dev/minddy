@@ -44,15 +44,17 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
   const includedUsageUsd = billing?.plan.includedUsageUsd ?? 0;
   const service = getServiceClient();
   const conversationIds = occurrences.map((occurrence) => occurrence.conversation_id);
-  const turnResult = conversationIds.length
-    ? await service.from("numo_assistant_turns")
-        .select("*")
-        .in("conversation_id", conversationIds)
-        .order("created_at", { ascending: false })
-    : { data: [], error: null };
+  const [turnResult, spend] = await Promise.all([
+    conversationIds.length
+      ? service.from("numo_assistant_turns")
+          .select("*")
+          .in("conversation_id", conversationIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    routineOccurrenceSpend(service, conversationIds),
+  ]);
   if (turnResult.error) throw new Error(turnResult.error.message);
   const allTurns = (turnResult.data ?? []) as Array<Record<string, unknown>>;
-  const spend = await routineOccurrenceSpend(service, conversationIds);
   const turns = new Map<string, Record<string, unknown>>();
   for (const turn of allTurns) {
     const conversationId = turn.conversation_id as string;

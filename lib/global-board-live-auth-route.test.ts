@@ -229,6 +229,7 @@ describe("overlapped RLS read callbacks", () => {
       "app/api/projects/[id]/categories/route.ts", "app/api/projects/[id]/issues/route.ts",
       "app/api/projects/[id]/objectives/route.ts", "app/api/projects/[id]/pages/[pageId]/backlinks/route.ts",
       "app/api/projects/[id]/pages/[pageId]/comments/route.ts", "app/api/projects/[id]/pages/[pageId]/events/route.ts",
+      "app/api/projects/[id]/route.ts", "app/api/projects/route.ts",
     ]);
     for (const path of callers) {
       expect({ path, ...violations(join(process.cwd(), path)) }).toEqual({ path, callbacks: 1, found: [] });

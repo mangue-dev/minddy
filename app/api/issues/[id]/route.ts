@@ -21,24 +21,27 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
 
-  const { data, error } = await auth.supabase
-    .from("issues")
-    .select(ISSUE_SELECT)
-    .eq("id", id)
-    .maybeSingle();
+  // Both reads use the caller's RLS client and are keyed by the issue id only.
+  const [{ data, error }, firstMetadata] = await Promise.all([
+    auth.supabase
+      .from("issues")
+      .select(ISSUE_SELECT)
+      .eq("id", id)
+      .maybeSingle(),
+    auth.supabase
+      .from("github_issue_sync_metadata")
+      .select(
+        "issue_id, github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at, content_ciphertext, content_encryption_version"
+      )
+      .eq("issue_id", id)
+      .maybeSingle(),
+  ]);
 
   if (error) {
     console.error("[api/issues/:id] get failed:", error.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
   if (!data) return NextResponse.json({ error: t("issueNotFound") }, { status: 404 });
-  const firstMetadata = await auth.supabase
-    .from("github_issue_sync_metadata")
-    .select(
-      "issue_id, github_node_id, author_login, author_association, state_reason, locked, active_lock_reason, milestone, created_at_remote, updated_at_remote, closed_at_remote, closed_by_login, metadata, synced_at, content_ciphertext, content_encryption_version"
-    )
-    .eq("issue_id", id)
-    .maybeSingle();
   const { data: githubMetadata, error: githubMetadataError } =
     legacyGithubIssueMetadataSchema(firstMetadata.error)
       ? await auth.supabase.from("github_issue_sync_metadata")
@@ -49,14 +52,15 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     console.error("[api/issues/:id] GitHub metadata get failed:", githubMetadataError.message);
     return NextResponse.json({ error: t("databaseError") }, { status: 500 });
   }
-  return NextResponse.json({
-    ...mapIssueRow(await decodeIssue(data, auth.user.id)),
-    github_metadata: githubMetadata ? await decodeGithubIssueMetadata(
+  const [issue, decodedMetadata] = await Promise.all([
+    decodeIssue(data, auth.user.id),
+    githubMetadata ? decodeGithubIssueMetadata(
       data.project_id as string, githubMetadata as unknown as {
         issue_id: string; metadata: Record<string, unknown>; milestone: unknown | null;
         content_ciphertext?: string | null; content_encryption_version?: number },
       auth.user.id) : null,
-  });
+  ]);
+  return NextResponse.json({ ...mapIssueRow(issue), github_metadata: decodedMetadata });
 }
 
 /** PATCH /api/issues/[id] — update fields (access enforced in updateIssueFields). */

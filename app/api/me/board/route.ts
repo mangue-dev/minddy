@@ -165,10 +165,9 @@ export async function GET(request: NextRequest) {
 
   const integrations: Record<string, IntegrationRef[]> = {};
   await measureAllStartupPhase(timing, "integrations_decode", async () => {
-    for (const row of (integrationRows ?? []) as IntegrationRef[]) {
-      (integrations[row.project_id] ??= []).push({...row,
-        name:(await decodeIntegrationField(row,"name",row.name))!});
-    }
+    const decoded = await Promise.all(((integrationRows ?? []) as IntegrationRef[]).map(
+      async (row) => ({...row, name:(await decodeIntegrationField(row,"name",row.name))!})));
+    for (const row of decoded) (integrations[row.project_id] ??= []).push(row);
   });
   for(const rows of Object.values(integrations))
     rows.sort((a,b)=>a.name.localeCompare(b.name));

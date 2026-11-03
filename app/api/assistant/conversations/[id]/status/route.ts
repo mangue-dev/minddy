@@ -17,26 +17,29 @@ export async function GET(
     return Response.json({ error: "Invalid conversation ID" }, { status: 400 });
   }
 
-  const { data: conversation } = await supabase
-    .from("numo_conversation_history")
-    .select("status, error_message, source, legacy_id")
-    .eq("id", conversationId)
-    .single();
+  // Both RLS reads start together; the turn is discarded when the
+  // conversation is not visible.
+  const [{ data: conversation }, { data: turn }] = await Promise.all([
+    supabase
+      .from("numo_conversation_history")
+      .select("status, error_message, source, legacy_id")
+      .eq("id", conversationId)
+      .single(),
+    supabase
+      .from("numo_assistant_turns")
+      .select("id, status, error_message, last_event_seq, updated_at")
+      .eq("conversation_id", conversationId)
+      // A pre-admission Stop receipt must not mask a newer admitted request.
+      .or("status.neq.stopped,model.not.is.null,attempts.gt.0")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (!conversation) {
     return Response.json({ error: "Not found" }, { status: 404 });
   }
-
-  const { data: turn } = await supabase
-    .from("numo_assistant_turns")
-    .select("id, status, error_message, last_event_seq, updated_at")
-    .eq("conversation_id", conversationId)
-    // A pre-admission Stop receipt must not mask a newer admitted request.
-    .or("status.neq.stopped,model.not.is.null,attempts.gt.0")
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(1)
-    .maybeSingle();
   const afterValue = Number(new URL(request.url).searchParams.get("after") ?? -1);
   const after = Number.isSafeInteger(afterValue) && afterValue >= -1 ? afterValue : -1;
   const { data: activity } = turn

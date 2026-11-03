@@ -402,6 +402,18 @@ export async function POST(request: NextRequest) {
   });
   timing("authorized");
   const requestConversationId = conversationId ?? newConversationId;
+  // Resolve conversation ownership before any unrelated Numo configuration or
+  // context work. The ownership read is an RLS read keyed by the caller; it runs
+  // beside the stopped-turn read, whose outcome still answers first.
+  let convId = conversationId;
+  const ownershipRead = convId
+    ? Promise.resolve(supabase
+        .from("conversations")
+        .select("id, provider, model, reasoning_level")
+        .eq("id", convId)
+        .eq("user_id", user.id)
+        .single())
+    : null;
   if (requestConversationId) {
     const { data: stopped, error } = await getServiceClient().from("numo_assistant_turns")
       .select("id").eq("conversation_id", requestConversationId)
@@ -411,22 +423,14 @@ export async function POST(request: NextRequest) {
     if (stopped) return settledTurnResponse(requestConversationId, stopped.id as string, "stopped");
   }
 
-  // Resolve conversation ownership before any unrelated Numo configuration or
-  // context work.
-  let convId = conversationId;
   let existingConversation: {
     id: string;
     provider?: string | null;
     model?: string | null;
     reasoning_level?: string | null;
   } | null = null;
-  if (convId) {
-    const { data, error } = await supabase
-      .from("conversations")
-      .select("id, provider, model, reasoning_level")
-      .eq("id", convId)
-      .eq("user_id", user.id)
-      .single();
+  if (ownershipRead) {
+    const { data, error } = await ownershipRead;
     if (error || !data) {
       return Response.json({ error: "Conversation not found" }, { status: 404 });
     }
@@ -568,12 +572,16 @@ export async function POST(request: NextRequest) {
   const titleController = new AbortController();
   // A title is read as text: each typed mention (MIN-872) as the name its
   // user sees, never the raw link.
-  const titleText = mentionPlainText(await markdownForReader(user.id, sanitizedUserMessage));
+  const [readerMessage, protectTitle] = await Promise.all([
+    markdownForReader(user.id, sanitizedUserMessage),
+    convId ? false : shouldProtectConversationTitle(service),
+  ]);
+  const titleText = mentionPlainText(readerMessage);
   let pendingTitle: { conversationId: string; fallback: string } | null = null;
   if (!convId) {
     const reservedConversationId = newConversationId ?? randomUUID();
     const title = fallbackShortTitle(titleText);
-    const storedTitle = await shouldProtectConversationTitle(service)
+    const storedTitle = protectTitle
       ? await encodeConversationTitle(user.id, reservedConversationId, title)
       : title;
     let created;

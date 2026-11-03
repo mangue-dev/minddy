@@ -91,8 +91,10 @@ export async function POST(request: NextRequest) {
   }).select("id").single();
   if (error || !data) return Response.json({ error: "Unable to create conversation" }, { status: 500 });
   try {
-    const conversation = await getNumoConversation(auth.supabase, data.id);
-    const config = await getNumoConversationConfig(auth.supabase, data.id);
+    const [conversation, config] = await Promise.all([
+      getNumoConversation(auth.supabase, data.id),
+      getNumoConversationConfig(auth.supabase, data.id),
+    ]);
     return Response.json(
       conversation && config
         ? { ...conversation, provider: config.provider, model: config.model, reasoning_level: config.reasoningLevel }
