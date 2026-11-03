@@ -6511,6 +6511,7 @@
     "viewSource": "View the source",
     "seeMcp": "Connect your AI assistant",
     "seePricing": "View pricing",
+    "guidesLabel": "Read more in the documentation:",
     "compareNavLabel": "Compare minddy",
     "sourceFor": "{name}: source for {feature}",
     "billingNote": "A project's capacity depends on its owner's plan. Inviting a collaborator does not add a per-person charge to that owner's bill. Each collaborator keeps their own account limits and AI allowance.",

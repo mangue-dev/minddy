@@ -22,6 +22,7 @@ import {
   type Comparison,
 } from "@/lib/comparisons";
 import { MCP_AGENTS } from "@/lib/mcp-agents";
+import { comparisonGuides } from "@/lib/server/comparison-guides";
 import {
   PUBLIC_ROUTES,
   publicPathForLocale,
@@ -480,6 +481,8 @@ async function renderComparison(
     getTranslations({ locale, namespace: comparison.namespace }),
   ]);
   const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${COMPARISON_REVIEWED_AT}T12:00:00Z`));
+  const page = (key: PublicRouteKey) => `${SITE_URL}${publicPathForLocale(routeByKey(key), locale)}`;
+  const guides = comparisonGuides(locale);
   const cell = (row: (typeof COMPARISON_ROWS)[number]) => [
     t(`minddy_${row}`),
     comparison.sources[row]
@@ -503,7 +506,7 @@ async function renderComparison(
       "| --- | --- | --- |",
       ...COMPARISON_ROWS.map((row) => `| ${t(`row_${row}`)} | ${cell(row).join(" | ")} |`),
     ].join("\n"),
-    t("billingNote"),
+    `${t("billingNote")} [${t("seePricing")}](${page("pricing")})`,
     t("checkedNote", { date: reviewedDate }),
     `[${t("checkedDocsLink", { name: comparison.name })}](${comparison.docsUrl}) · [${t("checkedLink", { name: comparison.name })}](${comparison.pricingUrl})`,
 
@@ -514,6 +517,9 @@ async function renderComparison(
       t(`feature_${feature}_body`),
     ]),
     t("aiNote"),
+    ...(guides.length
+      ? [`${t("guidesLabel")}\n\n${guides.map((guide) => `- [${guide.title}](${SITE_URL}${guide.path})`).join("\n")}`]
+      : []),
 
     `## ${t("verdictTitle")}`,
     t("verdictSubtitle"),
@@ -524,6 +530,7 @@ async function renderComparison(
 
     `## ${t("migrationTitle")}`,
     t("migrationBody", { name: comparison.name }),
+    `[${t("seeMcp")}](${page("mcp")})`,
     links(locale),
   ].join("\n\n") + "\n";
 }

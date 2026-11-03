@@ -116,6 +116,22 @@ export const COMPARISON_FEATURES = [
   "openSource",
 ] as const;
 
+export type ComparisonFeature = (typeof COMPARISON_FEATURES)[number];
+
+/**
+ * The public guide that explains each feature in depth, by documentation ID.
+ * Comparison pages link to these guides so their claims can be checked against
+ * the manual. Features without a dedicated guide have no entry.
+ */
+export const COMPARISON_FEATURE_GUIDES = {
+  agents: "minddy-mcp",
+  numo: "numo",
+  pages: "pages",
+  routines: "scheduled-routines",
+  planning: "objectives",
+  feedback: "feedback",
+} as const satisfies Partial<Record<ComparisonFeature, string>>;
+
 export function comparisonBySlug(slug: string): Comparison | null {
   return COMPARISONS.find((entry) => entry.slug === slug) ?? null;
 }

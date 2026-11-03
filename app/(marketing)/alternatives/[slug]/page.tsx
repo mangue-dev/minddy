@@ -23,6 +23,7 @@ import { PlatformDownloadLink } from "@/components/marketing/platform-download-l
 import { Github } from "@/components/git/provider-icons";
 import { AppIcon } from "@/components/icon";
 import { MINDDY_REPOSITORY_URL } from "@/lib/brand-constants";
+import { comparisonGuides } from "@/lib/server/comparison-guides";
 
 /** The features shown with the landing's illustrations; the others are told in text. */
 const ILLUSTRATED = [
@@ -57,6 +58,7 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
   const [t, tc] = await Promise.all([getTranslations("Alternatives"), getTranslations(comparison.namespace)]);
   const reviewedDate = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(new Date(`${COMPARISON_REVIEWED_AT}T12:00:00Z`));
   const downloadHref = localizedHref("/download", locale);
+  const guides = comparisonGuides(locale);
 
   return (
     <>
@@ -163,6 +165,18 @@ export default async function AlternativePage({ params }: { params: Promise<{ sl
             ))}
           </div>
           <p className="mt-5 max-w-3xl text-sm leading-relaxed text-muted-foreground">{t("aiNote")}</p>
+          {guides.length > 0 && (
+            <nav aria-labelledby="comparison-guides" className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              <p id="comparison-guides">{t("guidesLabel")}</p>
+              <ul className="mt-1 flex flex-wrap gap-x-5">
+                {guides.map(guide => (
+                  <li key={guide.id}>
+                    <Link href={guide.path} className="inline-flex min-h-11 items-center rounded-sm font-medium text-foreground underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{guide.title}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
         </div>
       </section>
 

@@ -6511,6 +6511,7 @@
     "viewSource": "Quellcode ansehen",
     "seeMcp": "KI-Assistenten verbinden",
     "seePricing": "Preise ansehen",
+    "guidesLabel": "Mehr dazu in der Dokumentation:",
     "compareNavLabel": "minddy vergleichen",
     "sourceFor": "{name}: Quelle zu {feature}",
     "billingNote": "Die Kapazität eines Projekts richtet sich nach dem Plan seines Eigentümers. Eine Einladung erhöht dessen Rechnung nicht um eine Gebühr pro Person. Alle Mitwirkenden behalten die Limits und das KI-Kontingent ihres eigenen Kontos.",

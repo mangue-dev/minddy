@@ -10,6 +10,10 @@ import MarkdownIt from "markdown-it";
 import { createElement } from "react";
 import { CookieTable } from "@/components/legal/prose";
 import { legalProseMarkdown } from "@/lib/server/legal-markdown";
+import { COMPARISONS, COMPARISON_FEATURE_GUIDES } from "@/lib/comparisons";
+import { routeByKey } from "@/lib/public-routes";
+import { documentationPath } from "@/lib/documentation-core.mjs";
+import { getDocumentationArticle } from "@/lib/server/documentation";
 
 vi.mock("next-intl/server", () => ({
   getTranslations: async ({ locale, namespace }: { locale: Locale; namespace: string }) =>
@@ -68,6 +72,27 @@ describe("public site Markdown content", () => {
     expect(body).toContain("/docs/workspace-encryption.md");
     expect(body).toContain("version-specific");
     expect(body).not.toContain("MINDDY_RELEASE_TAG");
+  });
+
+  it.each(locales)("links %s comparisons to pricing, MCP and the published feature guides", async locale => {
+    const t = createTranslator({ locale, messages: await loadMessages(locale), namespace: "Alternatives" });
+    const page = (key: "pricing" | "mcp") => `${SITE_URL}${publicPathForLocale(routeByKey(key), locale)}`;
+    for (const comparison of COMPARISONS) {
+      const path = publicPathForLocale(routeByKey(comparison.routeKey), locale);
+      const body = await (await GET(new NextRequest(`${SITE_URL}${publicMarkdownPath(path)}`))).text();
+      expect(body, comparison.slug).toContain(`[${t("seePricing")}](${page("pricing")})`);
+      expect(body, comparison.slug).toContain(`[${t("seeMcp")}](${page("mcp")})`);
+      expect(body, comparison.slug).toContain(t("guidesLabel"));
+      for (const id of Object.values(COMPARISON_FEATURE_GUIDES)) {
+        const article = getDocumentationArticle(id, locale);
+        const link = `(${SITE_URL}${documentationPath(id, locale)})`;
+        if (article) expect(body, `${comparison.slug} ${id}`).toContain(`[${article.title}]${link}`);
+        else expect(body, `${comparison.slug} ${id}`).not.toContain(link);
+      }
+      // The sourced table and its official links stay in the export.
+      expect(body).toContain(comparison.pricingUrl);
+      expect(body).toContain(comparison.docsUrl);
+    }
   });
 
   it("preserves literal punctuation and column boundaries in legal tables", async () => {
