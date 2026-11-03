@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EncryptedStore } from "./encryption/store";
 import { encodeIssue } from "./issue-store";
-import { loadGlobalBoardIssues } from "./global-board-issues";
+import { loadGlobalBoardIssues, parseIssueStatusesParam } from "./global-board-issues";
 import { mapIssueRow } from "./issue-mapper";
 
 const state = vi.hoisted(() => ({ store: null as EncryptedStore | null, client: null as SupabaseClient | null }));
@@ -311,5 +311,19 @@ describe("complete authenticated global board issues", () => {
     const response = await GET(new Request("https://example.test/api/me/issues") as never);
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "databaseError" });
+  });
+});
+
+describe("board status filter parameter", () => {
+  const parse = (query: string) => parseIssueStatusesParam(new URLSearchParams(query));
+
+  it("reads every status when absent and a known subset when present", () => {
+    expect(parse("")).toEqual({});
+    expect(parse("statuses=done,canceled,done")).toEqual({ statuses: ["done", "canceled"] });
+  });
+
+  it("rejects an empty or unknown status rather than narrowing the board", () => {
+    expect(parse("statuses=")).toBeNull();
+    expect(parse("statuses=done,closed")).toBeNull();
   });
 });

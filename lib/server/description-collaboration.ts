@@ -697,7 +697,11 @@ export async function materializePendingDescription(
 /** The cron's safety net: descriptions whose typing no request materialized. */
 export async function materializeStaleDescriptions(limit = 50): Promise<{ descriptions: number }> {
   const stale = await staleDocumentStreams(STALE_PENDING_MS, limit);
-  for (const owner of stale) await runMaterialization(owner, null);
+  // Five at a time, as materializeStalePages does: each document is claimed
+  // on its own and a failure is contained in its own run.
+  for (let offset = 0; offset < stale.length; offset += 5) {
+    await Promise.all(stale.slice(offset, offset + 5).map((owner) => runMaterialization(owner, null)));
+  }
   return { descriptions: stale.length };
 }
 

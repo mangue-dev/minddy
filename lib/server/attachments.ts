@@ -806,11 +806,13 @@ async function unreferencedPaths(
   const CHUNK = 100;
   for (let i = 0; i < paths.length; i += CHUNK) {
     const slice = paths.slice(i, i + CHUNK);
-    for (const table of ["attachments", "page_files"] as const) {
-      const { data, error } = await service
+    // Both tables are read together; each result only adds to `held`.
+    const reads = await Promise.all((["attachments", "page_files"] as const)
+      .map(async (table) => ({ table, ...await service
         .from(table)
         .select("storage_path")
-        .in("storage_path", slice);
+        .in("storage_path", slice) })));
+    for (const { table, data, error } of reads) {
       if (error) {
         // We no longer know who references what: we do not delete anything from this
         // slice. An orphan costs bytes, too much deletion costs

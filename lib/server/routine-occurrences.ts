@@ -330,7 +330,8 @@ export async function recoverPendingRoutineOccurrences(limit = 10): Promise<numb
   const service = getServiceClient();
   const { data, error } = await service
     .from("numo_routine_occurrences")
-    .select("*")
+    // Only what re-admission reads: the row never leaves this function.
+    .select("id, routine_id, origin, scheduled_for, request_id")
     .is("turn_id", null)
     .in("origin", ["scheduled", "manual"])
     .is("error_code", null)
@@ -338,7 +339,8 @@ export async function recoverPendingRoutineOccurrences(limit = 10): Promise<numb
     .limit(limit);
   if (error) throw new Error(error.message);
   let recovered = 0;
-  for (const occurrence of (data ?? []) as NumoRoutineOccurrence[]) {
+  for (const occurrence of (data ?? []) as Pick<NumoRoutineOccurrence,
+    "id" | "routine_id" | "origin" | "scheduled_for" | "request_id">[]) {
     const { data: routine, error: routineError } = await service
       .from("agent_routines")
       .select("*")

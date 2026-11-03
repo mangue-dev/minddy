@@ -3,7 +3,7 @@ import {
   measureAllStartupPhase,
   type AllStartupTiming,
 } from "@/lib/server/all-startup-timing";
-import { loadGlobalBoardIssues } from "@/lib/server/global-board-issues";
+import { loadGlobalBoardIssues, parseIssueStatusesParam } from "@/lib/server/global-board-issues";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NextResponse, type NextRequest } from "next/server";
@@ -16,6 +16,7 @@ import { buildMembersByProject } from "@/lib/server/project-members";
 import { mapIssueRow } from "@/lib/server/issue-mapper";
 import { ensureCycles, toCycleInfo, todayInTz } from "@/lib/server/cycles";
 import { resolveCyclePrefs } from "@/lib/cycle-prefs";
+import type { IssueStatus } from "@/lib/issue-constants";
 import type {
   BoardCycles,
   Category,
@@ -38,10 +39,11 @@ function cyclePrefsOf(user: User) {
  * role. Cycle reconciliation writes only cycles and issues, so every read but
  * the issues one can run while it does; `issues` is null when it must wait.
  */
-function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined, withIssues: boolean) {
+function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined, withIssues: boolean,
+  statuses: readonly IssueStatus[] | undefined) {
   // `Promise.resolve` sends each query now: a builder only runs once awaited.
   return {
-    issues: withIssues ? readBoardIssues(supabase, actorId, timing) : null,
+    issues: withIssues ? readBoardIssues(supabase, actorId, timing, statuses) : null,
     projects: Promise.resolve(measureAllStartupPhase(timing, "projects", () => supabase.from("projects").select("id, owner_id").is("deleted_at", null))),
     categories: Promise.resolve(measureAllStartupPhase(timing, "categories", () => categoryStore(supabase, actorId).select("*").order("position"))),
     objectives: Promise.resolve(measureAllStartupPhase(timing, "objectives", () => objectiveStore(supabase).select("*"))),
@@ -54,8 +56,9 @@ function readBoardRows(supabase: SupabaseClient, actorId: string, timing: AllSta
   };
 }
 
-function readBoardIssues(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined) {
-  return Promise.resolve(measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(supabase, actorId, timing)));
+function readBoardIssues(supabase: SupabaseClient, actorId: string, timing: AllStartupTiming | undefined,
+  statuses: readonly IssueStatus[] | undefined) {
+  return Promise.resolve(measureAllStartupPhase(timing, "issues", () => loadGlobalBoardIssues(supabase, actorId, timing, statuses)));
 }
 
 /**
@@ -73,18 +76,26 @@ function readBoardIssues(supabase: SupabaseClient, actorId: string, timing: AllS
  * Cycles (MIN-32): when the user has cycles enabled, this read lazily
  * reconciles their timeline (create/close/rollover/auto-fill — see
  * lib/server/cycles.ts) using `?tz=` to resolve the user's calendar day.
+ *
+ * `?statuses=` narrows the issue slice only (lib/global-board-reads.ts): the
+ * board paints its open columns from this response while GET /api/me/issues
+ * reads the other statuses beside it.
  */
 export async function GET(request: NextRequest) {
   const timing = createAllStartupTiming(request);
+  const filter = parseIssueStatusesParam(new URL(request.url).searchParams);
   // The RLS reads overlap the live session check; the response and every
   // service-role read still wait for it. With cycles, the issues read waits
   // for the reconciliation, which writes through the service client.
   const auth = await measureAllStartupPhase(timing, "auth", () => getAuthedUserWithRlsReads(request,
-    ({ user, supabase }) => Promise.resolve(readBoardRows(supabase, user.id, timing, !cyclePrefsOf(user).enabled))));
+    ({ user, supabase }) => filter
+      ? Promise.resolve(readBoardRows(supabase, user.id, timing, !cyclePrefsOf(user).enabled, filter.statuses))
+      : null));
   if (!auth.ok) return auth.response;
   const t = await getTranslations("ApiErrors");
+  if (!filter) return NextResponse.json({ error: t("invalidJson") }, { status: 400 });
   const service = getServiceClient();
-  const rows = (await auth.reads) ?? readBoardRows(auth.supabase, auth.user.id, timing, !cyclePrefsOf(auth.user).enabled);
+  const rows = (await auth.reads) ?? readBoardRows(auth.supabase, auth.user.id, timing, !cyclePrefsOf(auth.user).enabled, filter.statuses);
 
   // Members and integrations need only the authorized project ids: they start
   // as soon as the projects read lands, beside the other reads.
@@ -132,7 +143,7 @@ export async function GET(request: NextRequest) {
       upcoming: ensured.upcoming.map(toCycleInfo),
       past: ensured.past.slice(0, PAST_CYCLES_SHOWN).map(toCycleInfo),
     };
-    issuesRead = readBoardIssues(auth.supabase, auth.user.id, timing);
+    issuesRead = readBoardIssues(auth.supabase, auth.user.id, timing, filter.statuses);
   }
 
   const [issuesRes, projectsRes, categoriesRes, objectivesRes, relationsRes] =

@@ -29,10 +29,15 @@ export async function validateRoutineTrigger(value: unknown, projectId: string, 
     const target = leaf.field === "assignee" ? people : leaf.field === "category" ? categories : null;
     if (target) for (const id of Array.isArray(leaf.value) ? leaf.value : typeof leaf.value === "string" ? [leaf.value] : []) target.add(id);
   }
-  for (const id of people) if (!await userCanBeAssigned(service, id, projectId)) invalid();
-  for (const id of categories) {
-    const { data } = await categoryStore(service, actorId).select("id").eq("id", id).eq("project_id", projectId);
-    if (!data?.length) invalid();
-  }
+  // Independent existence reads that never throw: any missing reference gives
+  // the same refusal, so they can run together.
+  const references = await Promise.all([
+    ...[...people].map((id) => userCanBeAssigned(service, id, projectId)),
+    ...[...categories].map(async (id) => {
+      const { data } = await categoryStore(service, actorId).select("id").eq("id", id).eq("project_id", projectId);
+      return !!data?.length;
+    }),
+  ]);
+  if (references.some((found) => !found)) invalid();
   return trigger;
 }

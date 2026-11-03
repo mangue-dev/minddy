@@ -235,16 +235,20 @@ async function withoutBurstDuplicates(opts: {
   at?: string | null;
 }): Promise<string[]> {
   if (!collapsesInBurst(opts.type)) return opts.issueIds;
-  const kept: string[] = [];
-  for (const issueId of opts.issueIds) {
-    const recent = await hasRecentPrEvent({
+  // Independent reads, run together; the first failure in ticket order is the
+  // one raised, as when they ran one after another.
+  const checks = await Promise.allSettled(opts.issueIds.map((issueId) =>
+    hasRecentPrEvent({
       issueIds: [issueId],
       type: opts.type,
       prNumber: opts.prNumber,
       fromValue: opts.fromValue,
       at: opts.at,
-    });
-    if (!recent) kept.push(issueId);
+    })));
+  const kept: string[] = [];
+  for (const [index, check] of checks.entries()) {
+    if (check.status === "rejected") throw check.reason;
+    if (!check.value) kept.push(opts.issueIds[index]);
   }
   return kept;
 }

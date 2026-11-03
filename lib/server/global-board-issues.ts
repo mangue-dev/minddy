@@ -4,6 +4,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AllStartupTiming } from "./all-startup-timing";
 import { ISSUE_SELECT } from "./issue-mapper";
 import { issueStore } from "./issue-store";
+import { ISSUE_STATUSES } from "@/lib/issue-validation";
+import type { IssueStatus } from "@/lib/issue-constants";
 
 const BATCH_SIZE = 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -24,8 +26,27 @@ function compareNumber(a: number | null, b: number | null): number {
   return a < b ? -1 : 1;
 }
 
-/** Load every RLS-visible issue through the ordinary protected projection. */
-export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: string, timing?: AllStartupTiming): Promise<Result> {
+/**
+ * The `statuses` query parameter of the board reads: a comma-separated subset
+ * of the issue statuses. Absent means every status; an empty or unknown value
+ * is invalid (null), so a typo never silently narrows a board.
+ */
+export function parseIssueStatusesParam(params: URLSearchParams): { statuses?: IssueStatus[] } | null {
+  const raw = params.get("statuses");
+  if (raw === null) return {};
+  const statuses = raw.split(",");
+  const known: readonly string[] = ISSUE_STATUSES;
+  if (statuses.some((status) => !known.includes(status))) return null;
+  return { statuses: [...new Set(statuses)] as IssueStatus[] };
+}
+
+/**
+ * Load every RLS-visible issue through the ordinary protected projection,
+ * optionally only those in `statuses` (the board's first paint reads the open
+ * columns and the rest separately).
+ */
+export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: string, timing?: AllStartupTiming,
+  statuses?: readonly IssueStatus[]): Promise<Result> {
   const rows: Row[] = [];
   // Shared by both ranges: a row returned twice fails the whole read.
   const ids = new Set<string>();
@@ -38,6 +59,7 @@ export async function loadGlobalBoardIssues(client: SupabaseClient, actorId: str
       // position/number order is restored only after every batch succeeds.
       let query = issueStore(client, actorId, timing).select(ISSUE_SELECT, { count: "exact" })
         .order("id", { ascending: true }).limit(BATCH_SIZE);
+      if (statuses) query = query.in("status", [...statuses]);
       if (from) query = query.gte("id", from);
       if (before) query = query.lt("id", before);
       if (cursor) query = query.gt("id", cursor);

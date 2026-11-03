@@ -83,7 +83,7 @@ it("does not hold live reads behind a stalled encrypted restore and ignores its 
 it("starts the cold board read while the sealed snapshot opens", async () => {
   const relaunch = sealedRelaunch();
   await act(() => root.render(createElement(AppQueryProvider, null, createElement(BoardRoute))));
-  expect(relaunch.paths().sort()).toEqual(["/api/me/board", "/api/me/local-snapshots", "/api/me/views"]);
+  expect(relaunch.paths().sort()).toEqual(["/api/me/board", "/api/me/issues", "/api/me/local-snapshots", "/api/me/views"]);
 });
 
 it("shows restored data during the one in-flight live read without repeating it", async () => {

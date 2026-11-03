@@ -29,6 +29,7 @@ import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
 import { buildViewHref } from "@/lib/view-href";
 import { boardViewTabHref } from "@/lib/board-view-tab";
 import { filterIssues, statusColumns, visibleStatuses } from "@/lib/view-filter";
+import { isDeferredBoardStatus } from "@/lib/global-board-reads";
 import { StatusFilterMenu } from "@/components/status-filter-menu";
 import type { IssueStatus } from "@/lib/issue-constants";
 import {
@@ -132,6 +133,7 @@ function GlobalBoardInner() {
     relations,
     cycles,
     loading,
+    deferredPending,
     updateIssue,
     moveIssue,
     setCategories,
@@ -523,7 +525,13 @@ function GlobalBoardInner() {
     [openCreateIssue],
   );
 
-  if (loading || viewsLoading || projectsLoading) {
+  // The board paints from its open columns (lib/global-board-reads.ts). What
+  // reads the other statuses waits for them rather than show them empty: a
+  // view with such a column, the cycle, and the "no tickets yet" screen.
+  const awaitingDeferred = deferredPending && (cycleMode || scopedIssues.length === 0 ||
+    statuses.some((status) => isDeferredBoardStatus(status.value)));
+
+  if (loading || awaitingDeferred || viewsLoading || projectsLoading) {
     return (
       <BoardLoadingSkeleton
         position={boardScrollPosition}

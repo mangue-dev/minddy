@@ -8,6 +8,7 @@ import { resolveProjectSegment, resolveRouteRef } from "@/lib/server/route-refs"
 import { defaultFeedbackListReadPath } from "@/lib/feedback-selection-hint";
 import { PROJECT_SETTINGS_DEFAULT_TAB } from "@/lib/settings-sections";
 import { parseTimeZoneCookie, TIME_ZONE_COOKIE } from "@/lib/time-zone-cookie";
+import { DEFERRED_BOARD_ISSUES_PATH, globalBoardReadPath } from "@/lib/global-board-reads";
 import { SERVER_SEED_PATH_HEADER, type ServerSeedPlan, type ServerSeedResponse } from "@/lib/server-seed";
 
 /**
@@ -43,6 +44,7 @@ const ROUTES: { pattern: RegExp; load: () => Promise<RouteModule> }[] = [
   { pattern: /^\/api\/me\/views$/, load: () => import("@/app/api/me/views/route") },
   { pattern: /^\/api\/pull-requests$/, load: () => import("@/app/api/pull-requests/route") },
   { pattern: /^\/api\/me\/board$/, load: () => import("@/app/api/me/board/route") },
+  { pattern: /^\/api\/me\/issues$/, load: () => import("@/app/api/me/issues/route") },
   { pattern: /^\/api\/me\/cycle$/, load: () => import("@/app/api/me/cycle/route") },
   { pattern: /^\/api\/me\/triage-counts$/, load: () => import("@/app/api/me/triage-counts/route") },
   { pattern: /^\/api\/me\/avatar$/, load: () => import("@/app/api/me/avatar/route") },
@@ -153,7 +155,10 @@ export async function serverSeedPaths(location: string, timeZone: string | null)
   const tz = timeZone ? `?tz=${encodeURIComponent(timeZone)}` : null;
   if (tz) paths.push(`/api/me/cycle${tz}`);
   // The global board's prerequisites (lib/retained-board-read-state.ts).
-  if (url.pathname === "/all") paths.push("/api/me/views", ...(tz ? [`/api/me/board${tz}`] : []));
+  // Its two halves (lib/global-board-reads.ts) arrive as separate seeds.
+  if (url.pathname === "/all") {
+    paths.push("/api/me/views", ...(timeZone ? [globalBoardReadPath(timeZone)] : []), DEFERRED_BOARD_ISSUES_PATH);
+  }
   if (url.pathname === "/routines") paths.push("/api/routines", "/api/agent/models");
   // The route answers non-admins with an error, which is never seeded.
   if (url.pathname === "/admin") paths.push("/api/admin/capabilities", "/api/admin/overview");

@@ -9,6 +9,7 @@ import { signalRealtimeRekey } from "./realtime-topic";
 import { realtimeCoverageLive } from "./realtime-coverage";
 import { recordAcceptedPageWrite } from "./optimistic-page-writes";
 import { globalBoardQueryFn } from "./global-board-api";
+import { DEFERRED_BOARD_ISSUES_PATH } from "./global-board-reads";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import type { GlobalBoardResponse, Issue } from "./types";
 
@@ -371,6 +372,8 @@ describe("remote ticket changes on the aggregate board", () => {
   async function observedBoard() {
     const fetch = vi.fn(async (path: string) => path.startsWith("/api/me/board")
       ? Response.json(board([row("todo", at)]))
+      : path === DEFERRED_BOARD_ISSUES_PATH
+        ? Response.json([])
       : path === "/api/issues/issue-1"
         ? Response.json({ ...row("done", later), github_metadata: null })
         : Response.json({ error: "Unexpected" }, { status: 500 }));
@@ -381,7 +384,8 @@ describe("remote ticket changes on the aggregate board", () => {
     await advance(1_000);
     fetch.mockClear();
     const paths = () => fetch.mock.calls.map(([path]) => path.split("?")[0]);
-    return { stop, paths };
+    const fullPaths = () => fetch.mock.calls.map(([path]) => path);
+    return { stop, paths, fullPaths };
   }
 
   it("reads only the changed ticket for a remote metadata broadcast", async () => {
@@ -400,14 +404,16 @@ describe("remote ticket changes on the aggregate board", () => {
   });
 
   it("does not read every issue twice when the window comes back", async () => {
-    const { stop, paths } = await observedBoard();
+    const { stop, paths, fullPaths } = await observedBoard();
     try {
       await act(async () => window.dispatchEvent(new Event("blur")));
       await advance(20_000);
       await act(async () => window.dispatchEvent(new Event("focus")));
       await advance(1_000);
-      expect(paths()).not.toContain("/api/me/issues");
+      // One board read: its open half and the other statuses, never the complete snapshot too.
+      expect(fullPaths()).not.toContain("/api/me/issues");
       expect(paths().filter((path) => path === "/api/me/board")).toHaveLength(1);
+      expect(paths().filter((path) => path === "/api/me/issues")).toHaveLength(1);
     } finally { stop(); }
   });
 });

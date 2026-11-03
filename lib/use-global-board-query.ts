@@ -480,6 +480,8 @@ export function useGlobalBoardQuery() {
     relations: (data?.relations ?? NO_RELATIONS) as IssueRelation[],
     cycles: data?.cycles ?? null,
     loading: isPending,
+    /** The open columns are painted; the other statuses have not landed yet. */
+    deferredPending: data?.deferred_pending === true,
     updateIssue,
     moveIssue,
     setCategories,

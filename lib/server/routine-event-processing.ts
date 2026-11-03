@@ -19,6 +19,8 @@ interface Arming {
   subject_type: RoutineEventRow["subject_type"]; subject_id: string;
   retry_at: string; state: string; request_id: string; lease_token: string | null; attempts: number;
 }
+/** Exactly the `Arming` fields, so the read carries nothing evaluation ignores. */
+const ARMING_COLUMNS = "id, routine_id, revision, event_id, project_id, subject_type, subject_id, retry_at, state, request_id, lease_token, attempts";
 interface AdmissionBudget { remaining: number }
 function single<T>(value: unknown): T | null { return (Array.isArray(value) ? value[0] : value) as T | null; }
 function check(error: { message: string } | null) { if (error) throw new Error(error.message); }
@@ -163,7 +165,7 @@ async function processEvent(event: RoutineEventRow, budget: AdmissionBudget) {
       const armed = await service.rpc("arm_routine_event", { p_routine_id: routine.id, p_revision: routine.trigger_revision, p_event_id: event.id, p_delay_minutes: trigger.type === "schedule" ? 0 : trigger.delayMinutes ?? 0 });
       check(armed.error);
     }
-    const pending = await service.from("routine_armings").select("*").eq("routine_id", routine.id).eq("subject_type", event.subject_type).eq("subject_id", event.subject_id).in("state", ["armed", "reserved"]);
+    const pending = await service.from("routine_armings").select(ARMING_COLUMNS).eq("routine_id", routine.id).eq("subject_type", event.subject_type).eq("subject_id", event.subject_id).in("state", ["armed", "reserved"]);
     check(pending.error);
     for (const arming of pending.data ?? []) await evaluateArming(arming as Arming, routine, budget, event);
   }
@@ -190,7 +192,7 @@ export async function processRoutineEvents(limit = 20): Promise<{ events: number
       events++;
     }
   }
-  const retry = await service.from("routine_armings").select("*").in("state", ["armed", "reserved"]).lte("retry_at", new Date().toISOString()).order("retry_at").limit(limit);
+  const retry = await service.from("routine_armings").select(ARMING_COLUMNS).in("state", ["armed", "reserved"]).lte("retry_at", new Date().toISOString()).order("retry_at").limit(limit);
   check(retry.error);
   for (const arming of retry.data ?? []) {
     const row = await service.from("agent_routines").select("*").eq("id", arming.routine_id).is("deleted_at", null).maybeSingle();

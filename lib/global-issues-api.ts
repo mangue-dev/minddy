@@ -22,8 +22,11 @@ export interface GlobalIssueSnapshot {
   startedAt: number;
 }
 
-export async function fetchGlobalIssuesApi(signal?: AbortSignal): Promise<Issue[]> {
-  const response = await fetchClientRead("/api/me/issues", { signal });
+export async function fetchGlobalIssuesApi(
+  signal?: AbortSignal,
+  path = "/api/me/issues"
+): Promise<Issue[]> {
+  const response = await fetchClientRead(path, { signal });
   const text = await response.text();
   let data: unknown = null;
   try {

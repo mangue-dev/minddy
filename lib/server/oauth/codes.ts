@@ -104,7 +104,11 @@ export async function claimAuthorizationCode(
   claim = candidate.encrypted_content
     ? claim.eq("encrypted_content", candidate.encrypted_content)
     : claim.eq("redirect_uri", exchange.redirectUri);
-  const { data, error } = await claim.select("*").maybeSingle();
+  // The protected values were decoded from `candidate`; the claim returns
+  // only the plain columns the exchange reads.
+  const { data, error } = await claim
+    .select("code_hash, client_id, user_id, grant_id, code_challenge, scope")
+    .maybeSingle();
   if (error) {
     console.error("[oauth/codes] claim failed:", error.message);
     return null;
