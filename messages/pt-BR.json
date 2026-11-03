@@ -6511,6 +6511,7 @@
     "viewSource": "Ver o código-fonte",
     "seeMcp": "Conecte seu assistente de IA",
     "seePricing": "Ver preços",
+    "guidesLabel": "Saiba mais na documentação:",
     "compareNavLabel": "Comparar o minddy",
     "sourceFor": "{name}: fonte sobre {feature}",
     "billingNote": "A capacidade de um projeto depende do plano de seu proprietário. Convidar um colaborador não acrescenta uma cobrança por pessoa à fatura do proprietário. Cada colaborador mantém os limites e a cota de IA da própria conta.",

@@ -5,32 +5,34 @@ import { SITE_URL } from "@/lib/site";
  * robots.txt (MIN-73, supplemented by MIN-88).
  *
  * Written by hand rather than via `MetadataRoute.Robots`: the Next convention
- * can only issue `User-agent` / `Allow` / `Disallow` / `Sitemap`, but it
- * two things are missing here that it cannot produce — the line
- * `Content-Signal`, and groups per robot.
+ * can only issue `User-agent` / `Allow` / `Disallow` / `Sitemap`, and it cannot
+ * produce one group per robot or the comment that states our content signals.
  *
  * Three decisions:
  *
  * 1. **Outside production, everything is prohibited.** `preview.minddy.app/robots.txt`
- * replied `Allow: /` on a complete site: a second minddy, indexable,
- * in direct competition with the real one on its own requests. THE
- * `X-Robots-Tag` of `next.config.mjs` complete, because a robots.txt does not
- * governs that DISCOVERY: an already known URL is visited anyway.
+ *    replied `Allow: /` on a complete site: a second minddy, indexable, in
+ *    direct competition with the real one on its own queries. The
+ *    `X-Robots-Tag` of `next.config.mjs` completes it, because robots.txt only
+ *    governs discovery: an already known URL is visited anyway.
  *
- * 2. **AI bots are welcome** — explicitly, not by default.
- *    Ceux qui citent (`OAI-SearchBot`, `Claude-SearchBot`, `PerplexityBot`…)
- * like those that result in (`GPTBot`, `ClaudeBot`, `Google-Extended`…).
- * A young app has nothing to protect and everything to gain from being known to
- * models; they were already passing, but nothing said so, and the absence of
- * explicit rule reads like an oversight.
+ * 2. **AI bots are welcome**, explicitly rather than by default. Bots that
+ *    quote pages in an answer (`OAI-SearchBot`, `Claude-SearchBot`,
+ *    `PerplexityBot`…) and bots that collect training data (`GPTBot`,
+ *    `ClaudeBot`, `Google-Extended`…) each get their own group. A young app has
+ *    nothing to protect and everything to gain from being known to models, and
+ *    an absent rule reads like an oversight.
  *
- * 3. **`Content-Signal`** (Cloudflare, September 2025) says the same thing in
- * the form that publishers are adopting: `search=yes`,
- * `ai-input=yes` (quote in an answer), `ai-train=yes`.
+ * 3. **Content signals are a comment, not a directive.** Cloudflare's
+ *    `Content-Signal` line (September 2025) said the same thing as decision 2
+ *    (`search=yes, ai-input=yes, ai-train=yes`), but Google Search Console
+ *    reports it as a rule Googlebot ignores. Every value was `yes`,
+ *    which is also what the explicit groups grant, so the comment keeps the
+ *    statement for human readers without a warning in Search Console.
  *
  * The list of `Disallow` is DERIVED from `lib/protected-prefixes.ts`: this is the
- * same question asked twice ("what is private?"), it should not
- * not have two answers.
+ * same question asked twice ("what is private?"), and it should not have two
+ * answers.
  */
 
 /** Robots that quote pages in a response, and classic engines. */
@@ -65,12 +67,11 @@ const DISALLOW = [
   ...PROTECTED_PREFIXES,
 ];
 
-function group(userAgent: string, contentSignal?: string): string {
-  const lines = [`User-agent: ${userAgent}`];
-  if (contentSignal) lines.push(`Content-Signal: ${contentSignal}`);
-  lines.push("Allow: /");
-  lines.push(...DISALLOW.map((path) => `Disallow: ${path}`));
-  return lines.join("\n");
+/** Our content-usage preferences, for people; see decision 3 above. */
+const CONTENT_SIGNALS = "# Content signals: search=yes, ai-input=yes, ai-train=yes";
+
+function group(userAgent: string): string {
+  return [`User-agent: ${userAgent}`, "Allow: /", ...DISALLOW.map((path) => `Disallow: ${path}`)].join("\n");
 }
 
 export function GET(): Response {
@@ -80,7 +81,8 @@ export function GET(): Response {
   const body = isVercelNonProduction
     ? "User-agent: *\nDisallow: /\n"
     : [
-        group("*", "search=yes, ai-input=yes, ai-train=yes"),
+        CONTENT_SIGNALS,
+        group("*"),
         ...CITATION_BOTS.map((bot) => group(bot)),
         ...TRAINING_BOTS.map((bot) => group(bot)),
         `Sitemap: ${SITE_URL}/sitemap.xml`,
