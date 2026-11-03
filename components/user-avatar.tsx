@@ -26,12 +26,16 @@ export function UserAvatar({
   seed,
   className,
   title,
+  alt = title ?? "",
   shape = "circle",
 }: {
   url?: string | null;
   seed: string | null | undefined;
   className?: string;
   title?: string;
+  /** The text alternative. Defaults to `title`; pass `""` when the name is
+      already written beside the avatar. */
+  alt?: string;
   shape?: "circle" | "rounded";
 }) {
   const imageUrl = avatarImageUrl(url);
@@ -48,7 +52,10 @@ export function UserAvatar({
   const avatar = (
     <img
       src={imageUrl || importedUrl || avatarDataUri(seed as string)}
-      alt=""
+      // A titled avatar stands for its person (a card's assignee, a lead):
+      // the name is its text alternative, not only a hover tooltip (WCAG
+      // 1.1.1).
+      alt={alt}
       className={cn(
         "shrink-0 object-cover",
         shape === "rounded" ? "rounded-[6px]" : "rounded-full",

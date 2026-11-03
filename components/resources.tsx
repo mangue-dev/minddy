@@ -448,7 +448,7 @@ export function AddLinkDialog({
             placeholder={t("linkPlaceholder")}
             aria-invalid={error ? true : undefined}
           />
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={busy || !value.trim()}>
               {busy && <Spinner className="size-4" />}
@@ -547,7 +547,7 @@ export function RenameResourceDialog({
             }}
             aria-invalid={error ? true : undefined}
           />
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {tCommon("cancel")}

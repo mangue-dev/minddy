@@ -41,7 +41,7 @@ import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
 import { cycleBlockingRelations } from "@/lib/cycle";
 import { STATUS_MAP, issueIdentifier } from "@/lib/issue-constants";
 import { useTranslations } from "next-intl";
-import { useDragAnnouncements } from "@/lib/use-drag-announcements";
+import { useBoardCardInstructions, useDragAnnouncements } from "@/lib/use-drag-announcements";
 import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
@@ -349,6 +349,7 @@ export const KanbanBoard = memo(function KanbanBoard({
 
   // Screen readers hear issue titles and column names, not their IDs.
   const tStatus = useTranslations("Status");
+  const dragInstructions = useBoardCardInstructions();
   const dragAnnouncements = useDragAnnouncements((id) => {
     const issue = issueMap.get(String(id));
     if (issue) return issue.title;
@@ -519,7 +520,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         {/* A picker on a selected card edits the whole selection (MIN-795). */}
         <IssueSelectionProvider selectedIssues={selectedIssues} relationsByIssue={relationsByIssue} copyActions={bulkPromptActions}>
           <DndContext
-            accessibility={{ announcements: dragAnnouncements }}
+            accessibility={{ announcements: dragAnnouncements, screenReaderInstructions: dragInstructions }}
             sensors={canWrite ? sensors : NO_SENSORS}
             collisionDetection={boardCollision}
             onDragStart={handleDragStart}

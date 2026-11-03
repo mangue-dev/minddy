@@ -397,9 +397,10 @@ export function AccountSecuritySection() {
                 onChange={setCode}
                 disabled={busy}
                 aria-label={t("enrollCodeLabel")}
+                errorId={codeError ? "mfa-enroll-code-error" : undefined}
                 onComplete={(value) => void confirmEnrollment(value)}
               />
-              {codeError && <p className="text-sm text-destructive">{codeError}</p>}
+              {codeError && <p id="mfa-enroll-code-error" role="alert" className="text-sm text-destructive">{codeError}</p>}
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Button
                   size="sm"
@@ -430,7 +431,7 @@ export function AccountSecuritySection() {
                 {t("recoveryCodesLeft", { count: status.unusedRecoveryCodes })}
               </p>
               {status.unusedRecoveryCodes === 0 && (
-                <p className="text-xs text-destructive">{t("noRecoveryCodesLeft")}</p>
+                <p role="status" className="text-xs text-destructive">{t("noRecoveryCodesLeft")}</p>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-2">

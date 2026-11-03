@@ -158,7 +158,7 @@ export function FeedbackBoardClient({
     <div className="mx-auto flex w-full max-w-5xl gap-8 px-4 pb-16 pt-4 desktop:px-6">
       <div className="flex min-w-0 flex-1 flex-col gap-4">
         {ssoError && (
-          <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {t("ssoError")}
           </p>
         )}
@@ -868,7 +868,7 @@ function ComposerDialog({
           </div>
         )}
         {error && (
-          <p className="mt-3 text-sm text-destructive">
+          <p role="alert" className="mt-3 text-sm text-destructive">
             {/* Server error code: key assembled at runtime. */}
             {t(`errors.${error}` as MessageKey<"PublicFeedback">)}
           </p>

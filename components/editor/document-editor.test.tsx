@@ -201,3 +201,29 @@ it("reports and keeps a blank line left between two paragraphs (MIN-745)", async
   expect(reopened().editor()!.getJSON().content?.map((node) => node.content?.length ?? 0))
     .toEqual([1, 0, 1]);
 });
+
+// WCAG 4.1.2 (MIN-783): the contenteditable is a named text box while it can
+// be edited, and plain content when it cannot.
+it("names an editable surface as a multi-line text box", async () => {
+  await mount({ value: "Draft", placeholder: "Add a description…" });
+  const dom = host.querySelector(".ProseMirror")!;
+  expect(dom.getAttribute("role")).toBe("textbox");
+  expect(dom.getAttribute("aria-multiline")).toBe("true");
+  expect(dom.getAttribute("aria-label")).toBe("Add a description…");
+});
+
+it("prefers an explicit name, then falls back to the generic one", async () => {
+  await mount({ value: "", ariaLabel: "Comment", placeholder: "Write…" });
+  expect(host.querySelector(".ProseMirror")!.getAttribute("aria-label")).toBe("Comment");
+  await act(async () => root.unmount());
+  root = createRoot(host);
+  await mount({ value: "", placeholder: () => "Write…" });
+  expect(host.querySelector(".ProseMirror")!.getAttribute("aria-label")).toBe("textEditor");
+});
+
+it("keeps a read-only surface out of the text box role", async () => {
+  await mount({ value: "Shipped", readOnly: true, placeholder: "Add a description…" });
+  const dom = host.querySelector(".ProseMirror")!;
+  expect(dom.hasAttribute("role")).toBe(false);
+  expect(dom.hasAttribute("aria-label")).toBe(false);
+});

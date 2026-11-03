@@ -880,7 +880,13 @@ export const AssistantShell = forwardRef<
  FocusScope of the Sheet would place it on the shell (focus halo). */
           <>
             {hasMessages ? (
-              <Conversation className="min-h-0 flex-1" anchor={scrollAnchor}>
+              <Conversation
+                className="min-h-0 flex-1"
+                anchor={scrollAnchor}
+                // The log is polite: busy holds its announcements until the
+                // reply ends instead of reading each streamed token (4.1.3).
+                aria-busy={isBusy}
+              >
                 <ConversationContent
                    className={
                      compact

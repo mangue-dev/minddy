@@ -69,12 +69,24 @@ const CARD_HOVER =
 const CARD_HELD =
   "data-held:cursor-grabbing data-held:border-foreground/20 data-held:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] data-held:shadow-md dark:data-held:border-foreground/25";
 
+/* Read-only, the glyph is the value's only trace: an image named by it
+   (WCAG 1.1.1). The pickers name their trigger the same way. */
 export function IssueCardStatus({ value }: { value: IssueStatus }) {
-  return <StatusIndicator status={value} />;
+  const tStatus = useTranslations("Status");
+  return (
+    <span role="img" aria-label={tStatus(value)} className="inline-flex shrink-0">
+      <StatusIndicator status={value} />
+    </span>
+  );
 }
 
 export function IssueCardPriority({ value }: { value: IssuePriority }) {
-  return <PriorityIndicator priority={value} />;
+  const tPriority = useTranslations("Priority");
+  return (
+    <span role="img" aria-label={tPriority(value)} className="inline-flex shrink-0">
+      <PriorityIndicator priority={value} />
+    </span>
+  );
 }
 
 /** The effort, or a faded triangle and a dash while it is unset. */

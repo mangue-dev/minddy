@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-03",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -69,14 +69,17 @@
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
       "components/mobile-nav-actions.tsx",
-      "lib/keyboard/typeahead.ts"
+      "lib/keyboard/typeahead.ts",
+      "components/app-shell.tsx",
+      "lib/keyboard-modality.ts",
+      "lib/keyboard/hover-keys.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 24,
+    "fact": "agent:claude-code (new keyboard-navigation subsection: skip link, keyboard focus outline and Enter on a focused issue card, checked against components/app-shell.tsx, lib/keyboard-modality.ts, components/issue-card.tsx and lib/keyboard/hover-keys.ts; covered by jsdom tests, not checked in the running app; rest of the article unchanged; no figure added, existing figures do not show this behavior)",
+    "language": "agent:claude-code (de new subsection translated from en with the locale's catalog labels and article terms; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-03"
   },
   "related": [
     "views",
@@ -97,7 +100,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -206,6 +209,10 @@ Für die inhaltliche Suche gelten diese Grenzen:
 - Eine `@`-Suche, deren Text bereits zu einer Person, einem Projekt oder einer Seite passt, wird nicht inhaltlich gesucht. In einem Projekt mit mehr als 3.000 indexierten Tickets werden nur die 3.000 zuletzt indexierten verglichen; die übrigen werden über ihre Wörter gefunden.
 
 Jede neue Suchanfrage nutzt einen KI-Aufruf, der zu deinem Anteil **Automatisierungen** zählt und im Nutzungsverlauf als **Ticketsuche** erscheint. Eine innerhalb von etwa 15 Minuten wiederholte Anfrage wird normalerweise nicht erneut berechnet.
+
+### Mit der Tastatur bewegen {#keyboard-navigation}
+
+Beim ersten Drücken von Tab auf einer Seite erscheint **Zum Inhalt springen**: Drücke Enter, um die Seitenleiste zu überspringen und direkt zur Seite zu gelangen. Solange du dich mit Tab bewegst, ist das fokussierte Element in der Akzentfarbe umrandet; der Rahmen verschwindet, sobald du klickst. Auf einem Board erreicht Tab jede Ticketkarte: Enter öffnet das Ticket, und die oben beschriebenen Einzeltasten-Aktionen (S, P, E …) wirken auf die fokussierte Karte wie auf eine Karte unter dem Mauszeiger.
 
 ### Ein entsprechendes sichtbares Steuerelement verwenden {#shortcut-alternatives}
 

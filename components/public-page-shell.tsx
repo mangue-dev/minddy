@@ -37,6 +37,7 @@ export async function PublicPageShell({
   children: ReactNode;
 }) {
   const t = await getTranslations("PublicShare");
+  const tNav = await getTranslations("Nav");
   const containerClass = contained ? "mx-auto w-full max-w-5xl" : "w-full";
 
   return (
@@ -67,6 +68,7 @@ export async function PublicPageShell({
         </div>
         {tabs.length > 0 && (
           <nav
+            aria-label={tNav("mainNavigation")}
             className={cn(
               containerClass,
               "-mb-px flex gap-5 overflow-x-auto px-4 desktop:px-6"

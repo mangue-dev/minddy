@@ -31,3 +31,13 @@ export function useDragAnnouncements(
     };
   }, [t]);
 }
+
+/**
+ * What a board card's focus stop actually offers. Without them dnd-kit reads
+ * its English default, "press space bar to pick up", and the boards have no
+ * keyboard drag: the card opens instead, and its buttons change its fields.
+ */
+export function useBoardCardInstructions(): { draggable: string } {
+  const t = useTranslations("DragAnnouncements");
+  return useMemo(() => ({ draggable: t("cardInstructions") }), [t]);
+}

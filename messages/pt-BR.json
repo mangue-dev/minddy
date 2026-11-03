@@ -1585,7 +1585,9 @@
     "notFoundBody": "O link está errado ou a página foi movida.",
     "notFoundCta": "Voltar à página inicial",
     "botAccount": "Bot",
-    "hexColorPlaceholder": "Cor hexadecimal"
+    "hexColorPlaceholder": "Cor hexadecimal",
+    "textEditor": "Editor de texto",
+    "moreActions": "Mais ações"
   },
   "DatePicker": {
     "placeholder": "Escolha uma data",
@@ -2007,7 +2009,8 @@
     "githubRawMetadata": "Ver todos os metadados do GitHub preservados",
     "githubYes": "Sim",
     "githubNo": "Não",
-    "descriptionEmptyReadOnly": "Sem descrição."
+    "descriptionEmptyReadOnly": "Sem descrição.",
+    "fieldValueAria": "{field}: {value}"
   },
   "Language": {
     "title": "Idioma",
@@ -2335,7 +2338,9 @@
     "hideProject": "Ocultar projeto",
     "hideProjectConfirmTitle": "Ocultar “{name}”?",
     "hideProjectConfirmDescription": "Ele sai da sua barra lateral e da sua página inicial. Só você é afetado: os outros membros continuam vendo, e as rotinas e notificações dele continuam funcionando. Você pode mostrá-lo de novo em Configurações da conta → Projetos ocultos.",
-    "showProject": "Mostrar projeto"
+    "showProject": "Mostrar projeto",
+    "skipToContent": "Pular para o conteúdo",
+    "mainNavigation": "Navegação principal"
   },
   "CommandPaletteActions": {
     "copied": "Copiado",
@@ -2802,7 +2807,8 @@
     "findReplace": "Substituir",
     "findReplaceAll": "Substituir tudo",
     "findReplaced": "{count, plural, =0 {Nenhum resultado substituído} one {# resultado substituído} other {# resultados substituídos}}",
-    "promotePagesPrompt": "Transforme cada uma destas {count} páginas do meu projeto em um ticket próprio: {pages}.\n\nLeia primeiro cada página: o título, o conteúdo e, se for uma entrada de banco de dados, as propriedades. Faça perguntas antes de criar um ticket quando uma página não estiver clara o bastante para virar um bom ticket. Depois de criar cada ticket, anexe a página a ele; as páginas continuam onde estão."
+    "promotePagesPrompt": "Transforme cada uma destas {count} páginas do meu projeto em um ticket próprio: {pages}.\n\nLeia primeiro cada página: o título, o conteúdo e, se for uma entrada de banco de dados, as propriedades. Faça perguntas antes de criar um ticket quando uma página não estiver clara o bastante para virar um bom ticket. Depois de criar cada ticket, anexe a página a ele; as páginas continuam onde estão.",
+    "contentLabel": "Conteúdo da página"
   },
   "Picker": {
     "relatedByMeaning": "Relacionados pelo sentido",
@@ -5874,7 +5880,8 @@
     "ai_models_title": "Modelos de IA",
     "ai_models_body": "Escolha o modelo que o Numo usa em cada conversa, ou use sua própria chave (BYOK).",
     "navMenu_ai_title": "IA integrada",
-    "navMenu_ai_desc": "Smart Fill, Smart Assign e Numo, seu assistente"
+    "navMenu_ai_desc": "Smart Fill, Smart Assign e Numo, seu assistente",
+    "navLabel": "Navegação principal"
   },
   "Pricing": {
     "metaTitle": "Preços e planos do minddy Cloud",
@@ -7277,7 +7284,9 @@
     "dropped": "{item} foi solto sobre {target}.",
     "droppedNowhere": "{item} foi solto.",
     "cancelled": "A movimentação de {item} foi cancelada.",
-    "unnamedItem": "Item"
+    "unnamedItem": "Item",
+    "cardInstructions": "Pressione Enter para abrir o ticket. Os botões dele alteram o status, a prioridade e os outros campos.",
+    "cardRole": "cartão de ticket"
   },
   "DesktopWelcome": {
     "back": "Voltar",

@@ -835,6 +835,34 @@ button[data-variant="ghost"] {
   }
 }
 
+/* Keyboard focus in every theme (WCAG 2.4.7, MIN-783). The base layer hides
+   the UA outline, and many primitives declare `focus-visible:outline-none`
+   with no replacement, so a keyboard user saw no focus at all. While Tab
+   drives focus (`data-input-modality`, lib/keyboard-modality.ts) this draws
+   the ring color around the focused control. Unlayered, it wins over those
+   utilities; a click clears the attribute, so mouse use looks as before.
+
+   Same exclusions as the high-contrast rule in app/theme-presets.css: menu
+   rows and options show focus by their highlight, and containers that take
+   focus when they open keep their edge. Text being edited shows its caret,
+   script-only targets (`tabindex="-1"`, the skip link's `<main>`) are not
+   controls, and the switch draws its own offset ring. */
+html[data-input-modality="keyboard"] :focus-visible:not(
+  [role^="menuitem"], [role="option"], [role="dialog"], [role="alertdialog"],
+  [role="menu"], [role="listbox"], [data-slot$="-content"],
+  .desktop-palette-surface, [contenteditable="true"], [tabindex="-1"],
+  [role="switch"]
+) {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+/* Rows in the sidebar's scrolling column, and tabs in a clipped tab list,
+   would lose an outside ring to their container's `overflow`: draw it
+   inside. */
+html[data-input-modality="keyboard"] :is(.sidebar-nav-panel, [role="tablist"]) :focus-visible {
+  outline-offset: -2px;
+}
+
 /* ─── Numo (assistant) ──────────────────────────────────────────────── */
 
 /* Numo compact ⇄ expanded morph. The panel keeps right/bottom anchoring

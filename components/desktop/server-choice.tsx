@@ -415,7 +415,7 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
                     {t("chooseFolder")}
                   </Button>
                 </div>
-                {folderMessage && <p className="mt-1.5 text-xs text-destructive">{folderMessage}</p>}
+                {folderMessage && <p role="alert" className="mt-1.5 text-xs text-destructive">{folderMessage}</p>}
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">{t("accountNote")}</p>
             </div>

@@ -173,7 +173,7 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
           </p>
         )}
         {failed && (
-          <p className="text-xs text-destructive">
+          <p role="alert" className="text-xs text-destructive">
             {t("feedbackParticipantsFailed")}
           </p>
         )}

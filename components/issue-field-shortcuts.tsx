@@ -29,7 +29,7 @@ import { CommandGroup, CommandItem } from "@/components/ui/command";
 import { RELATION_TYPES } from "@/lib/relation-constants";
 import type { HierarchyRelation, RelationMenuKind } from "@/lib/issue-hierarchy";
 import { useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
-import { useHoverKeys } from "@/lib/keyboard/hover-keys";
+import { keyboardAnchorIn, useHoverKeys } from "@/lib/keyboard/hover-keys";
 import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
 import { CommandAnchor } from "@/components/command-anchor";
 import { useMountedWhileClosing } from "@/components/ui/overlay-freeze";
@@ -149,7 +149,12 @@ export function useIssueFieldShortcuts(
   const chordPrefixRef = useChordPrefixForEvents();
   const [menuState, setMenuState] = React.useState<ShortcutMenuState | null>(null);
 
-  const hoverRef = useHoverKeys((e) => {
+  // The region itself: a key typed from the keyboard anchors the picker on
+  // the focused control, which no pointer position describes (WCAG 2.1.1).
+  const regionRef = React.useRef<Element | null>(null);
+  const anchor = () => keyboardAnchorIn(regionRef.current) ?? posRef.current;
+
+  const registerHoverKeys = useHoverKeys((e) => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (chordPrefixRef.current !== null) return;
     const el = e.target as HTMLElement | null;
@@ -162,6 +167,15 @@ export function useIssueFieldShortcuts(
     )
       return;
     const key = eventKey(e);
+    // Space presses a focused button inside the region; on the region's own
+    // focus stop (a card's drag wrapper) it stays the region's action.
+    if (
+      key === " " &&
+      el &&
+      el !== regionRef.current?.parentElement &&
+      el.closest("button, a[href], [role=button], [role=combobox], [role=checkbox], [role=switch]")
+    )
+      return;
     const action = actionsRef.current?.[e.shiftKey ? `shift+${key}` : key];
     if (action) {
       // A ticket selection owns ⇧P while the pill is up (MIN-539): the
@@ -174,7 +188,7 @@ export function useIssueFieldShortcuts(
       // the combo — e.g. Shift+P copies here without touching the P picker.
       e.preventDefault();
       e.stopImmediatePropagation();
-      action(posRef.current);
+      action(anchor());
       return;
     }
     // Field pickers are unmodified single keys only.
@@ -183,11 +197,16 @@ export function useIssueFieldShortcuts(
     // don't swallow it, so that handler still receives the event.
     if (disabledKeysRef.current?.includes(key)) return;
     const field = SHORTCUT_KEYS[key];
-    if (!field || !posRef.current) return;
+    const position = anchor();
+    if (!field || !position) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    setMenuState({ field, position: posRef.current });
+    setMenuState({ field, position });
   }, enabled);
+  const hoverRef = React.useCallback((el: Element | null) => {
+    regionRef.current = el;
+    registerHoverKeys(el);
+  }, [registerHoverKeys]);
 
   // The hover is no longer recorded anywhere: these two handlers are no longer useful
   // just remember WHERE to anchor the picker (the last point of the cursor on the area).

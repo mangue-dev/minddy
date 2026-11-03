@@ -142,7 +142,7 @@ export function MarketingNav() {
             <NavLogo />
           </Link>
 
-          <nav className="hidden items-center gap-5 text-sm whitespace-nowrap text-muted-foreground lg:flex lg:gap-7">
+          <nav aria-label={t("navLabel")} className="hidden items-center gap-5 text-sm whitespace-nowrap text-muted-foreground lg:flex lg:gap-7">
             <NavProductMenu entries={PRODUCT_ENTRIES} label={t("navProduct")} locale={locale} />
             {LINKS.map((link) =>
               link.external ? (

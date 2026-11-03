@@ -85,9 +85,10 @@ export async function PublishedPage({
   // The public project site: Feedback tab, shared views and published pages.
   // A protected page reveals nothing about itself, but the site navigation
   // remains (its own token never enters the list: only `public` shares do).
-  const [t, tFeedback, unlocked] = await Promise.all([
+  const [t, tFeedback, tPages, unlocked] = await Promise.all([
     getTranslations("PublicPage"),
     getTranslations("PublicFeedback"),
+    getTranslations("Pages"),
     isShareUnlocked(bundle.share),
   ]);
   const tabs = await getPublicSiteTabs({
@@ -137,7 +138,7 @@ export async function PublishedPage({
         {/* The breadcrumb NEVER goes back above the published page: it
  says nothing about the wiki it comes from (cf. page-publication.ts). */}
         {bundle.trail.length > 0 && (
-          <nav className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <nav aria-label={tPages("breadcrumb")} className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {bundle.trail.map((node) => (
               <span key={node.id} className="flex items-center gap-1.5">
                 <a href={href(node.id)} className="truncate hover:text-foreground">

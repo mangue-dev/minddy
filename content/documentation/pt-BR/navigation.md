@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-03",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -69,14 +69,17 @@
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
       "components/mobile-nav-actions.tsx",
-      "lib/keyboard/typeahead.ts"
+      "lib/keyboard/typeahead.ts",
+      "components/app-shell.tsx",
+      "lib/keyboard-modality.ts",
+      "lib/keyboard/hover-keys.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 24,
+    "fact": "agent:claude-code (new keyboard-navigation subsection: skip link, keyboard focus outline and Enter on a focused issue card, checked against components/app-shell.tsx, lib/keyboard-modality.ts, components/issue-card.tsx and lib/keyboard/hover-keys.ts; covered by jsdom tests, not checked in the running app; rest of the article unchanged; no figure added, existing figures do not show this behavior)",
+    "language": "agent:claude-code (pt-BR new subsection translated from en with the locale's catalog labels and article terms; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-03"
   },
   "related": [
     "views",
@@ -97,7 +100,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -114,7 +117,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -206,6 +209,10 @@ A busca pelo sentido tem estes limites:
 - Uma busca `@` cujo texto já corresponde a uma pessoa, um projeto ou uma página não é buscada pelo sentido. Em um projeto com mais de 3.000 tickets indexados, só os 3.000 indexados mais recentemente são comparados; os outros são encontrados pelas palavras.
 
 Cada busca nova usa uma chamada de IA, contada na sua parcela **Automações** e exibida no histórico de uso como **Busca de tickets**. Uma busca repetida em cerca de 15 minutos normalmente não é cobrada de novo.
+
+### Navegar com o teclado {#keyboard-navigation}
+
+O primeiro Tab em uma página mostra **Pular para o conteúdo**: pressione Enter para passar a barra lateral e chegar à página. Enquanto você navega com Tab, o controle em foco tem um contorno na cor de destaque, que some quando você clica. Em um quadro, Tab chega a cada cartão de ticket: Enter abre o ticket, e as ações de uma tecla descritas acima (S, P, E…) agem sobre o cartão em foco como sobre um cartão sob o ponteiro.
 
 ### Usar um controle visível equivalente {#shortcut-alternatives}
 

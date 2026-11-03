@@ -23,6 +23,8 @@
 
 import { useCallback, useRef } from "react";
 
+import { keyboardAimsLast } from "@/lib/keyboard-modality";
+
 /**
  * The value entered for the INNERmost of the elements hovered over, or
  * `undefined` if no entry is under the pointer.
@@ -107,8 +109,42 @@ type HoverKeyHandler = (e: KeyboardEvent) => void;
 
 const handlers = new Map<Element, HoverKeyHandler>();
 
+/**
+ * The value entered for the innermost registered element that holds keyboard
+ * focus, or `undefined`. A keyboard user has no pointer to aim with (WCAG
+ * 2.1.1, MIN-783): the focused card takes the key first. A board card's focus
+ * stop is the drag wrapper around the registered element, hence the parent.
+ */
+export function innermostFocused<T>(
+  registry: Map<Element, T>,
+  active: Element | null = typeof document === "undefined" ? null : document.activeElement
+): T | undefined {
+  if (!active || active === active.ownerDocument.body) return undefined;
+  let innermost: Element | null = null;
+  for (const el of registry.keys()) {
+    if (!el.contains(active) && el.parentElement !== active) continue;
+    if (!innermost || innermost.contains(el)) innermost = el;
+  }
+  return innermost ? registry.get(innermost) : undefined;
+}
+
 function dispatch(e: KeyboardEvent) {
-  innermostHovered(handlers)?.(e);
+  // Only when Tab aimed last: a click focuses the card too, and a mouse user
+  // still aims with the pointer.
+  ((keyboardAimsLast() ? innermostFocused(handlers) : undefined) ?? innermostHovered(handlers))?.(e);
+}
+
+/**
+ * Where a picker opened from the keyboard anchors: below the focused control
+ * of `region` (or its drag wrapper), when Tab aimed last. Null otherwise, and
+ * the caller keeps the pointer's position.
+ */
+export function keyboardAnchorIn(region: Element | null): { x: number; y: number } | null {
+  if (!region || !keyboardAimsLast() || typeof document === "undefined") return null;
+  const active = document.activeElement;
+  if (!active || (!region.contains(active) && region.parentElement !== active)) return null;
+  const rect = active.getBoundingClientRect();
+  return { x: rect.left, y: rect.bottom };
 }
 
 /**

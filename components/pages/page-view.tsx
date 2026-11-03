@@ -200,6 +200,10 @@ function PageStatus({
   }`;
 
   return (
+    <>
+    {/* A live region announces its text, not an `aria-label` change, and a
+        button hides its children: the state is spoken from here (4.1.3). */}
+    <span role="status" className="sr-only">{label}</span>
     <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
         <Button
@@ -215,9 +219,9 @@ function PageStatus({
                 : "text-muted-foreground hover:text-foreground"
           )}
         >
-          <span role="status" aria-label={label} className="flex shrink-0">
+          <span aria-hidden className="flex shrink-0">
             {state === "saving" ? (
-              <Spinner className="size-3.5" />
+              <Spinner className="size-3.5" role={undefined} aria-label={undefined} />
             ) : state === "conflict" || state === "error" ? (
               <HugeiconsIcon icon={Alert01Icon} className="size-3.5" />
             ) : (
@@ -233,6 +237,7 @@ function PageStatus({
         ) : null}
       </TooltipContent>
     </Tooltip>
+    </>
   );
 }
 

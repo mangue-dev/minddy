@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -279,6 +279,8 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
   }
 
   return (
+    // The step slides honor reduced motion, as in the app (app-providers.tsx).
+    <MotionConfig reducedMotion="user">
     <AuthColumn inDesktopApp={inDesktopApp}>
       <div className="space-y-8">
         <WizardStepper
@@ -452,7 +454,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
             </AnimatePresence>
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
           <div className="space-y-3">
             <Button
@@ -492,5 +494,6 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
         </p>
       </div>
     </AuthColumn>
+    </MotionConfig>
   );
 }

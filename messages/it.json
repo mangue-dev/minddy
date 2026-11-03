@@ -1585,7 +1585,9 @@
     "notFoundBody": "Il link è sbagliato, o la pagina si è spostata.",
     "notFoundCta": "Torna alla home",
     "botAccount": "Bot",
-    "hexColorPlaceholder": "Colore esadecimale"
+    "hexColorPlaceholder": "Colore esadecimale",
+    "textEditor": "Editor di testo",
+    "moreActions": "Altre azioni"
   },
   "DatePicker": {
     "placeholder": "Scegli una data",
@@ -2007,7 +2009,8 @@
     "githubRawMetadata": "Visualizza tutti i metadati GitHub conservati",
     "githubYes": "Sì",
     "githubNo": "No",
-    "descriptionEmptyReadOnly": "Nessuna descrizione."
+    "descriptionEmptyReadOnly": "Nessuna descrizione.",
+    "fieldValueAria": "{field}: {value}"
   },
   "Language": {
     "title": "Lingua",
@@ -2335,7 +2338,9 @@
     "hideProject": "Nascondi progetto",
     "hideProjectConfirmTitle": "Nascondere «{name}»?",
     "hideProjectConfirmDescription": "Scompare dalla tua barra laterale e dalla tua home. Riguarda solo te: gli altri membri lo vedono ancora, e le sue routine e notifiche continuano. Puoi mostrarlo di nuovo da Impostazioni account → Progetti nascosti.",
-    "showProject": "Mostra progetto"
+    "showProject": "Mostra progetto",
+    "skipToContent": "Vai al contenuto",
+    "mainNavigation": "Navigazione principale"
   },
   "CommandPaletteActions": {
     "copied": "Copiato",
@@ -2802,7 +2807,8 @@
     "findReplace": "Sostituisci",
     "findReplaceAll": "Sostituisci tutto",
     "findReplaced": "{count, plural, one {# risultato sostituito} other {# risultati sostituiti}}",
-    "promotePagesPrompt": "Trasforma ognuna di queste {count} pagine del mio progetto in un ticket a sé: {pages}.\n\nLeggi prima ogni pagina: titolo, contenuto e, per una voce di database, le sue proprietà. Fammi domande prima di creare un ticket quando una pagina non è abbastanza chiara per farne uno buono. Una volta creato ogni ticket, allegagli la sua pagina; le pagine restano dove sono."
+    "promotePagesPrompt": "Trasforma ognuna di queste {count} pagine del mio progetto in un ticket a sé: {pages}.\n\nLeggi prima ogni pagina: titolo, contenuto e, per una voce di database, le sue proprietà. Fammi domande prima di creare un ticket quando una pagina non è abbastanza chiara per farne uno buono. Una volta creato ogni ticket, allegagli la sua pagina; le pagine restano dove sono.",
+    "contentLabel": "Contenuto della pagina"
   },
   "Picker": {
     "relatedByMeaning": "Correlati per significato",
@@ -5874,7 +5880,8 @@
     "ai_models_title": "Modelli di IA",
     "ai_models_body": "Scegli il modello che Numo usa in ogni conversazione, oppure usa la tua chiave (BYOK).",
     "navMenu_ai_title": "IA integrata",
-    "navMenu_ai_desc": "Smart Fill, Smart Assign e Numo, il tuo assistente"
+    "navMenu_ai_desc": "Smart Fill, Smart Assign e Numo, il tuo assistente",
+    "navLabel": "Navigazione principale"
   },
   "Pricing": {
     "metaTitle": "Prezzi e piani di minddy Cloud",
@@ -7277,7 +7284,9 @@
     "dropped": "{item} è stato rilasciato su {target}.",
     "droppedNowhere": "{item} è stato rilasciato.",
     "cancelled": "Spostamento di {item} annullato.",
-    "unnamedItem": "Elemento"
+    "unnamedItem": "Elemento",
+    "cardInstructions": "Premi Invio per aprire il ticket. I suoi pulsanti ne cambiano lo stato, la priorità e gli altri campi.",
+    "cardRole": "scheda di ticket"
   },
   "DesktopWelcome": {
     "back": "Indietro",

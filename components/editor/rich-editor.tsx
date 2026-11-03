@@ -46,6 +46,7 @@ import { BlockSelectionExtension } from "@/components/editor/block-selection";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 import { useLocale, useTranslations } from "next-intl";
+import { onEditorDom } from "@/components/editor/editor-dom";
 import { dateMentionOptions, datesFirst } from "@/lib/mention-date";
 import { cn } from "@/lib/utils";
 import { PROSE, type RichEditorSize } from "@/components/editor/prose";
@@ -294,6 +295,10 @@ export interface RichEditorProps {
    paragraphs; a function decides for every empty block. Defaults to the
    page's, which depends on the block under the cursor. */
   placeholder?: RichEditorPlaceholder;
+  /** Accessible name of the editing region. Defaults to a text placeholder,
+   then to a generic “Text editor”; an empty string leaves it unnamed (a
+   read-only preview inside a named card). */
+  ariaLabel?: string;
   /** Surface actions appended to the “/” menu after the blocks. Their
    identity must stay stable, like every option read at build time. */
   slashActions?: PageSlashItem[];
@@ -350,6 +355,7 @@ export function RichEditor({
   collaboration = null,
   editable = true,
   placeholder,
+  ariaLabel,
   slashActions,
   slashFirst,
   extensions: surfaceExtensions,
@@ -741,6 +747,26 @@ export function RichEditor({
         .setMeta("addToHistory", false));
     }
   }, [editor, canEdit]);
+
+  // WCAG 4.1.2 (MIN-783): Tiptap marks the surface `role="textbox"` but
+  // leaves it unnamed, and the placeholder is drawn by CSS. An editable
+  // surface is a named multi-line text box; a read-only one is plain content,
+  // which ARIA does not let carry a name.
+  const accessibleName = ariaLabel ?? (typeof placeholder === "string" ? placeholder : tCommon("textEditor"));
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    return onEditorDom(editor, (dom) => {
+      if (canEdit) {
+        dom.setAttribute("role", "textbox");
+        dom.setAttribute("aria-multiline", "true");
+      } else {
+        dom.removeAttribute("role");
+        dom.removeAttribute("aria-multiline");
+      }
+      if (canEdit && accessibleName) dom.setAttribute("aria-label", accessibleName);
+      else dom.removeAttribute("aria-label");
+    });
+  }, [editor, canEdit, accessibleName]);
 
   // Focus once, after mount, outside the commit phase. A mobile sheet keeps
   // the keyboard down until the user taps (lib/mobile-sheet-focus).

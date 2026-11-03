@@ -82,7 +82,7 @@ export function useIssuePropertyMenuActions() {
           ...members.map((m) => ({
             id: `property-assignee-${m.user_id}`,
             label: displayName(m),
-            icon: <UserAvatar seed={m.avatar_seed} title={displayName(m)} className="size-4" />,
+            icon: <UserAvatar seed={m.avatar_seed} className="size-4" />,
             checked: issue.assignee_id === m.user_id,
             onSelect: () => onPatch({ assignee_id: m.user_id }),
           })),

@@ -83,6 +83,7 @@ export function PageEditor({
       bottomReserve
       find
       size="page"
+      ariaLabel={t("contentLabel")}
       pages={pages}
       uploads={uploads}
       mentions={mentions}

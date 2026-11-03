@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-03",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -69,14 +69,17 @@
       "components/palette-picker-rows.tsx",
       "components/mobile-navigation.tsx",
       "components/mobile-nav-actions.tsx",
-      "lib/keyboard/typeahead.ts"
+      "lib/keyboard/typeahead.ts",
+      "components/app-shell.tsx",
+      "lib/keyboard-modality.ts",
+      "lib/keyboard/hover-keys.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (pointer to the Numo type-ahead on Home and in the expanded Numo panel, checked against lib/keyboard/typeahead.ts and lib/keyboard/keyboard-context.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show this behavior)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 23,
+    "fact": "agent:claude-code (new keyboard-navigation subsection: skip link, keyboard focus outline and Enter on a focused issue card, checked against components/app-shell.tsx, lib/keyboard-modality.ts, components/issue-card.tsx and lib/keyboard/hover-keys.ts; covered by jsdom tests, not checked in the running app; rest of the article unchanged; no figure added, existing figures do not show this behavior)",
+    "language": "agent:claude-code (en new subsection with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-03"
   },
   "related": [
     "views",
@@ -97,7 +100,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -113,7 +116,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -204,6 +207,10 @@ Search by meaning has these limits:
 - An `@` query whose text already matches a person, a project or a page is not searched by meaning. In a project with more than 3,000 indexed issues, only the 3,000 most recently indexed are compared; the others are found by their words.
 
 Each new query uses one AI call, counted in your **Automations** share and listed in usage history as **Issue search**. A query repeated within about 15 minutes is normally not charged again.
+
+### Move around with the keyboard {#keyboard-navigation}
+
+The first Tab on a page shows **Skip to content**: press Enter to move past the sidebar to the page itself. While you move with Tab, the focused control has an outline in the accent color; it disappears when you click. On a board, Tab reaches each issue card: Enter opens the issue, and the single-key field actions above (S, P, E…) act on the focused card as they do on a hovered one.
 
 ### Use an equivalent visible control {#shortcut-alternatives}
 

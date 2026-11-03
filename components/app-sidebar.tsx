@@ -375,8 +375,10 @@ function SidebarNav({
   /** Any navigable row picked from this panel leaves the browse. */
   resetBack: (href?: string) => void;
 }) {
+  const t = useTranslations("Nav");
   return (
     <nav
+      aria-label={t("mainNavigation")}
       className={cn(
         "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2",
         GUTTER,

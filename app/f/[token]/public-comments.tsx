@@ -353,7 +353,7 @@ function Composer({
         className="min-h-16 w-full resize-none rounded-lg bg-control px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:bg-control-hover"
       />
       {error && (
-        <p className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-destructive">
           {error === "closed" ? t("commentsClosed") : t("commentFailed")}
         </p>
       )}

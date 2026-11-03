@@ -1585,7 +1585,9 @@
     "notFoundBody": "The link is wrong, or the page has moved.",
     "notFoundCta": "Back to home",
     "botAccount": "Bot",
-    "hexColorPlaceholder": "Hex color"
+    "hexColorPlaceholder": "Hex color",
+    "textEditor": "Text editor",
+    "moreActions": "More actions"
   },
   "DatePicker": {
     "placeholder": "Pick a date",
@@ -2007,7 +2009,8 @@
     "githubRawMetadata": "View all preserved GitHub metadata",
     "githubYes": "Yes",
     "githubNo": "No",
-    "descriptionEmptyReadOnly": "No description."
+    "descriptionEmptyReadOnly": "No description.",
+    "fieldValueAria": "{field}: {value}"
   },
   "Language": {
     "title": "Language",
@@ -2335,7 +2338,9 @@
     "hideProject": "Hide project",
     "hideProjectConfirmTitle": "Hide “{name}”?",
     "hideProjectConfirmDescription": "It leaves your sidebar and home. Only you are affected: other members still see it, and its routines and notifications keep running. You can show it again from Account settings → Hidden projects.",
-    "showProject": "Show project"
+    "showProject": "Show project",
+    "skipToContent": "Skip to content",
+    "mainNavigation": "Main navigation"
   },
   "CommandPaletteActions": {
     "copied": "Copied",
@@ -2802,7 +2807,8 @@
     "findReplace": "Replace",
     "findReplaceAll": "Replace all",
     "findReplaced": "{count, plural, one {# match replaced} other {# matches replaced}}",
-    "promotePagesPrompt": "Turn each of these {count} pages of my project into its own issue: {pages}.\n\nRead every page first: its title and content and, for a database entry, its properties. Ask me questions before creating an issue when a page isn't clear enough to make a good one. Once each issue exists, attach its page to it; the pages stay where they are."
+    "promotePagesPrompt": "Turn each of these {count} pages of my project into its own issue: {pages}.\n\nRead every page first: its title and content and, for a database entry, its properties. Ask me questions before creating an issue when a page isn't clear enough to make a good one. Once each issue exists, attach its page to it; the pages stay where they are.",
+    "contentLabel": "Page content"
   },
   "Picker": {
     "relatedByMeaning": "Related by meaning",
@@ -5874,7 +5880,8 @@
     "ai_models_title": "AI models",
     "ai_models_body": "Pick the model Numo uses in each conversation, or bring your own key (BYOK).",
     "navMenu_ai_title": "Built-in AI",
-    "navMenu_ai_desc": "Smart Fill, Smart Assign and Numo, your assistant"
+    "navMenu_ai_desc": "Smart Fill, Smart Assign and Numo, your assistant",
+    "navLabel": "Main navigation"
   },
   "Pricing": {
     "metaTitle": "minddy Cloud pricing and plans",
@@ -7277,7 +7284,9 @@
     "dropped": "{item} was dropped over {target}.",
     "droppedNowhere": "{item} was dropped.",
     "cancelled": "Moving {item} was cancelled.",
-    "unnamedItem": "Item"
+    "unnamedItem": "Item",
+    "cardInstructions": "Press Enter to open the issue. Its buttons change its status, priority and other fields.",
+    "cardRole": "issue card"
   },
   "DesktopWelcome": {
     "back": "Back",

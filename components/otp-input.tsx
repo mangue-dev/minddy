@@ -56,6 +56,7 @@ export function OtpInput({
   disabled,
   autoFocus,
   "aria-label": ariaLabel,
+  errorId,
 }: {
   id?: string;
   value: string;
@@ -64,6 +65,9 @@ export function OtpInput({
   disabled?: boolean;
   autoFocus?: boolean;
   "aria-label"?: string;
+  /** Id of the error shown under the code, while there is one: the field is
+      marked invalid and described by it (WCAG 3.3.1). */
+  errorId?: string;
 }) {
   return (
     <OTPInput
@@ -75,6 +79,8 @@ export function OtpInput({
       disabled={disabled}
       autoFocus={autoFocus}
       aria-label={ariaLabel}
+      aria-invalid={errorId ? true : undefined}
+      aria-describedby={errorId}
       // The numeric keypad on mobile, and nothing but numbers —
       // including when pasting, where the lib filters on this pattern.
       inputMode="numeric"

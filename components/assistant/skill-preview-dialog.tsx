@@ -98,7 +98,7 @@ export function SkillPreviewDialog({
                 <TextLinesSkeleton label={t("skillPreviewLoading")} lines={6} />
               </div>
             ) : failed || !loaded ? (
-              <p className="mt-10 text-sm text-destructive">
+              <p role="alert" className="mt-10 text-sm text-destructive">
                 {t("skillPreviewError")}
               </p>
             ) : (

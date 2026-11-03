@@ -1339,7 +1339,7 @@ export function CreateProjectWizard({
             </Button>
           </div>
           {inviteeError && (
-            <p id="project-invitee-error" className="text-xs text-destructive">
+            <p role="alert" id="project-invitee-error" className="text-xs text-destructive">
               {inviteeError}
             </p>
           )}
