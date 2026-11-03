@@ -19,6 +19,14 @@ services:
   db:
     ports: !reset []
 
+  # minddy never uses the Storage S3 protocol. Storage up to 1.84.13 replays
+  # signed S3 requests past their expiry (GHSA-2p28-q2vx-mw6w), so keep the
+  # endpoint off; validate-self-hosted-compose refuses a pinned Storage image
+  # below the patched version without this setting.
+  storage:
+    environment:
+      S3_PROTOCOL_ENABLED: "false"
+
   database-access:
     image: ${SCHEDULER_IMAGE:?Set SCHEDULER_IMAGE from the matching compatibility row.}
     restart: unless-stopped

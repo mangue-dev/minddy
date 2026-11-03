@@ -19,5 +19,8 @@
 {$SUPABASE_SITE_ADDRESS} {
   encode zstd gzip
   header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  # The Storage S3 protocol is disabled in compose.full.yml; refuse its route
+  # here too (GHSA-2p28-q2vx-mw6w).
+  respond /storage/v1/s3* 404
   reverse_proxy api-gw:8000
 }

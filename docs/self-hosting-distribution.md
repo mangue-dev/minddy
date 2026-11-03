@@ -87,7 +87,12 @@ path older than `MINIMUM_OFFICIAL_SUPABASE_RELEASE`, and
 `pnpm validate:self-hosted-compose` refuses a pinned upstream Compose file whose
 Realtime or Storage image is older than `MINIMUM_OFFICIAL_SUPABASE_IMAGES`.
 Raise both constants, with the advisory identifiers in their comment, when a
-Supabase advisory affects a service the complete path ships. Rows published
+Supabase advisory affects a service the complete path ships. When no official
+release ships the fix yet, apply the advisory's workaround in
+`compose.full.yml` and guard it in the validator, as
+`assertStorageS3ProtocolMitigation` does for GHSA-2p28-q2vx-mw6w: it refuses a
+pinned Storage image below `STORAGE_S3_PROTOCOL_PATCHED` unless the overlay
+sets `S3_PROTOCOL_ENABLED: "false"` on `storage`. Rows published
 before a floor existed stay unchanged; their operators move to the first
 release that clears it.
 
