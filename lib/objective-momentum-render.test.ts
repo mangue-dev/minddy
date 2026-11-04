@@ -130,7 +130,7 @@ describe("objective momentum card", () => {
   it("renders translated progress and deadline copy", () => {
     const html = render({ ...objective, target_date: "2026-09-05T12:00:00.000Z" }, "fr");
 
-    expect(html).toContain("67% réalisé · 90% du temps écoulé");
+    expect(html).toContain("67 % réalisé · 90 % du temps écoulé");
     expect(html).toContain("En retard sur le rythme prévu");
     expect(html).toContain("16 septembre 2026");
     expect(html).not.toContain("Objectives.momentum");

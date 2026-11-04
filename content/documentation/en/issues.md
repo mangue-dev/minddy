@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 46,
-  "sourceRevision": 46,
+  "revision": 47,
+  "sourceRevision": 47,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -133,10 +133,10 @@
     ]
   },
   "review": {
-    "revision": 46,
-    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken); agent:claude (Smart Fill menu shortcut: source review of components/issue-compact-fields.tsx; sentence added on Command/Ctrl+Shift+F and the restored cursor; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude (Smart Fill menu status, assignee and due date: source review of components/issue-compact-fields.tsx and components/create-issue-dialog.tsx; one sentence added; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:claude (en sentences added with catalog UI labels; agent self-review, not human acceptance); agent:claude (en Smart Fill shortcut sentence with catalog UI labels; agent self-review, not human acceptance); agent:claude (en Smart Fill menu sentence with catalog UI labels; agent self-review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 47,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "feedback",
@@ -181,12 +181,12 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-27",
+      "capturedAt": "2026-11-04",
       "viewport": [
         720,
-        396
+        380
       ],
       "theme": "light",
       "padding": 24
@@ -197,7 +197,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -214,7 +214,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -230,7 +230,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +246,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -262,7 +262,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issue creation field in a demonstration parent issue.",
       "caption": "The inline field creates a child under this parent; a child keeps its own status and discussion.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -278,7 +278,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -294,7 +294,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -310,7 +310,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -327,7 +327,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -360,7 +360,7 @@ An issue tracks a piece of work within a project, from its initial report to com
 
 You need to be the owner or a Member of the destination project; readers can open issues but not create or edit them. Open the project and its new-issue control. Enter a title that names the work, then add the context, expected result and constraints in the description. The title and description work as one text: on a computer, the Down arrow on the title's last line moves to the description's first line, the Up arrow comes back, and the cursor keeps about the same place across the line. Shift+Enter in the title moves to the description; Enter does too, unless you chose Enter as your send shortcut, in which case it creates the issue. Command/Ctrl+Enter creates it from either field. The same arrows and Enter link the title and description of an open issue, objective, page or feedback request. The form opens on the current project; choose another one in **Create in**, at the top left of the form (next to the **New issue** title on a phone), especially when creating from a personal or cross-project view. On a computer, Command/Ctrl+Shift+P opens that menu, even while you type the title or description; once you choose a project or close the menu, the cursor returns exactly where it was. The pill shows this shortcut, which exists only when more than one project can be chosen; a phone shows no shortcut hint. Changing it clears the categories, objective and relations picked for the previous project. The create button names the identifier the issue will receive, such as `MIN-42`, and follows issues created meanwhile; its menu creates the issue and copies that identifier.
 
-For manual creation, switch Smart-fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart-fill on and open the arrow next to its button: choose a property, then its value. **Relations** there lists the relation types; choosing one opens the command palette on its possible targets. The same menu also sets the **Status** and the **Assignee**, and **Due date** opens the calendar; these three stay in the form row whether Smart-fill is on or off. Outside the title and description, the property's key opens its picker directly: P for priority, E for effort, L for categories or O for objective. On a computer, while Smart-fill is on for the issue, Command/Ctrl+Shift+F opens that arrow menu, even while you type the title or description; once you choose a value or close the menu, the cursor returns exactly where you were typing, as with Command/Ctrl+Shift+P for **Create in**. The value you choose stays visible in the form. Smart-fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart-fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible as pills in the property row, between the assignee and the due date, and are created with the issue.
+For manual creation, switch Smart Fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart Fill on and open the arrow next to its button: choose a property, then its value. **Relations** there lists the relation types; choosing one opens the command palette on its possible targets. The same menu also sets the **Status** and the **Assignee**, and **Due date** opens the calendar; these three stay in the form row whether Smart Fill is on or off. Outside the title and description, the property's key opens its picker directly: P for priority, E for effort, L for categories or O for objective. On a computer, while Smart Fill is on for the issue, Command/Ctrl+Shift+F opens that arrow menu, even while you type the title or description; once you choose a value or close the menu, the cursor returns exactly where you were typing, as with Command/Ctrl+Shift+P for **Create in**. The value you choose stays visible in the form. Smart Fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart Fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible as pills in the property row, between the assignee and the due date, and are created with the issue.
 
 Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is the project owner or a Member, never a reader; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority is **Not set** or ranges from low through medium and high to urgent; effort is **Not set** or uses XS, S, M, L and XL.
 
@@ -381,32 +381,32 @@ After a property change, verify the displayed value. Filters may remove an issue
 
 If creation or saving fails, retain your text, read the error and check that membership and the destination still exist. A retry after a network failure should first check whether the issue was already created. Attach project pages as live resources when their current content is needed, and use comments for task discussion.
 
-### Choose what Smart-fill does {#smart-fill-preferences}
+### Choose what Smart Fill does {#smart-fill-preferences}
 
-Smart-fill preferences belong to your account. Open **Account settings** → **Smart Fill**. Each option has its own card:
+Smart Fill preferences belong to your account. Open **Account settings** → **Smart Fill**. Each option has its own card:
 
-- In the **Smart Fill** card, **Enable Smart Fill** turns Smart-fill on or off for your account. It fills missing priority, effort, categories and objective; status, assignee and due date stay yours. The switches of the next two cards depend on it.
-- In **Issues to fill**, **Fill created issues** and **Fill triage issues** choose which new issues it fills: the issues you create, and the triage issues you own. **Re-evaluate edited issues**, on by default, lets Smart-fill [read an issue again](#smart-fill-reevaluation) after its title or description changes. **Write missing titles**, on by default, lets Smart-fill [write the title](#smart-fill-title) of an issue you only describe.
-- In **Related issues**, **Link related issues**, on by default, lets Smart-fill [add relations](#smart-fill-relations) after an issue is saved.
-- In **Issue indexing**, **Index issues**, on by default and independent of Smart-fill, turns the titles and descriptions of the issues you create or edit into private vectors used to find related issues and to [search issues by meaning](/docs/navigation#search-by-meaning). Background indexing of a project's existing issues follows both the project owner's switch and the author's: an issue whose author turned it off is never indexed. Vectors are encrypted with the project, like the issue; vectors stored before the project started encrypting are converted by the background job. When the switch is off, no vector is created for your issues, even when someone else edits them, and the related-issue search compares words only. Your own searches then use text only, without search by meaning. Vectors already created stay while the text is unchanged; they are deleted as soon as the text changes, or with the issue.
+- In the **Smart Fill** card, **Enable Smart Fill** turns Smart Fill on or off for your account. It fills missing priority, effort, categories and objective; status, assignee and due date stay yours. The switches of the next two cards depend on it.
+- In **Issues to fill**, **Fill created issues** and **Fill triage issues** choose which new issues it fills: the issues you create, and the triage issues you own. **Re-evaluate edited issues**, on by default, lets Smart Fill [read an issue again](#smart-fill-reevaluation) after its title or description changes. **Write missing titles**, on by default, lets Smart Fill [write the title](#smart-fill-title) of an issue you only describe.
+- In **Related issues**, **Link related issues**, on by default, lets Smart Fill [add relations](#smart-fill-relations) after an issue is saved.
+- In **Issue indexing**, **Index issues**, on by default and independent of Smart Fill, indexes the titles and descriptions of the issues you create or edit privately, to find related issues and to [search issues by meaning](/docs/navigation#search-by-meaning). Background indexing of a project's existing issues follows both the project owner's switch and the author's: an issue whose author turned it off is never indexed. Vectors are encrypted with the project, like the issue; vectors stored before the project started encrypting are converted by the background job. When the switch is off, no vector is created for your issues, even when someone else edits them, and the related-issue search compares words only. Your own searches then use text only, without search by meaning. Vectors already created stay while the text is unchanged; they are deleted as soon as the text changes, or with the issue.
 
 Turning a switch off also cancels the passes that have not run yet. Numo can change these preferences when you ask it to.
 
-### When Smart-fill reads an issue again {#smart-fill-reevaluation}
+### When Smart Fill reads an issue again {#smart-fill-reevaluation}
 
-With **Re-evaluate edited issues** on, an issue created with Smart-fill on is read again after its title or description changes. Smart-fill waits until the text has not changed for five minutes, so a series of edits is read once; the pass can start up to one minute later. It then sets the priority, effort, categories and objective again from the new text.
+With **Re-evaluate edited issues** on, an issue created with Smart Fill on is read again after its title or description changes. Smart Fill waits until the text has not changed for five minutes, so a series of edits is read once; the pass can start up to one minute later. It then sets the priority, effort, categories and objective again from the new text.
 
-It only changes the properties nobody chose by hand: those left empty when the issue was created and that nobody has changed since. As soon as you, Numo or a connected agent changes one of them, Smart-fill leaves it alone for good. It never removes the objective or all the categories; it can clear the effort when the text no longer describes estimable work. Issues created before this feature, with Smart-fill switched off or with every property already set are never read again.
+It only changes the properties nobody chose by hand: those left empty when the issue was created and that nobody has changed since. As soon as you, Numo or a connected agent changes one of them, Smart Fill leaves it alone for good. It never removes the objective or all the categories; it can clear the effort when the text no longer describes estimable work. Issues created before this feature, with Smart Fill switched off or with every property already set are never read again.
 
-Each change appears in the issue's activity with Smart-fill as its author, and an issue moved to another objective also appears in the activity of both objectives. A pass that finds nothing to change writes nothing. The pass counts toward the **Automations** share of the person who made the latest edit, follows that person's **Re-evaluate edited issues** preference, and is skipped when their budget is exhausted or the provider fails.
+Each change appears in the issue's activity with Smart Fill as its author, and an issue moved to another objective also appears in the activity of both objectives. A pass that finds nothing to change writes nothing. The pass counts toward the **Automations** share of the person who made the latest edit, follows that person's **Re-evaluate edited issues** preference, and is skipped when their budget is exhausted or the provider fails.
 
-### Let Smart-fill write the title {#smart-fill-title}
+### Let Smart Fill write the title {#smart-fill-title}
 
-With **Write missing titles** on, you create an issue by describing it. It is on by default and depends on **Enable Smart Fill**. While Smart-fill is on for the issue, the creation form shows only the description, with the cursor in it. Describe the work and create the issue. To write the title yourself, open the arrow next to the Smart-fill button and choose **Set manually** → **Title**: the title field appears above the description, and a title you type is kept as written. If you leave the field empty and move elsewhere, it disappears again. Switching Smart-fill off for the issue also brings the title back. This applies to the creation form; Numo, the MCP server and CSV imports write their own titles.
+With **Write missing titles** on, you create an issue by describing it. It is on by default and depends on **Enable Smart Fill**. While Smart Fill is on for the issue, the creation form shows only the description, with the cursor in it. Describe the work and create the issue. To write the title yourself, open the arrow next to the Smart Fill button and choose **Set manually** → **Title**: the title field appears above the description, and a title you type is kept as written. If you leave the field empty and move elsewhere, it disappears again. Switching Smart Fill off for the issue also brings the title back. This applies to the creation form; Numo, the MCP server and CSV imports write their own titles.
 
-Smart-fill writes a short title that summarizes the description and tells the issue apart from similar ones, in the language of the description. The issue appears once its title and properties are filled, and its activity names Smart-fill. If no title can be written, because the provider fails or your **Automations** budget is exhausted, the issue takes the first line of its description instead. A description that contains only an image still needs a title.
+Smart Fill writes a short title that summarizes the description and tells the issue apart from similar ones, in the language of the description. The issue appears once its title and properties are filled, and its activity names Smart Fill. If no title can be written, because the provider fails or your **Automations** budget is exhausted, the issue takes the first line of its description instead. A description that contains only an image still needs a title.
 
-A title written this way stays Smart-fill's until someone changes it. With **Re-evaluate edited issues** on, a later [reading](#smart-fill-reevaluation) can replace it when the description now describes other work, and keeps it while it still fits. That pass rewrites the title only when the person who made the latest edit has not turned off **Write missing titles**. As soon as you, Numo or a connected agent edits the title, Smart-fill leaves it alone for good.
+A title written this way stays Smart Fill's until someone changes it. With **Re-evaluate edited issues** on, a later [reading](#smart-fill-reevaluation) can replace it when the description now describes other work, and keeps it while it still fits. That pass rewrites the title only when the person who made the latest edit has not turned off **Write missing titles**. As soon as you, Numo or a connected agent edits the title, Smart Fill leaves it alone for good.
 
 ## Review incoming work in triage {#triage-incoming-work}
 
@@ -466,7 +466,7 @@ Open the issue's discussion timeline to add a comment. Explain a decision, quest
 
 Attach a relevant project page, file or link through the resources controls. A linked page is a live resource: its title follows page renaming and its content can evolve. A file is a stored attachment rather than a guarantee that an external URL remains available. **Page** opens the command palette on the project's pages, in sidebar order; choose one to attach it. To write a page that does not exist yet, choose **New page** at the bottom of the list; typing a title in the search first gives it that title. The page is created in the project, attached to the issue and opened in a side panel, where **Expand** opens the full page.
 
-Resources appear as cards: the image itself or the file type's icon, the name and the size. A link shows its page's preview image when the site provides one, otherwise its favicon. Click or right-click a card to open its menu: Preview, Open link or Open page, then Rename, Download and Remove when they apply. Preview opens a supported file across the whole window. Images, PDF files, Markdown (`.md`), plain text (`.txt`, `.text`), CSV files and supported audio or video use the same reader. Markdown is formatted, text stays literal, and CSV opens as a scrollable table. Use Close or Escape to return to the issue. The File actions (`…`) menu offers Download and, when you can change this resource, Rename and Remove. Clicking a file mention in a text opens the same reader. Minddy asks for confirmation before removing a resource, which then detaches from this context. A page resource keeps its page's title and cannot be renamed. Unsupported formats keep their download action. **Open page** reads the page in a side panel, where **Expand** opens the full page; a database opens as a full page directly. Hovering a page card shows its first lines, or a database's first rows.
+Resources appear as cards: the image itself or the file type's icon, the name and the size. A link shows its page's preview image when the site provides one, otherwise its favicon. Click or right-click a card to open its menu: Preview, Open link or Open page, then Rename, Download and Remove when they apply. Preview opens a supported file across the whole window. Images, PDF files, Markdown (`.md`), plain text (`.txt`, `.text`), CSV files and supported audio or video use the same reader. Markdown is formatted, text stays literal, and CSV opens as a scrollable table. Use Close or Escape to return to the issue. The File actions (`…`) menu offers Download and, when you can change this resource, Rename and Remove. Clicking a file mention in a text opens the same reader. minddy asks for confirmation before removing a resource, which then detaches from this context. A page resource keeps its page's title and cannot be renamed. Unsupported formats keep their download action. **Open page** reads the page in a side panel, where **Expand** opens the full page; a database opens as a full page directly. Hovering a page card shows its first lines, or a database's first rows.
 
 ![Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.](/documentation/en/file-preview.png)
 
@@ -496,15 +496,15 @@ Remove a relation from the relations controls when its meaning no longer applies
 
 If the relation picker cannot find an issue, check project access and the identifier. Do not expose another project's content by pasting a private issue URL into a public feedback reply.
 
-### Links added by Smart-fill {#smart-fill-relations}
+### Links added by Smart Fill {#smart-fill-relations}
 
-With **Link related issues** on, Smart-fill looks for related issues after an issue is created or its title or description changes. The work runs in the background after the save: creating or editing never waits for it, and links can appear a few seconds later. For a new issue, it follows the same choices as the other fields, so it does not run when you switched Smart-fill off for that issue. It does not run for issues imported from a linked repository, for recurring copies or for changes synced from the repository.
+With **Link related issues** on, Smart Fill looks for related issues after an issue is created or its title or description changes. The work runs in the background after the save: creating or editing never waits for it, and links can appear a few seconds later. For a new issue, it follows the same choices as the other fields, so it does not run when you switched Smart Fill off for that issue. It does not run for issues imported from a linked repository, for recurring copies or for changes synced from the repository.
 
-Smart-fill compares the issue with at most five candidates from the same project, leaving out canceled, duplicate and deleted issues. One decision then classifies each candidate as related, blocks, blocked by or no relation. Similarity alone never creates a link, a dependency needs stronger evidence than a related link, and Smart-fill adds nothing when in doubt. A related link needs an obvious connection, such as the same bug, a direct follow-up or a reversal: two issues that only share a feature or a topic stay unlinked. Most issues therefore receive no link. A single pass adds at most two relations. It never touches a pair that already has a relation, never adds a blocking relation that would close a cycle, and discards its result if the issue's text changed during the decision. It never marks a duplicate and never changes a status.
+Smart Fill compares the issue with at most five candidates from the same project, leaving out canceled, duplicate and deleted issues. One decision then classifies each candidate as related, blocks, blocked by or no relation. Similarity alone never creates a link, a dependency needs stronger evidence than a related link, and Smart Fill adds nothing when in doubt. A related link needs an obvious connection, such as the same bug, a direct follow-up or a reversal: two issues that only share a feature or a topic stay unlinked. Most issues therefore receive no link. A single pass adds at most two relations. It never touches a pair that already has a relation, never adds a blocking relation that would close a cycle, and discards its result if the issue's text changed during the decision. It never marks a duplicate and never changes a status.
 
-Links added this way appear in the issue's relations like any other, and the timeline names Smart-fill as their author. Check the direction of a dependency as you would for your own. To remove a link, use the relations controls: Smart-fill does not add a removed link back for that pair. To stop new links, turn off **Link related issues** in [your preferences](#smart-fill-preferences). Issues created before this feature, imported issues and issues synced from a repository are indexed gradually in the background, but they never receive links automatically.
+Links added this way appear in the issue's relations like any other, and the timeline names Smart Fill as their author. Check the direction of a dependency as you would for your own. To remove a link, use the relations controls: Smart Fill does not add a removed link back for that pair. To stop new links, turn off **Link related issues** in [your preferences](#smart-fill-preferences). Issues created before this feature, imported issues and issues synced from a repository are indexed gradually in the background, but they never receive links automatically.
 
-Indexing and relation decisions use AI. They count toward the **Automations** share of the account that owns the pass: the account charged for the new issue's Smart-fill, usually its creator; the editor for an edit; and the project owner for background indexing. Usage history lists indexing as **Smart-fill · issue index**. A relation decision appears as **AI decision** when the decision model answers it, and as **Smart-fill · relations** when the fallback model does. If that budget is exhausted or the provider fails, the pass is skipped and the issue stays unchanged. [Searching issues by meaning](/docs/navigation#search-by-meaning) uses the same index: each new query counts toward the searching account's **Automations** share and appears as **Issue search**.
+Indexing and relation decisions use AI. They count toward the **Automations** share of the account that owns the pass: the account charged for the new issue's Smart Fill, usually its creator; the editor for an edit; and the project owner for background indexing. Usage history lists indexing as **Smart Fill · issue index**. A relation decision appears as **AI decision** when the decision model answers it, and as **Smart Fill · relations** when the fallback model does. If that budget is exhausted or the provider fails, the pass is skipped and the issue stays unchanged. [Searching issues by meaning](/docs/navigation#search-by-meaning) uses the same index: each new query counts toward the searching account's **Automations** share and appears as **Issue search**.
 
 ## Split an issue into sub-issues {#sub-issues}
 
@@ -544,9 +544,9 @@ To have the plan implemented, copy the issue's prompt for your own coding agent,
 
 ### Copy a prompt for another coding agent {#copy-issue-prompt}
 
-To hand an issue to a coding agent outside Minddy, such as Claude Code, Codex or Cursor, open the issue's actions menu, choose **Copy as prompt**, then **Generate a plan** (or **Review the plan** when one exists), **Implement the issue**, **Verify the implementation** or **Custom…**. With several issues selected, **Copy the combined prompt** puts them in one prompt. Copying runs no AI model and uses no AI allowance: Minddy assembles what it already stores, and the agent explores the repository itself. If **Start the issue or task when I copy its prompt** is enabled in account preferences, copying also starts an issue that has not started yet. See [Code work and pull requests](/docs/code-work) for the complete workflow and pull request review.
+To hand an issue to a coding agent outside minddy, such as Claude Code, Codex or Cursor, open the issue's actions menu, choose **Copy as prompt**, then **Generate a plan** (or **Review the plan** when one exists), **Implement the issue**, **Verify the implementation** or **Custom…**. With several issues selected, **Copy the combined prompt** puts them in one prompt. Copying runs no AI model and uses no AI allowance: minddy assembles what it already stores, and the agent explores the repository itself. If **Start the issue or task when I copy its prompt** is enabled in account preferences, copying also starts an issue that has not started yet. See [Code work and pull requests](/docs/code-work) for the complete workflow and pull request review.
 
-The prompt carries the issue's fields, categories, relations, the number of attached resources and the plan's progress, but not the plan text, which the agent reads through the Minddy MCP server or asks you for. It also lists the project's linked repository and every pull request linked to the issue, with its state and branches when known. The agent continues an open pull request on its branch and treats merged or closed ones as history. Without an open pull request, the prompt suggests a branch name made of the issue identifier and a short title, such as `min-42-keyboard-navigation`. This is only a suggestion: the agent checks existing branches and follows the repository's naming convention first. Keeping the identifier in the branch name, the pull request title or a `Fixes MIN-42` line lets Minddy attach the pull request to the issue when the repository is linked.
+The prompt carries the issue's fields, categories, relations, the number of attached resources and the plan's progress, but not the plan text, which the agent reads through the minddy MCP server or asks you for. It also lists the project's linked repository and every pull request linked to the issue, with its state and branches when known. The agent continues an open pull request on its branch and treats merged or closed ones as history. Without an open pull request, the prompt suggests a branch name made of the issue identifier and a short title, such as `min-42-keyboard-navigation`. This is only a suggestion: the agent checks existing branches and follows the repository's naming convention first. Keeping the identifier in the branch name, the pull request title or a `Fixes MIN-42` line lets minddy attach the pull request to the issue when the repository is linked.
 
 If the pull request information cannot be loaded, the prompt says so instead of claiming there is none. Plan and plan review prompts ask the agent to stop before implementing. A custom prompt keeps your request and its scope as written. The issue's content and your request keep their original language; the surrounding instructions are in English.
 

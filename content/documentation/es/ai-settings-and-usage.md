@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (model pickers show the default's model by name instead of App default when that model is in the catalog, and choosing it keeps following the default; checked against components/agent/model-combobox.tsx and components/settings/account-ai-keys-section.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure changed, the diagram does not show picker labels)",
+    "revision": 25,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
     "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "date": "2026-11-04"
   },
   "related": [
     "scheduled-routines"
@@ -87,7 +87,7 @@
       "src": "/documentation/es/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Los proveedores conectados, un proveedor por uso, y el proveedor y modelo de Numo son ajustes separados.",
       "caption": "Cada uso funciona con minddy Cloud o un proveedor conectado. El valor predeterminado de Numo se guarda por proveedor; una conversación puede elegir su propio proveedor y modelo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -123,7 +123,7 @@
 
 Los ajustes de IA de la cuenta determinan los proveedores, las claves personales y los valores predeterminados de las funciones compatibles. Antes de empezar, comprueba la asignación de modelos. En el consumo Cloud, distingue la facturación del proveedor, la cuota de IA incluida y los límites de las rutinas.
 
-La sección **IA de Minddy** de los ajustes de IA de la cuenta configura los proveedores API que usan las conversaciones de Numo, las rutinas, las automatizaciones, la voz y el feedback. Los agentes de código que ejecutas por tu cuenta, conectados mediante minddy MCP, usan su propia suscripción o cuenta API y no consumen uso de IA de Minddy.
+La sección **IA de minddy** de los ajustes de IA de la cuenta configura los proveedores API que usan las conversaciones de Numo, las rutinas, las automatizaciones, la voz y el feedback. Los agentes de código que ejecutas por tu cuenta, conectados mediante minddy MCP, usan su propia suscripción o cuenta API y no consumen uso de IA de minddy.
 
 ## Configurar claves personales de IA y modelos {#ai-keys-and-models}
 
@@ -133,13 +133,13 @@ Debajo, **Numo**, **Automatizaciones**, **Dictado por voz** y **Sugerencias** mu
 
 Para las **Conversaciones** de Numo, elige el proveedor y después un modelo de ese proveedor. El selector muestra el modelo predeterminado de la app con su propio nombre, marcado mientras lo sigues; elegirlo mantiene tu ajuste siguiendo el predeterminado de la app, así que sus cambios posteriores se siguen aplicando. **Predeterminado de la app** solo aparece como opción cuando ese modelo no está en el catálogo. Este valor se guarda para tu cuenta y por separado para cada proveedor, entre recargas y sesiones nuevas. En una conversación, la lista de modelos junto al micrófono se abre en los proveedores cuando hay varios disponibles; elige uno para ver sus modelos. La conversación conserva ese proveedor y ese modelo, y las conversaciones que siguen tu valor predeterminado recogen los cambios posteriores de la cuenta. Los turnos ya admitidos conservan su proveedor y su modelo fijados. Un modelo guardado que deja de estar disponible o supera tu plan se rechaza: elige otro modelo o el modelo predeterminado de la app. Si se elimina el proveedor de una conversación, Numo te pide elegir otro en lugar de cambiarlo por su cuenta. La exportación e importación de la cuenta incluyen estas preferencias de modelo, sin las credenciales de los proveedores.
 
-Una clave sin confirmar o inaccesible puede dejar las llamadas generales de IA compatibles en la cuota de Minddy cuando la IA gestionada está configurada. Tu proveedor factura las llamadas realizadas con su clave, y minddy no las registra. Las claves personales validadas y el trabajo financiado por Minddy siguen las [reglas de presupuesto siguientes](#consumption).
+Una clave sin confirmar o inaccesible puede dejar las llamadas generales de IA compatibles en la cuota de minddy cuando la IA gestionada está configurada. Tu proveedor factura las llamadas realizadas con su clave, y minddy no las registra. Las claves personales validadas y el trabajo financiado por minddy siguen las [reglas de presupuesto siguientes](#consumption).
 
 ![Los proveedores conectados, un proveedor por uso, y el proveedor y modelo de Numo son ajustes separados.](/documentation/es/ai-providers-and-numo-defaults-flow.svg)
 
 ### Modelos locales {#models}
 
-Minddy llama a los modelos de IA desde el servidor, por lo que no puede usar un modelo que se ejecute en tu ordenador. **Añadir proveedor** no ofrece Ollama local ni endpoints locales compatibles con OpenAI. Un endpoint local guardado en una versión anterior sigue apareciendo en **Proveedores conectados**, pero no puede atender conversaciones de Numo, rutinas ni otras funciones. Elimínalo y asigna en su lugar un proveedor accesible desde el servidor. Cuando dejes de necesitar un proveedor, elimínalo mediante su control de confirmación y comprueba las asignaciones resultantes antes de la siguiente ejecución.
+minddy llama a los modelos de IA desde el servidor, por lo que no puede usar un modelo que se ejecute en tu ordenador. **Añadir proveedor** no ofrece Ollama local ni endpoints locales compatibles con OpenAI. Un endpoint local guardado en una versión anterior sigue apareciendo en **Proveedores conectados**, pero no puede atender conversaciones de Numo, rutinas ni otras funciones. Elimínalo y asigna en su lugar un proveedor accesible desde el servidor. Cuando dejes de necesitar un proveedor, elimínalo mediante su control de confirmación y comprueba las asignaciones resultantes antes de la siguiente ejecución.
 
 
 ## Entender planes Cloud y consumo de IA {#plans-and-ai-usage}
@@ -156,7 +156,7 @@ Las claves personales compatibles hacen que el proveedor facture las llamadas al
 
 ### Capacidad de los planes {#plan-capacities}
 
-Estos valores predeterminados corresponden a Minddy 0.20.0. Comprueba la página vigente de precios y tu cuenta antes de comprar: los precios configurados en el proceso de compra y las excepciones de cada cuenta pueden variar. El número de invitados no incluye al propietario del proyecto, pero sí a los miembros, los lectores y las invitaciones pendientes; no hay facturación por puesto. El almacenamiento se carga al propietario del proyecto que recibe los archivos. Cuando se transfiere la propiedad, estos límites, el almacenamiento y la IA en segundo plano, como Smart Assign y la revisión de feedback, usan el plan del nuevo propietario.
+Estos valores predeterminados corresponden a minddy 0.20.0. Comprueba la página vigente de precios y tu cuenta antes de comprar: los precios configurados en el proceso de compra y las excepciones de cada cuenta pueden variar. El número de invitados no incluye al propietario del proyecto, pero sí a los miembros, los lectores y las invitaciones pendientes; no hay facturación por puesto. El almacenamiento se carga al propietario del proyecto que recibe los archivos. Cuando se transfiere la propiedad, estos límites, el almacenamiento y la IA en segundo plano, como Smart Assign y la revisión de feedback, usan el plan del nuevo propietario.
 
 | Plan | Proyectos | Tickets por proyecto | Invitados por proyecto | Almacenamiento | IA mensual incluida (USD) |
 | --- | --- | --- | --- | --- | --- |

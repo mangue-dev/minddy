@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
+  "revision": 11,
   "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -48,8 +48,8 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured)",
     "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -72,7 +72,7 @@
       "src": "/documentation/fr/integration-api-and-webhooks-flow.svg",
       "alt": "Schéma: Le serveur garde la clé d’intégration projet. POST tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
       "caption": "Lisez les étapes dans cet ordre. Le serveur garde la clé d’intégration projet. `POST` tickets ou feedback avec le bon type. Le propriétaire choisit la destination webhook. Réception : HMAC brut et UUID de livraison.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -104,7 +104,7 @@
       "src": "/documentation/fr/feedback-ingestion-and-sso-workflow.svg",
       "alt": "Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.",
       "caption": "La clé d’ingestion authentifie les appels serveur. Le secret SSO du tableau signe un jeton visiteur court, à usage unique.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -189,7 +189,7 @@ Le propriétaire du projet crée une clé d’intégration feedback dans les ré
 curl -i "$MINDDY_ORIGIN/api/v1/feedback"   -H "Authorization: Bearer $MINDDY_FEEDBACK_KEY"   -H 'Content-Type: application/json'   --data '{"title":"Afficher la date de livraison","body":"Le support a besoin de la date prévue.","user":{"external_id":"demo-user-1","name":"Lecteur de démonstration"}}'
 ```
 
-Fournissez un titre non vide de 200 caractères maximum, un corps facultatif de 10 000 caractères maximum et `user.external_id` et/ou `user.email`. `user.name` est facultatif. L’identifiant externe accepte 255 caractères, l’email 254 et le nom 200. Votre backend garantit l’identité transmise ; l’ingestion anonyme est refusée. Le succès renvoie HTTP 201 avec `id`, `status`, `review_state`, les votes et le pseudonyme. Le board n’a pas besoin d’être activé pour l’ingestion. `analyze` est un booléen qui vaut `true` par défaut ; la chaîne `"false"` est refusée. Définissez-le sur `false` pour ignorer la modération, la catégorisation et la fusion des doublons de ce retour et lui donner l’état de revue `published` sans attente. Cet état de revue n’active pas le board et ne contourne pas les règles de visibilité du retour ou son statut spam. L’API crée les retours publics par défaut et n’accepte pas de paramètre de visibilité privée.
+Fournissez un titre non vide de 200 caractères maximum, un corps facultatif de 10 000 caractères maximum et `user.external_id` et/ou `user.email`. `user.name` est facultatif. L’identifiant externe accepte 255 caractères, l’e-mail 254 et le nom 200. Votre backend garantit l’identité transmise ; l’ingestion anonyme est refusée. Le succès renvoie HTTP 201 avec `id`, `status`, `review_state`, les votes et le pseudonyme. Le board n’a pas besoin d’être activé pour l’ingestion. `analyze` est un booléen qui vaut `true` par défaut ; la chaîne `"false"` est refusée. Définissez-le sur `false` pour ignorer la modération, la catégorisation et la fusion des doublons de ce retour et lui donner l’état de revue `published` sans attente. Cet état de revue n’active pas le board et ne contourne pas les règles de visibilité du retour ou son statut spam. L’API crée les retours publics par défaut et n’accepte pas de paramètre de visibilité privée.
 
 ### Votes, erreurs et webhooks {#errors}
 
@@ -199,9 +199,9 @@ La création autorise 20 appels par minute et par clé ; le vote, 60. Respectez 
 
 ### Identifier les visiteurs par SSO {#sso}
 
-En tant que propriétaire, activez le board et configurez son secret SSO distinct. Votre backend signe un JWT `HS256` avec un `sub` stable, un `exp` obligatoire et un email et un nom facultatifs. Limitez sa validité à 600 secondes et utilisez un `jti` unique ; la vérification tolère un décalage d’horloge de 60 secondes. Redirigez immédiatement vers `/f/<board-token>?sso=<jwt>`. Un token n’est consommable qu’une fois par board ; une nouvelle tentative exige un token fraîchement signé. Ne réutilisez jamais la clé d’ingestion comme secret SSO. Gardez les tokens hors des journaux et captures partagées.
+En tant que propriétaire, activez le board et configurez son secret SSO distinct. Votre backend signe un JWT `HS256` avec un `sub` stable, un `exp` obligatoire et un e-mail et un nom facultatifs. Limitez sa validité à 600 secondes et utilisez un `jti` unique ; la vérification tolère un décalage d’horloge de 60 secondes. Redirigez immédiatement vers `/f/<board-token>?sso=<jwt>`. Un token n’est consommable qu’une fois par board ; une nouvelle tentative exige un token fraîchement signé. Ne réutilisez jamais la clé d’ingestion comme secret SSO. Gardez les tokens hors des journaux et captures partagées.
 
-Vérifiez que le visiteur ouvre Mes retours avec l’identité prévue. Un token expiré exige une nouvelle redirection. Si le secret est compromis, renouvelez-le avec la confirmation du board et mettez à jour le backend en même temps. Le parcours par code email reste disponible lorsque le SSO ne l’est pas.
+Vérifiez que le visiteur ouvre Mes retours avec l’identité prévue. Un token expiré exige une nouvelle redirection. Si le secret est compromis, renouvelez-le avec la confirmation du board et mettez à jour le backend en même temps. Le parcours par code e-mail reste disponible lorsque le SSO ne l’est pas.
 
 ![Séquences distinctes d’ingestion backend et de SSO navigateur, avec deux secrets.](/documentation/fr/feedback-ingestion-and-sso-workflow.svg)
 

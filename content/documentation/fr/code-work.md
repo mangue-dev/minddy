@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-02",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
-    "language": "agent:claude-code (fr changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 23,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -86,7 +86,7 @@
       "src": "/documentation/fr/review-pull-requests-workflow.png",
       "alt": "Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.",
       "caption": "PR de démonstration qui reste ouverte, sans fusion. Le diff supprime les espaces autour du nom et utilise World pour une valeur vide. Cette instance ne peut pas demander l’autorisation utilisateur GitHub ; le libellé de disponibilité ne donne pas le droit de fusionner et ne prouve pas que la CI du fournisseur a réussi.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,11 +104,11 @@
 }
 ---
 
-Minddy suit le travail ; votre propre agent de code, comme Claude Code, Codex ou Cursor, modifie le code. Copiez un prompt depuis le ticket, laissez l’agent lire et mettre à jour le ticket via le MCP minddy, puis relisez la pull request liée dans Minddy avant de la fusionner. Numo n’écrit pas de code, n’ouvre pas de branche et ne lance pas de tests.
+minddy suit le travail ; votre propre agent de code, comme Claude Code, Codex ou Cursor, modifie le code. Copiez un prompt depuis le ticket, laissez l’agent lire et mettre à jour le ticket via le MCP minddy, puis relisez la pull request liée dans minddy avant de la fusionner. Numo n’écrit pas de code, n’ouvre pas de branche et ne lance pas de tests.
 
 ## Confier un ticket à un agent de code externe {#external-coding-agents}
 
-Connectez d’abord votre agent au MCP minddy pour qu’il puisse lire le plan et mettre à jour ses tâches ; consultez [Connecter un assistant externe au MCP minddy](/docs/minddy-mcp#external-minddy-mcp). L’agent s’exécute sur votre ordinateur ou dans son propre service, avec son propre abonnement ou ses propres coûts d’API. Minddy ne lui fournit pas d’accès au dépôt.
+Connectez d’abord votre agent au MCP minddy pour qu’il puisse lire le plan et mettre à jour ses tâches ; consultez [Connecter un assistant externe au MCP minddy](/docs/minddy-mcp#external-minddy-mcp). L’agent s’exécute sur votre ordinateur ou dans son propre service, avec son propre abonnement ou ses propres coûts d’API. minddy ne lui fournit pas d’accès au dépôt.
 
 1. Ouvrez le ticket et décrivez le comportement attendu, les contraintes et les critères à vérifier. Rédigez ou relisez le plan dans son onglet Plan lorsque le travail comporte plusieurs étapes.
 2. Ouvrez le menu d’actions du ticket et choisissez **Copier le prompt**. Choisissez **Générer un plan** (ou **Vérifier le plan** lorsqu’il en existe un) pour cadrer le travail sans coder, **Implémenter le ticket** pour lancer la modification, **Vérifier l'implémentation** pour que l’agent contrôle le travail terminé au regard du plan et des commentaires, ou **Personnalisé…** pour rédiger votre propre instruction.
@@ -121,11 +121,11 @@ Le contenu du prompt, la suggestion de branche et les règles de langue sont dé
 
 ### Garder le travail lié au ticket {#link-work}
 
-Lorsque le dépôt est lié au projet, conservez l’identifiant du ticket dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42`. Minddy rattache alors la pull request au ticket, et les prompts suivants demandent à l’agent de poursuivre la pull request ouverte sur sa branche. Pour rattacher un ticket à la main, utilisez **Lier un ticket** sur la pull request : la palette de commandes s’ouvre sur les tickets du projet, et le ticket choisi est lié après confirmation. Sa recherche accepte un identifiant ou des mots du titre, et une description liste aussi des tickets du projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**.
+Lorsque le dépôt est lié au projet, conservez l’identifiant du ticket dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42`. minddy rattache alors la pull request au ticket, et les prompts suivants demandent à l’agent de poursuivre la pull request ouverte sur sa branche. Pour rattacher un ticket à la main, utilisez **Lier un ticket** sur la pull request : la palette de commandes s’ouvre sur les tickets du projet, et le ticket choisi est lié après confirmation. Sa recherche accepte un identifiant ou des mots du titre, et une description liste aussi des tickets du projet trouvés [par le sens](/docs/navigation#search-by-meaning) sous **Liés par le sens**.
 
-Depuis un board, faites un clic droit sur un ticket sans pull request ouverte et choisissez **Lier à une pull request** pour choisir dans la palette de commandes l’une des pull requests ouvertes de son projet, brouillons compris. L’entrée n’apparaît que si ce projet en a au moins une à lier. Avec plusieurs tickets sélectionnés, **Actions** propose le même choix pour toute la sélection, ainsi que **Lier les autres tickets à #N** quand certains ont déjà la pull request N ; le clic droit sur l’un des tickets sélectionnés propose aussi **Lier les autres tickets à #N**. **Lier à une pull request** n’est plus proposé dès qu’un ticket sélectionné a une pull request liée ; **Délier N tickets de leurs pull requests** retire d’abord tous les liens de la sélection, après votre confirmation. Les liens s’affichent tout de suite sur les cartes, et chaque carte passe aussitôt au statut qu’implique sa pull request, par exemple **En revue** pour une pull request ouverte ; un lien refusé disparaît au rafraîchissement du board. Une carte avec une pull request ouverte affiche son numéro, coloré selon son état, et son état de fusion, le même indicateur que dans **Code review** ; quand l’auto-merge est activé, son infobulle ajoute **Auto-merge** après l’état. Survolez le numéro, ou la pastille de la pull request en haut du panneau du ticket, pour voir le dépôt, l’état et le titre de la pull request et, tant qu’elle est ouverte ou en brouillon, où en sont ses checks. Cliquez sur la carte pour ouvrir la pull request.
+Depuis un board, faites un clic droit sur un ticket sans pull request ouverte et choisissez **Lier à une pull request** pour choisir dans la palette de commandes l’une des pull requests ouvertes de son projet, brouillons compris. L’entrée n’apparaît que si ce projet en a au moins une à lier. Avec plusieurs tickets sélectionnés, **Actions** propose le même choix pour toute la sélection, ainsi que **Lier les autres tickets à #N** quand certains ont déjà la pull request N ; le clic droit sur l’un des tickets sélectionnés propose aussi **Lier les autres tickets à #N**. **Lier à une pull request** n’est plus proposé dès qu’un ticket sélectionné a une pull request liée ; **Délier N tickets de leurs pull requests** retire d’abord tous les liens de la sélection, après votre confirmation. Les liens s’affichent tout de suite sur les cartes, et chaque carte passe aussitôt au statut qu’implique sa pull request, par exemple **En revue** pour une pull request ouverte ; un lien refusé disparaît au rafraîchissement du board. Une carte avec une pull request ouverte affiche son numéro, coloré selon son état, et son état de fusion, le même indicateur que dans **Code review** ; quand la fusion automatique est activée, son infobulle ajoute **Fusion automatique** après l’état. Survolez le numéro, ou la pastille de la pull request en haut du panneau du ticket, pour voir le dépôt, l’état et le titre de la pull request et, tant qu’elle est ouverte ou en brouillon, où en sont ses checks. Cliquez sur la carte pour ouvrir la pull request.
 
-Quand un ticket a une pull request liée, son menu du clic droit regroupe les actions de cette pull request dans un sous-menu **Pull request**. **Voir la pull request** ouvre la pull request dans un onglet à part, ou bascule sur l’onglet qui l’affiche déjà. **Fusionner** apparaît lorsque la pull request est ouverte et peut être fusionnée, et que votre compte fournisseur peut écrire dans le dépôt ; l’action ouvre la pull request sur sa confirmation de fusion habituelle, où vous choisissez la méthode et le message de commit, ou **Fusionner avec Numo**. **Activer l’auto-merge** apparaît tant que la pull request ne peut pas encore être fusionnée et que le dépôt autorise l’auto-merge ; **Désactiver l’auto-merge** le remplace une fois l’auto-merge activé. Quand la pull request liée est fusionnée ou fermée, **Lier à une pull request** lie le ticket à une autre pull request ouverte du projet. **Délier de la pull request**, à part et en rouge en bas du sous-menu, retire le lien après votre confirmation.
+Quand un ticket a une pull request liée, son menu du clic droit regroupe les actions de cette pull request dans un sous-menu **Pull request**. **Voir la pull request** ouvre la pull request dans un onglet à part, ou bascule sur l’onglet qui l’affiche déjà. **Fusionner** apparaît lorsque la pull request est ouverte et peut être fusionnée, et que votre compte fournisseur peut écrire dans le dépôt ; l’action ouvre la pull request sur sa confirmation de fusion habituelle, où vous choisissez la méthode et le message de commit, ou **Fusionner avec Numo**. **Activer la fusion automatique** apparaît tant que la pull request ne peut pas encore être fusionnée et que le dépôt autorise la fusion automatique ; **Désactiver la fusion automatique** le remplace une fois la fusion automatique activée. Quand la pull request liée est fusionnée ou fermée, **Lier à une pull request** lie le ticket à une autre pull request ouverte du projet. **Délier de la pull request**, à part et en rouge en bas du sous-menu, retire le lien après votre confirmation.
 
 Dans **Paramètres du compte → Tickets → Démarrer un ticket**, **Démarrer le ticket ou la tâche quand je copie son prompt** passe en cours un ticket ou une tâche de carnet pas encore démarré lorsque vous copiez son prompt. Laissez cette option désactivée si vous copiez des prompts uniquement pour les lire.
 
@@ -139,7 +139,7 @@ Dans une description, un commentaire ou le diff d’une image, cliquez sur une i
 
 Mentionnez `@numo` dans un commentaire de pull request pour demander à Numo une relecture en lecture seule dans une conversation. Il lit la pull request et répond ; il ne pousse pas de commits. Une mention écrite sur le fournisseur Git n’est prise en compte que si son auteur est lié au propriétaire ou à un Membre (pas à un lecteur) d’un projet qui lie le dépôt, et sa consommation est imputée au propriétaire de ce projet.
 
-Ce qui est écrit sur une pull request ou une merge request liée apparaît aussi dans les commentaires de chaque ticket auquel elle est liée : les commentaires de la conversation, le message d’une revue soumise et les commentaires sur le code avec le fichier, la ligne et, sur GitHub, l’extrait qu’ils visent, les réponses regroupées dessous. Les commentaires des bots restent sur la pull request, sauf ceux qui portent sur le code. Une modification met la copie à jour, et un commentaire supprimé sur GitHub apparaît comme supprimé ; GitLab ne signale pas les suppressions. Chaque fois qu’une pull request est liée à un ticket, à la main ou parce que sa branche, son titre ou sa description nomme le ticket, les commentaires qu’elle porte déjà sont repris avec la date à laquelle ils ont été écrits, même antérieure à la création du ticket. Répondez sous l’un de ces commentaires pour répondre sur la pull request avec votre propre compte Git, comme dans la vue de la pull request ; une conversation sur le code affiche aussi **Résolu** ou **Périmé** et propose **Résoudre** ou **Rouvrir**. Les copies elles-mêmes ne se modifient pas dans Minddy.
+Ce qui est écrit sur une pull request ou une merge request liée apparaît aussi dans les commentaires de chaque ticket auquel elle est liée : les commentaires de la conversation, le message d’une revue soumise et les commentaires sur le code avec le fichier, la ligne et, sur GitHub, l’extrait qu’ils visent, les réponses regroupées dessous. Les commentaires des bots restent sur la pull request, sauf ceux qui portent sur le code. Une modification met la copie à jour, et un commentaire supprimé sur GitHub apparaît comme supprimé ; GitLab ne signale pas les suppressions. Chaque fois qu’une pull request est liée à un ticket, à la main ou parce que sa branche, son titre ou sa description nomme le ticket, les commentaires qu’elle porte déjà sont repris avec la date à laquelle ils ont été écrits, même antérieure à la création du ticket. Répondez sous l’un de ces commentaires pour répondre sur la pull request avec votre propre compte Git, comme dans la vue de la pull request ; une conversation sur le code affiche aussi **Résolu** ou **Périmé** et propose **Résoudre** ou **Rouvrir**. Les copies elles-mêmes ne se modifient pas dans minddy.
 
 ![Onglet Changements de la PR de démonstration ouverte, avec le diff de greeting et un avis d’autorisation GitHub indisponible.](/documentation/fr/review-pull-requests-workflow.png)
 

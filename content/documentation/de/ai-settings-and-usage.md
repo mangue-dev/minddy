@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (model pickers show the default's model by name instead of App default when that model is in the catalog, and choosing it keeps following the default; checked against components/agent/model-combobox.tsx and components/settings/account-ai-keys-section.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure changed, the diagram does not show picker labels)",
+    "revision": 25,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
     "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "date": "2026-11-04"
   },
   "related": [
     "scheduled-routines"
@@ -87,7 +87,7 @@
       "src": "/documentation/de/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Verbundene Anbieter, ein Anbieter je Nutzung sowie Anbieter und Modell von Numo sind getrennte Einstellungen.",
       "caption": "Jede Nutzung läuft über minddy Cloud oder einen verbundenen Anbieter. Numos Standard wird je Anbieter gespeichert; ein Gespräch kann eigenen Anbieter und eigenes Modell wählen.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -123,7 +123,7 @@
 
 Die KI-Kontoeinstellungen legen Anbieter, persönliche Schlüssel und Standardwerte für die unterstützten Funktionen fest. Prüfe vor Arbeitsbeginn die Modellzuordnung. Unterscheide beim Cloud-Verbrauch zwischen Anbieterabrechnung, enthaltenem KI-Kontingent und Routinenlimits.
 
-Der Abschnitt **Minddy-KI** der KI-Kontoeinstellungen konfiguriert die API-Anbieter für Numo-Gespräche, Routinen, Automatisierungen, Sprache und Feedback. Coding-Agenten, die du selbst ausführst und über minddy MCP verbinden, nutzen ihr eigenes Abonnement oder API-Konto und verbrauchen keine Minddy-KI-Nutzung.
+Der Abschnitt **minddy-KI** der KI-Kontoeinstellungen konfiguriert die API-Anbieter für Numo-Gespräche, Routinen, Automatisierungen, Sprache und Feedback. Coding-Agenten, die du selbst ausführst und über minddy MCP verbinden, nutzen ihr eigenes Abonnement oder API-Konto und verbrauchen keine minddy-KI-Nutzung.
 
 ## Eigene KI-Schlüssel und Modelle konfigurieren {#ai-keys-and-models}
 
@@ -131,15 +131,15 @@ In den KI-Kontoeinstellungen führt **Verbundene Anbieter** minddy Cloud, das in
 
 Darunter führen **Numo**, **Automatisierungen**, **Sprachdiktat** und **Feedback** ihre einzelnen Nutzungen auf, etwa Numos Gespräche, Gesprächstitel und Websuche oder Smart Fill und Sprache zu Text. Jede Nutzung wählt ihren eigenen Anbieter, minddy Cloud oder einen verbundenen, und lässt sich einzeln ändern: Du kannst alles bei minddy Cloud lassen außer Numos Gesprächen. Eine Nutzung bietet nur Anbieter an, die sie bedienen können: Transkription und Suche nach Bedeutung brauchen einen Anbieter mit diesen Modellen, und die Websuche braucht minddy Cloud oder einen OpenRouter-Schlüssel. Läuft eine Nutzung über einen deiner Schlüssel, erscheint ihr Modell unter dem Anbieter: Behalte das vorausgewählte Modell des Anbieters oder wähle ein anderes. Deine Auswahl gilt sofort. Auf einer Instanz ohne minddy Cloud übernimmt ein neu verbundener Anbieter jede Nutzung, die noch keinen hat.
 
-Wähle für Numos **Gespräche** den Anbieter und dann ein Modell dieses Anbieters. Die Auswahl zeigt das Standardmodell der App unter seinem eigenen Namen, abgehakt, solange du ihm folgst; wählst du es, folgt deine Einstellung weiter dem App-Standard, sodass spätere Änderungen daran weiter gelten. **App-Standard** erscheint nur dann als Option, wenn dieses Modell nicht im Katalog steht. Dieser Standard wird für dein Konto und getrennt für jeden Anbieter gespeichert, auch über Neuladen und neue Sitzungen hinweg. In einem Gespräch öffnet sich die Modellliste neben dem Mikrofon auf den Anbietern, wenn mehrere verfügbar sind; wähle einen, um seine Modelle zu sehen. Das Gespräch behält diesen Anbieter und dieses Modell, und Gespräche, die deinem Standard folgen, übernehmen spätere Kontoänderungen. Bereits zugelassene Durchläufe behalten ihren festgelegten Anbieter und ihr Modell. Ein gespeichertes Modell, das nicht mehr verfügbar ist oder deinen Plan übersteigt, wird abgelehnt: Wähle ein anderes Modell oder das Standardmodell der App. Wird der Anbieter eines Gesprächs entfernt, bittet Numo dich, einen anderen zu wählen, statt selbst zu wechseln. Kontoexport und -import enthalten diese Modelleinstellungen, ohne Anbieter-Zugangsdaten.
+Wähle für Numos **Unterhaltungen** den Anbieter und dann ein Modell dieses Anbieters. Die Auswahl zeigt das Standardmodell der App unter seinem eigenen Namen, abgehakt, solange du ihm folgst; wählst du es, folgt deine Einstellung weiter dem App-Standard, sodass spätere Änderungen daran weiter gelten. **App-Standard** erscheint nur dann als Option, wenn dieses Modell nicht im Katalog steht. Dieser Standard wird für dein Konto und getrennt für jeden Anbieter gespeichert, auch über Neuladen und neue Sitzungen hinweg. In einem Gespräch öffnet sich die Modellliste neben dem Mikrofon auf den Anbietern, wenn mehrere verfügbar sind; wähle einen, um seine Modelle zu sehen. Das Gespräch behält diesen Anbieter und dieses Modell, und Gespräche, die deinem Standard folgen, übernehmen spätere Kontoänderungen. Bereits zugelassene Durchläufe behalten ihren festgelegten Anbieter und ihr Modell. Ein gespeichertes Modell, das nicht mehr verfügbar ist oder deinen Plan übersteigt, wird abgelehnt: Wähle ein anderes Modell oder das Standardmodell der App. Wird der Anbieter eines Gesprächs entfernt, bittet Numo dich, einen anderen zu wählen, statt selbst zu wechseln. Kontoexport und -import enthalten diese Modelleinstellungen, ohne Anbieter-Zugangsdaten.
 
-Ein unbestätigter oder nicht erreichbarer Schlüssel kann unterstützte allgemeine KI-Aufrufe über das Minddy-Kontingent laufen lassen, wenn verwaltete KI eingerichtet ist. Dein Anbieter berechnet Aufrufe mit seinem Schlüssel, und minddy erfasst sie nicht. Validierte persönliche Schlüssel und von Minddy finanzierte Arbeit folgen den [Budgetregeln unten](#consumption).
+Ein unbestätigter oder nicht erreichbarer Schlüssel kann unterstützte allgemeine KI-Aufrufe über das minddy-Kontingent laufen lassen, wenn verwaltete KI eingerichtet ist. Dein Anbieter berechnet Aufrufe mit seinem Schlüssel, und minddy erfasst sie nicht. Validierte persönliche Schlüssel und von minddy finanzierte Arbeit folgen den [Budgetregeln unten](#consumption).
 
 ![Verbundene Anbieter, ein Anbieter je Nutzung sowie Anbieter und Modell von Numo sind getrennte Einstellungen.](/documentation/de/ai-providers-and-numo-defaults-flow.svg)
 
 ### Lokale Modelle {#models}
 
-Minddy ruft KI-Modelle vom Server aus auf und kann daher kein Modell nutzen, das auf deinem Computer läuft. **Anbieter hinzufügen** bietet weder lokales Ollama noch lokale OpenAI-kompatible Endpunkte an. Ein in einer früheren Version gespeicherter lokaler Endpunkt erscheint weiterhin unter **Verbundene Anbieter**, kann aber weder Numo-Konversationen noch Routinen oder andere Funktionen bedienen. Entferne ihn und weise stattdessen einen vom Server erreichbaren Anbieter zu. Entferne einen nicht mehr benötigten Anbieter über seine Bestätigung und prüfe vor dem nächsten Lauf die neue Zuordnung.
+minddy ruft KI-Modelle vom Server aus auf und kann daher kein Modell nutzen, das auf deinem Computer läuft. **Anbieter hinzufügen** bietet weder lokales Ollama noch lokale OpenAI-kompatible Endpunkte an. Ein in einer früheren Version gespeicherter lokaler Endpunkt erscheint weiterhin unter **Verbundene Anbieter**, kann aber weder Numo-Konversationen noch Routinen oder andere Funktionen bedienen. Entferne ihn und weise stattdessen einen vom Server erreichbaren Anbieter zu. Entferne einen nicht mehr benötigten Anbieter über seine Bestätigung und prüfe vor dem nächsten Lauf die neue Zuordnung.
 
 
 ## Cloud-Pläne und KI-Verbrauch verstehen {#plans-and-ai-usage}
@@ -156,7 +156,7 @@ Kompatible persönliche Schlüssel lassen Modellaufrufe beim Anbieter abrechnen,
 
 ### Kapazitäten der Pläne {#plan-capacities}
 
-Diese Standardwerte beschreiben Minddy 0.20.0. Prüfe vor einem Kauf die tatsächliche Preisseite und dein Konto. Konfigurierte Zahlungspreise und Kontoausnahmen können abweichen. Die Gästezahl schließt den Projekteigentümer aus und umfasst Mitglieder, Leser und ausstehende Einladungen; eine Abrechnung pro Platz gibt es nicht. Speicher wird dem Eigentümer des Projekts angerechnet, das die Dateien erhält. Wird das Eigentum übertragen, richten sich diese Limits, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung nach dem Plan des neuen Eigentümers.
+Diese Standardwerte beschreiben minddy 0.20.0. Prüfe vor einem Kauf die tatsächliche Preisseite und dein Konto. Konfigurierte Zahlungspreise und Kontoausnahmen können abweichen. Die Gästezahl schließt den Projekteigentümer aus und umfasst Mitglieder, Leser und ausstehende Einladungen; eine Abrechnung pro Platz gibt es nicht. Speicher wird dem Eigentümer des Projekts angerechnet, das die Dateien erhält. Wird das Eigentum übertragen, richten sich diese Limits, der Speicher und Hintergrund-KI wie Smart Assign und die Feedback-Prüfung nach dem Plan des neuen Eigentümers.
 
 | Plan | Projekte | Tickets pro Projekt | Gäste pro Projekt | Speicher | Enthaltene monatliche KI (USD) |
 | --- | --- | --- | --- | --- | --- |

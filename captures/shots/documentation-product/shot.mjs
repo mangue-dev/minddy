@@ -83,10 +83,12 @@ async function prepareIssueDraft(p, m, locale) {
  await p.keyboard.press('c');
  const dialog=p.getByRole('dialog',{name:m.IssueUI.newIssueTitle,exact:true});
  await dialog.waitFor();
- await dialog.locator('textarea').first().fill(issueDrafts[locale][0]);
- await dialog.locator('[contenteditable="true"]').first().fill(issueDrafts[locale][1]);
+ // While Smart Fill is on, the composer writes missing titles and hides the
+ // title field, so switch it off before filling the draft.
  const smart=dialog.getByRole('button',{name:m.IssueUI.smartFillChip,exact:true});
  if (await smart.getAttribute('aria-pressed')==='true') await smart.click();
+ await dialog.locator('textarea').first().fill(issueDrafts[locale][0]);
+ await dialog.locator('[contenteditable="true"]').first().fill(issueDrafts[locale][1]);
  return dialog;
 }
 const objectiveDrafts = {

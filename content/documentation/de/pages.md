@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
+  "revision": 27,
   "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -114,10 +114,10 @@
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:claude (de sentences translated from en revision 23 with the glossary register; agent self-review, not human acceptance); agent:claude (de context-mention and link-menu sentences translated from en revision 24 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-01"
+    "revision": 27,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "notifications-and-inbox",
@@ -152,7 +152,7 @@
       "src": "/documentation/de/page-create-menu.png",
       "alt": "Erstellungsmenü mit Neue Seite und Neue Datenbank.",
       "caption": "Wähle über die Seitenfunktionen des Projekts ein Dokument oder eine Datenbank.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -168,7 +168,7 @@
       "src": "/documentation/de/page-editor.png",
       "alt": "Demoseite mit Überschriften, Absätzen, Aufgaben mit Kontrollkästchen und einer Ticketreferenz.",
       "caption": "Überschriften, Aufgabenblöcke und die Referenz AUR-2 gliedern die Seite. Der Inhalt dient als Demobeispiel.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -185,7 +185,7 @@
       "src": "/documentation/de/page-comments.png",
       "alt": "Seitenaktivität ohne bisherige Einträge und ein leeres Kommentarfeld.",
       "caption": "Lies die Seitenaktivität und verfasse einen Kommentar im Eingabefeld. In diesem Beispiel wurde keiner abgesendet.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -202,7 +202,7 @@
       "src": "/documentation/de/page-file-states.png",
       "alt": "Demoseite mit einem unvollständigen Upload und einer gespeicherten Datei von 67 Byte mit Downloadfunktion.",
       "caption": "Prüfe den tatsächlichen Dateizustand: Der zweite Anhang ist verfügbar, der erste unvollständige Upload nicht.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -218,7 +218,7 @@
       "src": "/documentation/de/page-history-preview.png",
       "alt": "Versionen-Tab mit aufgeklapptem früherem Zustand, Autor, Wiederherstellen und Hinweis auf 30 Tage Aufbewahrung.",
       "caption": "Prüfe einen gespeicherten Zustand in der Vorschau und vergleiche ihn vor dem Wiederherstellen mit der aktuellen Seite.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -234,7 +234,7 @@
       "src": "/documentation/de/page-publish.png",
       "alt": "Veröffentlichungsdialog mit ausgewähltem Privat und Alternativen für Passwort oder Link.",
       "caption": "Privat hält die Seite im Projekt. Prüfe die vorgesehene Zielgruppe vor einer Änderung der Freigabe.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -250,7 +250,7 @@
       "src": "/documentation/de/page-export.png",
       "alt": "Exportmenü des Dokuments mit Markdown (.md) und Drucken / PDF.",
       "caption": "Wähle Markdown zum Herunterladen oder Drucken / PDF für die Druckansicht.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -266,7 +266,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -314,7 +314,7 @@ Halte die Umschalttaste gedrückt und klicke auf Seiten im Baum, um mehrere ausz
 
 Wenn eine Seite anstehende Arbeit beschreibt, kann der Eigentümer oder ein Mitglied sie mit Numo in ein Ticket umwandeln. Leser sehen diese Aktion nicht. Dafür benötigst du verfügbares KI-Kontingent oder einen kompatiblen persönlichen Schlüssel.
 
-1. Wähle **Zu Ticket hochstufen** im Menü der Seite im Seitenbaum (`…` oder Rechtsklick auf die Zeile) oder im `…`-Menü der geöffneten Seite (**Seitenoptionen**). Dieselbe Aktion gibt es für einen Datenbankeintrag, der im Seitenpanel geöffnet ist, und im Griffmenü eines einzelnen Eintrags, wie in der [Datenbankanleitung](/de/dokumentation/databases#entry-actions) beschrieben.
+1. Wähle **In ein Ticket umwandeln** im Menü der Seite im Seitenbaum (`…` oder Rechtsklick auf die Zeile) oder im `…`-Menü der geöffneten Seite (**Seitenoptionen**). Dieselbe Aktion gibt es für einen Datenbankeintrag, der im Seitenpanel geöffnet ist, und im Griffmenü eines einzelnen Eintrags, wie in der [Datenbankanleitung](/de/dokumentation/databases#entry-actions) beschrieben.
 2. Hat die geöffnete Seite ungespeicherte Änderungen, speichert minddy sie zuerst. Schlägt das Speichern fehl, meldet minddy, dass die Seite nicht gespeichert werden konnte, und Numo öffnet sich nicht. Stufe die Seite erneut hoch, sobald sie gespeichert ist.
 3. Numo öffnet sich im Projekt der Seite mit der Seite als Kontext und erhält die Anfrage, ihren Titel, ihren Inhalt und bei einem Datenbankeintrag dessen Eigenschaften zu lesen. Ist die Seite unklar oder lässt eine Datenbank offen, was das Ticket umfassen soll, stellt Numo zuerst Fragen. Beantworte sie im Gespräch.
 4. Numo erstellt ein einziges Ticket und hängt die Seite daran an. Öffne das Ticket und prüfe Kennung, Umfang, Eigenschaften und die angehängte Seite.

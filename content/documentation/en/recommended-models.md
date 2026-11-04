@@ -3,7 +3,7 @@
   "id": "recommended-models",
   "locale": "en",
   "title": "Recommended model configuration",
-  "summary": "Start an instance from the AI model configuration Minddy Cloud runs.",
+  "summary": "Start an instance from the AI model configuration minddy Cloud runs.",
   "topic": "Operate an instance",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "MIN-829 instance administration",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:claude-code (MIN-829 article checked against app/api/recommended-models/route.ts, lib/ai-model-config-file.ts and lib/server/admin-model-config.ts; no figure)",
-    "language": "agent:claude-code (en MIN-829 article with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 2,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "instance-administration",
@@ -56,9 +56,9 @@
 }
 ---
 
-## Start from the Minddy Cloud configuration {#recommended-models}
+## Start from the minddy Cloud configuration {#recommended-models}
 
-Minddy Cloud publishes the AI model configuration it runs, always current: [download the recommended configuration](https://www.minddy.app/api/recommended-models?download=1). The file uses the versioned format of **Export** in the admin **Models** tab (`minddy.instance-models`): category defaults, task models, routing shortcuts, reasoning level, recommended models and personal-key provider defaults. It contains no key, no account and no usage.
+minddy Cloud publishes the AI model configuration it runs, always current: [download the recommended configuration](https://www.minddy.app/api/recommended-models?download=1). The file uses the versioned format of **Export** in the admin **Models** tab (`minddy.instance-models`): category defaults, task models, routing shortcuts, reasoning level, recommended models and personal-key provider defaults. It contains no key, no account and no usage.
 
 ## Import it on your instance {#import}
 

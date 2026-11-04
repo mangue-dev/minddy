@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 23,
+  "revision": 24,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-03",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -76,10 +76,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (new keyboard-navigation subsection: skip link, keyboard focus outline and Enter on a focused issue card, checked against components/app-shell.tsx, lib/keyboard-modality.ts, components/issue-card.tsx and lib/keyboard/hover-keys.ts; covered by jsdom tests, not checked in the running app; rest of the article unchanged; no figure added, existing figures do not show this behavior)",
-    "language": "agent:claude-code (en new subsection with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-03"
+    "revision": 24,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "views",
@@ -100,7 +100,7 @@
       "src": "/documentation/en/work-navigation.png",
       "alt": "Project navigation beside the demonstration issue board.",
       "caption": "Use the project sidebar to switch between issues, objectives, pages and triage.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -116,7 +116,7 @@
       "src": "/documentation/en/work-search.png",
       "alt": "Search results for a demonstration issue identifier.",
       "caption": "The palette finds the issue by identifier alongside project pages; opening a result preserves its access rules.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -202,7 +202,7 @@ Text matches and exact identifiers always come first and keep their order. Short
 Search by meaning has these limits:
 
 - The query needs at least two words, or one word of at least six letters. Identifiers such as `MIN-42`, `#42` or `42`, and very short queries, use text search only.
-- It relies on the index that Smart-fill builds from issue titles and descriptions. An issue not indexed yet, or whose author turned off [**Index issues**](/docs/issues#smart-fill-preferences), is found by its words only. Issues in the trash never appear.
+- It relies on the index that Smart Fill builds from issue titles and descriptions. An issue not indexed yet, or whose author turned off [**Index issues**](/docs/issues#smart-fill-preferences), is found by its words only. Issues in the trash never appear.
 - If you turned off **Index issues** in **Account settings** → **Smart Fill** → **Issue indexing**, your searches compare words only. The same applies when your AI budget is exhausted or when the provider does not answer within a few seconds. The text results remain and no error is shown.
 - An `@` query whose text already matches a person, a project or a page is not searched by meaning. In a project with more than 3,000 indexed issues, only the 3,000 most recently indexed are compared; the others are found by their words.
 

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 23,
+  "revision": 24,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (model pickers show the default's model by name instead of App default when that model is in the catalog, and choosing it keeps following the default; checked against components/agent/model-combobox.tsx and components/settings/account-ai-keys-section.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure changed, the diagram does not show picker labels)",
+    "revision": 24,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "date": "2026-11-04"
   },
   "related": [
     "scheduled-routines"
@@ -87,7 +87,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, a provider for each usage, and Numo's provider and model are separate settings.",
       "caption": "Each usage runs on minddy Cloud or a connected provider. Numo's default is saved per provider; a conversation can choose its own provider and model.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -123,7 +123,7 @@
 
 Account AI settings choose the providers, personal keys and defaults used by supported features. Check model routing before starting work, then use the Cloud usage sections to distinguish provider billing, included AI allowance and routine limits.
 
-The **Minddy AI** section of account AI settings configures the API providers used by Numo conversations, routines, automations, voice and feedback. Coding agents you run yourself, connected through minddy MCP, use their own subscription or API account and do not consume Minddy AI usage.
+The **minddy AI** section of account AI settings configures the API providers used by Numo conversations, routines, automations, voice and feedback. Coding agents you run yourself, connected through minddy MCP, use their own subscription or API account and do not consume minddy AI usage.
 
 ## Configure personal AI keys and model defaults {#ai-keys-and-models}
 
@@ -133,13 +133,13 @@ Below, **Numo**, **Automations**, **Voice dictation** and **Feedback** list thei
 
 For Numo's **Conversations**, choose the provider, then a model from that provider. The picker shows the app's default model under its own name, checked while you follow it; choosing it keeps your setting following the app default, so later changes to that default still apply. **App default** appears as an option only when that model is not in the catalog. This default is saved for your account and separately for each provider, across reloads and new sessions. In a conversation, the model list next to the microphone opens on the providers when several are available; choose one to see its models. The conversation keeps that provider and model, and conversations following your default pick up later account changes. Already admitted turns retain their frozen provider and model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or the app's default model. If a conversation's provider is removed, Numo asks you to choose another one instead of switching on its own. Account export/import includes these model preferences, without provider credentials.
 
-An unconfirmed or unreachable key may leave supported general AI calls on managed Minddy usage when managed AI is configured. Your provider bills calls made with its key, and minddy does not record them. Validated personal keys and Minddy-funded work follow the [budget rules below](#consumption).
+An unconfirmed or unreachable key may leave supported general AI calls on managed minddy usage when managed AI is configured. Your provider bills calls made with its key, and minddy does not record them. Validated personal keys and minddy-funded work follow the [budget rules below](#consumption).
 
 ![Connected providers, a provider for each usage, and Numo's provider and model are separate settings.](/documentation/en/ai-providers-and-numo-defaults-flow.svg)
 
 ### Local models {#models}
 
-Minddy calls AI models from the server, so it cannot use a model running on your computer. **Add provider** does not offer local Ollama or OpenAI-compatible endpoints. A local endpoint saved in an earlier version still appears in **Connected providers**, but it cannot serve Numo conversations, routines or other features. Remove it and assign a server-reachable provider instead. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
+minddy calls AI models from the server, so it cannot use a model running on your computer. **Add provider** does not offer local Ollama or OpenAI-compatible endpoints. A local endpoint saved in an earlier version still appears in **Connected providers**, but it cannot serve Numo conversations, routines or other features. Remove it and assign a server-reachable provider instead. Remove a provider with its confirmation control when no longer needed and check the resulting routing before the next run.
 
 
 ## Understand Cloud plans and AI consumption {#plans-and-ai-usage}
@@ -156,7 +156,7 @@ Compatible personal keys bill model calls to their provider instead of included 
 
 ### Plan capacity reference {#plan-capacities}
 
-These defaults describe Minddy 0.20.0. Verify the live pricing page and account before purchasing; configured checkout prices and account overrides can differ. Guests exclude the project owner and include members, readers and pending invitations; there is no per-seat billing. Storage is charged to the owner of the project receiving files. When ownership is transferred, these limits, storage and background AI such as Smart Assign and feedback review use the new owner's plan.
+These defaults describe minddy 0.20.0. Verify the live pricing page and account before purchasing; configured checkout prices and account overrides can differ. Guests exclude the project owner and include members, readers and pending invitations; there is no per-seat billing. Storage is charged to the owner of the project receiving files. When ownership is transferred, these limits, storage and background AI such as Smart Assign and feedback review use the new owner's plan.
 
 | Plan | Projects | Issues per project | Guests per project | Storage | Included monthly AI (USD) |
 | --- | --- | --- | --- | --- | --- |

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
+  "revision": 11,
   "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of personal-statistics-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 11,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/de/personal-statistics-workflow.png",
       "alt": "Profilstatistik mit Kennzahlenleiste, Aktivitätsraster über 12 Monate, Aufschlüsselung nach Projekt und Kategorie sowie Arbeitsrhythmus.",
       "caption": "Echter Verlauf des Demokontos: sechs abgeschlossene Tickets in zwei Projekten, dreißig erstellte Tickets, keine abgehakte Notizbuchaufgabe.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -98,7 +98,7 @@ Die Zeit nach Aufwand ist der Median der verstrichenen Zeit zwischen dem ersten 
 
 ## Wenige oder veränderte Daten einordnen {#statistics-limits}
 
-Ein Konto, das noch kein Ticket erstellt oder abgeschlossen und keine Aufgabe im Aufgabenheft abgehakt hat, sieht statt der Kennzahlen **Noch nichts zu messen** mit der Schaltfläche **Neues Ticket**, oder **Erstelle das erste Projekt**, wenn es kein Projekt gibt, in dem ein Ticket erstellt werden kann. Ein leerer Zeitraum kann bedeuten, dass keine passenden abgeschlossenen Arbeiten oder zu wenige Aktivitäten vorliegen. Daraus folgt nicht, dass dein Konto keine Tickets hat. Änderungen der Aufwandsbezeichnungen, des Umfangs oder der Art der Arbeit können Vergleiche verändern, ohne zu belegen, dass du schneller oder langsamer geworden bist.
+Ein Konto, das noch kein Ticket erstellt oder abgeschlossen und keine Aufgabe im Aufgabenheft abgehakt hat, sieht statt der Kennzahlen **Noch nichts zu messen** mit der Schaltfläche **Neues Ticket**, oder **Das erste Projekt erstellen**, wenn es kein Projekt gibt, in dem ein Ticket erstellt werden kann. Ein leerer Zeitraum kann bedeuten, dass keine passenden abgeschlossenen Arbeiten oder zu wenige Aktivitäten vorliegen. Daraus folgt nicht, dass dein Konto keine Tickets hat. Änderungen der Aufwandsbezeichnungen, des Umfangs oder der Art der Arbeit können Vergleiche verändern, ohne zu belegen, dass du schneller oder langsamer geworden bist.
 
 Numo kann deine Statistik mit seinen nur lesenden Statistikwerkzeugen abrufen und dieselben Zahlen erklären. Auch sein Zugriff auf Planverbrauch und letzte Ausführungen ist nur lesend. Eine Auskunft verändert dein Budget nicht. Öffne bei Fragen zu KI-Kosten die Verbrauchs- und Kontoeinstellungen, statt den Aufwand eines Tickets zu ändern, um eine Messung zu verbergen.
 

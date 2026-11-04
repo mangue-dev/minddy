@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
+  "revision": 25,
   "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -65,10 +65,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate)",
-    "language": "agent:claude-code (de translation of the changed passage, reviewed against en revision 23; agent review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 25,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -89,7 +89,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -119,7 +119,7 @@ Die Zielbeschreibung und ihre Kommentare verwenden denselben Editor wie Projekts
 
 ![Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.](/documentation/de/reader-objectives.png)
 
-Halte auf der Zielseite die Umschalttaste gedrückt und klicke auf Ziele, um mehrere auszuwählen; ein Klick auf eine leere Stelle der Liste hebt die Auswahl auf. **Aktionen** in der schwebenden Leiste oder Command+K unter macOS bzw. Strg+K auf anderen Systemen bietet **Status ändern**, **Verantwortliche Person ändern**, **Farbe ändern** und **In den Papierkorb verschieben**, das vorher eine Bestätigung verlangt. **Numo fragen** öffnet Numo mit allen ausgewählten Zielen im Kontext.
+Halte auf der Zielseite die Umschalttaste gedrückt und klicke auf Ziele, um mehrere auszuwählen; ein Klick auf eine leere Stelle der Liste hebt die Auswahl auf. **Aktionen** in der schwebenden Leiste oder Command+K unter macOS bzw. Strg+K auf anderen Systemen bietet **Status ändern**, **Lead ändern**, **Farbe ändern** und **In den Papierkorb verschieben**, das vorher eine Bestätigung verlangt. **Numo fragen** öffnet Numo mit allen ausgewählten Zielen im Kontext.
 
 ### Den Fortschritt vor dem Abschluss prüfen {#objective-progress}
 

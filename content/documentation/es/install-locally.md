@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 11,
+  "revision": 13,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.1 (release documentation gate)",
     "editions": [
@@ -54,10 +54,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (MIN-847 desktop configuration step checked against scripts/self-hosting-install.mjs and lib/desktop/local-installer.ts); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog review recapture of install-locally-wizard on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.20.1 release documentation gate: Node.js minimum aligned with README and docs/self-hosting.md after MIN-780; release delta v0.20.0..main audited against the manual; no screenshot in scope); agent:claude-code (MIN-781 self-hosting from the desktop app and built-in local installer: source review of components/desktop/server-choice.tsx, components/auth/auth-chrome.tsx, components/auth/desktop-local-sign-in.tsx, desktop/src/main.ts, desktop/src/local-installer.ts, desktop/src/local-toolchain.ts, desktop/src/local-account.ts and the matching lib/desktop modules; no installation run, no screenshot recaptured)",
-    "language": "agent:claude-code (es MIN-847 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es figure update after the catalog review; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es Node.js minimum; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-781 translation on self-hosting from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 13,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/es/install-locally-flow.svg",
       "alt": "Diagrama: La aplicación de escritorio selecciona el clon. Aplicación loopback: puerto 6463. Supabase mínimo y datos duraderos. Salir detiene la aplicación y el backend.",
       "caption": "La aplicación de escritorio controla los servicios locales del clon elegido, cuyos datos se conservan de forma duradera.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/es/install-locally-wizard.png",
       "alt": "Asistente público de instalación con el perfil de este ordenador seleccionado.",
       "caption": "Elige la instalación personal cuando la aplicación de escritorio deba gestionar los servicios locales.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -132,7 +132,7 @@ La aplicación de escritorio incluye un instalador que ejecuta todo el procedimi
 
 1. Abre la aplicación de escritorio. Se inicia en minddy Cloud: el primer inicio abre su pantalla de registro. Haz clic en **Autoalojar minddy**, en la parte inferior de la pantalla de inicio de sesión o de registro. Cuando ya hayas iniciado sesión, abre la misma pantalla con **Connect to a Server…** en el menú nativo minddy (el menú nativo está en inglés; en Windows y Linux, pulsa Alt para mostrar la barra de menús) o desde **Ajustes de cuenta** → **Preferencias** → **Aplicación de escritorio** → **Servidor conectado** → **Cambiar…**.
 2. En **Autoalojar minddy**, elige **Instalar en este equipo**.
-3. En **Requisitos**, la aplicación comprueba Git, Node.js 24, pnpm, Supabase CLI y Docker. Una herramienta que falta muestra **No encontrado; se instalará**, y un Node.js anterior, **Se encontró la versión …; se instalará Node.js 24 para minddy**. Un Docker instalado pero detenido muestra **Instalado pero detenido; se iniciará**. No tienes que instalar nada antes: **Instalar** se encarga. **Comprobar de nuevo** repite la comprobación.
+3. En **Requisitos**, la aplicación comprueba Git, Node.js 24, pnpm, Supabase CLI y Docker. Una herramienta que falta muestra **No encontrado, se instalará**, y un Node.js anterior, **Se encontró la versión …; se instalará Node.js 24 para minddy**. Un Docker instalado pero detenido muestra **Instalado pero detenido, se iniciará**. No tienes que instalar nada antes: **Instalar** se encarga. **Comprobar de nuevo** repite la comprobación.
 4. Revisa la **Carpeta de instalación**. De forma predeterminada es una carpeta `minddy` en tu carpeta personal; **Elegir…** permite seleccionar otra. Si la carpeta elegida ya contiene otros archivos, la aplicación instala minddy en una carpeta `minddy` dentro de ella.
 5. Haz clic en **Instalar**. La aplicación no pide ningún correo: una nota explica que minddy crea tu cuenta en este equipo e inicia sesión por ti.
 6. Mantén la ventana abierta mientras se ejecutan los pasos. Las herramientas que faltan van primero, cada una en su propio paso: **Instalar Git**, **Instalar Node.js 24**, **Instalar pnpm**, **Instalar Supabase CLI** y después **Instalar Docker** o **Iniciar Docker**. **Descargar minddy**, seguido del número de versión, hace un `git clone` superficial de la versión que también usa la guía pública de instalación. **Instalar dependencias** ejecuta `pnpm install --frozen-lockfile`, **Configurar la instancia** convierte tu cuenta local en administradora de la instancia, **Preparar Supabase y compilar la app** ejecuta `pnpm self-host:local -- --no-open --prepare-only` **Iniciar minddy** inicia el entorno local y **Crear tu cuenta local** crea tu cuenta en la instancia. La primera instalación puede tardar varios minutos mientras Docker descarga las imágenes de Supabase y se compila la aplicación.

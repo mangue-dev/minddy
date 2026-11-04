@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 22,
+  "revision": 23,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-02",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
-    "language": "agent:claude-code (en changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 23,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -86,7 +86,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,11 +104,11 @@
 }
 ---
 
-Minddy tracks the work; your own coding agent, such as Claude Code, Codex or Cursor, changes the code. Copy a prompt from the issue, let the agent read and update the issue through minddy MCP, then review the linked pull request in Minddy before merging. Numo does not write code, open branches or run tests.
+minddy tracks the work; your own coding agent, such as Claude Code, Codex or Cursor, changes the code. Copy a prompt from the issue, let the agent read and update the issue through minddy MCP, then review the linked pull request in minddy before merging. Numo does not write code, open branches or run tests.
 
 ## Hand an issue to an external coding agent {#external-coding-agents}
 
-Connect your agent to minddy MCP first so it can read the plan and update its tasks; see [Connect an external assistant to minddy MCP](/docs/minddy-mcp#external-minddy-mcp). The agent runs on your computer or in its own service, with its own subscription or API costs. Minddy does not supply it with repository access.
+Connect your agent to minddy MCP first so it can read the plan and update its tasks; see [Connect an external assistant to minddy MCP](/docs/minddy-mcp#external-minddy-mcp). The agent runs on your computer or in its own service, with its own subscription or API costs. minddy does not supply it with repository access.
 
 1. Open the issue and describe the expected behavior, constraints and acceptance checks. Write or review the plan in its Plan tab when the work has several steps.
 2. Open the issue's actions menu and choose **Copy as prompt**. Choose **Generate a plan** (or **Review the plan** when one exists) to scope the work without coding, **Implement the issue** to start the change, **Verify the implementation** to have the agent review finished work against the plan and comments, or **Custom…** to write your own instruction.
@@ -121,7 +121,7 @@ The prompt contents, branch suggestion and language rules are described in [Copy
 
 ### Keep the work linked to the issue {#link-work}
 
-When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. Minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch. To attach an issue by hand, use **Link an issue** on the pull request: the command palette opens on the project's issues, and the one you choose is linked once you confirm. Its search accepts an identifier or title words, and a description also lists issues of the project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
+When the repository is linked to the project, keep the issue identifier in the branch name, the pull request title or a `Fixes MIN-42` line. minddy then attaches the pull request to the issue, and later prompts tell the agent to continue the open pull request on its branch. To attach an issue by hand, use **Link an issue** on the pull request: the command palette opens on the project's issues, and the one you choose is linked once you confirm. Its search accepts an identifier or title words, and a description also lists issues of the project found [by meaning](/docs/navigation#search-by-meaning) under **Related by meaning**.
 
 From a board, right-click an issue without an open pull request and choose **Link to a pull request** to pick, in the command palette, one of its project's open pull requests, drafts included. The entry appears only when that project has at least one such pull request to link to. With several issues selected, **Actions** offers the same choice for the whole selection, and **Link the other issues to #N** when some of them already have pull request N; right-clicking one of the selected issues offers **Link the other issues to #N** too. **Link to a pull request** is not offered once a selected issue has any linked pull request; **Unlink N issues from their pull requests** removes every link of the selection first, after you confirm. Links show on the cards immediately, and each card moves at once to the status its pull request implies, such as **In review** for an open pull request; a refused link is put back when the board refreshes. A card with an open pull request shows its number, coloured by state, and its merge readiness, the same indicator as on **Code review**; when auto-merge is on, its tooltip adds **Auto-merge** after the state. Hover the number, or the pull request chip at the top of the issue panel, to see the pull request's repository, state and title and, while it is open or a draft, where its checks stand. Click the card to open the pull request.
 
@@ -139,7 +139,7 @@ In a description, a comment or the diff of an image, click an image to open it a
 
 Mention `@numo` in a pull request comment to ask Numo for a read-only review in a conversation. It reads the pull request and answers; it does not push commits. A mention written on the forge counts only when its author is linked to the owner or a Member (not a reader) of a project that links the repository, and its usage is charged to that project's owner.
 
-What people write on a linked pull request or merge request also appears in the comments of each issue it is linked to: conversation comments, the message of a submitted review, and comments on the code with the file, line and, on GitHub, the excerpt they refer to, replies grouped under them. Bot comments stay on the pull request, except comments on the code. An edit updates the copy, and a comment deleted on GitHub shows as deleted; GitLab does not report deletions. Whenever a pull request gets linked to an issue, by hand or because its branch, title or description names the issue, the comments it already has are brought in with the date they were written, even when that is before the issue existed. Reply under one of these comments to answer on the pull request with your own Git account, as in the pull request view; a code conversation also shows **Resolved** or **Outdated** and offers **Resolve** or **Reopen**. The copies themselves cannot be edited in Minddy.
+What people write on a linked pull request or merge request also appears in the comments of each issue it is linked to: conversation comments, the message of a submitted review, and comments on the code with the file, line and, on GitHub, the excerpt they refer to, replies grouped under them. Bot comments stay on the pull request, except comments on the code. An edit updates the copy, and a comment deleted on GitHub shows as deleted; GitLab does not report deletions. Whenever a pull request gets linked to an issue, by hand or because its branch, title or description names the issue, the comments it already has are brought in with the date they were written, even when that is before the issue existed. Reply under one of these comments to answer on the pull request with your own Git account, as in the pull request view; a code conversation also shows **Resolved** or **Outdated** and offers **Resolve** or **Reopen**. The copies themselves cannot be edited in minddy.
 
 ![Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.](/documentation/en/review-pull-requests-workflow.png)
 

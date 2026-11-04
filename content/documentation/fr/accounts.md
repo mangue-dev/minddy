@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
+  "revision": 20,
   "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -74,8 +74,8 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected fr catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "revision": 20,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected fr catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured)",
     "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (fr MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (fr MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-01"
   },
@@ -109,7 +109,7 @@
       "src": "/documentation/fr/account-security-workflow.png",
       "alt": "Carte de double authentification avec le bouton Activer.",
       "caption": "Commencez ici, puis vérifiez l’authentificateur et conservez les codes de récupération à l’abri.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -124,9 +124,9 @@
       "id": "profile-and-preferences-workflow",
       "kind": "screenshot",
       "src": "/documentation/fr/profile-and-preferences-workflow.png",
-      "alt": "En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse email en lecture seule.",
-      "caption": "Sélectionnez l’avatar pour en générer ou en importer un, ou le nom pour le changer ; l’adresse email reste en lecture seule.",
-      "revision": 19,
+      "alt": "En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse e-mail en lecture seule.",
+      "caption": "Sélectionnez l’avatar pour en générer ou en importer un, ou le nom pour le changer ; l’adresse e-mail reste en lecture seule.",
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -143,7 +143,7 @@
       "src": "/documentation/fr/profile-and-preferences-preferences-workflow.png",
       "alt": "Sélecteur de langue, commandes des thèmes clair, sombre et système, sélecteurs de palette des modes clair et sombre et interrupteur de transparence.",
       "caption": "La langue du compte et celle du site public se règlent séparément.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/fr/privacy-and-account-deletion-workflow.png",
       "alt": "Aperçu de suppression listant les projets possédés, les tickets et les membres privés d’accès.",
       "caption": "Lisez l’aperçu et exportez les données à conserver avant d’ouvrir la confirmation de suppression.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -243,11 +243,11 @@ Si aucun facteur ni code de récupération n’est disponible, contactez l’op�
 
 ## Modifier son profil et ses préférences {#profile-and-preferences}
 
-Choisissez **Paramètres du compte** dans le menu du compte, le menu mobile ou la palette de commandes, ou appuyez sur Commande+virgule sur macOS (Ctrl+virgule sur Windows/Linux) : les paramètres du compte s’ouvrent sur l’onglet **Préférences**. Pour ouvrir directement l’onglet **Profil**, choisissez votre nom en haut du menu du compte ; vous pouvez aussi sélectionner **Profil** parmi les onglets des paramètres. Il affiche votre avatar, votre nom et votre adresse email, suivis de vos [statistiques personnelles](/docs/personal-statistics). Sélectionnez votre avatar, puis choisissez **Nouvel avatar Lorelei** ou **Importer une image** ; le changement s’applique dès qu’il réussit. Sélectionnez votre nom pour le changer : sur ordinateur, il devient un champ, qu’Entrée ou un clic ailleurs enregistre et qu’Échap annule ; sur téléphone, il ouvre un panneau avec **Nom d'utilisateur** et **Enregistrer**. Le nom ne peut pas être vide. L’adresse email est en lecture seule. Attendez le résultat et vérifiez l’avatar dans un commentaire ou une liste de membres ; il suit le compte entre projets et conversations. Si un fichier est refusé, suivez le message de validation plutôt que de le renvoyer à répétition.
+Choisissez **Paramètres du compte** dans le menu du compte, le menu mobile ou la palette de commandes, ou appuyez sur Commande+virgule sur macOS (Ctrl+virgule sur Windows/Linux) : les paramètres du compte s’ouvrent sur l’onglet **Préférences**. Pour ouvrir directement l’onglet **Profil**, choisissez votre nom en haut du menu du compte ; vous pouvez aussi sélectionner **Profil** parmi les onglets des paramètres. Il affiche votre avatar, votre nom et votre adresse e-mail, suivis de vos [statistiques personnelles](/docs/personal-statistics). Sélectionnez votre avatar, puis choisissez **Nouvel avatar Lorelei** ou **Importer une image** ; le changement s’applique dès qu’il réussit. Sélectionnez votre nom pour le changer : sur ordinateur, il devient un champ, qu’Entrée ou un clic ailleurs enregistre et qu’Échap annule ; sur téléphone, il ouvre un panneau avec **Nom d'utilisateur** et **Enregistrer**. Le nom ne peut pas être vide. L’adresse e-mail est en lecture seule. Attendez le résultat et vérifiez l’avatar dans un commentaire ou une liste de membres ; il suit le compte entre projets et conversations. Si un fichier est refusé, suivez le message de validation plutôt que de le renvoyer à répétition.
 
 L’image source ne doit pas dépasser 10 MiB. Le serveur vérifie les octets lisibles, applique l’orientation et recadre au centre en avatar WebP de 256 × 256.
 
-![En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse email en lecture seule.](/documentation/fr/profile-and-preferences-workflow.png)
+![En-tête du profil avec l’avatar et son badge de modification, le nom et l’adresse e-mail en lecture seule.](/documentation/fr/profile-and-preferences-workflow.png)
 
 ### Choisir le comportement de l’interface {#preferences}
 
@@ -273,7 +273,7 @@ Le consentement est distinct des données nécessaires au fonctionnement du comp
 
 Avant de supprimer le compte, exportez les données à conserver depuis l’onglet **Confidentialité et données**. Lisez l’aperçu des projets dont vous êtes propriétaire, des membres affectés, des tickets, des commentaires et de l’abonnement actif. Les conséquences sur les projets possédés touchent d’autres personnes ; réglez ces questions avant de confirmer.
 
-Ouvrez la confirmation de suppression seulement lorsque vous êtes prêt. Saisissez l’email du compte et, pour un compte avec mot de passe, ce mot de passe. Les comptes sans mot de passe exigent une connexion récente. Suivez les indications d’un refus d’authentification récente plutôt que de réessayer à l’aveugle. Une suppression réussie déconnecte le compte et revient au site public. Ce n’est pas une corbeille récupérable. Gardez les exports privés et traitez les questions restantes d’abonnement ou de fournisseur dans les contrôles de facturation et de service correspondants.
+Ouvrez la confirmation de suppression seulement lorsque vous êtes prêt. Saisissez l’e-mail du compte et, pour un compte avec mot de passe, ce mot de passe. Les comptes sans mot de passe exigent une connexion récente. Suivez les indications d’un refus d’authentification récente plutôt que de réessayer à l’aveugle. Une suppression réussie déconnecte le compte et revient au site public. Ce n’est pas une corbeille récupérable. Gardez les exports privés et traitez les questions restantes d’abonnement ou de fournisseur dans les contrôles de facturation et de service correspondants.
 
 
 ## Configurer les routines {#routines}

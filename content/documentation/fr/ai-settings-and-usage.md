@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 23,
+  "revision": 24,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (model pickers show the default's model by name instead of App default when that model is in the catalog, and choosing it keeps following the default; checked against components/agent/model-combobox.tsx and components/settings/account-ai-keys-section.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure changed, the diagram does not show picker labels)",
+    "revision": 24,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
     "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "date": "2026-11-04"
   },
   "related": [
     "scheduled-routines"
@@ -87,7 +87,7 @@
       "src": "/documentation/fr/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Les fournisseurs connectés, un fournisseur par usage, ainsi que le fournisseur et le modèle de Numo sont des réglages distincts.",
       "caption": "Chaque usage passe par minddy Cloud ou un fournisseur connecté. Le défaut de Numo est enregistré par fournisseur ; une conversation peut choisir son propre fournisseur et son modèle.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -123,7 +123,7 @@
 
 Les réglages IA du compte définissent les fournisseurs, les clés personnelles et les valeurs par défaut des fonctionnalités prises en charge. Vérifiez le routage des modèles avant de commencer, puis consultez les sections sur la consommation Cloud pour distinguer la facturation du fournisseur, le budget IA inclus et les limites des routines.
 
-La section **IA de Minddy** des paramètres IA du compte configure les fournisseurs API utilisés par les conversations Numo, les routines, les automatisations, la voix et le feedback. Les agents de code que vous exécutez vous-même, connectés via le MCP minddy, utilisent leur propre abonnement ou compte API et ne consomment pas l’usage IA de Minddy.
+La section **IA de minddy** des paramètres IA du compte configure les fournisseurs API utilisés par les conversations Numo, les routines, les automatisations, la voix et le feedback. Les agents de code que vous exécutez vous-même, connectés via le MCP minddy, utilisent leur propre abonnement ou compte API et ne consomment pas l’usage IA de minddy.
 
 ## Configurer ses clés IA et modèles {#ai-keys-and-models}
 
@@ -133,13 +133,13 @@ Plus bas, **Numo**, **Automatisations**, **Dictée vocale** et **Retours** liste
 
 Pour les **Conversations** de Numo, choisissez le fournisseur, puis un modèle de ce fournisseur. Le sélecteur affiche le modèle par défaut de l’app sous son propre nom, coché tant que vous le suivez ; le choisir garde votre réglage aligné sur le défaut de l’app, dont les changements ultérieurs s’appliquent donc encore. **Par défaut de l’app** n’apparaît comme option que si ce modèle ne figure pas au catalogue. Ce défaut est enregistré pour votre compte et séparément pour chaque fournisseur, entre les rechargements et les nouvelles sessions. Dans une conversation, la liste des modèles à côté du micro s’ouvre sur les fournisseurs lorsque plusieurs sont disponibles ; choisissez-en un pour voir ses modèles. La conversation garde ce fournisseur et ce modèle, et les conversations qui suivent votre défaut reprennent les changements ultérieurs du compte. Les tours déjà admis conservent leur fournisseur et leur modèle figés. Un modèle enregistré devenu indisponible ou supérieur à votre forfait est refusé : choisissez un autre modèle ou le modèle par défaut de l’app. Si le fournisseur d’une conversation est retiré, Numo vous demande d’en choisir un autre au lieu d’en changer seul. L’export et l’import du compte incluent ces préférences de modèle, sans les identifiants des fournisseurs.
 
-Une clé non confirmée ou inaccessible peut laisser les appels IA généraux compatibles sur le quota Minddy lorsque l’IA gérée est configurée. Votre fournisseur facture les appels effectués avec sa clé, et minddy ne les enregistre pas. Les clés personnelles validées et le travail financé par Minddy suivent les [règles de budget ci-dessous](#consumption).
+Une clé non confirmée ou inaccessible peut laisser les appels IA généraux compatibles sur le quota minddy lorsque l’IA gérée est configurée. Votre fournisseur facture les appels effectués avec sa clé, et minddy ne les enregistre pas. Les clés personnelles validées et le travail financé par minddy suivent les [règles de budget ci-dessous](#consumption).
 
 ![Les fournisseurs connectés, un fournisseur par usage, ainsi que le fournisseur et le modèle de Numo sont des réglages distincts.](/documentation/fr/ai-providers-and-numo-defaults-flow.svg)
 
 ### Modèles locaux {#models}
 
-Minddy appelle les modèles d’IA depuis le serveur : il ne peut donc pas utiliser un modèle qui tourne sur votre ordinateur. **Ajouter un fournisseur** ne propose pas d’Ollama local ni d’endpoint local compatible OpenAI. Un endpoint local enregistré dans une version précédente reste affiché dans **Fournisseurs connectés**, mais il ne peut servir ni les conversations Numo, ni les routines, ni les autres fonctions. Retirez-le et assignez à la place un fournisseur joignable depuis le serveur. Retirez un fournisseur devenu inutile avec son contrôle de confirmation et vérifiez le routage obtenu avant la prochaine exécution.
+minddy appelle les modèles d’IA depuis le serveur : il ne peut donc pas utiliser un modèle qui tourne sur votre ordinateur. **Ajouter un fournisseur** ne propose pas d’Ollama local ni d’endpoint local compatible OpenAI. Un endpoint local enregistré dans une version précédente reste affiché dans **Fournisseurs connectés**, mais il ne peut servir ni les conversations Numo, ni les routines, ni les autres fonctions. Retirez-le et assignez à la place un fournisseur joignable depuis le serveur. Retirez un fournisseur devenu inutile avec son contrôle de confirmation et vérifiez le routage obtenu avant la prochaine exécution.
 
 
 ## Comprendre forfaits Cloud et consommation IA {#plans-and-ai-usage}
@@ -156,7 +156,7 @@ Les clés personnelles compatibles font facturer les appels aux modèles par leu
 
 ### Capacités des formules {#plan-capacities}
 
-Ces valeurs par défaut décrivent Minddy 0.20.0. Vérifiez la page de prix et le compte réels avant d’acheter ; les prix configurés au paiement et les dérogations du compte peuvent différer. Le nombre d’invités exclut le propriétaire du projet et inclut les membres, les lecteurs et les invitations en attente ; il n’y a pas de facturation par siège. Le stockage est imputé au propriétaire du projet qui reçoit les fichiers. Lorsque la propriété est transférée, ces limites, le stockage et l’IA de fond comme Smart Assign et la relecture des retours reposent sur l’offre du nouveau propriétaire.
+Ces valeurs par défaut décrivent minddy 0.20.0. Vérifiez la page de prix et le compte réels avant d’acheter ; les prix configurés au paiement et les dérogations du compte peuvent différer. Le nombre d’invités exclut le propriétaire du projet et inclut les membres, les lecteurs et les invitations en attente ; il n’y a pas de facturation par siège. Le stockage est imputé au propriétaire du projet qui reçoit les fichiers. Lorsque la propriété est transférée, ces limites, le stockage et l’IA de fond comme Smart Assign et la relecture des retours reposent sur l’offre du nouveau propriétaire.
 
 | Plan | Projets | Tickets par projet | Invités par projet | Stockage | IA mensuelle incluse (USD) |
 | --- | --- | --- | --- | --- | --- |

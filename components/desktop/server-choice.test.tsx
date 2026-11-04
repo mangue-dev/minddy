@@ -137,7 +137,7 @@ describe("DesktopServerChoice", () => {
     state.bridge = { serverChoice: bridge, openExternal: vi.fn() };
     await render();
     await click(messages.DesktopWelcome.installTitle);
-    expect(container.textContent).toContain("Version 22.12.0 found; Node.js 24 will be installed for minddy");
+    expect(container.textContent).toContain("Version 22.12.0 found. Node.js 24 will be installed for minddy");
     expect(container.textContent).toContain(messages.DesktopWelcome.requirementWillInstall);
     expect(container.textContent).toContain(messages.DesktopWelcome.requirementWillStart);
     expect(container.textContent).not.toContain("Download");

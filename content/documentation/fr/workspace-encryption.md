@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
+  "revision": 9,
   "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-25",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -37,8 +37,8 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the local paragraph now distinguishes the desktop app's built-in installer, which keeps the default, from a clone you prepare yourself; no installation run, no screenshot recaptured, existing figures carried forward unchanged)",
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the local paragraph now distinguishes the desktop app's built-in installer, which keeps the default, from a clone you prepare yourself; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured)",
     "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-25"
   },
@@ -57,7 +57,7 @@
       "src": "/documentation/fr/workspace-encryption-flow.svg",
       "alt": "Schéma: Racine dédiée hors de PostgreSQL. Clés projet, utilisateur et système enveloppées. Déchiffrement autorisé sur le serveur. Restauration base + Storage + mêmes clés.",
       "caption": "Restaurer du contenu chiffré exige les données et les clés correspondantes, dont la racine conservée hors de la base.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -109,4 +109,4 @@ Une configuration existante sans flag reste désactivée jusqu’à modification
 
 ## Préserver la récupération {#recovery}
 
-Le serveur déchiffre pour les utilisateurs autorisés et l’IA : il s’agit d’un chiffrement au repos, pas d’un secret de bout en bout face à l’opérateur. Emails de connexion et métadonnées de routage restent lisibles ; fournisseurs externes et exports nécessitent leur propre protection. Gardez racines actuelles et anciennes pour les sauvegardes retenues. Chiffrez et contrôlez l’accès à une sauvegarde contenant configuration et données. Répétez une restauration base plus Storage avec clés correspondantes. Changer de racine impose un réenveloppement hors ligne protégé, applications arrêtées ; remplacer simplement la variable rend le contenu illisible.
+Le serveur déchiffre pour les utilisateurs autorisés et l’IA : il s’agit d’un chiffrement au repos, pas d’un secret de bout en bout face à l’opérateur. E-mails de connexion et métadonnées de routage restent lisibles ; fournisseurs externes et exports nécessitent leur propre protection. Gardez racines actuelles et anciennes pour les sauvegardes retenues. Chiffrez et contrôlez l’accès à une sauvegarde contenant configuration et données. Répétez une restauration base plus Storage avec clés correspondantes. Changer de racine impose un réenveloppement hors ligne protégé, applications arrêtées ; remplacer simplement la variable rend le contenu illisible.

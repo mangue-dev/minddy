@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration; MIN-847 instance variables",
     "editions": [
@@ -58,10 +58,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:claude-code (per-task model pickers show the category's model by name instead of Default model when that model is in the catalog, and choosing it makes the task follow the category again; checked against components/agent/model-combobox.tsx and components/admin/admin-models-dashboard.tsx; not checked in the running app; no figure recaptured, the Models figure may show the former picker wording); agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 14,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +79,7 @@
       "src": "/documentation/en/instance-administration-overview.png",
       "alt": "Accounts tab with the number of accounts and the exact-email account lookup.",
       "caption": "Accounts shows the number of accounts and the support lookup; this capture comes from a demonstration instance.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/en/instance-administration-models.png",
       "alt": "Models tab with one default model per category and folded per-task models.",
       "caption": "Models shows one default per category; per-task models stay folded. No model or provider setting was changed for this capture.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/en/instance-administration-instance.png",
       "alt": "Instance tab with each variable's source, a masked OpenRouter key set here and the administrator addresses from the file.",
       "caption": "Instance shows where each value comes from; secrets keep only their last characters. This capture comes from a disposable local self-hosted instance.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -166,7 +166,7 @@ In a Numo conversation started from an administrator session, Numo can read the 
 
 ## Edit the instance variables {#instance-variables}
 
-On a self-hosted instance whose environment file sets `MINDDY_CONFIG_OVERRIDES=1`, the **Instance** tab changes some of its variables without editing the file: the OpenRouter key, the administrator addresses, the email provider and senders, your own GitHub and GitLab apps, analytics, the instance name and contact address, and the publication of the model configuration. The installation guide asks whether to allow it, and the desktop app turns it on for the instance it installs on your computer. Only the file turns it on or off; Minddy Cloud never offers it.
+On a self-hosted instance whose environment file sets `MINDDY_CONFIG_OVERRIDES=1`, the **Instance** tab changes some of its variables without editing the file: the OpenRouter key, the administrator addresses, the email provider and senders, your own GitHub and GitLab apps, analytics, the instance name and contact address, and the publication of the model configuration. The installation guide asks whether to allow it, and the desktop app turns it on for the instance it installs on your computer. Only the file turns it on or off; minddy Cloud never offers it.
 
 ![Instance tab with each variable's source, a masked OpenRouter key set here and the administrator addresses from the file.](/documentation/en/instance-administration-instance.png)
 
@@ -180,7 +180,7 @@ Under **Models**, **Automations**, **Decision model** sets the one decision mode
 
 New decisions use the saved model within about a minute on every server process. When the model fails or answers below the confidence threshold, the decision falls back to the feature’s own LLM model, as before. The threshold was calibrated on Jev and other decision models spread their confidence differently, so review agreement per model in the `ai_decision_evaluations_weekly` database view after a change. Usage rows record the model that answered.
 
-**Smart-fill titles**, under **Models**, **Automations**, **Per-task models**, chooses the model that writes the title of an issue created without one, and rewrites it on a re-evaluation. It is a writing task, not a decision: the decision model never answers it. The default is `deepseek/deepseek-v4-flash`; someone is waiting for the issue, so pick a fast model.
+**Smart Fill titles**, under **Models**, **Automations**, **Per-task models**, chooses the model that writes the title of an issue created without one, and rewrites it on a re-evaluation. It is a writing task, not a decision: the decision model never answers it. The default is `deepseek/deepseek-v4-flash`; someone is waiting for the issue, so pick a fast model.
 
 ## Configure Smart Fill relations {#smart-fill-relations}
 

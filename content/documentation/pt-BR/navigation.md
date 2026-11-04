@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-03",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -76,10 +76,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (new keyboard-navigation subsection: skip link, keyboard focus outline and Enter on a focused issue card, checked against components/app-shell.tsx, lib/keyboard-modality.ts, components/issue-card.tsx and lib/keyboard/hover-keys.ts; covered by jsdom tests, not checked in the running app; rest of the article unchanged; no figure added, existing figures do not show this behavior)",
-    "language": "agent:claude-code (pt-BR new subsection translated from en with the locale's catalog labels and article terms; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-03"
+    "revision": 25,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "views",
@@ -100,7 +100,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -157,7 +157,7 @@ Clique com o botão direito em uma linha da barra lateral para agir sobre o que 
 - Uma aba de projeto oferece sua própria criação: **Novo ticket** em Tickets, **Novo objetivo** em Objetivos, **Nova página** em Páginas e **Novo feedback** em Feedback, que abre o formulário interno de feedback.
 - Uma linha de triagem oferece **Aceitar**, **Recusar** e **Marcar como duplicado…**, que pedem a mesma confirmação ou o mesmo seletor do painel de triagem, depois **Prioridade**, **Esforço**, **Responsável**, **Categorias** e **Objetivo**, a cópia do identificador e **Mover para a lixeira**. Um leitor só pode copiar o identificador. Veja [Analisar trabalho recebido na triagem](/docs/issues#triage-incoming-work).
 - Uma linha de objetivo oferece **Status**, **Responsável** e **Cor**, **Novo ticket** nesse objetivo, **Visualizar tickets** no quadro do projeto e **Mover para a lixeira**. Um leitor vê apenas **Visualizar tickets**.
-- Uma linha de feedback oferece **Status**, a menos que um ticket vinculado o defina, **Objetivo**, **Categorias**, **Visibilidade** quando o quadro público está ativado, **Publicar** enquanto a revisão da IA a retém, **Link para um ticket existente**, **Mesclar em…** quando outra solicitação pode recebê-la, e **Mover para a lixeira**. As propriedades mudam pela própria linha; as outras ações abrem a solicitação e pedem a mesma confirmação do painel dela.
+- Uma linha de feedback oferece **Status**, a menos que um ticket vinculado o defina, **Objetivo**, **Categorias**, **Visibilidade** quando o quadro público está ativado, **Publicar** enquanto a revisão da IA a retém, **Vincular a um ticket existente**, **Mesclar em…** quando outra solicitação pode recebê-la, e **Mover para a lixeira**. As propriedades mudam pela própria linha; as outras ações abrem a solicitação e pedem a mesma confirmação do painel dela.
 - Uma linha de rotina oferece **Abrir a última execução** e, ao proprietário do projeto, **Executar agora**, **Pausar** ou **Retomar**, **Editar** e **Mover para a lixeira**. Veja [Gerenciar e verificar execuções](/pt-br/documentacao/scheduled-routines#runs).
 - Uma linha de pull request oferece as mudanças que o estado atual permite, **Mesclar** quando ela está pronta e ações de correção quando algo a bloqueia. Veja [Revisão e mesclagem](/pt-br/documentacao/code-work#decision).
 
@@ -193,18 +193,18 @@ Use a ajuda de atalhos de teclado para consultar os comandos disponíveis na sua
 
 ### Ordem dos tickets na busca {#issue-search-order}
 
-Toda busca de tickets lista os tickets na mesma ordem: a paleta, as menções `@`, os seletores de relações, duplicados e pull requests, a janela **Link para um ticket existente** dos feedbacks e a busca usada pelo Numo e pelos agentes MCP. Tickets **Em andamento** e **Em revisão** vêm primeiro, depois os de **Backlog** e **A fazer**. Tickets em **Triagem**, **Concluído**, **Cancelado** e **Duplicado** sempre vêm por último e continuam selecionáveis. Dentro de cada grupo, a melhor correspondência de texto vem primeiro. Um identificador digitado por inteiro, como `MIN-42`, coloca esse ticket no topo, seja qual for o status.
+Toda busca de tickets lista os tickets na mesma ordem: a paleta, as menções `@`, os seletores de relações, duplicados e pull requests, a janela **Vincular a um ticket existente** dos feedbacks e a busca usada pelo Numo e pelos agentes MCP. Tickets **Em andamento** e **Em revisão** vêm primeiro, depois os de **Backlog** e **A fazer**. Tickets em **Triagem**, **Concluído**, **Cancelado** e **Duplicado** sempre vêm por último e continuam selecionáveis. Dentro de cada grupo, a melhor correspondência de texto vem primeiro. Um identificador digitado por inteiro, como `MIN-42`, coloca esse ticket no topo, seja qual for o status.
 
 ### Buscar tickets pelo sentido {#search-by-meaning}
 
-Quando uma busca descreve o trabalho em vez de nomeá-lo, a busca de tickets também encontra tickets de sentido próximo, mesmo que usem outras palavras. Por exemplo, “o login falha depois de redefinir a senha” pode encontrar um ticket intitulado “Sessão perdida ao trocar a senha”. Isso vale para a paleta de comandos, as menções `@` em descrições, páginas, comentários e no compositor do Numo, os seletores de relação, **Marcar como duplicado…** na triagem, **Vincular um ticket** em um pull request, o menu **Adicionar contexto** → **Ticket** do Numo e **Link para um ticket existente** no feedback.
+Quando uma busca descreve o trabalho em vez de nomeá-lo, a busca de tickets também encontra tickets de sentido próximo, mesmo que usem outras palavras. Por exemplo, “o login falha depois de redefinir a senha” pode encontrar um ticket intitulado “Sessão perdida ao trocar a senha”. Isso vale para a paleta de comandos, as menções `@` em descrições, páginas, comentários e no compositor do Numo, os seletores de relação, **Marcar como duplicado…** na triagem, **Vincular um ticket** em um pull request, o menu **Adicionar contexto** → **Ticket** do Numo e **Vincular a um ticket existente** no feedback.
 
 Correspondências de texto e identificadores exatos sempre vêm primeiro e mantêm a ordem. Pouco depois que você para de digitar, no máximo cinco tickets encontrados pelo sentido são adicionados depois deles, em **Relacionados pelo sentido**. Enquanto eles não chegam, uma linha **Buscando pelo sentido…** indica que a busca ainda está em andamento (na paleta de comandos, só quando nenhum resultado de texto corresponde). Se nenhum for encontrado, ela mostra **Nenhum ticket relacionado pelo sentido**; um menu `@` sem correspondência de texto fecha em vez disso. Um ticket já listado não se repete, e a linha destacada não se move. Cada seletor mantém as próprias regras, então só aparecem tickets que ele já podia oferecer: um seletor de relação, por exemplo, continua oferecendo apenas tickets do mesmo projeto que ainda não estão vinculados. A paleta de comandos busca nos projetos que você pode ler, até os 25 atualizados mais recentemente; as ações de seleção em massa dela não usam a busca pelo sentido.
 
 A busca pelo sentido tem estes limites:
 
 - A busca precisa de pelo menos duas palavras, ou de uma palavra com pelo menos seis letras. Identificadores como `MIN-42`, `#42` ou `42`, e buscas muito curtas, usam apenas a busca por texto.
-- Ela se apoia no índice que o Preenchimento inteligente monta a partir do título e da descrição dos tickets. Um ticket ainda não indexado, ou cujo autor desligou [**Indexar tickets**](/docs/issues#smart-fill-preferences), só é encontrado pelas palavras. Tickets na lixeira nunca aparecem.
+- Ela se apoia no índice que o Smart Fill monta a partir do título e da descrição dos tickets. Um ticket ainda não indexado, ou cujo autor desligou [**Indexar tickets**](/docs/issues#smart-fill-preferences), só é encontrado pelas palavras. Tickets na lixeira nunca aparecem.
 - Se você desligou **Indexar tickets** em **Configurações da conta** → **Smart Fill** → **Indexação de tickets**, suas buscas comparam apenas palavras. O mesmo acontece quando seu orçamento de IA acabou ou quando o provedor não responde em poucos segundos. Os resultados de texto permanecem e nenhum erro é exibido.
 - Uma busca `@` cujo texto já corresponde a uma pessoa, um projeto ou uma página não é buscada pelo sentido. Em um projeto com mais de 3.000 tickets indexados, só os 3.000 indexados mais recentemente são comparados; os outros são encontrados pelas palavras.
 
