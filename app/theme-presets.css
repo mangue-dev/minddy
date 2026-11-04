@@ -576,7 +576,7 @@ html.dark[data-theme-dark="high-contrast-dark"] {
   [role="tab"][aria-selected="true"],
   [aria-pressed="true"],
   [role="option"][aria-selected="true"],
-  [data-slot="command-item"][data-selected="true"],
+  [data-slot="command-item"][data-selected="true"]:not(:where(html[data-app-layout="mobile"] *)),
   [data-highlighted],
   [data-slot="select-item"]:focus,
   [role="menuitem"]:focus,

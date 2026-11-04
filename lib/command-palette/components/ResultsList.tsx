@@ -51,6 +51,11 @@ export interface ResultsListProps {
   height?: number;
   /** Whether we're on mobile. */
   isMobile?: boolean;
+  /**
+   * Paint the keyboard's active row. Off in the mobile layout, which has no
+   * keyboard to move it: a lit row read as an option already chosen (MIN-896).
+   */
+  highlightActive?: boolean;
   /** Touch handlers for mobile gestures. */
   getTouchHandlers?: (item: PaletteItem) => {
     onTouchStart?: (e: React.TouchEvent) => void;
@@ -191,6 +196,7 @@ interface RowData {
   hasActions: (item: PaletteItem) => boolean;
   onHoverPrefetch?: (item: PaletteItem) => void;
   isMobile: boolean;
+  highlightActive: boolean;
   getTouchHandlers?: ResultsListProps["getTouchHandlers"];
 }
 
@@ -204,6 +210,7 @@ function Row({
   hasActions,
   onHoverPrefetch,
   isMobile,
+  highlightActive,
   getTouchHandlers,
 }: RowComponentProps<RowData>): ReactElement {
   const row = rows[index];
@@ -223,7 +230,7 @@ function Row({
     );
   }
 
-  const isActive = row.globalIndex === activeIndex;
+  const isActive = highlightActive && row.globalIndex === activeIndex;
 
   return (
     <div
@@ -310,6 +317,7 @@ export function ResultsList({
   emptyState,
   height,
   isMobile = false,
+  highlightActive = true,
   getTouchHandlers,
 }: ResultsListProps) {
   const { t } = usePaletteConfig();
@@ -417,6 +425,7 @@ export function ResultsList({
           hasActions,
           onHoverPrefetch,
           isMobile,
+          highlightActive,
           getTouchHandlers,
         }}
         className={styles.list}

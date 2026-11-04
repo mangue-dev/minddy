@@ -12,17 +12,36 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
+import { attachSheetSwipeDismiss } from "@/lib/sheet-swipe-dismiss";
+import { useOverlayState } from "./overlay-freeze";
+import { useMergedRef } from "./menu-scroll-fade";
 
 /** Shared mobile chrome; custom dismissal guards still own onOpenChange. */
-export function MobileSheetContent({ children, className, onOpenAutoFocus, showCloseButton = true, ...props }: React.ComponentProps<typeof SheetContent>) {
+export function MobileSheetContent({ children, className, onOpenAutoFocus, showCloseButton = true, ref, ...props }: React.ComponentProps<typeof SheetContent>) {
   const mobile = useMobileLayout() === true;
-  return <SheetContent {...props} showCloseButton={mobile ? false : showCloseButton}
+  const swipeRef = useSwipeToDismiss(mobile);
+  const mergedRef = useMergedRef(ref, swipeRef);
+  return <SheetContent {...props} ref={mergedRef} showCloseButton={mobile ? false : showCloseButton}
     onOpenAutoFocus={(event) => { onOpenAutoFocus?.(event); if (mobile) focusMobileSheet(event); }}
     data-mobile-sheet={mobile ? "" : undefined}
     className={cn(mobile && "mobile-bottom-sheet", className)}>
     {children}
     {mobile && showCloseButton && <MobileSheetClose />}
   </SheetContent>;
+}
+
+/** A mobile sheet swiped down closes like its close button (lib/sheet-swipe-dismiss.ts). */
+function useSwipeToDismiss(enabled: boolean): React.RefCallback<HTMLDivElement> {
+  const [node, setNode] = React.useState<HTMLDivElement | null>(null);
+  const onOpenChange = useOverlayState()?.onOpenChange;
+  const close = React.useRef(onOpenChange);
+  React.useEffect(() => { close.current = onOpenChange; }, [onOpenChange]);
+  const active = enabled && onOpenChange !== undefined;
+  React.useEffect(() => {
+    if (!node || !active) return;
+    return attachSheetSwipeDismiss(node, () => close.current?.(false));
+  }, [node, active]);
+  return setNode;
 }
 
 export function MobileSheetClose() {
