@@ -1,0 +1,91 @@
+{
+  "version": "0.30.1",
+  "layout": "compact",
+  "copy": {
+    "en": {
+      "title": "0.30 on Windows",
+      "summary": "The Windows app moves to the 0.30 release. Its build failed in 0.30.0, so Windows users stayed on 0.20.1 until now."
+    },
+    "fr": {
+      "title": "La 0.30 sur Windows",
+      "summary": "L’application Windows passe à la version 0.30. Sa compilation avait échoué en 0.30.0 : les utilisateurs de Windows étaient restés en 0.20.1 jusqu’ici."
+    },
+    "de": {
+      "title": "0.30 unter Windows",
+      "summary": "Die Windows-App wechselt auf Version 0.30. Ihr Build war bei 0.30.0 fehlgeschlagen, daher blieb Windows bisher auf 0.20.1."
+    },
+    "pt-BR": {
+      "title": "A 0.30 no Windows",
+      "summary": "O aplicativo para Windows passa para a versão 0.30. A compilação dele tinha falhado na 0.30.0, então quem usa Windows continuou na 0.20.1 até agora."
+    },
+    "it": {
+      "title": "La 0.30 su Windows",
+      "summary": "L’app per Windows passa alla versione 0.30. La sua build era fallita con la 0.30.0, quindi su Windows si è rimasti alla 0.20.1 fino a ora."
+    },
+    "es": {
+      "title": "La 0.30 en Windows",
+      "summary": "La aplicación para Windows pasa a la versión 0.30. Su compilación había fallado en la 0.30.0, así que en Windows te quedaste en la 0.20.1 hasta ahora."
+    }
+  },
+  "features": [
+    {
+      "id": "windows-app-0301",
+      "illustration": {
+        "kind": "icon",
+        "name": "desktop"
+      },
+      "copy": {
+        "en": {
+          "title": "Everything from 0.30 in the Windows app",
+          "summary": "The Microsoft Store app gets every change listed under 0.30.0. Nothing changes on the web, macOS or Linux.",
+          "details": [
+            "The Windows build of 0.30.0 stopped on a problem specific to Windows, so the Microsoft Store kept offering 0.20.1. 0.30.1 fixes the build and brings the Windows app to the same release as the web, macOS and Linux apps. The Store installs the update on its own; you can also check for it from the Library page of the Microsoft Store."
+          ]
+        },
+        "fr": {
+          "title": "Tout le contenu de la 0.30 dans l’application Windows",
+          "summary": "L’application du Microsoft Store reçoit toutes les nouveautés de la 0.30.0. Rien ne change sur le web, macOS ou Linux.",
+          "details": [
+            "La compilation Windows de la 0.30.0 s’était arrêtée sur un problème propre à Windows : le Microsoft Store proposait donc encore la 0.20.1. La 0.30.1 corrige la compilation et aligne l’application Windows sur la version du web, de macOS et de Linux. Le Store installe la mise à jour de lui-même ; vous pouvez aussi la rechercher depuis la page Bibliothèque du Microsoft Store."
+          ]
+        },
+        "de": {
+          "title": "Alles aus 0.30 in der Windows-App",
+          "summary": "Die App aus dem Microsoft Store erhält alle Änderungen von 0.30.0. Im Web, unter macOS und Linux ändert sich nichts.",
+          "details": [
+            "Der Windows-Build von 0.30.0 brach an einem Windows-spezifischen Problem ab, deshalb bot der Microsoft Store weiter 0.20.1 an. 0.30.1 behebt den Build und bringt die Windows-App auf denselben Stand wie das Web und die Apps für macOS und Linux. Der Store installiert das Update selbst; du kannst auch auf der Seite Bibliothek im Microsoft Store danach suchen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Tudo da 0.30 no aplicativo para Windows",
+          "summary": "O aplicativo da Microsoft Store recebe todas as mudanças da 0.30.0. Nada muda na web, no macOS ou no Linux.",
+          "details": [
+            "A compilação para Windows da 0.30.0 parou em um problema específico do Windows, por isso a Microsoft Store continuou oferecendo a 0.20.1. A 0.30.1 corrige a compilação e deixa o aplicativo para Windows na mesma versão da web e dos aplicativos para macOS e Linux. A Store instala a atualização sozinha; você também pode procurá-la na página Biblioteca da Microsoft Store."
+          ]
+        },
+        "it": {
+          "title": "Tutta la 0.30 nell’app per Windows",
+          "summary": "L’app del Microsoft Store riceve tutte le novità della 0.30.0. Sul web, su macOS e su Linux non cambia nulla.",
+          "details": [
+            "La build per Windows della 0.30.0 si era fermata su un problema specifico di Windows, quindi il Microsoft Store continuava a proporre la 0.20.1. La 0.30.1 corregge la build e porta l’app per Windows alla stessa versione del web e delle app per macOS e Linux. Lo Store installa l’aggiornamento da solo; puoi anche cercarlo dalla pagina Raccolta del Microsoft Store."
+          ]
+        },
+        "es": {
+          "title": "Todo lo de la 0.30 en la aplicación para Windows",
+          "summary": "La aplicación de Microsoft Store recibe todos los cambios de la 0.30.0. En la web, macOS y Linux no cambia nada.",
+          "details": [
+            "La compilación para Windows de la 0.30.0 se detuvo por un problema propio de Windows, así que Microsoft Store siguió ofreciendo la 0.20.1. La 0.30.1 corrige la compilación y deja la aplicación para Windows en la misma versión que la web y las aplicaciones para macOS y Linux. La Store instala la actualización sola; también puedes buscarla desde la página Biblioteca de Microsoft Store."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "ecef95945f0f0d5b7704ea7e69af1316e816eb8f"
+    ],
+    "issues": [
+      "MIN-794"
+    ]
+  }
+}
