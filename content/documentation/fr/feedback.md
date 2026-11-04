@@ -20,10 +20,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
+  "revision": 16,
   "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,8 +67,8 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "revision": 16,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; 2 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured)",
     "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -96,7 +96,7 @@
       "src": "/documentation/fr/publish-a-feedback-board-workflow.png",
       "alt": "Board public de retours activé, avec identité des visiteurs par code e-mail, l’action Activer le SSO et URL masquée.",
       "caption": "Le propriétaire active le board et choisit l’identité des visiteurs. Ce board de démonstration utilise la vérification par e-mail ; son URL est masquée.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/fr/submit-and-follow-feedback-workflow.png",
       "alt": "Formulaire visiteur avec titre, description et visibilité publique activée.",
       "caption": "Un visiteur identifié soumet un besoin et choisit sa visibilité. L’exemple a été réellement envoyé avec la revue automatique désactivée.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -130,7 +130,7 @@
       "src": "/documentation/fr/feedback-objective-selection.png",
       "alt": "Aperçu des composants de sélection d’objectif pour un retour et une intégration, tous deux réglés sur Docs.",
       "caption": "Sélecteurs d’objectif avec des données de démonstration. Les nouveaux retours héritent du réglage de l’intégration.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-10",
       "viewport": [
@@ -147,7 +147,7 @@
       "src": "/documentation/fr/feedback-pages-and-views-workflow.png",
       "alt": "Guide des retours publié, sélectionné dans la navigation du board et lisible sans connexion.",
       "caption": "Publiez une page, activez les onglets de pages et sélectionnez-la pour le board. Cette page de démonstration a été ouverte anonymement ; son URL opaque conserve `noindex`.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -174,7 +174,7 @@ Les retours relient les demandes des visiteurs au travail de revue et de réalis
 
 En tant que propriétaire, ouvrez Retours dans les réglages du projet. Terminez la configuration si aucun board n’existe, puis activez le canal du board public. Copiez son URL publique et ouvrez-la dans un navigateur déconnecté pour vérifier la vue des visiteurs. Les membres peuvent consulter les réglages, mais ne peuvent ni modifier la publication, ni renouveler les tokens, ni gérer le secret SSO.
 
-Choisissez l’identification des visiteurs par code email ou par SSO configuré. Réglez les commentaires publics, l’affichage des catégories et les onglets des pages ou vues publiques sélectionnées. Examinez les données visibles avant de diffuser l’URL. Les visiteurs peuvent lire sans s’identifier ; publier un retour, voter et commenter exigent une identité sur le board. Les représentations publiques n’exposent ni l’email ni le vrai nom des visiteurs, tandis que l’équipe peut traiter leurs retours identifiés en privé.
+Choisissez l’identification des visiteurs par code e-mail ou par SSO configuré. Réglez les commentaires publics, l’affichage des catégories et les onglets des pages ou vues publiques sélectionnées. Examinez les données visibles avant de diffuser l’URL. Les visiteurs peuvent lire sans s’identifier ; publier un retour, voter et commenter exigent une identité sur le board. Les représentations publiques n’exposent ni l’e-mail ni le vrai nom des visiteurs, tandis que l’équipe peut traiter leurs retours identifiés en privé.
 
 ### Publication et ingestion sont distinctes {#channels}
 
@@ -186,7 +186,7 @@ Le propriétaire active ou désactive la **Revue par Numo** dans les réglages R
 
 ## Soumettre, voter et suivre un retour {#submit-and-follow-feedback}
 
-Ouvrez l’URL publique du board. Vous pouvez lire les retours publics sans compte minddy. Pour soumettre, voter ou commenter, identifiez-vous par le code email du board ou le lien SSO du produit. La réception du code dépend du service email de l’instance. Un code reste valable dix minutes et autorise cinq tentatives ; attendez au moins soixante secondes avant d’en demander un autre. Ne partagez jamais ce code.
+Ouvrez l’URL publique du board. Vous pouvez lire les retours publics sans compte minddy. Pour soumettre, voter ou commenter, identifiez-vous par le code e-mail du board ou le lien SSO du produit. La réception du code dépend du service e-mail de l’instance. Un code reste valable dix minutes et autorise cinq tentatives ; attendez au moins soixante secondes avant d’en demander un autre. Ne partagez jamais ce code.
 
 Recherchez les demandes existantes avant d’en publier une. Donnez un titre précis et décrivez le besoin et son contexte. Le titre accepte 200 caractères et le corps 10 000. L’option publique est cochée par défaut ; décochez-la pour adresser la demande en privé à l’équipe. Vérifiez que le texte ne contient pas de secrets avant l’envoi. Une modération facultative peut maintenir la demande en attente avant son affichage public.
 
@@ -242,7 +242,7 @@ Créez un ticket à partir de la demande si le travail n’est pas encore suivi.
 
 Le statut lié suit celui du ticket : `triage`/`backlog`/`duplicate` → `open` ; `todo` → `planned` ; `in_progress`/`in_review` → `in_progress` ; `done` → `shipped` ; `canceled` → `declined`. Replacer le travail dans le `backlog` rouvre aussi le statut du retour. Vérifiez le ticket lié et la demande en navigation déconnectée après un changement d’état.
 
-Les notifications de l’équipe à l’arrivée d’un retour dépendent de sa source et de sa transition de revue. Ne promettez pas à un votant un email automatique pour chaque fusion ou mise à jour de ticket ; il peut consulter le statut public et les réponses dans Mes retours. La liaison rend l’avancement visible sans exposer le ticket privé lui-même.
+Les notifications de l’équipe à l’arrivée d’un retour dépendent de sa source et de sa transition de revue. Ne promettez pas à un votant un e-mail automatique pour chaque fusion ou mise à jour de ticket ; il peut consulter le statut public et les réponses dans Mes retours. La liaison rend l’avancement visible sans exposer le ticket privé lui-même.
 
 
 ## Ajouter pages et vues publiques au tableau {#feedback-pages-and-views}

@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 26,
+  "revision": 28,
+  "sourceRevision": 27,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -76,10 +76,10 @@
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:claude-code (recovery section: no per-operation allocation card any more and concurrent conversations share the account budget, checked against lib/server/numo/turns.ts, app/api/assistant/chat/route.ts and supabase/migrations/20270109200096_numo_turns_without_budget_reservation.sql; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude (composer add menu: source review of components/assistant/chat-input.tsx; the Add context sentence now describes sectioned context with MCP servers among the mentions instead of a separate MCP group; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:claude-code (es changed passages; self-reviewed; agent review, not human acceptance); agent:claude (es Add context sentence translated from en revision 26 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-01"
+    "revision": 28,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "code-work",
@@ -109,7 +109,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -126,7 +126,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -187,7 +187,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Sigue las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -219,7 +219,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -236,7 +236,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
       "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -285,7 +285,7 @@ El modelo predeterminado de Numo se configura en **Ajustes de cuenta → IA y Nu
 
 ### Continuar una conversación {#continue}
 
-La lista permite recuperar conversaciones anteriores. Continúa la que contiene las decisiones necesarias. Numo organiza y sigue el trabajo: lee y actualiza incidencias, planes, páginas y otros contenidos de Minddy, y puede leer las pull requests vinculadas. Si se lo pides, también puede comentar una pull request, resolver las conversaciones de revisión ya atendidas y fusionarla. Cuando Numo busca incidencias, las coincidencias de texto y los identificadores exactos van primero; una búsqueda descriptiva puede añadir incidencias del mismo proyecto encontradas por el sentido, que Numo debe comprobar antes de basarse en ellas. No escribe código ni hace push de commits. Para que se escriba código, copia el prompt de la incidencia para tu propio agente de código; consulta [Trabajo con código y pull requests](/docs/code-work#external-coding-agents).
+La lista permite recuperar conversaciones anteriores. Continúa la que contiene las decisiones necesarias. Numo organiza y sigue el trabajo: lee y actualiza incidencias, planes, páginas y otros contenidos de minddy, y puede leer las pull requests vinculadas. Si se lo pides, también puede comentar una pull request, resolver las conversaciones de revisión ya atendidas y fusionarla. Cuando Numo busca incidencias, las coincidencias de texto y los identificadores exactos van primero; una búsqueda descriptiva puede añadir incidencias del mismo proyecto encontradas por el sentido, que Numo debe comprobar antes de basarse en ellas. No escribe código ni hace push de commits. Para que se escriba código, copia el prompt de la incidencia para tu propio agente de código; consulta [Trabajo con código y pull requests](/docs/code-work#external-coding-agents).
 
 Si solicita información, envía tu elección antes de esperar que continúen las acciones dependientes. Una tarjeta de consumo o error explica la interrupción. Comprueba cualquier escritura externa antes de pedir que se repita.
 
@@ -309,7 +309,7 @@ Las conversaciones no usan conexiones MCP personales de otros miembros. Las ruti
 
 ## Comprender los turnos duraderos de Numo {#numo-execution-model}
 
-Los mensajes interactivos, acciones contextuales y rutinas entran en conversaciones Numo. El modelo y razonamiento de conversación se eligen en el campo de composición. Numo actúa mediante sus herramientas de Minddy y las conexiones MCP personales que hayas añadido; no necesita ningún repositorio. Una rutina crea una nueva conversación con instrucciones guardadas y contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
+Los mensajes interactivos, acciones contextuales y rutinas entran en conversaciones Numo. El modelo y razonamiento de conversación se eligen en el campo de composición. Numo actúa mediante sus herramientas de minddy y las conexiones MCP personales que hayas añadido; no necesita ningún repositorio. Una rutina crea una nueva conversación con instrucciones guardadas y contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
 
 ![Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.](/documentation/es/numo-execution-model-flow.svg)
 

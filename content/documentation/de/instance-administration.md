@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration; MIN-847 instance variables",
     "editions": [
@@ -58,10 +58,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:claude-code (per-task model pickers show the category's model by name instead of Default model when that model is in the catalog, and choosing it makes the task follow the category again; checked against components/agent/model-combobox.tsx and components/admin/admin-models-dashboard.tsx; not checked in the running app; no figure recaptured, the Models figure may show the former picker wording); agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label and terminology correction: de labels aligned on the corrected catalog and the Ticket term; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 14,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +79,7 @@
       "src": "/documentation/de/instance-administration-overview.png",
       "alt": "Tab Konten mit der Anzahl der Konten und der Kontosuche über die exakte E-Mail-Adresse.",
       "caption": "Konten zeigt die Anzahl der Konten und die Support-Suche; die Aufnahme stammt von einer Demo-Instanz.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/de/instance-administration-models.png",
       "alt": "Tab Modelle mit einem Standardmodell pro Kategorie und eingeklappten Modellen pro Aufgabe.",
       "caption": "Modelle zeigt ein Standardmodell pro Kategorie; die Modelle pro Aufgabe bleiben eingeklappt. Für diese Aufnahme wurde keine Modell- oder Anbietereinstellung geändert.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/de/instance-administration-instance.png",
       "alt": "Tab Instanz mit der Quelle jeder Variablen, einem hier gesetzten, maskierten OpenRouter-Schlüssel und den Administratoradressen aus der Datei.",
       "caption": "Instanz zeigt, woher jeder Wert stammt; Geheimnisse zeigen nur ihre letzten Zeichen. Diese Aufnahme stammt von einer lokalen selbst gehosteten Wegwerf-Instanz.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -166,7 +166,7 @@ In einer Numo-Unterhaltung, die aus einer Administratorsitzung gestartet wurde, 
 
 ## Die Variablen der Instanz bearbeiten {#instance-variables}
 
-Auf einer selbst gehosteten Instanz, deren Umgebungsdatei `MINDDY_CONFIG_OVERRIDES=1` setzt, ändert der Tab **Instanz** einige ihrer Variablen, ohne die Datei zu bearbeiten: den OpenRouter-Schlüssel, die Administratoradressen, den E-Mail-Anbieter und die Absender, deine eigenen GitHub- und GitLab-Apps, die Analysen, den Namen und die Kontaktadresse der Instanz sowie die Veröffentlichung der Modellkonfiguration. Die Installationsanleitung fragt, ob das erlaubt sein soll, und die Desktop-App schaltet es für die Instanz ein, die sie auf deinem Computer installiert. Nur die Datei schaltet es ein oder aus; Minddy Cloud bietet es nie an.
+Auf einer selbst gehosteten Instanz, deren Umgebungsdatei `MINDDY_CONFIG_OVERRIDES=1` setzt, ändert der Tab **Instanz** einige ihrer Variablen, ohne die Datei zu bearbeiten: den OpenRouter-Schlüssel, die Administratoradressen, den E-Mail-Anbieter und die Absender, deine eigenen GitHub- und GitLab-Apps, die Analysen, den Namen und die Kontaktadresse der Instanz sowie die Veröffentlichung der Modellkonfiguration. Die Installationsanleitung fragt, ob das erlaubt sein soll, und die Desktop-App schaltet es für die Instanz ein, die sie auf deinem Computer installiert. Nur die Datei schaltet es ein oder aus; minddy Cloud bietet es nie an.
 
 ![Tab Instanz mit der Quelle jeder Variablen, einem hier gesetzten, maskierten OpenRouter-Schlüssel und den Administratoradressen aus der Datei.](/documentation/de/instance-administration-instance.png)
 
@@ -180,9 +180,9 @@ Unter **Modelle**, Abschnitt **Automatisierungen**, legt **Entscheidungsmodell**
 
 Neue Entscheidungen verwenden das gespeicherte Modell nach etwa einer Minute auf jedem Serverprozess. Scheitert das Modell oder antwortet es unter der Konfidenzschwelle, fällt die Entscheidung wie bisher auf das eigene LLM-Modell der Funktion zurück. Die Schwelle wurde auf Jev kalibriert, und andere Entscheidungsmodelle verteilen ihre Konfidenz anders: Prüfe nach einem Wechsel die Übereinstimmung pro Modell in der Datenbankansicht `ai_decision_evaluations_weekly`. Nutzungszeilen erfassen das Modell, das geantwortet hat.
 
-**Smart-Fill-Titel** unter **Modelle**, Abschnitt **Automatisierungen**, **Modelle pro Aufgabe**, wählt das Modell, das den Titel eines ohne Titel erstellten Tickets schreibt und ihn bei einer Neubewertung neu schreibt. Das ist eine Schreibaufgabe, keine Entscheidung: Das Entscheidungsmodell beantwortet sie nie. Standard ist `deepseek/deepseek-v4-flash`; jemand wartet auf das Ticket, wähle also ein schnelles Modell.
+**Titel von Smart Fill** unter **Modelle**, Abschnitt **Automatisierungen**, **Modelle pro Aufgabe**, wählt das Modell, das den Titel eines ohne Titel erstellten Tickets schreibt und ihn bei einer Neubewertung neu schreibt. Das ist eine Schreibaufgabe, keine Entscheidung: Das Entscheidungsmodell beantwortet sie nie. Standard ist `deepseek/deepseek-v4-flash`; jemand wartet auf das Ticket, wähle also ein schnelles Modell.
 
-## Smart-Fill-Beziehungen konfigurieren {#smart-fill-relations}
+## Beziehungen von Smart Fill konfigurieren {#smart-fill-relations}
 
 Nach dem Speichern eines Tickets kann Smart Fill es indexieren und mit verwandten Tickets verknüpfen. Zwei Felder unter **Modelle** steuern diese Arbeit:
 

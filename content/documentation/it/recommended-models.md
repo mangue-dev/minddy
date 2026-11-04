@@ -3,7 +3,7 @@
   "id": "recommended-models",
   "locale": "it",
   "title": "Configurazione dei modelli consigliata",
-  "summary": "Avviare un’istanza con la configurazione dei modelli IA di Minddy Cloud.",
+  "summary": "Avviare un’istanza con la configurazione dei modelli IA di minddy Cloud.",
   "topic": "Gestire un’istanza",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "MIN-829 instance administration",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:claude-code (MIN-829 article checked against app/api/recommended-models/route.ts, lib/ai-model-config-file.ts and lib/server/admin-model-config.ts; no figure)",
-    "language": "agent:claude-code (it MIN-829 article with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 2,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "instance-administration",
@@ -56,9 +56,9 @@
 }
 ---
 
-## Partire dalla configurazione di Minddy Cloud {#recommended-models}
+## Partire dalla configurazione di minddy Cloud {#recommended-models}
 
-Minddy Cloud pubblica la configurazione dei modelli IA che usa, sempre aggiornata: [scarica la configurazione consigliata](https://www.minddy.app/api/recommended-models?download=1). Il file usa il formato con versione di **Esporta** nella scheda **Modelli** dell’amministrazione (`minddy.instance-models`): modelli predefiniti delle categorie, modelli delle attività, scorciatoie di instradamento, livello di ragionamento, modelli consigliati e valori predefiniti dei fornitori per le chiavi personali. Non contiene chiavi, account né utilizzo.
+minddy Cloud pubblica la configurazione dei modelli IA che usa, sempre aggiornata: [scarica la configurazione consigliata](https://www.minddy.app/api/recommended-models?download=1). Il file usa il formato con versione di **Esporta** nella scheda **Modelli** dell’amministrazione (`minddy.instance-models`): modelli predefiniti delle categorie, modelli delle attività, scorciatoie di instradamento, livello di ragionamento, modelli consigliati e valori predefiniti dei fornitori per le chiavi personali. Non contiene chiavi, account né utilizzo.
 
 ## Importarla nella tua istanza {#import}
 

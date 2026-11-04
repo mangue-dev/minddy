@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [],
   "aliases": [],
@@ -57,7 +57,7 @@
       "src": "/documentation/en/scheduled-routines-workflow.png",
       "alt": "Scheduled and event modes, one condition group, app icons and discreet information buttons.",
       "caption": "Local demonstration of the actual trigger editor. No routine was saved or executed.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -77,7 +77,7 @@
 
 ## Create a routine {#scheduled-routines}
 
-Only the project owner can create, edit or enable a routine. Open Routines, choose an owned project and write the instruction Numo should receive. Mention relevant issues, pages or objectives. Each occurrence has a private Numo conversation, history and Minddy tools. Routines organize and track work, for example a weekly triage, a review of stale issues or a weekly summary; they do not change repository code.
+Only the project owner can create, edit or enable a routine. Open Routines, choose an owned project and write the instruction Numo should receive. Mention relevant issues, pages or objectives. Each occurrence has a private Numo conversation, history and minddy tools. Routines organize and track work, for example a weekly triage, a review of stale issues or a weekly summary; they do not change repository code.
 
 Choose **Scheduled** or **Event**. Database arrivals are an option in the event list.
 
@@ -86,7 +86,7 @@ Choose **Scheduled** or **Event**. Database arrivals are an option in the event 
 
 For a database arrival, choose **New database entry** in the event list, then a page database in this project. A creation, duplicate, database import or move into that database counts as an arrival. Restoring an entry does not create a new arrival.
 
-**Conditions** are optional: without them, every matching event can start the routine. Set the delay separately under **Start timing**. The small information buttons explain waiting behavior and timing. Pickers use the same status, priority, category and person indicators as the rest of Minddy. Use arrow keys and Enter; longer lists include search.
+**Conditions** are optional: without them, every matching event can start the routine. Set the delay separately under **Start timing**. The small information buttons explain waiting behavior and timing. Pickers use the same status, priority, category and person indicators as the rest of minddy. Use arrow keys and Enter; longer lists include search.
 
 Set the delay after an event if needed, from 0 to 120 minutes. Keep your timezone for Numo's context. Event and database routines listen for future arrivals and have no next scheduled date. Automatic processing requires the instance scheduler; a manual run remains available.
 

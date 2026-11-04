@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -72,10 +72,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude (MIN-879: issue graph hover cards and neighbour identifiers checked against components/stats/issue-graph.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (en sentences added with catalog UI labels; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 19,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -99,7 +99,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
       "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -116,7 +116,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Invite people card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -133,7 +133,7 @@
       "src": "/documentation/en/project-statistics.png",
       "alt": "Momentum, Where things stand and Contributors sections of a project with about a thousand issues: weekly created and completed bars, a status bar, health counts and one status bar per person.",
       "caption": "The momentum compares the last four weeks with the four before; overdue and stalled counts flag the work to look at.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-31",
       "viewport": [
@@ -150,7 +150,7 @@
       "src": "/documentation/en/project-issue-graph.png",
       "alt": "Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend and the Include closed issues and objectives switch.",
       "caption": "Hover over a dot to read its issue and highlight its links; select it to open the issue in the side panel.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-31",
       "viewport": [
@@ -179,7 +179,7 @@ Open the project, then its settings. Project ownership controls administrative s
 
 The **General** tab opens with the project's identity: its icon, its name and key, then five figures: **Issues**, **Members**, **Objectives**, **Categories** and **Created**. As owner, you change the icon, name and key where they are shown; there is no Save button. Select the icon and choose **New orb** (offered only while no image covers the orb), **Upload an image**, **Import from a website…**, which asks for the website address and imports its icon when you choose **Import**, or, when an image is set, **Remove the image**, which asks first because the image is deleted. Select the name or the key to edit it: on a computer it becomes a field, where Enter or leaving the field saves and Escape cancels; on a phone it opens a sheet with **Save**. The name cannot be empty. The key is normalized to uppercase and must have 2 to 5 letters (A–Z); otherwise an error appears and the key is not saved. Review the resulting identifiers after changing it. The icon only distinguishes the project in navigation; it does not change membership. Members and readers see the same header without these controls.
 
-Below the header come the project's statistics, built from its own data and visible to everyone in the project. **Momentum** compares the issues completed over the last four weeks with the four weeks before, shows whether the backlog grew or shrank over that span, and gives the median lead time from creation to **Done** over the last 90 days; its chart shows the issues created and completed each week over twelve weeks. **Where things stand** splits every issue by status and counts the open issues that are overdue, unassigned or stalled, that is in progress or in review with no change for 14 days. When pull requests are linked to the project's issues, **Pull requests** shows how many were merged, the median time to merge, the share of completed issues shipped through a merged pull request and the merges per week. **Contributors** lists who completed the most issues over the last 90 days and splits each person's issues by status: the open ones as they stand, the closed ones over those 90 days. **Issue graph** draws the open issues linked by a relation or a parent, colored by status, with arrows from parent to sub-issue and from blocker to blocked. Issues gather in a colored bubble per objective, around a square that stands for the objective and carries its own relations; a gray line between two objectives sums up the links between their issues, which show when you hover one of them. When there are many issues, the most connected ones of each objective are kept, and the bubble shows how many were left out. Select an issue to open it in the side panel, or an objective's square to open the objective; **Include closed issues and objectives** adds finished work. Hover an issue to see its full card and the identifiers of the issues linked to it, or an objective's square to see the objective's card. Canceled and duplicate issues never count as completed. Hover over or focus a bar to read its exact figures. Numo and Minddy MCP clients read the same numbers, with the overdue and stalled issues themselves.
+Below the header come the project's statistics, built from its own data and visible to everyone in the project. **Momentum** compares the issues completed over the last four weeks with the four weeks before, shows whether the backlog grew or shrank over that span, and gives the median lead time from creation to **Done** over the last 90 days; its chart shows the issues created and completed each week over twelve weeks. **Where things stand** splits every issue by status and counts the open issues that are overdue, unassigned or stalled, that is in progress or in review with no change for 14 days. When pull requests are linked to the project's issues, **Pull requests** shows how many were merged, the median time to merge, the share of completed issues shipped through a merged pull request and the merges per week. **Contributors** lists who completed the most issues over the last 90 days and splits each person's issues by status: the open ones as they stand, the closed ones over those 90 days. **Issue graph** draws the open issues linked by a relation or a parent, colored by status, with arrows from parent to sub-issue and from blocker to blocked. Issues gather in a colored bubble per objective, around a square that stands for the objective and carries its own relations; a gray line between two objectives sums up the links between their issues, which show when you hover one of them. When there are many issues, the most connected ones of each objective are kept, and the bubble shows how many were left out. Select an issue to open it in the side panel, or an objective's square to open the objective; **Include closed issues and objectives** adds finished work. Hover an issue to see its full card and the identifiers of the issues linked to it, or an objective's square to see the objective's card. Canceled and duplicate issues never count as completed. Hover over or focus a bar to read its exact figures. Numo and minddy MCP clients read the same numbers, with the overdue and stalled issues themselves.
 
 ![Momentum, Where things stand and Contributors sections of a project with about a thousand issues: weekly created and completed bars, a status bar, health counts and one status bar per person.](/documentation/en/project-statistics.png)
 
@@ -187,7 +187,7 @@ Below the header come the project's statistics, built from its own data and visi
 
 The other tabs are **Categories**, **Members**, **Recurrences**, **Smart Assign**, **Feedback**, **Git**, **Import** and **Integrations**. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
 
-In **Categories**, the owner and members manage the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to open the list of colors, where you can type a color's name to find it; the color you choose applies at once (on a phone the list opens in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue. Once the project has two categories or more, each row has a handle on its left: drag it to move the category up or down. From the keyboard, focus the handle, press Space, move the category with the Up and Down arrows and press Space again to drop it; Escape cancels. This order is the one every category menu and filter shows to everyone in the project. Numo and Minddy MCP clients can read and change it too, for example when you ask Numo to put a category first.
+In **Categories**, the owner and members manage the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to open the list of colors, where you can type a color's name to find it; the color you choose applies at once (on a phone the list opens in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue. Once the project has two categories or more, each row has a handle on its left: drag it to move the category up or down. From the keyboard, focus the handle, press Space, move the category with the Up and Down arrows and press Space again to drop it; Escape cancels. This order is the one every category menu and filter shows to everyone in the project. Numo and minddy MCP clients can read and change it too, for example when you ask Numo to put a category first.
 
 
 ![Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.](/documentation/en/project-general.png)
@@ -196,7 +196,7 @@ In **Categories**, the owner and members manage the categories used to label iss
 
 Hide a project you no longer follow day to day to keep it out of your sidebar and home without leaving it. In the project's general settings, choose **Hide** in the **Danger zone**, or right-click the project in the sidebar and choose **Hide project**, then confirm. Both ask first, in a dialog that names the project, because it leaves your navigation; showing it again needs no confirmation. Everyone in the project can hide it, including the owner and readers.
 
-Hiding changes only your own navigation. Outside the project itself, Minddy no longer offers it or its issues, objectives and pages anywhere you choose something: the command palette, mention suggestions after @, Numo context, and the project choice when you create an issue, an objective or a routine. Mentions and links already written still show their name and open. Its issues also leave the **All issues** board and its filters, the CSV export of all your projects and the automatic filling of your cycle; choosing the project explicitly in the export still includes it. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from the **Hidden projects** tab of **Account settings**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
+Hiding changes only your own navigation. Outside the project itself, minddy no longer offers it or its issues, objectives and pages anywhere you choose something: the command palette, mention suggestions after @, Numo context, and the project choice when you create an issue, an objective or a routine. Mentions and links already written still show their name and open. Its issues also leave the **All issues** board and its filters, the CSV export of all your projects and the automatic filling of your cycle; choosing the project explicitly in the export still includes it. The preference is saved on your account, so it follows you after signing in again and on your other devices. You keep your access and can still open and edit the project from a direct link or from the **Hidden projects** tab of **Account settings**. Other members still see the project, and its routines, integrations and notifications keep running. Opening a hidden project does not bring it back to your sidebar.
 
 To bring it back, choose **Show** in **Hidden projects** or in the project's general settings, or choose **Show project** from its sidebar menu. If the change cannot be saved, an error appears and the project returns to its previous state; try again. Unlike leaving or moving to trash, hiding never removes access or content.
 
@@ -210,13 +210,13 @@ The owner can also right-click the project in the sidebar and choose **Move to t
 
 ## Invite people to a project {#project-members}
 
-The project owner manages membership in **Project settings** → **Members**. In the **Invite people** card, search by name or enter the email the collaborator uses on this instance. As you type, **From your projects** proposes people who have already joined one of your other projects, as owner, member or reader, with a verified email; someone who was only invited is never proposed, nor are current members and pending invitations. Choose a person to place them in the field with their avatar and name, or press Enter when the name matches only one person. Anyone else is invited by email. Then choose their role and choose **Invite**. A person chosen from your projects is invited by account: Minddy checks again that they joined one of your projects and otherwise refuses with “This person is not part of your projects.” The invitation appears in the **Pending invitations** card until it is accepted; current members are listed in the **Members** card, whose title shows their number. Choose **Member** for someone who works on the project, or **Reader** for someone who only follows it. For a reader, turn on **Can comment** if they should take part in discussions. While the invitation is pending, the owner can change its role and comment option. The same email on another instance does not grant access here.
+The project owner manages membership in **Project settings** → **Members**. In the **Invite people** card, search by name or enter the email the collaborator uses on this instance. As you type, **From your projects** proposes people who have already joined one of your other projects, as owner, member or reader, with a verified email; someone who was only invited is never proposed, nor are current members and pending invitations. Choose a person to place them in the field with their avatar and name, or press Enter when the name matches only one person. Anyone else is invited by email. Then choose their role and choose **Invite**. A person chosen from your projects is invited by account: minddy checks again that they joined one of your projects and otherwise refuses with “This person is not part of your projects.” The invitation appears in the **Pending invitations** card until it is accepted; current members are listed in the **Members** card, whose title shows their number. Choose **Member** for someone who works on the project, or **Reader** for someone who only follows it. For a reader, turn on **Can comment** if they should take part in discussions. While the invitation is pending, the owner can change its role and comment option. The same email on another instance does not grant access here.
 
 The invited person signs in with that account and opens Inbox. Accept the pending invitation to join with the role it carries, or decline it if the project is unexpected. The first-use join dialog helps share your email with the owner; it does not let you join projects without an invitation.
 
 You can also invite people while creating the project. In the wizard's **Invite your team** step, search by name or enter an email. Below the field, **From your projects** proposes the same people as the **Invite people** card, even before you type, and narrows as you type. Choose a person, or press Enter when only one matches; typing such a person's address also adds them by name. Add anyone else by email with **Add** or Enter. The plan's guest limit applies as it does here, and the list is kept with the project draft if you resume creation later.
 
-Nothing is sent before you choose **Finish**: the project is created first, then each person receives an invitation with the **Member** role. People chosen from your projects are invited by account: Minddy checks again that they joined one of your projects and uses their verified address. The others are invited by email. These invitations appear in the **Pending invitations** card, where you can change their role, and are accepted in Inbox like any other. If some are refused, for example because of the plan's guest limit or because someone left your shared project in the meantime (“This person is not part of your projects.”), the others still go out and a notification lists each person who was not invited with the reason. Check the **Pending invitations** card before inviting them again. A pending invitation is recorded, which does not prove that its email was delivered.
+Nothing is sent before you choose **Finish**: the project is created first, then each person receives an invitation with the **Member** role. People chosen from your projects are invited by account: minddy checks again that they joined one of your projects and uses their verified address. The others are invited by email. These invitations appear in the **Pending invitations** card, where you can change their role, and are accepted in Inbox like any other. If some are refused, for example because of the plan's guest limit or because someone left your shared project in the meantime (“This person is not part of your projects.”), the others still go out and a notification lists each person who was not invited with the reason. Check the **Pending invitations** card before inviting them again. A pending invitation is recorded, which does not prove that its email was delivered.
 
 
 ![Invite people card above the Members card, which lists three demonstration members with the owner identified.](/documentation/en/project-members.png)

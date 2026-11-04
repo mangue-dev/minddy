@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-02",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
-    "language": "agent:claude-code (es changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 24,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -86,7 +86,7 @@
       "src": "/documentation/es/review-pull-requests-workflow.png",
       "alt": "Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.",
       "caption": "PR de demostración que sigue abierta, sin fusionar. Las diferencias eliminan los espacios alrededor del nombre y usan World para un valor vacío. Esta instancia no puede solicitar autorización de usuario de GitHub; la indicación de disponibilidad no concede permisos para fusionar ni demuestra que la CI del proveedor haya pasado.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,11 +104,11 @@
 }
 ---
 
-Minddy hace el seguimiento del trabajo; tu propio agente de código, como Claude Code, Codex o Cursor, modifica el código. Copia un prompt desde la incidencia, deja que el agente lea y actualice la incidencia a través de minddy MCP y revisa después la pull request vinculada en Minddy antes de fusionarla. Numo no escribe código, no abre ramas ni ejecuta pruebas.
+minddy hace el seguimiento del trabajo; tu propio agente de código, como Claude Code, Codex o Cursor, modifica el código. Copia un prompt desde la incidencia, deja que el agente lea y actualice la incidencia a través de minddy MCP y revisa después la pull request vinculada en minddy antes de fusionarla. Numo no escribe código, no abre ramas ni ejecuta pruebas.
 
 ## Encargar una incidencia a un agente de código externo {#external-coding-agents}
 
-Conecta primero tu agente a minddy MCP para que pueda leer el plan y actualizar sus tareas; consulta [Conectar un asistente externo al MCP de minddy](/docs/minddy-mcp#external-minddy-mcp). El agente se ejecuta en tu ordenador o en tu propio servicio, con tu propia suscripción o tus propios costes de API. Minddy no le proporciona acceso al repositorio.
+Conecta primero tu agente a minddy MCP para que pueda leer el plan y actualizar sus tareas; consulta [Conectar un asistente externo al MCP de minddy](/docs/minddy-mcp#external-minddy-mcp). El agente se ejecuta en tu ordenador o en tu propio servicio, con tu propia suscripción o tus propios costes de API. minddy no le proporciona acceso al repositorio.
 
 1. Abre la incidencia y describe el comportamiento esperado, las restricciones y las comprobaciones de aceptación. Escribe o revisa el plan en su pestaña Plan cuando el trabajo tenga varios pasos.
 2. Abre el menú de acciones de la incidencia y elige **Copiar como prompt**. Elige **Generar un plan** (o **Revisar el plan** si ya existe) para delimitar el trabajo sin programar, **Implementar la incidencia** para empezar el cambio, **Verificar la implementación** para que el agente revise el trabajo terminado frente al plan y los comentarios, o **Personalizado…** para escribir tu propia instrucción.
@@ -121,11 +121,11 @@ El contenido del prompt, la rama sugerida y las reglas de idioma se describen en
 
 ### Mantener el trabajo vinculado a la incidencia {#link-work}
 
-Cuando el repositorio está vinculado al proyecto, mantén el identificador de la incidencia en el nombre de la rama, en el título de la pull request o en una línea `Fixes MIN-42`. Minddy vincula entonces la pull request a la incidencia, y los prompts siguientes indican al agente que continúe la pull request abierta en su rama. Para vincular una incidencia a mano, usa **Vincular una incidencia** en la pull request: la paleta de comandos se abre con las incidencias del proyecto y la elegida se vincula tras confirmar. Su búsqueda acepta un identificador o palabras del título, y una descripción también muestra incidencias del proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
+Cuando el repositorio está vinculado al proyecto, mantén el identificador de la incidencia en el nombre de la rama, en el título de la pull request o en una línea `Fixes MIN-42`. minddy vincula entonces la pull request a la incidencia, y los prompts siguientes indican al agente que continúe la pull request abierta en su rama. Para vincular una incidencia a mano, usa **Vincular una incidencia** en la pull request: la paleta de comandos se abre con las incidencias del proyecto y la elegida se vincula tras confirmar. Su búsqueda acepta un identificador o palabras del título, y una descripción también muestra incidencias del proyecto encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
 
-Desde un tablero, haz clic derecho en una incidencia sin pull request abierta y elige **Vincular a una pull request** para escoger en la paleta de comandos una de las pull requests abiertas de su proyecto, incluidos los borradores. La opción solo aparece cuando ese proyecto tiene al menos una pull request que vincular. Con varias incidencias seleccionadas, **Acciones** ofrece la misma opción para toda la selección, y **Vincular las demás incidencias a #N** cuando algunas ya tienen la pull request N; al hacer clic derecho en una de las incidencias seleccionadas también aparece **Vincular las demás incidencias a #N**. **Vincular a una pull request** deja de ofrecerse en cuanto una incidencia seleccionada tiene alguna pull request vinculada; **Desvincular N incidencias de sus pull requests** quita primero todos los vínculos de la selección, después de que lo confirmes. Los vínculos aparecen al instante en las tarjetas, y cada tarjeta pasa enseguida al estado que implica su pull request, por ejemplo **En revisión** para una pull request abierta; un vínculo rechazado desaparece cuando el tablero se actualiza. Una tarjeta con una pull request abierta muestra su número, coloreado según su estado, y su preparación para la fusión, el mismo indicador que en **Revisión de código**; cuando el auto-merge está activado, su descripción emergente añade **Auto-merge** tras el estado. Pasa el puntero por el número, o por la etiqueta de la pull request en la parte superior del panel de la incidencia, para ver el repositorio, el estado y el título de la pull request y, mientras esté abierta o en borrador, cómo van sus comprobaciones. Haz clic en la tarjeta para abrir la pull request.
+Desde un tablero, haz clic derecho en una incidencia sin pull request abierta y elige **Vincular a una pull request** para escoger en la paleta de comandos una de las pull requests abiertas de su proyecto, incluidos los borradores. La opción solo aparece cuando ese proyecto tiene al menos una pull request que vincular. Con varias incidencias seleccionadas, **Acciones** ofrece la misma opción para toda la selección, y **Vincular las demás incidencias a #N** cuando algunas ya tienen la pull request N; al hacer clic derecho en una de las incidencias seleccionadas también aparece **Vincular las demás incidencias a #N**. **Vincular a una pull request** deja de ofrecerse en cuanto una incidencia seleccionada tiene alguna pull request vinculada; **Desvincular N incidencias de sus pull requests** quita primero todos los vínculos de la selección, después de que lo confirmes. Los vínculos aparecen al instante en las tarjetas, y cada tarjeta pasa enseguida al estado que implica su pull request, por ejemplo **En revisión** para una pull request abierta; un vínculo rechazado desaparece cuando el tablero se actualiza. Una tarjeta con una pull request abierta muestra su número, coloreado según su estado, y su preparación para la fusión, el mismo indicador que en **Revisión de código**; cuando la fusión automática está activada, su descripción emergente añade **Fusión automática** tras el estado. Pasa el puntero por el número, o por la etiqueta de la pull request en la parte superior del panel de la incidencia, para ver el repositorio, el estado y el título de la pull request y, mientras esté abierta o en borrador, cómo van sus comprobaciones. Haz clic en la tarjeta para abrir la pull request.
 
-Cuando una incidencia tiene una pull request vinculada, su menú del clic derecho agrupa las acciones de esa pull request en un submenú **Pull request**. **Ver pull request** abre la pull request en una pestaña propia, o cambia a la pestaña que ya la muestra. **Fusionar** aparece cuando la pull request está abierta y puede fusionarse, y tu cuenta del proveedor puede escribir en el repositorio; abre la pull request en su confirmación de fusión habitual, donde eliges el método y el mensaje del commit, o usas **Fusionar con Numo**. **Activar auto-merge** aparece mientras la pull request todavía no puede fusionarse y el repositorio permite el auto-merge; **Desactivar auto-merge** lo sustituye cuando el auto-merge está activado. Cuando la pull request vinculada está fusionada o cerrada, **Vincular a una pull request** vincula la incidencia a otra pull request abierta del proyecto. **Desvincular de la pull request**, aparte y en rojo al final del submenú, quita el vínculo después de que lo confirmes.
+Cuando una incidencia tiene una pull request vinculada, su menú del clic derecho agrupa las acciones de esa pull request en un submenú **Pull request**. **Ver pull request** abre la pull request en una pestaña propia, o cambia a la pestaña que ya la muestra. **Fusionar** aparece cuando la pull request está abierta y puede fusionarse, y tu cuenta del proveedor puede escribir en el repositorio; abre la pull request en su confirmación de fusión habitual, donde eliges el método y el mensaje del commit, o usas **Fusionar con Numo**. **Activar la fusión automática** aparece mientras la pull request todavía no puede fusionarse y el repositorio permite la fusión automática; **Desactivar la fusión automática** lo sustituye cuando la fusión automática está activada. Cuando la pull request vinculada está fusionada o cerrada, **Vincular a una pull request** vincula la incidencia a otra pull request abierta del proyecto. **Desvincular de la pull request**, aparte y en rojo al final del submenú, quita el vínculo después de que lo confirmes.
 
 En **Ajustes de la cuenta → Incidencias → Iniciar una incidencia**, **Iniciar la incidencia o la tarea cuando copio su prompt** pasa a «En curso» una incidencia o una tarea del cuaderno que aún no ha empezado cuando copias su prompt. Déjalo desactivado si solo copias prompts para leerlos.
 
@@ -139,7 +139,7 @@ En una descripción, un comentario o la diferencia de una imagen, haz clic en un
 
 Menciona `@numo` en un comentario de la pull request para pedir a Numo una revisión de solo lectura en una conversación. Numo lee la pull request y responde; no sube commits. Una mención escrita en el proveedor Git solo cuenta si su autor está vinculado al propietario o a un Miembro (no a un lector) de un proyecto que vincula el repositorio, y su uso se imputa al propietario de ese proyecto.
 
-Lo que se escribe en una pull request o merge request vinculada también aparece en los comentarios de cada incidencia a la que está vinculada: los comentarios de la conversación, el mensaje de una revisión enviada y los comentarios sobre el código con el archivo, la línea y, en GitHub, el fragmento al que se refieren, con las respuestas agrupadas debajo. Los comentarios de bots se quedan en la pull request, salvo los comentarios sobre el código. Una edición actualiza la copia, y un comentario eliminado en GitHub aparece como eliminado; GitLab no notifica las eliminaciones. Cada vez que una pull request se vincula a una incidencia, a mano o porque su rama, su título o su descripción nombra la incidencia, se traen los comentarios que ya tiene con la fecha en que se escribieron, aunque sea anterior a la creación de la incidencia. Responde bajo uno de estos comentarios para contestar en la pull request con tu propia cuenta de Git, como en la vista de la pull request; una conversación sobre el código también muestra **Resuelta** u **Obsoleto** y ofrece **Resolver** o **Reabrir**. Las copias en sí no se pueden editar en Minddy.
+Lo que se escribe en una pull request o merge request vinculada también aparece en los comentarios de cada incidencia a la que está vinculada: los comentarios de la conversación, el mensaje de una revisión enviada y los comentarios sobre el código con el archivo, la línea y, en GitHub, el fragmento al que se refieren, con las respuestas agrupadas debajo. Los comentarios de bots se quedan en la pull request, salvo los comentarios sobre el código. Una edición actualiza la copia, y un comentario eliminado en GitHub aparece como eliminado; GitLab no notifica las eliminaciones. Cada vez que una pull request se vincula a una incidencia, a mano o porque su rama, su título o su descripción nombra la incidencia, se traen los comentarios que ya tiene con la fecha en que se escribieron, aunque sea anterior a la creación de la incidencia. Responde bajo uno de estos comentarios para contestar en la pull request con tu propia cuenta de Git, como en la vista de la pull request; una conversación sobre el código también muestra **Resuelta** u **Obsoleto** y ofrece **Resolver** o **Reabrir**. Las copias en sí no se pueden editar en minddy.
 
 ![Pestaña Cambios de la PR de demostración abierta, con las diferencias de greeting y un aviso de autorización de GitHub no disponible.](/documentation/es/review-pull-requests-workflow.png)
 

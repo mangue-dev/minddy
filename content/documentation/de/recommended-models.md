@@ -3,7 +3,7 @@
   "id": "recommended-models",
   "locale": "de",
   "title": "Empfohlene Modellkonfiguration",
-  "summary": "Eine Instanz mit der KI-Modellkonfiguration von Minddy Cloud starten.",
+  "summary": "Eine Instanz mit der KI-Modellkonfiguration von minddy Cloud starten.",
   "topic": "Instanz betreiben",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 1,
-  "sourceRevision": 1,
+  "revision": 2,
+  "sourceRevision": 2,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "MIN-829 instance administration",
     "editions": [
@@ -38,10 +38,10 @@
     ]
   },
   "review": {
-    "revision": 1,
-    "fact": "agent:claude-code (MIN-829 article checked against app/api/recommended-models/route.ts, lib/ai-model-config-file.ts and lib/server/admin-model-config.ts; no figure)",
-    "language": "agent:claude-code (de MIN-829 article with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 2,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "instance-administration",
@@ -56,9 +56,9 @@
 }
 ---
 
-## Mit der Konfiguration von Minddy Cloud beginnen {#recommended-models}
+## Mit der Konfiguration von minddy Cloud beginnen {#recommended-models}
 
-Minddy Cloud veröffentlicht die KI-Modellkonfiguration, die es verwendet, immer aktuell: [lade die empfohlene Konfiguration herunter](https://www.minddy.app/api/recommended-models?download=1). Die Datei nutzt das versionierte Format von **Exportieren** im Admin-Tab **Modelle** (`minddy.instance-models`): Standardmodelle der Kategorien, Modelle der Aufgaben, Routing-Kürzel, Reasoning-Stufe, empfohlene Modelle und Anbieter-Standards für persönliche Schlüssel. Sie enthält weder Schlüssel noch Konten noch Nutzung.
+minddy Cloud veröffentlicht die KI-Modellkonfiguration, die es verwendet, immer aktuell: [lade die empfohlene Konfiguration herunter](https://www.minddy.app/api/recommended-models?download=1). Die Datei nutzt das versionierte Format von **Exportieren** im Admin-Tab **Modelle** (`minddy.instance-models`): Standardmodelle der Kategorien, Modelle der Aufgaben, Routing-Kürzel, Reasoning-Stufe, empfohlene Modelle und Anbieter-Standards für persönliche Schlüssel. Sie enthält weder Schlüssel noch Konten noch Nutzung.
 
 ## Auf deiner Instanz importieren {#import}
 

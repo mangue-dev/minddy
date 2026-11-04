@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration; MIN-847 instance variables",
     "editions": [
@@ -58,10 +58,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:claude-code (per-task model pickers show the category's model by name instead of Default model when that model is in the catalog, and choosing it makes the task follow the category again; checked against components/agent/model-combobox.tsx and components/admin/admin-models-dashboard.tsx; not checked in the running app; no figure recaptured, the Models figure may show the former picker wording); agent:claude-code (MIN-847 Instance tab section checked against lib/instance-variables.ts, lib/server/instance-variables.ts and app/api/admin/instance-variables/route.ts; figure captured on 2026-10-29 from a disposable local self-hosted instance with its own test administrator, every write blocked, and inspected); agent:claude-code (MIN-829 tabs, accounts, costs, model categories, configuration file and Numo admin tools checked against lib/admin-tabs.ts, lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts, lib/server/finance.ts, lib/admin-costs.ts, lib/server/retention.ts and lib/server/assistant/admin-tools.ts, including admin_get_costs; both figures recaptured on 2026-10-29 with captures/shots/documentation-admin from a local candidate against the preview capture admin, every write blocked, and inspected); agent:claude-code (MIN-798 Smart-fill titles model paragraph checked against lib/ai-model-config.ts, lib/ai-surfaces.ts and lib/server/smart-fill-title.ts: automations group, fallback deepseek/deepseek-v4-flash, not answered by the decision model; no figure changed); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; both screenshots recaptured on 2026-10-20 with captures/shots/documentation-admin and the preview-only capture admin (MIN-740); no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-829 sections with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-798 Smart-fill titles model paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 14,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +79,7 @@
       "src": "/documentation/es/instance-administration-overview.png",
       "alt": "Pestaña Cuentas con el número de cuentas y la búsqueda de una cuenta por su correo exacto.",
       "caption": "Cuentas muestra el número de cuentas y la búsqueda de soporte; la captura procede de una instancia de demostración.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/es/instance-administration-models.png",
       "alt": "Pestaña Modelos con un modelo predeterminado por categoría y los modelos por tarea plegados.",
       "caption": "Modelos muestra un modelo predeterminado por categoría; los modelos por tarea quedan plegados. No se cambió ningún ajuste de modelo ni de proveedor para esta captura.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/es/instance-administration-instance.png",
       "alt": "Pestaña Instancia con el origen de cada variable, una clave de OpenRouter enmascarada definida aquí y las direcciones de administradores del archivo.",
       "caption": "Instancia muestra de dónde viene cada valor; los secretos solo muestran sus últimos caracteres. Esta captura procede de una instancia autoalojada local desechable.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -168,7 +168,7 @@ En una conversación de Numo iniciada desde una sesión de administrador, Numo p
 
 ## Editar las variables de la instancia {#instance-variables}
 
-En una instancia autoalojada cuyo archivo de entorno define `MINDDY_CONFIG_OVERRIDES=1`, la pestaña **Instancia** cambia algunas de sus variables sin editar el archivo: la clave de OpenRouter, las direcciones de administración, el proveedor y los remitentes de correo, tus propias apps de GitHub y GitLab, la analítica, el nombre y la dirección de contacto de la instancia y la publicación de la configuración de modelos. La guía de instalación pregunta si permitirlo, y la app de escritorio lo activa para la instancia que instala en tu ordenador. Solo el archivo lo activa o lo desactiva; Minddy Cloud nunca lo ofrece.
+En una instancia autoalojada cuyo archivo de entorno define `MINDDY_CONFIG_OVERRIDES=1`, la pestaña **Instancia** cambia algunas de sus variables sin editar el archivo: la clave de OpenRouter, las direcciones de administración, el proveedor y los remitentes de correo, tus propias apps de GitHub y GitLab, la analítica, el nombre y la dirección de contacto de la instancia y la publicación de la configuración de modelos. La guía de instalación pregunta si permitirlo, y la app de escritorio lo activa para la instancia que instala en tu ordenador. Solo el archivo lo activa o lo desactiva; minddy Cloud nunca lo ofrece.
 
 ![Pestaña Instancia con el origen de cada variable, una clave de OpenRouter enmascarada definida aquí y las direcciones de administradores del archivo.](/documentation/es/instance-administration-instance.png)
 
@@ -182,7 +182,7 @@ En **Modelos**, sección **Automatizaciones**, **Modelo de decisión** fija el �
 
 Las nuevas decisiones usan el modelo guardado en aproximadamente un minuto en cada proceso del servidor. Si el modelo falla o responde por debajo del umbral de confianza, la decisión recurre al modelo LLM propio de la función, como antes. El umbral se calibró con Jev y otros modelos de decisión reparten su confianza de otra forma: tras un cambio, revisa la concordancia por modelo en la vista de base de datos `ai_decision_evaluations_weekly`. Las filas de uso registran el modelo que respondió.
 
-**Títulos de llenado inteligente**, en **Modelos**, sección **Automatizaciones**, **Modelos por tarea**, elige el modelo que escribe el título de una incidencia creada sin título y lo reescribe en una reevaluación. Es una tarea de redacción, no una decisión: el modelo de decisión nunca la responde. El valor predeterminado es `deepseek/deepseek-v4-flash`; alguien espera la incidencia, así que elige un modelo rápido.
+**Títulos de Smart Fill**, en **Modelos**, sección **Automatizaciones**, **Modelos por tarea**, elige el modelo que escribe el título de una incidencia creada sin título y lo reescribe en una reevaluación. Es una tarea de redacción, no una decisión: el modelo de decisión nunca la responde. El valor predeterminado es `deepseek/deepseek-v4-flash`; alguien espera la incidencia, así que elige un modelo rápido.
 
 ## Configurar las relaciones de Smart Fill {#smart-fill-relations}
 

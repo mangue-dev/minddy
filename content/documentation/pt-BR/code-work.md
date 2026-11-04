@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-02",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
-    "language": "agent:claude-code (pt-BR changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 24,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -86,7 +86,7 @@
       "src": "/documentation/pt-BR/review-pull-requests-workflow.png",
       "alt": "Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.",
       "caption": "PR de demonstração que permanece aberto, sem mesclagem. O diff remove os espaços ao redor do nome e usa World quando o valor é vazio. Esta instância não pode solicitar autorização de usuário do GitHub; a indicação de prontidão não concede permissão de mesclagem nem comprova que a CI do provedor passou.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,11 +104,11 @@
 }
 ---
 
-O Minddy acompanha o trabalho; seu próprio agente de código, como Claude Code, Codex ou Cursor, altera o código. Copie um prompt a partir do ticket, deixe o agente ler e atualizar o ticket pelo MCP do minddy e depois revise o pull request vinculado no Minddy antes da mesclagem. O Numo não escreve código, não abre branches nem executa testes.
+O minddy acompanha o trabalho; seu próprio agente de código, como Claude Code, Codex ou Cursor, altera o código. Copie um prompt a partir do ticket, deixe o agente ler e atualizar o ticket pelo MCP do minddy e depois revise o pull request vinculado no minddy antes da mesclagem. O Numo não escreve código, não abre branches nem executa testes.
 
 ## Entregar um ticket a um agente de código externo {#external-coding-agents}
 
-Primeiro, conecte seu agente ao MCP do minddy para que ele possa ler o plano e atualizar suas tarefas; consulte [Conectar um assistente externo ao MCP do minddy](/docs/minddy-mcp#external-minddy-mcp). O agente é executado no seu computador ou no próprio serviço, com assinatura ou custos de API próprios. O Minddy não fornece a ele acesso ao repositório.
+Primeiro, conecte seu agente ao MCP do minddy para que ele possa ler o plano e atualizar suas tarefas; consulte [Conectar um assistente externo ao MCP do minddy](/docs/minddy-mcp#external-minddy-mcp). O agente é executado no seu computador ou no próprio serviço, com assinatura ou custos de API próprios. O minddy não fornece a ele acesso ao repositório.
 
 1. Abra o ticket e descreva o comportamento esperado, as restrições e as verificações de aceitação. Escreva ou revise o plano na aba do plano quando o trabalho tiver várias etapas.
 2. Abra o menu de ações do ticket e escolha **Copiar como prompt**. Escolha **Gerar um plano** (ou **Revisar o plano** quando já existir um) para delimitar o trabalho sem programar, **Implementar o ticket** para iniciar a alteração, **Verificar a implementação** para que o agente revise o trabalho concluído com base no plano e nos comentários, ou **Personalizado…** para escrever sua própria instrução.
@@ -121,7 +121,7 @@ O conteúdo do prompt, a sugestão de branch e as regras de idioma estão descri
 
 ### Manter o trabalho vinculado ao ticket {#link-work}
 
-Quando o repositório estiver vinculado ao projeto, mantenha o identificador do ticket no nome da branch, no título do pull request ou em uma linha `Fixes MIN-42`. Assim o Minddy anexa o pull request ao ticket, e os prompts seguintes pedem ao agente que continue o pull request aberto na branch dele. Para anexar um ticket manualmente, use **Vincular um ticket** no pull request: a paleta de comandos abre com os tickets do projeto, e o escolhido é vinculado após a confirmação. A busca aceita um identificador ou palavras do título, e uma descrição também lista tickets do projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
+Quando o repositório estiver vinculado ao projeto, mantenha o identificador do ticket no nome da branch, no título do pull request ou em uma linha `Fixes MIN-42`. Assim o minddy anexa o pull request ao ticket, e os prompts seguintes pedem ao agente que continue o pull request aberto na branch dele. Para anexar um ticket manualmente, use **Vincular um ticket** no pull request: a paleta de comandos abre com os tickets do projeto, e o escolhido é vinculado após a confirmação. A busca aceita um identificador ou palavras do título, e uma descrição também lista tickets do projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning) em **Relacionados pelo sentido**.
 
 Em um quadro, clique com o botão direito em um ticket sem pull request aberto e escolha **Vincular a um pull request** para escolher na paleta de comandos um dos pull requests abertos do projeto, incluindo rascunhos. A opção só aparece quando esse projeto tem pelo menos um pull request para vincular. Com vários tickets selecionados, **Ações** oferece a mesma opção para toda a seleção, além de **Vincular os outros tickets a #N** quando alguns já têm o pull request N; o clique direito em um dos tickets selecionados também oferece **Vincular os outros tickets a #N**. **Vincular a um pull request** deixa de ser oferecido assim que um ticket selecionado tem algum pull request vinculado; **Desvincular N tickets dos seus pull requests** remove primeiro todos os vínculos da seleção, depois que você confirma. Os vínculos aparecem na hora nos cartões, e cada cartão passa na hora para o status que o pull request implica, por exemplo **Em revisão** para um pull request aberto; um vínculo recusado some quando o quadro é atualizado. Um cartão com um pull request aberto mostra o número dele, colorido conforme o estado, e sua prontidão para mesclagem, o mesmo indicador da **Revisão de código**; quando a mesclagem automática está ativada, a dica do indicador acrescenta **Mesclagem automática** depois do estado. Passe o ponteiro sobre o número, ou sobre a etiqueta do pull request no topo do painel do ticket, para ver o repositório, o estado e o título do pull request e, enquanto ele estiver aberto ou em rascunho, a situação das verificações. Clique no cartão para abrir o pull request.
 
@@ -139,7 +139,7 @@ Em uma descrição, em um comentário ou no diff de uma imagem, clique em uma im
 
 Mencione `@numo` em um comentário do pull request para pedir ao Numo uma revisão somente leitura em uma conversa. Ele lê o pull request e responde; não faz push de commits. Uma menção escrita na plataforma Git só conta quando o autor está vinculado ao proprietário ou a um Membro (não a um leitor) de um projeto que vincula o repositório, e o uso é cobrado do proprietário desse projeto.
 
-O que é escrito em um pull request ou merge request vinculado também aparece nos comentários de cada ticket ao qual ele está vinculado: os comentários da conversa, a mensagem de uma revisão enviada e os comentários sobre o código com o arquivo, a linha e, no GitHub, o trecho a que se referem, com as respostas agrupadas abaixo. Comentários de bots ficam no pull request, exceto os comentários sobre o código. Uma edição atualiza a cópia, e um comentário excluído no GitHub aparece como excluído; o GitLab não informa exclusões. Sempre que um pull request é vinculado a um ticket, manualmente ou porque a branch, o título ou a descrição dele cita o ticket, os comentários que ele já tem são trazidos com a data em que foram escritos, mesmo que seja anterior à criação do ticket. Responda sob um desses comentários para responder no pull request com sua própria conta do Git, como na visualização do pull request; uma conversa sobre o código também mostra **Resolvida** ou **Desatualizado** e oferece **Resolver** ou **Reabrir**. As cópias em si não podem ser editadas no Minddy.
+O que é escrito em um pull request ou merge request vinculado também aparece nos comentários de cada ticket ao qual ele está vinculado: os comentários da conversa, a mensagem de uma revisão enviada e os comentários sobre o código com o arquivo, a linha e, no GitHub, o trecho a que se referem, com as respostas agrupadas abaixo. Comentários de bots ficam no pull request, exceto os comentários sobre o código. Uma edição atualiza a cópia, e um comentário excluído no GitHub aparece como excluído; o GitLab não informa exclusões. Sempre que um pull request é vinculado a um ticket, manualmente ou porque a branch, o título ou a descrição dele cita o ticket, os comentários que ele já tem são trazidos com a data em que foram escritos, mesmo que seja anterior à criação do ticket. Responda sob um desses comentários para responder no pull request com sua própria conta do Git, como na visualização do pull request; uma conversa sobre o código também mostra **Resolvida** ou **Desatualizado** e oferece **Resolver** ou **Reabrir**. As cópias em si não podem ser editadas no minddy.
 
 ![Aba Alterações do PR de demonstração aberto, com o diff de greeting e um aviso de autorização do GitHub indisponível.](/documentation/pt-BR/review-pull-requests-workflow.png)
 

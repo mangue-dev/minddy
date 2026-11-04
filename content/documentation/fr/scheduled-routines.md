@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 12,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [],
   "aliases": [],
@@ -57,7 +57,7 @@
       "src": "/documentation/fr/scheduled-routines-workflow.png",
       "alt": "Modes « Programmé » et « Événement », un seul groupe de conditions, icônes de l’application et boutons d’information discrets.",
       "caption": "Démonstration locale du véritable éditeur de déclencheurs. Aucune routine n’a été enregistrée ou exécutée.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -77,7 +77,7 @@
 
 ## Créer une routine {#scheduled-routines}
 
-Seul le propriétaire du projet peut créer, modifier ou activer une routine. Ouvrez Routines, choisissez un projet dont vous êtes propriétaire et rédigez les instructions pour Numo. Mentionnez les tickets, pages ou objectifs utiles. Chaque occurrence possède une conversation Numo privée, un historique et les outils Minddy. Les routines organisent et suivent le travail, par exemple un tri hebdomadaire, une revue des tickets inactifs ou un résumé hebdomadaire ; elles ne modifient pas le code du dépôt.
+Seul le propriétaire du projet peut créer, modifier ou activer une routine. Ouvrez Routines, choisissez un projet dont vous êtes propriétaire et rédigez les instructions pour Numo. Mentionnez les tickets, pages ou objectifs utiles. Chaque occurrence possède une conversation Numo privée, un historique et les outils minddy. Les routines organisent et suivent le travail, par exemple un tri hebdomadaire, une revue des tickets inactifs ou un résumé hebdomadaire ; elles ne modifient pas le code du dépôt.
 
 Choisissez **Programmé** ou **Événement**. L’arrivée dans une base est un choix de la liste des événements.
 
@@ -86,7 +86,7 @@ Choisissez **Programmé** ou **Événement**. L’arrivée dans une base est un 
 
 Pour une arrivée dans une base, choisissez **Nouvelle entrée de base de données** dans la liste des événements, puis une base de pages de ce projet. Une création, duplication, import de base ou déplacement vers cette base compte comme une arrivée. Restaurer une entrée ne crée pas une nouvelle arrivée.
 
-Les **Conditions** sont facultatives : sans filtre, chaque événement correspondant peut lancer la routine. Réglez le délai séparément dans **Délai de lancement**. Les petits boutons d’information expliquent le comportement d’attente et le délai. Les sélecteurs reprennent les indicateurs de statut, de priorité, de catégorie et de personne de Minddy. Utilisez les flèches et Entrée ; les listes longues disposent d’une recherche.
+Les **Conditions** sont facultatives : sans filtre, chaque événement correspondant peut lancer la routine. Réglez le délai séparément dans **Délai de lancement**. Les petits boutons d’information expliquent le comportement d’attente et le délai. Les sélecteurs reprennent les indicateurs de statut, de priorité, de catégorie et de personne de minddy. Utilisez les flèches et Entrée ; les listes longues disposent d’une recherche.
 
 Réglez si nécessaire le délai après l’événement, de 0 à 120 minutes. Conservez votre fuseau pour le contexte de Numo. Les routines d’événement et de base écoutent les prochaines arrivées sans date planifiée. Le traitement automatique nécessite le scheduler de l’instance ; une exécution manuelle reste possible.
 

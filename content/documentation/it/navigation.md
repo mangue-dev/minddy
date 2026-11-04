@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 23,
+  "revision": 26,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-03",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -76,10 +76,10 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (new keyboard-navigation subsection: skip link, keyboard focus outline and Enter on a focused issue card, checked against components/app-shell.tsx, lib/keyboard-modality.ts, components/issue-card.tsx and lib/keyboard/hover-keys.ts; covered by jsdom tests, not checked in the running app; rest of the article unchanged; no figure added, existing figures do not show this behavior)",
-    "language": "agent:claude-code (it new subsection translated from en with the locale's catalog labels and article terms; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-03"
+    "revision": 26,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "views",
@@ -100,7 +100,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -117,7 +117,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -204,7 +204,7 @@ Le corrispondenze testuali e gli identificativi esatti vengono sempre per primi 
 La ricerca per significato ha questi limiti:
 
 - La ricerca deve contenere almeno due parole, o una parola di almeno sei lettere. Gli identificativi come `MIN-42`, `#42` o `42`, e le ricerche molto brevi, usano solo la ricerca testuale.
-- Si basa sull’indice che Riempimento intelligente costruisce dal titolo e dalla descrizione dei ticket. Un ticket non ancora indicizzato, o il cui autore ha disattivato [**Indicizza i ticket**](/docs/issues#smart-fill-preferences), viene trovato solo tramite le sue parole. I ticket nel cestino non compaiono mai.
+- Si basa sull’indice che Smart Fill costruisce dal titolo e dalla descrizione dei ticket. Un ticket non ancora indicizzato, o il cui autore ha disattivato [**Indicizza i ticket**](/docs/issues#smart-fill-preferences), viene trovato solo tramite le sue parole. I ticket nel cestino non compaiono mai.
 - Se hai disattivato **Indicizza i ticket** in **Impostazioni account** → **Smart Fill** → **Indicizzazione dei ticket**, le tue ricerche confrontano solo le parole. Lo stesso accade quando il tuo budget IA è esaurito o quando il provider non risponde entro pochi secondi. I risultati testuali restano e non viene mostrato alcun errore.
 - Una ricerca `@` il cui testo corrisponde già a una persona, un progetto o una pagina non viene cercata per significato. In un progetto con più di 3.000 ticket indicizzati, vengono confrontati solo i 3.000 indicizzati più di recente; gli altri si trovano tramite le loro parole.
 

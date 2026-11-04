@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
+  "revision": 20,
   "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -74,10 +74,10 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (MIN-762 UI label and terminology correction: pt-BR labels aligned on the corrected catalog and the ticket term; no behavior change, no new captures); agent:claude-code (MIN-762 recapture of profile-and-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:/root/min747 (pt-BR translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (pt-BR MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (pt-BR MIN-762 terminology edit; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-01"
+    "revision": 20,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "choose-an-instance",
@@ -109,7 +109,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -126,7 +126,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Cabeçalho do perfil com o avatar e seu selo de edição, o nome e o email somente leitura.",
       "caption": "Selecione o avatar para gerar ou enviar um, ou o nome para alterá-lo; o endereço de email continua somente leitura.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -143,7 +143,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -160,7 +160,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -239,7 +239,7 @@ Se não tiver nem o segundo fator nem um código de recuperação, contate o ope
 
 ## Alterar perfil e preferências {#profile-and-preferences}
 
-Escolha **Configurações da conta** no menu da conta, no menu móvel ou na paleta de comandos, ou pressione Command+vírgula no macOS (Ctrl+vírgula no Windows/Linux): as configurações da conta abrem na aba **Preferências**. Para abrir diretamente a aba **Perfil**, escolha seu nome no topo do menu da conta; você também pode selecionar **Perfil** entre as abas das configurações. Ela mostra seu avatar, seu nome e seu email, seguidos das suas [estatísticas pessoais](/docs/personal-statistics). Selecione seu avatar e escolha **Novo avatar de Lorelei** ou **Carregar imagem**; a mudança vale assim que é concluída. Selecione seu nome para alterá-lo: no computador ele vira um campo que Enter ou sair do campo salvam e Esc cancela; no celular abre um painel com **Nome de usuário** e **Salvar**. O nome não pode ficar vazio. O email é somente leitura. Aguarde o resultado e confira o avatar em um comentário ou na lista de membros; ele acompanha a conta entre projetos e conversas. Se o arquivo for rejeitado, siga a mensagem de validação em vez de reenviar repetidamente.
+Escolha **Configurações da conta** no menu da conta, no menu móvel ou na paleta de comandos, ou pressione Command+vírgula no macOS (Ctrl+vírgula no Windows/Linux): as configurações da conta abrem na aba **Preferências**. Para abrir diretamente a aba **Perfil**, escolha seu nome no topo do menu da conta; você também pode selecionar **Perfil** entre as abas das configurações. Ela mostra seu avatar, seu nome e seu email, seguidos das suas [estatísticas pessoais](/docs/personal-statistics). Selecione seu avatar e escolha **Novo avatar de Lorelei** ou **Enviar imagem**; a mudança vale assim que é concluída. Selecione seu nome para alterá-lo: no computador ele vira um campo que Enter ou sair do campo salvam e Esc cancela; no celular abre um painel com **Nome de usuário** e **Salvar**. O nome não pode ficar vazio. O email é somente leitura. Aguarde o resultado e confira o avatar em um comentário ou na lista de membros; ele acompanha a conta entre projetos e conversas. Se o arquivo for rejeitado, siga a mensagem de validação em vez de reenviar repetidamente.
 
 A imagem original não pode exceder 10 MiB. O servidor verifica se consegue ler os bytes, aplica a orientação e recorta o centro para gerar um avatar WebP de 256 × 256.
 

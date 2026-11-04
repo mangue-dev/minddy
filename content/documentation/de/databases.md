@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
+  "revision": 21,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -65,10 +65,10 @@
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (column header menu Delete column with confirmation and right-click opening, hover-only row gutter, touch-screen rows without gutter, checkbox tooltips and partial header state, bottom scrollbar hidden on touch screens, view rename/delete by right-click, column reordering by handle in Columns, Numo view tools and no MCP view tools checked against components/pages/database-column-name.tsx, page-database-view.tsx, database-view-strip.tsx, database-table-scroll.tsx, components/ui/checkbox.tsx, lib/server/assistant/tools.ts and lib/server/database-view-tools.ts; several filter conditions with All/Any match, operators per column type, up to 10 conditions, single filters kept, live view updates, default view rename, phone view dropdown, View settings sheets, search field and cell sheets checked against lib/page-database-filters.ts, components/pages/database-filter-editor.tsx, lib/use-page-database-views.ts, supabase/migrations/20270109200092_page_database_views_realtime.sql, components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx and components/pages/database-cell-editor.tsx; Page options in the entry side panel checked against components/pages/page-peek-panel.tsx and components/pages/pages-shell.tsx; the side panel's compact database toolbar (view dropdown, search popover, View settings menu with a Sort by submenu and Filter and Columns popovers, in-panel horizontal scrollbar, entries opened in place with Back) checked against components/pages/page-database-view.tsx, components/pages/database-view-strip.tsx, components/pages/database-table-scroll.tsx, components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-28"
+    "revision": 21,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "pages"
@@ -92,7 +92,7 @@
       "src": "/documentation/de/database-setup-cards.png",
       "alt": "Komponentenvorschau der Karten zur Einrichtung einer neuen Datenbank mit Numo oder zum Import einer vorhandenen Datenbank.",
       "caption": "Vorschläge für eine neue Datenbank mit Demonstrationsdaten. Wähle Numo oder Import, oder schließe die Karten, um manuell fortzufahren.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -109,7 +109,7 @@
       "src": "/documentation/de/database-property-types.png",
       "alt": "Auswahl des Spaltentyps mit Suchfeld sowie Text, Zahl, Auswahl, Datum, Personen und Kontrollkästchen.",
       "caption": "Wähle einen Typ, der zu den gespeicherten Werten passt.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-18",
       "viewport": [
@@ -126,7 +126,7 @@
       "src": "/documentation/de/database-entry.png",
       "alt": "Demoeintrag mit Beschreibung, Dauer 2.5, aktiviertem Kontrollkästchen und leerer Auswahl.",
       "caption": "Öffne einen Eintrag, um den vollständigen Text zu lesen und typisierte Werte zu bearbeiten.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +142,7 @@
       "src": "/documentation/de/database-conversion-warning.png",
       "alt": "Umwandlungswarnung: Der Wechsel von Text zu Zahl leert eine inkompatible Zelle; Abbrechen und Bestätigen sind verfügbar.",
       "caption": "Prüfe die tatsächliche Zahl inkompatibler Zellen vor der Bestätigung. Abbrechen erhält die bisherigen Werte.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -158,7 +158,7 @@
       "src": "/documentation/de/database-import-review.png",
       "alt": "Importprüfung einer lokalen CSV-Datei: zwei Eintragsseiten und zwei Eigenschaftsspalten mit der Importschaltfläche.",
       "caption": "Prüfe die eingelesenen Einträge und die Spaltenzahl vor dem Import in die leere Datenbank.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -174,7 +174,7 @@
       "src": "/documentation/de/database-options.png",
       "alt": "Komponentenvorschau von Optionen bearbeiten mit deutschen Statusoptionen, Pfeilen nach oben und unten, Papierkörben und einer Erklärung zum Löschen.",
       "caption": "Bearbeite Namen, Farben und Reihenfolge der Optionen gemeinsam. Der Papierkorb entfernt eine Option aus dem Entwurf; Speichern übernimmt die Änderungen. Mit Demonstrationsdaten.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-12",
       "viewport": [
@@ -191,7 +191,7 @@
       "src": "/documentation/de/database-date-time.png",
       "alt": "Komponentenvorschau der Datumsauswahl mit dem ausgewählten 24. Juli 2026, aktivierter Uhrzeit und Zeit auf 02:00 AM.",
       "caption": "Aktiviere „Uhrzeit hinzufügen“, um eine Uhrzeit einzugeben. Diese Komponentenvorschau verwendet Demonstrationsdaten und die Zeitzone des Geräts.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -262,7 +262,7 @@ Ein leerer Eintrag zeigt im Inhalt einen Platzhalter für den Schreibbereich. Be
 
 Verwende Zeilen-Kontrollkästchen für die Auswahl und Shift-Klick für einen Bereich. Der Tooltip jedes Kontrollkästchens lautet **Auswählen** oder **Auswahl aufheben**. Das Kontrollkästchen in der Kopfzeile (**Alle Einträge auswählen** oder, wenn alle ausgewählt sind, **Alle abwählen**) zeigt einen Strich, solange nur ein Teil der Einträge ausgewählt ist, und ein Häkchen, wenn alle ausgewählt sind; ein Klick darauf bei einer Teilauswahl wählt alle Einträge aus. Fahre mit dem Zeiger über eine Zeile, um ihren Rand anzuzeigen: Der Griff öffnet Aktionen und kann Einträge in manueller Reihenfolge umordnen, und das + fügt unter dem Eintrag ein; Option/Alt fügt oberhalb ein. Benachbartes Einfügen entfernt die Filter der aktiven Ansicht, damit der neue Eintrag sichtbar ist. Angehakte Einträge öffnen die schwebende Auswahlleiste: Wähle **Aktionen** oder drücke Command+K unter macOS bzw. Strg+K auf anderen Systemen, um sie zu Tickets hochzustufen, zu **Duplizieren** oder **In den Papierkorb verschieben**, jeweils nach ihrer Bestätigung, und **Numo fragen** öffnet Numo mit allen angehakten Einträgen im Kontext. Auf einem Touchscreen haben Zeilen keinen Rand, und ihre Kontrollkästchen bleiben sichtbar; dieselbe Auswahlleiste wirkt auf die angehakten Einträge, und das Verschieben eines Eintrags nach oben oder unten ist dort nicht verfügbar.
 
-Im Griffmenü eines einzelnen Eintrags kann der Eigentümer oder ein Mitglied **Zu Ticket hochstufen** wählen, damit Numo diesen Eintrag mit Inhalt und Eigenschaften in ein Ticket umwandelt. Der Eintrag bleibt in der Datenbank. Bezieht sich das Menü auf mehrere ausgewählte Zeilen, stufe sie stattdessen über **Aktionen** in der Auswahlleiste hoch: Eine einzige Numo-Konversation erstellt ein Ticket pro Eintrag. Die [Seitenanleitung](/de/dokumentation/pages#promote-page-to-issue) beschreibt die Rückfragen von Numo und was zu tun ist, wenn der Eintrag vorher nicht gespeichert werden kann.
+Im Griffmenü eines einzelnen Eintrags kann der Eigentümer oder ein Mitglied **In ein Ticket umwandeln** wählen, damit Numo diesen Eintrag mit Inhalt und Eigenschaften in ein Ticket umwandelt. Der Eintrag bleibt in der Datenbank. Bezieht sich das Menü auf mehrere ausgewählte Zeilen, stufe sie stattdessen über **Aktionen** in der Auswahlleiste hoch: Eine einzige Numo-Konversation erstellt ein Ticket pro Eintrag. Die [Seitenanleitung](/de/dokumentation/pages#promote-page-to-issue) beschreibt die Rückfragen von Numo und was zu tun ist, wenn der Eintrag vorher nicht gespeichert werden kann.
 
 ### Datenbankansichten {#database-display}
 

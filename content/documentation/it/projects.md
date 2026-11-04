@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 18,
+  "revision": 21,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -72,10 +72,10 @@
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude (MIN-879: issue graph hover cards and neighbour identifiers checked against components/stats/issue-graph.tsx; existing figures unaffected and kept; no capture taken)",
-    "language": "agent:claude (it sentences translated from en revision 18 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "revision": 21,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -99,7 +99,7 @@
       "src": "/documentation/it/project-general.png",
       "alt": "Intestazione del progetto con l’icona e il suo badge di modifica, il nome, la chiave e le cifre Ticket, Membri, Obiettivi, Categorie e Creato.",
       "caption": "Seleziona l’icona, il nome o la chiave per cambiarli sul posto; spostare il progetto nel cestino resta un’azione separata, più in basso.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -116,7 +116,7 @@
       "src": "/documentation/it/project-members.png",
       "alt": "Scheda «Invita persone» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.",
       "caption": "Invita con l’email dell’account e identifica il proprietario prima di rimuovere l’accesso di un membro.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -131,11 +131,11 @@
       "id": "project-statistics-steps",
       "kind": "screenshot",
       "src": "/documentation/it/project-statistics.png",
-      "alt": "Sezioni Slancio, Situazione attuale e Collaboratori di un progetto con circa mille ticket: barre settimanali dei ticket creati e completati, una barra degli stati, indicatori di salute e una barra degli stati per persona.",
+      "alt": "Sezioni Ritmo, Situazione attuale e Collaboratori di un progetto con circa mille ticket: barre settimanali dei ticket creati e completati, una barra degli stati, indicatori di salute e una barra degli stati per persona.",
       "caption": "Lo slancio confronta le ultime quattro settimane con le quattro precedenti; i ticket in ritardo e fermi segnalano il lavoro da guardare.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
-      "capturedAt": "2026-10-31",
+      "capturedAt": "2026-11-04",
       "viewport": [
         816,
         932
@@ -150,7 +150,7 @@
       "src": "/documentation/it/project-issue-graph.png",
       "alt": "Grafo dei ticket aperti raccolti in bolle colorate per obiettivo attorno ad ancore quadrate, con frecce grigie dal ticket padre al sottoticket, frecce rosse di blocco, collegamenti Correlati tratteggiati, linee grigie tra obiettivi, la legenda e l’interruttore Includi ticket e obiettivi chiusi.",
       "caption": "Passa il cursore su un punto per leggere il suo ticket ed evidenziarne i collegamenti; selezionalo per aprire il ticket nel pannello laterale.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-31",
       "viewport": [
@@ -179,15 +179,15 @@ Apri il progetto e poi le sue impostazioni. La proprietà del progetto determina
 
 La scheda **Generale** si apre con l’identità del progetto: la sua icona, il nome e la chiave, poi cinque cifre: **Ticket**, **Membri**, **Obiettivi**, **Categorie** e **Creato**. Come proprietario, modifichi icona, nome e chiave dove sono mostrati; non c’è più un pulsante Salva. Seleziona l’icona e scegli **Nuova sfera** (proposto solo finché nessuna immagine copre l’orbe), **Carica un'immagine**, **Importa da un sito…**, che chiede l’indirizzo del sito e ne importa l’icona quando scegli **Importa**, oppure, se è impostata un’immagine, **Rimuovi l’immagine**, che chiede prima conferma perché l’immagine viene eliminata. Seleziona il nome o la chiave per modificarli: su un computer diventano un campo in cui Invio o l’uscita dal campo salva ed Esc annulla; su un telefono si apre un pannello con **Salva**. Il nome non può essere vuoto. La chiave viene convertita in maiuscolo e deve avere da 2 a 5 lettere (A–Z); altrimenti compare un errore e la chiave non viene salvata. Dopo averla cambiata, controlla gli identificativi risultanti. L’icona distingue il progetto solo nella navigazione; non cambia l’appartenenza al progetto. Membri e lettori vedono la stessa intestazione senza questi controlli.
 
-Sotto l’intestazione compaiono le statistiche del progetto, calcolate sui suoi dati e visibili a tutte le persone del progetto. **Slancio** confronta i ticket completati nelle ultime quattro settimane con le quattro settimane precedenti, indica se il backlog è cresciuto o diminuito in quel periodo e mostra il tempo mediano di consegna dalla creazione a **Completato** negli ultimi 90 giorni; il suo grafico mostra i ticket creati e completati ogni settimana nell’arco di dodici settimane. **Situazione attuale** suddivide tutti i ticket per stato e conta i ticket aperti in ritardo, non assegnati o fermi, cioè in corso o in revisione senza modifiche da 14 giorni. Quando ai ticket del progetto sono collegate delle pull request, **Pull request** mostra quante sono state unite, il tempo mediano per unire, la quota di ticket completati consegnati tramite una pull request unita e le unioni per settimana. **Collaboratori** elenca chi ha completato più ticket negli ultimi 90 giorni e suddivide i ticket di ogni persona per stato: quelli aperti come sono adesso, quelli chiusi in quei 90 giorni. **Grafo dei ticket** disegna i ticket aperti collegati da una relazione o da un ticket padre, colorati in base allo stato, con frecce dal ticket padre al sottoticket e dal ticket che blocca a quello bloccato. I ticket si raccolgono in una bolla colorata per obiettivo, attorno a un quadrato che rappresenta l’obiettivo e porta le sue relazioni; una linea grigia tra due obiettivi riassume i collegamenti tra i loro ticket, che compaiono passando il cursore su uno di essi. Se i ticket sono molti, restano quelli più collegati di ogni obiettivo e la bolla indica quanti sono nascosti. Seleziona un ticket per aprirlo nel pannello laterale, o il quadrato di un obiettivo per aprire l’obiettivo; **Includi ticket e obiettivi chiusi** aggiunge il lavoro completato. Passa il puntatore su un ticket per vederne la scheda completa e gli identificativi dei ticket collegati, o sul quadrato di un obiettivo per vederne la scheda. I ticket annullati e i duplicati non contano mai come completati. Passa il cursore su una barra o mettila a fuoco per leggerne i valori esatti. Numo e i client Minddy MCP leggono gli stessi numeri, insieme ai ticket in ritardo e fermi stessi.
+Sotto l’intestazione compaiono le statistiche del progetto, calcolate sui suoi dati e visibili a tutte le persone del progetto. **Ritmo** confronta i ticket completati nelle ultime quattro settimane con le quattro settimane precedenti, indica se il backlog è cresciuto o diminuito in quel periodo e mostra il tempo mediano di consegna dalla creazione a **Completato** negli ultimi 90 giorni; il suo grafico mostra i ticket creati e completati ogni settimana nell’arco di dodici settimane. **Situazione attuale** suddivide tutti i ticket per stato e conta i ticket aperti in ritardo, non assegnati o fermi, cioè in corso o in revisione senza modifiche da 14 giorni. Quando ai ticket del progetto sono collegate delle pull request, **Pull request** mostra quante sono state unite, il tempo mediano per unire, la quota di ticket completati consegnati tramite una pull request unita e le unioni per settimana. **Collaboratori** elenca chi ha completato più ticket negli ultimi 90 giorni e suddivide i ticket di ogni persona per stato: quelli aperti come sono adesso, quelli chiusi in quei 90 giorni. **Grafo dei ticket** disegna i ticket aperti collegati da una relazione o da un ticket padre, colorati in base allo stato, con frecce dal ticket padre al sottoticket e dal ticket che blocca a quello bloccato. I ticket si raccolgono in una bolla colorata per obiettivo, attorno a un quadrato che rappresenta l’obiettivo e porta le sue relazioni; una linea grigia tra due obiettivi riassume i collegamenti tra i loro ticket, che compaiono passando il cursore su uno di essi. Se i ticket sono molti, restano quelli più collegati di ogni obiettivo e la bolla indica quanti sono nascosti. Seleziona un ticket per aprirlo nel pannello laterale, o il quadrato di un obiettivo per aprire l’obiettivo; **Includi ticket e obiettivi chiusi** aggiunge il lavoro completato. Passa il puntatore su un ticket per vederne la scheda completa e gli identificativi dei ticket collegati, o sul quadrato di un obiettivo per vederne la scheda. I ticket annullati e i duplicati non contano mai come completati. Passa il cursore su una barra o mettila a fuoco per leggerne i valori esatti. Numo e i client minddy MCP leggono gli stessi numeri, insieme ai ticket in ritardo e fermi stessi.
 
-![Sezioni Slancio, Situazione attuale e Collaboratori di un progetto con circa mille ticket: barre settimanali dei ticket creati e completati, una barra degli stati, indicatori di salute e una barra degli stati per persona.](/documentation/it/project-statistics.png)
+![Sezioni Ritmo, Situazione attuale e Collaboratori di un progetto con circa mille ticket: barre settimanali dei ticket creati e completati, una barra degli stati, indicatori di salute e una barra degli stati per persona.](/documentation/it/project-statistics.png)
 
 ![Grafo dei ticket aperti raccolti in bolle colorate per obiettivo attorno ad ancore quadrate, con frecce grigie dal ticket padre al sottoticket, frecce rosse di blocco, collegamenti Correlati tratteggiati, linee grigie tra obiettivi, la legenda e l’interruttore Includi ticket e obiettivi chiusi.](/documentation/it/project-issue-graph.png)
 
 Le altre schede sono **Categorie**, **Membri**, **Ricorrenze**, **Smart Assign**, **Feedback**, **Git**, **Importa** e **Integrazioni**. Segui la guida dell’attività corrispondente prima di abilitare un fornitore o lavoro automatico. Le preferenze dell’account, come la lingua dell’interfaccia, sono separate dalla configurazione del progetto.
 
-In **Categorie**, il proprietario e i membri gestiscono le categorie che classificano i ticket. Scegli **Nuova categoria** sulla riga del titolo della scheda: in cima all’elenco compare una riga con un punto colorato e un campo per il nome. Premi Invio o scegli **Aggiungi** per creare la categoria; Esc chiude la riga senza crearla. Seleziona il punto colorato di una categoria per aprire l’elenco dei colori, dove puoi digitare il nome di un colore per trovarlo; il colore scelto si applica subito (su un telefono l’elenco si apre in un pannello), oppure seleziona il nome per rinominarla sul posto. Il pulsante di eliminazione chiede conferma, poi rimuove la categoria da tutti i ticket. Quando il progetto ha almeno due categorie, ogni riga mostra una maniglia a sinistra: trascinala per spostare la categoria in su o in giù. Da tastiera, porta il focus sulla maniglia, premi Spazio, sposta la categoria con le frecce Su e Giù e premi di nuovo Spazio per rilasciarla; Esc annulla. Questo ordine è quello mostrato da tutti i menu e i filtri delle categorie, per tutto il progetto. Anche Numo e i client MCP di Minddy possono leggerlo e modificarlo, per esempio quando chiedi a Numo di mettere una categoria per prima.
+In **Categorie**, il proprietario e i membri gestiscono le categorie che classificano i ticket. Scegli **Nuova categoria** sulla riga del titolo della scheda: in cima all’elenco compare una riga con un punto colorato e un campo per il nome. Premi Invio o scegli **Aggiungi** per creare la categoria; Esc chiude la riga senza crearla. Seleziona il punto colorato di una categoria per aprire l’elenco dei colori, dove puoi digitare il nome di un colore per trovarlo; il colore scelto si applica subito (su un telefono l’elenco si apre in un pannello), oppure seleziona il nome per rinominarla sul posto. Il pulsante di eliminazione chiede conferma, poi rimuove la categoria da tutti i ticket. Quando il progetto ha almeno due categorie, ogni riga mostra una maniglia a sinistra: trascinala per spostare la categoria in su o in giù. Da tastiera, porta il focus sulla maniglia, premi Spazio, sposta la categoria con le frecce Su e Giù e premi di nuovo Spazio per rilasciarla; Esc annulla. Questo ordine è quello mostrato da tutti i menu e i filtri delle categorie, per tutto il progetto. Anche Numo e i client MCP di minddy possono leggerlo e modificarlo, per esempio quando chiedi a Numo di mettere una categoria per prima.
 
 
 ![Intestazione del progetto con l’icona e il suo badge di modifica, il nome, la chiave e le cifre Ticket, Membri, Obiettivi, Categorie e Creato.](/documentation/it/project-general.png)
@@ -196,7 +196,7 @@ In **Categorie**, il proprietario e i membri gestiscono le categorie che classif
 
 Nascondi un progetto che non segui più ogni giorno per toglierlo dalla tua barra laterale e dalla tua home senza lasciarlo. Nelle impostazioni generali del progetto, scegli **Nascondi** nella **Zona critica**, oppure fai clic con il tasto destro sul progetto nella barra laterale e scegli **Nascondi progetto**, poi conferma. In entrambi i casi una finestra che nomina il progetto chiede prima conferma, perché esce dalla tua navigazione; mostrarlo di nuovo non richiede conferma. Chiunque faccia parte del progetto può nasconderlo, compresi il proprietario e i lettori.
 
-Nascondere cambia solo la tua navigazione. Fuori dal progetto stesso, Minddy non propone più il progetto né i suoi ticket, obiettivi e pagine ovunque tu scelga qualcosa: la palette dei comandi, i suggerimenti di menzione dopo @, il contesto di Numo e la scelta del progetto quando crei un ticket, un obiettivo o una routine. Le menzioni e i link già scritti mantengono il loro nome e si aprono ancora. I suoi ticket escono anche dalla bacheca **Tutti i ticket** e dai suoi filtri, dall’esportazione CSV di tutti i tuoi progetti e dal riempimento automatico del tuo ciclo; se scegli esplicitamente il progetto nell’esportazione, viene ancora incluso. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o dalla scheda **Progetti nascosti** delle **Impostazioni account**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
+Nascondere cambia solo la tua navigazione. Fuori dal progetto stesso, minddy non propone più il progetto né i suoi ticket, obiettivi e pagine ovunque tu scelga qualcosa: la palette dei comandi, i suggerimenti di menzione dopo @, il contesto di Numo e la scelta del progetto quando crei un ticket, un obiettivo o una routine. Le menzioni e i link già scritti mantengono il loro nome e si aprono ancora. I suoi ticket escono anche dalla bacheca **Tutti i ticket** e dai suoi filtri, dall’esportazione CSV di tutti i tuoi progetti e dal riempimento automatico del tuo ciclo; se scegli esplicitamente il progetto nell’esportazione, viene ancora incluso. La preferenza è salvata nel tuo account, quindi resta dopo un nuovo accesso e sugli altri tuoi dispositivi. Mantieni il tuo accesso e puoi ancora aprire e modificare il progetto da un link diretto o dalla scheda **Progetti nascosti** delle **Impostazioni account**. Gli altri membri continuano a vedere il progetto, e le sue routine, integrazioni e notifiche continuano a funzionare. Aprire un progetto nascosto non lo riporta nella tua barra laterale.
 
 Per ritrovarlo, scegli **Mostra** in **Progetti nascosti** o nelle impostazioni generali del progetto, oppure scegli **Mostra progetto** dal suo menu nella barra laterale. Se la modifica non può essere salvata, compare un errore e il progetto torna allo stato precedente; riprova. A differenza di lasciare il progetto o spostarlo nel cestino, nasconderlo non rimuove mai accesso o contenuti.
 
@@ -210,13 +210,13 @@ Il proprietario può anche fare clic con il tasto destro sul progetto nella barr
 
 ## Invitare persone a un progetto {#project-members}
 
-Il proprietario del progetto gestisce l’appartenenza in **Impostazioni del progetto** → **Membri**. Nel riquadro **Invita persone**, cerca un nome o inserisci l’email che la persona usa su questa istanza. Mentre scrivi, **Dai tuoi progetti** propone le persone che sono già entrate in uno dei tuoi altri progetti, come proprietario, membro o lettore, con un’email verificata; chi è stato solo invitato non viene mai proposto, così come i membri attuali e gli inviti in attesa. Scegli una persona per inserirla nel campo con il suo avatar e il suo nome, oppure premi Invio quando il nome corrisponde a una sola persona. Chiunque altro viene invitato per email. Poi scegli il suo ruolo e **Invita**. Una persona scelta dai tuoi progetti viene invitata tramite il suo account: Minddy verifica di nuovo che sia entrata in uno dei tuoi progetti e altrimenti rifiuta con «Questa persona non fa parte dei tuoi progetti.» L’invito compare nel riquadro **Inviti in attesa** finché non viene accettato; i membri attuali sono elencati nel riquadro **Membri**, il cui titolo ne indica il numero. Scegli **Membro** per chi lavora sul progetto, oppure **Lettore** per chi si limita a seguirlo. Per un lettore, attiva **Può commentare** se deve partecipare alle discussioni. Finché l’invito è in attesa, il proprietario può cambiarne il ruolo e l’opzione di commento. La stessa email su un’altra istanza non dà accesso qui.
+Il proprietario del progetto gestisce l’appartenenza in **Impostazioni del progetto** → **Membri**. Nel riquadro **Invita persone**, cerca un nome o inserisci l’email che la persona usa su questa istanza. Mentre scrivi, **Dai tuoi progetti** propone le persone che sono già entrate in uno dei tuoi altri progetti, come proprietario, membro o lettore, con un’email verificata; chi è stato solo invitato non viene mai proposto, così come i membri attuali e gli inviti in attesa. Scegli una persona per inserirla nel campo con il suo avatar e il suo nome, oppure premi Invio quando il nome corrisponde a una sola persona. Chiunque altro viene invitato per email. Poi scegli il suo ruolo e **Invita**. Una persona scelta dai tuoi progetti viene invitata tramite il suo account: minddy verifica di nuovo che sia entrata in uno dei tuoi progetti e altrimenti rifiuta con «Questa persona non fa parte dei tuoi progetti.» L’invito compare nel riquadro **Inviti in attesa** finché non viene accettato; i membri attuali sono elencati nel riquadro **Membri**, il cui titolo ne indica il numero. Scegli **Membro** per chi lavora sul progetto, oppure **Lettore** per chi si limita a seguirlo. Per un lettore, attiva **Può commentare** se deve partecipare alle discussioni. Finché l’invito è in attesa, il proprietario può cambiarne il ruolo e l’opzione di commento. La stessa email su un’altra istanza non dà accesso qui.
 
 La persona invitata accede con quell’account e apre la posta in arrivo. Accetta l’invito in attesa per entrare con il ruolo che prevede, oppure rifiutalo se il progetto è inatteso. Il dialogo di ingresso iniziale aiuta a condividere la tua email con il proprietario; non permette di entrare in progetti senza invito.
 
 Puoi anche invitare persone mentre crei il progetto. Nel passaggio **Invita il tuo team** della procedura guidata, cerca un nome o inserisci un’email. Sotto il campo, **Dai tuoi progetti** propone le stesse persone del riquadro **Invita persone**, anche prima che tu scriva, e si filtra mentre scrivi. Scegli una persona, oppure premi Invio quando ne corrisponde una sola; anche digitare l’indirizzo di una di queste persone la aggiunge con il suo nome. Aggiungi chiunque altro per email con **Aggiungi** o Invio. Il limite di ospiti del tuo piano vale come qui, e l’elenco resta salvato nella bozza del progetto se riprendi la creazione più tardi.
 
-Non parte nulla prima che tu scelga **Fine**: il progetto viene creato per primo, poi ogni persona riceve un invito con il ruolo **Membro**. Le persone scelte dai tuoi progetti vengono invitate tramite il loro account: Minddy verifica di nuovo che siano entrate in uno dei tuoi progetti e usa il loro indirizzo verificato. Le altre vengono invitate per email. Questi inviti compaiono nel riquadro **Inviti in attesa**, dove puoi cambiarne il ruolo, e si accettano nella posta in arrivo come gli altri. Se alcuni vengono rifiutati, per esempio per il limite di ospiti del piano o perché qualcuno nel frattempo ha lasciato il progetto che condividevate («Questa persona non fa parte dei tuoi progetti.»), gli altri partono comunque e una notifica elenca ogni persona non invitata con il motivo. Controlla il riquadro **Inviti in attesa** prima di invitarle di nuovo. Un invito in attesa è registrato, il che non garantisce che la sua email sia stata recapitata.
+Non parte nulla prima che tu scelga **Fine**: il progetto viene creato per primo, poi ogni persona riceve un invito con il ruolo **Membro**. Le persone scelte dai tuoi progetti vengono invitate tramite il loro account: minddy verifica di nuovo che siano entrate in uno dei tuoi progetti e usa il loro indirizzo verificato. Le altre vengono invitate per email. Questi inviti compaiono nel riquadro **Inviti in attesa**, dove puoi cambiarne il ruolo, e si accettano nella posta in arrivo come gli altri. Se alcuni vengono rifiutati, per esempio per il limite di ospiti del piano o perché qualcuno nel frattempo ha lasciato il progetto che condividevate («Questa persona non fa parte dei tuoi progetti.»), gli altri partono comunque e una notifica elenca ogni persona non invitata con il motivo. Controlla il riquadro **Inviti in attesa** prima di invitarle di nuovo. Un invito in attesa è registrato, il che non garantisce che la sua email sia stata recapitata.
 
 
 ![Scheda «Invita persone» sopra la scheda Membri, che elenca tre membri dimostrativi con il proprietario indicato.](/documentation/it/project-members.png)

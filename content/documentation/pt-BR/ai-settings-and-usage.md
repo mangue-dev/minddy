@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -63,10 +63,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (model pickers show the default's model by name instead of App default when that model is in the catalog, and choosing it keeps following the default; checked against components/agent/model-combobox.tsx and components/settings/account-ai-keys-section.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure changed, the diagram does not show picker labels)",
+    "revision": 25,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
     "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "date": "2026-11-04"
   },
   "related": [
     "scheduled-routines"
@@ -88,7 +88,7 @@
       "src": "/documentation/pt-BR/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Provedores conectados, um provedor por uso e o provedor e modelo do Numo são ajustes separados.",
       "caption": "Cada uso passa pelo minddy Cloud ou por um provedor conectado. O padrão do Numo é salvo por provedor; uma conversa pode escolher o próprio provedor e modelo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -124,7 +124,7 @@
 
 As configurações de IA da conta definem chaves pessoais, escopos e modelos padrão. Confira o roteamento dos modelos antes de iniciar o trabalho. No Cloud, use a área de faturamento para distinguir uso incluído, chamadas com chaves pessoais e limites de rotinas. Em instâncias auto-hospedadas, disponibilidade e custos dependem da configuração da instância.
 
-A seção **IA do Minddy** das configurações de IA da conta configura os provedores de API usados pelas conversas do Numo, rotinas, automações, voz e feedback. Os agentes de código que você mesmo executa, conectados pelo MCP do minddy, usam a própria assinatura ou conta de API e não consomem o uso de IA do Minddy.
+A seção **IA do minddy** das configurações de IA da conta configura os provedores de API usados pelas conversas do Numo, rotinas, automações, voz e feedback. Os agentes de código que você mesmo executa, conectados pelo MCP do minddy, usam a própria assinatura ou conta de API e não consomem o uso de IA do minddy.
 
 ## Configurar chaves pessoais de IA e modelos {#ai-keys-and-models}
 
@@ -134,13 +134,13 @@ Abaixo, **Numo**, **Automações**, **Ditado por voz** e **Feedback** listam seu
 
 Para as **Conversas** do Numo, escolha o provedor e depois um modelo desse provedor. O seletor mostra o modelo padrão do app pelo próprio nome, marcado enquanto você o segue; escolhê-lo mantém sua configuração seguindo o padrão do app, então mudanças posteriores nesse padrão continuam valendo. **Padrão do app** só aparece como opção quando esse modelo não está no catálogo. Esse padrão é salvo para a sua conta e separadamente para cada provedor, entre recarregamentos e novas sessões. Em uma conversa, a lista de modelos ao lado do microfone abre nos provedores quando há vários disponíveis; escolha um para ver os modelos dele. A conversa mantém esse provedor e esse modelo, e as conversas que seguem o seu padrão recebem as mudanças posteriores da conta. Turnos já admitidos mantêm o provedor e o modelo fixados. Um modelo salvo que fica indisponível ou excede o seu plano é recusado: escolha outro modelo ou o modelo padrão do app. Se o provedor de uma conversa for removido, o Numo pede que você escolha outro em vez de trocar por conta própria. A exportação e a importação da conta incluem essas preferências de modelo, sem as credenciais dos provedores.
 
-Uma chave não confirmada ou inacessível pode manter as chamadas gerais de IA compatíveis na cota Minddy quando a IA gerenciada está configurada. Seu provedor cobra as chamadas feitas com a chave dele, e o minddy não as registra. Chaves pessoais validadas e trabalho financiado pelo Minddy seguem as [regras de orçamento abaixo](#consumption).
+Uma chave não confirmada ou inacessível pode manter as chamadas gerais de IA compatíveis na cota minddy quando a IA gerenciada está configurada. Seu provedor cobra as chamadas feitas com a chave dele, e o minddy não as registra. Chaves pessoais validadas e trabalho financiado pelo minddy seguem as [regras de orçamento abaixo](#consumption).
 
 ![Provedores conectados, um provedor por uso e o provedor e modelo do Numo são ajustes separados.](/documentation/pt-BR/ai-providers-and-numo-defaults-flow.svg)
 
 ### Modelos locais {#models}
 
-O Minddy chama os modelos de IA pelo servidor, então não consegue usar um modelo executado no seu computador. **Adicionar provedor** não oferece Ollama local nem endpoints locais compatíveis com OpenAI. Um endpoint local salvo em uma versão anterior continua aparecendo em **Provedores conectados**, mas não atende às conversas do Numo, às rotinas nem a outros recursos. Remova-o e atribua no lugar um provedor acessível pelo servidor. Remova um provedor pelo controle de confirmação quando ele não for mais necessário e confira o roteamento resultante antes da próxima execução.
+O minddy chama os modelos de IA pelo servidor, então não consegue usar um modelo executado no seu computador. **Adicionar provedor** não oferece Ollama local nem endpoints locais compatíveis com OpenAI. Um endpoint local salvo em uma versão anterior continua aparecendo em **Provedores conectados**, mas não atende às conversas do Numo, às rotinas nem a outros recursos. Remova-o e atribua no lugar um provedor acessível pelo servidor. Remova um provedor pelo controle de confirmação quando ele não for mais necessário e confira o roteamento resultante antes da próxima execução.
 
 
 ## Entender os planos Cloud e o consumo de IA {#plans-and-ai-usage}
@@ -157,7 +157,7 @@ As chaves pessoais compatíveis fazem o provedor cobrar as chamadas aos modelos,
 
 ### Capacidades dos planos {#plan-capacities}
 
-Estes padrões descrevem o Minddy 0.20.0. Confira a página de preços e a conta reais antes de comprar: os preços configurados no pagamento e as exceções da conta podem ser diferentes. A contagem de convidados exclui o proprietário do projeto e inclui membros, leitores e convites pendentes; não há cobrança por assento. O armazenamento é contabilizado para o proprietário do projeto que recebe os arquivos. Quando a propriedade é transferida, esses limites, o armazenamento e a IA em segundo plano, como o Smart Assign e a análise de feedback, passam a usar o plano do novo proprietário.
+Estes padrões descrevem o minddy 0.20.0. Confira a página de preços e a conta reais antes de comprar: os preços configurados no pagamento e as exceções da conta podem ser diferentes. A contagem de convidados exclui o proprietário do projeto e inclui membros, leitores e convites pendentes; não há cobrança por assento. O armazenamento é contabilizado para o proprietário do projeto que recebe os arquivos. Quando a propriedade é transferida, esses limites, o armazenamento e a IA em segundo plano, como o Smart Assign e a análise de feedback, passam a usar o plano do novo proprietário.
 
 | Plano | Projetos | Tickets por projeto | Convidados por projeto | Armazenamento | IA mensal incluída (USD) |
 | --- | --- | --- | --- | --- | --- |
@@ -165,7 +165,7 @@ Estes padrões descrevem o Minddy 0.20.0. Confira a página de preços e a conta
 | Go | Ilimitados | Ilimitadas | Ilimitados | 20 GiB | 5 |
 | Pro | Ilimitados | Ilimitadas | Ilimitados | 100 GiB | 15 |
 
-A Cobrança mostra o orçamento de IA restante e sua próxima redefinição, **Evolução do orçamento** e **O que consome seu orçamento?**, que divide o consumo entre **Rotinas**, **Numo**, **Ditado de voz**, **Feedback** e **Automações** como percentual do orçamento incluído. **Histórico de uso** lista as ações do período atual e sua parcela do orçamento.
+A Cobrança mostra o orçamento de IA restante e sua próxima redefinição, **Evolução do orçamento** e **O que consome seu orçamento?**, que divide o consumo entre **Rotinas**, **Numo**, **Ditado por voz**, **Feedback** e **Automações** como percentual do orçamento incluído. **Histórico de uso** lista as ações do período atual e sua parcela do orçamento.
 
 ## Ditar texto e alterações {#voice-dictation}
 

@@ -3,7 +3,7 @@
   "id": "authentication-and-email",
   "locale": "fr",
   "title": "Authentification et e-mails",
-  "summary": "Les emails Auth dépendent de Supabase/GoTrue.",
+  "summary": "Les e-mails Auth dépendent de Supabase/GoTrue.",
   "topic": "Exploiter une instance",
   "type": "guide",
   "audiences": [
@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 5,
+  "revision": 6,
   "sourceRevision": 5,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -37,8 +37,8 @@
     ]
   },
   "review": {
-    "revision": 5,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "revision": 6,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured)",
     "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -48,7 +48,7 @@
   ],
   "aliases": [],
   "tags": [
-    "Configurer les emails de compte, MFA et la récupération"
+    "Configurer les e-mails de compte, MFA et la récupération"
   ],
   "figures": [
     {
@@ -57,7 +57,7 @@
       "src": "/documentation/fr/authentication-and-email-flow.svg",
       "alt": "Schéma: Origine Auth et redirections configurées. SMTP opérateur et modèles versionnés. Geste de confirmation et connexion. Tests TOTP, récupération et ancien mot de passe.",
       "caption": "Lisez les étapes dans cet ordre. Origine Auth et redirections configurées. SMTP opérateur et modèles versionnés. Geste de confirmation et connexion. Tests TOTP, récupération et ancien mot de passe.",
-      "revision": 5,
+      "revision": 6,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -90,9 +90,9 @@
 }
 ---
 
-## Configurer les emails de compte, MFA et la récupération {#authentication-and-email}
+## Configurer les e-mails de compte, MFA et la récupération {#authentication-and-email}
 
-Les emails Auth dépendent de Supabase/GoTrue. Les notifications applicatives Resend ne configurent ni confirmation ni récupération du mot de passe. En full, conservez l’overlay minddy dans chaque commande Compose. Réglez `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` et `ADDITIONAL_REDIRECT_URLS` sur vos origines. Renseignez `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` et `SMTP_SENDER_NAME` avec votre fournisseur. L’overlay règle aussi les limites de session : `GOTRUE_SESSIONS_TIMEBOX` vaut `8760h` (un an) et `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` vaut `720h` (30 jours). Gardez la confirmation activée et redémarrez Auth dans le contexte Compose installé.
+Les e-mails Auth dépendent de Supabase/GoTrue. Les notifications applicatives Resend ne configurent ni confirmation ni récupération du mot de passe. En full, conservez l’overlay minddy dans chaque commande Compose. Réglez `SITE_URL`, `API_EXTERNAL_URL`, `SUPABASE_PUBLIC_URL` et `ADDITIONAL_REDIRECT_URLS` sur vos origines. Renseignez `SMTP_ADMIN_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` et `SMTP_SENDER_NAME` avec votre fournisseur. L’overlay règle aussi les limites de session : `GOTRUE_SESSIONS_TIMEBOX` vaut `8760h` (un an) et `GOTRUE_SESSIONS_INACTIVITY_TIMEOUT` vaut `720h` (30 jours). Gardez la confirmation activée et redémarrez Auth dans le contexte Compose installé.
 
 
 Avant d’utiliser `compose` ci-dessous, définissez la fonction du profil full installé depuis [le contexte Compose de référence](/fr/documentation/backups-and-restoration#context).
@@ -110,4 +110,4 @@ Dans les paramètres Authentication de votre projet, réglez Site URL et la redi
 
 ## Vérifier le résultat {#verify}
 
-Utilisez une adresse jetable que vous contrôlez. Vérifiez la réception de l’email d’inscription, son ouverture sur cette instance et le geste de confirmation. Activez TOTP dans les paramètres de sécurité et conservez les codes de récupération hors du navigateur. Déconnectez-vous puis vérifiez une nouvelle connexion avec mot de passe et TOTP. Demandez une réinitialisation et vérifiez que l’ancien mot de passe échoue après modification. Pour `ADMIN_EMAILS`, vérifiez l’administration après MFA. Consignez versions, dates et résultats expurgés. L’état des conteneurs ne prouve pas la livraison ni la sécurité du compte. N’incluez aucun token email, mot de passe, session, secret TOTP ou code de récupération.
+Utilisez une adresse jetable que vous contrôlez. Vérifiez la réception de l’e-mail d’inscription, son ouverture sur cette instance et le geste de confirmation. Activez TOTP dans les paramètres de sécurité et conservez les codes de récupération hors du navigateur. Déconnectez-vous puis vérifiez une nouvelle connexion avec mot de passe et TOTP. Demandez une réinitialisation et vérifiez que l’ancien mot de passe échoue après modification. Pour `ADMIN_EMAILS`, vérifiez l’administration après MFA. Consignez versions, dates et résultats expurgés. L’état des conteneurs ne prouve pas la livraison ni la sécurité du compte. N’incluez aucun token e-mail, mot de passe, session, secret TOTP ou code de récupération.

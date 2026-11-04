@@ -121,7 +121,7 @@ const INVITATION_COPY: Record<Locale, InvitationEmailCopy> = {
     note: (email) =>
       `Invitation envoyée à ${email}. Créez votre compte avec cette adresse : elle vous rattache au projet.`,
     ignore:
-      "Si vous ne connaissez pas cette personne, ignorez cet email — rien ne se passera.",
+      "Si vous ne connaissez pas cette personne, ignorez cet e-mail — rien ne se passera.",
   },
   de: {
     someone: "Jemand",
@@ -236,7 +236,7 @@ export async function sendInvitationEmail(
   const { lead, cta, ignore } = copy;
   const note = copy.note(params.to);
 
-  const text = `${title}\n\n${lead}\n\n${cta} : ${link}\n\n${note}\n\n${ignore}\n\n${SITE_NAME} — ${SITE_URL}`;
+  const text = `${title}\n\n${lead}\n\n${cta}${params.locale === "fr" ? "\u00a0:" : ":"} ${link}\n\n${note}\n\n${ignore}\n\n${SITE_NAME} — ${SITE_URL}`;
 
   const html = `<!doctype html>
 <html lang="${params.locale}">

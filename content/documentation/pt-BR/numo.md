@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 26,
+  "revision": 28,
+  "sourceRevision": 27,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -76,10 +76,10 @@
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:claude-code (recovery section: no per-operation allocation card any more and concurrent conversations share the account budget, checked against lib/server/numo/turns.ts, app/api/assistant/chat/route.ts and supabase/migrations/20270109200096_numo_turns_without_budget_reservation.sql; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude (composer add menu: source review of components/assistant/chat-input.tsx; the Add context sentence now describes sectioned context with MCP servers among the mentions instead of a separate MCP group; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:claude-code (pt-BR changed passages; self-reviewed; agent review, not human acceptance); agent:claude (pt-BR Add context sentence translated from en revision 26 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-01"
+    "revision": 28,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "code-work",
@@ -110,7 +110,7 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -127,7 +127,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -188,7 +188,7 @@
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
       "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -220,7 +220,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -237,7 +237,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Assistente de conexão do Notion mostrando o método de login conhecido pelo catálogo.",
       "caption": "Etapa de login de um serviço do catálogo. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-21",
       "viewport": [
@@ -278,7 +278,7 @@ Para perguntar ao Numo sobre um trecho, selecione-o em um editor, como uma pági
 
 O Numo também pode ver as imagens da descrição de um ticket ou objetivo, de um plano, de um comentário, de uma página ou do seu caderno quando o modelo da conversa aceita imagens. Sem essa capacidade, o Numo informa que não conseguiu ver a imagem em vez de descrevê-la.
 
-O Numo também pode escrever um arquivo para baixar: um relatório ou um documento em PDF, uma exportação em CSV, ou um arquivo de texto, Markdown, HTML, JSON, XML, SVG ou de calendário. Peça na sua solicitação; o Numo pode montá-lo a partir dos arquivos que você adicionou à conversa. O arquivo aparece como um cartão abaixo da resposta: selecionar o cartão abre a visualização quando o formato permite, **Baixar** salva o arquivo, e o menu ao lado oferece **Visualização** e **Copiar o conteúdo**. O arquivo fica no armazenamento privado da sua conversa; para compartilhá-lo com o projeto, peça ao Numo para anexá-lo a um ticket, a um objetivo ou a um comentário que ele publicar lá. Um PDF usa as fontes padrão: caracteres fora dos alfabetos da Europa Ocidental e emojis não aparecem.
+O Numo também pode escrever um arquivo para baixar: um relatório ou um documento em PDF, uma exportação em CSV, ou um arquivo de texto, Markdown, HTML, JSON, XML, SVG ou de calendário. Peça na sua solicitação; o Numo pode montá-lo a partir dos arquivos que você adicionou à conversa. O arquivo aparece como um cartão abaixo da resposta: selecionar o cartão abre a visualização quando o formato permite, **Baixar** salva o arquivo, e o menu ao lado oferece **Prévia** e **Copiar o conteúdo**. O arquivo fica no armazenamento privado da sua conversa; para compartilhá-lo com o projeto, peça ao Numo para anexá-lo a um ticket, a um objetivo ou a um comentário que ele publicar lá. Um PDF usa as fontes padrão: caracteres fora dos alfabetos da Europa Ocidental e emojis não aparecem.
 
 O modelo padrão do Numo vem de **Configurações da conta → IA e Numo → Modelo padrão do Numo**: o padrão do app ou um modelo pessoal do provedor ativo. Uma escolha explícita na conversa tem prioridade. Consulte [configurações de IA e uso](/docs/ai-settings-and-usage#ai-keys-and-models).
 
@@ -286,7 +286,7 @@ O modelo padrão do Numo vem de **Configurações da conta → IA e Numo → Mod
 
 ### Continuar uma conversa {#continue}
 
-A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. O Numo organiza e acompanha o trabalho: lê e atualiza tickets, planos, páginas e outros conteúdos do Minddy e pode ler os pull requests vinculados. Quando você pede, ele também pode comentar um pull request, resolver as conversas de revisão já atendidas e mesclá-lo. Quando o Numo busca tickets, correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode acrescentar tickets do mesmo projeto encontrados pelo sentido, que o Numo deve conferir antes de se basear neles. Ele não escreve código nem faz push de commits. Para que o código seja escrito, copie o prompt do ticket para seu próprio agente de código; consulte [Trabalho de código e pull requests](/docs/code-work#external-coding-agents).
+A lista mantém as conversas anteriores acessíveis. Continue a conversa com as decisões necessárias. O Numo organiza e acompanha o trabalho: lê e atualiza tickets, planos, páginas e outros conteúdos do minddy e pode ler os pull requests vinculados. Quando você pede, ele também pode comentar um pull request, resolver as conversas de revisão já atendidas e mesclá-lo. Quando o Numo busca tickets, correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode acrescentar tickets do mesmo projeto encontrados pelo sentido, que o Numo deve conferir antes de se basear neles. Ele não escreve código nem faz push de commits. Para que o código seja escrito, copie o prompt do ticket para seu próprio agente de código; consulte [Trabalho de código e pull requests](/docs/code-work#external-coding-agents).
 
 Se o Numo pedir informações, envie sua escolha antes de esperar a continuação das ações dependentes. Um cartão de consumo ou erro explica a interrupção. Confira qualquer gravação externa antes de pedir para repetir a ação.
 
@@ -310,7 +310,7 @@ Conversas não usam conexões MCP pessoais de outro membro. Rotinas usam conexõ
 
 ## Entender os turnos persistentes do Numo {#numo-execution-model}
 
-Mensagens interativas, ações contextuais e rotinas entram nas conversas do Numo. O modelo e raciocínio da conversa são escolhidos no campo de composição. O Numo age por meio de suas ferramentas do Minddy e das conexões MCP pessoais que você adicionou; ele não precisa de repositório. Uma rotina cria uma conversa nova com instruções salvas e contexto do proprietário e projeto. O desktop não precisa permanecer online.
+Mensagens interativas, ações contextuais e rotinas entram nas conversas do Numo. O modelo e raciocínio da conversa são escolhidos no campo de composição. O Numo age por meio de suas ferramentas do minddy e das conexões MCP pessoais que você adicionou; ele não precisa de repositório. Uma rotina cria uma conversa nova com instruções salvas e contexto do proprietário e projeto. O desktop não precisa permanecer online.
 
 ![Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.](/documentation/pt-BR/numo-execution-model-flow.svg)
 

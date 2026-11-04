@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 46,
-  "sourceRevision": 46,
+  "revision": 47,
+  "sourceRevision": 47,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -133,10 +133,10 @@
     ]
   },
   "review": {
-    "revision": 46,
-    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken); agent:claude (Smart Fill menu shortcut: source review of components/issue-compact-fields.tsx; sentence added on Command/Ctrl+Shift+F and the restored cursor; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude (Smart Fill menu status, assignee and due date: source review of components/issue-compact-fields.tsx and components/create-issue-dialog.tsx; one sentence added; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:claude (fr sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance); agent:claude (fr Smart Fill shortcut sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance); agent:claude (fr Smart Fill menu sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 47,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "feedback",
@@ -181,12 +181,12 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-27",
+      "capturedAt": "2026-11-04",
       "viewport": [
         720,
-        396
+        380
       ],
       "theme": "light",
       "padding": 24
@@ -197,7 +197,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -214,7 +214,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -230,7 +230,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -246,7 +246,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -262,7 +262,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Champ de création d’un sous-ticket dans un parent de démonstration.",
       "caption": "Ce champ crée un enfant sous le parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -278,7 +278,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -294,7 +294,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -310,7 +310,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -327,7 +327,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -360,7 +360,7 @@ Un ticket suit un travail dans un projet, de son signalement à sa clôture. Com
 
 Vous devez être propriétaire ou Membre du projet destinataire ; les lecteurs peuvent ouvrir les tickets, mais ni les créer ni les modifier. Ouvrez le projet et sa commande de création de ticket. Saisissez un titre qui nomme le travail, puis décrivez contexte, résultat attendu et contraintes. Le titre et la description se comportent comme un seul texte : sur ordinateur, la flèche bas sur la dernière ligne du titre passe à la première ligne de la description, la flèche haut revient, et le curseur garde à peu près sa place sur la ligne. Maj+Entrée dans le titre passe à la description ; Entrée aussi, sauf si vous avez choisi Entrée comme raccourci d’envoi, auquel cas il crée le ticket. Commande/Ctrl+Entrée le crée depuis l’un ou l’autre champ. Les mêmes flèches et Entrée relient le titre et la description d’un ticket, d’un objectif, d’une page ou d’un retour ouverts. Le formulaire s’ouvre sur le projet courant ; choisissez-en un autre dans **Créer dans**, en haut à gauche du formulaire (à côté du titre **Nouveau ticket** sur téléphone), en particulier depuis une vue personnelle ou transversale. Sur ordinateur, Commande/Ctrl+Maj+P ouvre ce menu, même pendant la saisie du titre ou de la description ; une fois le projet choisi ou le menu fermé, le curseur revient exactement où il était. La pastille affiche ce raccourci, qui n’existe que si plusieurs projets peuvent être choisis ; sur téléphone, aucun raccourci n’est indiqué. Changer de projet efface les catégories, l’objectif et les relations choisis pour le précédent. Le bouton de création affiche l’identifiant que recevra le ticket, par exemple `MIN-42`, et suit les tickets créés entre-temps ; son menu crée le ticket et copie cet identifiant.
 
-Pour une création manuelle, désactivez Smart-fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories, d’objectif et de relations deviennent alors disponibles. Pour ne fixer que certaines de ces propriétés, laissez Smart-fill activé et ouvrez la flèche à côté de son bouton : choisissez une propriété, puis sa valeur. **Relations** y liste les types de relation ; en choisir un ouvre la palette de commandes sur ses cibles possibles. Le même menu fixe aussi le **Statut** et l’**Assigné**, et **Échéance** ouvre le calendrier ; ces trois propriétés restent dans la ligne du formulaire, que Smart-fill soit activé ou non. Hors du titre et de la description, la touche de la propriété ouvre directement son sélecteur : P pour la priorité, E pour l’effort, L pour les catégories ou O pour l’objectif. Sur ordinateur, tant que Smart-fill est activé pour le ticket, Commande/Ctrl+Maj+F ouvre ce menu de la flèche, même pendant la saisie du titre ou de la description ; une fois la valeur choisie ou le menu fermé, le curseur revient exactement où vous écriviez, comme avec Commande/Ctrl+Maj+P pour **Créer dans**. La valeur choisie reste affichée dans le formulaire. Smart-fill ne déduit que les propriétés laissées vides. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant de Smart Assign et des routines. Tant que Smart-fill est activé, il [relie aussi le ticket aux tickets liés](#smart-fill-relations) une fois celui-ci enregistré : le sélecteur de relations est donc masqué ; R l’ouvre quand même. Les relations déjà choisies restent visibles sous forme de pastilles dans la ligne des propriétés, entre l’assigné et l’échéance, et sont créées avec le ticket.
+Pour une création manuelle, désactivez Smart Fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories, d’objectif et de relations deviennent alors disponibles. Pour ne fixer que certaines de ces propriétés, laissez Smart Fill activé et ouvrez la flèche à côté de son bouton : choisissez une propriété, puis sa valeur. **Relations** y liste les types de relation ; en choisir un ouvre la palette de commandes sur ses cibles possibles. Le même menu fixe aussi le **Statut** et l’**Assigné**, et **Échéance** ouvre le calendrier ; ces trois propriétés restent dans la ligne du formulaire, que Smart Fill soit activé ou non. Hors du titre et de la description, la touche de la propriété ouvre directement son sélecteur : P pour la priorité, E pour l’effort, L pour les catégories ou O pour l’objectif. Sur ordinateur, tant que Smart Fill est activé pour le ticket, Commande/Ctrl+Maj+F ouvre ce menu de la flèche, même pendant la saisie du titre ou de la description ; une fois la valeur choisie ou le menu fermé, le curseur revient exactement où vous écriviez, comme avec Commande/Ctrl+Maj+P pour **Créer dans**. La valeur choisie reste affichée dans le formulaire. Smart Fill ne déduit que les propriétés laissées vides. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant de Smart Assign et des routines. Tant que Smart Fill est activé, il [relie aussi le ticket aux tickets liés](#smart-fill-relations) une fois celui-ci enregistré : le sélecteur de relations est donc masqué ; R l’ouvre quand même. Les relations déjà choisies restent visibles sous forme de pastilles dans la ligne des propriétés, entre l’assigné et l’échéance, et sont créées avec le ticket.
 
 Définissez les propriétés utiles avant de confirmer : état, priorité, effort, responsable, objectif, catégories, échéance et récurrence. Le responsable est le propriétaire du projet ou un Membre, jamais un lecteur ; l’objectif regroupe des tickets autour d’un résultat du projet. Laissez une propriété optionnelle vide plutôt que de la deviner. La priorité est **Non définie** ou va de basse à urgente, en passant par moyenne et haute ; l’effort est **Non défini** ou utilise XS, S, M, L et XL.
 
@@ -381,32 +381,32 @@ Après une modification, vérifiez la valeur affichée. Un changement de respons
 
 Si la création ou la sauvegarde échoue, conservez votre texte, lisez l’erreur et vérifiez l’adhésion et la destination. Après un échec réseau, vérifiez d’abord si le ticket existe déjà. Liez une page comme ressource vivante lorsque son contenu actuel est nécessaire, et utilisez les commentaires pour la discussion de la tâche.
 
-### Choisir ce que fait Smart-fill {#smart-fill-preferences}
+### Choisir ce que fait Smart Fill {#smart-fill-preferences}
 
-Les préférences de Smart-fill appartiennent à votre compte. Ouvrez **Paramètres du compte** → **Smart Fill**. Chaque option a sa propre carte :
+Les préférences de Smart Fill appartiennent à votre compte. Ouvrez **Paramètres du compte** → **Smart Fill**. Chaque option a sa propre carte :
 
-- Dans la carte **Smart Fill**, **Activer Smart Fill** active ou désactive Smart-fill pour votre compte. Il complète la priorité, l’effort, les catégories et l’objectif manquants ; l’état, le responsable et l’échéance restent les vôtres. Les interrupteurs des deux cartes suivantes en dépendent.
-- Dans **Tickets à remplir**, **Remplir les tickets créés** et **Remplir les tickets en triage** choisissent les nouveaux tickets qu’il complète : ceux que vous créez, et les tickets en triage dont vous êtes responsable. **Réévaluer les tickets modifiés**, activé par défaut, permet à Smart-fill de [relire un ticket](#smart-fill-reevaluation) après une modification de son titre ou de sa description. **Rédiger les titres manquants**, activé par défaut, permet à Smart-fill de [rédiger le titre](#smart-fill-title) d’un ticket que vous vous contentez de décrire.
-- Dans **Tickets liés**, **Relier les tickets liés**, activé par défaut, permet à Smart-fill d’[ajouter des relations](#smart-fill-relations) après l’enregistrement d’un ticket.
-- Dans **Indexation des tickets**, **Indexer les tickets**, activé par défaut et indépendant de Smart-fill, transforme le titre et la description des tickets que vous créez ou modifiez en vecteurs privés qui servent à trouver les tickets liés et à [chercher des tickets par le sens](/docs/navigation#search-by-meaning). L’indexation en arrière-plan des tickets existants d’un projet suit à la fois l’interrupteur du propriétaire du projet et celui de l’auteur : un ticket dont l’auteur l’a désactivé n’est jamais indexé. Les vecteurs sont chiffrés avec le projet, comme le ticket ; ceux enregistrés avant que le projet ne soit chiffré sont convertis par la tâche d’arrière-plan. Interrupteur désactivé, aucun vecteur n’est créé pour vos tickets, même quand quelqu’un d’autre les modifie, et la recherche de tickets liés ne compare que les mots. Vos propres recherches n’utilisent alors que le texte, sans recherche par le sens. Les vecteurs déjà créés restent tant que le texte ne change pas ; ils sont supprimés dès que le texte change, ou avec le ticket.
+- Dans la carte **Smart Fill**, **Activer Smart Fill** active ou désactive Smart Fill pour votre compte. Il complète la priorité, l’effort, les catégories et l’objectif manquants ; l’état, le responsable et l’échéance restent les vôtres. Les interrupteurs des deux cartes suivantes en dépendent.
+- Dans **Tickets à remplir**, **Remplir les tickets créés** et **Remplir les tickets en triage** choisissent les nouveaux tickets qu’il complète : ceux que vous créez, et les tickets en triage dont vous êtes responsable. **Réévaluer les tickets modifiés**, activé par défaut, permet à Smart Fill de [relire un ticket](#smart-fill-reevaluation) après une modification de son titre ou de sa description. **Rédiger les titres manquants**, activé par défaut, permet à Smart Fill de [rédiger le titre](#smart-fill-title) d’un ticket que vous vous contentez de décrire.
+- Dans **Tickets liés**, **Relier les tickets liés**, activé par défaut, permet à Smart Fill d’[ajouter des relations](#smart-fill-relations) après l’enregistrement d’un ticket.
+- Dans **Indexation des tickets**, **Indexer les tickets**, activé par défaut et indépendant de Smart Fill, indexe en privé le titre et la description des tickets que vous créez ou modifiez, pour trouver les tickets liés et [chercher des tickets par le sens](/docs/navigation#search-by-meaning). L’indexation en arrière-plan des tickets existants d’un projet suit à la fois l’interrupteur du propriétaire du projet et celui de l’auteur : un ticket dont l’auteur l’a désactivé n’est jamais indexé. Les vecteurs sont chiffrés avec le projet, comme le ticket ; ceux enregistrés avant que le projet ne soit chiffré sont convertis par la tâche d’arrière-plan. Interrupteur désactivé, aucun vecteur n’est créé pour vos tickets, même quand quelqu’un d’autre les modifie, et la recherche de tickets liés ne compare que les mots. Vos propres recherches n’utilisent alors que le texte, sans recherche par le sens. Les vecteurs déjà créés restent tant que le texte ne change pas ; ils sont supprimés dès que le texte change, ou avec le ticket.
 
 Désactiver un interrupteur annule aussi les passes qui n’ont pas encore eu lieu. Numo peut modifier ces préférences à votre demande.
 
-### Quand Smart-fill relit un ticket {#smart-fill-reevaluation}
+### Quand Smart Fill relit un ticket {#smart-fill-reevaluation}
 
-Avec **Réévaluer les tickets modifiés** activé, un ticket créé avec Smart-fill actif est relu après une modification de son titre ou de sa description. Smart-fill attend que le texte n’ait plus changé pendant cinq minutes, si bien qu’une série de modifications n’est lue qu’une fois ; la passe peut démarrer jusqu’à une minute plus tard. Il redéfinit alors la priorité, l’effort, les catégories et l’objectif à partir du nouveau texte.
+Avec **Réévaluer les tickets modifiés** activé, un ticket créé avec Smart Fill actif est relu après une modification de son titre ou de sa description. Smart Fill attend que le texte n’ait plus changé pendant cinq minutes, si bien qu’une série de modifications n’est lue qu’une fois ; la passe peut démarrer jusqu’à une minute plus tard. Il redéfinit alors la priorité, l’effort, les catégories et l’objectif à partir du nouveau texte.
 
-Il ne modifie que les propriétés que personne n’a choisies à la main : celles laissées vides à la création du ticket et que personne n’a changées depuis. Dès que vous, Numo ou un agent connecté en changez une, Smart-fill n’y touche plus. Il ne retire jamais l’objectif ni toutes les catégories ; il peut vider l’effort quand le texte ne décrit plus de travail estimable. Les tickets créés avant cette fonctionnalité, avec Smart-fill désactivé ou avec toutes leurs propriétés déjà définies ne sont jamais relus.
+Il ne modifie que les propriétés que personne n’a choisies à la main : celles laissées vides à la création du ticket et que personne n’a changées depuis. Dès que vous, Numo ou un agent connecté en changez une, Smart Fill n’y touche plus. Il ne retire jamais l’objectif ni toutes les catégories ; il peut vider l’effort quand le texte ne décrit plus de travail estimable. Les tickets créés avant cette fonctionnalité, avec Smart Fill désactivé ou avec toutes leurs propriétés déjà définies ne sont jamais relus.
 
-Chaque modification apparaît dans l’activité du ticket avec Smart-fill pour auteur, et un ticket déplacé vers un autre objectif apparaît aussi dans l’activité des deux objectifs. Une passe qui ne trouve rien à changer n’écrit rien. La passe compte dans la part **Automatisations** de la personne qui a fait la dernière modification, suit sa préférence **Réévaluer les tickets modifiés**, et n’a pas lieu si son budget est épuisé ou si le fournisseur échoue.
+Chaque modification apparaît dans l’activité du ticket avec Smart Fill pour auteur, et un ticket déplacé vers un autre objectif apparaît aussi dans l’activité des deux objectifs. Une passe qui ne trouve rien à changer n’écrit rien. La passe compte dans la part **Automatisations** de la personne qui a fait la dernière modification, suit sa préférence **Réévaluer les tickets modifiés**, et n’a pas lieu si son budget est épuisé ou si le fournisseur échoue.
 
-### Laisser Smart-fill rédiger le titre {#smart-fill-title}
+### Laisser Smart Fill rédiger le titre {#smart-fill-title}
 
-Avec **Rédiger les titres manquants** activé, vous créez un ticket en le décrivant. L’option est activée par défaut et dépend de **Activer Smart Fill**. Tant que Smart-fill est actif pour le ticket, le formulaire de création n’affiche que la description, avec le curseur dedans. Décrivez le travail et créez le ticket. Pour rédiger le titre vous-même, ouvrez la flèche à côté du bouton Smart-fill et choisissez **Définir manuellement** → **Titre** : le champ du titre apparaît au-dessus de la description, et un titre que vous saisissez est conservé tel quel. Si vous laissez le champ vide et passez à autre chose, il disparaît de nouveau. Désactiver Smart-fill pour le ticket fait aussi revenir le titre. Cela concerne le formulaire de création ; Numo, le serveur MCP et l’import CSV rédigent leurs propres titres.
+Avec **Rédiger les titres manquants** activé, vous créez un ticket en le décrivant. L’option est activée par défaut et dépend de **Activer Smart Fill**. Tant que Smart Fill est actif pour le ticket, le formulaire de création n’affiche que la description, avec le curseur dedans. Décrivez le travail et créez le ticket. Pour rédiger le titre vous-même, ouvrez la flèche à côté du bouton Smart Fill et choisissez **Définir manuellement** → **Titre** : le champ du titre apparaît au-dessus de la description, et un titre que vous saisissez est conservé tel quel. Si vous laissez le champ vide et passez à autre chose, il disparaît de nouveau. Désactiver Smart Fill pour le ticket fait aussi revenir le titre. Cela concerne le formulaire de création ; Numo, le serveur MCP et l’import CSV rédigent leurs propres titres.
 
-Smart-fill rédige un titre court qui résume la description et distingue le ticket des tickets semblables, dans la langue de la description. Le ticket apparaît une fois son titre et ses propriétés remplis, et son activité nomme Smart-fill. Si aucun titre ne peut être rédigé, parce que le fournisseur échoue ou que votre budget **Automatisations** est épuisé, le ticket prend la première ligne de sa description. Une description qui ne contient qu’une image demande toujours un titre.
+Smart Fill rédige un titre court qui résume la description et distingue le ticket des tickets semblables, dans la langue de la description. Le ticket apparaît une fois son titre et ses propriétés remplis, et son activité nomme Smart Fill. Si aucun titre ne peut être rédigé, parce que le fournisseur échoue ou que votre budget **Automatisations** est épuisé, le ticket prend la première ligne de sa description. Une description qui ne contient qu’une image demande toujours un titre.
 
-Un titre rédigé ainsi reste celui de Smart-fill tant que personne ne le modifie. Avec **Réévaluer les tickets modifiés** activé, une [relecture](#smart-fill-reevaluation) ultérieure peut le remplacer quand la description décrit désormais un autre travail, et le garde tant qu’il convient. Cette passe ne réécrit le titre que si la personne qui a fait la dernière modification n’a pas désactivé **Rédiger les titres manquants**. Dès que vous, Numo ou un agent connecté modifiez le titre, Smart-fill n’y touche plus.
+Un titre rédigé ainsi reste celui de Smart Fill tant que personne ne le modifie. Avec **Réévaluer les tickets modifiés** activé, une [relecture](#smart-fill-reevaluation) ultérieure peut le remplacer quand la description décrit désormais un autre travail, et le garde tant qu’il convient. Cette passe ne réécrit le titre que si la personne qui a fait la dernière modification n’a pas désactivé **Rédiger les titres manquants**. Dès que vous, Numo ou un agent connecté modifiez le titre, Smart Fill n’y touche plus.
 
 ## Examiner le travail entrant dans le triage {#triage-incoming-work}
 
@@ -466,7 +466,7 @@ Ouvrez le fil du ticket pour ajouter un commentaire. Expliquez une décision, po
 
 Joignez une page du projet, un fichier ou un lien depuis les ressources. Une page liée est une ressource vivante : son titre suit les renommages et son contenu évolue. Un fichier est une pièce jointe stockée, pas la garantie qu’une URL externe restera disponible. **Page** ouvre la palette de commandes sur les pages du projet, dans l’ordre de la barre latérale ; choisissez-en une pour la joindre. Pour rédiger une page qui n’existe pas encore, choisissez **Nouvelle page** en bas de la liste ; un titre tapé d’abord dans la recherche devient son titre. La page est créée dans le projet, jointe au ticket et ouverte dans un panneau latéral, où **Agrandir** ouvre la page entière.
 
-Les ressources s’affichent en cartes : l’image elle-même ou l’icône du type de fichier, le nom et le poids. Un lien affiche l’image d’aperçu de sa page quand le site en fournit une, sinon son favicon. Cliquez ou faites un clic droit sur une carte pour ouvrir son menu : Aperçu, Ouvrir le lien ou Ouvrir la page, puis Renommer, Télécharger et Retirer quand ils s’appliquent. Aperçu ouvre un fichier pris en charge sur toute la fenêtre. Images, PDF, Markdown (`.md`), texte brut (`.txt`, `.text`), CSV et formats audio ou vidéo compatibles utilisent le même lecteur. Le Markdown est mis en forme, le texte reste littéral et le CSV s’ouvre dans un tableau défilant. Utilisez Fermer ou Échap pour revenir au ticket. Le menu Actions du fichier (`…`) propose Télécharger et, si vous pouvez modifier cette ressource, Renommer et Retirer. Un clic sur la mention d’un fichier dans un texte ouvre le même lecteur. Minddy demande une confirmation avant de retirer une ressource, qui est alors détachée de ce contexte. Une ressource page garde le titre de sa page et ne se renomme pas. Les formats non pris en charge conservent leur action de téléchargement. **Ouvrir la page** l’affiche dans un panneau latéral, où **Agrandir** ouvre la page entière ; une base de données s’ouvre directement en page entière. Survoler la carte d’une page montre ses premières lignes, ou les premières entrées d’une base de données.
+Les ressources s’affichent en cartes : l’image elle-même ou l’icône du type de fichier, le nom et le poids. Un lien affiche l’image d’aperçu de sa page quand le site en fournit une, sinon son favicon. Cliquez ou faites un clic droit sur une carte pour ouvrir son menu : Aperçu, Ouvrir le lien ou Ouvrir la page, puis Renommer, Télécharger et Retirer quand ils s’appliquent. Aperçu ouvre un fichier pris en charge sur toute la fenêtre. Images, PDF, Markdown (`.md`), texte brut (`.txt`, `.text`), CSV et formats audio ou vidéo compatibles utilisent le même lecteur. Le Markdown est mis en forme, le texte reste littéral et le CSV s’ouvre dans un tableau défilant. Utilisez Fermer ou Échap pour revenir au ticket. Le menu Actions du fichier (`…`) propose Télécharger et, si vous pouvez modifier cette ressource, Renommer et Retirer. Un clic sur la mention d’un fichier dans un texte ouvre le même lecteur. minddy demande une confirmation avant de retirer une ressource, qui est alors détachée de ce contexte. Une ressource page garde le titre de sa page et ne se renomme pas. Les formats non pris en charge conservent leur action de téléchargement. **Ouvrir la page** l’affiche dans un panneau latéral, où **Agrandir** ouvre la page entière ; une base de données s’ouvre directement en page entière. Survoler la carte d’une page montre ses premières lignes, ou les premières entrées d’une base de données.
 
 ![Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.](/documentation/fr/file-preview.png)
 
@@ -496,15 +496,15 @@ Retirez une relation devenue inexacte depuis ses commandes ; une confirmation no
 
 Si le sélecteur ne trouve pas un ticket, vérifiez son identifiant et l’accès au projet. Ne révélez pas un autre projet en copiant son lien privé dans une réponse publique à un retour.
 
-### Liens ajoutés par Smart-fill {#smart-fill-relations}
+### Liens ajoutés par Smart Fill {#smart-fill-relations}
 
-Lorsque **Relier les tickets liés** est activé, Smart-fill cherche les tickets liés après la création d’un ticket ou la modification de son titre ou de sa description. Ce travail se fait en arrière-plan après l’enregistrement : la création et la modification ne l’attendent jamais, et les liens peuvent apparaître quelques secondes plus tard. Pour un nouveau ticket, il suit les mêmes choix que les autres champs : il ne s’exécute donc pas si vous avez désactivé Smart-fill pour ce ticket. Il ne s’exécute pas pour les tickets importés d’un dépôt lié, pour les copies récurrentes ni pour les modifications synchronisées depuis le dépôt.
+Lorsque **Relier les tickets liés** est activé, Smart Fill cherche les tickets liés après la création d’un ticket ou la modification de son titre ou de sa description. Ce travail se fait en arrière-plan après l’enregistrement : la création et la modification ne l’attendent jamais, et les liens peuvent apparaître quelques secondes plus tard. Pour un nouveau ticket, il suit les mêmes choix que les autres champs : il ne s’exécute donc pas si vous avez désactivé Smart Fill pour ce ticket. Il ne s’exécute pas pour les tickets importés d’un dépôt lié, pour les copies récurrentes ni pour les modifications synchronisées depuis le dépôt.
 
-Smart-fill compare le ticket à cinq candidats au plus du même projet, en écartant les tickets annulés, en doublon ou supprimés. Une décision classe ensuite chaque candidat : lié, bloque, bloqué par ou aucune relation. La similarité seule ne crée jamais de lien, une dépendance exige des indices plus forts qu’un simple lien, et Smart-fill n’ajoute rien en cas de doute. Un lien exige un rapport évident, comme le même bug, une suite directe ou un retour en arrière : deux tickets qui partagent seulement une fonctionnalité ou un sujet restent sans lien. La plupart des tickets ne reçoivent donc aucun lien. Une même passe ajoute au plus deux relations. Elle ne touche jamais une paire qui a déjà une relation, n’ajoute jamais un blocage qui fermerait un cycle, et abandonne son résultat si le texte du ticket a changé pendant la décision. Elle ne marque jamais un doublon et ne change jamais un état.
+Smart Fill compare le ticket à cinq candidats au plus du même projet, en écartant les tickets annulés, en doublon ou supprimés. Une décision classe ensuite chaque candidat : lié, bloque, bloqué par ou aucune relation. La similarité seule ne crée jamais de lien, une dépendance exige des indices plus forts qu’un simple lien, et Smart Fill n’ajoute rien en cas de doute. Un lien exige un rapport évident, comme le même bug, une suite directe ou un retour en arrière : deux tickets qui partagent seulement une fonctionnalité ou un sujet restent sans lien. La plupart des tickets ne reçoivent donc aucun lien. Une même passe ajoute au plus deux relations. Elle ne touche jamais une paire qui a déjà une relation, n’ajoute jamais un blocage qui fermerait un cycle, et abandonne son résultat si le texte du ticket a changé pendant la décision. Elle ne marque jamais un doublon et ne change jamais un état.
 
-Les liens ajoutés ainsi apparaissent dans les relations du ticket comme les autres, et l’historique indique Smart-fill comme auteur. Vérifiez le sens d’une dépendance comme pour les vôtres. Pour retirer un lien, utilisez les commandes de relations : Smart-fill ne rajoute pas un lien retiré pour cette paire. Pour ne plus recevoir de nouveaux liens, désactivez **Relier les tickets liés** dans [vos préférences](#smart-fill-preferences). Les tickets créés avant cette fonctionnalité, les tickets importés et ceux synchronisés depuis un dépôt sont indexés progressivement en arrière-plan, mais ne reçoivent jamais de liens automatiques.
+Les liens ajoutés ainsi apparaissent dans les relations du ticket comme les autres, et l’historique indique Smart Fill comme auteur. Vérifiez le sens d’une dépendance comme pour les vôtres. Pour retirer un lien, utilisez les commandes de relations : Smart Fill ne rajoute pas un lien retiré pour cette paire. Pour ne plus recevoir de nouveaux liens, désactivez **Relier les tickets liés** dans [vos préférences](#smart-fill-preferences). Les tickets créés avant cette fonctionnalité, les tickets importés et ceux synchronisés depuis un dépôt sont indexés progressivement en arrière-plan, mais ne reçoivent jamais de liens automatiques.
 
-L’indexation et les décisions de relation utilisent l’IA. Elles comptent dans la part **Automatisations** du compte à qui revient la passe : le compte facturé pour le Smart-fill du nouveau ticket, en général son créateur ; l’auteur de la modification pour une modification ; le propriétaire du projet pour l’indexation en arrière-plan. L’historique d’usage affiche l’indexation sous **Smart-fill · index des tickets**. Une décision de relation apparaît sous **Décision IA** quand le modèle de décision la tranche, et sous **Smart-fill · relations** quand c’est le modèle de secours. Si ce budget est épuisé ou si le fournisseur échoue, la passe est ignorée et le ticket reste inchangé. [La recherche de tickets par le sens](/docs/navigation#search-by-meaning) utilise le même index : chaque nouvelle requête compte dans la part **Automatisations** du compte qui cherche et apparaît sous **Recherche de tickets**.
+L’indexation et les décisions de relation utilisent l’IA. Elles comptent dans la part **Automatisations** du compte à qui revient la passe : le compte facturé pour le Smart Fill du nouveau ticket, en général son créateur ; l’auteur de la modification pour une modification ; le propriétaire du projet pour l’indexation en arrière-plan. L’historique d’usage affiche l’indexation sous **Smart Fill · index des tickets**. Une décision de relation apparaît sous **Décision IA** quand le modèle de décision la tranche, et sous **Smart Fill · relations** quand c’est le modèle de secours. Si ce budget est épuisé ou si le fournisseur échoue, la passe est ignorée et le ticket reste inchangé. [La recherche de tickets par le sens](/docs/navigation#search-by-meaning) utilise le même index : chaque nouvelle requête compte dans la part **Automatisations** du compte qui cherche et apparaît sous **Recherche de tickets**.
 
 ## Découper un ticket en sous-tickets {#sub-issues}
 
@@ -544,9 +544,9 @@ Pour faire implémenter le plan, copiez le prompt du ticket pour votre propre ag
 
 ### Copier un prompt pour un autre agent de code {#copy-issue-prompt}
 
-Pour confier un ticket à un agent de code hors de Minddy, comme Claude Code, Codex ou Cursor, ouvrez le menu d'actions du ticket, choisissez **Copier le prompt**, puis **Générer un plan** (ou **Vérifier le plan** s'il existe), **Implémenter le ticket**, **Vérifier l'implémentation** ou **Personnalisé…**. Avec plusieurs tickets sélectionnés, **Copier le prompt combiné** les réunit dans un seul prompt. La copie n'exécute aucun modèle d'IA et ne consomme pas votre quota d'IA : Minddy assemble ce qu'il connaît déjà, et l'agent explore lui-même le dépôt. Si **Démarrer le ticket ou la tâche quand je copie son prompt** est activé dans les préférences du compte, la copie démarre aussi un ticket qui n'a pas encore commencé. Consultez [Travail de code et pull requests](/docs/code-work) pour le parcours complet et la relecture des pull requests.
+Pour confier un ticket à un agent de code hors de minddy, comme Claude Code, Codex ou Cursor, ouvrez le menu d'actions du ticket, choisissez **Copier le prompt**, puis **Générer un plan** (ou **Vérifier le plan** s'il existe), **Implémenter le ticket**, **Vérifier l'implémentation** ou **Personnalisé…**. Avec plusieurs tickets sélectionnés, **Copier le prompt combiné** les réunit dans un seul prompt. La copie n'exécute aucun modèle d'IA et ne consomme pas votre quota d'IA : minddy assemble ce qu'il connaît déjà, et l'agent explore lui-même le dépôt. Si **Démarrer le ticket ou la tâche quand je copie son prompt** est activé dans les préférences du compte, la copie démarre aussi un ticket qui n'a pas encore commencé. Consultez [Travail de code et pull requests](/docs/code-work) pour le parcours complet et la relecture des pull requests.
 
-Le prompt contient les champs du ticket, ses catégories, ses relations, le nombre de ressources jointes et l'avancement du plan, mais pas le texte du plan, que l'agent lit par le serveur MCP de Minddy ou vous demande. Il indique aussi le dépôt lié au projet et chaque pull request liée au ticket, avec son état et ses branches lorsqu'ils sont connus. L'agent poursuit une pull request ouverte sur sa branche et traite celles qui sont fusionnées ou fermées comme de l'historique. Sans pull request ouverte, le prompt suggère un nom de branche formé de l'identifiant du ticket et d'un titre court, par exemple `min-42-keyboard-navigation`. Ce n'est qu'une suggestion : l'agent vérifie d'abord les branches existantes et suit la convention de nommage du dépôt. Garder l'identifiant dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42` permet à Minddy de rattacher la pull request au ticket lorsque le dépôt est lié.
+Le prompt contient les champs du ticket, ses catégories, ses relations, le nombre de ressources jointes et l'avancement du plan, mais pas le texte du plan, que l'agent lit par le serveur MCP de minddy ou vous demande. Il indique aussi le dépôt lié au projet et chaque pull request liée au ticket, avec son état et ses branches lorsqu'ils sont connus. L'agent poursuit une pull request ouverte sur sa branche et traite celles qui sont fusionnées ou fermées comme de l'historique. Sans pull request ouverte, le prompt suggère un nom de branche formé de l'identifiant du ticket et d'un titre court, par exemple `min-42-keyboard-navigation`. Ce n'est qu'une suggestion : l'agent vérifie d'abord les branches existantes et suit la convention de nommage du dépôt. Garder l'identifiant dans le nom de branche, le titre de la pull request ou une ligne `Fixes MIN-42` permet à minddy de rattacher la pull request au ticket lorsque le dépôt est lié.
 
 Si les informations de pull request ne peuvent pas être chargées, le prompt le dit au lieu d'affirmer qu'il n'y en a aucune. Les prompts de plan et de vérification du plan demandent à l'agent de s'arrêter avant d'implémenter. Un prompt personnalisé garde votre demande et sa portée telles que vous les avez écrites. Le contenu du ticket et votre demande gardent leur langue d'origine ; les consignes qui les entourent sont en anglais.
 

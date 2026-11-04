@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 22,
+  "revision": 24,
+  "sourceRevision": 23,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-02",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-888: hover card of an issue's pull request on the board card's number and the issue panel's chip, with repository, state, title and checks while open or draft, click opens the pull request; checked against components/pull-requests/pr-hover-card.tsx, components/pull-requests/pr-preview-face.tsx, components/issue-card.tsx, components/issue-pr-chip.tsx and lib/pr-preview-checks.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the card)",
-    "language": "agent:claude-code (de changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 24,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -86,7 +86,7 @@
       "src": "/documentation/de/review-pull-requests-workflow.png",
       "alt": "Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.",
       "caption": "Demonstrations-PR, der offen bleibt und nicht gemergt wurde. Der Diff entfernt Leerzeichen um den Namen und verwendet World bei leerem Wert. Diese Instanz kann keine GitHub-Benutzerautorisierung anfordern; der Bereitschaftsstatus verleiht keine Merge-Rechte und belegt keine erfolgreiche Anbieter-CI.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -104,11 +104,11 @@
 }
 ---
 
-Minddy verfolgt die Arbeit; dein eigener Coding-Agent, etwa Claude Code, Codex oder Cursor, ändert den Code. Kopiere einen Prompt aus dem Ticket, lass den Agenten das Ticket über minddy MCP lesen und aktualisieren, und prüfe den verknüpften Pull Request anschließend in Minddy, bevor du ihn mergst. Numo schreibt keinen Code, legt keine Branches an und führt keine Tests aus.
+minddy verfolgt die Arbeit; dein eigener Coding-Agent, etwa Claude Code, Codex oder Cursor, ändert den Code. Kopiere einen Prompt aus dem Ticket, lass den Agenten das Ticket über minddy MCP lesen und aktualisieren, und prüfe den verknüpften Pull Request anschließend in minddy, bevor du ihn mergst. Numo schreibt keinen Code, legt keine Branches an und führt keine Tests aus.
 
 ## Ein Ticket an einen externen Coding-Agenten übergeben {#external-coding-agents}
 
-Verbinde deinen Agenten zuerst mit minddy MCP, damit er den Plan lesen und dessen Aufgaben aktualisieren kann; siehe [Einen externen Assistenten mit minddy MCP verbinden](/docs/minddy-mcp#external-minddy-mcp). Der Agent läuft auf deinem Computer oder in seinem eigenen Dienst, mit eigenem Abonnement oder eigenen API-Kosten. Minddy stellt ihm keinen Repository-Zugriff bereit.
+Verbinde deinen Agenten zuerst mit minddy MCP, damit er den Plan lesen und dessen Aufgaben aktualisieren kann; siehe [Einen externen Assistenten mit minddy MCP verbinden](/docs/minddy-mcp#external-minddy-mcp). Der Agent läuft auf deinem Computer oder in seinem eigenen Dienst, mit eigenem Abonnement oder eigenen API-Kosten. minddy stellt ihm keinen Repository-Zugriff bereit.
 
 1. Öffne das Ticket und beschreibe erwartetes Verhalten, Einschränkungen und Abnahmekriterien. Schreibe oder prüfe den Plan im Tab „Plan“, wenn die Arbeit mehrere Schritte umfasst.
 2. Öffne das Aktionsmenü des Tickets und wähle **Als Prompt kopieren**. Wähle **Plan erstellen** (oder **Plan überprüfen**, wenn bereits einer existiert), um den Umfang ohne Programmierung festzulegen, **Ticket umsetzen**, um die Änderung zu beginnen, **Implementierung überprüfen**, damit der Agent abgeschlossene Arbeit mit Plan und Kommentaren abgleicht, oder **Benutzerdefiniert…** für eine eigene Anweisung.
@@ -121,7 +121,7 @@ Inhalt des Prompts, Branch-Vorschlag und Sprachregeln beschreibt [Einen Prompt f
 
 ### Die Arbeit mit dem Ticket verknüpft halten {#link-work}
 
-Wenn das Repository mit dem Projekt verknüpft ist, behalte die Ticketkennung im Branch-Namen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42`. Minddy hängt den Pull Request dann an das Ticket, und spätere Prompts weisen den Agenten an, den offenen Pull Request auf seinem Branch fortzusetzen. Um ein Ticket von Hand anzuhängen, verwende **Ein Ticket verknüpfen** am Pull Request: Die Befehlspalette öffnet sich mit den Tickets des Projekts, und das gewählte Ticket wird nach einer Bestätigung verknüpft. Die Suche akzeptiert eine Kennung oder Wörter aus dem Titel, und eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets des Projekts unter **Inhaltlich verwandt** auf.
+Wenn das Repository mit dem Projekt verknüpft ist, behalte die Ticketkennung im Branch-Namen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42`. minddy hängt den Pull Request dann an das Ticket, und spätere Prompts weisen den Agenten an, den offenen Pull Request auf seinem Branch fortzusetzen. Um ein Ticket von Hand anzuhängen, verwende **Ein Ticket verknüpfen** am Pull Request: Die Befehlspalette öffnet sich mit den Tickets des Projekts, und das gewählte Ticket wird nach einer Bestätigung verknüpft. Die Suche akzeptiert eine Kennung oder Wörter aus dem Titel, und eine Beschreibung listet auch [inhaltlich gefundene](/docs/navigation#search-by-meaning) Tickets des Projekts unter **Inhaltlich verwandt** auf.
 
 Klicke auf einem Board mit der rechten Maustaste auf ein Ticket ohne offenen Pull Request und wähle **Mit einem Pull Request verknüpfen**, um in der Befehlspalette einen der offenen Pull Requests seines Projekts auszuwählen, Entwürfe eingeschlossen. Der Eintrag erscheint nur, wenn dieses Projekt mindestens einen solchen Pull Request zum Verknüpfen hat. Bei mehreren ausgewählten Tickets bietet **Aktionen** dieselbe Auswahl für die gesamte Auswahl an, sowie **Die anderen Tickets mit #N verknüpfen**, wenn einige davon bereits Pull Request N haben; ein Rechtsklick auf eines der ausgewählten Tickets bietet **Die anderen Tickets mit #N verknüpfen** ebenfalls an. **Mit einem Pull Request verknüpfen** wird nicht angeboten, sobald ein ausgewähltes Ticket einen verknüpften Pull Request hat; **Verknüpfung von N Tickets mit ihren Pull Requests lösen** entfernt nach deiner Bestätigung zuerst alle Verknüpfungen der Auswahl. Verknüpfungen erscheinen sofort auf den Karten, und jede Karte wechselt sofort in den Status, den ihr Pull Request vorgibt, etwa **In Prüfung** bei einem offenen Pull Request; eine abgelehnte Verknüpfung verschwindet, wenn das Board aktualisiert wird. Eine Karte mit offenem Pull Request zeigt dessen Nummer, nach Status eingefärbt, und seine Merge-Bereitschaft, denselben Indikator wie in **Code-Review**; ist Auto-Merge aktiv, ergänzt sein Tooltip den Status um **Auto-Merge**. Fahre mit der Maus über die Nummer oder über den Pull-Request-Chip oben im Detailpanel des Tickets, um Repository, Status und Titel des Pull Requests zu sehen und, solange er offen oder ein Entwurf ist, den Stand seiner Prüfungen. Klicke auf die Karte, um den Pull Request zu öffnen.
 
@@ -139,7 +139,7 @@ Klicke in einer Beschreibung, einem Kommentar oder dem Diff eines Bildes auf ein
 
 Erwähne `@numo` in einem Pull-Request-Kommentar, um Numo in einer Unterhaltung um ein Review ohne Schreibzugriff zu bitten. Numo liest den Pull Request und antwortet; es pusht keine Commits. Eine auf der Forge geschriebene Erwähnung zählt nur, wenn ihr Autor mit dem Eigentümer oder einem Mitglied (nicht einem Leser) eines Projekts verknüpft ist, das das Repository verknüpft; die Nutzung wird dem Eigentümer dieses Projekts angerechnet.
 
-Was auf einem verknüpften Pull Request oder Merge Request geschrieben wird, erscheint auch in den Kommentaren jedes Tickets, mit dem er verknüpft ist: Kommentare der Unterhaltung, die Nachricht eines eingereichten Reviews und Kommentare zum Code mit Datei, Zeile und, auf GitHub, dem Ausschnitt, auf den sie sich beziehen, die Antworten darunter gruppiert. Kommentare von Bots bleiben auf dem Pull Request, außer Kommentare zum Code. Eine Änderung aktualisiert die Kopie, und ein auf GitHub gelöschter Kommentar wird als gelöscht angezeigt; GitLab meldet keine Löschungen. Jedes Mal, wenn ein Pull Request mit einem Ticket verknüpft wird, von Hand oder weil sein Branch, Titel oder seine Beschreibung das Ticket nennt, werden seine bisherigen Kommentare mit dem Datum übernommen, an dem sie geschrieben wurden, auch wenn das vor der Erstellung des Tickets liegt. Antworte unter einem dieser Kommentare, um mit deinem eigenen Git-Konto auf dem Pull Request zu antworten, wie in der Pull-Request-Ansicht; eine Unterhaltung zum Code zeigt außerdem **Gelöst** oder **Veraltet** und bietet **Lösen** oder **Erneut öffnen** an. Die Kopien selbst lassen sich in Minddy nicht bearbeiten.
+Was auf einem verknüpften Pull Request oder Merge Request geschrieben wird, erscheint auch in den Kommentaren jedes Tickets, mit dem er verknüpft ist: Kommentare der Unterhaltung, die Nachricht eines eingereichten Reviews und Kommentare zum Code mit Datei, Zeile und, auf GitHub, dem Ausschnitt, auf den sie sich beziehen, die Antworten darunter gruppiert. Kommentare von Bots bleiben auf dem Pull Request, außer Kommentare zum Code. Eine Änderung aktualisiert die Kopie, und ein auf GitHub gelöschter Kommentar wird als gelöscht angezeigt; GitLab meldet keine Löschungen. Jedes Mal, wenn ein Pull Request mit einem Ticket verknüpft wird, von Hand oder weil sein Branch, Titel oder seine Beschreibung das Ticket nennt, werden seine bisherigen Kommentare mit dem Datum übernommen, an dem sie geschrieben wurden, auch wenn das vor der Erstellung des Tickets liegt. Antworte unter einem dieser Kommentare, um mit deinem eigenen Git-Konto auf dem Pull Request zu antworten, wie in der Pull-Request-Ansicht; eine Unterhaltung zum Code zeigt außerdem **Gelöst** oder **Veraltet** und bietet **Als gelöst markieren** oder **Erneut öffnen** an. Die Kopien selbst lassen sich in minddy nicht bearbeiten.
 
 ![Änderungsansicht des offenen Demonstrations-PR mit Diff der Funktion greeting und Hinweis auf fehlende GitHub-Autorisierung.](/documentation/de/review-pull-requests-workflow.png)
 
@@ -149,4 +149,4 @@ Wähle mit **Review anfordern** einen Reviewer, wenn ein zweites Review nötig i
 
 Führe den Merge erst nach den erforderlichen Prüfungen und Reviews mit einem berechtigten Anbieterkonto aus. Mit **Mit Numo zusammenführen** schreibt Numo Titel und Beschreibung des Merge-Commits anhand des Pull Requests und führt den Merge aus, sobald beides fertig ist. Eine sichtbare Aktion kann von der Forge dennoch abgelehnt werden. Bei veraltetem Status aktualisiere die Ansicht und prüfe den Anbieter vor einer Wiederholung. Eine verknüpfte Vorschau setzt ein tatsächliches Deployment beim Anbieter voraus.
 
-Klicke mit der rechten Maustaste auf einen Pull Request in der Liste, um seinen Status zu ändern, ihn zusammenzuführen oder eine Korrektur anzufordern, ohne ihn zu öffnen. Ein offener Pull Request bietet **In Entwurf umwandeln** und **Pull Request schließen**, ein Entwurf bietet **Bereit zur Überprüfung** und **Pull Request schließen**, und ein geschlossener bietet **Erneut öffnen**; jede Änderung verlangt eine Bestätigung. Ein zusammengeführter Pull Request bietet keine Statusänderung. Schreibaktionen erscheinen nur, wenn dein Anbieterkonto in das Repository schreiben kann, und bleiben nicht verfügbar, bis das Menü den Pull Request neu gelesen hat. **Zusammenführen** erscheint, wenn der Pull Request offen, kein Entwurf und zum Merge bereit ist; es öffnet den Pull Request mit seiner üblichen Merge-Bestätigung. **Korrektur-Prompt kopieren** und **Mit Numo beheben** erscheinen, wenn eine Prüfung fehlschlägt, eine Konversation ungelöst ist oder der Branch Konflikte hat oder veraltet ist. **Mit Numo beheben** sendet diesen Prompt mit dem Pull Request als Kontext an Numo. Numo kann den Pull Request lesen, eine Review-Unterhaltung beantworten, die keine Codeänderung erfordert, und Unterhaltungen auflösen, die der Branch bereits erledigt, ändert aber keinen Code und pusht keine Commits. Für Codeänderungen verwende **Korrektur-Prompt kopieren** und füge den Prompt in deinen Coding-Agenten ein. Berechtigungen und Merge-Fähigkeit werden beim Bestätigen erneut geprüft.
+Klicke mit der rechten Maustaste auf einen Pull Request in der Liste, um seinen Status zu ändern, ihn zusammenzuführen oder eine Korrektur anzufordern, ohne ihn zu öffnen. Ein offener Pull Request bietet **In Entwurf umwandeln** und **Pull Request schließen**, ein Entwurf bietet **Bereit zum Review** und **Pull Request schließen**, und ein geschlossener bietet **Erneut öffnen**; jede Änderung verlangt eine Bestätigung. Ein zusammengeführter Pull Request bietet keine Statusänderung. Schreibaktionen erscheinen nur, wenn dein Anbieterkonto in das Repository schreiben kann, und bleiben nicht verfügbar, bis das Menü den Pull Request neu gelesen hat. **Zusammenführen** erscheint, wenn der Pull Request offen, kein Entwurf und zum Merge bereit ist; es öffnet den Pull Request mit seiner üblichen Merge-Bestätigung. **Korrektur-Prompt kopieren** und **Mit Numo beheben** erscheinen, wenn eine Prüfung fehlschlägt, eine Konversation ungelöst ist oder der Branch Konflikte hat oder veraltet ist. **Mit Numo beheben** sendet diesen Prompt mit dem Pull Request als Kontext an Numo. Numo kann den Pull Request lesen, eine Review-Unterhaltung beantworten, die keine Codeänderung erfordert, und Unterhaltungen auflösen, die der Branch bereits erledigt, ändert aber keinen Code und pusht keine Commits. Für Codeänderungen verwende **Korrektur-Prompt kopieren** und füge den Prompt in deinen Coding-Agenten ein. Berechtigungen und Merge-Fähigkeit werden beim Bestätigen erneut geprüft.

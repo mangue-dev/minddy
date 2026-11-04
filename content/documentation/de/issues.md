@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 46,
-  "sourceRevision": 46,
+  "revision": 47,
+  "sourceRevision": 47,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -133,10 +133,10 @@
     ]
   },
   "review": {
-    "revision": 46,
-    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken); agent:claude (Smart Fill menu shortcut: source review of components/issue-compact-fields.tsx; sentence added on Command/Ctrl+Shift+F and the restored cursor; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude (Smart Fill menu status, assignee and due date: source review of components/issue-compact-fields.tsx and components/create-issue-dialog.tsx; one sentence added; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:claude (de sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance); agent:claude (de Smart Fill shortcut sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance); agent:claude (de Smart Fill menu sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 47,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "feedback",
@@ -181,12 +181,12 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-27",
+      "capturedAt": "2026-11-04",
       "viewport": [
         720,
-        396
+        380
       ],
       "theme": "light",
       "padding": 24,
@@ -198,7 +198,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -264,7 +264,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Eingabefeld für ein Unterticket in einem Demo-Elternticket.",
       "caption": "Das Feld erstellt ein Kind dieses Elterntickets; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -281,7 +281,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -298,7 +298,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -315,7 +315,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -332,7 +332,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -388,12 +388,12 @@ Schlägt Erstellen oder Speichern fehl, bewahre deinen Text auf, lies den Fehler
 
 ### Festlegen, was Smart Fill tut {#smart-fill-preferences}
 
-Die Smart-Fill-Einstellungen gehören zu deinem Konto. Öffne **Kontoeinstellungen** → **Smart Fill**. Jede Option hat ihre eigene Karte:
+Die Einstellungen von Smart Fill gehören zu deinem Konto. Öffne **Kontoeinstellungen** → **Smart Fill**. Jede Option hat ihre eigene Karte:
 
 - In der Karte **Smart Fill** schaltet **Smart Fill aktivieren** Smart Fill für dein Konto ein oder aus. Es ergänzt fehlende Priorität, fehlenden Aufwand, fehlende Kategorien und ein fehlendes Ziel; Status, zuständige Person und Fälligkeitsdatum bleiben deine Sache. Die Schalter der beiden folgenden Karten hängen davon ab.
 - In **Zu füllende Tickets** legen **Erstellte Tickets ausfüllen** und **Triage-Tickets ausfüllen** fest, welche neuen Tickets es ergänzt: die Tickets, die du erstellst, und die Triage-Tickets, für die du zuständig bist. **Bearbeitete Tickets neu bewerten** ist standardmäßig eingeschaltet und lässt Smart Fill ein Ticket [erneut lesen](#smart-fill-reevaluation), nachdem sich sein Titel oder seine Beschreibung geändert hat. **Fehlende Titel schreiben** ist standardmäßig eingeschaltet und lässt Smart Fill den [Titel eines Tickets schreiben](#smart-fill-title), das du nur beschreibst.
 - In **Verwandte Tickets** ist **Verwandte Tickets verknüpfen** standardmäßig eingeschaltet und erlaubt Smart Fill, nach dem Speichern eines Tickets [Beziehungen hinzuzufügen](#smart-fill-relations).
-- In **Ticketindexierung** ist **Tickets indexieren** standardmäßig eingeschaltet und von Smart Fill unabhängig. Es wandelt Titel und Beschreibung der Tickets, die du erstellst oder bearbeitest, in private Vektoren um, mit denen verwandte Tickets gefunden und Tickets [inhaltlich gesucht](/docs/navigation#search-by-meaning) werden. Die Indexierung der bestehenden Tickets eines Projekts im Hintergrund folgt sowohl dem Schalter des Projekteigentümers als auch dem des Autors: Ein Ticket, dessen Autor ihn ausgeschaltet hat, wird nie indexiert. Die Vektoren werden wie das Ticket mit dem Projekt verschlüsselt; Vektoren, die gespeichert wurden, bevor das Projekt verschlüsselt wurde, wandelt der Hintergrundjob um. Ist der Schalter aus, entsteht für deine Tickets kein Vektor, auch wenn jemand anderes sie bearbeitet, und die Suche nach verwandten Tickets vergleicht nur Wörter. Deine eigenen Suchen nutzen dann nur den Text, ohne inhaltliche Suche. Bereits erstellte Vektoren bleiben, solange sich der Text nicht ändert; sie werden gelöscht, sobald sich der Text ändert, oder mit dem Ticket.
+- In **Ticketindexierung** ist **Tickets indexieren** standardmäßig eingeschaltet und von Smart Fill unabhängig. Es indexiert Titel und Beschreibung der Tickets, die du erstellst oder bearbeitest, privat, um verwandte Tickets zu finden und Tickets [inhaltlich zu suchen](/docs/navigation#search-by-meaning) werden. Die Indexierung der bestehenden Tickets eines Projekts im Hintergrund folgt sowohl dem Schalter des Projekteigentümers als auch dem des Autors: Ein Ticket, dessen Autor ihn ausgeschaltet hat, wird nie indexiert. Die Vektoren werden wie das Ticket mit dem Projekt verschlüsselt; Vektoren, die gespeichert wurden, bevor das Projekt verschlüsselt wurde, wandelt der Hintergrundjob um. Ist der Schalter aus, entsteht für deine Tickets kein Vektor, auch wenn jemand anderes sie bearbeitet, und die Suche nach verwandten Tickets vergleicht nur Wörter. Deine eigenen Suchen nutzen dann nur den Text, ohne inhaltliche Suche. Bereits erstellte Vektoren bleiben, solange sich der Text nicht ändert; sie werden gelöscht, sobald sich der Text ändert, oder mit dem Ticket.
 
 Das Ausschalten eines Schalters bricht auch Durchläufe ab, die noch nicht ausgeführt wurden. Numo kann diese Einstellungen auf deine Bitte hin ändern.
 
@@ -407,7 +407,7 @@ Jede Änderung erscheint in der Aktivität des Tickets mit Smart Fill als Urhebe
 
 ### Smart Fill den Titel schreiben lassen {#smart-fill-title}
 
-Mit eingeschaltetem **Fehlende Titel schreiben** erstellst du ein Ticket, indem du es beschreibst. Die Option ist standardmäßig eingeschaltet und hängt von **Smart Fill aktivieren** ab. Solange Smart Fill für das Ticket aktiv ist, zeigt das Erstellungsformular nur die Beschreibung, mit dem Cursor darin. Beschreibe die Arbeit und erstelle das Ticket. Um den Titel selbst zu schreiben, öffne den Pfeil neben der Smart-Fill-Schaltfläche und wähle **Manuell festlegen** → **Titel**: Das Titelfeld erscheint über der Beschreibung, und ein Titel, den du eingibst, wird unverändert übernommen. Lässt du das Feld leer und wechselst woandershin, verschwindet es wieder. Schaltest du Smart Fill für das Ticket aus, kehrt der Titel ebenfalls zurück. Das gilt für das Erstellungsformular; Numo, der MCP-Server und der CSV-Import schreiben ihre eigenen Titel.
+Mit eingeschaltetem **Fehlende Titel schreiben** erstellst du ein Ticket, indem du es beschreibst. Die Option ist standardmäßig eingeschaltet und hängt von **Smart Fill aktivieren** ab. Solange Smart Fill für das Ticket aktiv ist, zeigt das Erstellungsformular nur die Beschreibung, mit dem Cursor darin. Beschreibe die Arbeit und erstelle das Ticket. Um den Titel selbst zu schreiben, öffne den Pfeil neben der Schaltfläche von Smart Fill und wähle **Manuell festlegen** → **Titel**: Das Titelfeld erscheint über der Beschreibung, und ein Titel, den du eingibst, wird unverändert übernommen. Lässt du das Feld leer und wechselst woandershin, verschwindet es wieder. Schaltest du Smart Fill für das Ticket aus, kehrt der Titel ebenfalls zurück. Das gilt für das Erstellungsformular; Numo, der MCP-Server und der CSV-Import schreiben ihre eigenen Titel.
 
 Smart Fill schreibt einen kurzen Titel, der die Beschreibung zusammenfasst und das Ticket von ähnlichen unterscheidet, in der Sprache der Beschreibung. Das Ticket erscheint, sobald Titel und Eigenschaften ausgefüllt sind, und seine Aktivität nennt Smart Fill. Kann kein Titel geschrieben werden, weil der Anbieter ausfällt oder dein Budget für **Automatisierungen** aufgebraucht ist, erhält das Ticket stattdessen die erste Zeile seiner Beschreibung. Eine Beschreibung, die nur ein Bild enthält, braucht weiterhin einen Titel.
 
@@ -464,7 +464,7 @@ Prüfe Filter, wenn ein Ticket nach dem Schließen verschwindet. Öffne es über
 
 Füge eine passende Projektseite, Datei oder einen Link über die Ressourcenfunktionen hinzu. Eine verknüpfte Seite ist eine aktuelle Ressource: Ihr Titel folgt einer Umbenennung und ihr Inhalt kann sich ändern. Eine Datei ist ein gespeicherter Anhang, keine Garantie für die Erreichbarkeit einer externen URL. **Seite** öffnet die Befehlspalette mit den Seiten des Projekts in der Reihenfolge der Seitenleiste; wähle eine, um sie anzuhängen. Um eine Seite zu schreiben, die es noch nicht gibt, wähle **Neue Seite** am Ende der Liste; ein zuvor in die Suche getippter Titel wird ihr Titel. Die Seite wird im Projekt erstellt, dem Ticket angehängt und in einem Seitenbereich geöffnet, in dem **Erweitern** die ganze Seite öffnet.
 
-Ressourcen erscheinen als Karten: das Bild selbst oder das Symbol des Dateityps, der Name und die Größe. Ein Link zeigt das Vorschaubild seiner Seite, wenn die Website eines bereitstellt, sonst ihr Favicon. Klicke oder rechtsklicke auf eine Karte, um ihr Menü zu öffnen: Vorschau, Link öffnen oder Seite öffnen, dann Umbenennen, Herunterladen und Entfernen, sofern zutreffend. Vorschau öffnet eine unterstützte Datei über das gesamte Fenster. Bilder, PDF-Dateien, Markdown (`.md`), Klartext (`.txt`, `.text`), CSV-Dateien sowie unterstützte Audio- und Videoformate verwenden denselben Betrachter. Markdown wird formatiert, Text bleibt unverändert und CSV erscheint als scrollbare Tabelle. Mit Schließen oder Escape kehrst du zum Ticket zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen und, wenn du diese Ressource ändern darfst, Umbenennen und Entfernen. Ein Klick auf die Erwähnung einer Datei in einem Text öffnet denselben Betrachter. Minddy fragt vor dem Entfernen nach einer Bestätigung; die Ressource wird dann aus diesem Kontext gelöst. Eine Seitenressource behält den Titel ihrer Seite und lässt sich nicht umbenennen. Nicht unterstützte Formate behalten ihre Download-Aktion. **Seite öffnen** zeigt die Seite in einem Seitenpanel, in dem **Vergrößern** die ganze Seite öffnet; eine Datenbank öffnet sich direkt als ganze Seite. Bewegst du den Mauszeiger auf die Karte einer Seite, siehst du ihre ersten Zeilen oder die ersten Einträge einer Datenbank.
+Ressourcen erscheinen als Karten: das Bild selbst oder das Symbol des Dateityps, der Name und die Größe. Ein Link zeigt das Vorschaubild seiner Seite, wenn die Website eines bereitstellt, sonst ihr Favicon. Klicke oder rechtsklicke auf eine Karte, um ihr Menü zu öffnen: Vorschau, Link öffnen oder Seite öffnen, dann Umbenennen, Herunterladen und Entfernen, sofern zutreffend. Vorschau öffnet eine unterstützte Datei über das gesamte Fenster. Bilder, PDF-Dateien, Markdown (`.md`), Klartext (`.txt`, `.text`), CSV-Dateien sowie unterstützte Audio- und Videoformate verwenden denselben Betrachter. Markdown wird formatiert, Text bleibt unverändert und CSV erscheint als scrollbare Tabelle. Mit Schließen oder Escape kehrst du zum Ticket zurück. Das Menü Dateiaktionen (`…`) bietet Herunterladen und, wenn du diese Ressource ändern darfst, Umbenennen und Entfernen. Ein Klick auf die Erwähnung einer Datei in einem Text öffnet denselben Betrachter. minddy fragt vor dem Entfernen nach einer Bestätigung; die Ressource wird dann aus diesem Kontext gelöst. Eine Seitenressource behält den Titel ihrer Seite und lässt sich nicht umbenennen. Nicht unterstützte Formate behalten ihre Download-Aktion. **Seite öffnen** zeigt die Seite in einem Seitenpanel, in dem **Vergrößern** die ganze Seite öffnet; eine Datenbank öffnet sich direkt als ganze Seite. Bewegst du den Mauszeiger auf die Karte einer Seite, siehst du ihre ersten Zeilen oder die ersten Einträge einer Datenbank.
 
 ![Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.](/documentation/de/file-preview.png)
 
@@ -542,9 +542,9 @@ Um den Plan umsetzen zu lassen, kopiere den Prompt des Tickets für deinen eigen
 
 ### Einen Prompt für einen anderen Coding-Agenten kopieren {#copy-issue-prompt}
 
-Um ein Ticket an einen Coding-Agenten außerhalb von Minddy zu übergeben, etwa Claude Code, Codex oder Cursor, öffne das Aktionsmenü des Tickets, wähle **Als Prompt kopieren** und dann **Plan erstellen** (oder **Plan überprüfen**, wenn bereits einer existiert), **Ticket umsetzen**, **Implementierung überprüfen** oder **Benutzerdefiniert…**. Bei mehreren ausgewählten Tickets fasst **Kombinierten Prompt kopieren** sie in einem Prompt zusammen. Das Kopieren führt kein KI-Modell aus und verbraucht kein KI-Kontingent: Minddy stellt zusammen, was es bereits gespeichert hat, und der Agent erkundet das Repository selbst. Ist in den Kontoeinstellungen **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** aktiviert, startet das Kopieren außerdem ein noch nicht begonnenes Ticket. Den vollständigen Ablauf und die Prüfung von Pull Requests beschreibt [Code-Arbeit und Pull Requests](/docs/code-work).
+Um ein Ticket an einen Coding-Agenten außerhalb von minddy zu übergeben, etwa Claude Code, Codex oder Cursor, öffne das Aktionsmenü des Tickets, wähle **Als Prompt kopieren** und dann **Plan erstellen** (oder **Plan überprüfen**, wenn bereits einer existiert), **Ticket umsetzen**, **Implementierung überprüfen** oder **Benutzerdefiniert…**. Bei mehreren ausgewählten Tickets fasst **Kombinierten Prompt kopieren** sie in einem Prompt zusammen. Das Kopieren führt kein KI-Modell aus und verbraucht kein KI-Kontingent: minddy stellt zusammen, was es bereits gespeichert hat, und der Agent erkundet das Repository selbst. Ist in den Kontoeinstellungen **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** aktiviert, startet das Kopieren außerdem ein noch nicht begonnenes Ticket. Den vollständigen Ablauf und die Prüfung von Pull Requests beschreibt [Code-Arbeit und Pull Requests](/docs/code-work).
 
-Der Prompt enthält die Felder des Tickets, seine Kategorien, Beziehungen, die Anzahl angehängter Ressourcen und den Fortschritt des Plans, aber nicht den Plantext. Diesen liest der Agent über den MCP-Server von Minddy oder fragt dich danach. Er nennt außerdem das mit dem Projekt verknüpfte Repository und jeden mit dem Ticket verknüpften Pull Request mit seinem Status und seinen Branches, sofern bekannt. Der Agent setzt einen offenen Pull Request auf dessen Branch fort und behandelt zusammengeführte oder geschlossene als Verlauf. Ohne offenen Pull Request schlägt der Prompt einen Branchnamen aus der Kennung des Tickets und einem kurzen Titel vor, zum Beispiel `min-42-keyboard-navigation`. Das ist nur ein Vorschlag: Der Agent prüft zuerst vorhandene Branches und folgt der Namenskonvention des Repositorys. Bleibt die Kennung im Branchnamen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42` erhalten, kann Minddy den Pull Request dem Ticket zuordnen, wenn das Repository verknüpft ist.
+Der Prompt enthält die Felder des Tickets, seine Kategorien, Beziehungen, die Anzahl angehängter Ressourcen und den Fortschritt des Plans, aber nicht den Plantext. Diesen liest der Agent über den MCP-Server von minddy oder fragt dich danach. Er nennt außerdem das mit dem Projekt verknüpfte Repository und jeden mit dem Ticket verknüpften Pull Request mit seinem Status und seinen Branches, sofern bekannt. Der Agent setzt einen offenen Pull Request auf dessen Branch fort und behandelt zusammengeführte oder geschlossene als Verlauf. Ohne offenen Pull Request schlägt der Prompt einen Branchnamen aus der Kennung des Tickets und einem kurzen Titel vor, zum Beispiel `min-42-keyboard-navigation`. Das ist nur ein Vorschlag: Der Agent prüft zuerst vorhandene Branches und folgt der Namenskonvention des Repositorys. Bleibt die Kennung im Branchnamen, im Titel des Pull Requests oder in einer Zeile `Fixes MIN-42` erhalten, kann minddy den Pull Request dem Ticket zuordnen, wenn das Repository verknüpft ist.
 
 Können die Pull-Request-Informationen nicht geladen werden, sagt der Prompt das, statt zu behaupten, es gebe keinen. Prompts zum Erstellen und Überprüfen eines Plans bitten den Agenten, vor der Umsetzung aufzuhören. Ein benutzerdefinierter Prompt übernimmt deine Anfrage und deren Umfang wie geschrieben. Der Inhalt des Tickets und deine Anfrage behalten ihre ursprüngliche Sprache; die umgebenden Anweisungen sind auf Englisch.
 

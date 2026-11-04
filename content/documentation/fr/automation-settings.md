@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 10,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [],
   "aliases": [],
@@ -53,7 +53,7 @@
 
 ## Ce que sont devenues les automatisations de projet {#automation-settings}
 
-Les interrupteurs d’automatisation du projet et les préréglages, tailles d’effort et délais du compte sont remplacés par les [Routines](/docs/scheduled-routines). Les règles d’automatisation configurées dans une version précédente ne s’exécutent plus, et Minddy ne les convertit pas en routines. Les chaînes en attente ou attendant une personne ont été arrêtées sans étape suivante. Les règles archivées restent dans le projet et dans les exports du compte.
+Les interrupteurs d’automatisation du projet et les préréglages, tailles d’effort et délais du compte sont remplacés par les [Routines](/docs/scheduled-routines). Les règles d’automatisation configurées dans une version précédente ne s’exécutent plus, et minddy ne les convertit pas en routines. Les chaînes en attente ou attendant une personne ont été arrêtées sans étape suivante. Les règles archivées restent dans le projet et dans les exports du compte.
 
 Pour conserver un workflow, ouvrez Routines avec le compte du propriétaire du projet et [créez une routine](/docs/scheduled-routines#scheduled-routines) avec les instructions, le déclencheur, les conditions et le délai nécessaires.
 

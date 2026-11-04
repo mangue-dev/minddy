@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 10,
+  "revision": 13,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -42,10 +42,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; 1 screenshot(s) without a current capture script keep their earlier capture and evidence; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (2026-11-01: removed the retired project auto-assignment switch from the finishing step, checked against components/create-project-wizard.tsx; no screenshot shows it)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (2026-11-01: deleted sentence only, remaining text unchanged; agent review, not human acceptance)",
-    "date": "2026-11-01"
+    "revision": 13,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "accounts",
@@ -65,7 +65,7 @@
       "src": "/documentation/it/reader-first-project.png",
       "alt": "Ticket AUR-3 in corso, con descrizione, assegnatario, impegno e categoria.",
       "caption": "Il ticket mostra identificativo, stato e proprietà. Segnalo come completato solo dopo aver verificato il risultato atteso.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -90,7 +90,7 @@ Usa un account dell’istanza prevista. In questo esempio, crea un progetto dimo
 Se il tuo team ha già un progetto, comunica al proprietario l'email del tuo account e accetta l'invito nella posta in arrivo invece di creare un duplicato.
 
 1. Apri Home dopo l'accesso. Per iniziare un nuovo lavoro, scegli l'azione per creare un progetto nella navigazione. Seleziona un progetto completamente nuovo nella procedura guidata, inserisci un nome e una chiave di due-cinque lettere e prosegui nei passaggi dell'icona e del repository. Per questo esempio manuale, mantieni l'icona predefinita e non scegliere un repository. Puoi lasciare vuota la descrizione iniziale. Il passaggio successivo propone di invitare il tuo team: saltalo per questo esempio manuale oppure cerca per nome le persone dei tuoi altri progetti o inserisci le loro email; nessun invito parte prima che tu concluda la creazione. Nel passaggio finale, controlla Smart Assign. Scegli l'azione per concludere, attendi la creazione e apri il progetto.
-2. Apri il progetto e crea un ticket. Assegna un titolo concreto, come «Controllare il collegamento di contatto del sito». Descrivi la pagina, la destinazione prevista e come verificherai il risultato. Se il pulsante Riempimento intelligente è visibile e attivo, disattivalo per questo esempio manuale prima di creare il ticket. Questo pulsante controlla la compilazione di questo ticket ed è indipendente da Smart Assign e dalle routine.
+2. Apri il progetto e crea un ticket. Assegna un titolo concreto, come «Controllare il collegamento di contatto del sito». Descrivi la pagina, la destinazione prevista e come verificherai il risultato. Se il pulsante Smart Fill è visibile e attivo, disattivalo per questo esempio manuale prima di creare il ticket. Questo pulsante controlla la compilazione di questo ticket ed è indipendente da Smart Assign e dalle routine.
 3. Scegli un assegnatario, una priorità e un impegno se aiutano a pianificare l’attività. Conferma la creazione, apri il ticket ottenuto e controlla progetto e identificativo.
 4. Imposta lo stato «In corso» quando inizi il lavoro. Esegui il controllo e registra il risultato in un commento. Usa «In revisione» se qualcuno deve ancora esaminarlo.
 5. Imposta «Completato» dopo aver verificato il risultato previsto. I tabelloni nascondono la colonna **Completato** per impostazione predefinita: seleziona **Completato** nel filtro **Stato** del tabellone, oppure cerca l’identificativo del ticket, per confermare il cambiamento.

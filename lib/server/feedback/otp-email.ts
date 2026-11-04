@@ -37,7 +37,7 @@ const OTP_COPY: Record<
   fr: {
     subject: (code) => `${code} — votre code de vérification`,
     text: (code) =>
-      `Votre code de vérification : ${code}\n\nSaisissez-le sur la page de retours où vous venez de renseigner cette adresse. Il expire dans 10 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — rien n'a été créé.`,
+      `Votre code de vérification : ${code}\n\nSaisissez-le sur la page de retours où vous venez de renseigner cette adresse. Il expire dans 10 minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail — rien n'a été créé.`,
   },
   de: {
     subject: (code) => `${code} — dein Bestätigungscode`,

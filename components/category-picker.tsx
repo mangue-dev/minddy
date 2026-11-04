@@ -49,7 +49,7 @@ export function CategoryPicker({
         align="start"
         emptyText={
           categories.length === 0
-            ? `${tf("noCategories")} ${t("createInSettings")}`
+            ? t("createInSettings")
             : undefined
         }
         trigger={

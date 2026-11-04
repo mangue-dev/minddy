@@ -1165,7 +1165,7 @@
   {
     "workflow": "H17",
     "article": "recommended-models",
-    "outcome": "Import the model configuration Minddy Cloud recommends, or publish one's own",
+    "outcome": "Import the model configuration minddy Cloud recommends, or publish one's own",
     "audiences": [
       "operator"
     ],

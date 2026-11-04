@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 46,
-  "sourceRevision": 46,
+  "revision": 47,
+  "sourceRevision": 47,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
     "editions": [
@@ -133,10 +133,10 @@
     ]
   },
   "review": {
-    "revision": 46,
-    "fact": "agent:claude (MIN-879: page resource hover card checked against components/resources.tsx, components/resource-card.tsx and components/mention-hover-card.tsx; existing figures unaffected and kept; no capture taken); agent:claude (Smart Fill menu shortcut: source review of components/issue-compact-fields.tsx; sentence added on Command/Ctrl+Shift+F and the restored cursor; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude (Smart Fill menu status, assignee and due date: source review of components/issue-compact-fields.tsx and components/create-issue-dialog.tsx; one sentence added; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
-    "language": "agent:claude (es sentences translated from en revision 45 with the glossary register; agent self-review, not human acceptance); agent:claude (es Smart Fill shortcut sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance); agent:claude (es Smart Fill menu sentence translated from en revision 46 with catalog UI labels, glossary and register; agent self-review, not human acceptance)",
-    "date": "2026-11-02"
+    "revision": 47,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "feedback",
@@ -181,12 +181,12 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-27",
+      "capturedAt": "2026-11-04",
       "viewport": [
         720,
-        396
+        380
       ],
       "theme": "light",
       "padding": 24,
@@ -198,7 +198,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -215,7 +215,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -232,7 +232,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -248,7 +248,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -265,7 +265,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
       "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -282,7 +282,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -299,7 +299,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -315,7 +315,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -332,7 +332,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 46,
+      "revision": 47,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -393,7 +393,7 @@ Las preferencias de Smart Fill pertenecen a tu cuenta. Abre **Ajustes de la cuen
 - En la tarjeta **Smart Fill**, **Activar Smart Fill** activa o desactiva Smart Fill para tu cuenta. Completa la prioridad, el esfuerzo, las categorías y el objetivo que falten; el estado, el responsable y la fecha límite siguen siendo cosa tuya. Los interruptores de las dos tarjetas siguientes dependen de él.
 - En **Incidencias que rellenar**, **Completar incidencias creadas** y **Completar incidencias en Clasificación** eligen qué incidencias nuevas completa: las que creas y las incidencias de triaje de las que eres responsable. **Reevaluar incidencias editadas**, activado por defecto, permite a Smart Fill [volver a leer una incidencia](#smart-fill-reevaluation) después de un cambio en su título o su descripción. **Escribir los títulos que falten**, activado por defecto, permite a Smart Fill [escribir el título](#smart-fill-title) de una incidencia que solo describes.
 - En **Incidencias relacionadas**, **Vincular incidencias relacionadas**, activado por defecto, permite a Smart Fill [añadir relaciones](#smart-fill-relations) después de guardar una incidencia.
-- En **Indexación de incidencias**, **Indexar incidencias**, activado por defecto e independiente de Smart Fill, convierte el título y la descripción de las incidencias que creas o editas en vectores privados que sirven para encontrar incidencias relacionadas y para [buscar incidencias por el sentido](/docs/navigation#search-by-meaning). La indexación en segundo plano de las incidencias existentes de un proyecto respeta a la vez el interruptor del propietario del proyecto y el del autor: una incidencia cuyo autor lo desactivó nunca se indexa. Los vectores se cifran con el proyecto, igual que la incidencia; los guardados antes de que el proyecto empezara a cifrar los convierte la tarea en segundo plano. Con el interruptor desactivado no se crea ningún vector para tus incidencias, aunque otra persona las edite, y la búsqueda de incidencias relacionadas solo compara palabras. Tus propias búsquedas usan entonces solo el texto, sin búsqueda por el sentido. Los vectores ya creados se mantienen mientras el texto no cambie; se eliminan en cuanto el texto cambia, o con la incidencia.
+- En **Indexación de incidencias**, **Indexar incidencias**, activado por defecto e independiente de Smart Fill, indexa en privado el título y la descripción de las incidencias que creas o editas, para encontrar incidencias relacionadas y [buscar incidencias por el sentido](/docs/navigation#search-by-meaning). La indexación en segundo plano de las incidencias existentes de un proyecto respeta a la vez el interruptor del propietario del proyecto y el del autor: una incidencia cuyo autor lo desactivó nunca se indexa. Los vectores se cifran con el proyecto, igual que la incidencia; los guardados antes de que el proyecto empezara a cifrar los convierte la tarea en segundo plano. Con el interruptor desactivado no se crea ningún vector para tus incidencias, aunque otra persona las edite, y la búsqueda de incidencias relacionadas solo compara palabras. Tus propias búsquedas usan entonces solo el texto, sin búsqueda por el sentido. Los vectores ya creados se mantienen mientras el texto no cambie; se eliminan en cuanto el texto cambia, o con la incidencia.
 
 Desactivar un interruptor también cancela las pasadas que aún no se han ejecutado. Numo puede cambiar estas preferencias cuando se lo pidas.
 
@@ -464,7 +464,7 @@ Abre la cronología de discusión de la incidencia para añadir un comentario. E
 
 Adjunta una página relevante del proyecto, un archivo o un enlace mediante los controles de recursos. Una página vinculada es un recurso actualizado: su título sigue los cambios de nombre y su contenido puede evolucionar. Un archivo es un adjunto almacenado, no una garantía de que una URL externa seguirá disponible. **Página** abre la paleta de comandos con las páginas del proyecto, en el orden de la barra lateral; elige una para adjuntarla. Para redactar una página que aún no existe, elige **Nueva página** al final de la lista; un título escrito antes en la búsqueda se convierte en su título. La página se crea en el proyecto, se adjunta a la incidencia y se abre en un panel lateral, donde **Ampliar** abre la página completa.
 
-Los recursos aparecen como tarjetas: la propia imagen o el icono del tipo de archivo, el nombre y el tamaño. Un enlace muestra la imagen de vista previa de su página cuando el sitio la ofrece; si no, su favicon. Haz clic o clic derecho en una tarjeta para abrir su menú: Vista previa, Abrir enlace o Abrir la página, y después Cambiar nombre, Descargar y Eliminar cuando correspondan. Vista previa abre un archivo compatible en toda la ventana. Las imágenes, los PDF, Markdown (`.md`), el texto sin formato (`.txt`, `.text`), los CSV y los formatos de audio o vídeo compatibles usan el mismo visor. Markdown se muestra con formato, el texto se mantiene literal y el CSV se abre como una tabla desplazable. Usa Cerrar o Escape para volver al ticket. El menú Acciones del archivo (`…`) ofrece Descargar y, si puedes modificar ese recurso, Cambiar nombre y Eliminar. Al hacer clic en la mención de un archivo en un texto se abre el mismo visor. Minddy pide confirmación antes de quitar un recurso, que entonces se desvincula de este contexto. Un recurso de página conserva el título de su página y no se puede renombrar. Los formatos no compatibles conservan su acción de descarga. **Abrir la página** la muestra en un panel lateral, donde **Ampliar** abre la página completa; una base de datos se abre directamente como página completa. Al pasar el puntero sobre la tarjeta de una página ves sus primeras líneas, o las primeras filas de una base de datos.
+Los recursos aparecen como tarjetas: la propia imagen o el icono del tipo de archivo, el nombre y el tamaño. Un enlace muestra la imagen de vista previa de su página cuando el sitio la ofrece; si no, su favicon. Haz clic o clic derecho en una tarjeta para abrir su menú: Vista previa, Abrir enlace o Abrir la página, y después Cambiar nombre, Descargar y Eliminar cuando correspondan. Vista previa abre un archivo compatible en toda la ventana. Las imágenes, los PDF, Markdown (`.md`), el texto sin formato (`.txt`, `.text`), los CSV y los formatos de audio o vídeo compatibles usan el mismo visor. Markdown se muestra con formato, el texto se mantiene literal y el CSV se abre como una tabla desplazable. Usa Cerrar o Escape para volver al ticket. El menú Acciones del archivo (`…`) ofrece Descargar y, si puedes modificar ese recurso, Cambiar nombre y Eliminar. Al hacer clic en la mención de un archivo en un texto se abre el mismo visor. minddy pide confirmación antes de quitar un recurso, que entonces se desvincula de este contexto. Un recurso de página conserva el título de su página y no se puede renombrar. Los formatos no compatibles conservan su acción de descarga. **Abrir la página** la muestra en un panel lateral, donde **Ampliar** abre la página completa; una base de datos se abre directamente como página completa. Al pasar el puntero sobre la tarjeta de una página ves sus primeras líneas, o las primeras filas de una base de datos.
 
 ![Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.](/documentation/es/file-preview.png)
 
@@ -500,9 +500,9 @@ Con **Vincular incidencias relacionadas** activado, Smart Fill busca incidencias
 
 Smart Fill compara la incidencia con cinco candidatas como máximo del mismo proyecto y descarta las incidencias canceladas, duplicadas o eliminadas. Después, una decisión clasifica cada candidata como relacionada, bloqueadora, bloqueada por o sin relación. La similitud por sí sola nunca crea un vínculo, una dependencia exige indicios más sólidos que una relación simple y, ante la duda, Smart Fill no añade nada. Una relación exige un vínculo evidente, como el mismo error, una continuación directa o una reversión: dos incidencias que solo comparten una función o un tema quedan sin vincular. Por eso la mayoría de las incidencias no recibe ningún vínculo. Una pasada añade como máximo dos relaciones. Nunca toca un par que ya tenga una relación, nunca añade un bloqueo que cierre un ciclo y descarta su resultado si el texto de la incidencia cambió durante la decisión. Nunca marca un duplicado ni cambia un estado.
 
-Los vínculos añadidos así aparecen en las relaciones de la incidencia como cualquier otro, y el historial indica Smart-fill como autor. Comprueba la dirección de una dependencia como harías con las tuyas. Para quitar un vínculo, usa los controles de relaciones: Smart Fill no vuelve a añadir un vínculo quitado para ese par. Para dejar de recibir vínculos nuevos, desactiva **Vincular incidencias relacionadas** en [tus preferencias](#smart-fill-preferences). Las incidencias creadas antes de esta función, las importadas y las sincronizadas desde un repositorio se indexan poco a poco en segundo plano, pero nunca reciben vínculos automáticos.
+Los vínculos añadidos así aparecen en las relaciones de la incidencia como cualquier otro, y el historial indica Smart Fill como autor. Comprueba la dirección de una dependencia como harías con las tuyas. Para quitar un vínculo, usa los controles de relaciones: Smart Fill no vuelve a añadir un vínculo quitado para ese par. Para dejar de recibir vínculos nuevos, desactiva **Vincular incidencias relacionadas** en [tus preferencias](#smart-fill-preferences). Las incidencias creadas antes de esta función, las importadas y las sincronizadas desde un repositorio se indexan poco a poco en segundo plano, pero nunca reciben vínculos automáticos.
 
-La indexación y las decisiones de relación usan IA. Cuentan en la parte **Automatizaciones** de la cuenta a la que corresponde la pasada: la cuenta a la que se cobra el Smart Fill de la incidencia nueva, normalmente quien la creó; quien edita, en una edición; y el propietario del proyecto, en la indexación en segundo plano. El historial de uso muestra la indexación como **Smart-fill · índice de incidencias**. Una decisión de relación aparece como **Decisión de IA** cuando la resuelve el modelo de decisión, y como **Smart-fill · relaciones** cuando la resuelve el modelo de respaldo. Si ese presupuesto se agota o el proveedor falla, la pasada se omite y la incidencia no cambia. [La búsqueda de incidencias por el sentido](/docs/navigation#search-by-meaning) usa el mismo índice: cada búsqueda nueva cuenta en la parte **Automatizaciones** de la cuenta que busca y aparece como **Búsqueda de incidencias**.
+La indexación y las decisiones de relación usan IA. Cuentan en la parte **Automatizaciones** de la cuenta a la que corresponde la pasada: la cuenta a la que se cobra el Smart Fill de la incidencia nueva, normalmente quien la creó; quien edita, en una edición; y el propietario del proyecto, en la indexación en segundo plano. El historial de uso muestra la indexación como **Smart Fill · índice de incidencias**. Una decisión de relación aparece como **Decisión de IA** cuando la resuelve el modelo de decisión, y como **Smart Fill · relaciones** cuando la resuelve el modelo de respaldo. Si ese presupuesto se agota o el proveedor falla, la pasada se omite y la incidencia no cambia. [La búsqueda de incidencias por el sentido](/docs/navigation#search-by-meaning) usa el mismo índice: cada búsqueda nueva cuenta en la parte **Automatizaciones** de la cuenta que busca y aparece como **Búsqueda de incidencias**.
 
 ## Dividir una incidencia en subincidencias {#sub-issues}
 
@@ -542,9 +542,9 @@ Para que se implemente el plan, copia el prompt de la incidencia para tu propio 
 
 ### Copiar un prompt para otro agente de código {#copy-issue-prompt}
 
-Para encargar una incidencia a un agente de código fuera de Minddy, como Claude Code, Codex o Cursor, abre el menú de acciones de la incidencia, elige **Copiar como prompt** y luego **Generar un plan** (o **Revisar el plan** si ya existe), **Implementar la incidencia**, **Verificar la implementación** o **Personalizado…**. Con varias incidencias seleccionadas, **Copiar el prompt combinado** las reúne en un solo prompt. Copiar no ejecuta ningún modelo de IA ni consume tu cuota de IA: Minddy reúne lo que ya tiene guardado y el agente explora el repositorio por su cuenta. Si **Iniciar la incidencia o la tarea cuando copio su prompt** está activado en las preferencias de la cuenta, copiar también inicia una incidencia que aún no ha empezado. Consulta [Trabajo con código y pull requests](/docs/code-work) para ver el flujo completo y la revisión de pull requests.
+Para encargar una incidencia a un agente de código fuera de minddy, como Claude Code, Codex o Cursor, abre el menú de acciones de la incidencia, elige **Copiar como prompt** y luego **Generar un plan** (o **Revisar el plan** si ya existe), **Implementar la incidencia**, **Verificar la implementación** o **Personalizado…**. Con varias incidencias seleccionadas, **Copiar el prompt combinado** las reúne en un solo prompt. Copiar no ejecuta ningún modelo de IA ni consume tu cuota de IA: minddy reúne lo que ya tiene guardado y el agente explora el repositorio por su cuenta. Si **Iniciar la incidencia o la tarea cuando copio su prompt** está activado en las preferencias de la cuenta, copiar también inicia una incidencia que aún no ha empezado. Consulta [Trabajo con código y pull requests](/docs/code-work) para ver el flujo completo y la revisión de pull requests.
 
-El prompt incluye los campos de la incidencia, sus categorías, sus relaciones, el número de recursos adjuntos y el progreso del plan, pero no el texto del plan, que el agente lee a través del servidor MCP de Minddy o te pide. También indica el repositorio vinculado al proyecto y cada pull request vinculada a la incidencia, con su estado y sus ramas cuando se conocen. El agente continúa una pull request abierta en su rama y trata las fusionadas o cerradas como historial. Sin una pull request abierta, el prompt sugiere un nombre de rama formado por el identificador de la incidencia y un título corto, por ejemplo `min-42-keyboard-navigation`. Es solo una sugerencia: el agente revisa primero las ramas existentes y sigue la convención de nombres del repositorio. Mantener el identificador en el nombre de la rama, el título de la pull request o una línea `Fixes MIN-42` permite a Minddy vincular la pull request a la incidencia cuando el repositorio está vinculado.
+El prompt incluye los campos de la incidencia, sus categorías, sus relaciones, el número de recursos adjuntos y el progreso del plan, pero no el texto del plan, que el agente lee a través del servidor MCP de minddy o te pide. También indica el repositorio vinculado al proyecto y cada pull request vinculada a la incidencia, con su estado y sus ramas cuando se conocen. El agente continúa una pull request abierta en su rama y trata las fusionadas o cerradas como historial. Sin una pull request abierta, el prompt sugiere un nombre de rama formado por el identificador de la incidencia y un título corto, por ejemplo `min-42-keyboard-navigation`. Es solo una sugerencia: el agente revisa primero las ramas existentes y sigue la convención de nombres del repositorio. Mantener el identificador en el nombre de la rama, el título de la pull request o una línea `Fixes MIN-42` permite a minddy vincular la pull request a la incidencia cuando el repositorio está vinculado.
 
 Si no se puede cargar la información de las pull requests, el prompt lo indica en lugar de afirmar que no hay ninguna. Los prompts de plan y de revisión del plan piden al agente que se detenga antes de implementar. Un prompt personalizado conserva tu petición y su alcance tal como los escribiste. El contenido de la incidencia y tu petición conservan su idioma original; las instrucciones que los rodean están en inglés.
 

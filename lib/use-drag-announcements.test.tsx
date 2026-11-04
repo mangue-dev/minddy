@@ -38,13 +38,13 @@ describe("drag announcements", () => {
     expect(a.onDragOver({ active, over })).toBe("Release notes is over Todo.");
     expect(a.onDragEnd({ active, over })).toBe("Release notes was dropped over Todo.");
     expect(a.onDragEnd({ active, over: null })).toBe("Release notes was dropped.");
-    expect(a.onDragCancel({ active, over: null })).toBe("Moving Release notes was cancelled.");
+    expect(a.onDragCancel({ active, over: null })).toBe("Moving Release notes was canceled.");
   });
 
   it("speaks the interface language and never falls back to a raw ID", async () => {
     const a = await announcements("fr", fr);
-    expect(a.onDragStart({ active })).toBe("Release notes est saisi.");
+    expect(a.onDragStart({ active })).toBe("Vous avez saisi Release notes.");
     const unknown = { id: "9a0b1c2d-0000-4000-8000-000000000009" } as Active;
-    expect(a.onDragStart({ active: unknown })).toBe("Élément est saisi.");
+    expect(a.onDragStart({ active: unknown })).toBe("Vous avez saisi Élément.");
   });
 });

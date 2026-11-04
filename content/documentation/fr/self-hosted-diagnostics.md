@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
+  "revision": 8,
   "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -36,8 +36,8 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured)",
     "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-10-22"
   },
@@ -57,7 +57,7 @@
 
 ## Diagnostiquer une installation self-hosted {#self-hosted-diagnostics}
 
-Lancez le doctor en lecture seule depuis la version et l’environnement réellement installés. Utilisez `--mode full` avec le chemin Compose amont, ou managed avec la connexion de base fournisseur. Il vérifie compatibilité, configuration, conteneurs, DNS/TLS, santé applicative, espace et planificateur ; migrations et Storage exigent la connexion appropriée. Son masquage est utile, mais inspectez le rapport avant partage. Le contrôle de santé ne prouve pas livraison des emails, lisibilité du contenu chiffré ni fichiers restaurés.
+Lancez le doctor en lecture seule depuis la version et l’environnement réellement installés. Utilisez `--mode full` avec le chemin Compose amont, ou managed avec la connexion de base fournisseur. Il vérifie compatibilité, configuration, conteneurs, DNS/TLS, santé applicative, espace et planificateur ; migrations et Storage exigent la connexion appropriée. Son masquage est utile, mais inspectez le rapport avant partage. Le contrôle de santé ne prouve pas livraison des e-mails, lisibilité du contenu chiffré ni fichiers restaurés.
 
 ```bash
 pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
