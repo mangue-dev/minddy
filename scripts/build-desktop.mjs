@@ -2,7 +2,7 @@ import { build } from "esbuild";
 import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { latestCompatibilityEntry } from "../lib/self-hosting-release-core.mjs";
 
 /**
@@ -164,8 +164,10 @@ const welcomeCssInput = path.join(repo, "components", "desktop", "server-choice.
 // PostCSS as the Tailwind plugin resolves it: it is that plugin's dependency
 // (the root only pins its version in overrides), so pnpm may not hoist it.
 const tailwindPluginEntry = requireRoot.resolve("@tailwindcss/postcss");
-const { default: postcss } = await import(createRequire(tailwindPluginEntry).resolve("postcss"));
-const { default: tailwind } = await import(tailwindPluginEntry);
+// import() takes a URL: a bare absolute path works on macOS and Linux but is
+// read as a `d:` URL scheme on Windows (the Store build runs there).
+const { default: postcss } = await import(pathToFileURL(createRequire(tailwindPluginEntry).resolve("postcss")).href);
+const { default: tailwind } = await import(pathToFileURL(tailwindPluginEntry).href);
 const welcomeCss = await postcss([tailwind({ base: repo, optimize: { minify: true } })]).process(
   await readFile(welcomeCssInput, "utf8"),
   { from: welcomeCssInput, to: path.join(WELCOME_DIR, "welcome.css") },
