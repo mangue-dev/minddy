@@ -63,9 +63,9 @@ export async function OAuthConsentCard({
           ))}
         </ul>
 
-        <div className="flex flex-col gap-2 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3.5">
+        <div className="flex flex-col gap-2 rounded-xl border border-warning/25 bg-surface-warning px-4 py-3.5">
           <p className="flex items-start gap-2.5 text-sm text-foreground/90">
-            <HugeiconsIcon icon={Shield01Icon} className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-500" strokeWidth={2.25} />
+            <HugeiconsIcon icon={Shield01Icon} className="mt-0.5 size-4 shrink-0 text-warning-strong" strokeWidth={2.25} />
             <span>
               {redirectHost
                 ? t("redirectTo", { host: redirectHost })

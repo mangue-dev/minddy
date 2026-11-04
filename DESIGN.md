@@ -119,6 +119,13 @@ where `lib/theme-presets.test.ts` measures their contrast.
   - a field in the workspace itself needs nothing: the shell shrinks to the
     visible height while it is focused, and the field is scrolled into view
     inside its own scroll area.
+  - a menu placed by hand next to the caret reads the room above the
+    keyboard from `visibleBand` or `editorMenuBand` in `lib/visible-band.ts`;
+  - a sheet opens with the keyboard down and focuses itself
+    (`allowInputAutoFocus`, `focusMobileSheet` in `lib/mobile-sheet-focus.ts`).
+    The command palette is the exception: it opens on its search field, and
+    the tap that opens it calls `primeMobileKeyboard` so iOS raises the
+    keyboard.
 - **Touch.** Under a coarse pointer, controls get a 44px hit area through the
   helpers in `components/ui/touch-target.ts` without changing how they look.
   Rows use `COARSE_ROW`. Hover effects belong to a fine pointer: `hover:`

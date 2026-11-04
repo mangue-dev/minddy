@@ -181,6 +181,7 @@ export function SearchBar({
         autoCorrect="off"
         autoCapitalize="off"
         spellCheck={false}
+        data-palette-search=""
       />
 
       {historyIndex >= 0 && (

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { HelpHint } from "@/components/settings/help-hint";
@@ -70,14 +70,15 @@ function ChoiceField({ label, value, choices, onChange, loading = false, compact
           {choices.map(choice => <SelectItem key={choice.id} value={choice.id || "__any__"}><ChoiceLabel icon={choice.icon} label={choice.label} /></SelectItem>)}
           {choices.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">{loading ? common("loading") : t("noTriggerChoices")}</p>}
         </SelectContent>
-      </Select> : <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+      </Select> : <ResponsivePopover open={open} onOpenChange={setOpen}>
+        <ResponsivePopoverTrigger asChild>
           <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open} data-missing={missing ? "" : undefined} className={cn("h-11 w-full min-w-0 justify-between bg-control px-3.5 font-normal md:h-9", focusRing, missing && missingRing)}>
             <ChoiceLabel icon={selected?.icon ?? fallbackIcon} label={unavailable ? t("unavailableSelection") : selected?.label || (loading ? common("loading") : t("chooseTriggerValue"))} />
             <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] min-w-48 max-w-[calc(100vw-2rem)] rounded-xl p-0">
+        </ResponsivePopoverTrigger>
+        {/* A sheet on phones: its search field stays above the keyboard. */}
+        <ResponsivePopoverContent align="start" mobileTitle={label} className="w-[var(--radix-popover-trigger-width)] min-w-48 max-w-[calc(100vw-2rem)] rounded-xl p-0">
           <Command label={label}>
             <CommandInput aria-label={label} placeholder={t("searchTriggerChoices")} />
             <CommandList className="p-1">
@@ -88,8 +89,8 @@ function ChoiceField({ label, value, choices, onChange, loading = false, compact
               </CommandItem>)}
             </CommandList>
           </Command>
-        </PopoverContent>
-      </Popover>}
+        </ResponsivePopoverContent>
+      </ResponsivePopover>}
     </div>
   );
 }

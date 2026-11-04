@@ -413,7 +413,7 @@ function tabBadge(indicator: AppTabIndicator | null, nav: NavTranslator): ReactN
   if (!indicator) return null;
   if (indicator.kind === "alert") {
     return (
-      <HugeiconsIcon icon={Alert01Icon} className="size-2.5 text-amber-500"
+      <HugeiconsIcon icon={Alert01Icon} className="size-2.5 text-warning-strong"
         aria-label={nav("smartAssignIncomplete")} />
     );
   }

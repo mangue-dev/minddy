@@ -16,7 +16,7 @@ import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { EmojiPicker as Frimousse } from "frimousse";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { cn } from "@/lib/utils";
 
 export function EmojiPicker({
@@ -41,8 +41,8 @@ export function EmojiPicker({
   const [open, setOpen] = useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <ResponsivePopover open={open} onOpenChange={setOpen}>
+      <ResponsivePopoverTrigger asChild>
         {children ?? (
           <Button
             variant="ghost"
@@ -53,13 +53,15 @@ export function EmojiPicker({
             {value}
           </Button>
         )}
-      </PopoverTrigger>
+      </ResponsivePopoverTrigger>
       {/* `overflow-hidden`: the selector paints its own background over its entire
  height (search bar, virtualized list). Without cutting, its
  square corners cover those of the panel and the whole thing appears without radius
- — the radius is there, it is the content which passes over it. */}
-      <PopoverContent
+ — the radius is there, it is the content which passes over it. On a
+ phone it is a sheet, whose search field stays above the keyboard. */}
+      <ResponsivePopoverContent
         align="start"
+        mobileTitle={t("changeIcon")}
         className="w-[320px] overflow-hidden p-0"
       >
         <Frimousse.Root
@@ -72,7 +74,7 @@ export function EmojiPicker({
             setOpen(false);
           }}
         >
-          <div className="flex items-center gap-2 border-b border-border p-2">
+          <div data-sheet-search className="flex items-center gap-2 border-b border-border p-2">
             <Frimousse.Search
               placeholder={t("searchEmoji")}
               className="h-8 min-w-0 flex-1 rounded-md bg-control px-2 text-sm outline-none focus-visible:bg-control-hover"
@@ -127,7 +129,7 @@ export function EmojiPicker({
             />
           </Frimousse.Viewport>
         </Frimousse.Root>
-      </PopoverContent>
-    </Popover>
+      </ResponsivePopoverContent>
+    </ResponsivePopover>
   );
 }

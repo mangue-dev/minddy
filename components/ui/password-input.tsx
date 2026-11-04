@@ -36,7 +36,7 @@ function PasswordInput({
           className="aspect-square h-full w-auto rounded-[calc(var(--radius)-3px)]"
           aria-label={label}
           aria-controls={props.id}
-          title={label}
+          tooltip={label}
           // Keep focus (and the caret) in the field while toggling.
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setVisible((v) => !v)}

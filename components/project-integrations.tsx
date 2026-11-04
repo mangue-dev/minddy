@@ -59,8 +59,8 @@ const KIND_STYLES: Record<IntegrationKind, { badge: string; avatar: string }> =
     },
     feedback: {
       badge:
-        "bg-amber-600/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
-      avatar: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+        "bg-surface-warning text-warning-strong",
+      avatar: "bg-surface-warning text-warning-strong",
     },
   };
 
@@ -180,7 +180,7 @@ function WebhookStatus({ integration }: { integration: Integration }) {
           !status
             ? "bg-muted-foreground/40"
             : healthy
-              ? "bg-green-500"
+              ? "bg-success"
               : "bg-destructive",
         )}
       />

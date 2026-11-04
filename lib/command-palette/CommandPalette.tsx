@@ -129,6 +129,19 @@ export interface CommandPaletteProps {
 
 /** Matches `paletteSlideOut` in CommandPalette.module.css. */
 const EXIT_MS = 120;
+/**
+ * On mobile the palette opens on its search field with the keyboard up:
+ * searching is what it is opened for. Other sheets keep the keyboard down
+ * until a tap (lib/mobile-sheet-focus.ts); the search tap primes it.
+ */
+function focusSearchField(event: Event) {
+  if (!(event.target instanceof HTMLElement)) return;
+  const field = event.target.querySelector<HTMLInputElement>("input[data-palette-search]");
+  if (!field) return;
+  event.preventDefault();
+  field.focus({ preventScroll: true });
+}
+
 /** Covers the mobile sheet's own close transition. */
 const MOBILE_EXIT_MS = 300;
 
@@ -357,7 +370,7 @@ export function CommandPalette({
 
   if (mobile) return <PaletteConfigProvider value={config}>
     <Dialog open={isOpen} onOpenChange={(next) => { if (!next) handleClose(); }}>
-      <DialogContent className="mobile-command-palette" aria-describedby={undefined}>
+      <DialogContent className="mobile-command-palette" aria-describedby={undefined} onOpenAutoFocus={focusSearchField}>
         <DialogTitle className="sr-only">{t("search.placeholder")}</DialogTitle>
         {isSuccess ? <div className="flex min-h-32 items-center justify-center"><CheckIcon /></div> : renderView()}
       </DialogContent>
