@@ -121,8 +121,13 @@ Adjectives agree with the issue term: masculine in Italian and Portuguese
   (Terms, Privacy, Cookies, Legal) change wording only, never substance.
 - A translation must not carry more or less meaning than the English. When the
   English changes, update every catalog in the same change.
-- Run `npx vitest run lib/i18n-contract.test.ts lib/i18n-glossary.test.ts` after
-  any catalog change, and `lib/seo-surface.test.ts` when a `metaTitle` or
+- Reuse a `Common` label (cancel, save, delete, copy…) instead of adding a
+  namespace key with the same text, unless the locales may need to word it
+  differently there. Delete a key in all six catalogs when its last caller
+  goes; `lib/i18n-unused-keys.test.ts` fails on keys no code reads, and lists
+  the keys built at runtime that it cannot see.
+- Run `npx vitest run lib/i18n-contract.test.ts lib/i18n-glossary.test.ts lib/i18n-unused-keys.test.ts`
+  after any catalog change, and `lib/seo-surface.test.ts` when a `metaTitle` or
   `metaDescription` changes (titles ≤ 70 characters, descriptions ≤ 170).
 
 ## Keeping the manual aligned

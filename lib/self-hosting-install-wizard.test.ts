@@ -94,7 +94,6 @@ function choose(method: "agent" | "manual", full = false) {
   expect(host.textContent).toContain(selfHostingRelease.tag);
   expect(host.textContent).toContain(copy.encryptionReleaseKeyNote);
   expect(host.querySelector(`a[href="https://example.test/docs/workspace-encryption"]`)).toBeTruthy();
-  expect(host.textContent).not.toContain(copy.encryptionEnabled);
   reach(copy.migrateTitle);
   clickCard(copy.migrateNo);
   if (full) {

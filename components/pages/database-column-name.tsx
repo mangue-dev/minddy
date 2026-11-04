@@ -39,6 +39,7 @@ export function DatabaseColumnName({
   disabled?: boolean;
 }) {
   const t = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   const name = property?.name ?? database.database_title_name ?? t("name");
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -223,8 +224,8 @@ export function DatabaseColumnName({
         }}
         title={t("deleteProperty")}
         description={t("deletePropertyBody", { name })}
-        confirmLabel={t("delete")}
-        cancelLabel={t("cancel")}
+        confirmLabel={tCommon("delete")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           if (!removeBase) return;
           void saveSchema(

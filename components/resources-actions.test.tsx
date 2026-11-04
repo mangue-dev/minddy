@@ -17,9 +17,9 @@ vi.mock("./file-viewer", () => ({ FileViewer: () => null }));
 vi.mock("./app-link", () => ({ default: ({ children, ...props }: { children: ReactNode }) => <a {...props}>{children}</a> }));
 
 const messages = {
-  Common: { cancel: "Cancel" },
+  Common: { cancel: "Cancel", remove: "Remove" },
   Resources: {
-    preview: "Preview", pageUnavailable: "This page no longer exists", addPage: "Page", openLink: "Open link", actions: "File actions", download: "Download", openPage: "Open page", remove: "Remove", rename: "Rename",
+    preview: "Preview", pageUnavailable: "This page no longer exists", addPage: "Page", openLink: "Open link", actions: "File actions", download: "Download", openPage: "Open page", rename: "Rename",
     renameDialogTitle: "Rename resource", renameLabel: "Name", renameEmpty: "Enter a name.",
     renameFailed: "Couldn't rename this resource.",
     removeConfirmTitle: "Remove “{name}”?", removeConfirmDescription: "Removed for everyone.",

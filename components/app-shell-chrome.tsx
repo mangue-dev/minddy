@@ -759,7 +759,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
           : openCreateObjective({ projectId: d.projectId, draftId: d.id }),
       });
     }
-    groups.push({ key: "create", heading: t("create"), items: createItems });
+    groups.push({ key: "create", heading: tCommon("create"), items: createItems });
 
     // ── Go to (global) ────────────────────────────────────────────────
     // Every shortcut below mirrors keyboard-context's runChord (G then key);

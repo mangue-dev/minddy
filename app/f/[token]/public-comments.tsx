@@ -278,7 +278,7 @@ export function PublicComments({
         }}
         title={t("commentDeleteTitle")}
         description={t("commentDeleteDescription")}
-        confirmLabel={t("commentDeleteConfirm")}
+        confirmLabel={tCommon("delete")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           if (deleteTarget) remove(deleteTarget);

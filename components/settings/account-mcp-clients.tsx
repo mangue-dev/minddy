@@ -89,6 +89,7 @@ type ConnectionCheck =
 
 export function AccountMcpClients() {
   const t = useTranslations("McpClients");
+  const tCommon = useTranslations("Common");
   const id = useId();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -903,7 +904,7 @@ export function AccountMcpClients() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => edit(connection)}>
                 <HugeiconsIcon icon={PencilEdit02Icon} />
-                {t("edit")}
+                {tCommon("edit")}
               </DropdownMenuItem>
               {connection.auth_mode === "oauth" &&
                 connection.oauth_connected && (
@@ -947,7 +948,7 @@ export function AccountMcpClients() {
         title={t("removeConfirmTitle", { name: toRemove?.name ?? "" })}
         description={t("removeConfirmDescription")}
         confirmLabel={t("remove")}
-        cancelLabel={t("cancel")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           if (!toRemove) return;
           if (await mutate(`${endpoint}/${toRemove.id}`, "DELETE"))

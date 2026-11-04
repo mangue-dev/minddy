@@ -182,6 +182,7 @@ export function BlockMenu({
   children: React.ReactNode;
 }) {
   const t = useTranslations("Pages");
+  const tCommon = useTranslations("Common");
   const [pendingDelete, setPendingDelete] = useState<{
     range: { from: number; to: number };
     count: number;
@@ -375,7 +376,7 @@ export function BlockMenu({
   const copyNode = (
     <DropdownMenuItem onSelect={copyOrDuplicate}>
       <HugeiconsIcon icon={Copy01Icon} />
-      <span className="truncate">{t(subpageId ? "duplicateBlock" : "copyBlock")}</span>
+      <span className="truncate">{subpageId ? t("duplicateBlock") : tCommon("copy")}</span>
     </DropdownMenuItem>
   );
   const linkNode = (
@@ -404,7 +405,7 @@ export function BlockMenu({
  the sidebar, word for word — it's the same gesture, it should not
  have two names depending on where it is triggered from. */}
       <span className="truncate">
-        {subpageId ? t("deletePage") : t("deleteBlock")}
+        {subpageId ? tCommon("moveToTrash") : tCommon("delete")}
       </span>
     </DropdownMenuItem>
   );
@@ -460,11 +461,11 @@ export function BlockMenu({
       node: colorNode,
       children: [colorEntries("text", t("colorText")), colorEntries("background", backgroundLabel)],
     }] : []),
-    ...(!mediaOnly ? [{ id: "copy", label: t(subpageId ? "duplicateBlock" : "copyBlock"), node: copyNode }] : []),
+    ...(!mediaOnly ? [{ id: "copy", label: subpageId ? t("duplicateBlock") : tCommon("copy"), node: copyNode }] : []),
     ...(blockLinks ? [{ id: "link", label: t("copyBlockLink"), node: linkNode }] : []),
     ...(canComment ? [{ id: "comment", label: t("commentSelection"), node: commentNode }] : []),
     ...(askNumo && can.text ? [{ id: "ask-numo", label: tBulk("askNumo"), node: askNumoNode }] : []),
-    { id: "delete", label: subpageId ? t("deletePage") : t("deleteBlock"), node: deleteNode },
+    { id: "delete", label: subpageId ? tCommon("moveToTrash") : tCommon("delete"), node: deleteNode },
   ];
   const results = search.query.trim() ? searchActionTree(entries(), search.query) : null;
 
@@ -559,7 +560,7 @@ export function BlockMenu({
               focusBlockRange(editor, range ?? null);
             }}
           >
-            {t("blockDeleteConfirm")}
+            {tCommon("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

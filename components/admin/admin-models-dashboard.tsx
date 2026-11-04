@@ -520,6 +520,7 @@ function ModelsFileActions({
   onImported: () => Promise<void>;
 }) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const changeLabel = useChangeLabel();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -657,7 +658,7 @@ function ModelsFileActions({
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPending(null)} disabled={busy}>
-              {t("modelsFile.cancel")}
+              {tCommon("cancel")}
             </Button>
             {pending && pending.changes.length > 0 ? (
               <Button onClick={() => void apply()} disabled={busy}>
@@ -1181,6 +1182,7 @@ function RecommendedRow({
   onSaved: OnSaved;
 }) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const tAgent = useTranslations("Agent");
   const locale = useLocale();
   // The platform catalog carries the multipliers (see getAdminModelCatalog):
@@ -1327,7 +1329,7 @@ function RecommendedRow({
                 disabled={busy || incomplete || duplicate}
                 onClick={save}
               >
-                {t("recommended.save")}
+                {tCommon("save")}
               </Button>
               <Button
                 type="button"
@@ -1336,7 +1338,7 @@ function RecommendedRow({
                 disabled={busy}
                 onClick={() => setList(savedList)}
               >
-                {t("recommended.cancel")}
+                {tCommon("cancel")}
               </Button>
             </>
           ) : saved ? (

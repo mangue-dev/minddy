@@ -24,9 +24,9 @@ it("previews resources through the shared reader and respects per-resource remov
   const remove = vi.fn();
   const render = async (allowed: boolean) => {
     await act(() => root.render(<NextIntlClientProvider locale="en" messages={{
-      Common: { cancel: "Cancel" },
+      Common: { cancel: "Cancel", remove: "Remove" },
       Resources: {
-        preview: "Preview", pageUnavailable: "This page no longer exists", addPage: "Page", openLink: "Open link", actions: "File actions", remove: "Remove", rename: "Rename", download: "Download",
+        preview: "Preview", pageUnavailable: "This page no longer exists", addPage: "Page", openLink: "Open link", actions: "File actions", rename: "Rename", download: "Download",
         removeConfirmTitle: "Remove “{name}”?", removeConfirmDescription: "Removed for everyone.",
         removeDraftConfirmDescription: "Not sent.", removeUploadConfirmDescription: "Upload stops.",
       },

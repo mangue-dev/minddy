@@ -941,6 +941,7 @@ export function PrDiff({
   className?: string;
 }) {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const resolvedTheme = useEffectiveColorScheme();
   const isMobile = useMobileLayout() === true;
@@ -1099,12 +1100,12 @@ export function PrDiff({
               {toolbarActions}
             </div>
             <div data-testid="pr-diff-display-controls" className="ml-auto flex shrink-0 items-center gap-2">
-              <AppTooltip label={t("wrapLines")}>
+              <AppTooltip label={tCommon("codeWrap")}>
                 <button
                   type="button"
                   onClick={() => setWrapChoice(!wrap)}
                   aria-pressed={wrap}
-                  aria-label={t("wrapLines")}
+                  aria-label={tCommon("codeWrap")}
                   className={cn(
                     "flex size-7 items-center justify-center rounded-md border transition-colors",
                     wrap

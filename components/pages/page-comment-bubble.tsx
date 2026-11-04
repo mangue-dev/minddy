@@ -245,6 +245,7 @@ export function PageCommentBubble({
   floating?: boolean;
 }) {
   const t = useTranslations("Pages");
+  const tCommon = useTranslations("Common");
   const colorName = useTranslations("Categories.colors");
   const tBulk = useTranslations("BulkActions");
   // Absent where Numo is not (a public page, an account without AI).
@@ -409,12 +410,12 @@ export function PageCommentBubble({
   // the card keeps the editor's selection, so the browser's copy reads it.
   const copySelection = () => {
     editor.view.focus();
-    if (document.execCommand("copy")) toast.success(t("selectionCopied"));
+    if (document.execCommand("copy")) toast.success(tCommon("copied"));
     else {
       const { from, to } = editor.state.selection;
       void navigator.clipboard
         .writeText(editor.state.doc.textBetween(from, to, "\n"))
-        .then(() => toast.success(t("selectionCopied")), () => toast.error(t("copyFailed")));
+        .then(() => toast.success(tCommon("copied")), () => toast.error(t("copyFailed")));
     }
   };
 
@@ -638,7 +639,7 @@ export function PageCommentBubble({
                   </ToolbarButton>
                 </>
               )}
-              <ToolbarButton label={t("selectionCopy")} shortcut={[mod, "C"]} onClick={copySelection}>
+              <ToolbarButton label={tCommon("copy")} shortcut={[mod, "C"]} onClick={copySelection}>
                 <HugeiconsIcon icon={Copy01Icon} className="size-4" />
               </ToolbarButton>
             </div>

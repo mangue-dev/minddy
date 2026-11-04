@@ -338,6 +338,7 @@ export function ThreadComment({
   presentation?: "comment" | "description";
 }) {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const isDescription = presentation === "description";
   const format = useFormatter();
   const now = useLiveNow();
@@ -393,7 +394,7 @@ export function ThreadComment({
         setDraft("");
       }}
     >
-      {t("cancel")}
+      {tCommon("cancel")}
     </Button>
   ) : (canEdit || onQuoteReply || canViewHistory) ? (
     <DropdownMenu>
@@ -416,7 +417,7 @@ export function ThreadComment({
             }}
           >
             <HugeiconsIcon icon={Edit04Icon} />
-            {t("editComment")}
+            {tCommon("edit")}
           </DropdownMenuItem>
         ) : null}
         {onQuoteReply ? (
@@ -487,7 +488,7 @@ export function ThreadComment({
             }}
             posting={saving}
             placeholder={t(isDescription ? "editDescriptionPlaceholder" : "editCommentPlaceholder")}
-            submitLabel={t("saveChanges")}
+            submitLabel={tCommon("save")}
             autoFocus={allowInputAutoFocus()}
           />
         ) : (
@@ -564,7 +565,7 @@ export function ThreadComment({
             </div>
             <DialogFooter>
               <Button variant="outline" size="sm" onClick={() => setHistoryOpen(false)}>
-                {t("close")}
+                {tCommon("close")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -652,6 +653,7 @@ export function PrDetail({
   onMergeIntentConsumed?: () => void;
 }) {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const { open: openAssistant } = useAssistantPanelActions();
   const format = useFormatter();
 
@@ -2144,7 +2146,7 @@ export function PrDetail({
           />
           <DialogFooter>
             <Button variant="outline" disabled={!!maintenanceAction} onClick={() => setEditingTitle(false)}>
-              {t("cancel")}
+              {tCommon("cancel")}
             </Button>
             <Button disabled={!!maintenanceAction || !titleDraft.trim()} onClick={() => void saveTitle()}>
               {maintenanceAction ? <Spinner /> : <HugeiconsIcon icon={Edit04Icon} />}
@@ -2248,7 +2250,7 @@ export function PrDetail({
           ) : null}
                 <DialogFooter>
                   <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
-                    {t("cancel")}
+                    {tCommon("cancel")}
                   </Button>
                   <Button
                     disabled={!!acting || !mergeCommitDraft || !mergeCommitDraft.title.trim()}
@@ -2288,7 +2290,7 @@ export function PrDetail({
           </p>
           <DialogFooter>
             <Button variant="outline" disabled={!!acting} onClick={() => setConfirmAction(null)}>
-              {t("cancel")}
+              {tCommon("cancel")}
             </Button>
             <Button
               variant={confirmAction?.kind === "state" && confirmAction.state === "closed" ? "destructive" : "default"}
@@ -2336,7 +2338,7 @@ export function PrDetail({
         submitDisabled={reviewSubmitDisabled}
         submitting={submitting}
         submitIcon={submitting ? <Spinner /> : null}
-        cancelLabel={t("cancel")}
+        cancelLabel={tCommon("cancel")}
         onCancel={() => {
           setReviewDialogOpen(false);
           setReviewVerdict(null);

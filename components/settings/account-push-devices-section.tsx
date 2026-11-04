@@ -409,10 +409,10 @@ export function AccountPushDevicesSection() {
                     }
                     onCheckedChange={(v) => void toggleDevice(device, v)}
                   />
-                  <AppTooltip label={t("remove")}>
+                  <AppTooltip label={tc("remove")}>
                     <IconButton
                       size="sm"
-                      aria-label={t("remove")}
+                      aria-label={tc("remove")}
                       onClick={() => setToRemove(device)}
                     >
                       <HugeiconsIcon icon={Delete02Icon} className="size-4" />
@@ -430,7 +430,7 @@ export function AccountPushDevicesSection() {
         onOpenChange={(open) => !open && setToRemove(null)}
         title={t("removeTitle", { name: toRemove ? deviceName(toRemove) : "" })}
         description={t("removeDescription")}
-        confirmLabel={t("remove")}
+        confirmLabel={tc("remove")}
         cancelLabel={tc("cancel")}
         onConfirm={handleRemove}
       />

@@ -295,7 +295,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
             onClick={() => setActiveConnectionId(null)}
             disabled={binding}
           >
-            {t("gitCancel")}
+            {tc("cancel")}
           </Button>
         </div>
       </div>,

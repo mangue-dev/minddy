@@ -56,6 +56,7 @@ export function DatabaseOptionsDialog({
   // Closes on screen first, then unmounts (components/ui/overlay-freeze.tsx).
   const [open, onClose] = useOpenUntilClosed(onClosed);
   const t = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   const tObjectives = useTranslations("Objectives");
   const locale = useLocale();
   const { saveSchema, pending } = usePageDatabase(projectId);
@@ -88,8 +89,8 @@ export function DatabaseOptionsDialog({
       description={property.name}
       className="sm:max-w-lg"
       contentProps={{ onInteractOutside: keepOverlayOpenForPopper }}
-      submitLabel={t("save")}
-      cancelLabel={t("cancel")}
+      submitLabel={tCommon("save")}
+      cancelLabel={tCommon("cancel")}
       submitting={pending}
       submitDisabled={!dirty || duplicate || names.some((name) => !name)}
       onSubmit={() => {
@@ -204,7 +205,7 @@ export function DatabaseOptionsDialog({
         names: listFormat.format(confirmRemoved ?? []),
       })}
       confirmLabel={t("deleteOptionsConfirm")}
-      cancelLabel={t("cancel")}
+      cancelLabel={tCommon("cancel")}
       onConfirm={save}
     />
     </>
@@ -236,6 +237,7 @@ function DatabaseColumnDialog({
   // Closes on screen first, then unmounts (components/ui/overlay-freeze.tsx).
   const [open, onClose] = useOpenUntilClosed(onClosed);
   const t = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   const { saveSchema, previewConversion, convertColumn, pending } =
     usePageDatabase(projectId);
   const [base] = useState(database);
@@ -280,8 +282,8 @@ function DatabaseColumnDialog({
             "aria-describedby": undefined,
             onInteractOutside: keepOverlayOpenForPopper,
           }}
-          submitLabel={t(property ? "save" : "addProperty")}
-          cancelLabel={t("cancel")}
+          submitLabel={property ? tCommon("save") : t("addProperty")}
+          cancelLabel={tCommon("cancel")}
           submitting={busy}
           submitDisabled={
             !name.trim() ||
@@ -393,7 +395,7 @@ function DatabaseColumnDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogCancel disabled={busy}>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={busy}

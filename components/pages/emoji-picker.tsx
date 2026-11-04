@@ -37,6 +37,7 @@ export function EmojiPicker({
   children?: React.ReactNode;
 }) {
   const t = useTranslations("Pages");
+  const tCommon = useTranslations("Common");
   const locale = useLocale();
   const [open, setOpen] = useState(false);
 
@@ -89,7 +90,7 @@ export function EmojiPicker({
                   setOpen(false);
                 }}
               >
-                {t("removeIcon")}
+                {tCommon("remove")}
               </Button>
             ) : null}
           </div>

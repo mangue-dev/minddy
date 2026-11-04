@@ -143,7 +143,7 @@ it("opens a curated preset on the sign-in step and edits the saved connection", 
     json: async () => (path.endsWith("/test") ? { tools: 1 } : {}),
   }));
   await render();
-  await act(async () => button(messages.McpClients.edit).click());
+  await act(async () => button(messages.Common.edit).click());
   // A saved connection already has its method: shown, not asked again.
   expect(heading()).toBe("Edit Linear");
   expect(document.body.querySelector('[role="radiogroup"]')).toBeNull();

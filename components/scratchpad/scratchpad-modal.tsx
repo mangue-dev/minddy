@@ -236,7 +236,7 @@ function ScratchpadBody() {
               variant="ghost"
               size="icon-sm"
               data-mobile-sheet-close-legacy
-              aria-label={t("close")}
+              aria-label={tCommon("close")}
               onClick={() => setOpen(false)}
               className="rounded-full text-muted-foreground hover:text-foreground"
             >
@@ -244,7 +244,7 @@ function ScratchpadBody() {
             </Button>
           </TooltipTrigger>
           <TooltipContent className="flex items-center gap-1.5">
-            {t("close")}
+            {tCommon("close")}
             <Kbd size="sm">Esc</Kbd>
           </TooltipContent>
         </Tooltip>

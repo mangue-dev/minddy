@@ -284,7 +284,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
         onOpenChange={setConfirmRemove}
         title={tResources("removeConfirmTitle", { name: alt || upload?.file.name || t("blockImage") })}
         description={tResources("removeBlockConfirmDescription")}
-        confirmLabel={tResources("remove")}
+        confirmLabel={tCommon("remove")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => deleteNode()}
       />}

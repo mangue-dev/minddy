@@ -341,7 +341,7 @@ export function AccountSecuritySection() {
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => void copyCodes()}>
                 {copied ? <HugeiconsIcon icon={CheckIcon} className="size-4" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
-                {t("copyCodes")}
+                {tc("copy")}
               </Button>
               <Button variant="outline" size="sm" onClick={downloadCodes}>
                 <HugeiconsIcon icon={Download01Icon} className="size-4" />
