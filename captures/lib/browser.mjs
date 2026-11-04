@@ -64,7 +64,9 @@ export async function openPage({
   }[locale] ?? "en-US";
   // Native controls (time inputs) follow the browser's UI language, not the
   // context locale: without `--lang` they show a 12-hour clock everywhere.
-  const browser = await chromium.launch({ args: [`--lang=${browserLocale}`, ...launchArgs] });
+  // A document the capture fulfils itself (disableServerSeeds) would otherwise
+  // count as a public origin, and Chromium would block its localhost requests.
+  const browser = await chromium.launch({ args: [`--lang=${browserLocale}`, "--disable-features=LocalNetworkAccessChecks", ...launchArgs] });
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: CAPTURE.deviceScaleFactor,
@@ -126,11 +128,46 @@ export async function openPage({
   ]);
 
   await alignStoredViewNames(context, locale);
+  if (process.env.CAPTURE_KEEP_SERVER_SEEDS !== "1") await disableServerSeeds(context);
 
   const page = await context.newPage();
+  // A redirect the browser follows (an id URL to its short code) skips the
+  // document route of disableServerSeeds: resolve it before navigating.
+  const goto = page.goto.bind(page);
+  page.goto = async (url, options) => {
+    let target = url;
+    for (let hop = 0; hop < 5; hop += 1) {
+      const probe = await context.request.get(target, { maxRedirects: 0, failOnStatusCode: false }).catch(() => null);
+      const location = probe && probe.status() >= 300 && probe.status() < 400 ? probe.headers().location : null;
+      await probe?.dispose().catch(() => {});
+      if (!location) break;
+      target = new URL(location, target).href;
+    }
+    return goto(target, options);
+  };
   expectedPageLocales.set(page, locale);
   expectedPageThemes.set(page, theme);
   return { browser, context, page };
+}
+
+/**
+ * Reads sent with the document (MIN-880, lib/server-seed.ts) never cross the
+ * network, so a capture's response-only adaptations (demo prose translated in
+ * GET responses, demonstration notifications, `waitForResponse` anchors)
+ * would silently miss them. The proxy only plans those seeds for a browser
+ * document navigation (`sec-fetch-dest: document`): fetching the capture's
+ * documents without those headers makes every startup read a normal request.
+ */
+async function disableServerSeeds(context) {
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    if (request.resourceType() !== "document") return route.fallback();
+    // Fetched from Node, the request carries no browser `sec-fetch-*` headers.
+    const headers = Object.fromEntries(Object.entries(request.headers()).filter(([name]) => !name.startsWith("sec-fetch-")));
+    const response = await route.fetch({ headers, maxRedirects: 0 }).catch(() => null);
+    if (!response) return route.fallback();
+    return route.fulfill({ response });
+  });
 }
 
 /**

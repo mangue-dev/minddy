@@ -22,6 +22,16 @@ export const DEMO_EMAIL_PATTERN = /^captures-demo(\+[a-z0-9-]+)?@minddy\.app$/;
  */
 export const PREVIEW_AURORA_PROJECT_ID = "9e3d0c35-c1d7-4d2a-983d-8190638cc887";
 
+/** Production's Aurora, still photographed by captures against www.minddy.app. */
+export const PRODUCTION_AURORA_PROJECT_ID = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+
+/** The Aurora id of the demo world that `baseUrl` serves. */
+export function auroraProjectId(baseUrl) {
+  return PRODUCTION_ORIGINS.includes(new URL(baseUrl).origin)
+    ? PRODUCTION_AURORA_PROJECT_ID
+    : PREVIEW_AURORA_PROJECT_ID;
+}
+
 /**
  * The capture administrator: a dedicated account for the instance
  * administration figures, never a real administrator. Its address, password

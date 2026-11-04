@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the recovery section: the doctor reads only the environment file (scripts/self-hosting-doctor.mjs diagnose and disabledCapabilities) while Instance tab overrides win over it (lib/server/instance-variables.ts, MIN-847); no browser walkthrough or operator rehearsal; figures not reviewed in this pass)",
+    "language": "agent:/root/min747 (de translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (de manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (de corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "instance-configuration",
@@ -70,7 +70,7 @@ Prüfe bei allgemeinen 401 nach Restore, dass JWT, Anon- und Service-Role-Schlü
 
 ## Wiederherstellbarkeit erhalten {#recovery}
 
-Behebe fehlendes Docker/CLI oder unvollständige API-Werte und wiederhole den idempotenten Installer mit erhaltener Umgebung. Korrigiere öffentliche Laufzeit-URLs und erstelle die App neu, ohne OCI-Neubuild. Lösche keine gefüllten Buckets, Daten oder Wurzelschlüssel wegen Warnungen. Optionale deaktivierte Funktionen können beabsichtigt sein. Gib Support Version, Profil, Zeiten, kontrollierte Fehlercodes und bereinigte Diagnosen. Entferne Passwörter, Tokens, `Authorization`-Header, Cookies, private Objekt-URLs und Benutzerinhalte.
+Behebe fehlendes Docker/CLI oder unvollständige API-Werte und wiederhole den idempotenten Installer mit erhaltener Umgebung. Korrigiere öffentliche Laufzeit-URLs und erstelle die App neu, ohne OCI-Neubuild. Lösche keine gefüllten Buckets, Daten oder Wurzelschlüssel wegen Warnungen. Optionale deaktivierte Funktionen können beabsichtigt sein. Der Doctor liest nur die Umgebungsdatei. Setzt diese Datei `MINDDY_CONFIG_OVERRIDES=1`, ersetzt ein im Tab **Instanz** des Admin-Dashboards gespeicherter Wert den der Datei; prüfe also diesen Tab, bevor du einen optionalen Dienst in der Datei änderst; siehe [die Variablen der Instanz bearbeiten](/docs/instance-administration#instance-variables). Gib Support Version, Profil, Zeiten, kontrollierte Fehlercodes und bereinigte Diagnosen. Entferne Passwörter, Tokens, `Authorization`-Header, Cookies, private Objekt-URLs und Benutzerinhalte.
 
 
 Bricht der erste Image-Download nach einem langen Fortschrittsprotokoll ohne Registry-Fehler ab, kann der Installer von v0.11.0 seinen Ausgabepuffer für Unterprozesse überschreiten. Spätere Installer laden leise mit einem größeren Puffer und brechen, falls die Ausgabe ihn dennoch überschreitet, mit einer ausdrücklichen Anweisung ab. Führe in beiden Fällen `compose pull --quiet` im exakten Compose-Kontext der Installation aus und wiederhole anschließend denselben Installer mit `--skip-pull`, um die geladenen Images zu verwenden und die Umgebung zu erhalten. Das behebt weder Registry- noch Signaturfehler. Meldet die Offline-Kompilierung eine abweichende `jose`-Version, halte an. Die Werkzeuge von v0.11.0 verlangen 6.2.3, ihre direkte eingefrorene Abhängigkeit ergibt jedoch 6.2.12; besorge eine korrigierte Kombination aus Release und Werkzeugen, bevor du diese Installation abnimmst. In späteren Releases entspricht die Bindung der eingefrorenen Abhängigkeit, eine Abweichung bedeutet also, dass `pnpm install --frozen-lockfile` in diesem Checkout nicht abgeschlossen wurde. Lockere die Identitätsprüfung nicht stillschweigend.

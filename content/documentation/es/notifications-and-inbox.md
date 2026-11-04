@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 8,
+  "revision": 10,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "projects",
@@ -61,9 +61,9 @@
       "src": "/documentation/es/work-inbox.png",
       "alt": "Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.",
       "caption": "La actividad de ejemplo muestra el autor, el ticket y el estado de lectura. Todos incluye notificaciones leídas y no leídas.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         528,
         648
@@ -81,7 +81,7 @@
 
 ## Leer la bandeja de entrada {#notifications-and-inbox}
 
-Abre la bandeja de entrada con su icono en la barra superior, desde su fila en la barra lateral en un teléfono o pulsando G y luego I fuera de un campo de texto. Un contador rojo en el icono suma las notificaciones sin leer y las invitaciones pendientes; una PWA instalada muestra el mismo número en el icono de la aplicación. La bandeja de entrada se abre en un panel emergente, o en una hoja en un teléfono, y agrupa las notificaciones en Hoy, Ayer y Anteriormente.
+Abre la bandeja de entrada con su icono en la barra superior, desde su fila en la barra lateral en un teléfono o pulsando G y luego I fuera de un campo de texto. Un contador rojo en el icono suma las notificaciones sin leer y las invitaciones pendientes; una PWA instalada muestra el mismo número en el icono de la aplicación. La bandeja de entrada se abre en un panel emergente, o en una hoja en un teléfono, y agrupa las notificaciones en Hoy, Ayer y Anteriormente. En cuanto escribes en la paleta de comandos, también encuentra notificaciones: elegir una abre la bandeja de entrada en la pestaña que la lista, Sin leer o Todos, y la resalta sin marcarla como leída.
 
 Se abre con el filtro Sin leer. Todos muestra también las notificaciones leídas, y Menciones conserva solo las menciones en comentarios y páginas. Selecciona un elemento para abrir la incidencia, la página o la pull request correspondiente. Abrir una notificación la marca como leída. Su fila también ofrece Marcar como leído o Marcar como sin leer, y Marcar todo como leído, en el encabezado de la bandeja de entrada, quita todos los indicadores de no leído. Marcarla como no leída restaura ese indicador de actividad; no deshace el cambio en la incidencia o página. Una notificación apunta a trabajo accesible; no sustituye su contenido actual.
 
@@ -93,7 +93,7 @@ Las invitaciones pendientes a proyectos aparecen en Invitaciones con los filtros
 
 ## Elegir canales de notificación {#notification-preferences}
 
-Elige Ajustes de la bandeja de entrada en el encabezado de la bandeja de entrada, o abre Ajustes de la cuenta y la pestaña Notificaciones. En Notificaciones de entrada, un interruptor por categoría (Asignaciones, Menciones, Comentarios, Numo, Rutinas, Pull requests, Sugerencias y Páginas) decide qué llega a tu bandeja de entrada. Desactivar una categoría detiene las futuras notificaciones de ese tipo, incluidos sus avisos push; no elimina las notificaciones que ya recibiste.
+Elige Ajustes de la bandeja de entrada en el encabezado de la bandeja de entrada, o abre Ajustes de la cuenta y la pestaña Notificaciones. En Notificaciones de entrada, un interruptor por categoría (Asignaciones, Menciones, Comentarios, Numo, Rutinas, Pull requests, Sugerencias y Páginas) decide qué llega a tu bandeja de entrada. Desactivar una categoría detiene las futuras notificaciones de ese tipo, incluidos sus avisos push; no elimina las notificaciones que ya recibiste. En una instancia self-hosted, los administradores también reciben una notificación Variables de la instancia cuando otro administrador cambia una variable de la instancia; ningún interruptor la desactiva. Consulta [Editar las variables de la instancia](/docs/instance-administration#instance-variables).
 
 La sección Notificaciones push de la misma pestaña muestra los dispositivos que reciben avisos. La entrega por navegador, PWA o escritorio también requiere registrar el dispositivo y obtener permiso del sistema operativo. Desactivar o quitar un dispositivo detiene los avisos solo en ese dispositivo; tu bandeja de entrada y sus categorías no cambian.
 

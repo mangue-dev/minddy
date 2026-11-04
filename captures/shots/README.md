@@ -3,6 +3,18 @@
 Each folder contains `intent.md`, its Playwright `shot.mjs`, lossless PNGs in
 `out/`, and a run history in `history.jsonl`.
 
+## November 4, 2026 refresh (0.30.0)
+
+The eleven landing shots were recaptured on `https://preview.minddy.app`
+serving `ace5b85f`, in six locales and both themes, then published with
+`publish.mjs --shots` and `focus-marketing.mjs`. Seeds `015` and `017` were
+reapplied for the Oct 26-Nov 8 cycle. The demo account always keeps one synced
+tab (the API refuses to close the last one): point it at the shot's route
+before a run that restores tabs, and run `routines` one locale at a time.
+Shots now pick the preview or production Aurora project by origin, and fetch
+their documents without browser `sec-fetch-*` headers so startup reads sent
+with the page (MIN-880) still cross the network and keep their adaptations.
+
 ## October 20, 2026 refresh (0.20.0)
 
 The landing shots were recaptured on `https://preview.minddy.app` serving

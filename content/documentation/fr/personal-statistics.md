@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "personal-cycle",
@@ -68,9 +68,9 @@
       "src": "/documentation/fr/personal-statistics-workflow.png",
       "alt": "Statistiques du profil : bandeau de chiffres, grille d’activité sur 12 mois, répartitions par projet et par catégorie, rythme de travail.",
       "caption": "Historique réel du compte de démonstration : six tickets terminés dans deux projets, trente tickets créés, aucune tâche du carnet cochée.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         816,
         984
@@ -90,9 +90,9 @@
 
 Vos statistiques se trouvent dans l’onglet **Profil** des paramètres du compte. Choisissez votre nom en haut du menu du compte pour l’ouvrir directement. **Paramètres du compte** s’ouvre sur **Préférences** ; de là, sélectionnez **Profil**, le premier onglet. Les statistiques apparaissent sous votre avatar, votre nom et votre adresse email. L’ancienne adresse `/statistics` ouvre désormais cet onglet.
 
-Une bande de six chiffres vient d’abord : **Terminés**, **Tâches cochées**, **Créés**, **Projets**, **Plus longue série** et **Série en cours**. Elle remplace l’ancienne section des totaux historiques. En dessous, lisez le chiffre des 12 mois et la grille d’activité, puis **Où est passé votre travail ?**, avec les répartitions par projet, catégorie et objectif, et **Rythme de travail**, avec **Charge actuelle**, **Tickets par cycle**, **Écart à l'échéance** et **Répartition par effort**. **Tickets par cycle**, **Écart à l'échéance** et **Répartition par effort** n’apparaissent que lorsqu’ils ont des données. L’onglet affiche ses périodes prévues ; il n’a pas de filtre de dates pour choisir un autre intervalle. Cet écran résume votre travail ; il n’établit pas un classement des performances d’un autre membre.
+Une bande de six chiffres vient d’abord : **Terminés**, **Tâches cochées**, **Créés**, **Projets**, **Plus longue série** et **Série en cours**. Elle remplace l’ancienne section des totaux historiques. En dessous, lisez le chiffre des 12 mois et la grille d’activité, puis **Où est passé votre travail ?**, avec les répartitions par projet, catégorie et objectif, et **Rythme de travail**, avec **Charge actuelle**, **Tickets par cycle**, **Écart à l'échéance** et **Répartition par effort**. **Tickets par cycle**, **Écart à l'échéance** et **Répartition par effort** n’apparaissent que lorsqu’ils ont des données. L’onglet affiche ses périodes prévues ; il n’a pas de filtre de dates pour choisir un autre intervalle. Cet écran résume votre travail ; il n’établit pas un classement des performances d’un autre membre. Les statistiques d’un projet entier, visibles par ses membres, se trouvent dans ses paramètres : voir [Configurer un projet](/docs/projects#project-settings).
 
-Consultez tickets terminés, rythme, jours actifs, séries et temps pour examiner votre activité. La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. La grille ne défile jamais : elle montre les semaines les plus récentes qui tiennent à l’écran, si bien qu’un téléphone affiche moins de mois qu’un ordinateur. Un jour actif contient au moins un de ces événements ; la série courante tolère l’absence d’activité aujourd’hui, puis s’arrête au premier jour sans activité dans les jours précédents. Le chiffre **Terminés** déduplique les identifiants : un ticket repassé en Terminé n’est compté qu’une fois, si bien qu’un compte d’événements et un total de tickets distincts ne répondent pas à la même question. Le chiffre affiché au-dessus de la grille additionne les tickets et les tâches du carnet terminés sur les 12 derniers mois ; pointez ce nombre pour voir sa répartition en tickets, tâches et jours actifs. Il compte lui aussi chaque ticket une seule fois sur ces 12 mois : un ticket terminé à nouveau marque chacun de ses jours dans la grille, mais n’ajoute qu’un ticket au chiffre.
+Consultez tickets terminés, rythme, jours actifs, séries et temps pour examiner votre activité. La grille d’activité compte les événements de réalisation de tickets et de tâches du carnet, regroupés en jours calendaires dans votre fuseau. Ses lignes commencent par le jour choisi dans **Premier jour de la semaine**, sous **Préférences**. La grille ne défile jamais : elle montre les semaines les plus récentes qui tiennent à l’écran, si bien qu’un téléphone affiche moins de mois qu’un ordinateur. Un jour actif contient au moins un de ces événements ; la série courante tolère l’absence d’activité aujourd’hui, puis s’arrête au premier jour sans activité dans les jours précédents. Le chiffre **Terminés** déduplique les identifiants : un ticket repassé en Terminé n’est compté qu’une fois, si bien qu’un compte d’événements et un total de tickets distincts ne répondent pas à la même question. Le chiffre affiché au-dessus de la grille additionne les tickets et les tâches du carnet terminés sur les 12 derniers mois ; pointez ce nombre pour voir sa répartition en tickets, tâches et jours actifs. Il compte lui aussi chaque ticket une seule fois sur ces 12 mois : un ticket terminé à nouveau marque chacun de ses jours dans la grille, mais n’ajoute qu’un ticket au chiffre.
 
 Le temps par effort est la médiane du temps écoulé entre le premier passage enregistré d’un ticket en cours et sa réalisation, pour les tickets terminés qui vous sont attribués et possèdent effort et horodatages nécessaires. Il comprend le temps d’attente écoulé ; ce n’est pas un chronomètre d’heures travaillées. La vue **Nombre de tickets** montre la taille de l’échantillon. Une médiane absente peut indiquer l’absence de mesures admissibles, pas une durée nulle. Lisez les unités et la période décrite par chaque section avant de comparer les valeurs.
 

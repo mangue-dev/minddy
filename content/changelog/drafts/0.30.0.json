@@ -1,0 +1,1179 @@
+{
+  "version": "0.30.0",
+  "layout": "bento",
+  "copy": {
+    "en": {
+      "title": "Describe the work, minddy fills in the rest",
+      "summary": "Smart Fill writes issue titles, pull request discussions reach your issues, mentions show what they point to, and minddy gets a new look, faster screens and full keyboard access."
+    },
+    "fr": {
+      "title": "Décrivez le travail, minddy complète le reste",
+      "summary": "Smart Fill rédige les titres des tickets, les discussions de pull request arrivent dans vos tickets, les mentions montrent ce qu’elles désignent, et minddy change de look, avec des écrans plus rapides et un accès complet au clavier."
+    },
+    "de": {
+      "title": "Beschreib die Arbeit, minddy ergänzt den Rest",
+      "summary": "Smart Fill schreibt Tickettitel, Diskussionen aus Pull Requests landen in deinen Tickets, Erwähnungen zeigen, worauf sie verweisen, und minddy bekommt ein neues Aussehen, schnellere Ansichten und vollständige Bedienung per Tastatur."
+    },
+    "pt-BR": {
+      "title": "Descreva o trabalho, o minddy preenche o resto",
+      "summary": "O Smart Fill escreve os títulos dos tickets, as discussões das pull requests chegam aos seus tickets, as menções mostram para onde apontam, e o minddy ganha um visual novo, telas mais rápidas e acesso completo pelo teclado."
+    },
+    "it": {
+      "title": "Descrivi il lavoro, minddy compila il resto",
+      "summary": "Smart Fill scrive i titoli dei ticket, le discussioni delle pull request arrivano nei tuoi ticket, le menzioni mostrano ciò a cui puntano e minddy ha un aspetto nuovo, schermate più rapide e un accesso completo da tastiera."
+    },
+    "es": {
+      "title": "Describe el trabajo y minddy completa el resto",
+      "summary": "Smart Fill escribe el título de cada incidencia, las conversaciones de las pull requests llegan a tus incidencias, las menciones muestran a qué apuntan, y minddy estrena aspecto, pantallas más rápidas y acceso completo por teclado."
+    }
+  },
+  "features": [
+    {
+      "id": "smart-fill-titles-0300",
+      "illustration": {
+        "kind": "icon",
+        "name": "smart-fill"
+      },
+      "copy": {
+        "en": {
+          "title": "Describe the issue, Smart Fill names it",
+          "summary": "Leave the title empty and Smart Fill writes it from the description, along with the priority, effort, categories and objective.",
+          "details": [
+            "With Smart Fill on, the new issue form opens on the description. Smart Fill writes the title when the issue is created. To write it yourself, open the arrow next to Smart Fill and choose Set manually, then Title. The same menu sets the status, priority, effort, categories, assignee, due date or objective by hand: a value you choose is never overwritten. Turn off Write missing titles in your Smart Fill settings to keep titles manual.",
+            "When someone edits the title or description of an issue Smart Fill filled, it reads the issue again five minutes after the last edit and updates the properties it still owns. Anything set by hand stays as it is. Voice dictation leaves those properties to Smart Fill unless you name one, and in projects with Smart Assign on, the assignee pickers show Smart Assign instead of Unassigned."
+          ]
+        },
+        "fr": {
+          "title": "Décrivez le ticket, Smart Fill lui donne un titre",
+          "summary": "Laissez le titre vide : Smart Fill le rédige d’après la description, avec la priorité, l’effort, les catégories et l’objectif.",
+          "details": [
+            "Avec Smart Fill activé, le formulaire de nouveau ticket s’ouvre sur la description. Smart Fill rédige le titre à la création du ticket. Pour l’écrire vous-même, ouvrez la flèche à côté de Smart Fill et choisissez « Définir manuellement », puis « Titre ». Le même menu permet de fixer à la main le statut, la priorité, l’effort, les catégories, l’assigné, l’échéance ou l’objectif : une valeur que vous choisissez n’est jamais écrasée. Désactivez « Rédiger les titres manquants » dans vos préférences Smart Fill pour garder des titres manuels.",
+            "Quand quelqu’un modifie le titre ou la description d’un ticket rempli par Smart Fill, celui-ci relit le ticket cinq minutes après la dernière modification et met à jour les propriétés qui lui reviennent encore. Tout ce qui a été fixé à la main reste tel quel. La dictée vocale laisse ces propriétés à Smart Fill, sauf si vous en nommez une, et dans les projets où Smart Assign est activé, les sélecteurs d’assigné affichent Smart Assign au lieu de « Non assigné »."
+          ]
+        },
+        "de": {
+          "title": "Beschreib das Ticket, Smart Fill gibt ihm einen Titel",
+          "summary": "Lass den Titel leer, und Smart Fill schreibt ihn anhand der Beschreibung, zusammen mit Priorität, Aufwand, Kategorien und Ziel.",
+          "details": [
+            "Mit aktiviertem Smart Fill öffnet sich das Formular für ein neues Ticket direkt in der Beschreibung. Smart Fill schreibt den Titel, wenn das Ticket erstellt wird. Willst du ihn selbst schreiben, öffne den Pfeil neben Smart Fill und wähle „Manuell festlegen“, dann „Titel“. Im selben Menü legst du Status, Priorität, Aufwand, Kategorien, Zuständig, Fälligkeitsdatum oder Ziel von Hand fest: Ein Wert, den du wählst, wird nie überschrieben. Schalte „Fehlende Titel schreiben“ in deinen Smart-Fill-Einstellungen aus, wenn du Titel selbst vergeben willst.",
+            "Ändert jemand Titel oder Beschreibung eines Tickets, das Smart Fill ausgefüllt hat, liest Smart Fill das Ticket fünf Minuten nach der letzten Änderung erneut und aktualisiert die Eigenschaften, die es noch verwaltet. Was von Hand gesetzt wurde, bleibt unverändert. Bei der Spracheingabe bleiben diese Eigenschaften Smart Fill überlassen, außer du nennst eine davon. In Projekten mit aktiviertem Smart Assign zeigen die Auswahlfelder für Zuständige „Smart Assign“ statt „Nicht zugewiesen“."
+          ]
+        },
+        "pt-BR": {
+          "title": "Descreva o ticket, o Smart Fill dá o título",
+          "summary": "Deixe o título vazio e o Smart Fill o escreve a partir da descrição, junto com a prioridade, o esforço, as categorias e o objetivo.",
+          "details": [
+            "Com o Smart Fill ativado, o formulário de novo ticket abre na descrição, e o Smart Fill escreve o título quando o ticket é criado. Para escrevê-lo você mesmo, abra a seta ao lado do Smart Fill e escolha Definir manualmente e depois Título. O mesmo menu define à mão o status, a prioridade, o esforço, as categorias, o responsável, a data de entrega ou o objetivo: um valor que você escolhe nunca é sobrescrito. Desative Escrever títulos ausentes nas configurações do Smart Fill para manter os títulos manuais.",
+            "Quando alguém edita o título ou a descrição de um ticket preenchido pelo Smart Fill, ele relê o ticket cinco minutos depois da última edição e atualiza as propriedades que ainda são dele. O que foi definido à mão continua como está. O ditado por voz deixa essas propriedades para o Smart Fill, a menos que você cite alguma, e nos projetos com o Smart Assign ativado, os seletores de responsável mostram Smart Assign em vez de Sem responsável."
+          ]
+        },
+        "it": {
+          "title": "Descrivi il ticket, Smart Fill gli dà un titolo",
+          "summary": "Lascia vuoto il titolo e Smart Fill lo scrive a partire dalla descrizione, insieme a priorità, impegno, categorie e obiettivo.",
+          "details": [
+            "Con Smart Fill attivo, il modulo del nuovo ticket si apre sulla descrizione. Smart Fill scrive il titolo quando il ticket viene creato. Per scriverlo tu, apri la freccia accanto a Smart Fill e scegli «Imposta manualmente», poi «Titolo». Dallo stesso menu imposti a mano stato, priorità, impegno, categorie, assegnatario, data di scadenza o obiettivo: un valore scelto da te non viene mai sovrascritto. Disattiva «Scrivi i titoli mancanti» nelle impostazioni di Smart Fill per scrivere sempre i titoli a mano.",
+            "Quando qualcuno modifica il titolo o la descrizione di un ticket compilato da Smart Fill, Smart Fill rilegge il ticket cinque minuti dopo l’ultima modifica e aggiorna le proprietà che gestisce ancora. Ciò che è stato impostato a mano resta com’è. La dettatura vocale lascia queste proprietà a Smart Fill, a meno che tu non ne nomini una, e nei progetti con Smart Assign attivo i selettori dell’assegnatario mostrano Smart Assign invece di «Non assegnato»."
+          ]
+        },
+        "es": {
+          "title": "Describe la incidencia y Smart Fill le pone título",
+          "summary": "Deja el título vacío y Smart Fill lo escribe a partir de la descripción, junto con la prioridad, el esfuerzo, las categorías y el objetivo.",
+          "details": [
+            "Con Smart Fill activado, el formulario de nueva incidencia se abre en la descripción. Smart Fill escribe el título al crear la incidencia. Si prefieres escribirlo tú, abre la flecha junto a Smart Fill y elige «Definir manualmente» y luego «Título». El mismo menú sirve para fijar a mano el estado, la prioridad, el esfuerzo, las categorías, el responsable, la fecha límite o el objetivo: un valor que eliges nunca se sobrescribe. Desactiva «Escribir los títulos que falten» en tus ajustes de Smart Fill para seguir escribiendo los títulos a mano.",
+            "Cuando alguien edita el título o la descripción de una incidencia que rellenó Smart Fill, este vuelve a leerla cinco minutos después de la última edición y actualiza las propiedades que aún le corresponden. Lo que se fijó a mano no cambia. El dictado por voz deja esas propiedades a Smart Fill salvo que nombres alguna, y en los proyectos con Smart Assign activado, los selectores de responsable muestran Smart Assign en lugar de «Sin asignar»."
+          ]
+        }
+      }
+    },
+    {
+      "id": "pull-request-comments-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "pull-request"
+      },
+      "copy": {
+        "en": {
+          "title": "Pull request discussions in your issues",
+          "summary": "Comments and reviews on a linked GitHub pull request or GitLab merge request appear in the issue, and you can answer them from there.",
+          "details": [
+            "Conversation comments, review messages and code comments are copied into every linked issue, with code comments shown on their diff excerpt. Edits follow, and comments written before the link are imported once with their original date. A reply under a mirrored comment is posted on GitHub or GitLab with your own git account.",
+            "When an MCP agent has commented on an issue and people answered after it, the issue offers Copy prompt for new comments. The prompt asks the agent to read those comments through the minddy MCP and address each one. Hover the pull request chip on a card or in the issue panel to see its state, checks and changes."
+          ]
+        },
+        "fr": {
+          "title": "Les discussions de pull request dans vos tickets",
+          "summary": "Les commentaires et les reviews d’une pull request GitHub ou d’une merge request GitLab liée apparaissent dans le ticket, et vous pouvez y répondre depuis celui-ci.",
+          "details": [
+            "Les commentaires de conversation, les messages de review et les commentaires de code sont copiés dans chaque ticket lié, les commentaires de code étant affichés sur leur extrait de diff. Les modifications suivent, et les commentaires écrits avant la liaison sont importés une fois, avec leur date d’origine. Une réponse sous un commentaire recopié est publiée sur GitHub ou GitLab avec votre propre compte git.",
+            "Quand un agent MCP a commenté un ticket et que des personnes ont répondu après lui, le ticket propose « Copier le prompt des nouveaux commentaires ». Le prompt demande à l’agent de lire ces commentaires par le MCP de minddy et de traiter chacun d’eux. Survolez la pastille de pull request sur une carte ou dans le panneau du ticket pour voir son état, ses checks et ses modifications."
+          ]
+        },
+        "de": {
+          "title": "Diskussionen aus Pull Requests in deinen Tickets",
+          "summary": "Kommentare und Reviews zu einem verknüpften GitHub-Pull-Request oder GitLab-Merge-Request erscheinen im Ticket, und du kannst dort direkt antworten.",
+          "details": [
+            "Kommentare aus der Unterhaltung, Review-Nachrichten und Code-Kommentare werden in jedes verknüpfte Ticket übernommen, Code-Kommentare mit ihrem Ausschnitt aus dem Diff. Spätere Änderungen werden nachgezogen, und Kommentare, die vor der Verknüpfung geschrieben wurden, werden einmalig mit ihrem ursprünglichen Datum importiert. Eine Antwort unter einem übernommenen Kommentar wird mit deinem eigenen Git-Konto auf GitHub oder GitLab veröffentlicht.",
+            "Hat ein MCP-Agent ein Ticket kommentiert und danach haben Personen geantwortet, bietet das Ticket „Prompt für neue Kommentare kopieren“ an. Der Prompt bittet den Agenten, diese Kommentare über das minddy-MCP zu lesen und auf jeden einzugehen. Fahre mit der Maus über den Pull-Request-Chip auf einer Karte oder im Ticketbereich, um Zustand, Checks und Änderungen zu sehen."
+          ]
+        },
+        "pt-BR": {
+          "title": "As discussões das pull requests nos seus tickets",
+          "summary": "Os comentários e revisões de uma pull request do GitHub ou merge request do GitLab vinculada aparecem no ticket, e você pode respondê-los de lá.",
+          "details": [
+            "Os comentários da conversa, as mensagens de revisão e os comentários de código são copiados para cada ticket vinculado, com os comentários de código exibidos sobre o trecho do diff. As edições também são acompanhadas, e os comentários escritos antes do vínculo são importados uma vez, com a data original. Uma resposta abaixo de um comentário espelhado é publicada no GitHub ou no GitLab com a sua própria conta git.",
+            "Quando um agente MCP comentou em um ticket e outras pessoas responderam depois dele, o ticket oferece Copiar prompt para os novos comentários. O prompt pede ao agente que leia esses comentários pelo MCP do minddy e trate cada um. Passe o cursor sobre o chip da pull request em um cartão ou no painel do ticket para ver o estado, as verificações e as alterações dela."
+          ]
+        },
+        "it": {
+          "title": "Le discussioni delle pull request nei tuoi ticket",
+          "summary": "Commenti e revisioni di una pull request GitHub o di una merge request GitLab collegata compaiono nel ticket, e puoi rispondere da lì.",
+          "details": [
+            "I commenti della conversazione, i messaggi di revisione e i commenti al codice vengono copiati in ogni ticket collegato, e i commenti al codice appaiono sul loro estratto del diff. Anche le modifiche vengono riportate, e i commenti scritti prima del collegamento vengono importati una sola volta con la loro data originale. Una risposta sotto un commento copiato viene pubblicata su GitHub o GitLab con il tuo account Git.",
+            "Quando un agente MCP ha commentato un ticket e altre persone hanno risposto dopo, il ticket propone «Copia il prompt per i nuovi commenti». Il prompt chiede all’agente di leggere quei commenti tramite l’MCP di minddy e di occuparsi di ciascuno. Passa il puntatore sull’indicatore della pull request, in una scheda o nel pannello del ticket, per vederne lo stato, i controlli e le modifiche."
+          ]
+        },
+        "es": {
+          "title": "Las conversaciones de las pull requests, en tus incidencias",
+          "summary": "Los comentarios y las revisiones de una pull request de GitHub o una merge request de GitLab vinculadas aparecen en la incidencia, y puedes responderlos desde ahí.",
+          "details": [
+            "Los comentarios de la conversación, los mensajes de revisión y los comentarios de código se copian en cada incidencia vinculada; los de código aparecen sobre su fragmento del diff. Las ediciones también se trasladan, y los comentarios escritos antes del vínculo se importan una vez con su fecha original. Una respuesta bajo un comentario copiado se publica en GitHub o GitLab con tu propia cuenta git.",
+            "Cuando un agente MCP ha comentado en una incidencia y otras personas han respondido después, la incidencia ofrece «Copiar prompt para los comentarios nuevos». El prompt pide al agente que lea esos comentarios a través del MCP de minddy y atienda cada uno. Pasa el cursor sobre la etiqueta de la pull request en una tarjeta o en el panel de la incidencia para ver su estado, sus comprobaciones y sus cambios."
+          ]
+        }
+      }
+    },
+    {
+      "id": "mention-hover-cards-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "relations"
+      },
+      "copy": {
+        "en": {
+          "title": "Mentions that show what they point to",
+          "summary": "Hover a mention to see its target's card, and mention pull requests, routines, cycles, skills, MCP connections and dates.",
+          "details": [
+            "An issue mention shows its board card, an objective its status, progress and lead, a page its first lines. The same cards appear on relation rows, page backlinks and resource pills. A mention keeps working after its target is renamed, and appears as Unavailable to someone who cannot open the target.",
+            "Type @ followed by a date in plain words, such as next Friday or in two weeks, to insert a date. The reading works in all six languages. Pull requests, routines, cycles, skills and MCP connections can now be mentioned too."
+          ]
+        },
+        "fr": {
+          "title": "Des mentions qui montrent ce qu’elles désignent",
+          "summary": "Survolez une mention pour voir la fiche de sa cible, et mentionnez des pull requests, des routines, des cycles, des skills, des connexions MCP et des dates.",
+          "details": [
+            "La mention d’un ticket affiche sa carte du tableau, celle d’un objectif son statut, son avancement et son responsable, celle d’une page ses premières lignes. Les mêmes fiches apparaissent sur les lignes de relations, les rétroliens des pages et les pastilles de ressources. Une mention continue de fonctionner après le renommage de sa cible et s’affiche comme « Indisponible » pour qui ne peut pas ouvrir la cible.",
+            "Tapez @ suivi d’une date en toutes lettres, comme vendredi prochain ou dans deux semaines, pour insérer une date. La lecture fonctionne dans les six langues. Les pull requests, les routines, les cycles, les skills et les connexions MCP peuvent aussi être mentionnés."
+          ]
+        },
+        "de": {
+          "title": "Erwähnungen zeigen, worauf sie verweisen",
+          "summary": "Fahre mit der Maus über eine Erwähnung, um die Karte ihres Ziels zu sehen, und erwähne Pull Requests, Routinen, Zyklen, Skills, MCP-Verbindungen und Datumsangaben.",
+          "details": [
+            "Eine Ticketerwähnung zeigt die Karte vom Board, ein Ziel seinen Status, Fortschritt und die verantwortliche Person, eine Seite ihre ersten Zeilen. Dieselben Karten erscheinen in Beziehungszeilen, Rückverweisen von Seiten und Ressourcen-Pills. Eine Erwähnung funktioniert weiter, wenn ihr Ziel umbenannt wird, und erscheint als „Nicht verfügbar“ für alle, die das Ziel nicht öffnen dürfen.",
+            "Tippe @ und dann ein Datum in normalen Worten, etwa „nächsten Freitag“ oder „in zwei Wochen“, um ein Datum einzufügen. Das funktioniert in allen sechs Sprachen. Auch Pull Requests, Routinen, Zyklen, Skills und MCP-Verbindungen lassen sich jetzt erwähnen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Menções que mostram para onde apontam",
+          "summary": "Passe o cursor sobre uma menção para ver o cartão do destino, e mencione pull requests, rotinas, ciclos, skills, conexões MCP e datas.",
+          "details": [
+            "A menção a um ticket mostra o cartão dele no quadro; a um objetivo, o status, o progresso e o responsável; a uma página, as primeiras linhas. Os mesmos cartões aparecem nas linhas de relações, nos backlinks das páginas e nas pílulas de recursos. Uma menção continua funcionando depois que o destino é renomeado e aparece como Indisponível para quem não pode abri-lo.",
+            "Digite @ seguido de uma data por extenso, como próxima sexta ou daqui a duas semanas, para inserir uma data. Isso funciona nos seis idiomas. Agora também é possível mencionar pull requests, rotinas, ciclos, skills e conexões MCP."
+          ]
+        },
+        "it": {
+          "title": "Menzioni che mostrano ciò a cui puntano",
+          "summary": "Passa il puntatore su una menzione per vedere la scheda di ciò a cui punta, e menziona pull request, routine, cicli, skill, connessioni MCP e date.",
+          "details": [
+            "La menzione di un ticket mostra la sua scheda della bacheca, quella di un obiettivo lo stato, l’avanzamento e il responsabile, quella di una pagina le prime righe. Le stesse schede compaiono sulle righe delle relazioni, nell’elenco delle pagine che citano una pagina e sugli indicatori delle risorse. Una menzione continua a funzionare anche dopo che il suo destinatario è stato rinominato, e appare come «Non disponibile» a chi non può aprirlo.",
+            "Digita @ seguito da una data scritta a parole, come venerdì prossimo o tra due settimane, per inserire una data. Il riconoscimento funziona in tutte e sei le lingue. Ora puoi menzionare anche pull request, routine, cicli, skill e connessioni MCP."
+          ]
+        },
+        "es": {
+          "title": "Menciones que muestran a qué apuntan",
+          "summary": "Pasa el cursor sobre una mención para ver la tarjeta de su destino, y menciona pull requests, rutinas, ciclos, skills, conexiones MCP y fechas.",
+          "details": [
+            "La mención de una incidencia muestra su tarjeta del tablero; la de un objetivo, su estado, su progreso y su responsable; la de una página, sus primeras líneas. Las mismas tarjetas aparecen en las filas de relaciones, en las referencias entrantes de las páginas y en las pastillas de recursos. Una mención sigue funcionando después de renombrar su destino, y aparece como «No disponible» para quien no puede abrirlo.",
+            "Escribe @ seguido de una fecha en lenguaje natural, como «próximo viernes» o «en 2 semanas», para insertar una fecha. Funciona en los seis idiomas. Ahora también se pueden mencionar pull requests, rutinas, ciclos, skills y conexiones MCP."
+          ]
+        }
+      }
+    },
+    {
+      "id": "project-statistics-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "activity"
+      },
+      "copy": {
+        "en": {
+          "title": "Project statistics and objective forecasts",
+          "summary": "Project settings show momentum, status counts, pull request delivery and each contributor's load. Objectives estimate their finish from real activity.",
+          "details": [
+            "The General tab of a project's settings compares the issues completed over the last four weeks with the four before, shows the backlog trend and the median lead time, and counts open, overdue, unassigned and stalled issues. When pull requests are linked, it adds merges per week and the median time to merge.",
+            "An objective's estimated finish date now comes from the people assigned to its issues: their usual working hours, the effort they deliver per hour across all their projects, and the share of it going to this objective. Without enough history, the estimate falls back to the objective's own pace."
+          ]
+        },
+        "fr": {
+          "title": "Statistiques de projet et prévisions des objectifs",
+          "summary": "Les paramètres du projet montrent la dynamique, le nombre de tickets par statut, la livraison des pull requests et la charge de chaque contributeur. Les objectifs estiment leur fin d’après l’activité réelle.",
+          "details": [
+            "L’onglet « Général » des paramètres d’un projet compare les tickets terminés sur les quatre dernières semaines aux quatre précédentes, montre la tendance du backlog et le délai médian de traitement, et compte les tickets ouverts, en retard, non assignés et à l’arrêt. Quand des pull requests sont liées, il ajoute les fusions par semaine et le délai médian avant fusion.",
+            "La date de fin estimée d’un objectif vient maintenant des personnes assignées à ses tickets : leurs heures de travail habituelles, l’effort qu’elles livrent par heure sur l’ensemble de leurs projets et la part qui va à cet objectif. Sans historique suffisant, l’estimation se rabat sur le rythme propre de l’objectif."
+          ]
+        },
+        "de": {
+          "title": "Projektstatistiken und Prognosen für Ziele",
+          "summary": "Die Projekteinstellungen zeigen das Tempo, die Zahl der Tickets je Status, die Auslieferung von Pull Requests und die Auslastung jeder beteiligten Person. Ziele schätzen ihr Ende anhand der tatsächlichen Aktivität.",
+          "details": [
+            "Der Tab „Allgemein“ in den Projekteinstellungen vergleicht die in den letzten vier Wochen erledigten Tickets mit den vier Wochen davor, zeigt die Entwicklung des Backlogs und die mittlere Durchlaufzeit und zählt offene, überfällige, nicht zugewiesene und stockende Tickets. Sind Pull Requests verknüpft, kommen Merges pro Woche und die mittlere Zeit bis zum Merge hinzu.",
+            "Das geschätzte Enddatum eines Ziels ergibt sich jetzt aus den Personen, die seinen Tickets zugewiesen sind: ihren üblichen Arbeitszeiten, dem Aufwand, den sie pro Stunde über alle ihre Projekte hinweg erledigen, und dem Anteil davon, der in dieses Ziel fließt. Fehlt genug Verlauf, richtet sich die Schätzung nach dem bisherigen Tempo des Ziels."
+          ]
+        },
+        "pt-BR": {
+          "title": "Estatísticas do projeto e previsões dos objetivos",
+          "summary": "As configurações do projeto mostram o ritmo, a contagem por status, a entrega de pull requests e a carga de cada colaborador. Os objetivos estimam a conclusão pela atividade real.",
+          "details": [
+            "A aba Geral das configurações de um projeto compara os tickets concluídos nas últimas quatro semanas com as quatro anteriores, mostra a tendência do backlog e o tempo mediano de conclusão, e conta os tickets abertos, atrasados, sem responsável e parados. Quando há pull requests vinculadas, ela acrescenta as mesclagens por semana e o tempo mediano até a mesclagem.",
+            "A data estimada de conclusão de um objetivo agora vem das pessoas atribuídas aos tickets dele: o horário em que costumam trabalhar, o esforço que entregam por hora em todos os seus projetos e a parte dele dedicada a este objetivo. Sem histórico suficiente, a estimativa volta a usar o ritmo do próprio objetivo."
+          ]
+        },
+        "it": {
+          "title": "Statistiche di progetto e previsioni sugli obiettivi",
+          "summary": "Le impostazioni del progetto mostrano il ritmo, i conteggi per stato, la consegna delle pull request e il carico di ogni collaboratore. Gli obiettivi stimano la data di fine in base all’attività reale.",
+          "details": [
+            "La scheda «Generale» delle impostazioni di un progetto confronta i ticket completati nelle ultime quattro settimane con quelli delle quattro precedenti, mostra l’andamento del backlog e il tempo mediano di consegna, e conta i ticket aperti, scaduti, non assegnati e fermi. Quando ci sono pull request collegate, aggiunge le unioni per settimana e il tempo mediano di unione.",
+            "La data di fine stimata di un obiettivo dipende ora dalle persone assegnate ai suoi ticket: il loro orario di lavoro abituale, l’impegno che completano ogni ora su tutti i loro progetti e la parte che ne dedicano a questo obiettivo. Se lo storico non basta, la stima si basa sul ritmo dell’obiettivo stesso."
+          ]
+        },
+        "es": {
+          "title": "Estadísticas de proyecto y previsiones de objetivos",
+          "summary": "Los ajustes del proyecto muestran el ritmo, el recuento por estado, la entrega de pull requests y la carga de cada colaborador. Los objetivos estiman su fecha de fin a partir de la actividad real.",
+          "details": [
+            "La pestaña General de los ajustes de un proyecto compara las incidencias completadas en las últimas cuatro semanas con las de las cuatro anteriores, muestra la tendencia del backlog y la mediana del plazo de entrega, y cuenta las incidencias abiertas, vencidas, sin asignar y estancadas. Cuando hay pull requests vinculadas, añade las fusiones por semana y la mediana del tiempo hasta fusionar.",
+            "La fecha de fin estimada de un objetivo se calcula ahora a partir de las personas asignadas a sus incidencias: su horario de trabajo habitual, el esfuerzo que completan por hora en todos sus proyectos y la parte que dedican a este objetivo. Sin historial suficiente, la estimación vuelve al ritmo propio del objetivo."
+          ]
+        }
+      }
+    },
+    {
+      "id": "numo-files-0300",
+      "illustration": {
+        "kind": "icon",
+        "name": "assistant"
+      },
+      "copy": {
+        "en": {
+          "title": "Numo writes files and does more per request",
+          "summary": "Numo creates downloadable files, attaches them to issues and objectives, and updates many issues or database entries at once.",
+          "details": [
+            "Ask Numo for a CSV, a Markdown or JSON file, a calendar file or a PDF. It appears as a card under the answer, with a preview, and Numo can attach it to an issue, an objective or a comment. Numo also reads and answers an objective's comment threads.",
+            "Numo and connected MCP agents can update up to 50 issues in one request, link several issues at once, edit several passages of a page or description in place, move pages and fill every property of a database entry in one step. Connecting an MCP server now goes through a short wizard that tests the connection before saving it."
+          ]
+        },
+        "fr": {
+          "title": "Numo crée des fichiers et en fait plus par demande",
+          "summary": "Numo crée des fichiers à télécharger, les joint aux tickets et aux objectifs, et met à jour de nombreux tickets ou entrées de base de données d’un coup.",
+          "details": [
+            "Demandez à Numo un fichier CSV, Markdown ou JSON, un fichier d’agenda ou un PDF. Il apparaît sous forme de carte sous la réponse, avec un aperçu, et Numo peut le joindre à un ticket, un objectif ou un commentaire. Numo lit aussi les fils de commentaires d’un objectif et y répond.",
+            "Numo et les agents MCP connectés peuvent mettre à jour jusqu’à 50 tickets en une demande, lier plusieurs tickets à la fois, modifier sur place plusieurs passages d’une page ou d’une description, déplacer des pages et remplir toutes les propriétés d’une entrée de base de données en une étape. La connexion d’un serveur MCP passe maintenant par un court assistant qui teste la connexion avant de l’enregistrer."
+          ]
+        },
+        "de": {
+          "title": "Numo erstellt Dateien und erledigt mehr pro Anfrage",
+          "summary": "Numo erstellt Dateien zum Herunterladen, hängt sie an Tickets und Ziele an und aktualisiert viele Tickets oder Datenbankeinträge auf einmal.",
+          "details": [
+            "Bitte Numo um eine CSV-, Markdown- oder JSON-Datei, eine Kalenderdatei oder ein PDF. Sie erscheint als Karte mit Vorschau unter der Antwort, und Numo kann sie an ein Ticket, ein Ziel oder einen Kommentar anhängen. Außerdem liest Numo die Kommentarverläufe eines Ziels und antwortet darin.",
+            "Numo und verbundene MCP-Agenten können bis zu 50 Tickets in einer Anfrage aktualisieren, mehrere Tickets auf einmal verknüpfen, mehrere Stellen einer Seite oder Beschreibung direkt bearbeiten, Seiten verschieben und alle Eigenschaften eines Datenbankeintrags in einem Schritt ausfüllen. Einen MCP-Server verbindest du jetzt über einen kurzen Assistenten, der die Verbindung vor dem Speichern testet."
+          ]
+        },
+        "pt-BR": {
+          "title": "O Numo cria arquivos e faz mais a cada pedido",
+          "summary": "O Numo cria arquivos para baixar, anexa-os a tickets e objetivos e atualiza muitos tickets ou entradas de banco de dados de uma vez.",
+          "details": [
+            "Peça ao Numo um CSV, um arquivo Markdown ou JSON, um arquivo de calendário ou um PDF. Ele aparece como um cartão abaixo da resposta, com prévia, e o Numo pode anexá-lo a um ticket, a um objetivo ou a um comentário. O Numo também lê e responde as discussões de comentários de um objetivo.",
+            "O Numo e os agentes MCP conectados podem atualizar até 50 tickets em um pedido, vincular vários tickets de uma vez, editar diretamente vários trechos de uma página ou descrição, mover páginas e preencher todas as propriedades de uma entrada de banco de dados em uma só etapa. Conectar um servidor MCP agora passa por um assistente curto que testa a conexão antes de salvá-la."
+          ]
+        },
+        "it": {
+          "title": "Numo crea file e fa di più a ogni richiesta",
+          "summary": "Numo crea file scaricabili, li allega a ticket e obiettivi e aggiorna molti ticket o voci di database in una volta sola.",
+          "details": [
+            "Chiedi a Numo un file CSV, Markdown o JSON, un file di calendario o un PDF. Il file compare come scheda sotto la risposta, con un’anteprima, e Numo può allegarlo a un ticket, a un obiettivo o a un commento. Numo legge anche le discussioni nei commenti di un obiettivo e risponde.",
+            "Numo e gli agenti MCP collegati possono aggiornare fino a 50 ticket con una sola richiesta, collegare più ticket insieme, modificare direttamente più passaggi di una pagina o di una descrizione, spostare pagine e compilare tutte le proprietà di una voce di database in un solo passaggio. Per collegare un server MCP c’è ora una breve procedura guidata che verifica la connessione prima di salvarla."
+          ]
+        },
+        "es": {
+          "title": "Numo crea archivos y hace más en cada petición",
+          "summary": "Numo crea archivos descargables, los adjunta a incidencias y objetivos, y actualiza muchas incidencias o entradas de base de datos a la vez.",
+          "details": [
+            "Pide a Numo un CSV, un archivo Markdown o JSON, un archivo de calendario o un PDF. Aparece como una tarjeta con vista previa debajo de la respuesta, y Numo puede adjuntarlo a una incidencia, un objetivo o un comentario. Numo también lee y responde los hilos de comentarios de un objetivo.",
+            "Numo y los agentes MCP conectados pueden actualizar hasta 50 incidencias en una sola petición, vincular varias incidencias a la vez, editar directamente varios pasajes de una página o una descripción, mover páginas y rellenar todas las propiedades de una entrada de base de datos de una vez. Para conectar un servidor MCP hay ahora un breve asistente que prueba la conexión antes de guardarla."
+          ]
+        }
+      }
+    },
+    {
+      "id": "ai-provider-per-use-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "providers"
+      },
+      "copy": {
+        "en": {
+          "title": "Choose a provider for each AI use",
+          "summary": "Your AI settings assign a provider to each use, so you can keep minddy Cloud for Smart Fill and use your own key for Numo conversations.",
+          "details": [
+            "Account settings list the connected providers, minddy Cloud included, and give each use its own provider: Numo conversations, web search, Smart Fill, Smart Assign, speech to text and the others. A use only offers the providers that can serve it. Numo's model list starts with the provider, so you can switch between your key and minddy Cloud from the conversation.",
+            "minddy no longer records the calls made with your own key: you pay your provider directly. Anthropic keys now honor the selected effort and leave room for thinking."
+          ]
+        },
+        "fr": {
+          "title": "Un fournisseur par usage de l’IA",
+          "summary": "Vos paramètres d’IA attribuent un fournisseur à chaque usage : vous pouvez garder minddy Cloud pour Smart Fill et utiliser votre propre clé pour les conversations avec Numo.",
+          "details": [
+            "Les paramètres du compte listent les fournisseurs connectés, minddy Cloud compris, et donnent à chaque usage son propre fournisseur : conversations avec Numo, recherche web, Smart Fill, Smart Assign, transcription vocale et les autres. Un usage ne propose que les fournisseurs capables de le servir. La liste des modèles de Numo commence par le fournisseur, pour passer de votre clé à minddy Cloud depuis la conversation.",
+            "minddy n’enregistre plus les appels faits avec votre propre clé : vous payez directement votre fournisseur. Les clés Anthropic respectent maintenant l’effort choisi et laissent de la place au raisonnement."
+          ]
+        },
+        "de": {
+          "title": "Einen Anbieter für jede KI-Nutzung wählen",
+          "summary": "In deinen KI-Einstellungen bekommt jede Nutzung einen eigenen Anbieter. So bleibt Smart Fill etwa bei minddy Cloud, während Numo-Unterhaltungen deinen eigenen Schlüssel verwenden.",
+          "details": [
+            "Die Kontoeinstellungen listen die verbundenen Anbieter auf, minddy Cloud eingeschlossen, und weisen jeder Nutzung einen eigenen Anbieter zu: Numo-Unterhaltungen, Websuche, Smart Fill, Smart Assign, Spracherkennung und die übrigen. Eine Nutzung bietet nur die Anbieter an, die sie bedienen können. Die Modellliste von Numo beginnt mit dem Anbieter, sodass du direkt in der Unterhaltung zwischen deinem Schlüssel und minddy Cloud wechseln kannst.",
+            "minddy erfasst keine Aufrufe mehr, die mit deinem eigenen Schlüssel gemacht werden: Du bezahlst deinen Anbieter direkt. Anthropic-Schlüssel berücksichtigen jetzt den gewählten Aufwand und lassen Raum für Reasoning."
+          ]
+        },
+        "pt-BR": {
+          "title": "Escolha um provedor para cada uso de IA",
+          "summary": "Nas configurações de IA, cada uso tem seu provedor: você pode manter o minddy Cloud para o Smart Fill e usar sua própria chave nas conversas com o Numo.",
+          "details": [
+            "As configurações da conta listam os provedores conectados, incluindo o minddy Cloud, e dão a cada uso o seu provedor: conversas com o Numo, busca na web, Smart Fill, Smart Assign, conversão de fala em texto e os demais. Cada uso oferece apenas os provedores capazes de atendê-lo. A lista de modelos do Numo começa pelo provedor, para que você alterne entre a sua chave e o minddy Cloud na própria conversa.",
+            "O minddy não registra mais as chamadas feitas com a sua própria chave: você paga diretamente ao seu provedor. As chaves da Anthropic agora respeitam o esforço selecionado e deixam espaço para o raciocínio."
+          ]
+        },
+        "it": {
+          "title": "Scegli un provider per ogni uso dell’IA",
+          "summary": "Le impostazioni dell’IA assegnano un provider a ogni uso: puoi tenere minddy Cloud per Smart Fill e usare la tua chiave per le conversazioni con Numo.",
+          "details": [
+            "Le impostazioni dell’account elencano i provider collegati, minddy Cloud compreso, e assegnano a ogni uso il suo provider: conversazioni con Numo, ricerca web, Smart Fill, Smart Assign, da voce a testo e gli altri. Ogni uso propone solo i provider in grado di gestirlo. L’elenco dei modelli di Numo inizia dal provider, così passi dalla tua chiave a minddy Cloud senza lasciare la conversazione.",
+            "minddy non registra più le chiamate fatte con la tua chiave: paghi direttamente il tuo provider. Le chiavi Anthropic rispettano ora il livello di impegno selezionato e lasciano spazio al ragionamento."
+          ]
+        },
+        "es": {
+          "title": "Elige un proveedor para cada uso de la IA",
+          "summary": "Tus ajustes de IA asignan un proveedor a cada uso, así que puedes mantener minddy Cloud para Smart Fill y usar tu propia clave en las conversaciones con Numo.",
+          "details": [
+            "Los ajustes de la cuenta muestran los proveedores conectados, minddy Cloud incluido, y asignan a cada uso su propio proveedor: conversaciones con Numo, búsqueda web, Smart Fill, Smart Assign, voz a texto y los demás. Cada uso solo ofrece los proveedores que pueden atenderlo. La lista de modelos de Numo empieza por el proveedor, así que puedes pasar de tu clave a minddy Cloud desde la propia conversación.",
+            "minddy ya no registra las llamadas hechas con tu propia clave: pagas directamente a tu proveedor. Las claves de Anthropic respetan ahora el esfuerzo seleccionado y dejan margen para el razonamiento."
+          ]
+        }
+      }
+    },
+    {
+      "id": "selection-actions-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "Act on a whole selection",
+          "summary": "Field shortcuts and the right-click menu apply to every selected issue, and selection now works on feedback, routines, objectives and pages.",
+          "details": [
+            "With several issues selected, changing the status, priority, assignee, categories, due date, objective or relations on one of them changes them all, and one undo reverts the whole change. Right-click a selected card to copy a combined prompt or the list of identifiers.",
+            "Shift-click selects rows in the feedback list, routines, objectives, the page tree and database rows, with actions suited to each. The relation menus can also make an existing issue the parent or sub-issue of another."
+          ]
+        },
+        "fr": {
+          "title": "Agir sur toute une sélection",
+          "summary": "Les raccourcis de champ et le menu du clic droit s’appliquent à chaque ticket sélectionné, et la sélection fonctionne maintenant sur les retours, les routines, les objectifs et les pages.",
+          "details": [
+            "Avec plusieurs tickets sélectionnés, changer le statut, la priorité, l’assigné, les catégories, l’échéance, l’objectif ou les relations de l’un d’eux les change tous, et une seule annulation défait l’ensemble. Faites un clic droit sur une carte sélectionnée pour copier un prompt groupé ou la liste des identifiants.",
+            "Le Maj-clic sélectionne des lignes dans la liste des retours, les routines, les objectifs, l’arborescence des pages et les lignes de base de données, avec des actions adaptées à chacun. Les menus de relations permettent aussi de faire d’un ticket existant le parent ou le sous-ticket d’un autre."
+          ]
+        },
+        "de": {
+          "title": "Eine ganze Auswahl bearbeiten",
+          "summary": "Feld-Tastenkürzel und das Kontextmenü wirken auf jedes ausgewählte Ticket, und die Auswahl funktioniert jetzt auch bei Feedback, Routinen, Zielen und Seiten.",
+          "details": [
+            "Sind mehrere Tickets ausgewählt, ändert eine Änderung von Status, Priorität, Zuständig, Kategorien, Fälligkeitsdatum, Ziel oder Beziehungen an einem davon alle, und ein einziges Rückgängig macht die ganze Änderung rückgängig. Klicke mit der rechten Maustaste auf eine ausgewählte Karte, um einen kombinierten Prompt oder die Liste der Kennungen zu kopieren.",
+            "Mit Umschalt-Klick wählst du Zeilen in der Feedbackliste, bei Routinen, Zielen, im Seitenbaum und in Datenbankzeilen aus, jeweils mit passenden Aktionen. Über die Beziehungsmenüs kannst du außerdem ein bestehendes Ticket zum übergeordneten Ticket oder Unterticket eines anderen machen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Aja sobre uma seleção inteira",
+          "summary": "Os atalhos de campo e o menu do botão direito valem para todos os tickets selecionados, e a seleção agora funciona no feedback, nas rotinas, nos objetivos e nas páginas.",
+          "details": [
+            "Com vários tickets selecionados, mudar o status, a prioridade, o responsável, as categorias, a data de entrega, o objetivo ou as relações de um deles muda todos, e um único desfazer reverte a alteração inteira. Clique com o botão direito em um cartão selecionado para copiar um prompt combinado ou a lista de identificadores.",
+            "Shift + clique seleciona linhas na lista de feedback, nas rotinas, nos objetivos, na árvore de páginas e nas linhas de banco de dados, com ações adequadas a cada um. Os menus de relações também podem tornar um ticket existente o pai ou o subticket de outro."
+          ]
+        },
+        "it": {
+          "title": "Agisci su un’intera selezione",
+          "summary": "Le scorciatoie dei campi e il menu del clic destro valgono per tutti i ticket selezionati, e la selezione funziona ora anche su feedback, routine, obiettivi e pagine.",
+          "details": [
+            "Con più ticket selezionati, se cambi stato, priorità, assegnatario, categorie, data di scadenza, obiettivo o relazioni su uno di essi, il cambiamento vale per tutti, e un solo annullamento ripristina l’intera modifica. Fai clic destro su una scheda selezionata per copiare un prompt combinato o l’elenco degli identificativi.",
+            "Il clic con Maiusc seleziona le righe nell’elenco dei feedback, nelle routine, negli obiettivi, nell’albero delle pagine e nei database, con azioni adatte a ciascuno. Dai menu delle relazioni puoi anche rendere un ticket esistente il ticket principale o il sottoticket di un altro."
+          ]
+        },
+        "es": {
+          "title": "Actúa sobre toda una selección",
+          "summary": "Los atajos de campo y el menú contextual se aplican a todas las incidencias seleccionadas, y la selección funciona ahora en el feedback, las rutinas, los objetivos y las páginas.",
+          "details": [
+            "Con varias incidencias seleccionadas, cambiar el estado, la prioridad, el responsable, las categorías, la fecha límite, el objetivo o las relaciones de una de ellas los cambia en todas, y un solo deshacer revierte el cambio completo. Haz clic derecho en una tarjeta seleccionada para copiar un prompt combinado o la lista de identificadores.",
+            "Mayús + clic selecciona filas en la lista de feedback, las rutinas, los objetivos, el árbol de páginas y las filas de las bases de datos, con las acciones propias de cada caso. Los menús de relaciones también permiten convertir una incidencia existente en la incidencia principal o en una subincidencia de otra."
+          ]
+        }
+      }
+    },
+    {
+      "id": "drafts-tray-0300",
+      "illustration": {
+        "kind": "icon",
+        "name": "triage"
+      },
+      "copy": {
+        "en": {
+          "title": "Drafts that wait for you",
+          "summary": "Closing a creation dialog keeps what you wrote, and saved issue and objective drafts have their own tray.",
+          "details": [
+            "Close the new issue or objective dialog and open it again: the form is still there, with the caret at the end of the description. After two minutes closed, it is saved as a draft and the form clears.",
+            "Drafts appear in a Drafts pill at the bottom of the screen, next to Numo and the task notebook. Open one to pick up where you left off."
+          ]
+        },
+        "fr": {
+          "title": "Des brouillons qui vous attendent",
+          "summary": "Fermer une fenêtre de création garde ce que vous avez écrit, et les brouillons de tickets et d’objectifs ont leur propre emplacement.",
+          "details": [
+            "Fermez la fenêtre de nouveau ticket ou de nouvel objectif et rouvrez-la : le formulaire est toujours là, avec le curseur à la fin de la description. Après deux minutes de fermeture, il est enregistré comme brouillon et le formulaire se vide.",
+            "Les brouillons apparaissent dans une pastille « Brouillons » en bas de l’écran, à côté de Numo et du carnet de tâches. Ouvrez-en un pour reprendre là où vous vous étiez arrêté."
+          ]
+        },
+        "de": {
+          "title": "Entwürfe, die auf dich warten",
+          "summary": "Schließt du einen Erstellungsdialog, bleibt erhalten, was du geschrieben hast, und gespeicherte Entwürfe von Tickets und Zielen haben einen eigenen Bereich.",
+          "details": [
+            "Schließ den Dialog für ein neues Ticket oder Ziel und öffne ihn wieder: Das Formular ist noch da, mit dem Cursor am Ende der Beschreibung. Bleibt er zwei Minuten geschlossen, wird der Inhalt als Entwurf gespeichert und das Formular geleert.",
+            "Entwürfe erscheinen in der Pill „Entwürfe“ unten am Bildschirm, neben Numo und dem Aufgabennotizbuch. Öffne einen Entwurf, um dort weiterzumachen, wo du aufgehört hast."
+          ]
+        },
+        "pt-BR": {
+          "title": "Rascunhos que esperam por você",
+          "summary": "Fechar uma janela de criação mantém o que você escreveu, e os rascunhos salvos de tickets e objetivos têm um espaço próprio.",
+          "details": [
+            "Feche a janela de novo ticket ou de novo objetivo e abra-a de novo: o formulário continua lá, com o cursor no fim da descrição. Depois de dois minutos fechado, ele é salvo como rascunho e o formulário é limpo.",
+            "Os rascunhos aparecem na pílula Rascunhos, na parte inferior da tela, ao lado do Numo e do caderno de tarefas. Abra um para continuar de onde parou."
+          ]
+        },
+        "it": {
+          "title": "Bozze che ti aspettano",
+          "summary": "Chiudere una finestra di creazione non cancella ciò che hai scritto, e le bozze salvate di ticket e obiettivi hanno ora un loro spazio.",
+          "details": [
+            "Chiudi la finestra del nuovo ticket o del nuovo obiettivo e riaprila: il modulo è ancora lì, con il cursore alla fine della descrizione. Se resta chiusa per due minuti, il contenuto viene salvato come bozza e il modulo si svuota.",
+            "Le bozze compaiono nel pulsante «Bozze» in fondo allo schermo, accanto a Numo e al taccuino delle attività. Aprine una per riprendere da dove avevi lasciato."
+          ]
+        },
+        "es": {
+          "title": "Borradores que te esperan",
+          "summary": "Cerrar un diálogo de creación conserva lo que escribiste, y los borradores guardados de incidencias y objetivos tienen su propia bandeja.",
+          "details": [
+            "Cierra el diálogo de nueva incidencia o de nuevo objetivo y vuelve a abrirlo: el formulario sigue ahí, con el cursor al final de la descripción. Si pasa dos minutos cerrado, se guarda como borrador y el formulario se vacía.",
+            "Los borradores aparecen en una pastilla «Borradores» en la parte inferior de la pantalla, junto a Numo y el cuaderno de tareas. Abre uno para seguir donde lo dejaste."
+          ]
+        }
+      }
+    },
+    {
+      "id": "pages-side-panel-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "pages"
+      },
+      "copy": {
+        "en": {
+          "title": "Pages beside your work",
+          "summary": "Pages open in a side panel, page databases get shared views, and the editor gains block selection.",
+          "details": [
+            "A page opened from a mention, a backlink or an issue's resources slides in beside the current screen, with Expand to open it in full. The page picker of an issue or objective can create a new page and attach it in one step.",
+            "Database sorts, filters and hidden columns are saved as named views that every project member shares. In the editor, drag across blocks or draw a rectangle beside the text to select whole blocks, then move, convert or delete them together. A routine's instruction is now edited live, like an issue plan."
+          ]
+        },
+        "fr": {
+          "title": "Les pages à côté de votre travail",
+          "summary": "Les pages s’ouvrent dans un panneau latéral, les bases de données des pages ont des vues partagées, et l’éditeur permet de sélectionner des blocs.",
+          "details": [
+            "Une page ouverte depuis une mention, un rétrolien ou les ressources d’un ticket glisse à côté de l’écran en cours, avec « Agrandir » pour l’ouvrir en entier. Le sélecteur de pages d’un ticket ou d’un objectif peut créer une nouvelle page et la joindre en une étape.",
+            "Les tris, filtres et colonnes masquées d’une base de données s’enregistrent dans des vues nommées que tous les membres du projet partagent. Dans l’éditeur, faites glisser sur plusieurs blocs ou tracez un rectangle à côté du texte pour sélectionner des blocs entiers, puis déplacez-les, convertissez-les ou supprimez-les ensemble. L’instruction d’une routine se modifie maintenant en direct, comme le plan d’un ticket."
+          ]
+        },
+        "de": {
+          "title": "Seiten neben deiner Arbeit",
+          "summary": "Seiten öffnen sich in einem Seitenbereich, Seitendatenbanken bekommen gemeinsame Ansichten, und im Editor lassen sich Blöcke auswählen.",
+          "details": [
+            "Eine Seite, die du aus einer Erwähnung, einem Rückverweis oder den Ressourcen eines Tickets öffnest, gleitet neben der aktuellen Ansicht herein, und „Vergrößern“ öffnet sie vollständig. In der Seitenauswahl eines Tickets oder Ziels kannst du in einem Schritt eine neue Seite erstellen und anhängen.",
+            "Sortierungen, Filter und ausgeblendete Spalten einer Datenbank werden als benannte Ansichten gespeichert, die alle Projektmitglieder teilen. Ziehe im Editor über mehrere Blöcke oder zieh neben dem Text ein Rechteck auf, um ganze Blöcke auszuwählen, und verschiebe, wandle oder lösche sie dann gemeinsam. Die Anweisung einer Routine wird jetzt live bearbeitet, wie der Plan eines Tickets."
+          ]
+        },
+        "pt-BR": {
+          "title": "Páginas ao lado do seu trabalho",
+          "summary": "As páginas abrem em um painel lateral, os bancos de dados de páginas ganham visualizações compartilhadas e o editor ganha a seleção de blocos.",
+          "details": [
+            "Uma página aberta a partir de uma menção, de um backlink ou dos recursos de um ticket desliza ao lado da tela atual, com Expandir para abri-la em tela inteira. O seletor de páginas de um ticket ou objetivo pode criar uma página e anexá-la em uma só etapa.",
+            "As ordenações, os filtros e as colunas ocultas de um banco de dados ficam salvos em visualizações com nome, compartilhadas por todos os membros do projeto. No editor, arraste sobre os blocos ou desenhe um retângulo ao lado do texto para selecionar blocos inteiros e depois movê-los, convertê-los ou excluí-los juntos. A instrução de uma rotina agora é editada ao vivo, como o plano de um ticket."
+          ]
+        },
+        "it": {
+          "title": "Le pagine accanto al tuo lavoro",
+          "summary": "Le pagine si aprono in un pannello laterale, i database delle pagine hanno viste condivise e nell’editor puoi selezionare interi blocchi.",
+          "details": [
+            "Una pagina aperta da una menzione, da una citazione o dalle risorse di un ticket scorre accanto alla schermata corrente, con «Espandi» per aprirla a schermo intero. Il selettore di pagine di un ticket o di un obiettivo può creare una nuova pagina e allegarla in un solo passaggio.",
+            "Ordinamenti, filtri e colonne nascoste di un database si salvano come viste con un nome, condivise da tutti i membri del progetto. Nell’editor, trascina sopra più blocchi o disegna un rettangolo accanto al testo per selezionare blocchi interi, poi spostali, convertili o eliminali insieme. L’istruzione di una routine si modifica ora direttamente, come il piano di un ticket."
+          ]
+        },
+        "es": {
+          "title": "Páginas junto a tu trabajo",
+          "summary": "Las páginas se abren en un panel lateral, las bases de datos de páginas tienen vistas compartidas y el editor permite seleccionar bloques.",
+          "details": [
+            "Una página abierta desde una mención, una referencia entrante o los recursos de una incidencia se desliza junto a la pantalla actual, con «Ampliar» para abrirla completa. El selector de páginas de una incidencia o un objetivo puede crear una página nueva y adjuntarla en un solo paso.",
+            "Las ordenaciones, los filtros y las columnas ocultas de una base de datos se guardan como vistas con nombre que comparten todos los miembros del proyecto. En el editor, arrastra sobre varios bloques o dibuja un rectángulo junto al texto para seleccionar bloques enteros, y después muévelos, conviértelos o elimínalos a la vez. La instrucción de una rutina se edita ahora en directo, como el plan de una incidencia."
+          ]
+        }
+      }
+    },
+    {
+      "id": "command-palette-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "tabs"
+      },
+      "copy": {
+        "en": {
+          "title": "A command palette that finds more",
+          "summary": "The palette searches routines, pull requests, views and notifications, and it is where you pick what to link.",
+          "details": [
+            "Search now returns routines, pull requests, board views and inbox notifications. Choosing a notification opens the inbox on its row.",
+            "Linking an issue, a pull request or a page opens the palette with only the items that fit. Action menus also search their submenus, so typing a value finds it wherever it sits."
+          ]
+        },
+        "fr": {
+          "title": "Une palette de commandes qui trouve plus de choses",
+          "summary": "La palette cherche dans les routines, les pull requests, les vues et les notifications, et c’est là que vous choisissez ce que vous liez.",
+          "details": [
+            "La recherche renvoie maintenant les routines, les pull requests, les vues du tableau et les notifications de l’Inbox. Choisir une notification ouvre l’Inbox sur sa ligne.",
+            "Lier un ticket, une pull request ou une page ouvre la palette avec les seuls éléments qui conviennent. Les menus d’actions cherchent aussi dans leurs sous-menus : saisissez une valeur pour la trouver, où qu’elle se trouve."
+          ]
+        },
+        "de": {
+          "title": "Eine Befehlspalette, die mehr findet",
+          "summary": "Die Palette durchsucht Routinen, Pull Requests, Ansichten und Benachrichtigungen, und dort wählst du aus, was du verknüpfen willst.",
+          "details": [
+            "Die Suche liefert jetzt auch Routinen, Pull Requests, Board-Ansichten und Benachrichtigungen aus dem Posteingang. Wählst du eine Benachrichtigung, öffnet sich der Posteingang an ihrer Zeile.",
+            "Wenn du ein Ticket, einen Pull Request oder eine Seite verknüpfst, öffnet sich die Palette nur mit den passenden Elementen. Aktionsmenüs durchsuchen auch ihre Untermenüs, sodass du einen Wert findest, egal wo er steht."
+          ]
+        },
+        "pt-BR": {
+          "title": "Uma paleta de comandos que encontra mais",
+          "summary": "A paleta busca rotinas, pull requests, visualizações e notificações, e é nela que você escolhe o que vincular.",
+          "details": [
+            "A busca agora retorna rotinas, pull requests, visualizações de quadro e notificações da caixa de entrada. Escolher uma notificação abre a caixa de entrada na linha dela.",
+            "Vincular um ticket, uma pull request ou uma página abre a paleta só com os itens que servem. Os menus de ações também buscam nos submenus, então digitar um valor o encontra onde quer que ele esteja."
+          ]
+        },
+        "it": {
+          "title": "Una palette dei comandi che trova di più",
+          "summary": "La palette cerca routine, pull request, viste e notifiche, ed è da lì che scegli cosa collegare.",
+          "details": [
+            "La ricerca restituisce ora routine, pull request, viste delle bacheche e notifiche della Posta in arrivo. Se scegli una notifica, la Posta in arrivo si apre sulla sua riga.",
+            "Quando colleghi un ticket, una pull request o una pagina, la palette si apre con i soli elementi pertinenti. I menu delle azioni cercano anche nei loro sottomenu, così un valore digitato viene trovato ovunque si trovi."
+          ]
+        },
+        "es": {
+          "title": "Una paleta de comandos que encuentra más",
+          "summary": "La paleta busca rutinas, pull requests, vistas y notificaciones, y es donde eliges qué vincular.",
+          "details": [
+            "La búsqueda devuelve ahora rutinas, pull requests, vistas de tablero y notificaciones de la bandeja de entrada. Al elegir una notificación, la bandeja de entrada se abre en su fila.",
+            "Vincular una incidencia, una pull request o una página abre la paleta solo con los elementos que encajan. Los menús de acciones también buscan en sus submenús, así que al escribir un valor lo encuentras esté donde esté."
+          ]
+        }
+      }
+    },
+    {
+      "id": "keyboard-and-screen-readers-0300",
+      "illustration": {
+        "kind": "icon",
+        "name": "shield"
+      },
+      "copy": {
+        "en": {
+          "title": "Usable from the keyboard and screen readers",
+          "summary": "minddy was checked against WCAG 2.2 AA: every control shows its keyboard focus, and board cards open, edit and move from the keyboard.",
+          "details": [
+            "A Skip to content link comes first, focus is visible on every control, and field buttons announce their value, such as Status: In progress. Board cards open with Enter, take field shortcuts while focused, and open their menu from the keyboard to reorder without dragging.",
+            "Screen readers hear the unread notification count when it grows and a short notice when Numo finishes replying. Objectives take the same single-key shortcuts as issues, and the arrow keys move between a title and its description."
+          ]
+        },
+        "fr": {
+          "title": "Utilisable au clavier et avec un lecteur d’écran",
+          "summary": "minddy a été vérifié selon WCAG 2.2 AA : chaque contrôle montre son focus clavier, et les cartes du tableau s’ouvrent, se modifient et se déplacent au clavier.",
+          "details": [
+            "Un lien « Aller au contenu » vient en premier, le focus est visible sur chaque contrôle, et les boutons de champ annoncent leur valeur, comme « Statut : En cours ». Les cartes du tableau s’ouvrent avec Entrée, acceptent les raccourcis de champ quand elles ont le focus et ouvrent leur menu au clavier pour changer d’ordre sans glisser-déposer.",
+            "Les lecteurs d’écran annoncent le nombre de notifications non lues quand il augmente, et un court message quand Numo a fini de répondre. Les objectifs acceptent les mêmes raccourcis à une touche que les tickets, et les flèches font passer d’un titre à sa description."
+          ]
+        },
+        "de": {
+          "title": "Per Tastatur und mit Screenreadern bedienbar",
+          "summary": "minddy wurde nach WCAG 2.2 AA geprüft: Jedes Bedienelement zeigt seinen Tastaturfokus, und Karten auf dem Board lassen sich per Tastatur öffnen, bearbeiten und verschieben.",
+          "details": [
+            "Ein Link „Zum Inhalt springen“ steht an erster Stelle, der Fokus ist auf jedem Bedienelement sichtbar, und Feldschaltflächen nennen ihren Wert, etwa „Status: In Bearbeitung“. Karten auf dem Board öffnen sich mit der Eingabetaste, reagieren im Fokus auf Feld-Tastenkürzel und öffnen ihr Menü per Tastatur, sodass du sie ohne Ziehen umsortieren kannst.",
+            "Screenreader melden die Zahl ungelesener Benachrichtigungen, wenn sie steigt, und geben einen kurzen Hinweis, wenn Numo mit der Antwort fertig ist. Ziele unterstützen dieselben Einzeltasten-Kürzel wie Tickets, und mit den Pfeiltasten wechselst du zwischen Titel und Beschreibung."
+          ]
+        },
+        "pt-BR": {
+          "title": "Utilizável pelo teclado e por leitores de tela",
+          "summary": "O minddy foi verificado segundo a WCAG 2.2 AA: todos os controles mostram o foco do teclado, e os cartões do quadro abrem, são editados e se movem pelo teclado.",
+          "details": [
+            "Um link Pular para o conteúdo vem primeiro, o foco fica visível em todos os controles e os botões de campo anunciam o valor, como Status: Em andamento. Os cartões do quadro abrem com Enter, aceitam atalhos de campo quando estão em foco e abrem o menu pelo teclado para reordenar sem arrastar.",
+            "Os leitores de tela anunciam o número de notificações não lidas quando ele aumenta e dão um aviso curto quando o Numo termina de responder. Os objetivos aceitam os mesmos atalhos de uma tecla que os tickets, e as setas passam do título para a descrição e vice-versa."
+          ]
+        },
+        "it": {
+          "title": "Utilizzabile da tastiera e con i lettori di schermo",
+          "summary": "minddy è stato verificato secondo le WCAG 2.2 AA: ogni controllo mostra il focus della tastiera e le schede della bacheca si aprono, si modificano e si spostano da tastiera.",
+          "details": [
+            "Il primo elemento è il link «Vai al contenuto», il focus è visibile su ogni controllo e i pulsanti dei campi annunciano il loro valore, come «Stato: In corso». Le schede della bacheca si aprono con Invio, accettano le scorciatoie dei campi quando hanno il focus e aprono il loro menu da tastiera, così puoi riordinarle senza trascinarle.",
+            "I lettori di schermo annunciano il numero di notifiche non lette quando aumenta e un breve avviso quando Numo finisce di rispondere. Gli obiettivi accettano le stesse scorciatoie a un tasto dei ticket, e i tasti freccia passano dal titolo alla sua descrizione e viceversa."
+          ]
+        },
+        "es": {
+          "title": "Accesible con el teclado y los lectores de pantalla",
+          "summary": "minddy se ha revisado según WCAG 2.2 AA: cada control muestra su foco de teclado, y las tarjetas del tablero se abren, se editan y se mueven desde el teclado.",
+          "details": [
+            "Un enlace «Ir al contenido» aparece en primer lugar, el foco es visible en todos los controles y los botones de campo anuncian su valor, como «Estado: En curso». Las tarjetas del tablero se abren con Enter, aceptan los atajos de campo cuando tienen el foco y abren su menú desde el teclado para reordenarlas sin arrastrar.",
+            "Los lectores de pantalla anuncian el número de notificaciones sin leer cuando aumenta, y un breve aviso cuando Numo termina de responder. Los objetivos aceptan los mismos atajos de una sola tecla que las incidencias, y las flechas permiten pasar del título a la descripción y viceversa."
+          ]
+        }
+      }
+    },
+    {
+      "id": "new-look-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "A new look",
+          "summary": "A new logo and app icons, lavender as the default accent, animated dialogs and panels, and a home page built around Numo.",
+          "details": [
+            "Buttons, switches and focus rings use lavender by default. If you preferred the previous black or white actions, choose the Black or White accent in Appearance. Dialogs, sheets and side panels animate as they open and close, loading screens show the shape of the page, and color pickers became a searchable list.",
+            "Home centers on the Numo composer with suggestions above it. Project pages have a project switcher that keeps you on the same page, links use short readable addresses instead of long ids, and you can choose the first day of the week."
+          ]
+        },
+        "fr": {
+          "title": "Un nouveau look",
+          "summary": "Un nouveau logo et de nouvelles icônes d’app, la lavande comme accent par défaut, des fenêtres et panneaux animés, et un accueil construit autour de Numo.",
+          "details": [
+            "Les boutons, interrupteurs et contours de focus sont lavande par défaut. Si vous préfériez les actions noires ou blanches d’avant, choisissez l’accent « Noir » ou « Blanc » dans « Apparence ». Les fenêtres, volets et panneaux latéraux s’animent à l’ouverture et à la fermeture, les écrans de chargement montrent la forme de la page, et les sélecteurs de couleur sont devenus une liste avec recherche.",
+            "L’accueil est centré sur la zone de saisie de Numo, avec des suggestions au-dessus. Les pages de projet ont un sélecteur de projet qui vous garde sur la même page, les liens utilisent des adresses courtes et lisibles au lieu de longs identifiants, et vous pouvez choisir le premier jour de la semaine."
+          ]
+        },
+        "de": {
+          "title": "Ein neues Aussehen",
+          "summary": "Ein neues Logo und neue App-Symbole, Lavendel als Standard-Akzentfarbe, animierte Dialoge und Seitenbereiche und eine Startseite rund um Numo.",
+          "details": [
+            "Schaltflächen, Schalter und Fokusringe sind standardmäßig lavendelfarben. Wenn dir die bisherigen schwarzen oder weißen Aktionen lieber waren, wähle unter „Aussehen“ die Akzentfarbe „Schwarz“ oder „Weiß“. Dialoge, Sheets und Seitenbereiche öffnen und schließen sich animiert, Ladebildschirme zeigen die Form der Seite, und Farbauswahlen sind jetzt eine durchsuchbare Liste.",
+            "Die Startseite stellt das Eingabefeld von Numo in die Mitte, mit Vorschlägen darüber. Projektseiten haben einen Projektwechsler, der dich auf derselben Seite hält, Links verwenden kurze, lesbare Adressen statt langer IDs, und du kannst den ersten Tag der Woche wählen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Um visual novo",
+          "summary": "Um novo logo e novos ícones do app, lavanda como cor de destaque padrão, janelas e painéis animados e uma página inicial centrada no Numo.",
+          "details": [
+            "Botões, interruptores e anéis de foco usam lavanda por padrão. Se você preferia as ações em preto ou branco de antes, escolha o destaque Preto ou Branco em Aparência. As janelas, os painéis inferiores e os painéis laterais são animados ao abrir e fechar, as telas de carregamento mostram o formato da página e os seletores de cor viraram uma lista com busca.",
+            "A página inicial se concentra no campo de mensagem do Numo, com sugestões acima dele. As páginas de projeto têm um seletor de projeto que mantém você na mesma página, os links usam endereços curtos e legíveis em vez de ids longos, e você pode escolher o primeiro dia da semana."
+          ]
+        },
+        "it": {
+          "title": "Un aspetto nuovo",
+          "summary": "Un nuovo logo e nuove icone dell’app, la lavanda come accento predefinito, finestre e pannelli animati e una home costruita attorno a Numo.",
+          "details": [
+            "Pulsanti, interruttori e anelli di focus usano la lavanda per impostazione predefinita. Se preferivi le azioni nere o bianche di prima, scegli l’accento «Nero» o «Bianco» in «Aspetto». Finestre e pannelli si animano all’apertura e alla chiusura, le schermate di caricamento mostrano la forma della pagina e i selettori di colore sono diventati un elenco con ricerca.",
+            "La home ruota attorno al campo di scrittura di Numo, con dei suggerimenti sopra. Le pagine di progetto hanno un selettore di progetto che ti lascia sulla stessa pagina, i link usano indirizzi brevi e leggibili invece di lunghi identificativi, e puoi scegliere il «Primo giorno della settimana»."
+          ]
+        },
+        "es": {
+          "title": "Un aspecto nuevo",
+          "summary": "Nuevo logotipo e iconos de la aplicación, lavanda como acento por defecto, diálogos y paneles animados, y una página de inicio centrada en Numo.",
+          "details": [
+            "Los botones, los interruptores y los anillos de foco usan lavanda por defecto. Si preferías las acciones en negro o blanco de antes, elige el acento Negro o Blanco en Apariencia. Los diálogos, las hojas deslizantes y los paneles laterales se animan al abrirse y cerrarse, las pantallas de carga muestran la forma de la página y los selectores de color son ahora una lista con búsqueda.",
+            "Inicio gira en torno al cuadro de mensaje de Numo, con sugerencias encima. Las páginas de proyecto tienen un selector de proyecto que te mantiene en la misma página, los enlaces usan direcciones cortas y legibles en lugar de identificadores largos, y puedes elegir el primer día de la semana."
+          ]
+        }
+      }
+    },
+    {
+      "id": "faster-navigation-0300",
+      "illustration": {
+        "kind": "icon",
+        "name": "performance"
+      },
+      "copy": {
+        "en": {
+          "title": "Faster screens",
+          "summary": "Navigation shows the destination right away, settings tabs switch instantly, and pages and pull requests load faster.",
+          "details": [
+            "The sidebar and content switch as soon as you click, showing the destination's layout while it loads. Settings and admin tabs change without a round trip, and minddy starts loading the next screen when you hover or focus its link.",
+            "Server reads run in parallel on the busiest screens, and the pull request page reads less to show the same content."
+          ]
+        },
+        "fr": {
+          "title": "Des écrans plus rapides",
+          "summary": "La navigation affiche tout de suite la destination, les onglets des paramètres changent instantanément, et les pages et les pull requests se chargent plus vite.",
+          "details": [
+            "La barre latérale et le contenu changent dès le clic et montrent la mise en page de la destination pendant son chargement. Les onglets des paramètres et de l’administration changent sans aller-retour avec le serveur, et minddy commence à charger l’écran suivant quand vous survolez son lien ou lui donnez le focus.",
+            "Les lectures côté serveur s’exécutent en parallèle sur les écrans les plus chargés, et la page de pull request lit moins de données pour afficher le même contenu."
+          ]
+        },
+        "de": {
+          "title": "Schnellere Ansichten",
+          "summary": "Die Navigation zeigt das Ziel sofort, Tabs in den Einstellungen wechseln ohne Verzögerung, und Seiten und Pull Requests laden schneller.",
+          "details": [
+            "Seitenleiste und Inhalt wechseln, sobald du klickst, und zeigen das Layout des Ziels, während es lädt. Tabs in den Einstellungen und im Adminbereich wechseln ohne Anfrage an den Server, und minddy beginnt die nächste Ansicht zu laden, sobald du mit der Maus über ihren Link fährst oder ihn fokussierst.",
+            "Auf den meistgenutzten Ansichten laufen Lesezugriffe auf dem Server parallel, und die Pull-Request-Seite liest weniger Daten, um denselben Inhalt anzuzeigen."
+          ]
+        },
+        "pt-BR": {
+          "title": "Telas mais rápidas",
+          "summary": "A navegação mostra o destino na hora, as abas das configurações mudam instantaneamente e as páginas e pull requests carregam mais rápido.",
+          "details": [
+            "A barra lateral e o conteúdo mudam assim que você clica, mostrando o layout do destino enquanto ele carrega. As abas das configurações e da administração mudam sem ida e volta ao servidor, e o minddy começa a carregar a próxima tela quando você passa o cursor sobre o link dela ou o coloca em foco.",
+            "As leituras no servidor rodam em paralelo nas telas mais movimentadas, e a página de pull request lê menos dados para mostrar o mesmo conteúdo."
+          ]
+        },
+        "it": {
+          "title": "Schermate più rapide",
+          "summary": "La navigazione mostra subito la destinazione, le schede delle impostazioni cambiano all’istante e pagine e pull request si caricano più in fretta.",
+          "details": [
+            "Barra laterale e contenuto cambiano appena fai clic e mostrano la struttura della destinazione mentre si carica. Le schede delle impostazioni e dell’amministrazione cambiano senza passare dal server, e minddy inizia a caricare la schermata successiva quando passi il puntatore sul suo link o gli dai il focus.",
+            "Sulle schermate più cariche le letture dal server avvengono in parallelo, e la pagina della pull request legge meno dati per mostrare lo stesso contenuto."
+          ]
+        },
+        "es": {
+          "title": "Pantallas más rápidas",
+          "summary": "La navegación muestra el destino al instante, las pestañas de ajustes cambian de inmediato, y las páginas y las pull requests cargan más rápido.",
+          "details": [
+            "La barra lateral y el contenido cambian en cuanto haces clic y muestran la estructura del destino mientras carga. Las pestañas de ajustes y de administración cambian sin esperar al servidor, y minddy empieza a cargar la siguiente pantalla cuando pasas el cursor sobre su enlace o le das el foco.",
+            "En las pantallas con más carga, las lecturas del servidor se hacen en paralelo, y la página de una pull request lee menos datos para mostrar el mismo contenido."
+          ]
+        }
+      }
+    },
+    {
+      "id": "mobile-0300",
+      "illustration": {
+        "kind": "code",
+        "name": "board"
+      },
+      "copy": {
+        "en": {
+          "title": "More natural on phones",
+          "summary": "Swipe a bottom sheet down to close it. The bottom bar adds the task notebook, and foldables and the iOS keyboard are handled properly.",
+          "details": [
+            "Every bottom sheet follows your finger and closes when dragged down. The bottom bar reads sidebar, Numo, search, task notebook and New, and the command palette opens with the keyboard up.",
+            "Wide and foldable phones get a layout that fits, the iOS keyboard no longer pushes the page around, and touch screens no longer show hover effects."
+          ]
+        },
+        "fr": {
+          "title": "Plus naturel sur téléphone",
+          "summary": "Faites glisser un volet du bas vers le bas pour le fermer. La barre du bas ajoute le carnet de tâches, et les écrans pliables et le clavier iOS sont bien pris en charge.",
+          "details": [
+            "Chaque volet du bas suit votre doigt et se ferme quand vous le tirez vers le bas. La barre du bas contient la barre latérale, Numo, la recherche, le carnet de tâches et « Nouveau », et la palette de commandes s’ouvre avec le clavier affiché.",
+            "Les téléphones larges et pliables ont une mise en page adaptée, le clavier iOS ne décale plus la page, et les écrans tactiles n’affichent plus les effets de survol."
+          ]
+        },
+        "de": {
+          "title": "Natürlicher auf dem Smartphone",
+          "summary": "Wische ein Bottom Sheet nach unten, um es zu schließen. Die untere Leiste enthält jetzt das Aufgabennotizbuch, und faltbare Geräte sowie die iOS-Tastatur werden richtig unterstützt.",
+          "details": [
+            "Jedes Bottom Sheet folgt deinem Finger und schließt sich, wenn du es nach unten ziehst. Die untere Leiste enthält Seitenleiste, Numo, Suche, Aufgabennotizbuch und Neu, und die Befehlspalette öffnet sich mit eingeblendeter Tastatur.",
+            "Breite und faltbare Smartphones bekommen ein passendes Layout, die iOS-Tastatur verschiebt die Seite nicht mehr, und Touchscreens zeigen keine Hover-Effekte mehr."
+          ]
+        },
+        "pt-BR": {
+          "title": "Mais natural no celular",
+          "summary": "Deslize um painel inferior para baixo para fechá-lo. A barra inferior ganha o caderno de tarefas, e os dobráveis e o teclado do iOS são bem tratados.",
+          "details": [
+            "Todo painel inferior acompanha o seu dedo e fecha quando arrastado para baixo. A barra inferior traz barra lateral, Numo, busca, caderno de tarefas e Novo, e a paleta de comandos abre com o teclado já aberto.",
+            "Celulares largos e dobráveis ganham um layout que cabe na tela, o teclado do iOS não empurra mais a página e as telas de toque não mostram mais efeitos de hover."
+          ]
+        },
+        "it": {
+          "title": "Più naturale sul telefono",
+          "summary": "Trascina verso il basso un pannello per chiuderlo. La barra in basso aggiunge il taccuino delle attività, e i telefoni pieghevoli e la tastiera di iOS sono gestiti correttamente.",
+          "details": [
+            "Ogni pannello dal basso segue il dito e si chiude quando lo trascini verso il basso. La barra in basso contiene barra laterale, Numo, ricerca, taccuino delle attività e «Nuovo», e la palette dei comandi si apre con la tastiera già visibile.",
+            "I telefoni larghi e pieghevoli hanno un layout adatto, la tastiera di iOS non sposta più la pagina e gli schermi touch non mostrano più gli effetti al passaggio del puntatore."
+          ]
+        },
+        "es": {
+          "title": "Más natural en el teléfono",
+          "summary": "Desliza hacia abajo un panel inferior para cerrarlo. La barra inferior incluye el cuaderno de tareas, y los plegables y el teclado de iOS funcionan como deben.",
+          "details": [
+            "Todos los paneles inferiores siguen tu dedo y se cierran al arrastrarlos hacia abajo. La barra inferior muestra la barra lateral, Numo, la búsqueda, el cuaderno de tareas y Nuevo, y la paleta de comandos se abre con el teclado desplegado.",
+            "Los teléfonos anchos y plegables tienen un diseño que se ajusta a su pantalla, el teclado de iOS ya no desplaza la página y las pantallas táctiles ya no muestran efectos al pasar el cursor."
+          ]
+        }
+      }
+    },
+    {
+      "id": "desktop-0300",
+      "illustration": {
+        "kind": "icon",
+        "name": "desktop"
+      },
+      "copy": {
+        "en": {
+          "title": "Desktop app refinements",
+          "summary": "On macOS and Windows 11 the window chrome shows your desktop blurred behind it, and right-clicking a field opens the native edit menu.",
+          "details": [
+            "The sidebar, tab strip and window edges let the desktop show through, as in Finder or Notes, while the content stays opaque. Turn it off under Desktop app transparency. Reduce transparency and high contrast settings always win.",
+            "The sign-in screen has a Self-host minddy button for connecting to your own server, and the macOS installer window was redesigned. The preview channel is retired: installed apps return to the stable release automatically."
+          ]
+        },
+        "fr": {
+          "title": "Retouches de l’app de bureau",
+          "summary": "Sur macOS et Windows 11, le cadre de la fenêtre laisse voir votre bureau flouté derrière lui, et un clic droit dans un champ ouvre le menu d’édition natif.",
+          "details": [
+            "La barre latérale, la barre d’onglets et les bords de la fenêtre laissent voir le bureau, comme dans le Finder ou Notes, tandis que le contenu reste opaque. Désactivez-le dans « Transparence de l’app de bureau ». Les réglages système de réduction de la transparence et de contraste élevé l’emportent toujours.",
+            "L’écran de connexion a un bouton « Auto-héberger minddy » pour vous connecter à votre propre serveur, et la fenêtre d’installation macOS a été redessinée. Le canal preview est retiré : les apps installées reviennent automatiquement à la version stable."
+          ]
+        },
+        "de": {
+          "title": "Verbesserungen an der Desktop-App",
+          "summary": "Unter macOS und Windows 11 scheint dein Desktop unscharf durch den Fensterrahmen, und ein Rechtsklick in ein Feld öffnet das native Bearbeiten-Menü.",
+          "details": [
+            "Seitenleiste, Tableiste und Fensterränder lassen den Desktop durchscheinen, wie im Finder oder in Notizen, während der Inhalt deckend bleibt. Ausschalten kannst du das unter „Transparenz der Desktop-App“. Die Systemeinstellungen für reduzierte Transparenz und hohen Kontrast haben immer Vorrang.",
+            "Der Anmeldebildschirm hat eine Schaltfläche „minddy selbst hosten“, um dich mit deinem eigenen Server zu verbinden, und das Installationsfenster unter macOS wurde neu gestaltet. Der Preview-Kanal wurde eingestellt: Installierte Apps kehren automatisch zur stabilen Version zurück."
+          ]
+        },
+        "pt-BR": {
+          "title": "Ajustes no app de desktop",
+          "summary": "No macOS e no Windows 11, a moldura da janela deixa ver sua área de trabalho desfocada por trás, e clicar com o botão direito em um campo abre o menu de edição nativo.",
+          "details": [
+            "A barra lateral, a faixa de abas e as bordas da janela deixam a área de trabalho aparecer por trás, como no Finder ou no Notas, enquanto o conteúdo fica opaco. Desative em Transparência do aplicativo de desktop. Os ajustes de redução de transparência e de alto contraste do sistema sempre prevalecem.",
+            "A tela de login tem um botão Auto-hospedar o minddy para se conectar ao seu próprio servidor, e a janela do instalador do macOS foi redesenhada. O canal de prévia foi encerrado: os apps instalados voltam automaticamente para a versão estável."
+          ]
+        },
+        "it": {
+          "title": "Rifiniture dell’app desktop",
+          "summary": "Su macOS e Windows 11 la cornice della finestra lascia vedere la scrivania sfocata, e il clic destro su un campo apre il menu di modifica del sistema.",
+          "details": [
+            "Barra laterale, barra delle schede e bordi della finestra lasciano trasparire la scrivania, come nel Finder o in Note, mentre il contenuto resta opaco. Puoi disattivarlo da «Trasparenza dell’app desktop». Le impostazioni di sistema «Riduci trasparenza» e contrasto elevato hanno sempre la precedenza.",
+            "La schermata di accesso ha un pulsante «Ospita minddy in autonomia» per collegarti al tuo server, e la finestra del programma di installazione per macOS è stata ridisegnata. Il canale preview è stato ritirato: le app installate tornano automaticamente alla versione stabile."
+          ]
+        },
+        "es": {
+          "title": "Mejoras en la aplicación de escritorio",
+          "summary": "En macOS y Windows 11, el marco de la ventana deja ver tu escritorio difuminado detrás, y al hacer clic derecho en un campo se abre el menú de edición nativo.",
+          "details": [
+            "La barra lateral, la barra de pestañas y los bordes de la ventana dejan ver el escritorio, como en Finder o Notas, mientras el contenido sigue opaco. Desactívalo en «Transparencia de la aplicación de escritorio». Los ajustes del sistema para reducir la transparencia y aumentar el contraste siempre tienen prioridad.",
+            "La pantalla de inicio de sesión tiene un botón «Autoalojar minddy» para conectarte a tu propio servidor, y la ventana del instalador de macOS se ha rediseñado. El canal de vista previa se retira: las aplicaciones instaladas vuelven automáticamente a la versión estable."
+          ]
+        }
+      }
+    },
+    {
+      "id": "instance-administration-0300",
+      "illustration": {
+        "kind": "icon",
+        "name": "shield"
+      },
+      "copy": {
+        "en": {
+          "title": "Instance administration for self-hosters",
+          "summary": "Administrators of a self-hosted instance edit its variables from the admin area, and the complete profile is hardened.",
+          "details": [
+            "The admin area shows the number of accounts, an exact-email lookup for support and AI costs, and on a self-hosted instance an Instance tab where administrators edit the instance variables without touching the server files.",
+            "The complete profile turns off the Supabase Storage S3 protocol, closing a published Storage vulnerability, and this release includes the October Node.js and November Next.js security updates."
+          ]
+        },
+        "fr": {
+          "title": "Administration de l’instance pour l’auto-hébergement",
+          "summary": "Les administrateurs d’une instance auto-hébergée modifient ses variables depuis l’espace d’administration, et le profil complet est renforcé.",
+          "details": [
+            "L’espace d’administration affiche le nombre de comptes, une recherche par adresse e-mail exacte pour le support et les coûts d’IA, et, sur une instance auto-hébergée, un onglet « Instance » où les administrateurs modifient les variables de l’instance sans toucher aux fichiers du serveur.",
+            "Le profil complet désactive le protocole S3 de Supabase Storage, ce qui ferme une vulnérabilité publiée de Storage, et cette version inclut les mises à jour de sécurité d’octobre de Node.js et de novembre de Next.js."
+          ]
+        },
+        "de": {
+          "title": "Instanzverwaltung für selbst gehostete Installationen",
+          "summary": "Administratoren einer selbst gehosteten Instanz bearbeiten deren Variablen im Adminbereich, und das vollständige Profil ist besser abgesichert.",
+          "details": [
+            "Der Adminbereich zeigt die Zahl der Konten, eine Suche nach exakter E-Mail-Adresse für Support und KI-Kosten und auf einer selbst gehosteten Instanz einen Tab „Instanz“, in dem Administratoren die Variablen der Instanz bearbeiten, ohne die Dateien auf dem Server anzufassen.",
+            "Das vollständige Profil schaltet das S3-Protokoll von Supabase Storage ab und schließt damit eine veröffentlichte Sicherheitslücke in Storage. Diese Version enthält außerdem die Sicherheitsupdates von Node.js aus dem Oktober und von Next.js aus dem November."
+          ]
+        },
+        "pt-BR": {
+          "title": "Administração da instância para quem hospeda o minddy",
+          "summary": "Os administradores de uma instância auto-hospedada editam as variáveis dela na área de administração, e o perfil completo ficou mais seguro.",
+          "details": [
+            "A área de administração mostra o número de contas, uma busca por e-mail exato para suporte e custos de IA e, em uma instância auto-hospedada, uma aba Instância em que os administradores editam as variáveis da instância sem mexer nos arquivos do servidor.",
+            "O perfil completo desativa o protocolo S3 do Supabase Storage, fechando uma vulnerabilidade publicada do Storage, e esta versão inclui as atualizações de segurança de outubro do Node.js e de novembro do Next.js."
+          ]
+        },
+        "it": {
+          "title": "Amministrazione dell’istanza per il self-hosting",
+          "summary": "Gli amministratori di un’istanza self-hosted ne modificano le variabili dall’area di amministrazione, e il profilo completo è più protetto.",
+          "details": [
+            "L’area di amministrazione mostra il numero di account, una ricerca per indirizzo email esatto per il supporto e i costi dell’IA e, su un’istanza self-hosted, una scheda «Istanza» in cui gli amministratori modificano le variabili dell’istanza senza toccare i file del server.",
+            "Il profilo completo disattiva il protocollo S3 di Supabase Storage, chiudendo una vulnerabilità di Storage resa pubblica, e questa versione include gli aggiornamenti di sicurezza di Node.js di ottobre e di Next.js di novembre."
+          ]
+        },
+        "es": {
+          "title": "Administración de instancias autoalojadas",
+          "summary": "Los administradores de una instancia autoalojada editan sus variables desde el área de administración, y el perfil completo está reforzado.",
+          "details": [
+            "El área de administración muestra el número de cuentas, una búsqueda por dirección de correo exacta para el soporte y los costes de IA y, en una instancia autoalojada, una pestaña Instancia donde los administradores editan las variables de la instancia sin tocar los archivos del servidor.",
+            "El perfil completo desactiva el protocolo S3 de Supabase Storage, lo que cierra una vulnerabilidad de Storage ya publicada, y esta versión incluye las actualizaciones de seguridad de Node.js de octubre y de Next.js de noviembre."
+          ]
+        }
+      }
+    }
+  ],
+  "evidence": {
+    "commits": [
+      "ace5b85fc159108b003e919626e30d10bc3ceaf0",
+      "da69e695cdc34f7a7b6afca37eb4f76f4b764c8d",
+      "37a3f216f1961d5669591a6e3380bb6790156f48",
+      "c9e98cad322a2fc3a4b71e4cf4fd46f9d415e108",
+      "8ef543ae739bc2f9b3e1406d9afda553e181b58a",
+      "22a5eda4eff112eff4029ddafb3d33782fa432e2",
+      "609dd9dc71a3dfe1996bc0e7359dc4be0b816e32",
+      "cc1efa8fad95487d8deae7e6246e9182d3d19ef9",
+      "a7c2238ecb38b6804dacb9f88249ab28f8b3528f",
+      "a027e8db914d2c9d2bfe5b50704c879d72b1d00b",
+      "76000fceb071e77b4fce14f1c1e7e5e03b684572",
+      "355f0002bf1446d7735e80312607a426fc4a497f",
+      "2d58185a9b8478f607ce3004c8e25959ac470092",
+      "ce8dd1fd1340571e6c4086c33ef740ec1986e3a0",
+      "396b08a0ebe2601d7741b02af9b0d027b49cec05",
+      "9b14d693e0cab5ae041b4425930b105be142f6ef",
+      "bc585d9d38c5fb1a7be05aa836947b974779f0c0",
+      "b012b72ea5e892a826d4cab8cc73913d95ca350e",
+      "5e5abaab42c114abce0af27321473e4dd6496380",
+      "52dac4590310fb402a331352aa88142adf22b640",
+      "8333ba983d91de54a3d0ea928968c6209692e765",
+      "f5be60330ea23b94d88fbf6b830c23f3146bcc25",
+      "9c99b9b725c4984a1e98c82bf349ab79180c652e",
+      "774ecb0e06e370dd995843e2520aece22cb54154",
+      "e71fe9a9f8c234b68ed53424cfe2529069d11e95",
+      "477a70a90b63f5a982ca8648d32edb8ac3380612",
+      "82004238ae3483837996a34a94df99bdb0a907be",
+      "bb6a1cf7403214465e4ea2ba5576e7d962354575",
+      "95ea27759a32ecc66b6d084fa84694790feeeea4",
+      "ed4cb7d357f5e51f5cdf11c88b4e06acf87dc529",
+      "39175ca763c0a3c0e94abc6f2669a4546960dcf8",
+      "82793ca96effa1cc100693ad9f0967fc77916f7e",
+      "1ddec75d61833be3e68b138f61fd3f8a0a950e52",
+      "57bd8d288cd2c98c0c0dc68603e0c8c4b350df79",
+      "a779a88fcc40a6b8a2afcd0920848e5687af6730",
+      "fef51ca30007f1aa2a3221ceeccd03f0f4f5a739",
+      "bb302f05fdb997c1a28a4ed6957570fa2597668a",
+      "24302de1c19af038967203036077c2fb968346c3",
+      "f0a46e49506cec17f42b6e1a2ccaf4fcd255cc71",
+      "be74782aaa400e1725d17f40bcb6ab916565269b",
+      "92671192198d068915cdb94458bba50ad3040291",
+      "886ce145bb80d26883c9b1edef5affd2466b61d5",
+      "7c39c40fbcb1065adeb0a03843679b4a9f77e355",
+      "0081b3f5e21a415051e1612f332d99939bd0cff9",
+      "8d4f4dbac603d8911038668f0e09be6136f9eaeb",
+      "d4ada161dd6a720702de1cbf5985021b291f430a",
+      "89f9ee1c93823b1b07a353fc0d86276669e9c07e",
+      "410892964d90b125c7da9e1c02b075597d2a2a24",
+      "2849fa8d856a714816365d5cde7eb05ee4a0e284",
+      "ab2d19fd576724538c815ec65fb8f6056e78fcb3",
+      "a22f8961da1de7ea75a77e6379d7a554500f4d2d",
+      "35b65394b9e0d23194fac838bba3e93f3494045c",
+      "e866ff40724563b1e90646d97d2273f8ff08efcb",
+      "2d1eebd20bc78d4bf2fe60fd6e0ceb72e791b223",
+      "13760a8e806211b1e634b423283892ab4baf7803",
+      "74552a1bb019332f9f86cfcd5caf9bff217f0534",
+      "3e458daf29e7e482a31ee620a330103936effd3b",
+      "b75549c9146f65d445d6e21a40a411a3a3ef8a01",
+      "b923154fd00c95ef5dfc74245438292b73c59e0c",
+      "2e90b0991e9d4029c92b1bea747ea7aca0e0c85d",
+      "9e6f97ac0019a79f943596233c0c3e5244d1e3f8",
+      "c7fb8872b3a4a0c817ca8fa143b5d724f1fbcde9",
+      "40bab1878e4430ee357d14e79962958cb7da0d34",
+      "ab8532da985a78b6061defc5ef8fd2d1e59f7e4b",
+      "3f58fc2c74a899775550c72203c1b31d6d7ca78f",
+      "37bef72ccd1a1e74383579ae61ec9c1eb8c5c848",
+      "0ee53d29d448ed3a0afbeefee5d2cf519ff10549",
+      "d1d2703bfee0fd4207532cb536d618563350ef9a",
+      "64255d5bcb9b64362455b152a3fab1b113bcff01",
+      "88e8f1b556278ffb813bd0cc5fd6ed25f1d4a61a",
+      "f15caf87880e78eaa469f6f66705122826fded14",
+      "55752f660ba4a4f0da02d317f96387a1a328d309",
+      "0a117ba75c133f50ba1ac5705a4640a4d91bd5a3",
+      "f9ed73aaf0d92b7f057489d16542f30fd8445152",
+      "9eb8996eb5b329f885566c5902dc050e1f8cf4a3",
+      "98ba87544cb6d42289f7ed227963ab2b5206578f",
+      "911507816eb773c90f1c4f3c1dc9d8f178aeb1d9",
+      "9c9b2c5d7fb07d666afd5f5e2d5a26ac9b401ff6",
+      "d6dce9371207733eff5a84fe2b1b1ea15fee42b0",
+      "1b2cbd6e67bbe94fefd9f8728d4f32b601edfbc1",
+      "9a346f822fdfdc3be1259396e5c065cb5095f85b",
+      "c76494d3f62c32c756a45dc4f355c5d7d36f9fe7",
+      "b3bba099b97cce6f20c56bc41646c81f0defefc4",
+      "c3ea86e90e001515284ee86e7fd42b24fc00536e",
+      "268e5300c62b7efa109f984740309f314c3b5fe3",
+      "05ecbb9952d6cb2b27a08c5f9787c3c3200dbffb",
+      "f7d7322dea61565858eaf0bebe18fceaffbb171d",
+      "2f0fede304c11c611173ac8712acc0d55e1f808a",
+      "69d2b0c19c1a9934edf6fdefd95bf86e8bff702c",
+      "d95f4d009ab40f14b349f984eb016c11e203ec0a",
+      "e68e299dd447b88f98819708f8ca4b4b025642d6",
+      "3ba893b9502717e99d538d4c844b4cce84bdce2d",
+      "2a8d59de8c64096089471e4f73d43c761972655a",
+      "8cd0b6d5c4e59f9b48d6ff99ddbb4050b9fd99b1",
+      "c1181d100011650f9422c7bb9fc4973a4925e93a",
+      "3bb554c993dcafbb1013b5b08adf17948f0110e0",
+      "5bf0a17aaed91b941c8ccd361003cd7e8118c5fd",
+      "08ddfce277eace277c0a163ea1ba3a8a2fe620a8",
+      "8552bd58f0cabeb4febe6eb48d217e5d38fe5ea2",
+      "70b25019bc37c8b4be25a7d113822f1109360cbb",
+      "347740adc767a62d813e814e809b72b3742caf23",
+      "7daa925764c8061cb44f2e2fd3023a27c4cc1f80",
+      "60a8181451fcafddf6999763d85879ab98d74171",
+      "69cdeefffd603ceb574cf65e5c566bd5dcc2edd0",
+      "ab669d7acb48fef71a7058e15198aebf7bef03ef",
+      "f68be70b9b1dbabb7fb4ee99198599caa63759fd",
+      "b400154e47c66ba2480c52749e224697e670b7ab",
+      "f849ca4191329572bc737694aefa4e61db61daa9",
+      "d838ed17ba9512a5f82c762bcf6dedf600b4a796",
+      "4f88fdf78b3a31ae41a999d8ee17d23ea24c4fe9",
+      "bb04804c2a336ae7de6591cf260fb03580ed8ea8",
+      "2bf8917e41a7921e727f9090eff50856a7656eb2",
+      "9bc02e230b166346b4445d240862af5cc516d818",
+      "2efcd2b6a64e74fceb416416f137c8556ced6eea",
+      "6553e8fb032a0cd79f6615d4fd9328debbc230d1",
+      "89854ac97b85532f4b6f4b50f5fc6354ea54816d",
+      "d1b7bb7b913ea890c2473eecded9ef69880e077a",
+      "5caf5e5909c418776007553eee31c935cf003827",
+      "d28dd74d57cdfa46893820840752b500454de72e",
+      "528bb57ec87fa3823772f7e9890a917c86aeda8e"
+    ],
+    "issues": [
+      "MIN-740",
+      "MIN-750",
+      "MIN-753",
+      "MIN-754",
+      "MIN-756",
+      "MIN-757",
+      "MIN-758",
+      "MIN-760",
+      "MIN-761",
+      "MIN-762",
+      "MIN-764",
+      "MIN-765",
+      "MIN-766",
+      "MIN-768",
+      "MIN-769",
+      "MIN-770",
+      "MIN-772",
+      "MIN-773",
+      "MIN-774",
+      "MIN-775",
+      "MIN-776",
+      "MIN-777",
+      "MIN-778",
+      "MIN-779",
+      "MIN-780",
+      "MIN-781",
+      "MIN-782",
+      "MIN-783",
+      "MIN-784",
+      "MIN-785",
+      "MIN-786",
+      "MIN-789",
+      "MIN-790",
+      "MIN-791",
+      "MIN-792",
+      "MIN-793",
+      "MIN-795",
+      "MIN-796",
+      "MIN-797",
+      "MIN-798",
+      "MIN-799",
+      "MIN-800",
+      "MIN-801",
+      "MIN-802",
+      "MIN-803",
+      "MIN-804",
+      "MIN-809",
+      "MIN-810",
+      "MIN-811",
+      "MIN-812",
+      "MIN-813",
+      "MIN-814",
+      "MIN-815",
+      "MIN-816",
+      "MIN-817",
+      "MIN-818",
+      "MIN-819",
+      "MIN-820",
+      "MIN-821",
+      "MIN-822",
+      "MIN-823",
+      "MIN-824",
+      "MIN-825",
+      "MIN-826",
+      "MIN-827",
+      "MIN-828",
+      "MIN-829",
+      "MIN-830",
+      "MIN-831",
+      "MIN-832",
+      "MIN-833",
+      "MIN-834",
+      "MIN-836",
+      "MIN-837",
+      "MIN-838",
+      "MIN-840",
+      "MIN-841",
+      "MIN-842",
+      "MIN-843",
+      "MIN-844",
+      "MIN-845",
+      "MIN-846",
+      "MIN-847",
+      "MIN-868",
+      "MIN-869",
+      "MIN-870",
+      "MIN-872",
+      "MIN-873",
+      "MIN-874",
+      "MIN-875",
+      "MIN-876",
+      "MIN-877",
+      "MIN-878",
+      "MIN-879",
+      "MIN-880",
+      "MIN-881",
+      "MIN-882",
+      "MIN-884",
+      "MIN-885",
+      "MIN-886",
+      "MIN-887",
+      "MIN-888",
+      "MIN-889",
+      "MIN-890",
+      "MIN-891",
+      "MIN-893",
+      "MIN-894",
+      "MIN-895",
+      "MIN-896"
+    ]
+  }
+}

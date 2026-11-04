@@ -8,11 +8,13 @@
  *   node captures/shots/feedback-inbox/shot.mjs --publish   # + livre
  */
 import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
+import { auroraProjectId } from "../../lib/config.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "feedbackInbox";
 const OUT = "captures/shots/feedback-inbox/out";
-const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+// Preview and production give Aurora different ids (captures/lib/config.mjs).
+const AURORA = auroraProjectId(CAPTURE.baseUrl);
 const VIEWPORT = { width: 1736, height: 1085 };
 
 /** The return which carries the suggestion of fusion. Title = data, therefore bilingual. */

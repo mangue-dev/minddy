@@ -28,11 +28,13 @@ import {
   CAPTURE_VARIANTS,
   DEFAULT_VIEW_NAMES,
 } from "../../lib/browser.mjs";
+import { auroraProjectId } from "../../lib/config.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "heroBoard";
 const OUT = "captures/shots/hero-board/out";
-const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+// Preview and production give Aurora different ids (captures/lib/config.mjs).
+const AURORA = auroraProjectId(CAPTURE.baseUrl);
 
 /** 16/10, positioned on the gutter which follows the 4th column. See intent.md. */
 const VIEWPORT = { width: 1792, height: 1120 };

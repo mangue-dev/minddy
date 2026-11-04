@@ -5,6 +5,7 @@ import { openPage, settle, CAPTURE, CAPTURE_LOCALES } from "../../lib/browser.mj
 import { settleDocumentationPage, captureDocumentationControl } from "../../lib/documentation-frame.mjs";
 import { catalog } from "../../lib/messages.mjs";
 import { demoProse, translateDemo } from "../../lib/demo-prose.mjs";
+import { PREVIEW_AURORA_PROJECT_ID } from "../../lib/config.mjs";
 
 if (!["localhost", "127.0.0.1", "www.minddy.app"].includes(new URL(CAPTURE.baseUrl).hostname)) throw new Error("Documentation refresh requires the local candidate or the canonical hosted application.");
 const output = "output/documentation-captures/visual-refresh-captures-2026-10-09.json";
@@ -40,6 +41,12 @@ for (const locale of locales) {
   page.setDefaultTimeout(20000);
   const messages = await catalog(locale);
   const fixture = JSON.parse(await readFile(new URL(`../documentation-work/${locale}/fixture.json`, import.meta.url), "utf8"));
+  // A local candidate reads the preview database, whose Aurora project has
+  // another id than the production world the fixture names.
+  if (["localhost", "127.0.0.1"].includes(new URL(CAPTURE.baseUrl).hostname)) {
+    fixture.projectId = process.env.DOC_CAPTURE_PROJECT ?? PREVIEW_AURORA_PROJECT_ID;
+    fixture.issueId = "AUR-2";
+  }
   const writes = [], adaptations = [];
   const numo = JSON.parse(await readFile("captures/shots/documentation-refresh/numo-localized-demo-fixture.json", "utf8"));
   for (let index = 0; index < numo.original.length; index++) fixture.mapping[numo.original[index]] = numo.translations[locale][index];
@@ -60,7 +67,7 @@ for (const locale of locales) {
         return route.abort("blockedbyclient");
       }
       // `/api/stats` names the demo projects and objectives in the profile.
-      if (!path.startsWith(`/api/projects/${fixture.projectId}`) && !/^\/api\/(assistant|documents|numo|routines|stats)(\/|$)/.test(path)) return route.fallback();
+      if (!path.startsWith(`/api/projects/${fixture.projectId}`) && !/^\/api\/(assistant|documents|numo|routines|stats|me\/search-index|me\/issues|me\/board|me\/cycle)(\/|$)/.test(path)) return route.fallback();
       const response = await route.fetch().catch(() => null);
       if (!response) return;
       if (!response.ok()) return route.fulfill({ response });
@@ -205,7 +212,7 @@ for (const locale of locales) {
       await page.getByRole("button").filter({ has: page.getByText(installer.fullTitle, { exact: true }) }).click();
     });
     await capture("web-and-mobile-workflow", `/projects/${fixture.projectId}?issue=${fixture.issueId}`, () => page.getByRole("dialog").first(), async () => {
-      await page.getByRole("dialog").first().getByRole("button", { name: messages.IssueUI.changeStatusAria, exact: true }).waitFor();
+      await page.getByRole("dialog").first().getByRole("button", { name: new RegExp(`^${messages.Field.status}\\s*:`) }).waitFor();
     }, { width: 390, height: 1000 });
   } finally {
     await context.unrouteAll({ behavior: "ignoreErrors" }).catch(() => {});

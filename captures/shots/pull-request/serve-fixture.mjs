@@ -132,6 +132,18 @@ export async function serveFixture(page) {
     (r) => json(r, { commits: COMMITS, truncated: false }),
   );
   await on(
+    (p) => under("/deployment").test(p),
+    // The deployment card, read after the detail since MIN-889. The demo
+    // shows its deployment as a timeline event, so the card stays empty.
+    (r) => json(r, {
+      headSha: DETAIL_RESPONSE.pr.headSha ?? null,
+      deploymentUrl: null,
+      deploymentStatus: null,
+      deploymentStartedAt: null,
+      deploymentDurationMs: null,
+    }),
+  );
+  await on(
     (p) => under("/comment-edits").test(p),
     // Edit history of one comment: the demo comments were never edited.
     (r) => json(r, { edits: [] }),

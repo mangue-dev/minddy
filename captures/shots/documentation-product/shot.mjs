@@ -109,7 +109,8 @@ async function prepareObjectiveDraft(p, m, locale) {
  return dialog;
 }
 // The page's own "New objective" button proves it is hydrated, so the shortcut lands.
-const readyObjectives = (page, m) => page.locator('main').getByRole('button', { name: new RegExp('^' + m.Objectives.newObjective) }).first().waitFor({ state: 'visible', timeout: 20000 });
+// The list column sits outside `main` since the objectives list and detail split.
+const readyObjectives = (page, m) => page.getByRole('button', { name: new RegExp('^' + m.Objectives.newObjective) }).first().waitFor({ state: 'visible', timeout: 20000 });
 const run = async (...args) => { if (!requested || requested.includes(args[1])) await captureControl(...args); };
 for (const locale of (process.env.CAPTURE_LOCALES?.split(',') ?? CAPTURE_LOCALES)) {
  await run(locale, 'project-general', `${base}/settings`, null, (p,m)=>p.getByRole('heading',{name:m.Settings.generalTab,exact:true}).waitFor());
@@ -121,8 +122,8 @@ for (const locale of (process.env.CAPTURE_LOCALES?.split(',') ?? CAPTURE_LOCALES
  await run(locale, 'page-history', pagePath, async(p,m)=>{await p.getByRole('button',{name:new RegExp('^'+m.Pages.historyTabVersions)}).first().click();await p.getByText(m.Pages.historyTabVersions,{exact:true}).last().waitFor();}, readyPage, p=>p.getByRole('dialog'));
  await run(locale, 'new-issue', base, async(p,m,l)=>{await prepareIssueDraft(p,m,l);}, readyBoard, (p,m)=>p.getByRole('dialog',{name:m.IssueUI.newIssueTitle,exact:true}));
  await run(locale, 'reader-objectives', `${base}/objectives`, async(p,m,l)=>{await prepareObjectiveDraft(p,m,l);}, readyObjectives, (p,m)=>p.getByRole('dialog',{name:m.Objectives.newObjective,exact:true}));
- await run(locale, 'issue-statuses', base, async(p,m,l)=>{const dialog=await prepareIssueDraft(p,m,l);await dialog.getByRole('button',{name:m.IssueUI.changeStatusAria,exact:true}).click();await p.getByRole('listbox').last().waitFor();}, readyBoard, p=>p.getByRole('listbox').last());
- await run(locale, 'issue-date-recurrence', base, async(p,m,l)=>{const dialog=await prepareIssueDraft(p,m,l);await dialog.getByRole('button',{name:m.IssueUI.changeDueDateAria,exact:true}).click();await p.getByText(m.Recurrence.recurring,{exact:true}).last().click();}, readyBoard, p=>p.locator('[data-radix-popper-content-wrapper]').last());
+ await run(locale, 'issue-statuses', base, async(p,m,l)=>{const dialog=await prepareIssueDraft(p,m,l);await dialog.getByRole('button',{ name: new RegExp(`^${m.Field.status}\\s*:`) }).click();await p.getByRole('listbox').last().waitFor();}, readyBoard, p=>p.getByRole('listbox').last());
+ await run(locale, 'issue-date-recurrence', base, async(p,m,l)=>{const dialog=await prepareIssueDraft(p,m,l);await dialog.getByRole('button',{ name: new RegExp(`^${m.Field.dueDate}\\s*:`) }).click();await p.getByText(m.Recurrence.recurring,{exact:true}).last().click();}, readyBoard, p=>p.locator('[data-radix-popper-content-wrapper]').last());
  await run(locale, 'page-publish', pagePath, async(p,m)=>{await p.locator('main').getByRole('button',{name:m.Pages.pageOptions,exact:true}).click();await p.getByText(m.Pages.publish,{exact:true}).last().click();await p.getByRole('dialog').waitFor();}, readyPage, p=>p.getByRole('dialog'));
  await run(locale, 'keyboard-shortcuts', base, async(p,_m)=>{await p.keyboard.press('?');await p.getByRole('dialog').waitFor();}, readyBoard, p=>p.getByRole('dialog'));
 }

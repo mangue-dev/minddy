@@ -15,13 +15,17 @@
  *   CAPTURE_BASE_URL=https://preview.minddy.app node captures/shots/pages-editor/shot.mjs --publish
  */
 import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
+import { auroraProjectId, PREVIEW_AURORA_PROJECT_ID } from "../../lib/config.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "pagesEditor";
 const OUT = "captures/shots/pages-editor/out";
-const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+// Preview and production give Aurora different ids (captures/lib/config.mjs).
+const AURORA = auroraProjectId(CAPTURE.baseUrl);
 /** « Release process », sous « Product handbook » — 014-pages-aurora.mjs. */
-const PAGE = "cd3ee91e-ad73-423c-bb99-9f81722f8912";
+const PAGE = AURORA === PREVIEW_AURORA_PROJECT_ID
+  ? "af2ed90e-02f0-48d6-83fb-5e13f62777ba"
+  : "cd3ee91e-ad73-423c-bb99-9f81722f8912";
 
 /** 16/10, like the other locations in this report. */
 const VIEWPORT = { width: 1736, height: 1085 };

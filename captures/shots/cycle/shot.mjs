@@ -35,13 +35,16 @@ async function capture({ locale, theme }) {
     // cycle only because it is cross-project. If it is missing, the image does not show
     // pas ce qu'elle doit montrer.
     await page.goto(`${CAPTURE.baseUrl}/all`, { waitUntil: "domcontentloaded" });
-    await settle(page, { expect: "text=BCN-8" });
+    await settle(page, { expect: "main h2" });
 
     // The Cycle tab, designated by its label read from the catalog — the
     // `?view=cycle` deep-link no longer survives a fresh browser context
     // (the app-tabs session rewrites the URL before the effect sees it).
     const cycleTab = (await catalog(locale)).Board.cycleTab;
     await page.getByRole("button", { name: cycleTab, exact: true }).click();
+    // Checked on the Cycle tab: since the Lumen statistics project (MIN-878),
+    // the All view's long backlog keeps BCN-8 below the fold.
+    await page.locator("text=BCN-8").first().waitFor({ state: "visible", timeout: 15_000 });
 
     // The rings come from a separate calculation: without them the header is bare.
     await page.locator("main").getByText("%", { exact: false }).first()
@@ -71,7 +74,10 @@ async function capture({ locale, theme }) {
 
     // Since MIN-736 the board hides Done and Canceled by default, so it may
     // no longer overflow: nothing to shift then.
-    if (scrolled && scrolled.applied !== COLUMN_PITCH) {
+    // With Backlog filtered out the board overflows by less than a column:
+    // scrolling to its end is enough, and the framing check below still
+    // refuses a column cut at the right edge.
+    if (scrolled && scrolled.applied !== Math.min(COLUMN_PITCH, scrolled.max)) {
       throw new Error(
         `${locale}/${theme} — défilement impossible (${JSON.stringify(scrolled)}). ` +
           `La colonne vide serait au premier plan.`,

@@ -169,7 +169,9 @@ export function AccountPreferencesSection() {
               }}
               disabled={!user}
             >
-              <SelectTrigger id="account-week-start" className="w-48">
+              {/* Sized to its value: "Language default (Monday)" runs longer
+                  than w-48 in de, es, it and pt-BR. */}
+              <SelectTrigger id="account-week-start" className="w-auto min-w-48 max-w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
