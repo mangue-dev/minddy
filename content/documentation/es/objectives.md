@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-31",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -66,9 +66,9 @@
   },
   "review": {
     "revision": 24,
-    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate)",
+    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (es translation of the changed passage, reviewed against en revision 23; agent review, not human acceptance)",
-    "date": "2026-10-31"
+    "date": "2026-11-04"
   },
   "related": [
     "issues",
@@ -91,10 +91,10 @@
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
       "revision": 24,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         720,
-        358
+        342
       ],
       "theme": "light",
       "padding": 24,

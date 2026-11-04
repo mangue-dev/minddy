@@ -20,7 +20,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-01",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -47,9 +47,9 @@
   },
   "review": {
     "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures)",
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 2 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude (searchable filter menus: views-and-filters-steps recaptured on 2026-11-01 from the local candidate against the preview demo account (Aurora) with documentation-work, API writes blocked, image inspected for labels, margins and clipping; filter-menu paragraph checked against components/board-toolbar.tsx and components/filter-menu.tsx; no browser walkthrough of the procedures); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude (en figure alt text and caption with catalog UI labels; agent self-review, not human acceptance)",
-    "date": "2026-11-01"
+    "date": "2026-11-04"
   },
   "related": [
     "navigation",
@@ -73,13 +73,14 @@
       "caption": "Search any filter value, open a property's submenu or choose a sort order. Create with Numo lets you describe the filters you want instead.",
       "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-11-01",
+      "capturedAt": "2026-11-04",
       "viewport": [
         304,
         448
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "share-a-view-steps",
@@ -89,13 +90,14 @@
       "caption": "Private, password-protected and public access are distinct choices. This capture keeps the view private.",
       "revision": 12,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         496,
         234
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     }
   ],
   "requiredFigures": [

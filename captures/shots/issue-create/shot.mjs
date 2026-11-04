@@ -16,12 +16,14 @@ import {
   CAPTURE_VARIANTS,
   DEFAULT_VIEW_NAMES,
 } from "../../lib/browser.mjs";
+import { auroraProjectId } from "../../lib/config.mjs";
 import { catalog } from "../../lib/messages.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "workflowIssue";
 const OUT = "captures/shots/issue-create/out";
-const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+// Preview and production give Aurora different ids (captures/lib/config.mjs).
+const AURORA = auroraProjectId(CAPTURE.baseUrl);
 
 /** 4/3, the executive report. Rule common to all five 4/3 locations. */
 const VIEWPORT = { width: 1447, height: 1085 };
@@ -47,15 +49,21 @@ const ISSUE = {
  * data). The S/P/E/L keyboard shortcuts would have avoided this table, but
  * they are filtered as long as the focus is in the title or description.
  */
+const fieldButton = (field) =>
+  new RegExp(`^${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s?:`);
+
 async function uiLabels(locale) {
   const messages = await catalog(locale);
   return {
     dialog: messages.IssueUI.newIssueTitle,
-    priority: messages.IssueUI.changePriorityAria,
-    effort: messages.IssueUI.changeEffortAria,
-    categories: messages.IssueUI.editCategoriesAria,
+    // Field buttons announce their value since MIN-783 ("Priority: None"),
+    // with the French space before the colon.
+    priority: fieldButton(messages.Field.priority),
+    effort: fieldButton(messages.Field.effort),
+    categories: fieldButton(messages.Field.categories),
     highPriority: messages.Priority.high,
     smartFill: messages.IssueUI.smartFillChip,
+    title: messages.Field.title,
   };
 }
 
@@ -103,7 +111,16 @@ async function capture({ locale, theme }) {
     const dialog = page.getByRole("dialog", { name: words.dialog, exact: true });
     await dialog.waitFor({ state: "visible", timeout: 10_000 });
 
-    // The title field is `autoFocus`: we type directly in it.
+    // Smart Fill first: since MIN-813 the form hides the title while Smart
+    // Fill writes it, so the title only appears once Smart Fill is off.
+    const smartFill = dialog.getByRole("button", { name: words.smartFill });
+    await smartFill.waitFor({ state: "visible", timeout: 10_000 });
+    if ((await smartFill.getAttribute("aria-pressed")) === "true") {
+      await smartFill.click();
+    }
+    const titleField = dialog.getByLabel(words.title, { exact: true });
+    await titleField.waitFor({ state: "visible", timeout: 10_000 });
+    await titleField.click();
     await page.keyboard.type(ISSUE.title, { delay: 6 });
 
     // The description is a ProseMirror editor, not a textarea: we enter
@@ -122,11 +139,7 @@ async function capture({ locale, theme }) {
     // This is the entire row that the image should show. We therefore cut the
     // rocker — punctual gesture, rested at each opening, which does not change any
     // account setting.
-    const smartFill = dialog.getByRole("button", { name: words.smartFill });
-    await smartFill.waitFor({ state: "visible", timeout: 10_000 });
-    if ((await smartFill.getAttribute("aria-pressed")) === "true") {
-      await smartFill.click();
-    }
+    // Smart Fill was switched off before typing the title (see above).
     await dialog
       .getByRole("button", { name: words.priority })
       .waitFor({ state: "visible", timeout: 10_000 });

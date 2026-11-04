@@ -15,12 +15,14 @@ import {
   CAPTURE_VARIANTS,
   DEFAULT_VIEW_NAMES,
 } from "../../lib/browser.mjs";
+import { auroraProjectId } from "../../lib/config.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 import { catalog, toolCallLabel } from "../../lib/messages.mjs";
 
 const SLOT = "numoPanel";
 const OUT = "captures/shots/numo/out";
-const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+// Preview and production give Aurora different ids (captures/lib/config.mjs).
+const AURORA = auroraProjectId(CAPTURE.baseUrl);
 
 /**
  * 4/3, but in 1200 × 900 and not in the common window of 1447 × 1085 —

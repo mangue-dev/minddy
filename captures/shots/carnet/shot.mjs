@@ -9,11 +9,13 @@
  * node captures/shots/carnet/shot.mjs --publish # + book on the landing
  */
 import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
+import { auroraProjectId } from "../../lib/config.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "scratchpad";
 const OUT = "captures/shots/carnet/out";
-const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+// Preview and production give Aurora different ids (captures/lib/config.mjs).
+const AURORA = auroraProjectId(CAPTURE.baseUrl);
 
 /** 4/3. Smaller than other captures: see `intent.md`, § Framing. */
 const VIEWPORT = { width: 1024, height: 768 };

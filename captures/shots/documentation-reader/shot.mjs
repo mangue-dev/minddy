@@ -71,7 +71,7 @@ async function run(authed, resolved = null) {
       // Rewrite only the read APIs that carry demo prose. Server-rendered
       // documents are left intact (rewriting them breaks hydration); the
       // public board's demo text is translated in the rendered page instead.
-      if (!/^\/api\/(projects|trash|documents|me\/cycle|me\/board|all|public)(\/|$)/.test(url.pathname)) return route.fallback();
+      if (!/^\/api\/(projects|trash|documents|me\/cycle|me\/board|me\/search-index|me\/issues|all|public)(\/|$)/.test(url.pathname)) return route.fallback();
       const response = await route.fetch().catch(() => null);
       if (!response) return;
       if (!response.ok()) return route.fulfill({ response });
@@ -139,7 +139,7 @@ async function run(authed, resolved = null) {
       const openIssue = async key => {
         const dialog = page.getByRole("dialog").first();
         if (!(await dialog.isVisible())) await page.getByText(key, { exact: true }).first().click();
-        await dialog.getByRole("button", { name: messages.IssueUI.changeStatusAria, exact: true }).waitFor();
+        await dialog.getByRole("button", { name: new RegExp(`^${messages.Field.status}\\s*:`) }).waitFor();
         return dialog;
       };
       await capture("reader-first-project", `/projects/${demo.projectId}`, () => page.getByRole("dialog").first(), async () => {
@@ -149,7 +149,7 @@ async function run(authed, resolved = null) {
       await capture("database-date-time", `/projects/${demo.projectId}`, () => page.locator("[data-radix-popper-content-wrapper]").last(), async () => {
         await page.getByText("AUR-2", { exact: true }).first().waitFor();
         const dialog = await openIssue("AUR-2");
-        await dialog.getByRole("button", { name: messages.IssueUI.changeDueDateAria, exact: true }).click();
+        await dialog.getByRole("button", { name: new RegExp(`^${messages.Field.dueDate}\\s*:`) }).click();
         const popover = page.locator("[data-radix-popper-content-wrapper]").last();
         const addTime = popover.getByRole("switch", { name: messages.DatePicker.addTime });
         if (await addTime.getAttribute("aria-checked") !== "true") await addTime.click();

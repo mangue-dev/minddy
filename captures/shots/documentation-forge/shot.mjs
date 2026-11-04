@@ -226,7 +226,8 @@ try {
     const composer = page.locator("[contenteditable=true]").last();
     await composer.waitFor();
     await composer.click();
-    await page.keyboard.type("$documentation");
+    // Skills are picked from the "/" menu since the "$" menu was removed.
+    await page.keyboard.type("/documentation");
     await page.getByText("documentation-demo", { exact: true }).first().waitFor();
     await page.keyboard.press("Enter");
     await page.locator("[data-skill-path]").getByRole("button").first().click();

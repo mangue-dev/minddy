@@ -26,7 +26,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-01",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -115,9 +115,9 @@
   },
   "review": {
     "revision": 24,
-    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged)",
+    "fact": "agent:claude (MIN-879: mention hover cards per type and the backlink and page resource cards checked against components/mention-hover-card.tsx, lib/server/mention-preview.ts, app/api/mentions/preview/route.ts and components/pages/page-backlinks.tsx; existing figures unaffected and kept; no capture taken); agent:claude (context mentions and the link menu: source review of lib/use-context-mentions.ts, components/mention-chip.tsx, components/mention-suggest.tsx and components/markdown-link-menu.tsx; sentences added on the contextual sections of the @ menu, the issue plan mention, truncated mentions, MCP logos and the link menu; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 4 kept with their earlier capture; no browser walkthrough of the procedures)",
     "language": "agent:claude (en sentences added with catalog UI labels; agent self-review, not human acceptance); agent:claude (en context-mention and link-menu sentences with catalog UI labels; agent self-review, not human acceptance)",
-    "date": "2026-11-01"
+    "date": "2026-11-04"
   },
   "related": [
     "notifications-and-inbox",
@@ -170,13 +170,14 @@
       "caption": "Headings, task blocks and the AUR-2 mention keep the page structured. This is demonstration content.",
       "revision": 24,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         1154,
         1046
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "page-comments-and-collaboration-steps",
@@ -186,13 +187,14 @@
       "caption": "Read page activity and write a comment in the composer. No comment has been submitted in this example.",
       "revision": 24,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         608,
         616
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "page-files-steps",
@@ -234,13 +236,14 @@
       "caption": "Private keeps the page within the project. Review the intended audience before changing publication.",
       "revision": 24,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         496,
         234
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "import-export-and-print-pages-steps",
@@ -250,13 +253,14 @@
       "caption": "Choose Markdown to download the document, or Print / PDF to open the printable view.",
       "revision": 24,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         211,
         128
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "page-file-preview",

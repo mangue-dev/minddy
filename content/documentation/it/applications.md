@@ -23,7 +23,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -74,7 +74,7 @@
   },
   "review": {
     "revision": 19,
-    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture)",
+    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (it changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-04"
   },
@@ -103,7 +103,7 @@
       "caption": "Su uno schermo stretto, i dettagli del ticket occupano un pannello adattabile. Usa il pulsante di chiusura per tornare al progetto; Numo resta accessibile dal pulsante mobile.",
       "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         438,
         1032
@@ -120,7 +120,7 @@
       "caption": "La guida pubblica illustra i tre passaggi di Safari e l’opzione Apri come app web da mantenere attiva. Sono illustrazioni didattiche mostrate da minddy, non schermate di un’installazione iOS completata.",
       "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-28",
+      "capturedAt": "2026-11-04",
       "viewport": [
         1488,
         759
@@ -137,7 +137,7 @@
       "caption": "Questo browser blocca le notifiche. Ripristina il permesso del sito prima di registrare il dispositivo.",
       "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         816,
         196
@@ -154,7 +154,7 @@
       "caption": "L’account ha un dispositivo browser registrato e attivo. L’elenco mostra la data di registrazione e quella dell’ultimo invio. La comparsa di un avviso dipende comunque dal permesso del browser e dalle impostazioni del sistema operativo.",
       "revision": 19,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         816,
         208

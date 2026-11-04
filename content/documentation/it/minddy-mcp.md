@@ -21,7 +21,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-10-31",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -60,9 +60,9 @@
   },
   "review": {
     "revision": 17,
-    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept)",
+    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:claude (it paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-10-31"
+    "date": "2026-11-04"
   },
   "related": [
     "numo",
@@ -87,7 +87,7 @@
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         816,
         252
@@ -104,7 +104,7 @@
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
       "revision": 17,
       "reviewed": true,
-      "capturedAt": "2026-10-21",
+      "capturedAt": "2026-11-04",
       "viewport": [
         560,
         288

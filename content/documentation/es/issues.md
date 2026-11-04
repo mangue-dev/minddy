@@ -30,7 +30,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-753 drafts tray; MIN-750 Smart Fill re-evaluation; MIN-804 parent and sub-issue relations; MIN-798 Smart Fill titles; MIN-809 Smart Fill split button; MIN-813 Smart Fill title on request; MIN-833 selection right-click menu",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -133,7 +133,7 @@
   },
   "review": {
     "revision": 47,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate)",
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 9 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-04"
   },
@@ -199,7 +199,7 @@
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         1154,
         786
@@ -216,10 +216,10 @@
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         288,
-        358
+        357
       ],
       "theme": "light",
       "padding": 24,
@@ -233,13 +233,14 @@
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         496,
         212
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "issue-dependencies-steps",
@@ -249,7 +250,7 @@
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-29",
+      "capturedAt": "2026-11-04",
       "viewport": [
         788,
         506
@@ -262,11 +263,11 @@
       "id": "sub-issues-steps",
       "kind": "screenshot",
       "src": "/documentation/es/work-sub-issues.png",
-      "alt": "Campo para crear una subincidencia en una incidencia principal de demostración.",
-      "caption": "El campo crea una hija de esta incidencia; cada hija conserva su estado y conversación.",
+      "alt": "Sección de subincidencias de una incidencia principal de demostración, con el botón Crear una subincidencia y su flecha de opciones.",
+      "caption": "Crear una subincidencia abre la creación con esta incidencia como principal; cada hija conserva su estado y conversación.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         508,
         1096
@@ -283,7 +284,7 @@
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         508,
         1416
@@ -300,13 +301,14 @@
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-20",
+      "capturedAt": "2026-11-04",
       "viewport": [
         324,
-        540
+        532
       ],
       "theme": "light",
-      "padding": 24
+      "padding": 24,
+      "deviceScaleFactor": 2
     },
     {
       "id": "import-issues-workflow",
@@ -316,7 +318,7 @@
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
       "revision": 47,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         816,
         977

@@ -10,10 +10,14 @@
  */
 import { openPage, settle, shoot, CAPTURE, CAPTURE_VARIANTS } from "../../lib/browser.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
+import { PRODUCTION_ORIGINS } from "../../lib/config.mjs";
 
 const SLOT = "feedbackBoard";
 const OUT = "captures/shots/feedback-board/out";
-const BOARD = "/f/CTxGSyqeTTB85z8crWBwyw";
+// Each demo world publishes Aurora's board under its own token.
+const BOARD = PRODUCTION_ORIGINS.includes(new URL(CAPTURE.baseUrl).origin)
+  ? "/f/CTxGSyqeTTB85z8crWBwyw"
+  : "/f/P8eOokkQQrrN6bSQLGD1Fg";
 const VIEWPORT = { width: 1736, height: 1085 };
 
 /** The expected returns, from the most voted to the least voted. Titles = data. */

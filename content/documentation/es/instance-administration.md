@@ -19,7 +19,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review); MIN-798 Smart Fill title model; MIN-829 instance administration; MIN-847 instance variables",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "self-hosted"
     ],
@@ -59,7 +59,7 @@
   },
   "review": {
     "revision": 14,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-04"
   },
@@ -81,7 +81,7 @@
       "caption": "Cuentas muestra el número de cuentas y la búsqueda de soporte; la captura procede de una instancia de demostración.",
       "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-29",
+      "capturedAt": "2026-11-04",
       "viewport": [
         1488,
         1148
@@ -98,7 +98,7 @@
       "caption": "Modelos muestra un modelo predeterminado por categoría; los modelos por tarea quedan plegados. No se cambió ningún ajuste de modelo ni de proveedor para esta captura.",
       "revision": 14,
       "reviewed": true,
-      "capturedAt": "2026-10-29",
+      "capturedAt": "2026-11-04",
       "viewport": [
         1488,
         1148

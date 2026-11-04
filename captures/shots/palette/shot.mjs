@@ -27,24 +27,24 @@ import {
   CAPTURE_VARIANTS,
   DEFAULT_VIEW_NAMES,
 } from "../../lib/browser.mjs";
+import { auroraProjectId } from "../../lib/config.mjs";
 import { publishShot, writeManifest } from "../../lib/publish.mjs";
 
 const SLOT = "featurePalette";
 const OUT = "captures/shots/palette/out";
-const AURORA = "6cd36606-c297-4920-8ce3-31b5f3697be8";
+// Preview and production give Aurora different ids (captures/lib/config.mjs).
+const AURORA = auroraProjectId(CAPTURE.baseUrl);
 
 /** Same window as heroBoard: both images must have the same scale. */
 const VIEWPORT = { width: 1792, height: 1120 };
 
 /**
- * The query typed. The same word in both languages: it is English in both
- * demo world ticket titles, and it is also the name of the public board
- * on the interface side — this is what brings up a page AND tickets.
+ * The query typed, the same in every locale: demo ticket titles are English.
  */
-// In English, "board" also matches the word "keyboard" in two settings
-// actions. The extra letter keeps the intended public-board action and four
-// tickets in frame without changing the query used by the other locales.
-const QUERY_BY_LOCALE = { en: "board l" };
+// Since the Lumen statistics project (MIN-878) joined the demo account, "board"
+// returns dozens of Lumen tickets and clips the list in every locale.
+// "onboarding" returns three tickets and two actions, all in frame.
+const QUERY = "onboarding";
 
 /**
  * A ticket result can be recognized by its identifier. No word limit
@@ -58,7 +58,7 @@ const PUBLISH = process.argv.includes("--publish");
 const VARIANTS = CAPTURE_VARIANTS;
 
 async function capture({ locale, theme }) {
-  const query = QUERY_BY_LOCALE[locale] ?? "board";
+  const query = QUERY;
   const { browser, page } = await openPage({ theme, locale, viewport: VIEWPORT });
   try {
     await page.goto(`${CAPTURE.baseUrl}/projects/${AURORA}`, { waitUntil: "domcontentloaded" });
@@ -97,7 +97,7 @@ async function capture({ locale, theme }) {
     await page
       .getByRole("option")
       .filter({ hasText: ISSUE_ROW })
-      .nth(3)
+      .nth(2)
       .waitFor({ state: "visible", timeout: 10_000 });
 
     /**

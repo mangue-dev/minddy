@@ -30,7 +30,14 @@ September 2026) so that both images on the page have the same scale.
 fr/light, fr/dark, en/light, en/dark, de/light, de/dark, pt-BR/light,
 pt-BR/dark, it/light, it/dark, es/light, es/dark
 
-## The typed text: `board`
+## The typed text: `onboarding` (since November 2026)
+
+The demo account now also holds the Lumen statistics project, whose
+thousand tickets make `board` overflow the list in every locale. The query is
+`onboarding`: three tickets and two actions, all in frame. The history below
+explains the former `board` query.
+
+## Former typed text: `board`
 
 A search which must retrieve tickets **and** actions, in both
 LANGUAGES. Since the ticket titles are in English, the query is an English word

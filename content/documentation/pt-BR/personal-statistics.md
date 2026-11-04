@@ -19,7 +19,7 @@
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
-    "version": "0.20.0 (MIN-747 release review)",
+    "version": "0.30.0 (MIN-794 release review)",
     "editions": [
       "Cloud",
       "self-hosted"
@@ -70,7 +70,7 @@
       "caption": "Histórico real da conta de demonstração: seis tickets concluídos em dois projetos, trinta tickets criados e nenhuma tarefa do caderno marcada.",
       "revision": 11,
       "reviewed": true,
-      "capturedAt": "2026-10-22",
+      "capturedAt": "2026-11-04",
       "viewport": [
         816,
         999
