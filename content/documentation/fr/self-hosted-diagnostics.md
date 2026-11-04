@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 7,
+  "revision": 9,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-885: email written e-mail as in the fr catalog; wording only, no figure recaptured); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the recovery section: the doctor reads only the environment file (scripts/self-hosting-doctor.mjs diagnose and disabledCapabilities) while Instance tab overrides win over it (lib/server/instance-variables.ts, MIN-847); no browser walkthrough or operator rehearsal; figures not reviewed in this pass)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "instance-configuration",
@@ -77,7 +77,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Préserver la récupération {#recovery}
 
-Corrigez prérequis Docker/CLI ou valeurs API incomplètes puis relancez l’installateur idempotent avec l’environnement conservé. Corrigez les URLs runtime et recréez l’application, sans reconstruire l’image OCI. N’effacez pas de bucket non vide, de données ou de racine pour supprimer un avertissement. Les capacités optionnelles désactivées peuvent être normales. Pour le support, partagez version, profil, heures, codes d’erreur contrôlés et diagnostic expurgé. Retirez mots de passe, tokens, `Authorization`, cookies, URLs privées et contenu utilisateur.
+Corrigez prérequis Docker/CLI ou valeurs API incomplètes puis relancez l’installateur idempotent avec l’environnement conservé. Corrigez les URLs runtime et recréez l’application, sans reconstruire l’image OCI. N’effacez pas de bucket non vide, de données ou de racine pour supprimer un avertissement. Les capacités optionnelles désactivées peuvent être normales. Le doctor ne lit que le fichier d’environnement. Lorsque ce fichier définit `MINDDY_CONFIG_OVERRIDES=1`, une valeur enregistrée dans l’onglet **Instance** de l’administration le remplace : vérifiez cet onglet avant de modifier un service optionnel dans le fichier. Voir [modifier les variables de l’instance](/docs/instance-administration#instance-variables). Pour le support, partagez version, profil, heures, codes d’erreur contrôlés et diagnostic expurgé. Retirez mots de passe, tokens, `Authorization`, cookies, URLs privées et contenu utilisateur.
 
 
 Si un premier téléchargement s’arrête avec un long journal de progression sans erreur de registre, l’installateur v0.11.0 peut dépasser son tampon de sortie de sous-processus. Les installateurs suivants téléchargent en mode silencieux avec un tampon plus grand et, si la sortie le dépasse encore, s’arrêtent avec une consigne explicite. Dans les deux cas, lancez `compose pull --quiet` dans le contexte Compose exact de l’installation, puis relancez le même installateur avec `--skip-pull` pour utiliser ces images locales en conservant l’environnement. Ce contournement ne corrige ni une erreur de registre ni une signature invalide. Si la compilation hors ligne signale une version `jose` différente, arrêtez. L’outillage v0.11.0 exige 6.2.3 alors que sa dépendance directe figée résout 6.2.12 ; obtenez une combinaison release/outillage corrigée avant de valider cette installation. Dans les releases suivantes, l’épinglage correspond à la dépendance figée : un écart signifie que `pnpm install --frozen-lockfile` ne s’est pas terminé dans ce checkout. Ne relâchez pas silencieusement le contrôle d’identité de dépendance.

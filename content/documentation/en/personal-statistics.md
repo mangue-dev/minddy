@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -47,10 +47,10 @@
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the activity grid description to state that its rows follow the First day of the week preference, and added a pointer to project statistics in project settings; no browser walkthrough; figures not reviewed in this pass)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "personal-cycle",
@@ -68,7 +68,7 @@
       "src": "/documentation/en/personal-statistics-workflow.png",
       "alt": "Profile statistics with the figure strip, the 12-month activity grid, the breakdowns by project and category, and the work rhythm.",
       "caption": "The demonstration account's real history: six completed issues in two projects, thirty created issues, no notebook task checked off.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -90,9 +90,9 @@
 
 Your statistics are in the **Profile** tab of account settings. Choose your name at the top of the account menu to open it directly. **Account settings** opens on **Preferences**; from there, select **Profile**, the first tab. The statistics appear under your avatar, name and email. The former `/statistics` address now opens this tab.
 
-A strip of six figures comes first: **Completed**, **Tasks checked off**, **Created**, **Projects**, **Longest streak** and **Current streak**. It replaces the former all-time totals section. Below it, read the 12-month headline and activity grid, then **Where your work went**, with breakdowns by project, category and objective, and **Work rhythm**, with **Current workload**, **Issues per cycle**, **Due-date gap** and **Breakdown by effort**. **Issues per cycle**, **Due-date gap** and **Breakdown by effort** appear only when they have data. The tab shows its configured periods; it has no date-range filter to select another interval. The surface summarizes your work rather than establishing another member's performance ranking.
+A strip of six figures comes first: **Completed**, **Tasks checked off**, **Created**, **Projects**, **Longest streak** and **Current streak**. It replaces the former all-time totals section. Below it, read the 12-month headline and activity grid, then **Where your work went**, with breakdowns by project, category and objective, and **Work rhythm**, with **Current workload**, **Issues per cycle**, **Due-date gap** and **Breakdown by effort**. **Issues per cycle**, **Due-date gap** and **Breakdown by effort** appear only when they have data. The tab shows its configured periods; it has no date-range filter to select another interval. The surface summarizes your work rather than establishing another member's performance ranking. Statistics for a whole project, visible to its members, are in its settings: see [Configure a project](/docs/projects#project-settings).
 
-Use completed issue counts, pace, active days, streaks and time measurements to inspect your own activity. The activity grid counts issue-completion and notebook-task-completion events, grouped into calendar days in your time zone. The grid never scrolls: it shows the most recent weeks that fit the screen, so a phone shows fewer months than a computer. An active day has at least one such event; the current streak tolerates an empty today but ends at the next empty day. The **Completed** figure deduplicates issue identifiers: moving the same issue to Done twice still counts once, so an event count and a distinct-issue total answer different questions. The headline above the grid adds the issues and notebook tasks you completed over the last 12 months; point to its number to see the split into issues, tasks and active days. It also counts each issue once over those 12 months: an issue completed again marks each of its days in the grid but adds one issue to the headline.
+Use completed issue counts, pace, active days, streaks and time measurements to inspect your own activity. The activity grid counts issue-completion and notebook-task-completion events, grouped into calendar days in your time zone. Its rows start on the day chosen under **First day of the week** in **Preferences**. The grid never scrolls: it shows the most recent weeks that fit the screen, so a phone shows fewer months than a computer. An active day has at least one such event; the current streak tolerates an empty today but ends at the next empty day. The **Completed** figure deduplicates issue identifiers: moving the same issue to Done twice still counts once, so an event count and a distinct-issue total answer different questions. The headline above the grid adds the issues and notebook tasks you completed over the last 12 months; point to its number to see the split into issues, tasks and active days. It also counts each issue once over those 12 months: an issue completed again marks each of its days in the grid but adds one issue to the headline.
 
 Time by effort is the median elapsed time from an issue’s first recorded move to in progress until completion, for eligible done issues assigned to you with an effort and both timestamps. It includes elapsed waiting time; it is not a stopwatch of hours worked. The **Issue count** view shows the underlying sample size. A missing median can reflect no eligible measurements rather than zero duration. Read the unit and the period each section describes before comparing values.
 

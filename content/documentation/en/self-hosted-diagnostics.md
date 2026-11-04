@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 7,
-  "sourceRevision": 7,
+  "revision": 8,
+  "sourceRevision": 8,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 8,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the recovery section: the doctor reads only the environment file (scripts/self-hosting-doctor.mjs diagnose and disabledCapabilities) while Instance tab overrides win over it (lib/server/instance-variables.ts, MIN-847); no browser walkthrough or operator rehearsal; figures not reviewed in this pass)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "instance-configuration",
@@ -77,7 +77,7 @@ pnpm self-host:doctor -- --mode full --env-file "$MINDDY_ENV_FILE" \
 
 ## Retain evidence and retry deliberately {#recovery}
 
-Fix missing Docker/CLI prerequisites or incomplete API values and repeat the idempotent installer using the preserved environment. Correct runtime public URLs and recreate the application; rebuilding the OCI image is unnecessary. Do not delete non-empty buckets, reset database data or rotate roots to clear warnings. Optional-disabled capability reports can be expected when those providers are intentionally absent. Share release, profile, timestamps, controlled error codes and redacted diagnostics for support. Remove passwords, tokens, `Authorization` headers, cookies, private object URLs and user content.
+Fix missing Docker/CLI prerequisites or incomplete API values and repeat the idempotent installer using the preserved environment. Correct runtime public URLs and recreate the application; rebuilding the OCI image is unnecessary. Do not delete non-empty buckets, reset database data or rotate roots to clear warnings. Optional-disabled capability reports can be expected when those providers are intentionally absent. The doctor reads only the environment file. When that file sets `MINDDY_CONFIG_OVERRIDES=1`, a value saved in the **Instance** tab of the admin dashboard overrides it, so check that tab before changing an optional service in the file; see [edit the instance variables](/docs/instance-administration#instance-variables). Share release, profile, timestamps, controlled error codes and redacted diagnostics for support. Remove passwords, tokens, `Authorization` headers, cookies, private object URLs and user content.
 
 
 If a fresh image download stops with a long progress log and no registry error, the v0.11.0 installer can exceed its subprocess output buffer. Later installers pull quietly with a larger buffer and, if the output still exceeds it, stop with an explicit instruction. In either case, run `compose pull --quiet` in the exact installed Compose context, then rerun the same installer with `--skip-pull` to use those loaded images, preserving the environment. This workaround does not repair a registry or signature failure. If offline function compilation reports a `jose` version mismatch, stop. The v0.11.0 tooling requests 6.2.3 while its direct frozen dependency resolves to 6.2.12; obtain a corrected release/tooling combination before treating that installation as accepted. In later releases, the pin matches the frozen dependency, so a mismatch means `pnpm install --frozen-lockfile` did not complete in that checkout. Do not silently relax the dependency identity check.

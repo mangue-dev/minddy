@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-22"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "projects",
@@ -61,7 +61,7 @@
       "src": "/documentation/en/work-inbox.png",
       "alt": "Inbox with demonstration mentions, assignments and comments, including read and unread items.",
       "caption": "Demonstration activity shows the author, issue and read state. All includes read and unread notifications.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -80,7 +80,7 @@
 
 ## Read Inbox {#notifications-and-inbox}
 
-Open Inbox from its icon in the top bar, from the Inbox row of the sidebar on a phone, or by pressing G then I outside a text field. A red count on the icon adds unread notifications and pending invitations; an installed PWA shows the same count on its app icon. Inbox opens as a popover, or as a sheet on a phone, and groups notifications under Today, Yesterday and Earlier.
+Open Inbox from its icon in the top bar, from the Inbox row of the sidebar on a phone, or by pressing G then I outside a text field. A red count on the icon adds unread notifications and pending invitations; an installed PWA shows the same count on its app icon. Inbox opens as a popover, or as a sheet on a phone, and groups notifications under Today, Yesterday and Earlier. Once you type in the command palette, it also finds notifications: choosing one opens Inbox on the tab that lists it, Unread or All, and highlights it without marking it read.
 
 Inbox opens on the Unread filter. All also lists read notifications, and Mentions keeps only mentions in comments and pages. Select an item to open its underlying issue, page or pull request. Opening a notification marks it read. Its row also offers Mark as read or Mark as unread, and Mark all as read in the Inbox header clears every unread marker. Marking unread restores that activity marker; it does not undo the underlying issue or page change. A notification is a pointer to accessible work, not a replacement for its current content.
 
@@ -92,7 +92,7 @@ Pending project invitations appear under Invitations in the Unread and All filte
 
 ## Choose notification channels {#notification-preferences}
 
-Select Inbox settings in the Inbox header, or open Account settings and choose the Notifications tab. Under Inbox notifications, a switch per category (Assignments, Mentions, Comments, Numo, Routines, Pull requests, Feedback and Pages) decides what lands in your Inbox. Turning a category off stops future notifications of that kind, including their push alerts; it does not remove notifications you already received.
+Select Inbox settings in the Inbox header, or open Account settings and choose the Notifications tab. Under Inbox notifications, a switch per category (Assignments, Mentions, Comments, Numo, Routines, Pull requests, Feedback and Pages) decides what lands in your Inbox. Turning a category off stops future notifications of that kind, including their push alerts; it does not remove notifications you already received. On a self-hosted instance, administrators also get an Instance variables notification when another administrator changes an instance variable; no switch turns it off. See [Edit the instance variables](/docs/instance-administration#instance-variables).
 
 The Push notifications section on the same tab lists the devices that receive alerts. Browser, PWA or desktop delivery also needs device registration and the operating system's permission. Turning a device off or removing it stops alerts on that device only; your Inbox and its categories are unchanged.
 
