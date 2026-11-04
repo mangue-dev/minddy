@@ -152,7 +152,7 @@ export function ObjectiveBoardHeader({
             <div className="flex items-center gap-2">
               <ProgressRing
                 percent={progress.percent}
-                colorClass="text-emerald-500"
+                colorClass="text-success"
                 className="size-7"
               />
               <div className="flex flex-col leading-tight">

@@ -48,6 +48,7 @@ const REASONING_LABEL_KEYS: Record<ReasoningLevel, MessageKey<"Agent">> = {
 /** Shared Numo settings mounted by both the full composer and the FAB panel. */
 export function ConversationSettings() {
   const t = useTranslations("Agent");
+  const tIssueUI = useTranslations("IssueUI");
   const { state, updateConversationConfig } = useAssistantChatContext();
   // Numo's default provider and the providers the account can choose; then
   // the catalog of the provider this conversation uses (MIN-826).
@@ -153,7 +154,15 @@ export function ConversationSettings() {
           <Button
             type="button"
             variant="ghost"
-            aria-label={t("sectionTitle")}
+            // The name carries the model and reasoning shown on hover.
+            aria-label={
+              resolvedModel
+                ? tIssueUI("fieldValueAria", {
+                    field: t("sectionTitle"),
+                    value: `${formatModelName(resolvedModel)} · ${t(REASONING_LABEL_KEYS[displayedReasoning])}`,
+                  })
+                : t("sectionTitle")
+            }
             aria-expanded={open}
             // The composer shows the provider's logo and a chevron only
             // (MIN-827): the model and its reasoning level are named on hover.

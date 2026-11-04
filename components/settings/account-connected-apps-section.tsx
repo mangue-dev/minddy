@@ -12,13 +12,13 @@ import { revokeOAuthGrantApi, type OAuthGrant } from "@/lib/oauth-grants-api";
 import { oauthGrantsQueryKey, useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
 import { isMcpAgentId } from "@/lib/mcp-agents";
 import {
-  SettingsEmpty,
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
 import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 
 /** “Connected applications”: active OAuth grants (agents connected
  via browser consent, without a key). Revoke cuts access
@@ -60,7 +60,7 @@ export function AccountConnectedAppsSection() {
         title={t("connectedAppsTitle")}
       >
         {loading ? (
-          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+          <RowsSkeleton rows={2} leading="avatar" secondLine rowClassName="py-3" />
         ) : grants.length === 0 ? (
           <EmptyScene
             size="compact"

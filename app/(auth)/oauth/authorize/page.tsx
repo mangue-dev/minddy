@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -87,12 +86,11 @@ export default async function OAuthAuthorizePage({
     return (
       <Card className="w-full max-w-md rounded-2xl">
         <CardHeader>
-          <CardTitle className="font-display text-xl tracking-tight">
+          <CardTitle role="heading" aria-level={1} className="font-display text-xl tracking-tight">
             {t("errorTitle")}
           </CardTitle>
           <CardDescription>{t(FAILURE_MESSAGE[validation.reason])}</CardDescription>
         </CardHeader>
-        <CardContent />
       </Card>
     );
   }

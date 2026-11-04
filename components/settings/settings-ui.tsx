@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/field";
 import { HelpHint } from "@/components/settings/help-hint";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * The grammar of the settings screens (MIN-167).
@@ -29,7 +30,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
  * the only tab that read well, raised in shared primitives. Three levels,
  * and each one is MARKED — that's what was missing, everything was in `text-sm` :
  *
- * Page title text-2xl font-display “Settings”
+ * Page title: the title line of the header bar (SettingsShell)
  * └─ Group: section name text-sm font-medium ABOVE the card, with the ⓘ
  *   hint and the master action on the same line (Linear-style); the card
  *   carries only the options, no in-card header anymore
@@ -325,8 +326,15 @@ export function SettingsListRow({
           </span>
         ))}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{title}</div>
-        {subtitle && (
+        {/* A cut name, email or path shows in full on hover. */}
+        {typeof title === "string" ? (
+          <TruncatedText text={title} className="truncate text-sm font-medium" />
+        ) : (
+          <div className="truncate text-sm font-medium">{title}</div>
+        )}
+        {subtitle && (typeof subtitle === "string" && truncateSubtitle ? (
+          <TruncatedText text={subtitle} className="truncate text-xs text-muted-foreground" />
+        ) : (
           <div
             className={cn(
               "text-xs text-muted-foreground",
@@ -335,7 +343,7 @@ export function SettingsListRow({
           >
             {subtitle}
           </div>
-        )}
+        ))}
       </div>
       {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
     </div>

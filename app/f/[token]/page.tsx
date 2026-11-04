@@ -29,6 +29,7 @@ import {
 } from "@/lib/feedback/types";
 import { FeedbackBoardClient } from "./feedback-board-client";
 import { HeaderIdentity } from "./header-identity";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * Public feedback board (MIN-37) — anonymous for reading, the EST token
@@ -132,7 +133,7 @@ export default async function PublicFeedbackPage({ params, searchParams }: PageP
       heading={
         <div className="flex min-w-0 items-center gap-2">
           <ProjectOrb seed={projectOrbSeed(ctx.project)} iconUrl={ctx.project.icon_url} className="size-5 rounded-[6px]" />
-          <h1 className="min-w-0 truncate text-sm font-semibold">{ctx.project.name}</h1>
+          <h1 className="min-w-0 text-sm font-semibold"><TruncatedText text={ctx.project.name} /></h1>
           {tabs.length === 0 && (
             <span className="shrink-0 text-sm text-muted-foreground">· {t("title")}</span>
           )}

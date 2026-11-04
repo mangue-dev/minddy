@@ -12,6 +12,7 @@ import { ImportMappingEditor } from "@/components/settings/import-mapping-editor
 import { useCsvImport } from "@/lib/use-csv-import";
 import type { ImportCommitResponse } from "@/lib/import-api";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /** The import gesture in a PAGE (MIN-45): the “Import” tab of the settings
     of the project, where the deposit and its overview can be read by scrolling, among the others
@@ -68,7 +69,7 @@ export function CsvImportPanel({
         <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{prepared.fileName}</p>
+              <TruncatedText text={prepared.fileName} className="truncate text-sm font-medium" />
               <p className="text-xs text-muted-foreground">
                 {/* The source is detected when analyzing the file: key
                     assembly at execution. */}
@@ -111,7 +112,7 @@ export function CsvImportPanel({
           {/* No title column: the file is not refused, it is waiting
               let us designate which one bears the name of the tickets — just above. */}
           {!hasTitleColumn && (
-            <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+            <p className="flex items-center gap-1.5 text-xs text-warning-strong">
               <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" aria-hidden />
               {t("importErrorInvalid")}
             </p>

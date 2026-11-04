@@ -102,6 +102,7 @@ export function FeedbackSetupWizard({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("Settings");
+  const tBoard = useTranslations("FeedbackBoard");
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("board");
   const [sso, setSso] = useState(true);
@@ -259,7 +260,7 @@ export function FeedbackSetupWizard({
         error?: string;
       } | null;
       if (!response.ok || !data?.prompt) {
-        throw new Error(data?.error || "Error");
+        throw new Error(data?.error || tBoard("errorGeneric"));
       }
       setPrompt(data.prompt);
       setKeyCreated(data.key_created === true);
@@ -511,7 +512,7 @@ export function FeedbackSetupWizard({
                   }}
                 >
                   {envCopied ? (
-                    <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
+                    <HugeiconsIcon icon={CheckIcon} className="size-4 text-success" />
                   ) : (
                     <HugeiconsIcon icon={Copy01Icon} className="size-4" />
                   )}
@@ -534,7 +535,7 @@ export function FeedbackSetupWizard({
             onClick={() => prompt && void copyToClipboard(prompt)}
           >
             {copied ? (
-              <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
+              <HugeiconsIcon icon={CheckIcon} className="size-4 text-success" />
             ) : (
               <HugeiconsIcon icon={Copy01Icon} className="size-4" />
             )}

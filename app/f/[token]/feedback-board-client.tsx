@@ -60,6 +60,7 @@ import {
   TooltipTrigger,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * Public board list (MIN-37) — UserJot-style structure: filter bar
@@ -859,7 +860,7 @@ function ComposerDialog({
                 onClick={() => onOpenChange(false)}
                 className="flex items-center justify-between gap-2 text-sm transition-colors hover:text-brand"
               >
-                <span className="min-w-0 truncate">{s.title}</span>
+                <TruncatedText text={s.title} className="min-w-0 truncate" />
                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                   ▲ {s.voteCount}
                 </span>

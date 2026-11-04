@@ -111,6 +111,9 @@ export function FeedbackAuthDialog({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t("emailPlaceholder")}
+                aria-label={t("emailPlaceholder")}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "feedback-auth-error" : undefined}
                 autoComplete="email"
                 autoFocus
                 required
@@ -140,6 +143,9 @@ export function FeedbackAuthDialog({
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
               placeholder={t("codePlaceholder")}
+              aria-label={t("codePlaceholder")}
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "feedback-auth-error" : undefined}
               autoComplete="one-time-code"
               autoFocus
               required
@@ -149,7 +155,7 @@ export function FeedbackAuthDialog({
           {/* The error code comes from the server response: key assembled at
  execution. */}
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p id="feedback-auth-error" role="alert" className="text-sm text-destructive">
               {t(`errors.${error}` as MessageKey<"PublicFeedback">)}
             </p>
           )}

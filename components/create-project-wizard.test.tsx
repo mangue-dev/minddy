@@ -73,6 +73,7 @@ vi.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => children,
   TooltipTrigger: ({ children }: { children: React.ReactNode }) => children,
   TooltipContent: () => null,
+  useTooltipScope: () => ({ provided: false, insideTrigger: false }),
 }));
 vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => null }));
 vi.mock("@/components/project-icon-picker", () => ({ ProjectIconPicker: () => null }));

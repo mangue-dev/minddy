@@ -37,13 +37,13 @@ export default async function EmailConfirmedPage() {
   const t = await getTranslations("Auth");
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
+    <main className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md rounded-2xl">
         <CardContent className="flex flex-col items-center gap-6 px-8 py-10 text-center">
           <MinddyLogo className="h-7 w-auto text-foreground" />
 
           <AppIcon icon={CheckIcon}
-            className="size-10 text-emerald-500"
+            className="size-10 text-success"
             strokeWidth={1.5}
             aria-hidden="true"
           />
@@ -60,6 +60,6 @@ export default async function EmailConfirmedPage() {
           </Button>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

@@ -158,7 +158,7 @@ export function ImportMappingEditor({
         })}
       </span>
       {unresolved > 0 && (
-        <span className="text-amber-600 dark:text-amber-500">
+        <span className="text-warning-strong">
           {t("importMappingUnresolved", { count: unresolved })}
         </span>
       )}
@@ -346,7 +346,7 @@ function Row({
     <div
       className={cn(
         "-mx-1.5 flex items-center gap-3 rounded-md px-1.5 py-0.5",
-        unresolved && "bg-amber-500/10 dark:bg-amber-500/15"
+        unresolved && "bg-surface-warning"
       )}
     >
       <div className="min-w-0 flex-1">
@@ -358,7 +358,7 @@ function Row({
             <>
               <AppTooltip label={t("importValueToPlace")}>
                 <span
-                  className="ml-0.5 font-medium text-amber-600 dark:text-amber-500"
+                  className="ml-0.5 font-medium text-warning-strong"
                   aria-hidden
                 >
                   *

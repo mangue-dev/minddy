@@ -168,6 +168,7 @@ const ObjectiveColorValue = memo(function ObjectiveColorValue({
 } & PickerControl) {
   const t = useTranslations("Objectives");
   const tCommon = useTranslations("Common");
+  const tIssueUI = useTranslations("IssueUI");
   const name = useColorName(value);
   return (
     <ColorSelect
@@ -178,7 +179,15 @@ const ObjectiveColorValue = memo(function ObjectiveColorValue({
       tooltip={t("colorFieldLabel")}
       {...control}
       trigger={
-        <button type="button" aria-label={t("colorFieldLabel")} className={TRIGGER}>
+        // The name keeps the visible value (WCAG 2.5.3).
+        <button
+          type="button"
+          aria-label={tIssueUI("fieldValueAria", {
+            field: t("colorFieldLabel"),
+            value: value ? (name ?? t("colorFieldLabel")) : tCommon("none"),
+          })}
+          className={TRIGGER}
+        >
           <span
             className={cn(
               "flex size-[18px] shrink-0 items-center justify-center rounded-full",

@@ -49,7 +49,7 @@ export default async function ConfirmSignInPage() {
   const cta = recovery ? "confirmResetCta" : "confirmSignInCta";
 
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
+    <main className="flex min-h-[100dvh] items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md rounded-2xl">
         <CardContent className="flex flex-col items-center gap-6 px-8 py-10 text-center">
           <MinddyLogo className="h-7 w-auto text-foreground" />
@@ -85,6 +85,6 @@ export default async function ConfirmSignInPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

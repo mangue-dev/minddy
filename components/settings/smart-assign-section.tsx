@@ -21,6 +21,7 @@ import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {AutoTextarea} from "@/components/auto-textarea";
 import type { Project } from "@/lib/types";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 const UserCircleSceneIcon = ({
   className,
@@ -178,7 +179,7 @@ export function SmartAssignSection({
  an optional field, and Smart Assign looks like it sorts while it
  returns everything to the owner. */}
             {incomplete && (
-              <p className="flex items-start gap-2 text-xs leading-relaxed text-amber-600 dark:text-amber-500">
+              <p className="flex items-start gap-2 text-xs leading-relaxed text-warning-strong">
                 <HugeiconsIcon icon={Alert01Icon} className="mt-0.5 size-3.5 shrink-0" aria-hidden />
                 {t("smartAssignIncompleteWarning", {
                   count: missingRuleIds.size,
@@ -198,10 +199,10 @@ export function SmartAssignSection({
               label={
                 <>
                   <UserAvatar seed={m.avatar_seed} className="size-6" />
-                  <span className="truncate">{displayName(m)}</span>
+                  <TruncatedText text={displayName(m)} className="truncate" />
                   {m.is_owner && <Badge variant="secondary">{tm("owner")}</Badge>}
                   {missingRuleIds.has(m.user_id) && (
-                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-normal text-amber-600 dark:text-amber-500">
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-normal text-warning-strong">
                       <HugeiconsIcon icon={Alert01Icon} className="size-3" aria-hidden />
                       {t("smartAssignNoRule")}
                     </span>

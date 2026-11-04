@@ -247,7 +247,7 @@ export function RoutineSettings({
         <CollapsibleContent>
           <div className="flex flex-col gap-3 px-4 pb-4">
             {incomplete ? (
-              <p className="text-xs text-amber-700 dark:text-amber-400">{t("triggerIncompleteHint")}</p>
+              <p className="text-xs text-warning-strong">{t("triggerIncompleteHint")}</p>
             ) : null}
             <RoutineTriggerFields
               hideLegend

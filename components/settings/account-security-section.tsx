@@ -20,6 +20,8 @@ import {OtpInput} from "@/components/otp-input";
 import {isMobileDeviceLabel} from "@/lib/device-label";
 import {authSessionsQueryKey, revokeAuthSessionApi, useAuthSessionsQuery} from "@/lib/use-auth-sessions-query";
 import type {AuthSessionSummary} from "@/lib/types";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { TextLinesSkeleton, RowsSkeleton } from "@/components/loading-skeletons";
 
 /**
  * Account settings → “Second factor” (MIN-132).
@@ -318,7 +320,7 @@ export function AccountSecuritySection() {
         variant="block"
       >
         {status === null ? (
-          <SettingsEmpty className="py-0">{tc("loading")}</SettingsEmpty>
+          <TextLinesSkeleton lines={2} />
         ) : stage === "codes" ? (
           <div className="space-y-4">
             <div className="space-y-1">
@@ -507,7 +509,7 @@ export function AccountSecuritySection() {
           )}
         </SettingsRow>
         {sessionsLoading ? (
-          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+          <RowsSkeleton rows={2} leading="avatar" secondLine rowClassName="py-3" />
         ) : sessionsFailed ? (
           <SettingsEmpty>{t("sessionsLoadError")}</SettingsEmpty>
         ) : (
@@ -535,87 +537,51 @@ export function AccountSecuritySection() {
         )}
       </SettingsGroup>
 
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={toRevoke !== null}
         onOpenChange={(open) => {
           if (!open) setToRevoke(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("signOutSessionConfirmTitle", {
-                device: toRevoke ? sessionName(toRevoke) : "",
-              })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("signOutSessionConfirmDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={(e) => {
-                e.preventDefault();
-                const session = toRevoke;
-                setToRevoke(null);
-                if (session) void revokeSession(session);
-              }}
-            >
-              {t("signOutSessionButton")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("signOutSessionConfirmTitle", {
+          device: toRevoke ? sessionName(toRevoke) : "",
+        })}
+        description={t("signOutSessionConfirmDescription")}
+        confirmLabel={t("signOutSessionButton")}
+        cancelLabel={tc("cancel")}
+        onConfirm={() => {
+          const session = toRevoke;
+          setToRevoke(null);
+          if (session) void revokeSession(session);
+        }}
+      />
 
-      <AlertDialog open={signOutOthersOpen} onOpenChange={setSignOutOthersOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("signOutOthersConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("signOutOthersConfirmDescription")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={signingOutOthers}>{tc("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={signingOutOthers}
-              onClick={(e) => {
-                e.preventDefault();
-                setSignOutOthersOpen(false);
-                void signOutOthers();
-              }}
-            >
-              {t("signOutOthersButton")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={signOutOthersOpen}
+        onOpenChange={setSignOutOthersOpen}
+        title={t("signOutOthersConfirmTitle")}
+        description={t("signOutOthersConfirmDescription")}
+        confirmLabel={t("signOutOthersButton")}
+        cancelLabel={tc("cancel")}
+        isLoading={signingOutOthers}
+        onConfirm={() => {
+          setSignOutOthersOpen(false);
+          void signOutOthers();
+        }}
+      />
 
-      <AlertDialog open={disableOpen} onOpenChange={setDisableOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("disableConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>{t("disableConfirmDescription")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={busy}>{tc("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={busy}
-              onClick={(e) => {
-                e.preventDefault();
-                setDisableOpen(false);
-                void disable();
-              }}
-            >
-              {t("disableButton")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={disableOpen}
+        onOpenChange={setDisableOpen}
+        title={t("disableConfirmTitle")}
+        description={t("disableConfirmDescription")}
+        confirmLabel={t("disableButton")}
+        cancelLabel={tc("cancel")}
+        isLoading={busy}
+        onConfirm={() => {
+          setDisableOpen(false);
+          void disable();
+        }}
+      />
 
       <AlertDialog open={regenerateOpen} onOpenChange={setRegenerateOpen}>
         <AlertDialogContent>

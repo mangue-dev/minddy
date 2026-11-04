@@ -119,6 +119,8 @@ export function ForgotPasswordForm() {
           <Field id="email" label={t("email")}>
             <Input
               id="email"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "forgot-password-error" : undefined}
               type="email"
               className="h-10 bg-control"
               autoComplete="email"
@@ -130,7 +132,7 @@ export function ForgotPasswordForm() {
             />
           </Field>
 
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p id="forgot-password-error" role="alert" className="text-sm text-destructive">{error}</p>}
 
           <Button
             type="submit"

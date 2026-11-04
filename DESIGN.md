@@ -72,7 +72,8 @@ where `lib/theme-presets.test.ts` measures their contrast.
 - **Fonts.** Inter for interface text (sans, mono and display all resolve to
   it); Instrument Serif for the rare editorial accent; `--font-kbd` for key
   caps. Extra sizes: `text-2xs` (10px), `text-3xs` (11px), `text-md` (13px).
-  Settings page titles use `text-2xl font-display`.
+  A settings screen's title is the title line of its header bar
+  (`SettingsShell`), not a heading above the cards.
 - **Radius.** `--radius` is 1rem and the scale is relative to it (`rounded-sm`
   to `rounded-4xl`); note that `rounded-md` is 14px here, not Tailwind's 6px.
   Buttons are pills (`rounded-full`). The floating content pane and the modals

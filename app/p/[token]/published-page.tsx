@@ -16,6 +16,7 @@ import { ProjectOrb } from "@/components/project-orb";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { PublicPageBody } from "@/components/public-page-body";
 import { PagePasswordForm } from "./password-form";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * A PUBLISHED PAGE (MIN-283), rendered for someone who does not have an account.
@@ -126,9 +127,7 @@ export async function PublishedPage({
             iconUrl={bundle.project.icon_url}
             className="size-5 rounded-[6px]"
           />
-          <span className="min-w-0 truncate text-sm font-semibold">
-            {bundle.project.name}
-          </span>
+          <TruncatedText text={bundle.project.name} className="min-w-0 truncate text-sm font-semibold" />
         </div>
       }
     >

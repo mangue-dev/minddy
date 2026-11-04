@@ -40,6 +40,7 @@ import type {
   Objective,
 } from "@/lib/types";
 import { PasswordForm } from "./password-form";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * Public read-only view of a shared kanban (MIN-26). Anonymous — the token IS
@@ -232,7 +233,7 @@ export default async function SharedViewPage({ params }: PageProps) {
       // The password gate shows nothing about the view, not even its name.
       heading={
         unlocked ? (
-          <h1 className="min-w-0 truncate text-sm font-semibold">{view.name}</h1>
+          <h1 className="min-w-0 text-sm font-semibold"><TruncatedText text={view.name} /></h1>
         ) : undefined
       }
     >

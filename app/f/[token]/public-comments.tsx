@@ -32,6 +32,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * The PUBLIC thread of a return (MIN-196).
@@ -421,9 +422,7 @@ function PublicCommentRow({
               iconUrl={project.iconUrl}
               className="size-6 rounded-[7px]"
             />
-            <span className="min-w-0 truncate text-sm font-medium">
-              {t("teamName", { project: project.name })}
-            </span>
+            <TruncatedText text={t("teamName", { project: project.name })} className="min-w-0 truncate text-sm font-medium" />
           </>
         ) : (
           <UserAvatar seed={comment.authorSeed} className="size-6" />

@@ -38,6 +38,7 @@ import {
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { useTrackView } from "@/lib/use-track-view";
 import { ROUTINE_ICON } from "@/components/feature-icons";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 type TrashFilter = "all" | TrashType;
 
@@ -122,8 +123,8 @@ function TrashRow({
                 {item.identifier}
               </span>
             ) : null}
-            <h3 className="min-w-0 flex-1 basis-48 truncate text-base font-medium tracking-tight">
-              {title}
+            <h3 className="min-w-0 flex-1 basis-48 text-base font-medium tracking-tight">
+              <TruncatedText text={title} />
             </h3>
           </div>
 

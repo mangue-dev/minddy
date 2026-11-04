@@ -1,7 +1,8 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { CloseButton } from "@/components/ui/close-button";
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "framer-motion";
@@ -170,15 +171,7 @@ export function WizardDialog<Id extends string>({
         <DialogDescription className="sr-only">{step.title}</DialogDescription>
 
         <div data-mobile-sheet-close-wrapper className="absolute top-4 right-4 z-30">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => onOpenChange(false)}
-            data-mobile-sheet-close
-            aria-label={tCommon("close")}
-          >
-            <HugeiconsIcon icon={Cancel01Icon} className="h-4 w-4" />
-          </Button>
+          <CloseButton onClick={() => onOpenChange(false)} data-mobile-sheet-close />
         </div>
 
         {/* Header: only where we are. Progression is the only

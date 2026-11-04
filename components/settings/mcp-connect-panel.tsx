@@ -5,7 +5,6 @@ import { CheckmarkCircle02Icon, Copy01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { WizardDialog, type WizardStep } from "@/components/wizard/wizard-dialog";
@@ -119,14 +118,13 @@ function McpAgentWizard({
         <p className="flex items-center gap-2 text-sm" role="status">
           <HugeiconsIcon
             icon={CheckmarkCircle02Icon}
-            className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+            className="size-5 shrink-0 text-success"
             aria-hidden
           />
           {t("mcpConnectedStatus", { name: agent.label })}
         </p>
       ) : (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-          <Spinner />
+        <p className="text-shimmer text-sm text-muted-foreground" role="status">
           {t("mcpWaitingStatus", { name: agent.label })}
         </p>
       ),
