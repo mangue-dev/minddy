@@ -22,8 +22,13 @@ if (pkg.version !== version || desktopPkg.version !== version) {
 }
 const compatibilityEntry = assertReleaseCompatibility(compatibility, version);
 
+// Captures and manual figures put the compressed source archive above 128 MiB
+// in 0.30.0; git and gzip share one bound so an archive git can produce can
+// also be compressed.
+const MAX_ARCHIVE_BYTES = 512 * 1024 * 1024;
+
 function git(args, options = {}) {
-  return execFileSync("git", args, { cwd: root, encoding: options.encoding ?? "utf8", maxBuffer: 512 * 1024 * 1024 });
+  return execFileSync("git", args, { cwd: root, encoding: options.encoding ?? "utf8", maxBuffer: MAX_ARCHIVE_BYTES });
 }
 
 const commit = git(["rev-parse", "HEAD"]).trim();
@@ -50,7 +55,7 @@ const migrationsTar = git([
 ], { encoding: "buffer" });
 
 function gzip(buffer) {
-  return execFileSync("gzip", ["-9", "-n", "-c"], { input: buffer, encoding: "buffer", maxBuffer: 128 * 1024 * 1024 });
+  return execFileSync("gzip", ["-9", "-n", "-c"], { input: buffer, encoding: "buffer", maxBuffer: MAX_ARCHIVE_BYTES });
 }
 
 await writeFile(path.join(output, sourceName), gzip(sourceTar));
