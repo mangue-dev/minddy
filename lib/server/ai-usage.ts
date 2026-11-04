@@ -18,7 +18,7 @@ export type {
   NormalizedUsage,
   OpenRouterUsage,
 } from "./ai-usage-shape";
-export { OPENROUTER_USAGE_INCLUDE, parseOpenRouterUsage } from "./ai-usage-shape";
+export { parseOpenRouterUsage } from "./ai-usage-shape";
 
 /**
  * LLM Cost Tracker — the SINGLE recording point for all IA calls.

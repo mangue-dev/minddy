@@ -45,9 +45,6 @@ export interface ReadContext {
   actorId?: string;
 }
 
-export const COMPACT_ISSUE_COLUMNS =
-  "id, number, title, status, priority, effort, assignee_id, objective_id, due_date, recurrence, parent_id, issue_categories(category_id)";
-
 /** Statuses hidden from list_issues unless include_done (or an explicit filter). */
 export const CLOSED_STATUSES = ["done", "canceled", "duplicate"];
 
@@ -76,11 +73,6 @@ export function compactIssue(
     parent_id: row.parent_id,
     category_ids: categories?.map((c) => c.category_id) ?? [],
   };
-}
-
-/** Escape a user-supplied fragment for a PostgREST or()/ilike pattern. */
-export function ilikePattern(query: string): string {
-  return `%${query.replace(/[,()%_\\]/g, " ").trim()}%`;
 }
 
 /**

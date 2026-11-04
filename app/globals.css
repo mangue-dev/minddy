@@ -1427,14 +1427,6 @@ html[data-app-shell] textarea {
   }
 }
 
-/* Radix enables each ScrollArea axis with an inline overflow declaration. */
-html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-x: scroll"] {
-  overscroll-behavior-x: none;
-}
-html[data-app-shell] [data-radix-scroll-area-viewport][style*="overflow-y: scroll"] {
-  overscroll-behavior-y: none;
-}
-
 /* Mobile full-screen search sheet: the <CommandList> primitive ships a default
    max-height (max-h-72 ≈ 288px) sized for the desktop popover. In the full-
    screen sheet that squishes the command palette into the top third with a big

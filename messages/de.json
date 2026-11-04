@@ -1136,7 +1136,6 @@
     "viewGenerating": "Numo erstellt diese Ansicht…",
     "viewOptions": "Optionen für „{name}“",
     "newIssue": "Neues Ticket",
-    "createInSettings": "Noch keine Kategorien. Erstelle in den Einstellungen eine.",
     "shareView": "Ansicht teilen",
     "renameView": "Ansicht umbenennen",
     "deleteView": "Ansicht löschen",
@@ -1440,7 +1439,6 @@
     "resetFilters": "Filter zurücksetzen"
   },
   "Categories": {
-    "removeFromIssue": "„{name}“ entfernen",
     "colors": {
       "amber": "Bernstein",
       "blue": "Blau",
@@ -1609,7 +1607,6 @@
     "objectiveLinked": "Verknüpftes Ziel",
     "noObjective": "Kein Ziel",
     "parent": "Übergeordnetes Element",
-    "noParent": "Kein übergeordnetes Element",
     "order": "Reihenfolge",
     "integration": "Integration",
     "noIntegration": "Keine Integration",
@@ -2761,7 +2758,6 @@
     "markInProgress": "Als in Bearbeitung markieren",
     "markCompleted": "Als abgeschlossen markieren",
     "cancelTask": "Als abgebrochen markieren",
-    "taskMenuAria": "Aufgabenstatus ändern",
     "taskActionsAria": "Aufgabenaktionen",
     "taskCheckboxAria": "Aufgabe „{text}“ umschalten"
   },
@@ -3213,15 +3209,12 @@
   "Projects": {
     "newProject": "Neues Projekt",
     "firstProject": "Das erste Projekt erstellen",
-    "projectOptions": "Projektoptionen",
     "tickets": "Tickets",
     "triage": "Triage",
     "feedback": "Feedback",
     "objectives": "Ziele",
     "settings": "Einstellungen",
     "triageIssues": "{entityPlural} in der Triage",
-    "openIssues": "Offene {entityPlural}",
-    "doneIssues": "Geschlossene {entityPlural}",
     "nameRequired": "Name ist erforderlich.",
     "keyInvalid": "Der Schlüssel muss mindestens 2 Buchstaben lang sein.",
     "keyTaken": "Der Schlüssel „{key}“ wird bereits von einem deiner Projekte verwendet.",
@@ -5515,9 +5508,6 @@
     "ai_routines_title": "Routinen",
     "ai_routines_body": "Numo erledigt eine Aufgabe nach Zeitplan oder wenn etwas passiert: Ein Ticket landet in der Triage, ein Status ändert sich, neues Feedback kommt an.",
     "aiNote": "In jedem Plan enthalten, auch in Free.",
-    "aiFigure_prompt": "Teile das Checkout-Redesign in Tickets auf",
-    "aiFigure_working": "Tickets werden erstellt…",
-    "aiFigure_reply": "Erledigt: drei Tickets, ausgefüllt und zugewiesen.",
     "aiFigure_issue1": "Zahlungsschritt neu gestalten",
     "aiFigure_issue2": "Karte für das nächste Mal speichern",
     "aiFigure_issue3": "Steuern vor der Zahlung anzeigen",

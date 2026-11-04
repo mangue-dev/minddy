@@ -67,14 +67,6 @@ export type PullRequestWriteToolName =
   | "edit_own_pull_request_comment"
   | "resolve_pull_request_threads";
 
-export const PULL_REQUEST_WRITE_TOOL_NAMES: PullRequestWriteToolName[] = [
-  "merge_pull_request",
-  "update_pull_request",
-  "post_pull_request_comment",
-  "edit_own_pull_request_comment",
-  "resolve_pull_request_threads",
-];
-
 // ── Resolution ──────────────────────────────────────────────────────────────
 
 type Resolved = {

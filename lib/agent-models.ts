@@ -26,21 +26,6 @@ export const AGENT_ALLOWED_MODELS: AgentModelOption[] = [
   { id: "anthropic/claude-opus-4.8", label: "Claude Opus 4.8", hint: "Qualité maximale" },
 ];
 
-// ── Operational settings (defaults; overloadable later) ────────────────
-/**
- * CEILING of the soft-deadline of a chunk: beyond that, we suspend the next round.
- *
- * 700 s, based on the 800 s of the Pro plan under Fluid Compute (see the `maxDuration` of
- * `app/api/cron/agent-drain`). This is only a CEILING: the effective soft-deadline
- * is `min(the caller's declared budget, this)`, so a drain launched from a
- * route of 300 s remains limited by its own budget. This is what allows you to have long chunks in the cron without endangering the short paths.
- */
-export const AGENT_SOFT_DEADLINE_MS = 700_000;
-/** Hard timeout of a model call in the agentic loop. */
-export const AGENT_RUN_TIMEOUT_MS = 210_000;
-/** Garde-fou anti-runaway : nombre max de reprises (suspend→resume) d'un run. */
-export const AGENT_MAX_CONTINUATIONS = 20;
-
 // ── Context compaction (hardening, very long runs) ────────────────────
 /** Beyond this estimation of tokens, we summarize the middle of the history.
  Conservative (proxy characters/4 which underestimates the code): safe on models
@@ -132,23 +117,3 @@ export function agentCompactThreshold(opts: {
   );
   return Math.min(fromWindow, budget);
 }
-/** Size (bytes) of the recent queue preserved verbatim during compaction. */
-export const AGENT_COMPACT_KEEP_RECENT_BYTES = 48_000;
-/** We do not launch compaction (additional LLM call) if there is less than that budget remaining. */
-export const AGENT_COMPACT_MIN_BUDGET_MS = 60_000;
-
-/**
- * Rate at which BOTH engines reread the spending cap — the loop
- * house (`refreshBudgetUsd`) like the opencode supervisor. Here rather than
- * in each of them: a loss window which would differ between the two forms
- * would be exactly the kind of gap that MIN-224 is careful not to create, and
- * MIN-286 completes the separation — the supervisor does not import the loop that it
- * replaces.
- *
- * One minute, and not every round: reading costs two requests (billing
- * + sum of the ledger) and a round can last three seconds. What can be lost
- * between two readings is therefore limited by what the OTHER runs spend in one
- * minute — compared to five for the old form, which only rereads between its chunks,
- * and compared to an entire round (hours) for a form which does not reread.
- */
-export const BUDGET_REFRESH_INTERVAL_MS = 60_000;

@@ -1,5 +1,5 @@
 import "server-only";
-import { hasStrongSecret, requireSecret } from "@/lib/server/env-secrets";
+import { requireSecret } from "@/lib/server/env-secrets";
 
 import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
 
@@ -30,11 +30,6 @@ import { decrypt, encrypt, isEncryptedEnvelope } from "@/lib/server/encryption";
 function getSsoEncryptionSecret(): string {
   // Absent OR too short: the same refusal (MIN-347).
   return requireSecret("FEEDBACK_SSO_ENCRYPTION_SECRET");
-}
-
-/** Is the encryption secret deployed and usable? (config. guard) */
-export function isSsoCryptoConfigured(): boolean {
-  return hasStrongSecret("FEEDBACK_SSO_ENCRYPTION_SECRET");
 }
 
 export function encryptBoardSsoSecret(plain: string): string {

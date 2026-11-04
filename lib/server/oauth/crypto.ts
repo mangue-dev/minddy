@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 
 /**
  * OAuth server crypto primitives. All secrets (codes, tokens) are
@@ -68,13 +68,4 @@ const VERIFIER_RE = /^[A-Za-z0-9._~-]{43,128}$/;
 export function pkceS256Challenge(verifier: unknown): string | null {
   if (typeof verifier !== "string" || !VERIFIER_RE.test(verifier)) return null;
   return createHash("sha256").update(verifier).digest("base64url");
-}
-
-/** PKCE S256 verification in constant time. Only S256 is accepted. */
-export function verifyPkceS256(verifier: unknown, challenge: string): boolean {
-  const computed = pkceS256Challenge(verifier);
-  if (!computed) return false;
-  const a = Buffer.from(computed);
-  const b = Buffer.from(challenge);
-  return a.length === b.length && timingSafeEqual(a, b);
 }

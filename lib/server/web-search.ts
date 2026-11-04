@@ -49,9 +49,6 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 /** `app_config` keys (adjustable from /admin, see lib/ai-model-config.ts). */
 export const WEB_SEARCH_MODEL_CONFIG_KEY = "web_search_model";
 
-/** Exa plan per search, as billed by OpenRouter (USD, indicative). */
-export const WEB_SEARCH_USD_PER_CALL = 0.005;
-
 /** Requested results — the package is the same from 1 to 10, only the prompt increases. */
 const DEFAULT_MAX_RESULTS = 5;
 const MAX_RESULTS_CAP = 10;

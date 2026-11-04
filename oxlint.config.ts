@@ -54,9 +54,9 @@ export default defineConfig({
     // fundamental disagreement, not a count to reduce.
     "anti-slop/no-module-mocking": "off",
     // `no-shape-in-symbol-names` rejects the word "shape". In this repository it
-    // usually describes the domain rather than a data structure: the visual shape
-    // of a mention bullet (components/mention-chip.tsx) and grain canvas shapes
-    // (components/marketing/grain-canvas.tsx). Renaming would reduce clarity.
+    // usually describes the domain rather than a data structure, such as the
+    // visual shape of a mention bullet (components/mention-chip.tsx). Renaming
+    // would reduce clarity.
     "anti-slop/no-shape-in-symbol-names": "off",
 
     // ── oxlint: default rule settings ──────────────────────────────────────────

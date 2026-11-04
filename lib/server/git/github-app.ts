@@ -62,10 +62,6 @@ export function isLocalGithubAppConfigured(): boolean {
   );
 }
 
-export function isGithubWebhookConfigured(): boolean {
-  return !!process.env.GITHUB_WEBHOOK_SECRET;
-}
-
 /**
  * Checks the HMAC signature of a GitHub webhook (`X-Hub-Signature-256: sha256=<hex>`)
  * in constant time. Returns false — never an exception — on missing/malformed
@@ -343,50 +339,6 @@ export async function listInstallationRepositories(
     url = parseNextLink(response.headers.get("link"));
   }
   return repos;
-}
-
-export interface CommitIdentity {
-  name: string;
-  email: string;
-}
-
-// Stored Git identity of the App bot (login `<slug>[bot]`). The numeric id of
-// bot is stable per app; solved once then reused for the entire process.
-let cachedBotIdentity: CommitIdentity | null = null;
-
-/**
- * GitHub App bot commit identity (`<slug>[bot]` + its email noreply
- * GitHub `<id>+<slug>[bot]@users.noreply.github.com`). Committing under THIS
- * identity — not a fancy email like `agent@minddy.app` — allows GitHub,
- * and therefore Vercel's commit author control, to attach each commit from
- * the agent to a real account (exactly like dependabot[bot] / github-actions[bot]) ;
- * otherwise Vercel blocks the deployment (“commit email could not be matched to a
- * GitHub account”). The numeric id comes from `GET /users/<slug>[bot]` (public
- * data, readable with the installation token) and never changes: memorized.
- */
-export async function getGithubBotCommitIdentity(
-  installationToken: string,
-): Promise<CommitIdentity> {
-  requireCapability("github");
-  if (cachedBotIdentity) return cachedBotIdentity;
-
-  const login = `${getGithubAppSlug()}[bot]`;
-  const response = await fetch(
-    `${GITHUB_API_BASE}/users/${encodeURIComponent(login)}`,
-    { headers: githubHeaders(installationToken) },
-  );
-  const data = (await response.json()) as { id?: number; message?: string };
-  if (!response.ok || typeof data.id !== "number") {
-    throw new Error(
-      data.message || `Failed to resolve GitHub App bot user id (${response.status})`,
-    );
-  }
-
-  cachedBotIdentity = {
-    name: login,
-    email: `${data.id}+${login}@users.noreply.github.com`,
-  };
-  return cachedBotIdentity;
 }
 
 export interface RemoteRepoIssue {

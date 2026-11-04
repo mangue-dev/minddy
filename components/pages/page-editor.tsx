@@ -20,8 +20,6 @@ import type { BodyCollaboration } from "@/components/pages/page-collaboration";
 import { slashSection, type PageSlashItem } from "@/components/pages/page-slash-command";
 import { insertSubpageMention, subpageBlock } from "@/components/pages/blocks/subpage";
 
-export { BLOCK_ID_ATTRIBUTE } from "@/components/pages/blocks";
-
 export type PageEditorMentions = RichEditorMentions;
 
 export function PageEditor({

@@ -23,9 +23,6 @@ export type MacArch = "arm64" | "x64";
 export type LinuxArch = "arm64" | "x64";
 export type LinuxPackageFormat = "AppImage" | "deb" | "rpm";
 
-export const MAC_ARCHES: readonly MacArch[] = ["arm64", "x64"] as const;
-export const LINUX_ARCHES: readonly LinuxArch[] = ["x64", "arm64"] as const;
-
 export function isMacArch(value: string | null | undefined): value is MacArch {
   return value === "arm64" || value === "x64";
 }

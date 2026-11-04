@@ -58,7 +58,3 @@ export function resolveForgeRelayConfig(
   if (!url || !instanceId || !secret) return null;
   return { url, instanceId, secret };
 }
-
-export function isForgeRelayConfigured(env: ForgeRelayEnvironment): boolean {
-  return resolveForgeRelayConfig(env) !== null;
-}

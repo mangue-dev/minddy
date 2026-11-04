@@ -162,29 +162,6 @@ export function Metric({
   );
 }
 
-/** A measurement of the tape “from the beginning” — small, aligned, without a map. */
-export function TotalItem({
-  label,
-  value,
-  info,
-}: {
-  label: string;
-  value: number | string;
-  info?: string;
-}) {
-  return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="text-xl font-semibold tabular-nums tracking-tight text-foreground">
-        {value}
-      </span>
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <span className="truncate">{label}</span>
-        {info ? <InfoHint text={info} /> : null}
-      </span>
-    </div>
-  );
-}
-
 /**
  * One figure of a `StatsFigureStrip` (the profile, a project header). A description list row: on a phone the strip is a
  * table — label on the left, value on the right, a line between rows — and

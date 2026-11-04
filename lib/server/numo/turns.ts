@@ -84,18 +84,6 @@ import {
   withNumoSurfaceEmitter,
 } from "./surface-projection";
 import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
-
-export const NUMO_TURN_STATUSES = [
-  "queued",
-  "running",
-  "waiting_input",
-  "stopping",
-  "stopped",
-  "retryable",
-  "reconciling",
-  "completed",
-  "failed",
-] as const;
 export interface NumoTurnIntent {
   /** Public help uses the same billing and durable lifecycle, with restricted tools. */
   documentation?: Omit<NonNullable<AssistantPageContext["documentation"]>, "locale">;
@@ -754,10 +742,6 @@ function signalLocalTurnStop(turnId: string): boolean {
   if (!notify) return false;
   notify();
   return true;
-}
-
-export function signalNumoTurnStopInProcess(turnId: string): boolean {
-  return signalLocalTurnStop(turnId);
 }
 
 async function stopRequested(service: SupabaseClient, turnId: string, claimToken: string) {

@@ -77,8 +77,6 @@ export const COMPARISONS = [
   },
 ] as const satisfies ReadonlyArray<Comparison>;
 
-export type ComparisonSlug = (typeof COMPARISONS)[number]["slug"];
-
 /**
  * The table rows, in order. i18n keys: `Alternatives.row_<key>` for
  * the label, `Alternatives.minddy_<key>` for minddy's cell, and

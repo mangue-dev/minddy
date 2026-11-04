@@ -161,13 +161,6 @@ export function toReasoningLevel(value: unknown): ReasoningLevel {
   return isReasoningLevel(value) ? value : DEFAULT_REASONING_LEVEL;
 }
 
-/**
- * The reasoning keys that can be placed in a request body. Also serves
- * at guardrail 400 of the loop: an error message which cites one of them
- * designates an endpoint that REJECTS the field instead of ignoring it.
- */
-export const REASONING_REQUEST_KEYS = ["reasoning_effort", "reasoning", "thinking"] as const;
-
 /** What a flat `reasoning_effort` accepts: the OpenAI API vocabulary. */
 const COMPAT_EFFORTS: ReasoningLevel[] = ["minimal", "low", "medium", "high"];
 

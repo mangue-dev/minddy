@@ -43,7 +43,6 @@
     "evidence": [
       "content/knowledge/core-tracker.md",
       "components/create-issue-dialog.tsx",
-      "components/issue-fields.tsx",
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
       "lib/smart-fill-fields.ts",

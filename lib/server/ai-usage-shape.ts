@@ -162,9 +162,6 @@ export interface NormalizedUsage {
   cacheWriteTokens: number | null;
 }
 
-/** To pass on each AI call to get the cost inline in the response. */
-export const OPENROUTER_USAGE_INCLUDE = { include: true } as const;
-
 /**
  * Normalizes OpenRouter's `usage` object to our fields. Covers both forms
  * of token naming (chat: prompt/completion, audio: input/output) and calculates

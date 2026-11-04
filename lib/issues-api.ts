@@ -16,7 +16,6 @@ import type {
   IssueUpdateInput,
   RecurringIssue,
 } from "./types";
-import type { SmartTriageMode, SmartTriageMove } from "./smart-triage";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -234,27 +233,4 @@ export async function deleteIssueApi(
     );
   }
   trackEvent("issue_deleted", { surface: meta?.surface ?? "unknown" });
-}
-
-/** Apply deterministic Smart ordering without changing positions when persist=false. */
-export async function smartTriageApi(
-  projectId: string,
-  options: { statuses?: string[]; persist?: boolean } = {}
-): Promise<{
-  mode: SmartTriageMode;
-  moves: SmartTriageMove[];
-  columns: number;
-  scored: false;
-  scores: null;
-}> {
-  return parseJson(
-    await fetch(`/api/projects/${projectId}/smart-triage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(options.statuses ? { statuses: options.statuses } : {}),
-        ...(options.persist !== undefined ? { persist: options.persist } : {}),
-      }),
-    })
-  );
 }

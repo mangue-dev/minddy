@@ -109,5 +109,3 @@ export function useQueryHistory(storagePrefix: string): QueryHistory {
 
   return { historyIndex, navigate, reset, submit };
 }
-
-export default useQueryHistory;

@@ -93,9 +93,6 @@ export const CONTACT_EMAIL = publicSite.contactEmail;
 
 export { MINDDY_REPOSITORY_URL };
 
-/** Board where the operator wants to collect feedback on the product. */
-export const PRODUCT_FEEDBACK_URL = publicSite.productFeedbackUrl;
-
 /**
  * Ownership verification tokens (MIN-88), placed in `<meta>` by the root
  * layout. Hardcoded and not an environment variable: these are public

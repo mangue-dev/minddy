@@ -270,11 +270,6 @@ export async function fetchPullRequestDeploymentApi(
   return parseJson(await fetchClientRead(`/api/pull-requests/${prId}/deployment`, { signal, cache: "no-store" }));
 }
 
-export interface PullRequestReadinessResponse {
-  provider: RepoProviderId;
-  readiness: PullRequestReadiness;
-}
-
 /**
  * What a board needs to offer the merge gestures of a row (auto-merge state,
  * whether the repository allows it, whether the viewer may write). The server
@@ -295,12 +290,6 @@ export interface PullRequestReadinessBatchResponse {
   retryStatus?: 403 | 429;
   /** Client-anchored transport deadline, never content freshness or write authority. */
   retryAt?: number;
-}
-
-export async function fetchPullRequestReadinessApi(
-  prId: string,
-): Promise<PullRequestReadinessResponse> {
-  return parseJson(await fetchClientRead(`/api/pull-requests/${prId}/readiness`));
 }
 
 export async function fetchPullRequestReadinessBatchApi(

@@ -25,19 +25,6 @@ export function objectiveColor(color: string | null | undefined): string {
   return color ?? "var(--muted-foreground)";
 }
 
-/** The target, in the color of the objective. */
-export function ObjectiveIcon({
-  color,
-  className,
-}: {
-  color?: string | null;
-  className?: string;
-}) {
-  return (
-    <HugeiconsIcon icon={Target01Icon} className={className} style={{ color: objectiveColor(color) }} />
-  );
-}
-
 /**
  * The target in its tinted patch: 12% of the color in the background, the full color
  * for the line — exactly the dosage of Numo's context pills,

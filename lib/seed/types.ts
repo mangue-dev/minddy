@@ -66,5 +66,3 @@ export const MAX_SEED_DISTINCT_LABELS = 6;
 export const MAX_BRIEF_CHARS = 10_000;
 /** Below, there is nothing to cut — the button remains off. */
 export const MIN_BRIEF_CHARS = 40;
-
-export const EMPTY_SEED_PROPOSAL: SeedProposal = { objectives: [], issues: [] };

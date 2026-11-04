@@ -427,5 +427,3 @@ export function CommandPalette({
     </PaletteConfigProvider>
   );
 }
-
-export default CommandPalette;

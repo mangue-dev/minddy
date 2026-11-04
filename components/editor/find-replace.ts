@@ -17,7 +17,7 @@ import { Extension } from "@tiptap/core";
 import { EditorState, TextSelection, type Transaction } from "@tiptap/pm/state";
 import { SearchQuery, search, type SearchResult } from "prosemirror-search";
 
-export { getSearchState, setSearchState } from "prosemirror-search";
+export { setSearchState } from "prosemirror-search";
 export type { SearchResult };
 
 /** Mounted only by the surfaces that offer the bar (pages, the notebook). */

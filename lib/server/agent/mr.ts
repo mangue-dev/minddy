@@ -1149,18 +1149,6 @@ export async function approveMergeRequest(opts: {
   );
 }
 
-export async function unapproveMergeRequest(opts: {
-  token: string;
-  repoFullName: string;
-  number: number;
-}): Promise<void> {
-  await glJson<unknown>(
-    `${GITLAB_API_BASE}/projects/${projectPath(opts.repoFullName)}/merge_requests/${opts.number}/unapprove`,
-    opts.token,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
-  );
-}
-
 /**
  * Submits a review on MR — the counterpart of `submitPullRequestReview`, with
  * two deviations that GitLab imposes:

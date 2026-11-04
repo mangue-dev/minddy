@@ -107,7 +107,7 @@
       "member"
     ],
     "type": "guide",
-    "source": "K/core-tracker; `components/create-issue-dialog.tsx`; `components/issue-fields.tsx`",
+    "source": "K/core-tracker; `components/create-issue-dialog.tsx`",
     "gaps": "Exact property controls, priority/effort/due date/assignee/categories, validation and save result",
     "illustration": "Reuse workflowIssue; new detail/property focus",
     "requiresFigures": true,

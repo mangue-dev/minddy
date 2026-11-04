@@ -16,11 +16,7 @@ import {
   TaskSurfaceProvider,
   type TaskSurface,
 } from "@/components/scratchpad/task-surface";
-import { taskItemNodeView } from "@/components/scratchpad/task-item-view";
-import {
-  ScratchpadTaskItemBase,
-  ScratchpadTaskList,
-} from "@/components/scratchpad/task-nodes";
+import { ScratchpadTaskList } from "@/components/scratchpad/task-nodes";
 
 /**
  * The “notebook” surface: what surrounds the gesture when the task leaves here.
@@ -59,13 +55,5 @@ export function ScratchpadTaskSurface({ children }: { children: ReactNode }) {
 
   return <TaskSurfaceProvider value={surface}>{children}</TaskSurfaceProvider>;
 }
-
-/** The notebook task node (task-nodes.ts) + the shared view. The schema and the
- * round-trip markdown live separately to remain testable without React. */
-export const ScratchpadTaskItem = ScratchpadTaskItemBase.extend({
-  addNodeView() {
-    return taskItemNodeView();
-  },
-});
 
 export { ScratchpadTaskList };

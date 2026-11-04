@@ -94,10 +94,6 @@ export const PRIORITIES: PriorityMeta[] = [
   { value: "urgent", icon: AlertTriangle, color: "text-red-500" },
 ];
 
-export const PRIORITY_MAP: Record<IssuePriority, PriorityMeta> = Object.fromEntries(
-  PRIORITIES.map((p) => [p.value, p])
-) as Record<IssuePriority, PriorityMeta>;
-
 export interface EffortMeta {
   value: IssueEffort;
   label: string;

@@ -11,8 +11,6 @@
 export type ProjectRole = "owner" | "member" | "reader";
 export type MemberRole = Exclude<ProjectRole, "owner">;
 
-export const MEMBER_ROLES: readonly MemberRole[] = ["member", "reader"];
-
 export interface ProjectCapabilities {
   role: ProjectRole;
   /** Create, edit, move and delete project content. */

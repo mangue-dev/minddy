@@ -250,24 +250,8 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
 /** Default Provider when no BYOK: OpenRouter platform key. */
 export const DEFAULT_AGENT_PROVIDER: AgentProviderId = "openrouter";
 
-/**
- * “mindy quota” option of the selector: platform mode (no BYOK), the agent
- * runs on minddy's OpenRouter key within the limit of the monthly cap.
- * PSEUDO-provider reserved for the UI — does NOT belong to `AGENT_PROVIDERS` (it is not
- * not a BYOK provider on the server side, “quota minddy” = absence of BYOK key).
- */
-export const MINDDY_QUOTA_PROVIDER_ID = "minddy";
-
 export function getAgentProvider(id: string | null | undefined): AgentProviderDef | undefined {
   return AGENT_PROVIDERS.find((p) => p.id === id);
-}
-
-/**
- * Default model (border) of a provider, or undefined if it does not have its own
- *: OpenRouter (takes the root default = minddy quota) and the generic.
- */
-export function getProviderDefaultModel(id: string | null | undefined): string | undefined {
-  return getAgentProvider(id)?.defaultModel;
 }
 
 export function isKnownAgentProvider(id: string): id is AgentProviderId {

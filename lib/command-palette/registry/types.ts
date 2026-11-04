@@ -227,15 +227,6 @@ export interface ActionProvider {
 // TYPE GUARDS & SORTING
 // =============================================================================
 
-/** Check if an action has a form requirement. */
-export function actionRequiresForm(
-  action: ContextualAction
-): action is ContextualAction & {
-  requiresForm: NonNullable<ContextualAction["requiresForm"]>;
-} {
-  return action.requiresForm !== undefined;
-}
-
 /** Order of action categories for sorting. */
 export const ACTION_CATEGORY_ORDER: ActionCategory[] = [
   "primary",

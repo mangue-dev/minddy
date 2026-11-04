@@ -151,18 +151,6 @@ export async function findIssueRelation(
   return (data as IssueRelationRow) ?? null;
 }
 
-/** Raw relation rows touching one issue (either endpoint) — for enrichment. */
-export async function listRelationsForIssue(
-  db: SupabaseClient,
-  issueId: string
-): Promise<IssueRelationRow[]> {
-  const { data } = await db
-    .from("issue_relations")
-    .select(RELATION_COLUMNS)
-    .or(`source_id.eq.${issueId},target_id.eq.${issueId}`);
-  return (data ?? []) as IssueRelationRow[];
-}
-
 /** Both endpoints must belong to the project in scope and be alive — issues
     and objectives both trash softly (the DB trigger also enforces the
     same-project rule, but an explicit check gives a clean 404). */

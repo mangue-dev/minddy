@@ -3,8 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CommentLiveTable } from "@/lib/comment-live-topic";
 import { commentStore } from "@/lib/server/comment-store";
 
-export { numoCommentTopic } from "@/lib/comment-live-topic";
-
 // Persist throttled snapshots through encryption; Realtime sends only invalidations.
 // SQL realtime.send stores its payload, so private topics cannot carry plaintext.
 const LIVE_FLUSH_MS = 900;

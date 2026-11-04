@@ -208,5 +208,3 @@ export function FormView({ actionContext, onSuccess }: FormViewProps) {
     </div>
   );
 }
-
-export default FormView;
