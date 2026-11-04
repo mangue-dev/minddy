@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,14 +67,16 @@
       "lib/desktop/server-choice.ts",
       "desktop/src/menu.ts",
       "components/auth/auth-chrome.tsx",
-      "lib/desktop/window-material.ts"
+      "lib/desktop/window-material.ts",
+      "components/ui/mobile-sheet.tsx",
+      "lib/sheet-swipe-dismiss.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude-code (desktop window opaque in full screen even with Desktop app transparency on, transparency restored on leaving full screen; checked against desktop/src/main.ts and lib/desktop/window-material.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show window transparency)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 18,
+    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture)",
+    "language": "agent:claude-code (fr changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues"
@@ -99,7 +101,7 @@
       "src": "/documentation/fr/web-and-mobile-workflow.png",
       "alt": "Panneau mobile d’un ticket avec titre, description, propriétés et zone de commentaire.",
       "caption": "Sur un écran étroit, les détails du ticket occupent un panneau adaptatif. Utilisez le bouton de fermeture pour revenir au projet ; Numo reste accessible par son bouton flottant.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/fr/install-the-pwa-workflow.png",
       "alt": "Guide Safari illustré de minddy : Partager, Sur l’écran d’accueil puis confirmer.",
       "caption": "Le guide public illustre les trois étapes Safari et le maintien de l’option Ouvrir comme app web. Il s’agit d’illustrations pédagogiques affichées par minddy, pas de captures d’une installation iOS effectuée.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -133,7 +135,7 @@
       "src": "/documentation/fr/devices-and-notifications-workflow.png",
       "alt": "Réglages push indiquant un blocage du navigateur et aucun appareil inscrit.",
       "caption": "Ce navigateur bloque les notifications. Rétablissez l’autorisation du site avant d’inscrire cet appareil.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -150,7 +152,7 @@
       "src": "/documentation/fr/devices-and-notifications-registered.png",
       "alt": "Appareil navigateur enregistré et actif sur le compte, avec la date réelle du dernier envoi.",
       "caption": "Le compte possède un appareil navigateur enregistré et actif. La liste indique les dates d’inscription et du dernier envoi. La permission du navigateur et les réglages du système restent nécessaires pour afficher une bannière.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -167,7 +169,7 @@
       "src": "/documentation/fr/desktop-renderer-recovery.png",
       "alt": "Page locale de récupération après un crash forcé du moteur de rendu, avec les commandes Reload window et Check server settings.",
       "caption": "Page de récupération dans l’application de développement macOS, avec un profil isolé et un serveur de démonstration. Le shell natif utilise des libellés anglais dans toutes les langues.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -194,6 +196,8 @@ Accédez à la même instance depuis un navigateur, une application web install�
 ## Travailler sur le web et sur mobile {#web-and-mobile}
 
 Ouvrez l’adresse de votre instance et connectez-vous à celle-ci. Sur un écran étroit, affichez la barre latérale pour choisir un projet, puis ouvrez un ticket depuis la liste ou le tableau. Consultez ses détails dans le panneau adapté à l’écran, modifiez le champ voulu ou ajoutez un commentaire, puis attendez le résultat de l’enregistrement avant de fermer. Fermez le panneau de détails pour revenir à la liste ; sa présentation mobile diffère de celle d’un écran large.
+
+Sur un téléphone, les menus, les sélecteurs et les boîtes de dialogue s’ouvrent dans une feuille inférieure. Fermez-la avec son bouton de fermeture ou en la faisant glisser vers le bas ; si sa liste a défilé, le geste la ramène d’abord en haut.
 
 Ouvrez Numo avec son bouton flottant ou une action contextuelle du ticket. Vérifiez le contexte du ticket dans le champ de saisie. Si un panneau masque le contenu dont vous avez besoin, fermez-le avant de poursuivre la navigation. Sur un écran tactile, utilisez les boutons et menus explicites : les actions au survol et les raccourcis d’un ordinateur ne sont pas toujours disponibles.
 

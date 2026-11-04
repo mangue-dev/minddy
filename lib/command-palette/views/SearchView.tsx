@@ -15,6 +15,7 @@
 "use client";
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import React, { useMemo, useCallback, useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { usePaletteConfig } from "../config";
@@ -152,6 +153,7 @@ export function SearchView({
   const debouncedQuery = useDebouncedValue(query, 50);
 
   const isTouchDevice = useIsTouchDevice();
+  const mobileLayout = useMobileLayout() === true;
 
   // Manual expansion in compact mode (ArrowDown)
   const [isManuallyExpanded, setIsManuallyExpanded] = useState(false);
@@ -526,6 +528,7 @@ export function SearchView({
               hasActions={hasActions}
               onHoverPrefetch={onHoverPrefetch}
               isMobile={isTouchDevice}
+              highlightActive={!mobileLayout}
               getTouchHandlers={isTouchDevice ? getTouchHandlers : undefined}
             />
           </div>

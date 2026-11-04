@@ -134,3 +134,43 @@ it("retains automatic input focus in desktop dialogs", async () => {
   expect(document.querySelector('[data-mobile-dialog]')).toBeNull();
   expect(document.activeElement).toBe(document.querySelector('input[aria-label="View name"]'));
 });
+
+function swipe(target: Element, from: number, to: number) {
+  for (const [type, y, time] of [["touchstart", from, 0], ["touchmove", from + 10, 50], ["touchmove", to, 150], ["touchend", to, 160]] as const) {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      touches: { value: type === "touchend" ? [] : [{ clientX: 0, clientY: y }] },
+      changedTouches: { value: [{ clientX: 0, clientY: y }] },
+      timeStamp: { value: time },
+    });
+    target.dispatchEvent(event);
+  }
+}
+
+// MIN-896: mobile sheets close on a downward swipe, through the same
+// onOpenChange as their close button, and only in the mobile layout.
+it.each([true, false])("closes a sheet swiped down (mobile: %s)", async (mobile) => {
+  viewport.mobile = mobile;
+  const changed = vi.fn();
+  await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Common: { close: "Close" } }}>
+    <Dialog open onOpenChange={changed}><DialogContent aria-describedby={undefined}>
+      <DialogTitle>Filters</DialogTitle><button type="button">Status</button>
+    </DialogContent></Dialog>
+  </NextIntlClientProvider>));
+  const row = [...document.querySelectorAll("button")].find((node) => node.textContent === "Status")!;
+  await act(() => swipe(row, 100, 400));
+  expect(changed).toHaveBeenCalledTimes(mobile ? 1 : 0);
+  if (mobile) expect(changed).toHaveBeenCalledWith(false);
+});
+
+// MIN-896: no keyboard on mobile, so cmdk's default first row must not look chosen.
+it.each([true, false])("paints the keyboard highlight only on desktop (mobile: %s)", async (mobile) => {
+  viewport.mobile = mobile;
+  await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Common: { close: "Close" }, Picker: { search: "Search", noResults: "No results" } }}>
+    <TooltipProvider><SearchSelect value={null} onChange={() => {}} options={[{ value: "high", label: "High priority" }]}
+      trigger={<button type="button">Priority</button>} /></TooltipProvider>
+  </NextIntlClientProvider>));
+  await act(() => container.querySelector<HTMLButtonElement>("button")!.click());
+  const first = document.querySelector<HTMLElement>('[cmdk-item][data-selected="true"]')!;
+  expect(first.classList.contains("data-selected:bg-muted")).toBe(!mobile);
+});

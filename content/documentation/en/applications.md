@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-04",
   "compatibility": {
     "version": "0.20.0 (MIN-747 release review)",
     "editions": [
@@ -67,14 +67,16 @@
       "lib/desktop/server-choice.ts",
       "desktop/src/menu.ts",
       "components/auth/auth-chrome.tsx",
-      "lib/desktop/window-material.ts"
+      "lib/desktop/window-material.ts",
+      "components/ui/mobile-sheet.tsx",
+      "lib/sheet-swipe-dismiss.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude-code (desktop window opaque in full screen even with Desktop app transparency on, transparency restored on leaving full screen; checked against desktop/src/main.ts and lib/desktop/window-material.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show window transparency)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-10-29"
+    "revision": 18,
+    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture)",
+    "language": "agent:claude-code (en changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-04"
   },
   "related": [
     "issues"
@@ -99,7 +101,7 @@
       "src": "/documentation/en/web-and-mobile-workflow.png",
       "alt": "Mobile issue panel with localized title, description, properties and comment composer.",
       "caption": "On a narrow screen, issue details occupy a responsive panel. Use the close button to return to the project; Numo remains reachable through its floating button.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/en/install-the-pwa-workflow.png",
       "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
       "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -133,7 +135,7 @@
       "src": "/documentation/en/devices-and-notifications-workflow.png",
       "alt": "Push settings showing browser permission blocked and no registered device.",
       "caption": "This browser blocks notifications. Restore site permission before trying to register this device.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-20",
       "viewport": [
@@ -150,7 +152,7 @@
       "src": "/documentation/en/devices-and-notifications-registered.png",
       "alt": "An active browser push device registered to the account, with its actual last-send date.",
       "caption": "The account has an active registered browser device. The list shows its registration and last-send dates. Browser permission and operating-system settings still determine whether a banner appears.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-22",
       "viewport": [
@@ -167,7 +169,7 @@
       "src": "/documentation/en/desktop-renderer-recovery.png",
       "alt": "Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.",
       "caption": "Recovery page in the macOS development app with an isolated profile and demonstration server. The native shell uses English labels in every language.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -194,6 +196,8 @@ Access the same instance from a browser, an installed web app or the desktop app
 ## Work in a browser or on a small screen {#web-and-mobile}
 
 Open your instance address and sign in to that instance. On a narrow viewport, reveal the sidebar to choose a project, then open an issue from its list or board. Read details in the responsive panel, change the intended field or add a comment, and wait for the save result before closing it. Close the detail panel to return to the list; its mobile presentation differs from a wide desktop layout.
+
+On a phone, menus, pickers and dialogs open in a bottom sheet. Close one with its close button or by swiping it down; when its list is scrolled, the swipe first scrolls it back to the top.
 
 Open Numo through its floating button or contextual issue action. Check the issue context in the composer. Close one panel before navigating when another overlays the content you need. Use explicit buttons and menus instead of assuming hover actions or desktop shortcuts are available on touch devices.
 
