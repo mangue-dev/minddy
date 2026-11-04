@@ -45,7 +45,7 @@ export function ObjectiveProgressStat({
   const t = useTranslations("Objectives");
 
   const ring = (
-    <ProgressRing percent={progress.percent} colorClass="text-emerald-500" />
+    <ProgressRing percent={progress.percent} colorClass="text-success" />
   );
   const count = (
     <span>

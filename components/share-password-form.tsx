@@ -52,12 +52,15 @@ export function SharePasswordForm({
       <Input
         type="password"
         name="password"
+        aria-label={t("passwordPlaceholder")}
+        aria-invalid={state?.error ? true : undefined}
+        aria-describedby={state?.error ? "share-password-error" : undefined}
         placeholder={t("passwordPlaceholder")}
         autoComplete="current-password"
         autoFocus
         required
       />
-      {state?.error && <p role="alert" className="text-sm text-destructive">{t(state.error)}</p>}
+      {state?.error && <p id="share-password-error" role="alert" className="text-sm text-destructive">{t(state.error)}</p>}
       <Button type="submit" className="w-full" disabled={pending}>
         {pending && <Spinner />}
         {t("unlock")}

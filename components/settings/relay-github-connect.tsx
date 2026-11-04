@@ -2,7 +2,8 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowRight01Icon, CheckIcon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, ArrowRight01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -127,38 +128,31 @@ export function RelayGithubConnect() {
     return (
       <ClaimCard title={t("title")}>
         <HugeiconsIcon icon={AlertCircleIcon} className="h-10 w-10 text-destructive" aria-hidden />
-        <p className="text-sm text-muted-foreground">
+        <p role="alert" className="text-sm text-muted-foreground">
           {t("failed", { reason: error ?? "unknown" })}
         </p>
-        <button
-          type="button"
-          onClick={() => router.replace(returnPath)}
-          className="mt-2 inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted"
-        >
+        <Button type="button" variant="outline" className="mt-2" onClick={() => router.replace(returnPath)}>
           {t("back")}
-          <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" aria-hidden />
-        </button>
+          <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden />
+        </Button>
       </ClaimCard>
     );
   }
 
   return (
     <ClaimCard title={t("title")}>
-      <HugeiconsIcon icon={LoaderCircleIcon} className="h-8 w-8 animate-spin text-primary" aria-hidden />
-      <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+      {/* Running work: the waiting line shimmers instead of a spinner. */}
+      <p role="status" className="text-shimmer max-w-md text-sm leading-relaxed text-muted-foreground">
         {t("waiting")}
       </p>
       {claimUrl && (
-        <a
-          href={claimUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-1 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          <Github className="h-4 w-4" aria-hidden />
-          {t("openGithub")}
-          <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4" aria-hidden />
-        </a>
+        <Button asChild className="mt-1">
+          <a href={claimUrl} target="_blank" rel="noopener noreferrer">
+            <Github aria-hidden />
+            {t("openGithub")}
+            <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden />
+          </a>
+        </Button>
       )}
     </ClaimCard>
   );

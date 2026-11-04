@@ -39,6 +39,7 @@ import {
 } from "@/lib/routine-schedule";
 import type { AssistantMention } from "@/lib/assistant-types";
 import { useWeekStart } from "@/lib/use-week-start";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * Set up a ROUTINE (MIN-185), by hand: where, what, and on what schedule.
@@ -305,9 +306,7 @@ export function CreateRoutineWizard({
                   iconUrl={p.icon_url}
                   className="size-5 shrink-0"
                 />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {p.name}
-                </span>
+                <TruncatedText text={p.name} className="min-w-0 flex-1 truncate text-sm font-medium" />
               </button>
             ))}
           </div>

@@ -266,6 +266,8 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             <Field id="email" label={t("email")}>
               <Input
                 id="email"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "login-error" : undefined}
                 type="email"
                 className="h-10 bg-control"
                 autoComplete="email"
@@ -279,6 +281,8 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             <Field id="password" label={t("password")}>
               <PasswordInput
                 id="password"
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "login-error" : undefined}
                 className="h-10 bg-control"
                 autoComplete="current-password"
                 required
@@ -301,7 +305,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
               </Link>
             </div>
 
-            {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+            {error && <p id="login-error" role="alert" className="text-sm text-destructive">{error}</p>}
 
             <Button
               type="submit"

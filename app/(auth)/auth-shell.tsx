@@ -67,13 +67,13 @@ export function AuthShell({
         <PreviewEnvBanner />
         {fullBleed ? (
           <div className="flex flex-1">
-            <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+            <main className="flex min-w-0 flex-1 flex-col">{children}</main>
             {showcase}
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center p-6">
+          <main className="flex flex-1 items-center justify-center p-6">
             {children}
-          </div>
+          </main>
         )}
       </div>
     </AuthProvider>

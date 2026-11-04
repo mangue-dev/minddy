@@ -15,6 +15,7 @@ import { useCsvImport } from "@/lib/use-csv-import";
 import type { ImportGuide } from "@/lib/import-guides";
 import type { ImportCommitResponse } from "@/lib/import-api";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * The backlog import process, in large format (MIN-45, MIN-98, MIN-171).
@@ -146,7 +147,7 @@ export function ImportWizardDialog({
  that we designate which one bears the name of the tickets — just in
  below. */}
             {!hasTitleColumn && (
-              <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+              <p className="flex items-center gap-1.5 text-xs text-warning-strong">
                 <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" aria-hidden />
                 {t("importErrorInvalid")}
               </p>
@@ -296,7 +297,7 @@ function FileLine({
     >
       <HugeiconsIcon icon={FileAttachmentIcon} className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{fileName}</p>
+        <TruncatedText text={fileName} className="truncate text-sm font-medium" />
         <p className="truncate text-xs text-muted-foreground">
           {sourceLabel} — {t("importPreviewCount", { count })}
         </p>

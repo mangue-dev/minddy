@@ -35,7 +35,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useMembersQuery } from "@/lib/use-members-query";
 import { usePlanGates } from "@/lib/use-billing-query";
 import {
-  SettingsEmpty,
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
@@ -47,6 +46,8 @@ import type { Collaborator, Member } from "@/lib/types";
 import { useCollaboratorsQuery } from "@/lib/use-collaborators-query";
 import { matchCollaborators } from "@/lib/collaborator-search";
 import { CollaboratorSuggestions } from "@/components/collaborator-suggestions";
+import { RowsSkeleton } from "@/components/loading-skeletons";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 function displayName(m: Pick<Member, "email" | "full_name">): string {
   return resolveDisplayName(m);
@@ -89,6 +90,7 @@ function RoleSelect({
   shape?: keyof typeof ROLE_TRIGGER_CLASS;
 }) {
   const t = useTranslations("Members");
+  const tIssueUI = useTranslations("IssueUI");
   return (
     <Select
       value={value}
@@ -101,7 +103,11 @@ function RoleSelect({
         id={id}
         size={shape === "badge" ? "sm" : "default"}
         className={ROLE_TRIGGER_CLASS[shape]}
-        aria-label={ariaLabel}
+        // The name keeps the visible role (WCAG 2.5.3).
+        aria-label={tIssueUI("fieldValueAria", {
+          field: ariaLabel,
+          value: value === "member" ? t("roleMember") : t("roleReader"),
+        })}
       >
         <SelectValue />
       </SelectTrigger>
@@ -280,7 +286,7 @@ export function ProjectMembers({
                 {selected ? (
                   <div className="flex h-9 items-center gap-2 rounded-md border border-border pl-2 pr-1">
                     <UserAvatar seed={selected.avatar_seed} className="size-6" />
-                    <span className="min-w-0 flex-1 truncate text-sm">{displayName(selected)}</span>
+                    <TruncatedText text={displayName(selected)} className="min-w-0 flex-1 truncate text-sm" />
                     <Button
                       type="button"
                       variant="ghost"
@@ -378,7 +384,7 @@ export function ProjectMembers({
         title={loading ? t("membersLabel") : `${t("membersLabel")} · ${members.length}`}
       >
         {loading ? (
-          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+          <RowsSkeleton rows={3} leading="avatar" secondLine rowClassName="py-3" />
         ) : (
           <div className="flex flex-col divide-y divide-border">
             {members.map((m) => {
@@ -595,55 +601,45 @@ export function ProjectMembers({
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      {/* The owner gives the project away: confirmed like a removal. */}
+      <ConfirmDeleteDialog
         open={transferTarget !== null}
         onOpenChange={(open) => {
           if (!open) setTransferTarget(null);
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {t("transferTitle", {
-                name: transferTarget ? displayName(transferTarget) : "",
-              })}
-            </DialogTitle>
-            <DialogDescription>{t("transferDescription")}</DialogDescription>
-          </DialogHeader>
-          <ul className="flex list-disc flex-col gap-1.5 pl-5 text-sm text-muted-foreground">
-            <li>{t("transferBecomeMember")}</li>
-            <li>{t("transferRoutinesPaused")}</li>
-            <li>{t("transferPlanFollows")}</li>
-            <li>{t("transferPersonalStays")}</li>
-          </ul>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTransferTarget(null)}>
-              {tc("cancel")}
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={isBusy(transferTarget?.user_id)}
-              onClick={async () => {
-                if (!transferTarget) return;
-                const target = transferTarget;
-                let paused = 0;
-                const ok = await withBusy(target.user_id, async () => {
-                  paused = (await transferOwnership(target.user_id)).disabledRoutines;
-                });
-                if (!ok) return;
-                setTransferTarget(null);
-                toast.success(t("transferDone", { name: displayName(target) }), {
-                  description:
-                    paused > 0 ? t("transferRoutinesPausedCount", { count: paused }) : undefined,
-                });
-              }}
-            >
-              {isBusy(transferTarget?.user_id) ? <Spinner /> : null}
-              {t("transferConfirm")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("transferTitle", {
+          name: transferTarget ? displayName(transferTarget) : "",
+        })}
+        description={
+          <span className="flex flex-col gap-2">
+            <span>{t("transferDescription")}</span>
+            <span className="flex list-disc flex-col gap-1.5 pl-5" role="list">
+              <span role="listitem" className="list-item">{t("transferBecomeMember")}</span>
+              <span role="listitem" className="list-item">{t("transferRoutinesPaused")}</span>
+              <span role="listitem" className="list-item">{t("transferPlanFollows")}</span>
+              <span role="listitem" className="list-item">{t("transferPersonalStays")}</span>
+            </span>
+          </span>
+        }
+        confirmLabel={t("transferConfirm")}
+        cancelLabel={tc("cancel")}
+        isLoading={isBusy(transferTarget?.user_id)}
+        closeOnConfirm={false}
+        onConfirm={async () => {
+          if (!transferTarget) return;
+          const target = transferTarget;
+          let paused = 0;
+          const ok = await withBusy(target.user_id, async () => {
+            paused = (await transferOwnership(target.user_id)).disabledRoutines;
+          });
+          if (!ok) return;
+          setTransferTarget(null);
+          toast.success(t("transferDone", { name: displayName(target) }), {
+            description:
+              paused > 0 ? t("transferRoutinesPausedCount", { count: paused }) : undefined,
+          });
+        }}
+      />
     </>
   );
 }

@@ -48,6 +48,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useWeekStart } from "@/lib/use-week-start";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 // Shared with the row-intent preload: both resolve the same module promise.
 const loadRoutineDetail = () => import("@/components/routines/routine-detail");
@@ -541,7 +542,8 @@ export function RoutinesPanel({
           collapsedBadge={
             g.items.some((r) => r.last_error) ? (
               <span
-                className="size-2 shrink-0 rounded-full bg-amber-500"
+                role="img"
+                className="size-2 shrink-0 rounded-full bg-warning"
                 aria-label={t("lastErrorBadge")}
               />
             ) : null
@@ -806,23 +808,24 @@ function RoutineRow({
       )}
     >
       <span className="flex min-w-0 flex-1 flex-col">
-        <span
+        <TruncatedText
+          text={routine.title}
           className={cn(
             "truncate text-sm",
             routine.enabled ? "" : "text-muted-foreground",
           )}
-        >
-          {routine.title}
-        </span>
+        />
         <span className="truncate text-xs text-muted-foreground">{cadence}</span>
       </span>
       {routine.last_error ? (
         <span
-          className="size-2 shrink-0 rounded-full bg-amber-500"
+          role="img"
+          className="size-2 shrink-0 rounded-full bg-warning"
           aria-label={t("lastErrorBadge")}
         />
       ) : !routine.enabled ? (
         <span
+          role="img"
           className="size-2 shrink-0 rounded-full bg-muted-foreground/40"
           aria-label={t("paused")}
         />

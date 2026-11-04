@@ -37,6 +37,7 @@ import {MCP_AUTHORIZATION_PARAM, MCP_DESKTOP_PARAM, prepareMcpAuthorization} fro
 import {getDesktopBridge} from "@/lib/desktop/bridge";
 import {useAuth} from "@/lib/auth-context";
 import {MCP_CONNECTIONS_QUERY_KEY as queryKey, useMcpConnections} from "@/lib/use-mcp-connections";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 
 const endpoint = "/api/account/mcp-connections";
 const connectionChannel = "minddy:mcp-connections";
@@ -832,7 +833,7 @@ export function AccountMcpClients() {
         </p>
       )}
       {isPending && (
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
+        <RowsSkeleton rows={2} leading="avatar" secondLine label={t("loading")} rowClassName="py-3" />
       )}
       {isError && (
         <div role="alert">

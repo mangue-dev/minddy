@@ -13,6 +13,7 @@ import {useAuth} from "@/lib/auth-context";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle} from "@/components/ui/dialog";
+import { TextLinesSkeleton } from "@/components/loading-skeletons";
 
 /**
  * Account settings → “Personal data” (MIN-119).
@@ -260,7 +261,7 @@ export function AccountDataSection() {
               {preview.hasActiveSubscription && <li>{t("deleteWhatSubscription")}</li>}
             </ul>
           ) : (
-            <p className="text-xs text-muted-foreground">{tc("loading")}</p>
+            <TextLinesSkeleton lines={3} />
           )}
           <p className="text-xs text-muted-foreground">{t("deleteExportFirst")}</p>
         </SettingsRow>

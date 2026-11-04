@@ -72,6 +72,7 @@ import {
   type PageSlashItem,
 } from "@/components/pages/page-slash-command";
 import { useWeekStart } from "@/lib/use-week-start";
+import { visibleBand } from "@/lib/visible-band";
 
 /** The island's height, and the gap it keeps around itself. */
 const TOOLBAR_HEIGHT = 44;
@@ -89,21 +90,6 @@ function scrollParent(node: HTMLElement | null): HTMLElement | null {
     }
   }
   return null;
-}
-
-/**
- * The band of the screen the keyboard leaves. From the keyboard tokens of
- * lib/use-mobile-layout.ts when the document is pinned: they already know
- * where the keyboard is going while Safari still reports where it was.
- */
-function visibleBand() {
-  const root = document.documentElement;
-  const viewport = window.visualViewport;
-  const inset = Number.parseFloat(getComputedStyle(root).getPropertyValue("--mobile-keyboard-inset"));
-  if (!Number.isNaN(inset) && (!viewport || viewport.offsetTop === 0)) return { top: 0, bottom: root.clientHeight - inset };
-  return viewport
-    ? { top: viewport.offsetTop, bottom: viewport.offsetTop + viewport.height }
-    : { top: 0, bottom: window.innerHeight };
 }
 
 /**

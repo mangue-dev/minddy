@@ -425,6 +425,8 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                     <Field id="password" label={t("password")}>
                       <PasswordInput
                         id="password"
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={error ? "signup-error" : undefined}
                         className="h-10 bg-control"
                         autoComplete="new-password"
                         autoFocus
@@ -439,6 +441,8 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
 
                     <PasswordInput
                       id="confirm-password"
+                      aria-invalid={error ? true : undefined}
+                      aria-describedby={error ? "signup-error" : undefined}
                       className="h-10 bg-control"
                       autoComplete="new-password"
                       required
@@ -454,7 +458,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
             </AnimatePresence>
           </div>
 
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p id="signup-error" role="alert" className="text-sm text-destructive">{error}</p>}
 
           <div className="space-y-3">
             <Button

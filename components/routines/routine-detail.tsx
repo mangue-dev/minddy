@@ -42,6 +42,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * A ROUTINE (MIN-185) and its “Previous Executions”.
@@ -260,9 +261,7 @@ export function RoutineDetail({
             className={`size-4 shrink-0 ${APP_CONTENT_HEADER_LEADING_INSET}`}
           />
         ) : null}
-        <span className="min-w-0 flex-1 truncate text-sm font-medium">
-          {routine.title}
-        </span>
+        <TruncatedText text={routine.title} className="min-w-0 flex-1 truncate text-sm font-medium" />
 
         {/* THE STATE and the gesture that changes it are one control: a badge
             that opens Active / Paused, like a pull request's state. A reader
@@ -321,7 +320,7 @@ export function RoutineDetail({
           <div className="flex flex-col gap-1 empty:hidden">
             {!agentCapabilitiesLoading &&
             !routineSchedulingConfigured ? (
-              <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <p className="flex items-center gap-1.5 text-xs text-warning-strong">
                 <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" />
                 <span>
                   {t("unavailableScheduler")}
@@ -332,7 +331,7 @@ export function RoutineDetail({
             {routine.legacy_source_key ? <p className="rounded-md border p-3 text-sm">{t("legacyProposalNotice")}</p> : null}
             {routine.trigger_error ? <p role="alert" className="text-sm text-destructive">{["quota", "launchFailed"].includes(routine.trigger_error) ? routineErrorLabel(routine.trigger_error, t) : t("triggerFilterError")}</p> : null}
             {routine.last_error ? (
-              <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <p className="flex items-center gap-1.5 text-xs text-warning-strong">
                 <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" />
                 <span>{routineErrorLabel(routine.last_error, t)}</span>
                 {routine.last_error === "quota" ? (

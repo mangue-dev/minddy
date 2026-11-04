@@ -67,6 +67,7 @@ import {
   mentionAttrsFromOption,
   mentionAttrsFromScanned,
 } from "@/lib/mention-attributes";
+import { caretMenuPosition, editorMenuBand } from "@/lib/visible-band";
 
 /* ── The node ───────────────────────────── ────────────────────────────── */
 
@@ -383,15 +384,18 @@ function renderMentionMenu(pluginKey: PluginKey) {
   const place = () => {
     const rect = caretRect?.();
     if (!menuEl || !rect) return;
-    const { offsetWidth: w, offsetHeight: h } = menuEl;
-    const below = window.innerHeight - rect.bottom - GAP - EDGE;
-    const above = rect.top - GAP - EDGE;
-    const openBelow = h <= below || below >= above;
-    const top = openBelow ? rect.bottom + GAP : rect.top - GAP - h;
-    const clamp = (v: number, max: number) =>
-      Math.round(Math.min(Math.max(v, EDGE), Math.max(EDGE, max)));
-    menuEl.style.top = `${clamp(top, window.innerHeight - h - EDGE)}px`;
-    menuEl.style.left = `${clamp(rect.left, window.innerWidth - w - EDGE)}px`;
+    // Above the keyboard and the editor toolbar on a phone.
+    const { top, left } = caretMenuPosition({
+      caret: rect,
+      width: menuEl.offsetWidth,
+      height: menuEl.offsetHeight,
+      band: editorMenuBand(),
+      viewportWidth: window.innerWidth,
+      edge: EDGE,
+      gap: GAP,
+    });
+    menuEl.style.top = `${top}px`;
+    menuEl.style.left = `${left}px`;
   };
 
   // The size of the menu only applies to the next frame after a change of

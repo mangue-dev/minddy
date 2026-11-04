@@ -370,7 +370,7 @@ export function ProjectGitSection({ projectId }: { projectId: string }) {
               }
             >
               {issueSync && writeMissingUrl && (
-                <p className="text-xs text-amber-600 dark:text-amber-500">
+                <p className="text-xs text-warning-strong">
                   <a
                     href={writeMissingUrl}
                     target="_blank"

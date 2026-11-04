@@ -28,12 +28,8 @@ export function ServerUnavailableState({
   );
 
   return (
-    <main
-      className="flex min-h-[100dvh] items-center justify-center bg-background px-6 py-16"
-      role="alert"
-      aria-live="assertive"
-    >
-      <div className="mx-auto w-full max-w-lg text-center">
+    <main className="flex min-h-[100dvh] items-center justify-center bg-background px-6 py-16">
+      <div role="alert" aria-live="assertive" className="mx-auto w-full max-w-lg text-center">
         <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground">
           <AppIcon icon={ServerOff} className="size-7" aria-hidden />
         </div>

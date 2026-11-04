@@ -15,6 +15,7 @@ import { useCreate } from "@/lib/create-context";
 import { useProjects } from "@/lib/projects-context";
 import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { useAllDrafts, type DraftEntry } from "@/lib/use-all-drafts";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 // The preview renders typed mentions, whose chips carry the date picker and
 // its parser: they load after the page's first content, or when the pill is
@@ -137,7 +138,7 @@ function DraftRow({ draft, onOpen, onDelete }: { draft: DraftEntry; onOpen: () =
       >
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex min-w-0 items-baseline gap-1.5">
-            <span className="truncate text-sm font-medium">{title}</span>
+            <TruncatedText text={title} className="truncate text-sm font-medium" />
             {project && (
               <span className="shrink-0 font-mono text-[0.7rem] text-muted-foreground/70">{project.key}</span>
             )}

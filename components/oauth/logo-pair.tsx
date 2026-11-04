@@ -27,7 +27,7 @@ export function OAuthLogoPair({
       <MinddyLogo className="h-11 w-11 shrink-0 text-foreground" />
 
       {state === "success" ? (
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-green-500/15 text-green-500">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-success text-success">
           <HugeiconsIcon icon={CheckIcon} className="size-4" strokeWidth={3} />
         </span>
       ) : (

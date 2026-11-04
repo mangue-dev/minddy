@@ -31,7 +31,8 @@ const h = vi.hoisted(() => ({
 }));
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
+  useTranslations: () => (key: string, values?: Record<string, string>) =>
+    key === "fieldValueAria" && values ? `${values.field}: ${values.value}` : key,
 }));
 vi.mock("@/lib/assistant-chat-context", () => ({
   useAssistantChatContext: () => ({
@@ -148,7 +149,9 @@ describe("ConversationSettings", () => {
 
     // The composer trigger shows the logo only (MIN-827); the model and its
     // reasoning level are named by its tooltip.
-    const trigger = host.querySelector('button[aria-label="sectionTitle"]');
+    // Its accessible name carries them too (WCAG 2.5.3).
+    const trigger = host.querySelector('button[aria-label="sectionTitle: GLM 5.3 Flash · reasoningLow"]');
+    expect(trigger).not.toBeNull();
     expect(trigger?.textContent).not.toContain("GLM 5.3 Flash");
     expect(trigger?.getAttribute("tooltip")).toBe("GLM 5.3 Flash · reasoningLow");
     expect(host.textContent).not.toContain("modelDefault");

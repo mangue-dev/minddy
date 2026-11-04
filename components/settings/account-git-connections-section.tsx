@@ -28,13 +28,13 @@ import {
 import { getRepoProvider, type RepoProviderId } from "@/lib/repo-providers";
 import { ProviderConnectMenu } from "@/components/git/provider-connect-buttons";
 import {
-  SettingsEmpty,
   SettingsGroup,
   SettingsListRow,
 } from "@/components/settings/settings-ui";
 import { EmptyScene } from "@/components/empty-scene";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import type { GitConnection, GitIdentity } from "@/lib/types";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 
 const PROVIDER_ICON = { github: Github, gitlab: Gitlab } as const;
 
@@ -247,7 +247,7 @@ export function AccountGitConnectionsSection() {
       >
         {/* The two requests decide the contents of the same block: wait for them both, otherwise the authorization line jumps from one state to the other in front of you. */}
         {loading || identitiesLoading ? (
-          <SettingsEmpty className="py-0">{tc("loading")}</SettingsEmpty>
+          <RowsSkeleton rows={2} leading="avatar" secondLine rowClassName="py-3" />
         ) : blocks.length === 0 ? (
           <EmptyScene
             size="compact"

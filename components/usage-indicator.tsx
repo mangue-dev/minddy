@@ -47,6 +47,7 @@ export function UsageIndicator({
   onOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations("Billing");
+  const tIssueUI = useTranslations("IssueUI");
   const {
     usageLoading: loading,
     usageError,
@@ -67,7 +68,7 @@ export function UsageIndicator({
     state === "exhausted" || state === "low"
       ? "text-destructive hover:text-destructive"
       : state === "warning"
-        ? "text-amber-600 dark:text-amber-400 hover:text-amber-600 dark:hover:text-amber-400"
+        ? "text-warning-strong hover:text-warning-strong"
         : "text-muted-foreground hover:text-foreground";
 
   return (
@@ -76,7 +77,15 @@ export function UsageIndicator({
         <Button
           variant="ghost"
           size="sm"
-          aria-label={t("usageAria")}
+          // The name keeps the visible value (WCAG 2.5.3).
+          aria-label={
+            usage
+              ? tIssueUI("fieldValueAria", {
+                  field: t("usageAria"),
+                  value: t("usagePercent", { percent: roundRemainingPercent(remainingPercent) }),
+                })
+              : t("usageAria")
+          }
           className={cn(
             "gap-1.5 text-xs font-medium tabular-nums shadow-none",
             sidebar

@@ -133,7 +133,7 @@ function OptionToggle({
 const BAR_BUTTON = "rounded-sm app-mobile:size-10";
 
 /** A thin vertical divider between the bar's groups. */
-const Divider = () => <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-border" />;
+const Divider = ({ className }: { className?: string }) => <span aria-hidden className={cn("mx-0.5 h-4 w-px shrink-0 bg-border", className)} />;
 
 /** The bar's inset from its pane's edges. */
 const PANE_INSET = 8;
@@ -387,7 +387,9 @@ export function FindBar({ editor, editable }: { editor: Editor; editable: boolea
         !place && "invisible"
       )}
     >
-      <div className="flex items-center gap-0.5">
+      {/* On a phone the toggles take a second row: with 40px targets, one
+          row would leave the field no width and push the close button out. */}
+      <div className="flex items-center gap-0.5 app-mobile:flex-wrap">
         <HugeiconsIcon icon={Search01Icon} className="ml-2 size-4 shrink-0 text-muted-foreground" aria-hidden />
         <input
           ref={fieldRef}
@@ -408,37 +410,39 @@ export function FindBar({ editor, editable }: { editor: Editor; editable: boolea
         <span aria-live="polite" className="shrink-0 px-1 text-xs whitespace-nowrap text-muted-foreground tabular-nums">
           {statusText}
         </span>
-        <Divider />
-        <OptionToggle
-          label={t("findMatchCase")}
-          pressed={options.caseSensitive}
-          onToggle={() => update({ caseSensitive: !options.caseSensitive })}
-        >
-          Aa
-        </OptionToggle>
-        <OptionToggle
-          label={t("findWholeWord")}
-          pressed={options.wholeWord}
-          onToggle={() => update({ wholeWord: !options.wholeWord })}
-        >
-          <span className="underline decoration-1 underline-offset-2">ab</span>
-        </OptionToggle>
-        <OptionToggle
-          label={t("findRegex")}
-          pressed={options.regexp}
-          onToggle={() => update({ regexp: !options.regexp })}
-        >
-          <span className="font-mono">.*</span>
-        </OptionToggle>
-        {canReplace && (
+        <div className="contents app-mobile:order-last app-mobile:flex app-mobile:w-full app-mobile:items-center app-mobile:gap-0.5 app-mobile:pl-6">
+          <Divider className="app-mobile:hidden" />
           <OptionToggle
-            label={replaceOpen ? t("findHideReplace") : t("findShowReplace")}
-            pressed={replaceOpen}
-            onToggle={() => setReplaceOpen((value) => !value)}
+            label={t("findMatchCase")}
+            pressed={options.caseSensitive}
+            onToggle={() => update({ caseSensitive: !options.caseSensitive })}
           >
-            <HugeiconsIcon icon={ReplaceIcon} className="size-4" />
+            Aa
           </OptionToggle>
-        )}
+          <OptionToggle
+            label={t("findWholeWord")}
+            pressed={options.wholeWord}
+            onToggle={() => update({ wholeWord: !options.wholeWord })}
+          >
+            <span className="underline decoration-1 underline-offset-2">ab</span>
+          </OptionToggle>
+          <OptionToggle
+            label={t("findRegex")}
+            pressed={options.regexp}
+            onToggle={() => update({ regexp: !options.regexp })}
+          >
+            <span className="font-mono">.*</span>
+          </OptionToggle>
+          {canReplace && (
+            <OptionToggle
+              label={replaceOpen ? t("findHideReplace") : t("findShowReplace")}
+              pressed={replaceOpen}
+              onToggle={() => setReplaceOpen((value) => !value)}
+            >
+              <HugeiconsIcon icon={ReplaceIcon} className="size-4" />
+            </OptionToggle>
+          )}
+        </div>
         <Divider />
         <Button
           variant="ghost"

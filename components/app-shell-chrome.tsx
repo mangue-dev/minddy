@@ -74,6 +74,7 @@ import {
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useMobileLayout, useMobileViewport } from "@/lib/use-mobile-layout";
+import { primeMobileKeyboard } from "@/lib/mobile-sheet-focus";
 import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSettingsMenu } from "@/components/mobile-project-menu";
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
 import { useAccountActions } from "@/components/mobile-account";
@@ -1657,6 +1658,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     [armSearchIndex, refreshSearchIndex, warmPalette]
   );
   const openPalette = useCallback(() => handlePaletteOpenChange(true), [handlePaletteOpenChange]);
+  // The search tap raises the keyboard the palette's field then takes over.
+  const openMobilePalette = useCallback(() => {
+    primeMobileKeyboard();
+    openPalette();
+  }, [openPalette]);
   const openDestinationPalette = useCallback(() => {
     warmPalette();
     setPaletteMode("destination");
@@ -1738,7 +1744,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       mobileNav={
         <MobileNavigation
           {...mobileNavigation}
-          onSearch={openPalette}
+          onSearch={openMobilePalette}
         />
       }
     >

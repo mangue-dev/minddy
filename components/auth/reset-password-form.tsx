@@ -101,7 +101,7 @@ export function ResetPasswordForm() {
             ? (result as { error?: unknown; code?: unknown })
             : {};
         const resetError = new Error(
-          typeof payload.error === "string" ? payload.error : "Password reset failed"
+          typeof payload.error === "string" ? payload.error : t("errorUnexpected")
         ) as Error & { code?: string; status?: number };
         if (typeof payload.code === "string") resetError.code = payload.code;
         resetError.status = response.status;
@@ -184,6 +184,8 @@ export function ResetPasswordForm() {
           <Field id="password" label={t("newPassword")}>
             <PasswordInput
               id="password"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "reset-password-error" : undefined}
               className="h-10 bg-control"
               autoComplete="new-password"
               autoFocus
@@ -200,6 +202,8 @@ export function ResetPasswordForm() {
           <Field id="confirmPassword" label={t("confirmPassword")}>
             <PasswordInput
               id="confirmPassword"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? "reset-password-error" : undefined}
               className="h-10 bg-control"
               autoComplete="new-password"
               required
@@ -210,7 +214,7 @@ export function ResetPasswordForm() {
             />
           </Field>
 
-          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {error && <p id="reset-password-error" role="alert" className="text-sm text-destructive">{error}</p>}
 
           <Button
             type="submit"

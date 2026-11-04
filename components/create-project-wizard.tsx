@@ -92,6 +92,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * Project creation wizard (MIN-62, MIN-171, MIN-689): Where do we start? →
@@ -1075,9 +1076,7 @@ export function CreateProjectWizard({
                   <RepoIcon className="size-5" strokeWidth={1.5} />
                 </span>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="truncate text-sm font-medium">
-                    {repo.fullName}
-                  </p>
+                  <TruncatedText text={repo.fullName} className="truncate text-sm font-medium" />
                   <p className="truncate text-xs text-muted-foreground">
                     {getRepoProvider(repo.provider).displayName}
                   </p>
@@ -1186,9 +1185,7 @@ export function CreateProjectWizard({
                     <HugeiconsIcon icon={FileUploadIcon} className="size-5" strokeWidth={1.5} />
                   </span>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="truncate text-sm font-medium">
-                      {csvFile.name}
-                    </p>
+                    <TruncatedText text={csvFile.name} className="truncate text-sm font-medium" />
                     <p className="truncate text-xs text-muted-foreground">
                       {t("wizardSeedFileReady")}
                     </p>
@@ -1379,9 +1376,7 @@ export function CreateProjectWizard({
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                     <HugeiconsIcon icon={Mail01Icon} className="size-3.5" aria-hidden />
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-left text-sm">
-                    {email}
-                  </span>
+                  <TruncatedText text={email} className="min-w-0 flex-1 truncate text-left text-sm" />
                   <Button
                     type="button"
                     variant="ghost"
@@ -1435,7 +1430,7 @@ export function CreateProjectWizard({
               className="size-10 rounded-[11px] border border-border"
             />
             <div className="min-w-0 flex-1 text-left">
-              <p className="truncate text-sm font-medium">{name}</p>
+              <TruncatedText text={name} className="truncate text-sm font-medium" />
               <p className="truncate text-xs text-muted-foreground">
                 <span className="font-mono">{key}</span>
                 {repo ? ` · ${repo.fullName}` : ` · ${t("wizardNoRepo")}`}

@@ -22,6 +22,7 @@ import {SettingsEmpty, SettingsGroup, SettingsListRow, SettingsRow} from "@/comp
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import type { PushDevice } from "@/lib/types";
 import {AppTooltip} from "@/components/ui/app-tooltip";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 
 /**
  * “Push notifications” (MIN-183) — the card by which you turn on, turn off and
@@ -373,7 +374,7 @@ export function AccountPushDevicesSection() {
         )}
 
         {loading ? (
-          <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+          <RowsSkeleton rows={2} leading="avatar" secondLine rowClassName="py-3" />
         ) : devices.length === 0 ? (
           <SettingsEmpty>{t("empty")}</SettingsEmpty>
         ) : (

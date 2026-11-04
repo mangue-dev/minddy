@@ -82,7 +82,7 @@ vi.mock("@/lib/use-context-mentions", () => ({ useContextMentions: <T,>(base: T)
 vi.mock("@/lib/use-issue-relations-query", () => ({ useIssueRelationsQuery: () => ({ relations: [] }) }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
 vi.mock("@/lib/use-repository-skills", () => ({ useRepositorySkills: () => ({ skills: [] }) }));
-vi.mock("@/components/ui/tooltip", () => ({ Tooltip: ({ children }: { children: ReactNode }) => children, TooltipTrigger: ({ children }: { children: ReactNode }) => children, TooltipContent: () => null }));
+vi.mock("@/components/ui/tooltip", () => ({ Tooltip: ({ children }: { children: ReactNode }) => children, TooltipTrigger: ({ children }: { children: ReactNode }) => children, TooltipContent: () => null, useTooltipScope: () => ({ provided: false, insideTrigger: false }) }));
 vi.mock("@/components/pull-requests/pr-state-badge", () => ({ PR_STATE_STYLES: {}, PrStateBadge: () => null }));
 vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({ user: { id: "owner" } }),

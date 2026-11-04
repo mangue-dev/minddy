@@ -29,7 +29,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  SettingsEmpty,
   SettingsGroup,
 } from "@/components/settings/settings-ui";
 import { WizardDialog } from "@/components/wizard/wizard-dialog";
@@ -44,6 +43,8 @@ import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { EmptyScene } from "@/components/empty-scene";
 import { ObjectiveBadge } from "@/components/objective-label";
 import type { Integration, IntegrationKind } from "@/lib/types";
+import { RowsSkeleton } from "@/components/loading-skeletons";
+import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * The TYPE of a key decides what it is allowed to write — tickets in
@@ -59,8 +60,8 @@ const KIND_STYLES: Record<IntegrationKind, { badge: string; avatar: string }> =
     },
     feedback: {
       badge:
-        "bg-amber-600/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
-      avatar: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+        "bg-surface-warning text-warning-strong",
+      avatar: "bg-surface-warning text-warning-strong",
     },
   };
 
@@ -180,7 +181,7 @@ function WebhookStatus({ integration }: { integration: Integration }) {
           !status
             ? "bg-muted-foreground/40"
             : healthy
-              ? "bg-green-500"
+              ? "bg-success"
               : "bg-destructive",
         )}
       />
@@ -283,7 +284,7 @@ export function ProjectIntegrations({
       )}
 
       {loading ? (
-        <SettingsEmpty>{tc("loading")}</SettingsEmpty>
+        <RowsSkeleton rows={2} leading="avatar" secondLine rowClassName="py-3" />
       ) : integrations.length === 0 ? (
         <EmptyScene size="compact" icon={Plug01Icon} title={t("integrationsEmpty")}>
           {isOwner && (
@@ -333,7 +334,7 @@ export function ProjectIntegrations({
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate text-sm font-medium">{integration.name}</span>
+                      <TruncatedText text={integration.name} className="truncate text-sm font-medium" />
                       <code className="shrink-0 font-mono text-xs text-muted-foreground">
                         {integration.key_prefix}…
                       </code>

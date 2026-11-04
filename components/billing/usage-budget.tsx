@@ -119,7 +119,7 @@ export function UsageBudgetSummary({ compact = false }: { compact?: boolean }) {
                 state === "low" || state === "exhausted"
                   ? "text-destructive"
                   : state === "warning"
-                    ? "text-amber-600 dark:text-amber-400"
+                    ? "text-warning-strong"
                     : "text-foreground",
               )}
             >

@@ -166,3 +166,19 @@ it("orders the bottom bar as sidebar, Numo, search, task notebook and New, witho
   expect([...bar.querySelectorAll("a, button")].map((control) => control.getAttribute("aria-label")))
     .toEqual(["Go to", "Numo", "Search", "Task notebook", "New"]);
 });
+
+it("gives the focus back to the menu button without a focus style of its own", async () => {
+  // The focus returns by script once the sidebar closes; after a swipe the
+  // browser counts it as visible focus, so a `focus-visible:` style painted
+  // the button gray. Keyboard focus comes from the global ring instead.
+  await act(() => root.render(<div className="app-shell"><NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close", clearFilter: "Clear filter" }, Settings: { filterPlaceholder: "Filter {count} items" } }}>
+    <MobileNavigation sections={[]} onSearch={() => {}} />
+  </NextIntlClientProvider></div>));
+  const trigger = container.querySelector<HTMLButtonElement>("[data-mobile-menu-trigger]")!;
+  await act(() => trigger.click());
+  await act(() => container.querySelector<HTMLButtonElement>("[data-mobile-sidebar-dismiss]")!.click());
+  expect(document.activeElement).toBe(trigger);
+  const slots = [...container.querySelectorAll<HTMLButtonElement>("[data-mobile-navigation] button")];
+  expect(slots.length).toBeGreaterThan(1);
+  for (const slot of slots) expect(slot.className).not.toMatch(/focus-visible:/);
+});

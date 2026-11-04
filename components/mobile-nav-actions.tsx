@@ -18,7 +18,8 @@ import { useScratchpad } from "@/lib/scratchpad-context";
 import { useScratchpadProgress } from "@/lib/use-scratchpad-query";
 import { useModShiftShortcut } from "@/lib/keyboard/use-mod-shortcut";
 
-const SLOT_CLASS = "flex h-full min-w-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring";
+// No focus style of its own, like the other slots (components/mobile-navigation.tsx).
+const SLOT_CLASS = "flex h-full min-w-0 items-center justify-center rounded-full outline-none";
 
 /** Numo, the task notebook and creation occupy fixed slots in the mobile bottom bar. */
 export function MobileNumoButton() {

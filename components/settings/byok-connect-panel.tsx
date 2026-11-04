@@ -3,16 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { RowsSkeleton } from "@/components/loading-skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -184,9 +176,7 @@ export function ByokConnectPanel({
   };
 
   if (loading)
-    return (
-      <p className="py-2 text-sm text-muted-foreground">{tc("loading")}</p>
-    );
+    return <RowsSkeleton rows={2} leading="avatar" secondLine className="max-w-2xl" />;
   const cloudProviders = availableProviders.filter(
     (entry) => !isLocalAgentProvider(entry.id),
   );
@@ -196,42 +186,28 @@ export function ByokConnectPanel({
 
   return (
     <div className={cn("flex max-w-2xl flex-col gap-3", className)}>
-      <AlertDialog
+      <ConfirmDeleteDialog
         open={removing !== null}
         onOpenChange={(open) => {
           if (!open && !deleting) setRemoving(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("aiKeyRemoveConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("aiKeyRemoveConfirmDescription", {
-                provider: removing
-                  ? providerLabel(getAgentProvider(removing.provider) ?? {
-                      id: removing.provider,
-                      label: removing.provider,
-                    })
-                  : "",
-              })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>{tc("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleting}
-              onClick={(event) => {
-                event.preventDefault();
-                if (removing) void removeKey(removing);
-              }}
-            >
-              {deleting ? <Spinner /> : null}
-              {t("aiKeyRemove")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title={t("aiKeyRemoveConfirmTitle")}
+        description={t("aiKeyRemoveConfirmDescription", {
+          provider: removing
+            ? providerLabel(getAgentProvider(removing.provider) ?? {
+                id: removing.provider,
+                label: removing.provider,
+              })
+            : "",
+        })}
+        confirmLabel={t("aiKeyRemove")}
+        cancelLabel={tc("cancel")}
+        isLoading={deleting}
+        closeOnConfirm={false}
+        onConfirm={async () => {
+          if (removing) await removeKey(removing);
+        }}
+      />
       {mode === "settings" && managedAiAvailable && (
         <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
           <MinddyLogo className="size-5 shrink-0" />
@@ -414,7 +390,7 @@ export function ByokConnectPanel({
           </div>
         </div>}
       {keys.some((key) => !key.validated_at) ? (
-        <p className="text-xs text-amber-600 dark:text-amber-500">
+        <p className="text-xs text-warning-strong">
           {t("aiKeyUnconfirmed")}
         </p>
       ) : null}

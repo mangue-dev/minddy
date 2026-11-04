@@ -42,6 +42,7 @@ vi.mock("@/components/ui/tooltip", () => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipContent: () => null,
+  useTooltipScope: () => ({ provided: false, insideTrigger: false }),
 }));
 vi.mock("@/components/routines/spend-cap-select", () => ({ SpendCapSelect: () => null }));
 vi.mock("@/components/ui/collapsible", () => ({
