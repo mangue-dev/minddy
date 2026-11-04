@@ -93,18 +93,6 @@ async function claim(key: string): Promise<number | null> {
 }
 
 /**
- * Is the author of this comment a member of one of the projects that knows
- * this repository? `false` on an absent login (a payload without an author doesn't look like anyone) as well as on a forge account that no one has logged in.
- */
-export async function isForgeAuthorMember(params: {
-  provider: RepoProviderId;
-  projectIds: string[];
-  authorLogin: string | null;
-}): Promise<boolean> {
-  return !!await forgeAuthorMemberId(params);
-}
-
-/**
  * Resolve the exact minddy member connected to the forge comment author, among
  * people who can still write in that project (owner or `member`, live).
  */

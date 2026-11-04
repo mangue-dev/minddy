@@ -4,8 +4,6 @@ import { useEffect, useSyncExternalStore } from "react";
 
 import { isMobileLayout, subscribeAppLayout } from "./app-layout";
 import { isKeyboardOpen, keyboardInset, revealDelta } from "./mobile-keyboard";
-
-export { MOBILE_LAYOUT_QUERY } from "./app-layout";
 const serverSnapshot = () => undefined;
 
 /** Resolve the viewport before mounting anything that writes desktop tabs. */

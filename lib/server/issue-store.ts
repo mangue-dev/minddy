@@ -79,19 +79,6 @@ export async function encodeIssue(row: Row, previousVersion = 0): Promise<Row> {
   }, { table: "issues", scope });
 }
 
-/** Read a complete issue under the caller's existing RLS and metadata filters. */
-export async function readIssue(
-  client: SupabaseClient,
-  id: string,
-  projectId: string,
-  actorId: string | null = null,
-): Promise<{ data: Row | null; error: { code?: string; message: string } | null }> {
-  const { data, error } = await client.from("issues").select("*")
-    .eq("id", id).eq("project_id", projectId).is("deleted_at", null).maybeSingle();
-  if (error || !data) return { data: null, error };
-  return { data: await decodeIssue(data as Row, actorId), error: null };
-}
-
 const protectedFields = new Set<string>(["*", ...issueContentColumns]);
 const storageFields = new Set(["encrypted_content", "encryption_version", "encryption_revision", "encryption_checked_at"]);
 
@@ -246,34 +233,4 @@ export async function loadIssueTitles(
     }
   }
   return titles;
-}
-
-/** Internal checklist sync: compare the complete row before changing its plan. */
-export async function saveIssuePlanSnapshot(
-  client: SupabaseClient, issueId: string, projectId: string,
-  expectedPlan: string, nextPlan: string,
-): Promise<boolean> {
-  const { data: stored, error } = await client.from("issues").select("*")
-    .eq("id", issueId).eq("project_id", projectId)
-    .is("deleted_at", null).maybeSingle();
-  if (error || !stored) return false;
-  const current = await decodeIssue(stored);
-  if (current.plan !== expectedPlan) return false;
-  const encoded = await encodeIssue({ ...current, plan: nextPlan },
-    (stored.encryption_version as number | undefined) ?? 0);
-  const updates: Row = Object.fromEntries(issueContentColumns.map((field) => [field, encoded[field]]));
-  if (encoded.encryption_version !== undefined) {
-    updates.encryption_version = encoded.encryption_version;
-    updates.encrypted_content = encoded.encrypted_content;
-  }
-  let query = client.from("issues").update(updates)
-    .eq("id", issueId).eq("project_id", projectId).is("deleted_at", null);
-  if (stored.encryption_revision !== undefined) {
-    query = query.eq("encryption_revision", stored.encryption_revision);
-  } else {
-    query = query.eq("plan", expectedPlan);
-  }
-  const { data, error: writeError } = await query.select("id").maybeSingle();
-  if (writeError) throw new Error("Unable to save issue plan");
-  return !!data;
 }

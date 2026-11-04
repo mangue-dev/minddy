@@ -30,14 +30,6 @@ export function SearchIcon(props: P) {
   );
 }
 
-export function CloseIcon(props: P) {
-  return (
-    <svg {...base} {...props}>
-      <path d="M18 6 6 18M6 6l12 12" />
-    </svg>
-  );
-}
-
 export function ChevronLeftIcon(props: P) {
   return (
     <svg {...base} {...props}>
@@ -65,15 +57,6 @@ export function ArrowRightIcon(props: P) {
 export function LoaderIcon(props: P) {
   return (
     <AppIcon icon={LoaderCircleIcon} width={16} height={16} {...props} />
-  );
-}
-
-export function CopyIcon(props: P) {
-  return (
-    <svg {...base} {...props}>
-      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-    </svg>
   );
 }
 

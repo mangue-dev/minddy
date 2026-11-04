@@ -79,22 +79,5 @@ export interface DemoTicket {
   assignee: { id: DemoMemberId; name: string; avatar: string } | null;
   category: { id: DemoCategoryId; name: string } | null;
 }
-
-/** Ce que renvoie `POST /api/demo/dictate`. */
-export interface DemoDictationResult {
-  /** What was heard (or the example phrase played). */
-  transcript: string;
-  ticket: DemoTicket;
-}
-
-/**
- * Customer side socket terminals. The demo is not the dictation of the product: there
- * where the app lets you talk as long as you want, here you stop on your own
- * — a public demo is paid for by each second of audio, and one sentence is enough to
- * the demonstration.
- */
-export const DEMO_MAX_RECORDING_MS = 15_000;
-/** Product pinned throughput (`DictateButton`): ~6 KB/s. */
-export const DEMO_AUDIO_BITS_PER_SECOND = 48_000;
 /** Payload ceiling accepted by the road (~1 min of speech). */
 export const DEMO_MAX_AUDIO_BYTES = 400 * 1024;

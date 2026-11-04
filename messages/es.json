@@ -1136,7 +1136,6 @@
     "viewGenerating": "Numo está creando esta vista…",
     "viewOptions": "Opciones de «{name}»",
     "newIssue": "Nueva incidencia",
-    "createInSettings": "Todavía no hay categorías. Crea una en Ajustes.",
     "shareView": "Compartir vista",
     "renameView": "Cambiar el nombre de la vista",
     "deleteView": "Eliminar vista",
@@ -1440,7 +1439,6 @@
     "resetFilters": "Restablecer filtros"
   },
   "Categories": {
-    "removeFromIssue": "Quitar «{name}»",
     "colors": {
       "amber": "ámbar",
       "blue": "azul",
@@ -1609,7 +1607,6 @@
     "objectiveLinked": "Objetivo vinculado",
     "noObjective": "Sin objetivo",
     "parent": "Incidencia principal",
-    "noParent": "Sin incidencia principal",
     "order": "Ordenar",
     "integration": "Integración",
     "noIntegration": "Sin integración",
@@ -2761,7 +2758,6 @@
     "markInProgress": "Marcar como en curso",
     "markCompleted": "Marcar como completada",
     "cancelTask": "Marcar como cancelada",
-    "taskMenuAria": "Cambiar el estado de la tarea",
     "taskActionsAria": "Acciones de la tarea",
     "taskCheckboxAria": "Cambiar el estado de la tarea «{text}»"
   },
@@ -3213,15 +3209,12 @@
   "Projects": {
     "newProject": "Nuevo proyecto",
     "firstProject": "Crear el primer proyecto",
-    "projectOptions": "Opciones de proyecto",
     "tickets": "Incidencias",
     "triage": "Clasificación",
     "feedback": "Sugerencias",
     "objectives": "Objetivos",
     "settings": "Ajustes",
     "triageIssues": "{entityPlural} en Clasificación",
-    "openIssues": "{entityPlural} abiertas",
-    "doneIssues": "{entityPlural} cerradas",
     "nameRequired": "El nombre es obligatorio.",
     "keyInvalid": "La clave debe tener al menos 2 letras.",
     "keyTaken": "Uno de tus proyectos ya utiliza la clave «{key}».",
@@ -5515,9 +5508,6 @@
     "ai_routines_title": "Rutinas",
     "ai_routines_body": "Numo ejecuta una tarea según un horario o cuando pasa algo: una incidencia entra en clasificación, cambia un estado, llega un comentario.",
     "aiNote": "Incluido en todos los planes, también en Free.",
-    "aiFigure_prompt": "Divide el rediseño del pago en incidencias",
-    "aiFigure_working": "Creando incidencias…",
-    "aiFigure_reply": "Listo: tres incidencias, completadas y asignadas.",
     "aiFigure_issue1": "Rediseñar el paso de pago",
     "aiFigure_issue2": "Guardar la tarjeta para la próxima vez",
     "aiFigure_issue3": "Mostrar los impuestos antes del pago",

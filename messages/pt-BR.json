@@ -1136,7 +1136,6 @@
     "viewGenerating": "O Numo está construindo esta visualização…",
     "viewOptions": "Opções para “{name}”",
     "newIssue": "Novo ticket",
-    "createInSettings": "Ainda não há categorias. Crie uma em Configurações.",
     "shareView": "Compartilhar visualização",
     "renameView": "Renomear visualização",
     "deleteView": "Excluir visualização",
@@ -1440,7 +1439,6 @@
     "resetFilters": "Redefinir filtros"
   },
   "Categories": {
-    "removeFromIssue": "Remover “{name}”",
     "colors": {
       "amber": "âmbar",
       "blue": "azul",
@@ -1609,7 +1607,6 @@
     "objectiveLinked": "Objetivo vinculado",
     "noObjective": "Sem objetivo",
     "parent": "Pai",
-    "noParent": "Sem pai",
     "order": "Classificar",
     "integration": "Integração",
     "noIntegration": "Sem integração",
@@ -2761,7 +2758,6 @@
     "markInProgress": "Marcar como em andamento",
     "markCompleted": "Marcar como concluída",
     "cancelTask": "Marcar como cancelada",
-    "taskMenuAria": "Alterar estado da tarefa",
     "taskActionsAria": "Ações da tarefa",
     "taskCheckboxAria": "Alternar tarefa “{text}”"
   },
@@ -3213,15 +3209,12 @@
   "Projects": {
     "newProject": "Novo projeto",
     "firstProject": "Criar o primeiro projeto",
-    "projectOptions": "Opções do projeto",
     "tickets": "Tickets",
     "triage": "Triagem",
     "feedback": "Feedback",
     "objectives": "Objetivos",
     "settings": "Configurações",
     "triageIssues": "{entityPlural} na triagem",
-    "openIssues": "{entityPlural} abertos",
-    "doneIssues": "{entityPlural} fechados",
     "nameRequired": "O nome é obrigatório.",
     "keyInvalid": "A chave deve ter pelo menos 2 letras.",
     "keyTaken": "A chave “{key}” já é usada por um de seus projetos.",
@@ -5515,9 +5508,6 @@
     "ai_routines_title": "Rotinas",
     "ai_routines_body": "O Numo executa uma tarefa em horários definidos ou quando algo acontece: um ticket entra na triagem, um status muda, chega um feedback.",
     "aiNote": "Incluído em todos os planos, inclusive no Free.",
-    "aiFigure_prompt": "Divida o redesign do checkout em tickets",
-    "aiFigure_working": "Criando tickets…",
-    "aiFigure_reply": "Pronto: três tickets, preenchidos e atribuídos.",
     "aiFigure_issue1": "Redesenhar a etapa de pagamento",
     "aiFigure_issue2": "Salvar o cartão para a próxima vez",
     "aiFigure_issue3": "Mostrar os impostos antes do pagamento",

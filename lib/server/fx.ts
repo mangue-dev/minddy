@@ -31,12 +31,6 @@ const LOOKBACK_DAYS = 7;
 
 const REQUEST_TIMEOUT_MS = 5_000;
 
-export interface FxRate {
-  /** Jour calendaire (`YYYY-MM-DD`) auquel ce taux s'applique. */
-  day: string;
-  usdEur: number;
-}
-
 interface FrankfurterRange {
   rates?: Record<string, { EUR?: number }>;
 }
@@ -149,25 +143,4 @@ export async function syncFxRates(options?: { days?: number }): Promise<{
   }
 
   return { ok: true, inserted: rows.length, from, to };
-}
-
-/**
- * The most recent rate in base, with ITS date. The screen displays both: a
- * converted amount without its rate is not verifiable, and the date makes visible
- * a failed cron.
- */
-export async function getLatestFxRate(): Promise<FxRate | null> {
-  const service = getServiceClient();
-  const { data, error } = await service
-    .from("fx_rates")
-    .select("day, usd_eur")
-    .order("day", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.error("[fx] lecture du dernier taux impossible :", error.message);
-    return null;
-  }
-  if (!data) return null;
-  return { day: data.day as string, usdEur: Number(data.usd_eur) };
 }

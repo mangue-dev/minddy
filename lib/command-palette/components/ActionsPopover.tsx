@@ -408,5 +408,3 @@ export function ActionsPopover({
 
   return popoverContent;
 }
-
-export default ActionsPopover;

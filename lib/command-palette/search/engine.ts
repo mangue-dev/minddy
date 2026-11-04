@@ -339,17 +339,6 @@ export function matchesSearch(query: string, text: string): boolean {
   return false;
 }
 
-/**
- * Check if query matches any of the provided text fields.
- */
-export function matchesSearchFields(
-  query: string,
-  fields: (string | undefined)[]
-): boolean {
-  const combinedText = fields.filter(Boolean).join(" ");
-  return matchesSearch(query, combinedText);
-}
-
 // =============================================================================
 // RELEVANCE SCORING
 // =============================================================================
@@ -606,35 +595,6 @@ export function recordUsage(itemId: string): void {
 // =============================================================================
 // KEYWORD UTILITIES
 // =============================================================================
-
-/**
- * Build keywords from multiple sources for search.
- * Normalizes and deduplicates all text tokens.
- */
-export function buildKeywords(
-  ...sources: Array<string | string[] | undefined>
-): string[] {
-  const keywords = new Set<string>();
-
-  const register = (value: string) => {
-    const normalized = normalizeSearchText(value);
-    normalized
-      .split(/\s+/)
-      .filter(Boolean)
-      .forEach((token) => keywords.add(token));
-  };
-
-  sources.forEach((source) => {
-    if (!source) return;
-    if (Array.isArray(source)) {
-      source.forEach((entry) => register(entry));
-    } else {
-      register(source);
-    }
-  });
-
-  return Array.from(keywords);
-}
 
 // =============================================================================
 // SEARCH ENGINE CLASS (Optional OOP wrapper)

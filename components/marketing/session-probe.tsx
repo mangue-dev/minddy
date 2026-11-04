@@ -10,7 +10,7 @@ import { useEffect } from "react";
  * places the target of a bare `import()` in the INITIAL chunk group of the
  * component: measured on the landing, 18 KB gzipped from the SDK left with the
  * starting bundle, in front of the LCP image. A `next/dynamic` produces a
- * real lazy chunk (this is already what `hero-shader.tsx` does for WebGL).
+ * real lazy chunk.
  *
  * The nav only mounts it if a Supabase auth cookie is present: an anonymous visitor
  * — the vast majority on a landing — never ask for this chunk.

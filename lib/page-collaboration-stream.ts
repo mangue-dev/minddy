@@ -56,11 +56,7 @@ import {
 import { diffDocSteps } from "./page-collaboration-document";
 import { COLLAB_META, COLLAB_REBUILD_META } from "./page-collaboration-origin";
 
-export {
-  COLLAB_META,
-  COLLAB_REBUILD_META,
-  isCollabRemoteTransaction,
-} from "./page-collaboration-origin";
+export { COLLAB_META, COLLAB_REBUILD_META } from "./page-collaboration-origin";
 
 export function collabPlugin(version: number, clientID: string) {
   return collab({ version, clientID });

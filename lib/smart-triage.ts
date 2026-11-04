@@ -35,12 +35,6 @@ export function boardComparatorFactory(
   });
 }
 
-/** One position the server rewrote — applied optimistically by the client. */
-export interface SmartTriageMove {
-  id: string;
-  position: number;
-}
-
 /** The lean ticket shape the orderings read — a full `Issue` satisfies it. */
 export interface TriageIssue {
   id: string;

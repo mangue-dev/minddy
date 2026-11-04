@@ -1,7 +1,7 @@
 // Objective status is fixed. The value list itself lives in
 // lib/objective-validation.ts, which imports nothing — server code (route
 // handlers, Numo's tool schemas) reads it there rather than dragging UI code in.
-export { OBJECTIVE_STATUS_VALUES, isObjectiveStatus } from "./objective-validation";
+export { OBJECTIVE_STATUS_VALUES } from "./objective-validation";
 export type { ObjectiveStatus } from "./objective-validation";
 
 import type { ObjectiveStatus } from "./objective-validation";

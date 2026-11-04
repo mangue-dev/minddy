@@ -1,5 +1,5 @@
 import type { Locale } from "@/i18n/config";
-export { documentationPath, documentationRoots, resolveDocumentationPath, normalizeDocumentationText, searchDocumentation } from "@/lib/documentation-core.mjs";
+export { documentationPath } from "@/lib/documentation-core.mjs";
 
 export type DocumentationAudience = "member" | "owner" | "visitor" | "operator" | "integrator";
 export interface DocumentationDiagram {

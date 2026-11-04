@@ -36,9 +36,6 @@ import { normalizePageUrl } from "@/lib/page-content-schema";
     carries several, and 10 MB is already a very generous screenshot. */
 export const MAX_PAGE_FILE_BYTES = 10 * 1024 * 1024;
 
-/** What the limit displays to the user, in megabytes. */
-export const MAX_PAGE_FILE_MB = 10;
-
 /** `projects/{project}/pages/{page}/{file}/{name}` — the family of paths of
     page files, IN the project resources prefix.
 

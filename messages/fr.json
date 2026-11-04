@@ -1136,7 +1136,6 @@
     "viewGenerating": "Numo construit cette vue…",
     "viewOptions": "Options de « {name} »",
     "newIssue": "Nouveau ticket",
-    "createInSettings": "Aucune catégorie pour l'instant. Créez-en dans les paramètres.",
     "shareView": "Partager la vue",
     "renameView": "Renommer la vue",
     "deleteView": "Supprimer la vue",
@@ -1440,7 +1439,6 @@
     "resetFilters": "Réinitialiser les filtres"
   },
   "Categories": {
-    "removeFromIssue": "Retirer « {name} »",
     "colors": {
       "amber": "ambre",
       "blue": "bleu",
@@ -1609,7 +1607,6 @@
     "objectiveLinked": "Objectif lié",
     "noObjective": "Aucun objectif",
     "parent": "Parent",
-    "noParent": "Aucun parent",
     "order": "Trier",
     "integration": "Intégration",
     "noIntegration": "Aucune intégration",
@@ -2761,7 +2758,6 @@
     "markInProgress": "Marquer en cours",
     "markCompleted": "Marquer terminée",
     "cancelTask": "Marquer annulée",
-    "taskMenuAria": "Changer l'état de la tâche",
     "taskActionsAria": "Actions sur la tâche",
     "taskCheckboxAria": "Basculer la tâche « {text} »"
   },
@@ -3213,15 +3209,12 @@
   "Projects": {
     "newProject": "Nouveau projet",
     "firstProject": "Créer le premier projet",
-    "projectOptions": "Options du projet",
     "tickets": "Tickets",
     "triage": "Triage",
     "feedback": "Retours",
     "objectives": "Objectifs",
     "settings": "Paramètres",
     "triageIssues": "{entityPlural} en triage",
-    "openIssues": "{entityPlural} ouverts",
-    "doneIssues": "{entityPlural} fermés",
     "nameRequired": "Le nom est obligatoire.",
     "keyInvalid": "La clé doit faire au moins 2 lettres.",
     "keyTaken": "La clé « {key} » est déjà utilisée par un de vos projets.",
@@ -5515,9 +5508,6 @@
     "ai_routines_title": "Routines",
     "ai_routines_body": "Numo exécute une tâche à heure fixe, ou quand quelque chose se produit : un ticket arrive en triage, un statut change, un retour arrive.",
     "aiNote": "Inclus dans toutes les offres, Free compris.",
-    "aiFigure_prompt": "Découpe la refonte du paiement en tickets",
-    "aiFigure_working": "Création des tickets…",
-    "aiFigure_reply": "C’est fait : trois tickets, remplis et assignés.",
     "aiFigure_issue1": "Refondre l’étape de paiement",
     "aiFigure_issue2": "Mémoriser la carte pour la prochaine fois",
     "aiFigure_issue3": "Afficher les taxes avant le paiement",

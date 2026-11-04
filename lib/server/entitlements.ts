@@ -2,7 +2,7 @@ import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
-import { getResolvedBilling, type ResolvedBilling } from "@/lib/server/billing-accounts";
+import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { hasUsageBudget } from "@/lib/server/usage";
 import { isManagedBillingEnabled } from "@/lib/managed-services";
@@ -16,10 +16,6 @@ import { isManagedBillingEnabled } from "@/lib/managed-services";
  * plan of the OWNER of the project (a Pro member does not extend a project of an owner
  * Free); an AI action is paid for on the level of its ACTOR.
  */
-
-export async function getEntitlements(userId: string): Promise<ResolvedBilling> {
-  return getResolvedBilling(userId);
-}
 
 /**
  * Number of projects (not deleted) TO WHICH the user has access: those of which

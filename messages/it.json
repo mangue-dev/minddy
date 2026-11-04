@@ -1136,7 +1136,6 @@
     "viewGenerating": "Numo sta costruendo questa vista…",
     "viewOptions": "Opzioni per «{name}»",
     "newIssue": "Nuovo ticket",
-    "createInSettings": "Non ci sono ancora categorie. Creane una in Impostazioni.",
     "shareView": "Condividi vista",
     "renameView": "Rinomina vista",
     "deleteView": "Elimina vista",
@@ -1440,7 +1439,6 @@
     "resetFilters": "Reimposta filtri"
   },
   "Categories": {
-    "removeFromIssue": "Rimuovi «{name}»",
     "colors": {
       "amber": "ambra",
       "blue": "blu",
@@ -1609,7 +1607,6 @@
     "objectiveLinked": "Obiettivo collegato",
     "noObjective": "Nessun obiettivo",
     "parent": "Ticket principale",
-    "noParent": "Nessun ticket principale",
     "order": "Ordina",
     "integration": "Integrazione",
     "noIntegration": "Nessuna integrazione",
@@ -2761,7 +2758,6 @@
     "markInProgress": "Segna come in corso",
     "markCompleted": "Segna come completata",
     "cancelTask": "Segna come annullata",
-    "taskMenuAria": "Cambia lo stato dell'attività",
     "taskActionsAria": "Azioni dell’attività",
     "taskCheckboxAria": "Attiva o disattiva l'attività «{text}»"
   },
@@ -3213,15 +3209,12 @@
   "Projects": {
     "newProject": "Nuovo progetto",
     "firstProject": "Crea il primo progetto",
-    "projectOptions": "Opzioni del progetto",
     "tickets": "Ticket",
     "triage": "Triage",
     "feedback": "Feedback",
     "objectives": "Obiettivi",
     "settings": "Impostazioni",
     "triageIssues": "{entityPlural} in Triage",
-    "openIssues": "{entityPlural} aperti",
-    "doneIssues": "{entityPlural} chiusi",
     "nameRequired": "Il nome è obbligatorio.",
     "keyInvalid": "La chiave deve avere almeno 2 lettere.",
     "keyTaken": "La chiave «{key}» è già utilizzata da uno dei tuoi progetti.",
@@ -5515,9 +5508,6 @@
     "ai_routines_title": "Routine",
     "ai_routines_body": "Numo esegue un compito a orari fissi o quando succede qualcosa: un ticket entra nel triage, cambia uno stato, arriva un feedback.",
     "aiNote": "Incluso in ogni piano, anche in Free.",
-    "aiFigure_prompt": "Dividi il redesign del checkout in ticket",
-    "aiFigure_working": "Creazione dei ticket…",
-    "aiFigure_reply": "Fatto: tre ticket, compilati e assegnati.",
     "aiFigure_issue1": "Ridisegnare il passaggio di pagamento",
     "aiFigure_issue2": "Salvare la carta per la prossima volta",
     "aiFigure_issue3": "Mostrare le tasse prima del pagamento",

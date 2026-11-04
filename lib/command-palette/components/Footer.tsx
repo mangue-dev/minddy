@@ -58,5 +58,3 @@ export function Footer({
     </button>
   );
 }
-
-export default Footer;

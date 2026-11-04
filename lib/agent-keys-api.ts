@@ -101,17 +101,3 @@ export async function updateAiKeyPreferencesApi(patch: {
     }),
   );
 }
-
-/** Routes one model family through a configured key, or null for managed Minddy. */
-export async function assignAiCapabilityApi(
-  capability: ModelCatalogCapability,
-  keyId: string | null,
-): Promise<void> {
-  await parseJson(
-    await fetch("/api/account/ai-keys", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ capability, assigned_key_id: keyId }),
-    }),
-  );
-}

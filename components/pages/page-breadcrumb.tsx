@@ -16,9 +16,8 @@
 // When the chain lengthens, it is the MIDDLE levels which disappear, under
 // a “…” which renders them all with one click. Never both ends: the root says
 // in which document we are, the direct relative says where we come from, and these are
-// the only two we need without thinking. This is the motive of Notion, of
-// Motion and breadcrumbs of the app (components/app-breadcrumb.tsx), including
-// this one takes the punctuation.
+// the only two we need without thinking. This is the pattern Notion and
+// Motion use.
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { File02Icon } from "@hugeicons/core-free-icons";

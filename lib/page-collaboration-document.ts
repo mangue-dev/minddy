@@ -23,8 +23,6 @@ import { ReplaceStep, Step, Transform } from "@tiptap/pm/transform";
 import { pageExtensions } from "@/components/pages/page-extensions";
 import { BLOCK_ID_ATTRIBUTE, BLOCK_ID_TYPES } from "@/components/pages/blocks";
 
-export { COLLAB_META, COLLAB_REBUILD_META, isCollabRemoteTransaction } from "./page-collaboration-origin";
-
 /* ── Schemas ──────────────────────────────────────────────────────────────── */
 
 let bodySchema: Schema | null = null;

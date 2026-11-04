@@ -34,14 +34,6 @@ export function pullRequestTopic(prId: string): string {
  */
 export type PrLivePart = "pr" | "conversation" | "commits" | "reviewComments";
 
-/** Charge utile du message `changed`. */
-export interface PrLiveChanged {
-  parts: PrLivePart[];
-  /** Transmission timestamp (ms) — is used for diagnosis, not for order: a
- * invalidation is not a delta, replaying it out of order has no effect. */
-  at: number;
-}
-
 /**
  * React Query caches to invalidate for these parts (see `lib/use-agent-runs.ts`).
  *

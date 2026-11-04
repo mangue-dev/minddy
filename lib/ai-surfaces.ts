@@ -10,9 +10,6 @@ export const AI_SURFACES = ["agent", "assistant", "automations", "voice", "feedb
 
 export type AiSurface = (typeof AI_SURFACES)[number];
 
-/** An existing or newly created key covers everything as long as the user does not uncheck anything. */
-export const DEFAULT_BYOK_SURFACES: AiSurface[] = [...AI_SURFACES];
-
 /**
  * The groups the account's AI settings show (MIN-826): each lists its precise
  * usages, the call types, and every call type chooses its own provider in
@@ -22,10 +19,6 @@ export const DEFAULT_BYOK_SURFACES: AiSurface[] = [...AI_SURFACES];
 export const ROUTED_AI_SURFACES = ["assistant", "automations", "voice", "feedback"] as const;
 
 export type RoutedAiSurface = (typeof ROUTED_AI_SURFACES)[number];
-
-export function isRoutedAiSurface(value: unknown): value is RoutedAiSurface {
-  return typeof value === "string" && (ROUTED_AI_SURFACES as readonly string[]).includes(value);
-}
 
 /**
  * The call type that answers for a whole surface when a caller does not name

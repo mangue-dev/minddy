@@ -64,7 +64,7 @@ vi.mock("@/lib/app-tab-local-state", () => ({ useAppTabLocalState: (_: string, i
 vi.mock("@/lib/use-app-tab-change", () => ({ useAppTabChange: () => {} }));
 vi.mock("@/lib/app-tabs-context", () => ({ useOptionalAppTabSession: () => ({}) }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: () => {} }));
-vi.mock("@/lib/issues-api", () => ({ smartTriageApi: vi.fn() }));
+vi.mock("@/lib/issues-api", () => ({}));
 vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantContext: () => {}, useAssistantPanelActions: () => ({ open: state.noop, openIntent: state.noop }) }));
 vi.mock("@/components/empty-scene", () => ({ EmptyScene: () => null }));
 vi.mock("@/components/board-toolbar", () => ({ BoardToolbar: (props: Record<string, unknown>) => { state.toolbar = props; return null; } }));

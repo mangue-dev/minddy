@@ -1,15 +1,13 @@
 "use client";
 
 import {
-  Children,
   createContext,
-  useContext,
   useEffect,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { MotionPauseButton, useLandingMotionPaused } from "./motion-pause";
 
@@ -35,43 +33,6 @@ interface SceneClock {
 
 /** Outside a stepper a figure shows its first scene, finished. */
 const SceneContext = createContext<SceneClock>({ scene: 0, elapsed: Infinity, sceneMs: 1 });
-
-/**
- * The figure's own step for the current scene. `ranges[i]` lists the first and
- * last steps of scene `i`; the steps of a scene are spread evenly over its
- * duration, and the last one holds until the scene ends.
- */
-export function useSceneStep(ranges: readonly (readonly [number, number])[]): number {
-  const { scene, elapsed, sceneMs } = useContext(SceneContext);
-  const [first, last] = ranges[Math.min(scene, ranges.length - 1)];
-  const count = last - first + 1;
-  // The last step gets a longer share, so the scene ends on its result.
-  const share = Math.min(1, elapsed / (sceneMs * 0.8));
-  return Math.min(last, first + Math.floor(share * count));
-}
-
-/** Shows the child that matches the current scene, cross-faded. */
-export function SceneSwitch({ children }: { children: ReactNode }) {
-  const { scene } = useContext(SceneContext);
-  const items = Children.toArray(children);
-  const index = Math.min(scene, items.length - 1);
-  return (
-    <div className="relative h-full">
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={index}
-          initial={{ opacity: 0, scale: 0.985 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-0"
-        >
-          {items[index]}
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  );
-}
 
 const TICK_MS = 120;
 

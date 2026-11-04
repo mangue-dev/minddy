@@ -5,7 +5,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { AppIcon } from "@/components/icon";
 
-export type { AppIcon, IconComponent } from "@/components/icon";
+export type { AppIcon } from "@/components/icon";
 
 // =============================================================================
 // PALETTE ITEM
@@ -109,11 +109,6 @@ export interface CategoryDefinition {
   searchBoost?: number;
   /** Search input placeholder when this tab is active. */
   placeholder?: string;
-}
-
-/** Options to open the palette pre-filtered on a category. */
-export interface PaletteFilterOptions {
-  category: string;
 }
 
 // =============================================================================

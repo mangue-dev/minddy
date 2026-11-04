@@ -26,8 +26,6 @@ import {
   UsageSegmentBreakdown,
 } from "@/components/billing/usage-budget";
 
-export { SEGMENT_UI } from "@/components/billing/usage-segment-ui";
-
 const PLAN_LABEL_KEYS: Record<
   BillingPlanId,
   "planFree" | "planGo" | "planPro"

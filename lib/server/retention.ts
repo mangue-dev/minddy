@@ -118,8 +118,6 @@ export const RETENTION_DAYS = {
   orphanAttachments: ORPHAN_ATTACHMENT_DAYS,
 } as const;
 
-export type RetentionKey = keyof typeof RETENTION_DAYS;
-
 const DAY_MS = 86_400_000;
 
 /** ISO limit below which a line is expired. */

@@ -25,7 +25,6 @@ import {
 import { generateShortTitle } from "@/lib/server/short-title";
 import {
   RoutineScheduleError,
-  assertSchedule,
   isRoutineFrequency,
   nextRunAt,
   type RoutineFrequency,
@@ -747,14 +746,4 @@ export function routineSchedule(routine: Routine): RoutineSchedule {
     daysOfMonth: routine.days_of_month,
     timezone: routine.timezone,
   };
-}
-
-/** Sanity: the cadence of a routine is valid (useful to external callers). */
-export function isValidSchedule(schedule: RoutineSchedule): boolean {
-  try {
-    assertSchedule(schedule);
-    return true;
-  } catch {
-    return false;
-  }
 }

@@ -626,20 +626,6 @@ export async function prDeploymentResponse(scope: PrScope): Promise<NextResponse
   }
 }
 
-/** GET the compact readiness payload used by pull request sidebar rows. */
-export async function prReadinessResponse(scope: PrScope): Promise<NextResponse> {
-  try {
-    const pr = await scope.forge.getPullRequest(scope.call);
-    const { readiness } = await readPullRequestReadiness(scope, pr);
-    return NextResponse.json({
-      provider: scope.target.provider,
-      readiness,
-    });
-  } catch (err) {
-    return forgeErrorResponse(err);
-  }
-}
-
 /** GET compact readiness for several sidebar rows with bounded forge concurrency. */
 export async function prReadinessBatchResponse(
   userId: string,

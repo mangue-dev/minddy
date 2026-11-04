@@ -31,8 +31,6 @@ import { getCachedOpenRouterModelInfo, loadOpenRouterIndex } from "@/lib/server/
  * of a single call) in `ai_usage`. Best-effort, never affect return.
  */
 
-export const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-
 /**
  * A refusal from OpenRouter, distinguished from other failures (timeout, crooked JSON)
  * because it is the ONLY one that we replay: a model carrying a shortcut of

@@ -135,35 +135,6 @@ export interface AssistantMessage {
   created_at: string;
 }
 
-// SSE events for streaming assistant responses
-export type AssistantSSEEvent =
-  | { type: "content_delta"; data: { delta: string } }
-  | { type: "reasoning_start"; data: { started_at: string } }
-  | { type: "reasoning_tick"; data: { duration_ms: number } }
-  | { type: "reasoning_delta"; data: { text: string } }
-  | { type: "reasoning_end"; data: { duration_ms: number; text: string } }
-  | { type: "tool_call_start"; data: { id: string; name: string } }
-  | {
-      type: "tool_call_args_delta";
-      data: { id: string; delta: string };
-    }
-  | {
-      type: "tool_call_complete";
-      data: { id: string; name: string; arguments: string };
-    }
-  | {
-      type: "tool_result";
-      data: {
-        id: string;
-        name: string;
-        result: unknown;
-        success: boolean;
-      };
-    }
-  | { type: "message_complete"; data: { message_id: string } }
-  | { type: "error"; data: { message: string; status?: NumoTurnStatus } }
-  | { type: "done"; data: { status?: ConversationStatus | NumoTurnStatus } };
-
 /**
  * A hand-chosen context element (@ button on the composer): a ticket,
  * a project or a team member. The label comes from the client — it's only there

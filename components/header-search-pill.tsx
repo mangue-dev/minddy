@@ -1,12 +1,7 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon } from "@hugeicons/core-free-icons";
 import { type ReactNode } from "react";
 import { type AppIcon } from "@/components/icon";
-import { useTranslations } from "next-intl";
-import { Kbd } from "@/components/ui/kbd";
-import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 
 /**
  * A single command-palette row. Superset of a plain command-menu item: adds
@@ -69,46 +64,4 @@ export interface PaletteGroup {
   key?: string;
   heading?: string;
   items: PaletteItem[];
-}
-
-/**
- * Header search affordance: a pill-shaped button that opens the command palette
- * (command-palette.tsx). The app shell owns the global shortcuts (⌘K / ⌘P / F)
- * so they work before the deferred palette chunk loads; this pill is the
- * pointer entry point in the desktop header.
- */
-export function HeaderSearchPill({
-  onOpen,
-  onWarm,
-}: {
-  onOpen: () => void;
-  onWarm?: () => void;
-}) {
-  const t = useTranslations("Nav");
-  // The pill ANNOUNCES the shortcut: it must therefore say the one we have under the
-  // fingers. The cheat sheet and the foot of the palette already solve “mod” at the
-  // platform ; this was the last one to display ⌘ in hard copy, including to whom
-  // has no ⌘ key.
-  const mod = useModKey();
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      onPointerEnter={onWarm}
-      onFocus={onWarm}
-      aria-label={t("searchPlaceholder")}
-      className="flex h-8 items-center gap-1.5 rounded-full bg-control px-3 text-[0.8rem] font-medium text-muted-foreground shadow-none transition-colors hover:bg-control-hover focus-visible:bg-control-hover focus-visible:outline-none"
-    >
-      <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0" strokeWidth={2} />
-      <span className="hidden text-left sm:inline-block">
-        {t("searchPlaceholder")}
-      </span>
-      {/* Two keys, two `Kbd` — like the cheat sheet, and like the keyboard:
- “⌘K” in a single dot read like a single key. */}
-      <span className="ml-1 hidden items-center gap-0.5 opacity-60 sm:inline-flex">
-        <Kbd>{mod}</Kbd>
-        <Kbd>K</Kbd>
-      </span>
-    </button>
-  );
 }

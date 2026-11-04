@@ -259,24 +259,3 @@ export function BoardSkeleton({
 }) {
   return <BoardLoadingSkeleton columns={columns} specialView={specialView} />;
 }
-
-/**
- * Full height page with centered content (objectives, sorting):
- * `min-h-0 flex-1 overflow-y-auto px-6 py-8` + `mx-auto max-w-5xl`.
- */
-export function ScrollPageSkeleton({ rows = 4 }: { rows?: number }) {
-  return (
-    <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-        <div className="mx-auto max-w-5xl">
-          <Skeleton className="mb-6 h-8 w-56" />
-          <div className="flex flex-col gap-4">
-            {Array.from({ length: rows }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}

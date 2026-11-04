@@ -51,38 +51,6 @@ export async function issueInProject(
 }
 
 /**
- * Does this account have access to the project (owner OR member)? Same rule as
- * `getProjectAccess`/`can_access_project`, without the project SELECT when
- * the caller already holds its `owner_id` (the write cores loaded it with
- * their snapshot from before).
- */
-export async function userInProject(
-  service: SupabaseClient,
-  userId: string,
-  projectId: string,
-  ownerId?: string | null
-): Promise<boolean> {
-  if (ownerId && ownerId === userId) return true;
-  if (ownerId === undefined) {
-    const { data: project } = await service
-      .from("projects")
-      .select("owner_id")
-      .eq("id", projectId)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (!project) return false;
-    if ((project.owner_id as string) === userId) return true;
-  }
-  const { data } = await service
-    .from("project_members")
-    .select("project_id")
-    .eq("project_id", projectId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  return !!data;
-}
-
-/**
  * May this account be assigned work in the project (owner or member role)?
  * Readers can read and be mentioned but are never assignees, objective leads
  * or routine trigger people (MIN-693).

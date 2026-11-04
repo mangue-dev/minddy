@@ -23,12 +23,6 @@ import { useNavigationContextActions } from "@/components/navigation-context-act
 import { composeSidebarContextActions } from "@/lib/sidebar-context-actions";
 
 /**
- * Width of the column the primary sidebar takes when it hosts this bar
- * (MIN-546). Shared by the desktop fallback column (`app-desktop:w-80`).
- */
-export const SECONDARY_WIDTH = 320;
-
-/**
  * Registration must be done BEFORE painting: it is what decides whether the
  * primary sidebar swaps its nav for the back row + this bar. Passed by an
  * ordinary effect, we would see one level miss for the duration of an image

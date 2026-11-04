@@ -132,11 +132,6 @@ export function trace(kind: string, detail?: Record<string, unknown>): void {
   ring.push({ t: performance.now(), kind, detail });
 }
 
-/** Does the trace rotate? (to avoid CALCULATE an expensive detail for nothing) */
-export function isTracing(): boolean {
-  return ring !== null;
-}
-
 /** The current dump, or a line that says nothing is working. */
 export function dumpTrace(): string {
   if (!ring) return "(trace éteinte — localStorage.minddy.trace = \"1\" puis recharger)";

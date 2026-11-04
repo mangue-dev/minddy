@@ -14,13 +14,6 @@ import { feedbackCommentsOptions, feedbackEventsOptions } from "./secondary-view
 import type { Comment, ResourceInput } from "./types";
 import type { CommentVisibility } from "./feedback/types";
 import type { TimelineItem } from "./use-issue-timeline";
-
-/** React-query keys for a feedback post's activity + internal comments. Both are
-    invalidated by the central realtime bridge (a feedback comment / event
-    broadcasts on the project topic, MIN-51) and by the team page after each
-    mutation. */
-export const feedbackEventsKey = (projectId: string, postId: string) =>
-  ["feedback-events", projectId, postId] as const;
 export const feedbackCommentsKey = (projectId: string, postId: string) =>
   ["feedback-comments", projectId, postId] as const;
 

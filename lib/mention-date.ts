@@ -49,8 +49,6 @@ export function parseDay(value: string | null | undefined): Date | null {
   return dayKey(date) === value ? date : null;
 }
 
-export const isMentionDay = (value: string | null | undefined): boolean => parseDay(value) !== null;
-
 /** A date mention's id and metadata as one value; malformed parts are dropped. */
 export function mentionDateFrom(id: string, meta?: MentionMeta | null): MentionDate | null {
   if (!parseDay(id)) return null;

@@ -28,7 +28,6 @@ vi.mock("@/lib/server/feedback/board-sso-content", () => ({
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: vi.fn() }));
 vi.mock("@/lib/server/feedback/sso-crypto", () => ({
   encryptBoardSsoSecret: (plain: string) => `sealed:${plain}`,
-  isSsoCryptoConfigured: () => true,
   readBoardSsoSecret: (stored: string | null) => ({
     plain: stored?.replace(/^sealed:/, "") ?? null,
     legacy: false,

@@ -14,7 +14,7 @@ import {
 import { mcpFetch, MCP_TIMEOUT_MS } from "./mcp-http";
 export { mcpFetch, MCP_TIMEOUT_MS, MCP_MAX_BYTES } from "./mcp-http";
 import { decodeMcpConnection, mcpSecret } from "./mcp-content";
-export { encryptMcpToken, decryptMcpToken } from "./mcp-credentials";
+export { encryptMcpToken } from "./mcp-credentials";
 import { openMcpOAuth } from "./mcp-oauth";
 import { checkSessionRateLimit } from "./session-rate-limit";
 import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";

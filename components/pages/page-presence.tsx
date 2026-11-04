@@ -59,12 +59,6 @@ export function PagePresenceProvider({
   );
 }
 
-/** Anything OTHERS look at in the project — the tree needs it in full
-. */
-export function usePresentPages(): PagePresenceMap {
-  return useContext(PresenceContext);
-}
-
 /** Others present on a given page. */
 export function usePresentOn(pageId: string | null): string[] {
   const present = useContext(PresenceContext);

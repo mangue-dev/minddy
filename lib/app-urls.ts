@@ -239,12 +239,6 @@ export function resolveIssueRef<T extends { id: string; number?: number | null; 
   return resolveRef(ref, issues);
 }
 
-/** The issue number an identifier such as `MIN-42` carries, else null. */
-export function issueNumberFromRef(ref: string): number | null {
-  const identifier = ISSUE_IDENTIFIER_RE.exec(ref);
-  return identifier && !CODE_RE.test(ref) ? Number(identifier[2]) : null;
-}
-
 /** Inclusive UUID bounds of a short code, for an indexed range lookup. */
 export function shortCodeRange(code: string): { from: string; to: string } | null {
   if (!CODE_RE.test(code)) return null;

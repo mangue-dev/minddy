@@ -176,9 +176,7 @@ const GROUP_BOOSTS: Record<string, number> = {
 
 /** Ticket status icon: the SAME indicator as board cards and
  * the side panel (dotted ring, progression pie, solid disk
- * to the hollowed-out glyph — cf. components/issue-indicators.tsx). The lucid glyphs of
- * `STATUS_MAP` / `PRIORITY_MAP` are the game before Figma design: the palette
- * was the last surface to display them, they are no longer read anywhere. */
+ * to the hollowed-out glyph — cf. components/issue-indicators.tsx). */
 function statusIcon(status: IssueStatus) {
   return <StatusIndicator status={status} className="size-4" />;
 }

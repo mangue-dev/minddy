@@ -63,7 +63,6 @@ vi.mock("@/lib/supabase-service", () => ({
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: vi.fn() }));
 vi.mock("@/lib/server/feedback/sso-crypto", () => ({
   encryptBoardSsoSecret: vi.fn(),
-  isSsoCryptoConfigured: () => true,
   readBoardSsoSecret: (stored: unknown) => readSecret(stored),
 }));
 

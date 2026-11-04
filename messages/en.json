@@ -1136,7 +1136,6 @@
     "viewGenerating": "Numo is building this view…",
     "viewOptions": "Options for “{name}”",
     "newIssue": "New issue",
-    "createInSettings": "No categories yet. Create one in Settings.",
     "shareView": "Share view",
     "renameView": "Rename view",
     "deleteView": "Delete view",
@@ -1440,7 +1439,6 @@
     "resetFilters": "Reset filters"
   },
   "Categories": {
-    "removeFromIssue": "Remove “{name}”",
     "colors": {
       "amber": "amber",
       "blue": "blue",
@@ -1609,7 +1607,6 @@
     "objectiveLinked": "Linked objective",
     "noObjective": "No objective",
     "parent": "Parent",
-    "noParent": "No parent",
     "order": "Sort",
     "integration": "Integration",
     "noIntegration": "No integration",
@@ -2761,7 +2758,6 @@
     "markInProgress": "Mark as in progress",
     "markCompleted": "Mark as completed",
     "cancelTask": "Mark as canceled",
-    "taskMenuAria": "Change task state",
     "taskActionsAria": "Task actions",
     "taskCheckboxAria": "Toggle task “{text}”"
   },
@@ -3213,15 +3209,12 @@
   "Projects": {
     "newProject": "New project",
     "firstProject": "Create the first project",
-    "projectOptions": "Project options",
     "tickets": "Issues",
     "triage": "Triage",
     "feedback": "Feedback",
     "objectives": "Objectives",
     "settings": "Settings",
     "triageIssues": "{entityPlural} in Triage",
-    "openIssues": "Open {entityPlural}",
-    "doneIssues": "Closed {entityPlural}",
     "nameRequired": "Name is required.",
     "keyInvalid": "The key must be at least 2 letters.",
     "keyTaken": "The key “{key}” is already used by one of your projects.",
@@ -5515,9 +5508,6 @@
     "ai_routines_title": "Routines",
     "ai_routines_body": "Numo runs a task on a schedule, or when something happens: an issue enters triage, a status changes, new feedback arrives.",
     "aiNote": "Included in every plan, including Free.",
-    "aiFigure_prompt": "Split the checkout redesign into issues",
-    "aiFigure_working": "Creating issues…",
-    "aiFigure_reply": "Done: three issues, filled in and assigned.",
     "aiFigure_issue1": "Redesign the payment step",
     "aiFigure_issue2": "Save cards for next time",
     "aiFigure_issue3": "Show taxes before payment",

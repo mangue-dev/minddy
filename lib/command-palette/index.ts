@@ -8,53 +8,16 @@
  */
 
 // === Main component & controller ===
-export { CommandPalette, type CommandPaletteProps } from "./CommandPalette";
-export { usePalette, isApplePlatform, type PaletteController, type UsePaletteOptions } from "./hooks/usePalette";
+export { CommandPalette } from "./CommandPalette";
+export { usePalette } from "./hooks/usePalette";
 
 // === Core types ===
-export type {
-  PaletteItem,
-  CategoryDefinition,
-  PaletteFilterOptions,
-  PaletteViewApi,
-  PaletteViewRenderer,
-  IconComponent,
-} from "./types";
+export type { PaletteItem, CategoryDefinition } from "./types";
 
 // === Action system ===
-export type {
-  ActionProvider,
-  ContextualAction,
-  ActionExecutionContext,
-  ActionResult,
-  ActionCategory,
-  FormFieldSpec,
-  FormSelectOption,
-} from "./registry/types";
-export { sortActions, actionRequiresForm } from "./registry/types";
-export { ActionRegistry, createActionRegistry } from "./registry/ActionRegistry";
+export type { ActionProvider, ContextualAction, ActionResult, FormSelectOption } from "./registry/types";
+export { ActionRegistry } from "./registry/ActionRegistry";
 export { ItemActionsProvider } from "./registry/providers/ItemActionsProvider";
 
-// === Search engine (usable standalone) ===
-export {
-  matchesSearch,
-  matchesSearchFields,
-  calculateSearchScore,
-  searchWithRelevance,
-  normalizeSearchText,
-  buildKeywords,
-  SearchEngine,
-  configureSearchStorage,
-  recordUsage,
-  loadUsageStats,
-  type SearchableItem,
-  type SearchContext,
-  type ScoredSearchResult,
-  type UsageStats,
-} from "./search/engine";
-
-// === i18n ===
-export { STRINGS_EN, STRINGS_FR, createTranslate, type PaletteStrings, type TranslateFn } from "./i18n";
-
 // === Store (advanced: programmatic control) ===
-export { usePaletteStore, type PaletteView, type PaletteStore } from "./store";
+export { usePaletteStore } from "./store";

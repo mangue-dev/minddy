@@ -191,5 +191,3 @@ export const ResultItem = memo(function ResultItem({
     </div>
   );
 });
-
-export default ResultItem;

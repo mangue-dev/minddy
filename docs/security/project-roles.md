@@ -32,7 +32,7 @@ authorization.
 | SQL | `lock_live_project_actor_access(project, actor)` | owner or any member row; only page-content RPCs still call it |
 | RLS | `issues_*`, `pages_*`, `objectives_*`, `categories_*`, `issue_relations_*`, `issue_categories_*`, `views_*`, `comments_*`, `page_comments_*`, attachment storage insert | `can_access_project` (any member writes) |
 | RLS | `projects_update/delete`, `project_members_insert/update` | owner only |
-| TS | `getProjectAccess`, `hasProjectAccess`, `accessibleProjectIds`, `userInProject` | owner, or any member row; `isMember` was always true |
+| TS | `getProjectAccess`, `hasProjectAccess`, `accessibleProjectIds` | owner, or any member row; `isMember` was always true |
 | TS | inline `access.isOwner` / `owner_id !== actor` | administration |
 
 Most project writes use the service-role client and authorize in TypeScript
@@ -179,8 +179,8 @@ the feedback SSO secret.
   require write access.
 - TypeScript: `ProjectAccess` carries `role`, `canWrite`, `canComment`;
   content cores check `canWrite`, comment cores `canComment`, administration
-  `isOwner`. `userInProject` remains the read rule; `userCanBeAssigned` is the
-  assignment rule.
+  `isOwner`. `hasProjectAccess` remains the read rule; `userCanBeAssigned` is
+  the assignment rule.
 - MCP: `lib/server/mcp/tool-capabilities.ts` declares the capability of
   every tool (`user`, `read`, `comment`, `write`, `admin`). Registration
   throws for an undeclared tool, and `requireProject` / `resolveProject`
