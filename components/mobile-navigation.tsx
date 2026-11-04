@@ -44,6 +44,14 @@ export function MobileMenuRows({ sections, onBrowse, onNavigate }: { sections: M
 }
 
 // Memoized like the desktop sidebar: it is mounted (and hidden) on desktop too.
+/**
+ * A slot of the bottom bar. No focus style of its own: closing the sidebar or
+ * the palette hands the focus back here by script, and after a swipe the
+ * browser counts that as visible focus, which painted the button gray. The
+ * global keyboard ring (app/globals.css) still shows while Tab drives focus.
+ */
+const NAV_SLOT = "flex h-full min-w-0 items-center justify-center rounded-full outline-none";
+
 export const MobileNavigation = memo(function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], homeBadge, homeBadgeLabel, onSearch }: {
   sections: MobileMenuSection[];
   initialPanel?: MobileMenuPanel;
@@ -94,9 +102,9 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
   return <>
     <nav aria-label={t("mainNavigation")} data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
       <div className="grid h-12 w-[min(100%-2rem,320px)] grid-cols-5 grid-rows-1 items-center rounded-full border border-border bg-background shadow-lg">
-        <button ref={menuTrigger} data-mobile-menu-trigger type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className="flex h-full min-w-0 items-center justify-center rounded-full outline-none focus-visible:bg-muted"><AppIcon icon={LayoutAlignLeftIcon} className="size-[22px]" /></button>
+        <button ref={menuTrigger} data-mobile-menu-trigger type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className={NAV_SLOT}><AppIcon icon={LayoutAlignLeftIcon} className="size-[22px]" /></button>
         <MobileNumoButton />
-        <button type="button" aria-label={t("searchPlaceholder")} onClick={onSearch} className="flex h-full min-w-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring"><AppIcon icon={Search01Icon} className="size-[22px]" /></button>
+        <button type="button" aria-label={t("searchPlaceholder")} onClick={onSearch} className={NAV_SLOT}><AppIcon icon={Search01Icon} className="size-[22px]" /></button>
         <MobileNotebookButton />
         <MobileCreateButton />
       </div>
