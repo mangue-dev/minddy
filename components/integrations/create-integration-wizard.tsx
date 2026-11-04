@@ -431,7 +431,7 @@ export function CreateIntegrationWizard({
   const lastConfigId = order[order.length - 2];
   steps[order.length - 2] = {
     ...steps[order.length - 2],
-    submitLabel: t("createIntegration"),
+    submitLabel: tCommon("create"),
   };
 
   return (

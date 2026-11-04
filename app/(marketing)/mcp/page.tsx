@@ -48,10 +48,11 @@ const AGENT_TONES = [CARD_TONES.peach, CARD_TONES.butter, CARD_TONES.sky, CARD_T
 const COPY_BUTTON = "min-h-11 rounded-full border-current/15 bg-background/65 px-4 text-current hover:bg-background/90 hover:text-current";
 
 export default async function McpPage() {
-  const [t, tl, ta] = await Promise.all([
+  const [t, tl, ta, tCommon] = await Promise.all([
     getTranslations("Mcp"),
     getTranslations("Landing"),
     getTranslations("Account"),
+    getTranslations("Common"),
   ]);
   const locale = (await getLocale()) as Locale;
   const faqItems = MCP_FAQ_KEYS.map(key => ({
@@ -89,7 +90,7 @@ export default async function McpPage() {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <code className="min-w-0 font-mono text-base leading-relaxed break-all sm:text-xl">{MCP_ENDPOINT}</code>
-                <CopyButton text={MCP_ENDPOINT} label={t("copy")} copiedLabel={t("copied")} className={COPY_BUTTON} />
+                <CopyButton text={MCP_ENDPOINT} label={tCommon("copy")} copiedLabel={tCommon("copied")} className={COPY_BUTTON} />
               </div>
             </div>
             <div className={cn("rounded-2xl p-6 sm:p-8", CARD_TONES.butter)}>
@@ -113,11 +114,11 @@ export default async function McpPage() {
                 {assistantPrompt}
               </p>
               <div className="mt-auto pt-5">
-                <CopyButton text={assistantPrompt} label={t("copyPrompt")} copiedLabel={t("copied")} className={COPY_BUTTON} />
+                <CopyButton text={assistantPrompt} label={t("copyPrompt")} copiedLabel={tCommon("copied")} className={COPY_BUTTON} />
               </div>
             </li>
             {MCP_AGENTS.map((agent, index) => (
-              <AgentCard key={agent.id} agent={agent} copy={t("copy")} copied={t("copied")}
+              <AgentCard key={agent.id} agent={agent} copy={tCommon("copy")} copied={tCommon("copied")}
                 hint={ta(agent.hint)} tone={AGENT_TONES[index % AGENT_TONES.length]} />
             ))}
           </ul>

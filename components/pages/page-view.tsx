@@ -325,6 +325,7 @@ function PageSurface({
   panel?: boolean;
 }) {
   const t = useTranslations("Pages");
+  const tCommon = useTranslations("Common");
   const queryClient = useQueryClient();
   const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
@@ -1271,7 +1272,7 @@ function PageSurface({
           <AlertDialogFooter>
             <AlertDialogCancel>{t("subpageDeleteCancel")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={confirmTrash}>
-              {t("subpageDeleteConfirm")}
+              {tCommon("moveToTrash")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -303,6 +303,7 @@ function VariableRow({
   write: (variable: VariableView, perform: () => Promise<void>, success: string) => Promise<boolean>;
 }) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const [editing, setEditing] = useState(false);
   const [removing, setRemoving] = useState(false);
   const overridden = variable.source === "database" || variable.source === "both";
@@ -328,7 +329,7 @@ function VariableRow({
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
             <HugeiconsIcon icon={PencilEdit02Icon} className="size-3.5" />
-            {t("instance.edit")}
+            {tCommon("edit")}
           </Button>
           {overridden ? (
             removalLocksOut ? (
@@ -336,13 +337,13 @@ function VariableRow({
                 {/* A disabled button gets no pointer events: the span carries the tooltip. */}
                 <span tabIndex={0} className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                   <Button variant="ghost" size="sm" disabled>
-                    {t("instance.remove")}
+                    {tCommon("remove")}
                   </Button>
                 </span>
               </AppTooltip>
             ) : (
               <Button variant="ghost" size="sm" onClick={() => setRemoving(true)}>
-                {t("instance.remove")}
+                {tCommon("remove")}
               </Button>
             )
           ) : null}
@@ -375,8 +376,8 @@ function VariableRow({
         onOpenChange={setRemoving}
         title={t("instance.removeTitle", { name: label })}
         description={variable.source === "both" ? t("instance.removeDescriptionFile") : t("instance.removeDescriptionUnset")}
-        confirmLabel={t("instance.removeConfirm")}
-        cancelLabel={t("instance.cancel")}
+        confirmLabel={tCommon("remove")}
+        cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           await write(variable, () => call("DELETE", { key: variable.key }), t("instance.removed"));
         }}
@@ -458,6 +459,7 @@ function EditDialog({
   onSave: (value: string) => Promise<void>;
 }) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   // A secret never comes back to the browser: its field always starts empty.
   const initial = variable.kind === "secret" ? "" : variable.value ?? "";
   const [draft, setDraft] = useState(initial);
@@ -541,11 +543,11 @@ function EditDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
-            {t("instance.cancel")}
+            {tCommon("cancel")}
           </Button>
           <Button onClick={() => void save()} disabled={blocked}>
             {busy ? <Spinner /> : null}
-            {t("instance.save")}
+            {tCommon("save")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -556,6 +558,7 @@ function EditDialog({
 /** A second factor presented again, then the write that needed it, replayed. */
 function ReauthDialog({ request, onClose }: { request: ReauthRequest | null; onClose: () => void }) {
   const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
   const { firstTotpFactorId, verifyTotp } = useAuth();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -606,7 +609,7 @@ function ReauthDialog({ request, onClose }: { request: ReauthRequest | null; onC
         {error ? <p id="instance-reauth-code-error" role="alert" className="text-sm text-destructive">{error}</p> : null}
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={busy}>
-            {t("instance.cancel")}
+            {tCommon("cancel")}
           </Button>
           <Button onClick={() => void confirm()} disabled={busy || code.trim().length !== 6}>
             {busy ? <Spinner /> : null}

@@ -48,6 +48,7 @@ export function PrLinkIssue({
   onLinked: () => void;
 }) {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const tStatus = useTranslations("Status");
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -155,7 +156,7 @@ export function PrLinkIssue({
           ) : null}
           <DialogFooter>
             <Button variant="outline" disabled={linking} onClick={() => setPending(null)}>
-              {t("cancel")}
+              {tCommon("cancel")}
             </Button>
             <Button disabled={linking} onClick={() => void confirm()}>
               {linking ? <Spinner /> : null}

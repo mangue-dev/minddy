@@ -191,7 +191,7 @@ export function FileView({ node, editor, deleteNode, updateAttributes }: NodeVie
         onOpenChange={setConfirmRemove}
         title={tResources("removeConfirmTitle", { name })}
         description={tResources("removeBlockConfirmDescription")}
-        confirmLabel={tResources("remove")}
+        confirmLabel={tCommon("remove")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => deleteNode()}
       />}

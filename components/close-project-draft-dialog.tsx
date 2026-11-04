@@ -38,6 +38,7 @@ export function CloseProjectDraftDialog({
   onDiscard: () => void;
 }) {
   const t = useTranslations("Projects");
+  const tCommon = useTranslations("Common");
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -67,7 +68,7 @@ export function CloseProjectDraftDialog({
             {t("draftCloseDiscard")}
           </AlertDialogAction>
           <AlertDialogAction onClick={onSave}>
-            {t("draftCloseConfirm")}
+            {tCommon("save")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -533,7 +533,7 @@ export function ProjectMembers({
           name: removeTarget ? displayName(removeTarget) : "",
         })}
         description={t("removeMemberDescription")}
-        confirmLabel={t("remove")}
+        confirmLabel={tc("remove")}
         cancelLabel={tc("cancel")}
         isLoading={isBusy(removeTarget?.user_id)}
         closeOnConfirm={false}

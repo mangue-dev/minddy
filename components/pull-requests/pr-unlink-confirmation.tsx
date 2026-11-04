@@ -17,6 +17,7 @@ export function PrUnlinkConfirmationProvider({ children }: {
   children: React.ReactNode;
 }) {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const [target, setTarget] = useState<UnlinkTarget | null>(null);
   const mutation = useUnlinkPullRequestIssue();
   const requestUnlink = useCallback((next: UnlinkTarget) => setTarget(next), []);
@@ -45,7 +46,7 @@ export function PrUnlinkConfirmationProvider({ children }: {
         title={t("unlinkIssueConfirmTitle")}
         description={t("unlinkIssueConfirmDescription", { identifier: target?.identifier ?? "" })}
         confirmLabel={t("unlinkIssue")}
-        cancelLabel={t("cancel")}
+        cancelLabel={tCommon("cancel")}
         isLoading={mutation.isPending}
         closeOnConfirm={false}
         onConfirm={confirm}

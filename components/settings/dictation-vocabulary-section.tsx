@@ -89,7 +89,7 @@ export function DictationVocabularySection() {
             className="min-w-0 flex-1 basis-40"
           />
           <Button type="submit" variant="outline" disabled={!canAdd}>
-            {t("vocabularyAdd")}
+            {tc("add")}
           </Button>
         </form>
         {vocabulary.length === 0 ? (

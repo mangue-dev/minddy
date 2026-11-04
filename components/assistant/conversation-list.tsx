@@ -437,13 +437,13 @@ export function ConversationList({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("deleteConfirm.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
             {/* `variant`, not a colored `className`: AlertDialogAction
  places the button classes on a parent Slot, so the color
  written here does not pass through tailwind-merge and would lose against
  that of the variant — the deletion was displayed as a blue button. */}
             <AlertDialogAction variant="destructive" onClick={handleConfirmDelete}>
-              {t("deleteConfirm.confirm")}
+              {tc("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

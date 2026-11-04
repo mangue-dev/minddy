@@ -890,7 +890,7 @@ export function ResourcePills({
             : []),
           ...(removable
             ? [{
-                label: t("remove"),
+                label: tCommon("remove"),
                 onClick: () => setRemoving({ resource: a }),
                 icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
               }]
@@ -955,7 +955,7 @@ export function ResourcePills({
               ? [{ key: "download", label: t("download"), icon: <HugeiconsIcon icon={Download01Icon} />, href: fileHref?.(a, "download") ?? attachmentFileUrl(path, true), download: true }]
               : []),
             ...(removable
-              ? [{ key: "remove", label: t("remove"), icon: <HugeiconsIcon icon={Delete02Icon} />, destructive: true, onSelect: () => setRemoving({ resource: a }) }]
+              ? [{ key: "remove", label: tCommon("remove"), icon: <HugeiconsIcon icon={Delete02Icon} />, destructive: true, onSelect: () => setRemoving({ resource: a }) }]
               : []),
           ];
           const detail = url
@@ -1085,7 +1085,7 @@ export function ResourcePills({
             menuLabel={t("actions")}
             items={onRemovePending ? [{
               key: "remove",
-              label: t("remove"),
+              label: tCommon("remove"),
               icon: <HugeiconsIcon icon={Delete02Icon} />,
               destructive: true,
               onSelect: () => setRemoving({ pending: p }),
@@ -1101,7 +1101,7 @@ export function ResourcePills({
             action={
               onRemovePending
                 ? {
-                    label: t("remove"),
+                    label: tCommon("remove"),
                     onClick: () => setRemoving({ pending: p }),
                     icon: <HugeiconsIcon icon={Cancel01Icon} className="size-3" />,
                   }
@@ -1157,7 +1157,7 @@ export function ResourcePills({
               ? t("removeDraftConfirmDescription")
               : t("removeConfirmDescription")
         }
-        confirmLabel={t("remove")}
+        confirmLabel={tCommon("remove")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           if (!removing) return;

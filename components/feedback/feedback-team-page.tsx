@@ -439,6 +439,7 @@ function AuthorValue({
   seed: string;
 }) {
   const t = useTranslations("FeedbackBoard");
+  const tCommon = useTranslations("Common");
   const [copied, setCopied] = useState(false);
   const label = name?.trim() || email?.trim() || pseudonym || "";
 
@@ -451,7 +452,7 @@ function AuthorValue({
         // and this is intentional: the tooltip disappears as soon as you move the mouse away —
         // often the very gesture which follows the copy — and would carry its proof.
         setCopied(true);
-        toast.success(t("emailCopied"));
+        toast.success(tCommon("copied"));
         setTimeout(() => setCopied(false), 1500);
       })
       .catch(() => toast.error(t("errorGeneric")));
@@ -484,7 +485,7 @@ function AuthorValue({
         <button
           type="button"
           onClick={copy}
-          aria-label={copied ? t("emailCopied") : t("copyEmail")}
+          aria-label={copied ? tCommon("copied") : t("copyEmail")}
           className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-background/70 outline-none transition-colors hover:bg-background/15 hover:text-background focus-visible:bg-background/15 focus-visible:text-background focus-visible:ring-1 focus-visible:ring-background/60"
         >
           {copied ? (
@@ -1952,7 +1953,7 @@ function FeedbackDetail({
                   line of the ticket itself, where you see it. */}
               <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
                 <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                {t("deletePost")}
+                {tCommon("moveToTrash")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -2495,7 +2496,7 @@ function FeedbackDetail({
         onOpenChange={setDeleteOpen}
         title={t("deletePostTitle", { title: post.title })}
         description={t("deletePostConfirm", { days: TRASH_RETENTION_DAYS })}
-        confirmLabel={t("deletePost")}
+        confirmLabel={tCommon("moveToTrash")}
         cancelLabel={tCommon("cancel")}
         onConfirm={async () => {
           await api(`/api/projects/${projectId}/feedback/${postId}`, { method: "DELETE" });
@@ -2911,6 +2912,7 @@ function InternalFeedbackDialog({
   onCreated: (postId: string) => void;
 }) {
   const t = useTranslations("FeedbackBoard");
+  const tCommon = useTranslations("Common");
   const tDictate = useTranslations("Dictate");
   const locale = useLocale();
   const tField = useTranslations("Field");
@@ -3098,7 +3100,7 @@ function InternalFeedbackDialog({
       }}
       numoBusy={numoBusy}
       numoWorkingLabel={tDictate("numoWorking")}
-      submitLabel={t("create")}
+      submitLabel={tCommon("create")}
       canSubmit={canSubmit}
       busy={busy}
       onSubmit={() => void submit()}

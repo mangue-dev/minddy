@@ -183,7 +183,6 @@ describe("initial project brief", () => {
   it("saves the full 50,000-character Markdown brief as a page without opening Numo", async () => {
     await mount();
     expect(host.textContent).toContain(en.Projects.wizardSeedBriefDesc);
-    expect(host.textContent).not.toContain(en.Projects.wizardSeedNumoLink);
     const text = "# Initial brief\n\n- Build the project\n\n".padEnd(49_992, "x") + "THE END!";
     expect(text.length).toBe(50_000);
     await typeBrief(text);

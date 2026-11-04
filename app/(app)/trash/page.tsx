@@ -84,6 +84,7 @@ function TrashRow({
   onPurge: (item: TrashItem) => void;
 }) {
   const t = useTranslations("Trash");
+  const tCommon = useTranslations("Common");
   const tPages = useTranslations("Pages");
   const locale = useLocale();
   const Icon = item.type === "page" && item.is_database ? DatabaseIcon : TYPE_ICON[item.type];
@@ -171,7 +172,7 @@ function TrashRow({
             <Button
               size="icon-sm"
               variant="ghost"
-              aria-label={t("moreActions")}
+              aria-label={tCommon("moreActions")}
               data-sidebar-filter-result
             >
               <HugeiconsIcon icon={MoreHorizontalIcon} className="size-4" />

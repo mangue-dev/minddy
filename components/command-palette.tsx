@@ -899,7 +899,7 @@ export function CommandPalette({
     () =>
       createMinddyEntityActionsProvider({
         labels: {
-          copied: tAction("copied"),
+          copied: tCommon("copied"),
           linkCopied: tAction("linkCopied"),
           openInNewTab: tAction("openInNewTab"),
           copyLink: tAction("copyLink"),

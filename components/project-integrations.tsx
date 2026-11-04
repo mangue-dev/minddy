@@ -81,6 +81,7 @@ function WebhookDialog({
   onSaved: () => void;
 }) {
   const t = useTranslations("Settings");
+  const tCommon = useTranslations("Common");
   const [webhook, setWebhook] = useState<WebhookConfig>(DEFAULT_WEBHOOK);
   const [stepIndex, setStepIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -123,7 +124,7 @@ function WebhookDialog({
   const webhookSteps = useWebhookSteps({
     value: webhook,
     onChange: setWebhook,
-    scopeSubmitLabel: t("webhookSave"),
+    scopeSubmitLabel: tCommon("save"),
   });
 
   return (

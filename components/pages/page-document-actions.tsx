@@ -230,7 +230,7 @@ export function usePageDocumentMenu({
       }
       const copyAction: ContextMenuAction = {
         id: "copy",
-        label: t("copy"),
+        label: tCommon("copy"),
         icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
         separatorBefore: canWrite,
         children: copyChildren,
@@ -281,7 +281,7 @@ export function usePageDocumentMenu({
         exportAction,
         {
           id: "trash",
-          label: t("deletePage"),
+          label: tCommon("moveToTrash"),
           icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
           variant: "destructive",
           separatorBefore: true,

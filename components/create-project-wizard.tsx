@@ -1332,7 +1332,7 @@ export function CreateProjectWizard({
               disabled={inviteLimitReached || !inviteeInput.trim()}
             >
               <HugeiconsIcon icon={UserAdd01Icon} />
-              {t("wizardMembersAdd")}
+              {tCommon("add")}
             </Button>
           </div>
           {inviteeError && (

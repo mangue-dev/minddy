@@ -60,6 +60,7 @@ export function PrUnresolvedConversations({
   showBar?: boolean;
 }) {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const [confirmOutdated, setConfirmOutdated] = useState(false);
   const [resolvingOutdated, setResolvingOutdated] = useState(false);
   const [confirmResolveAll, setConfirmResolveAll] = useState(false);
@@ -284,7 +285,7 @@ export function PrUnresolvedConversations({
               disabled={resolvingOutdated}
               onClick={() => setConfirmOutdated(false)}
             >
-              {t("cancel")}
+              {tCommon("cancel")}
             </Button>
             <Button
               data-testid="pr-resolve-outdated-confirm"
@@ -318,7 +319,7 @@ export function PrUnresolvedConversations({
               disabled={resolvingAll}
               onClick={() => setConfirmResolveAll(false)}
             >
-              {t("cancel")}
+              {tCommon("cancel")}
             </Button>
             <Button
               data-testid="pr-resolve-all-confirm"

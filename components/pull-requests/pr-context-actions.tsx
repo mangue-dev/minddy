@@ -79,6 +79,7 @@ export function usePrContextActions({
   dialog: ReactNode;
 } {
   const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const { openIntent } = useAssistantPanelActions();
   const [menuPrId, setMenuPrId] = useState<string | null>(null);
   const openedAt = useRef(0);
@@ -272,7 +273,7 @@ export function usePrContextActions({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant={target.state === "closed" ? "destructive" : "default"}
               onClick={() => {

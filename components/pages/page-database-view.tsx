@@ -225,6 +225,7 @@ function PropertySettings({
   anchored?: { open: boolean; onOpenChange: (open: boolean) => void; anchor: RefObject<HTMLElement | null> };
 }) {
   const t = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   const { saveSchema, pending } = usePageDatabase(projectId);
   const schema = database.database_schema ?? [];
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -301,7 +302,7 @@ function PropertySettings({
                         size="sm"
                         disabled={pending || !rename.trim()}
                       >
-                        {t("save")}
+                        {tCommon("save")}
                       </Button>
                     </form>
                   ) : (
@@ -448,8 +449,8 @@ function PropertySettings({
         }}
         title={t("deleteProperty")}
         description={t("deletePropertyBody", { name: remove?.name ?? "" })}
-        confirmLabel={t("delete")}
-        cancelLabel={t("cancel")}
+        confirmLabel={tCommon("delete")}
+        cancelLabel={tCommon("cancel")}
         isLoading={pending}
         onConfirm={() => {
           void saveSchema(
@@ -491,6 +492,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
   const columnSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates, keyboardCodes: { start: ["F8"], cancel: ["Escape"], end: ["F8", "Enter", "Space"] } }));
   const t = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   const mobile = useMobileLayout() === true;
   const columnAnnouncements = useDragAnnouncements((id) =>
     database.database_schema?.find((property) => property.id === id)?.name);
@@ -661,7 +663,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
           },
           {
             id: "entries-trash",
-            title: t("moveToTrash"),
+            title: tCommon("moveToTrash"),
             icon: Delete02Icon,
             keywords: ["trash", "delete", "corbeille", "supprimer"],
             // Opens the entries' own confirmation below.
@@ -1274,7 +1276,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
           <AlertDialogTitle>{t("duplicateEntries", { count: duplicateTargets.length })}</AlertDialogTitle>
           <AlertDialogDescription>{t("duplicateEntriesBody", { count: duplicateTargets.length })}</AlertDialogDescription>
         </AlertDialogHeader><AlertDialogFooter>
-          <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+          <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
           <AlertDialogAction onClick={() => { duplicate(duplicateTargets); setDuplicateTargets([]); }}>{t("duplicate")}</AlertDialogAction>
         </AlertDialogFooter></AlertDialogContent>
       </AlertDialog>
@@ -1296,7 +1298,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               onClick={(e) => {
@@ -1313,7 +1315,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                 });
               }}
             >
-              {t("moveToTrash")}
+              {tCommon("moveToTrash")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1381,6 +1383,7 @@ const DatabaseRow = memo(function DatabaseRow({
   actions: RowActions;
 }) {
   const t = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   const tPages = useTranslations("Pages");
   return (
     <tr
@@ -1455,7 +1458,7 @@ const DatabaseRow = memo(function DatabaseRow({
                   onSelect={() => actions.remove(entry)}
                 >
                   <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                  {t("moveToTrash")}
+                  {tCommon("moveToTrash")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -244,9 +244,13 @@ changing `messages/*.json`, `lib/command-palette/i18n.ts` or quoted labels in
 - When a label changes, update it in all six catalogs, then every article that
   quotes it, its figure alt and caption, the diagram SVG fallback, and recapture
   the screenshots that show it with the scripts listed in the guide.
-- Run `npx vitest run lib/i18n-contract.test.ts lib/i18n-glossary.test.ts`
+- Run `npx vitest run lib/i18n-contract.test.ts lib/i18n-glossary.test.ts lib/i18n-unused-keys.test.ts`
   after a catalog change, plus `lib/seo-surface.test.ts` when page metadata
   changes.
+- Reuse a `Common` label (cancel, save, delete, copy…) instead of adding a
+  namespace key with the same text, and delete a key in all six catalogs when
+  its last caller goes; `lib/i18n-unused-keys.test.ts` fails on keys no code
+  reads.
 
 ## Public routes and sitemap dates
 

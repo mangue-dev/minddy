@@ -270,7 +270,7 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
       {onRemove && <button type="button" role="menuitem" tabIndex={-1}
         className="flex min-h-10 w-full items-center gap-2 rounded-sm px-2 text-sm text-destructive hover:bg-destructive-surface-hover focus:bg-destructive-surface-hover focus:outline-none"
         onClick={() => { close(); onRemove(); }}>
-        <HugeiconsIcon icon={Delete02Icon} className="size-4" aria-hidden />{t("remove")}
+        <HugeiconsIcon icon={Delete02Icon} className="size-4" aria-hidden />{common("remove")}
       </button>}
     </div>}
     </div>

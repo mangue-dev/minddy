@@ -67,12 +67,12 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const openDestination = useAppNavigation();
   const client = useQueryClient();
   const t = useTranslations("Pages");
-  const tCommon = useTranslations("Common");
   const { projectId: routeProjectId, pathname, searchParams } = useAppTabRoute();
   const projectId = routeProjectId!;
   // Project readers (MIN-693) browse pages without creating any.
   const { canWrite } = useProjectCapabilities(projectId);
   const tDatabase = useTranslations("PageDatabase");
+  const tCommon = useTranslations("Common");
   const previewFlush = useRef<() => Promise<boolean>>(async () => true);
   const registerPreviewFlush = useCallback((flush: () => Promise<boolean>) => { previewFlush.current = flush; }, []);
 
@@ -337,7 +337,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
           canWrite ? (
             <PageCreateMenu onCreate={(database) => void create(null, database)} trigger={
               <Button variant="ghost" size="icon" className={SIDEBAR_HEADER_ACTION_CLASS}
-                aria-label={tDatabase("create")}><HugeiconsIcon icon={Add01Icon} className="size-4" /></Button>
+                aria-label={tCommon("create")}><HugeiconsIcon icon={Add01Icon} className="size-4" /></Button>
             } />
           ) : undefined
         }

@@ -39,8 +39,8 @@ afterEach(async () => { await act(() => root.unmount()); container.remove(); vi.
 const render = async (children: ReactNode) => {
   await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Pages: {
     filePreview: "Preview file", fileDownload: "Download", blockFile: "File", imageOpen: "Open image", blockImage: "Image", imageCaption: "Caption", imageResize: "Resize",
-  }, Resources: { remove: "Remove", removeConfirmTitle: "Remove “{name}”?", removeBlockConfirmDescription: "Undo in the editor." },
-  Common: { cancel: "Cancel" } }}>{children}</NextIntlClientProvider>));
+  }, Resources: { removeConfirmTitle: "Remove “{name}”?", removeBlockConfirmDescription: "Undo in the editor." },
+  Common: { cancel: "Cancel", remove: "Remove" } }}>{children}</NextIntlClientProvider>));
 };
 
 it("opens private text blocks in the shared reader while retaining modified-click download navigation", async () => {

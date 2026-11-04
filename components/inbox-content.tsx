@@ -595,10 +595,10 @@ export default function InboxContent({
                                 </IconButton>
                               </ActionTooltip>
                             )}
-                            <ActionTooltip label={t("delete")}>
+                            <ActionTooltip label={tCommon("delete")}>
                               <IconButton
                                 size="sm"
-                                aria-label={t("delete")}
+                                aria-label={tCommon("delete")}
                                 onClick={() => setDeleteTargetId(notification.id)}
                               >
                                 <HugeiconsIcon icon={Delete02Icon} className="size-4" />
@@ -621,7 +621,7 @@ export default function InboxContent({
         }}
         title={t("deleteConfirmTitle")}
         description={t("deleteConfirmDescription")}
-        confirmLabel={t("delete")}
+        confirmLabel={tCommon("delete")}
         cancelLabel={tCommon("cancel")}
         onConfirm={() => {
           if (deleteTargetId) act(remove([deleteTargetId]));
@@ -646,7 +646,7 @@ export default function InboxContent({
                 act(clearRead());
               }}
             >
-              {t("delete")}
+              {tCommon("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

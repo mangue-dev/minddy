@@ -168,6 +168,7 @@ function NewCategoryRow({
   onDone: () => void;
 }) {
   const t = useTranslations("Categories");
+  const tCommon = useTranslations("Common");
   const [name, setName] = useState("");
   const [color, setColor] = useState<string>(DEFAULT_CATEGORY_COLOR);
   const [creating, setCreating] = useState(false);
@@ -214,7 +215,7 @@ function NewCategoryRow({
       />
       <Button size="sm" disabled={creating || !name.trim()} onClick={() => void create()}>
         {creating && <Spinner />}
-        {t("addCategory")}
+        {tCommon("add")}
       </Button>
     </li>
   );

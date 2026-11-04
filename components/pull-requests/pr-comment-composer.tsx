@@ -86,7 +86,7 @@ export function PrCommentComposer({
  */
   variant?: "thread" | "line";
 }) {
-  const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   // The forge accounts are only loaded at the first “@” typed: open a
   // PR should not cost any extra query, and most of them can be read without having to
   // write there. The flag never comes down — once the list is requested, it
@@ -185,7 +185,7 @@ export function PrCommentComposer({
             <>
               {onCancel ? (
                 <Button variant="ghost" size="sm" onClick={onCancel} disabled={posting}>
-                  {t("cancel")}
+                  {tCommon("cancel")}
                 </Button>
               ) : null}
               <SendShortcutTooltip label={submitLabel}>

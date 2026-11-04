@@ -498,7 +498,7 @@ function PlainComposer({
   submitLabel: string;
   autoFocus?: boolean;
 }) {
-  const t = useTranslations("PullRequests");
+  const tCommon = useTranslations("Common");
   const canPost = !submitting && !!value.trim();
 
   return (
@@ -520,7 +520,7 @@ function PlainComposer({
       </div>
       <div className="flex items-center justify-end gap-1.5">
         <Button variant="ghost" size="sm" onClick={onCancel} disabled={submitting}>
-          {t("cancel")}
+          {tCommon("cancel")}
         </Button>
         <SendShortcutTooltip label={submitLabel}>
           <Button size="sm" onClick={onSubmit} disabled={!canPost}>
