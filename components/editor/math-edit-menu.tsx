@@ -6,6 +6,7 @@ import { NodeSelection, TextSelection, type Transaction } from "@tiptap/pm/state
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +34,7 @@ interface Target {
 export function MathEditMenu({ editor }: { editor: Editor | null }) {
   const t = useTranslations("Pages");
   const tCommon = useTranslations("Common");
+  const collisionPadding = useOverlayCollisionPadding(12);
   const mobile = useMobileLayout() === true;
   const inputId = useId();
   const [target, setTarget] = useState<Target | null>(null);
@@ -166,7 +168,7 @@ export function MathEditMenu({ editor }: { editor: Editor | null }) {
         side="bottom"
         align={display ? "center" : "start"}
         sideOffset={6}
-        collisionPadding={12}
+        collisionPadding={collisionPadding}
         data-floating-surface
         aria-label={t("mathEditTitle")}
         className="w-[min(26rem,calc(100vw-2rem))]"

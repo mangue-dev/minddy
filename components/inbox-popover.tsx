@@ -8,6 +8,7 @@ import { InboxSkeleton } from "@/components/inbox-skeleton";
 import { ResponsivePopover, ResponsivePopoverAnchor, ResponsivePopoverContent } from "@/components/ui/responsive-popover";
 import { OPEN_INBOX_EVENT, type OpenInboxDetail } from "@/lib/inbox-launcher";
 import type { InboxFocus } from "@/components/inbox-content";
+import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding";
 
 const InboxContent = dynamic(() => import("@/components/inbox-content"), {
   loading: () => <InboxSkeleton />,
@@ -27,6 +28,7 @@ export const InboxPopover = memo(function InboxPopover({ open, onOpenChange: set
   const searchParams = useSearchParams();
   const router = useRouter();
   const t = useTranslations("Inbox");
+  const collisionPadding = useOverlayCollisionPadding(12);
   const returnFocus = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const anchor = useRef({
@@ -74,7 +76,7 @@ export const InboxPopover = memo(function InboxPopover({ open, onOpenChange: set
         side="bottom"
         align="start"
         sideOffset={8}
-        collisionPadding={12}
+        collisionPadding={collisionPadding}
         updatePositionStrategy="always"
         className="mobile-inbox-sheet h-[min(600px,calc(100dvh-96px))] max-h-[var(--radix-popover-content-available-height)] w-[480px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
         onOpenAutoFocus={(event) => {

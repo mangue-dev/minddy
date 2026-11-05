@@ -8,7 +8,7 @@ import { COARSE_INSET_HIT_AREA, COARSE_ROW } from "./touch-target"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
-import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
+import { useOverlayCollisionPadding, useWindowControlsOverlayPage } from "@/components/ui/overlay-collision-padding"
 import { useListScrollFade } from "@/components/ui/menu-scroll-fade"
 
 function Select({
@@ -65,11 +65,17 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
+  position: positionProp,
   align = "center",
-  collisionPadding = OVERLAY_COLLISION_PADDING,
+  collisionPadding,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
+  const windowControls = useWindowControlsOverlayPage()
+  const defaultCollisionPadding = useOverlayCollisionPadding()
+  // Radix places an item-aligned list with a fixed 10 px margin from the
+  // window and ignores `collisionPadding`, so it can open under the window
+  // controls of the desktop app. There the list hangs from its trigger.
+  const position = positionProp ?? (windowControls ? "popper" : "item-aligned")
   // The viewport scrolls inside the surface: options past an edge fade there.
   const fade = useListScrollFade<HTMLDivElement>()
   return (
@@ -85,7 +91,7 @@ function SelectContent({
                                 )}
         position={position}
         align={align}
-        collisionPadding={collisionPadding}
+        collisionPadding={collisionPadding ?? defaultCollisionPadding}
         {...props}
       >
         <SelectScrollUpButton />
