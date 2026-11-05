@@ -63,6 +63,10 @@ import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
+import { sidebarTakesProjectSwitch } from "@/lib/keyboard/project-switch-shortcut";
+import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
+import { useAppRouter } from "@/lib/use-app-router";
+import { SearchSelect } from "@/components/search-select";
 import { transitions } from "@/lib/motion";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
 import { useSecondarySidebar, sidebarPanelForRoute } from "@/lib/secondary-sidebar-context";
@@ -466,52 +470,89 @@ export function ProjectSwitcher({
   const prefetchProject = usePrefetchProject();
   const queryClient = useQueryClient();
   const session = useOptionalAppTabSession();
+  const router = useAppRouter();
   const projectMenu = useProjectTriggerMenu(currentProject);
+  const tNav = useTranslations("Nav");
+  const tCreation = useTranslations("Creation");
+  const mod = useModKey();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // With a single project there is nothing to switch to: the menu still
+  // names it on a click, but the shortcut stays free (MIN-900).
+  const switchable = projects.length > 1;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuOpenRef = useRef(false);
+  const onMenuOpenChangeRef = useRef(onMenuOpenChange);
+  useEffect(() => {
+    onMenuOpenChangeRef.current = onMenuOpenChange;
+  }, [onMenuOpenChange]);
+  // Outside any state updater: the parent's layer state is another component.
+  const changeMenuOpen = useCallback((open: boolean) => {
+    if (menuOpenRef.current === open) return;
+    menuOpenRef.current = open;
+    setMenuOpen(open);
+    onMenuOpenChangeRef.current?.(open);
+  }, []);
+
+  // ⌘⇧P, the creation dialog's "Create in" shortcut (MIN-900). Listening on
+  // the window, after every capturing handler, lets an open dialog keep it.
+  useEffect(() => {
+    if (!switchable) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (!sidebarTakesProjectSwitch(event, triggerRef.current, menuOpenRef.current)) return;
+      event.preventDefault();
+      changeMenuOpen(!menuOpenRef.current);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [switchable, changeMenuOpen]);
+
+  // Same destination rules as a sidebar link: a prepared or retained tab is
+  // reused in place, anything else goes through the app router.
+  const openProject = (projectId: string | null) => {
+    const project = projects.find((p) => p.id === projectId);
+    if (!project || project.id === currentProject.id) return;
+    const href = projectTabHref(pathname, project, objectiveBoard);
+    if (session && (isPreparedAppTabDestination(queryClient, href) ||
+      session.isRetainedDestination(session.getSnapshot().activeId, href)) &&
+      (session.reuseDestination(href) || session.navigateInCurrentTab(href))) return;
+    router.push(href);
+  };
+
   return (
     <>
-    <DropdownMenu onOpenChange={onMenuOpenChange}>
-      <DropdownMenuTrigger
-        type="button"
-        data-sidebar-project-switcher
-        aria-label={currentProject.name}
-        onContextMenu={projectMenu.onContextMenu}
-        className={PROJECT_TRIGGER_CLASS}
-      >
-        <ProjectTriggerContent project={currentProject} />
-      </DropdownMenuTrigger>
-
-      {/* No label above the switcher list: the row itself names the project,
-            the menu holds nothing but projects. */}
-      <DropdownMenuContent data-project-picker-menu side="right" align="start" sideOffset={6} className="w-60 data-[state=closed]:pointer-events-none">
-        {projects.map((project) => {
-          const href = projectTabHref(pathname, project, objectiveBoard);
-          const current = project.id === currentProject.id;
-          return (
-            <DropdownMenuItem key={project.id} asChild>
-              <Link
-                href={href}
-                aria-current={current ? "page" : undefined}
-                onMouseEnter={() => prefetchProject(project.id)}
-                onFocus={() => prefetchProject(project.id)}
-                onNavigate={(event) => {
-                  if (!session || !(isPreparedAppTabDestination(queryClient, href) ||
-                    session.isRetainedDestination(session.getSnapshot().activeId, href))) return;
-                  if (session.reuseDestination(href) || session.navigateInCurrentTab(href)) event.preventDefault();
-                }}
-              >
-                <ProjectOrb
-                  seed={projectOrbSeed(project)}
-                  iconUrl={project.icon_url}
-                  className="size-[18px] rounded-[5px]"
-                />
-                <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                {current ? <HugeiconsIcon icon={CheckIcon} className="ml-auto size-4 shrink-0" /> : null}
-              </Link>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    {/* The shortcut shows in the tooltip only: the row keeps its name. */}
+    <SearchSelect
+      open={menuOpen}
+      onOpenChange={changeMenuOpen}
+      value={currentProject.id}
+      onChange={openProject}
+      onHighlight={prefetchProject}
+      options={projects.map((project) => ({
+        value: project.id,
+        label: project.name,
+        keywords: [project.key],
+        icon: <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url}
+          className="size-[18px] rounded-[5px]" />,
+      }))}
+      // No tooltip over its own open menu (the shortcut can open it under the pointer).
+      tooltip={menuOpen ? undefined : tNav("switchProject")}
+      shortcutHint={switchable ? [mod, "⇧", "P"] : undefined}
+      searchPlaceholder={tCreation("searchProject")}
+      emptyText={tCreation("noProject")}
+      align="start"
+      trigger={
+        <button
+          ref={triggerRef}
+          type="button"
+          data-sidebar-project-switcher
+          aria-label={currentProject.name}
+          onContextMenu={projectMenu.onContextMenu}
+          className={PROJECT_TRIGGER_CLASS}
+        >
+          <ProjectTriggerContent project={currentProject} />
+        </button>
+      }
+    />
     {projectMenu.menu}
     </>
   );

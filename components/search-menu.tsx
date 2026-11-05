@@ -58,8 +58,12 @@ export type SearchMenuProps = {
   position?: { x: number; y: number } | null;
   /** Optional tooltip on the trigger (trigger mode only). */
   tooltip?: string;
-  /** Key badge (e.g. "S") shown next to the tooltip — surfaces the shortcut. */
-  shortcutHint?: string;
+  /** Key badge (e.g. "S") shown next to the tooltip — surfaces the shortcut.
+   *  A combo passes its keys in order (`["⌘", "⇧", "P"]`). */
+  shortcutHint?: string | readonly string[];
+  /** The value of the option under the pointer or the arrow keys, for menus
+   *  that warm their destination before it is chosen. */
+  onHighlight?: (value: string) => void;
   searchPlaceholder?: string;
   /** Controls search text. By default cmdk holds it itself; THE
  * pass is used for menus which advance from one step to another without closing
@@ -102,6 +106,7 @@ export function SearchMenu({
   position,
   tooltip,
   shortcutHint,
+  onHighlight,
   searchPlaceholder,
   searchValue,
   onSearchValueChange,
@@ -150,7 +155,7 @@ export function SearchMenu({
         triggerNode.current?.focus();
       } : undefined)}
     >
-      <Command shouldFilter={shouldFilter} filter={searchMenuFilter}>
+      <Command shouldFilter={shouldFilter} filter={searchMenuFilter} onValueChange={onHighlight}>
         <DropdownSearchRow>
           <CommandPrimitive.Input
             ref={inputRef}
@@ -213,7 +218,7 @@ export function SearchMenu({
       </ResponsivePopover>}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltip}
-        {shortcutHint && <Kbd size="sm">{shortcutHint}</Kbd>}
+        <ShortcutHint keys={shortcutHint} />
       </TooltipContent>
     </Tooltip>;
   }
@@ -242,8 +247,18 @@ export function SearchMenu({
       {popover}
       <TooltipContent className="flex items-center gap-1.5">
         {tooltip}
-        {shortcutHint && <Kbd size="sm">{shortcutHint}</Kbd>}
+        <ShortcutHint keys={shortcutHint} />
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function ShortcutHint({ keys }: { keys: string | readonly string[] | undefined }) {
+  if (!keys?.length) return null;
+  if (typeof keys === "string") return <Kbd size="sm">{keys}</Kbd>;
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {keys.map((key, index) => <Kbd key={`${index}-${key}`} size="sm">{key}</Kbd>)}
+    </span>
   );
 }

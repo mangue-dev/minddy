@@ -59,7 +59,12 @@ describe("primary sidebar project context", () => {
   });
 
   it("keeps the back rows sidebar-only: they lift a level, they never navigate", () => {
-    expect(sidebar).not.toContain("router.push");
+    // Only the project switcher opens a page: the picked project, on the same tab.
+    const switcherStart = sidebar.indexOf("export function ProjectSwitcher");
+    const switcherEnd = sidebar.indexOf("export function ProjectContextRow");
+    const switcher = sidebar.slice(switcherStart, switcherEnd);
+    expect(switcher).toContain("router.push(href)");
+    expect(sidebar.slice(0, switcherStart) + sidebar.slice(switcherEnd)).not.toContain("router.push");
     expect(sidebar).toContain("<SidebarBackRow label={back.label} onBack={goBack}");
     expect(sidebar).toContain("onClick={onBack}");
   });
