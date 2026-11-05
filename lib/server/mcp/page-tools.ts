@@ -4,6 +4,13 @@ import { z } from "zod";
 import { readTextEdits, TEXT_EDIT_FIELDS } from "./text-edit-input";
 import { MCP_MENTIONS_IN_MARKDOWN } from "./instructions";
 import { DATABASE_ENTRY_VALUES, DATABASE_TOOL_SCHEMA, databaseToolDescription } from "@/lib/server/database-tool-schema";
+import {
+  DATABASE_VIEWS_TOOL_SCHEMA,
+  MCP_DATABASE_VIEW_TOOL_NAMES,
+  databaseViewsToolDescriptions,
+  listDatabaseViewsForAgent,
+  updateDatabaseViewsForAgent,
+} from "@/lib/server/database-view-tools";
 import type { McpServer } from "@modelcontextprotocol/server";
 import {
   addPageCommentForAgent,
@@ -202,7 +209,7 @@ export function registerPageTools(server: McpServer): void {
       title: "Get page",
       description:
         "is_database says whether the page IS a database: true even when database_schema is empty and database_revision is 0 — a database with no columns yet, to fill with minddy_update_page_database rather than recreate. " +
-        "Database pages include database_schema, database_revision, database_title_name, and entry property_values/created_at in subpages. Use minddy_update_page_database for columns and values. " +
+        "Database pages include database_schema, database_revision, database_title_name, and entry property_values/created_at in subpages. Use minddy_update_page_database for columns and values; its saved views (sort, filter, hidden columns) are read with minddy_list_page_database_views. " +
         "ONE page in full: its title, its icon, its body in MARKDOWN, its version, " +
         "and its direct subpages (so you can walk down the tree without a second " +
         "listing call). This is what you read before writing: copy passages from " +
@@ -362,7 +369,9 @@ export function registerPageTools(server: McpServer): void {
     "minddy_update_page_database",
     {
       title: "Update page database",
-      description: databaseToolDescription("minddy_get_page", "minddy_create_page"),
+      description:
+        databaseToolDescription("minddy_get_page", "minddy_create_page") +
+        " Saved views (sort, filter, hidden columns) are not part of the schema: change them with minddy_update_page_database_views.",
       inputSchema: DATABASE_TOOL_SCHEMA.extend({ project_id: PROJECT_ID }),
       annotations: { ...WRITE, destructiveHint: true },
     },
@@ -375,6 +384,60 @@ export function registerPageTools(server: McpServer): void {
         actorId: scope.userId,
         mcpKeyId: scope.keyId,
         input: args,
+      });
+      return result.ok ? ok(result.data) : refusal(result);
+    },
+  );
+
+  // The saved views of a database (MIN-898): the same repository, validation
+  // and sealing as the view strip and Numo, through `database-view-tools.ts`.
+  const viewDescriptions = databaseViewsToolDescriptions(MCP_DATABASE_VIEW_TOOL_NAMES);
+  const DATABASE_PAGE_ID = PAGE_ID.describe(
+    "The database page id (is_database true in minddy_get_page)."
+  );
+
+  server.registerTool(
+    "minddy_list_page_database_views",
+    {
+      title: "List page database views",
+      description: viewDescriptions.list,
+      inputSchema: z.object({ project_id: PROJECT_ID, page_id: DATABASE_PAGE_ID }),
+      annotations: READ_ONLY,
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await listDatabaseViewsForAgent({
+        projectId: scope.access.project.id,
+        pageId: args.page_id,
+        actorId: scope.userId,
+        names: MCP_DATABASE_VIEW_TOOL_NAMES,
+      });
+      return result.ok ? ok(result.data) : refusal(result);
+    },
+  );
+
+  server.registerTool(
+    "minddy_update_page_database_views",
+    {
+      title: "Update page database views",
+      description: viewDescriptions.update,
+      inputSchema: DATABASE_VIEWS_TOOL_SCHEMA.extend({
+        project_id: PROJECT_ID,
+        page_id: DATABASE_PAGE_ID,
+      }),
+      // operation=delete removes a view other members may rely on.
+      annotations: { ...WRITE, destructiveHint: true },
+    },
+    async (args, extra) => {
+      const scope = await requireProject(extra, args.project_id);
+      if ("error" in scope) return scope.error;
+      const result = await updateDatabaseViewsForAgent({
+        projectId: scope.access.project.id,
+        pageId: args.page_id,
+        actorId: scope.userId,
+        input: args,
+        names: MCP_DATABASE_VIEW_TOOL_NAMES,
       });
       return result.ok ? ok(result.data) : refusal(result);
     },
