@@ -534,7 +534,8 @@ export function ProjectSwitcher({
         icon: <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url}
           className="size-[18px] rounded-[5px]" />,
       }))}
-      tooltip={tNav("switchProject")}
+      // No tooltip over its own open menu (the shortcut can open it under the pointer).
+      tooltip={menuOpen ? undefined : tNav("switchProject")}
       shortcutHint={switchable ? [mod, "⇧", "P"] : undefined}
       searchPlaceholder={tCreation("searchProject")}
       emptyText={tCreation("noProject")}
