@@ -74,6 +74,9 @@ export const CHEATSHEET: CheatsheetSection[] = [
         labelKey: "navProjectSettings",
         keys: [["G"], ["S"]],
       },
+      // The sidebar project switcher, from a project's pages: the same combo
+      // as "Create in" in the creation dialogs, which keep it while open.
+      { id: "nav.switchProject", labelKey: "switchProject", keys: [["mod", "⇧", "P"]] },
       // The only one in the section that is not a chord: it only applies to the
       // Objectives page, an open objective, and the button already has it in plain text.
       {

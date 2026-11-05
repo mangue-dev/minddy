@@ -2321,6 +2321,7 @@
       "navTriage": "Go to Triage",
       "navFeedback": "Go to Feedback",
       "navProjectSettings": "Project settings",
+      "switchProject": "Switch project",
       "navObjectiveIssues": "See the open objective's issues",
       "pageCopyLink": "Copy the open page’s link",
       "palette": "Command palette",

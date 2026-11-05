@@ -6,7 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { SearchSelect } from "@/components/search-select";
 import { Kbd } from "@/components/ui/kbd";
-import { matchesModShiftCombo } from "@/lib/keyboard/mod-combo";
+import { isProjectSwitchShortcut } from "@/lib/keyboard/project-switch-shortcut";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { captureWritingSpot, restoreWritingSpot, type WritingSpot } from "@/lib/keyboard/writing-spot";
 import { ProjectOrb } from "@/components/project-orb";
@@ -22,10 +22,6 @@ const DIALOG_PILL =
 const SHEET_TRIGGER =
   "flex min-w-0 items-center gap-1.5 rounded-md px-1.5 text-base font-medium text-foreground outline-none transition-colors";
 const INTERACTIVE = "hover:bg-control-hover focus-visible:bg-control-hover";
-
-/** ⌘⇧P / Ctrl+Shift+P: a combo, so it works while writing the title or the
- *  description. The key itself stays free for the browser elsewhere. */
-const SHORTCUT_KEY = "p";
 
 /**
  * "Create in" control of the creation dialogs (MIN-741): the project the new
@@ -59,10 +55,12 @@ export function CreationProjectSelect({
   // text exactly where the caret was, instead of the trigger.
   const writingSpot = useRef<WritingSpot | null>(null);
 
+  // ⌘⇧P, shared with the sidebar switcher. Capturing on the document and
+  // stopping the event keeps the sidebar's menu closed behind the dialog.
   useEffect(() => {
     if (!selectable) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || !matchesModShiftCombo(event, SHORTCUT_KEY)) return;
+      if (event.defaultPrevented || !isProjectSwitchShortcut(event)) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       setOpen((wasOpen) => {

@@ -152,7 +152,9 @@ type ShellProps = {
   /** Optional tooltip on the trigger (used by the compact card pickers). */
   tooltip?: string;
   /** Key badge (e.g. "S") shown next to the tooltip — surfaces the shortcut. */
-  shortcutHint?: string;
+  shortcutHint?: string | readonly string[];
+  /** The highlighted option's value, as `SearchMenu` reports it. */
+  onHighlight?: (value: string) => void;
   searchPlaceholder?: string;
   emptyText?: string;
   align?: "start" | "center" | "end";
