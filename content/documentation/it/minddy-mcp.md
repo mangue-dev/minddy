@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 16,
+  "revision": 18,
+  "sourceRevision": 17,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-05",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -55,14 +55,15 @@
       "lib/server/issue-reads.ts",
       "components/settings/account-settings-page.tsx",
       "lib/server/project-stats.ts",
-      "lib/project-stats.ts"
+      "lib/project-stats.ts",
+      "lib/server/database-view-tools.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude (it paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 18,
+    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept)",
+    "language": "agent:claude (it paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (it paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-11-05"
   },
   "related": [
     "numo",
@@ -85,7 +86,7 @@
       "src": "/documentation/it/external-minddy-mcp-workflow.png",
       "alt": "Selettore dei client MCP minddy con Claude, Codex e altri assistenti.",
       "caption": "Scegli il client per visualizzare il comando o la configurazione di installazione.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -102,7 +103,7 @@
       "src": "/documentation/it/external-minddy-mcp-install-workflow.png",
       "alt": "Passaggio di installazione di Codex nella procedura di collegamento al MCP di minddy, con l’endpoint minddy Cloud.",
       "caption": "Questo esempio si connette a minddy Cloud. Per un’istanza autogestita, usa l’origine della tua istanza; il comando mostrato non è stato eseguito per questa cattura.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -173,6 +174,8 @@ Le letture che restituiscono testo con immagini (`minddy_get_issue`, `minddy_get
 ### Rispettare revisioni e proprietà {#pages-and-routines}
 
 `minddy_list_pages` mostra la gerarchia, `minddy_search_pages` restituisce estratti e `minddy_get_page` restituisce Markdown, commenti e valori completi. Preferisci modifiche parziali e usa la versione corrente quando sostituisci il contenuto. Conserva esattamente gli URL di file e immagini. `minddy_create_page` con `database=true` crea un database di pagine. `minddy_update_page_database` richiede la revisione del database per le modifiche allo schema e il valore precedente per le modifiche alle celle. Per riempire un database con meno chiamate, passa `values` a `minddy_create_page` per creare una voce con le sue proprietà, oppure usa `operation=values` per modificare più proprietà della stessa voce in una volta: tutte le celle vengono scritte insieme o nessuna.
+
+Le viste salvate di un database si leggono con `minddy_list_page_database_views` e si creano, modificano, eliminano o riordinano con `minddy_update_page_database_views`. I filtri usano gli ID di proprietà e opzioni restituiti da `minddy_get_page`, mai il nome di un’opzione; `filters` e `hidden_property_ids` sostituiscono ciascuno l’intero valore attuale e `operation=reorder` elenca ogni vista una sola volta.
 
 Per convertire un tipo, usa `operation=convert` con `propertyId`, `targetType`, `revision` e `preview=true`. Controlla `incompatibleCount`, quindi invia le stesse impostazioni con `preview=false` e il `token` restituito. Imposta `confirmLoss=true` solo dopo che l’utente ha autorizzato esplicitamente la cancellazione dei valori incompatibili.
 

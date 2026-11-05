@@ -109,6 +109,49 @@ export const DATABASE_VIEWS_TOOL_PARAMETERS: {
   required: jsonSchema.required ?? [],
 };
 
+/** The tool names a surface gives the database and view tools. */
+export interface DatabaseViewToolNames {
+  getPage: string;
+  updateDatabase: string;
+  listViews: string;
+  updateViews: string;
+  /** The issue board's view tools, when the surface has them. */
+  boardViews?: { list: string; create: string; update: string };
+}
+
+export const NUMO_DATABASE_VIEW_TOOL_NAMES: DatabaseViewToolNames = {
+  getPage: "get_page",
+  updateDatabase: "update_page_database",
+  listViews: "list_page_database_views",
+  updateViews: "update_page_database_views",
+  boardViews: { list: "list_views", create: "create_view", update: "update_view" },
+};
+
+export const MCP_DATABASE_VIEW_TOOL_NAMES: DatabaseViewToolNames = {
+  getPage: "minddy_get_page",
+  updateDatabase: "minddy_update_page_database",
+  listViews: "minddy_list_page_database_views",
+  updateViews: "minddy_update_page_database_views",
+};
+
+/** The model contract of the two view tools, shared by Numo and the MCP. */
+export function databaseViewsToolDescriptions(names: DatabaseViewToolNames):
+  { list: string; update: string } {
+  const board = names.boardViews;
+  return {
+    list:
+      "The saved VIEWS of a database page, in the order of its view strip: each has view_id, name, position, sort, descending, filters ({ match: \"and\"|\"or\", conditions: [{ property_id, operator, value }] }) and hidden_property_ids. Views are shared by every project member. When the conversation is about a database page, \"a view\" / \"une vue\" means one of THESE, never an issue board view. An empty list means the database still shows its default view (by position, no filter, every column). " +
+      `Read this before ${names.updateViews}.` +
+      (board ? ` These are NOT the issue views of ${board.list}.` : ""),
+    update:
+      `Create, reconfigure, delete or reorder the saved VIEWS of a database page — never its schema or entries (${names.updateDatabase}), never the issue board views${board ? ` (${board.create}/${board.update})` : ""}. ` +
+      "When the conversation is about a database page, this is the tool for \"create a view\" / \"crée une vue\", filtering, sorting or hiding columns. " +
+      `Read ${names.getPage} for the property ids and option ids, and ${names.listViews} for the view ids, first. ` +
+      "operation=create needs name and takes any view field; omitted fields get the default (sort position ascending, no filter, no hidden column); the view is added at the end of the strip. operation=update needs view_id and changes ONLY the fields you pass (name, sort, descending, filters, hidden_property_ids). filters and hidden_property_ids each REPLACE the whole current value: resend the conditions and ids you want to keep. operation=delete needs view_id; the last view cannot be deleted. operation=reorder needs order: EVERY view_id of the database exactly once, in the new strip order. sort is \"position\" (manual order), \"title\" or a property id. filters = { match: \"and\" (every condition, the default) or \"or\" (any condition), conditions: up to 10 { property_id, operator, value } }; null or no conditions removes the filter. Operators by property type: text contains, not_contains, eq, neq (case-insensitive); number eq, neq, gt, lt (value a decimal); select eq, neq (value an option ID, never its name); multi_select contains, not_contains (option ID); people contains, not_contains (member user id); date and created_at eq (same day), gt (after), lt (before) with value YYYY-MM-DD; checkbox eq with \"true\" or \"false\"; every type except checkbox also takes empty and not_empty, without a value. " +
+      `Column ORDER is not part of a view: it is the order of the database_schema array, changed with ${names.updateDatabase} operation=schema. The result lists every view after the write.`,
+  };
+}
+
 const NO_VIEW_NOTE =
   "This database has no saved view yet: it shows the default view (sorted by " +
   "position, no filter, every column). Create one to save a configuration.";
@@ -130,12 +173,13 @@ const fail = <T>(code: PageToolCode, message: string): PageToolResult<T> =>
 const invalid = <T>(message: string) => fail<T>("invalid_params", message);
 
 /** The view repository's refusals, worded for views rather than cells. */
-function refuse<T>(errorKey: PageErrorKey): PageToolResult<T> {
+function refuse<T>(errorKey: PageErrorKey,
+  names: DatabaseViewToolNames = NUMO_DATABASE_VIEW_TOOL_NAMES): PageToolResult<T> {
   switch (errorKey) {
     case "pageNotFound":
     case "projectNotFound":
       return fail("page_not_found",
-        "No database with this page_id in this project. Read it with get_page: is_database must be true.");
+        `No database with this page_id in this project. Read it with ${names.getPage}: is_database must be true.`);
     case "readOnlyProject":
       return fail("forbidden", "Refused: you can only read this project.");
     case "pageDatabaseStale":
@@ -179,25 +223,29 @@ function listed(pageId: string, views: SavedDatabaseView[], schema: DatabaseProp
 }
 
 /** The views of a database, in the order of its view strip. */
-export async function listDatabaseViewsForAgent({ projectId, pageId, actorId }: {
+export async function listDatabaseViewsForAgent({ projectId, pageId, actorId,
+  names = NUMO_DATABASE_VIEW_TOOL_NAMES }: {
   projectId: string; pageId: string; actorId: string;
+  /** The surface's tool names, quoted in refusals. */
+  names?: DatabaseViewToolNames;
 }): Promise<PageToolResult<AgentDatabaseViews>> {
   // The schema converts the single filter of views saved before conditions.
-  const schema = await databaseSchema(projectId, pageId, actorId);
+  const schema = await databaseSchema(projectId, pageId, actorId, names);
   if (!schema.ok) return schema;
   const result = await listPageDatabaseViews(projectId, pageId, actorId);
   return result.ok ? { ok: true, data: listed(pageId, result.page, schema.data) }
-    : refuse(result.errorKey);
+    : refuse(result.errorKey, names);
 }
 
 /** The database's properties; also proves the page is a database of the project. */
-async function databaseSchema(projectId: string, pageId: string, actorId: string):
+async function databaseSchema(projectId: string, pageId: string, actorId: string,
+  names: DatabaseViewToolNames):
   Promise<PageToolResult<DatabaseProperty[]>> {
-  if (!UUID.test(pageId)) return refuse("pageNotFound");
+  if (!UUID.test(pageId)) return refuse("pageNotFound", names);
   const page = await getPage(pageId, actorId, { projectId });
-  if (!page.ok) return refuse(page.errorKey);
+  if (!page.ok) return refuse(page.errorKey, names);
   if (page.page.project_id !== projectId || page.page.database_schema == null)
-    return refuse("pageNotFound");
+    return refuse("pageNotFound", names);
   return { ok: true, data: page.page.database_schema };
 }
 
@@ -250,26 +298,29 @@ function mergeView(base: DatabaseView, input: ViewsInput, schema: DatabaseProper
 }
 
 /** Create, reconfigure, delete or reorder the saved views of a database. */
-export async function updateDatabaseViewsForAgent({ projectId, pageId, actorId, input }: {
+export async function updateDatabaseViewsForAgent({ projectId, pageId, actorId, input,
+  names = NUMO_DATABASE_VIEW_TOOL_NAMES }: {
   projectId: string; pageId: string; actorId: string; input: unknown;
+  /** The surface's tool names, quoted in refusals. */
+  names?: DatabaseViewToolNames;
 }): Promise<PageToolResult<AgentDatabaseViews>> {
   const parsed = DATABASE_VIEWS_TOOL_SCHEMA.safeParse(input);
   if (!parsed.success)
     return invalid(`Invalid arguments: ${parsed.error.issues.map((issue) =>
       `${issue.path.join(".") || "input"} ${issue.message}`).join("; ")}.`);
   const args = parsed.data;
-  const schema = await databaseSchema(projectId, pageId, actorId);
+  const schema = await databaseSchema(projectId, pageId, actorId, names);
   if (!schema.ok) return schema;
   const current = await listPageDatabaseViews(projectId, pageId, actorId);
-  if (!current.ok) return refuse(current.errorKey);
+  if (!current.ok) return refuse(current.errorKey, names);
   const views = current.page;
   const target = args.view_id ? views.find((view) => view.id === args.view_id) : undefined;
   if ((args.operation === "update" || args.operation === "delete") && !target)
-    return invalid("view_id must be one of this database's views (list_page_database_views).");
+    return invalid(`view_id must be one of this database's views (${names.listViews}).`);
   const reread = async (view?: SavedDatabaseView): Promise<PageToolResult<AgentDatabaseViews>> => {
     const after = await listPageDatabaseViews(projectId, pageId, actorId);
     return after.ok ? { ok: true, data: listed(pageId, after.page, schema.data, view) }
-      : refuse(after.errorKey);
+      : refuse(after.errorKey, names);
   };
 
   switch (args.operation) {
@@ -281,20 +332,20 @@ export async function updateDatabaseViewsForAgent({ projectId, pageId, actorId, 
       if (!view.ok) return view;
       const created = await createPageDatabaseView(projectId, pageId, actorId,
         { name: args.name, view: view.data });
-      return created.ok ? reread(created.page) : refuse(created.errorKey);
+      return created.ok ? reread(created.page) : refuse(created.errorKey, names);
     }
     case "update": {
       const view = mergeView(target!.view, args, schema.data);
       if (!view.ok) return view;
       const updated = await updatePageDatabaseView(projectId, pageId, target!.id, actorId,
         { ...(args.name !== undefined && { name: args.name }), view: view.data });
-      return updated.ok ? reread(updated.page) : refuse(updated.errorKey);
+      return updated.ok ? reread(updated.page) : refuse(updated.errorKey, names);
     }
     case "delete": {
       if (views.length <= 1)
         return invalid("A database keeps at least one saved view: rename or reconfigure it instead.");
       const deleted = await deletePageDatabaseView(projectId, pageId, target!.id, actorId);
-      return deleted.ok ? reread() : refuse(deleted.errorKey);
+      return deleted.ok ? reread() : refuse(deleted.errorKey, names);
     }
     case "reorder": {
       const order = args.order ?? [];
@@ -308,7 +359,7 @@ export async function updateDatabaseViewsForAgent({ projectId, pageId, actorId, 
         if (views.find((view) => view.id === viewId)?.position === index + 1) continue;
         const moved = await updatePageDatabaseView(projectId, pageId, viewId, actorId,
           { position: index + 1 });
-        if (!moved.ok) return refuse(moved.errorKey);
+        if (!moved.ok) return refuse(moved.errorKey, names);
       }
       return reread();
     }

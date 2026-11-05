@@ -1,6 +1,10 @@
 import "server-only";
 import { DATABASE_TOOL_PARAMETERS, databaseToolDescription } from "@/lib/server/database-tool-schema";
-import { DATABASE_VIEWS_TOOL_PARAMETERS } from "@/lib/server/database-view-tools";
+import {
+  DATABASE_VIEWS_TOOL_PARAMETERS,
+  NUMO_DATABASE_VIEW_TOOL_NAMES,
+  databaseViewsToolDescriptions,
+} from "@/lib/server/database-view-tools";
 
 import { MCP_CLIENT_TOOLS, MCP_SETUP_TOOLS } from "@/lib/mcp-client-tools";
 
@@ -34,6 +38,8 @@ import { TRASH_TYPES } from "@/lib/server/trash";
 import { VIEW_SORTS } from "@/lib/server/views";
 import { SMART_TRIAGE_MODES } from "@/lib/smart-triage";
 import { locales } from "@/i18n/config";
+
+const VIEW_DESCRIPTIONS = databaseViewsToolDescriptions(NUMO_DATABASE_VIEW_TOOL_NAMES);
 
 // ── Tool definitions (OpenAI function-calling format) ──────────────────
 // Numo's tool surface over minddy: read + write issues (all fields, bulk),
@@ -886,8 +892,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "list_page_database_views",
-      description:
-        "The saved VIEWS of a database page, in the order of its view strip: each has view_id, name, position, sort, descending, filters ({ match: \"and\"|\"or\", conditions: [{ property_id, operator, value }] }) and hidden_property_ids. Views are shared by every project member. When the conversation is about a database page, \"a view\" / \"une vue\" means one of THESE, never an issue board view. An empty list means the database still shows its default view (by position, no filter, every column). Read this before update_page_database_views. These are NOT the issue views of list_views.",
+      description: VIEW_DESCRIPTIONS.list,
       parameters: {
         type: "object",
         properties: {
@@ -901,8 +906,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     type: "function",
     function: {
       name: "update_page_database_views",
-      description:
-        "Create, reconfigure, delete or reorder the saved VIEWS of a database page — never its schema or entries (update_page_database), never the issue board views (create_view/update_view). When the conversation is about a database page, this is the tool for \"create a view\" / \"crée une vue\", filtering, sorting or hiding columns. Read get_page for the property ids and option ids, and list_page_database_views for the view ids, first. operation=create needs name and takes any view field; omitted fields get the default (sort position ascending, no filter, no hidden column); the view is added at the end of the strip. operation=update needs view_id and changes ONLY the fields you pass (name, sort, descending, filters, hidden_property_ids). filters and hidden_property_ids each REPLACE the whole current value: resend the conditions and ids you want to keep. operation=delete needs view_id; the last view cannot be deleted. operation=reorder needs order: EVERY view_id of the database exactly once, in the new strip order. sort is \"position\" (manual order), \"title\" or a property id. filters = { match: \"and\" (every condition, the default) or \"or\" (any condition), conditions: up to 10 { property_id, operator, value } }; null or no conditions removes the filter. Operators by property type: text contains, not_contains, eq, neq (case-insensitive); number eq, neq, gt, lt (value a decimal); select eq, neq (value an option ID, never its name); multi_select contains, not_contains (option ID); people contains, not_contains (member user id); date and created_at eq (same day), gt (after), lt (before) with value YYYY-MM-DD; checkbox eq with \"true\" or \"false\"; every type except checkbox also takes empty and not_empty, without a value. Column ORDER is not part of a view: it is the order of the database_schema array, changed with update_page_database operation=schema. The result lists every view after the write.",
+      description: VIEW_DESCRIPTIONS.update,
       parameters: {
         ...DATABASE_VIEWS_TOOL_PARAMETERS,
         properties: {

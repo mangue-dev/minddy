@@ -59,6 +59,7 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_list_pages: "read",
   minddy_search_pages: "read",
   minddy_get_page: "read",
+  minddy_list_page_database_views: "read",
 
   // Internal comments.
   minddy_add_comment: "comment",
@@ -93,6 +94,7 @@ export const MCP_TOOL_CAPABILITIES = {
   minddy_list_integrations: "write",
   minddy_create_page: "write",
   minddy_update_page_database: "write",
+  minddy_update_page_database_views: "write",
   minddy_update_page: "write",
   minddy_append_to_page: "write",
   minddy_edit_page_text: "write",
