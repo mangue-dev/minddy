@@ -9,7 +9,7 @@ import { useMediaQuery } from "@/lib/use-media-query"
 import { ChevronRightIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
-import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
+import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding"
 import { useMenuScrollFade, useMergedRef } from "@/components/ui/menu-scroll-fade"
 import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
 
@@ -169,12 +169,13 @@ function DropdownMenuContent({
   className,
   align = "start",
   sideOffset = 4,
-  collisionPadding = OVERLAY_COLLISION_PADDING,
+  collisionPadding,
   children,
   ref,
   onScroll,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  const defaultCollisionPadding = useOverlayCollisionPadding()
   // Rows hidden past an edge fade out there (useMenuScrollFade).
   const fade = useMenuScrollFade<HTMLDivElement>()
   const mergedRef = useMergedRef(ref, fade.ref)
@@ -186,7 +187,7 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         align={align}
-        collisionPadding={collisionPadding}
+        collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
                                   "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-max min-w-[max(var(--radix-dropdown-menu-trigger-width),12rem)] max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-10 p-2 text-popover-foreground shadow-md ring-1 ring-border duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                                   className
@@ -456,11 +457,12 @@ function DropdownMenuSubTrigger({
 function DropdownMenuSubContent({
   className,
   children,
-  collisionPadding = OVERLAY_COLLISION_PADDING,
+  collisionPadding,
   ref,
   onScroll,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+  const defaultCollisionPadding = useOverlayCollisionPadding()
   const ctx = React.useContext(DropdownSubInlineContext)
   const fade = useMenuScrollFade<HTMLDivElement>()
   const mergedRef = useMergedRef(ref, fade.ref)
@@ -492,7 +494,7 @@ function DropdownMenuSubContent({
         // into the viewport (overlapping the parent menu) instead of staying
         // pinned to the trigger and spilling off a narrow screen.
         sticky="always"
-        collisionPadding={collisionPadding}
+        collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
                           "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-40 max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-10 p-2 text-popover-foreground shadow-lg ring-1 ring-border duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                           className

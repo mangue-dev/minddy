@@ -5,7 +5,7 @@ import { Popover as PopoverPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import { escapeClosesMenusFirst } from "@/lib/escape-layers"
-import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
+import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding"
 import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen, useOverlayState } from "@/components/ui/overlay-freeze"
 import { useMergedRef } from "@/components/ui/menu-scroll-fade"
 import { listenOutsideClick } from "@/lib/overlay-dismiss"
@@ -40,7 +40,7 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
-  collisionPadding = OVERLAY_COLLISION_PADDING,
+  collisionPadding,
   container,
   children,
   ref,
@@ -51,6 +51,7 @@ function PopoverContent({
    *  subtree (otherwise wheel/touch scrolling inside it is blocked). */
   container?: HTMLElement | null
 }) {
+  const defaultCollisionPadding = useOverlayCollisionPadding()
   // A closing popover keeps what it showed (components/ui/overlay-freeze.tsx).
   const shown = useFrozenWhileClosed(children)
   // The node in state: Radix's portal mounts the content one render late.
@@ -87,7 +88,7 @@ function PopoverContent({
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
-        collisionPadding={collisionPadding}
+        collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
           "z-50 flex w-max min-w-(--radix-popover-trigger-width) origin-(--radix-popover-content-transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-border outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className

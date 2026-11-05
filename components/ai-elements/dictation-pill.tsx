@@ -177,7 +177,6 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
           side="top"
           align="start"
           sideOffset={10}
-          collisionPadding={10}
           className="w-72 gap-3 rounded-xl p-3"
         >
           <PopoverHeader>

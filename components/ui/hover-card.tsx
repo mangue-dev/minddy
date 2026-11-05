@@ -4,7 +4,7 @@ import * as React from "react"
 import { HoverCard as HoverCardPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface"
+import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding"
 
 /**
  * A card that opens while its trigger is hovered (MIN-879): more about what
@@ -43,16 +43,17 @@ function HoverCardContent({
   className,
   align = "start",
   sideOffset = 6,
-  collisionPadding = OVERLAY_COLLISION_PADDING,
+  collisionPadding,
   ...props
 }: React.ComponentProps<typeof HoverCardPrimitive.Content>) {
+  const defaultCollisionPadding = useOverlayCollisionPadding()
   return (
     <HoverCardPrimitive.Portal>
       <HoverCardPrimitive.Content
         data-slot="hover-card-content"
         align={align}
         sideOffset={sideOffset}
-        collisionPadding={collisionPadding}
+        collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
           // Above popovers, menus and dialogs (z-50), whose rows it often
           // explains — a relation in a card's popover —, below tooltips (z-60).

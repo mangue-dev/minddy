@@ -810,7 +810,6 @@ function AccountButton({
         side="top"
         align="start"
         sideOffset={8}
-        collisionPadding={10}
         className="w-72 gap-3 rounded-xl p-3"
       >
         <PopoverHeader>
