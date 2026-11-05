@@ -31,6 +31,23 @@ function isSpacer(parent: MarkdownNode | undefined, index: number): boolean {
   return before && after;
 }
 
+/**
+ * Write the line break and the line prefix owed by the previous block before
+ * the paragraph's own text (MIN-901).
+ *
+ * tiptap-markdown records where a bold or italic run opens BEFORE
+ * prosemirror-markdown flushes the pending block break into the output, then
+ * trims whitespace from that position. At the top level or in a list item the
+ * flushed text is only newlines and indentation, which the trim skips. In a
+ * quote it is `\n>\n> `: the trim stops on the `>`, the blank `>` line between
+ * two paragraphs disappears and a stray `**` (or `*`) is written. Flushing
+ * here moves the recorded position past the prefix. Escaping is unaffected:
+ * it follows `renderInline`'s block-start flag, not the output.
+ */
+export function startInlineBlock(state: MarkdownState, node: MarkdownNode): void {
+  if (node.childCount > 0) state.write("");
+}
+
 function paragraphToMarkdown(
   state: MarkdownState,
   node: MarkdownNode,
@@ -38,7 +55,10 @@ function paragraphToMarkdown(
   index: number
 ): void {
   if (isSpacer(parent, index)) state.write(SPACER_LINE);
-  else state.renderInline(node);
+  else {
+    startInlineBlock(state, node);
+    state.renderInline(node);
+  }
   state.closeBlock(node);
 }
 
