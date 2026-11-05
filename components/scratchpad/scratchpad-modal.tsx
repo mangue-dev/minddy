@@ -4,7 +4,7 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,12 @@ function ScratchpadBody() {
   // The notebook spans projects, so its mention picker uses the same global
   // source as Numo's global composer and only loads when "@" is typed.
   const { mentionables, links, scan, onMentionQuery } = useNumoMentionables(null);
+  // Every page of every project is offered (MIN-899); the notebook itself is
+  // not, since a note citing the notebook it sits in points nowhere new.
+  const mentionOptions = useMemo(
+    () => mentionables.filter((option) => option.type !== "scratchpad"),
+    [mentionables],
+  );
 
   const markdownRef = useRef<(() => string) | null>(null);
   const applyRef = useRef<
@@ -275,7 +281,7 @@ function ScratchpadBody() {
               focusTaskIndex={focusTaskIndex}
               onFocusTask={clearFocusTask}
               mentions={{
-                options: mentionables,
+                options: mentionOptions,
                 links,
                 scan,
                 onQuery: () => onMentionQuery(true),

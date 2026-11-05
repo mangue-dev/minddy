@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 11,
+  "revision": 14,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-05",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -49,14 +49,16 @@
       "lib/keyboard/find-shortcut.ts",
       "components/pages/blocks/math.ts",
       "components/editor/math-edit-menu.tsx",
-      "components/editor/block-selection.ts"
+      "components/editor/block-selection.ts",
+      "lib/use-mention-sources.ts",
+      "lib/use-numo-mentionables.ts"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 14,
+    "fact": "agent:claude-code (MIN-899: the notebook's `@` menu offering the pages of every non-hidden project with their project's name, opening a cited page in its project, and leaving out the notebook itself checked against lib/use-mention-sources.ts, lib/use-numo-mentionables.ts, lib/use-numo-mentionables.test.tsx and components/scratchpad/scratchpad-modal.tsx; the other mention types listed checked against lib/use-feature-mentions.ts; rest of the article unchanged since the previous review; no figure recaptured, the existing figure shows no `@` menu); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; equivalent meaning to en revision 12; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-05"
   },
   "related": [
     "issues",
@@ -74,7 +76,7 @@
       "src": "/documentation/de/work-task-notebook.png",
       "alt": "Übersetzte persönliche Demo-Aufgaben im Notizbuch.",
       "caption": "Das Notizbuch hält persönliche Schritte außerhalb der Tickethierarchie des Projekts fest. Die Zustände der Beispielaufgaben bleiben unverändert.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -99,6 +101,8 @@
 Um eine Aufgabe wiederzufinden, öffne die Befehlspalette mit Command+K unter macOS beziehungsweise Strg+K unter Windows/Linux und tippe Wörter daraus ein. Noch offene Aufgaben erscheinen unter **Aufgabennotizbuch**, mit ihrem Abschnitt; erledigte und abgebrochene Aufgaben sowie Fragen erscheinen dort nicht. Wähle eine aus, um das Notizbuch bei dieser Aufgabe zu öffnen. Solange du nichts eingibst, listet die Palette keine Aufgaben aus dem Notizbuch auf.
 
 Das Aufgabenheft verwendet denselben Editor wie Projektseiten, mit denselben Blockgriffen: Fahre über einen Block, um ihn zu ziehen, sein Menü zu öffnen oder mit **+** einen Block hinzuzufügen. Tippe `/`, um eine Aufgabe, die zuerst angeboten wird, oder eine Überschrift, Liste, ein Zitat, einen **Hinweis**, einen Codeblock, eine **Gleichung**, ein Element **Aufklappbarer Bereich** oder einen Teiler einzufügen, oder wähle **Eine Aufgabe diktieren**, um Aufgaben zu sprechen. Das Heft wird weiterhin als Markdown gespeichert, sodass Numo und verbundene Agenten dieselben Aufgaben und Zustände lesen. Markiere Text, um ihn zu formatieren oder einen Link hinzuzufügen. Ganze Blöcke wählst du wie auf einer Seite aus, indem du über sie ziehst, mit einem Auswahlrechteck, das du neben oder unter den Notizen aufziehst, mit Escape oder mit Command/Strg+A, wie in der [Seitenanleitung](/de/dokumentation/pages#editor-formatting) beschrieben. Füge ein Bild ein, ziehe es hinein oder wähle **Bild** im `/`-Menü, um es in eine Notiz einzufügen. Andere Dateitypen gehören in Seiten. Auf dem Smartphone ersetzt die Leiste über der Tastatur die Blockgriffe, die Auswahlleiste und das getippte `@`-Menü; die [Seitenanleitung](/de/dokumentation/pages#editor-formatting) beschreibt sie. Solange das Notizbuch geöffnet ist, öffnet Command+F unter macOS oder Strg+F unter Windows/Linux dieselbe [Leiste zum Suchen und Ersetzen](/de/dokumentation/pages#find-and-replace) wie auf einer Seite.
+
+Tippe `@` in einer Notiz, um eine Person, ein Projekt, ein Ticket, ein Ziel, eine Seite, einen Pull Request, eine Routine, einen Zyklus, einen MCP-Server oder ein Datum aus einem deiner Projekte zu erwähnen. Das Menü listet die Seiten aller Projekte, jeweils mit dem Namen ihres Projekts, damit zwei Seiten mit gleichem Titel unterscheidbar bleiben. Ausgeblendete Projekte fehlen darin. Klicke auf eine Erwähnung, um zu öffnen, worauf sie verweist, etwa eine Seite in ihrem Projekt.
 
 Das Menü **Notizbuchaktionen** (`…`) bietet **Alle als Prompt kopieren**, das das ganze Aufgabenheft für deinen eigenen Coding-Agenten kopiert, und **Erledigte und verworfene Aufgaben entfernen**. Das Entfernen verlangt eine Bestätigung, löscht erledigte und abgebrochene Aufgaben samt der Überschriften, die dadurch leer werden, und behält offene oder laufende Aufgaben. Um weniger zu kopieren, verwende bei einer Überschrift **Abschnitt als Prompt kopieren** oder bei einer Aufgabe **Als Prompt kopieren**. Ist **Ticket oder Aufgabe starten, wenn ich den Prompt kopiere** unter **Kontoeinstellungen** → **Tickets** aktiviert, setzt das Kopieren die kopierten offenen Aufgaben außerdem auf „In Bearbeitung“.
 
