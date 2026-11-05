@@ -78,21 +78,29 @@ export function useNumoMentionables(
   const [wanted, setWanted] = useState(false);
   const { members } = useNumoMembers(wanted, scopeProjectId);
   // Tickets and objectives come from the palette index, like the mentions
-  // a description: it already carries everything, of all my projects. The pages, they
-  // are those of the project in scope — a wiki belongs to its project.
+  // a description: it already carries everything, of all my projects. Pages are
+  // those of the project in scope, or of every project without one (MIN-899).
   const {
     projects: mentionProjects,
     issues,
     objectives,
     pages,
+    accountPages,
     offered,
+    offeredPages,
     armNow,
   } = useMentionSources(
     scopeProjectId,
     wanted,
   );
 
-  const entityLinks = useMentionLinksFor({ issues, objectives, pages, references });
+  // Without a project, every project's pages are offered (MIN-899): their
+  // pills must open them too. `accountPages` is empty in a project.
+  const linkedPages = useMemo(
+    () => (accountPages.length ? accountPages : pages),
+    [accountPages, pages],
+  );
+  const entityLinks = useMentionLinksFor({ issues, objectives, pages: linkedPages, references });
   // Pull requests, routines, the notebook, cycles and MCP servers (MIN-872),
   // loaded at the first "@". Skills are the composer's own pills.
   const features = useFeatureMentions(scopeProjectId, useOfferedProject(scopeProjectId));
@@ -113,6 +121,10 @@ export function useNumoMentionables(
     [members, mentionProjects, issues, objectives, pages],
   );
 
+  const projectNames = useMemo(
+    () => new Map(mentionProjects.map((project) => [project.id, project.name])),
+    [mentionProjects],
+  );
   const mentionables = useMemo<MentionOption[]>(
     () => [
       ...members.map((m) => ({
@@ -152,20 +164,26 @@ export function useNumoMentionables(
         // The status glyph replaces the target in the suggestion (MIN-785).
         objectiveStatus: o.status,
       })),
-      // The wiki pages of the current project (MIN-273): quoting “@Guide” is enough
-      // that Numo reads the document before responding.
-      ...pages
+      // Wiki pages (MIN-273): quoting “@Guide” is enough that Numo reads the
+      // document before responding. In a project, its own pages; without one,
+      // those of every project, each naming its project, since two wikis may
+      // both hold a “Guide” (MIN-899).
+      ...offeredPages
         .filter((p) => p.title.trim())
-        .map((p) => ({
-          type: "page" as const,
-          id: p.id,
-          projectId: p.project_id,
-          label: p.title,
-          icon: p.icon,
-        })),
+        .map((p) => {
+          const project = scopeProjectId ? undefined : projectNames.get(p.project_id);
+          return {
+            type: "page" as const,
+            id: p.id,
+            projectId: p.project_id,
+            label: p.title,
+            icon: p.icon,
+            ...(project ? { detail: project } : {}),
+          };
+        }),
       ...features.options.filter((option) => option.type !== "skill"),
     ],
-    [members, offered, pages, features.options],
+    [members, offered, offeredPages, scopeProjectId, projectNames, features.options],
   );
 
   const onMentionQuery = useCallback(

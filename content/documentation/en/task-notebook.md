@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-11-05",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -49,14 +49,16 @@
       "lib/keyboard/find-shortcut.ts",
       "components/pages/blocks/math.ts",
       "components/editor/math-edit-menu.tsx",
-      "components/editor/block-selection.ts"
+      "components/editor/block-selection.ts",
+      "lib/use-mention-sources.ts",
+      "lib/use-numo-mentionables.ts"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; the pointer to block selection (drag, Escape, Command/Ctrl+A) in the shared editor checked against components/editor/block-selection.ts and components/scratchpad/scratchpad-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "revision": 12,
+    "fact": "agent:claude-code (MIN-899: the notebook's `@` menu offering the pages of every non-hidden project with their project's name, opening a cited page in its project, and leaving out the notebook itself checked against lib/use-mention-sources.ts, lib/use-numo-mentionables.ts, lib/use-numo-mentionables.test.tsx and components/scratchpad/scratchpad-modal.tsx; the other mention types listed checked against lib/use-feature-mentions.ts; rest of the article unchanged since the previous review; no figure recaptured, the existing figure shows no `@` menu); agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; the pointer to block selection (drag, Escape, Command/Ctrl+A) in the shared editor checked against components/editor/block-selection.ts and components/scratchpad/scratchpad-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "date": "2026-11-05"
   },
   "related": [
     "issues",
@@ -74,7 +76,7 @@
       "src": "/documentation/en/work-task-notebook.png",
       "alt": "Localized demonstration tasks in the personal notebook.",
       "caption": "The notebook keeps personal steps outside the project issue hierarchy. The sample task states remain unchanged.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -99,6 +101,8 @@ Open the task notebook from the personal application controls, or use Command+Sh
 To find a task again, open the command palette with Command+K on macOS or Ctrl+K on Windows/Linux and type words from it. Tasks still to do appear under **Task notebook**, with their section; completed and canceled tasks and questions do not. Choose one to open the notebook on that task. Before you type, the palette does not list notebook tasks.
 
 The notebook uses the same editor as project pages, with the same block handles: hover a block to drag it, open its menu or add a block with **+**. Type `/` to insert a task, listed first, or a heading, list, quote, **Callout**, code block, **Equation**, **Toggle** or divider, or choose **Dictate a task** to speak tasks aloud. The notebook is still saved as Markdown, so Numo and connected agents read the same tasks and states. Select text to format it or add a link. Select whole blocks the same way as on a page, by dragging across them, with a selection rectangle drawn from beside or below the notes, with Escape or with Command/Ctrl+A, as described in the [Pages guide](/docs/pages#editor-formatting). Paste or drop an image, or choose **Image** in the `/` menu, to insert it in a note. Other kinds of files belong in pages. On a phone, the toolbar above the keyboard replaces the block handles, the selection toolbar and the typed `@` menu; the [Pages guide](/docs/pages#editor-formatting) describes it. Command+F on macOS or Ctrl+F on Windows/Linux opens the same [find and replace bar](/docs/pages#find-and-replace) as on a page while the notebook is open.
+
+Type `@` in a note to mention a person, project, issue, objective, page, pull request, routine, cycle, MCP server or date, from any of your projects. The menu lists the pages of every project, each followed by its project’s name so two pages with the same title stay apart. Hidden projects are left out. Click a mention to open what it points to, such as a page in its project.
 
 The **Notebook actions** menu (`…`) offers **Copy all as prompt**, which copies the whole notebook for your own coding agent, and **Remove done and dropped tasks**. Removal asks for confirmation, deletes completed and canceled tasks with the headings they leave empty, and keeps tasks to do or in progress. To copy less, use a heading's **Copy section as prompt** control or a task's **Copy as prompt**. If **Start the issue or task when I copy its prompt** is enabled in **Account settings** → **Issues**, copying also moves the copied pending tasks to in progress.
 

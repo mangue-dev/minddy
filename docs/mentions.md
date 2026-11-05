@@ -80,6 +80,14 @@ with a project), their enabled MCP connections and pull requests, the open
 ones first and the completed ones after (`GET /api/pull-requests`). None of
 them loads before the first `@`.
 
+Pages belong to their project's wiki, so a surface with a project offers only
+that project's pages. A surface without one (the task notebook, the home
+composer, the Numo panel outside a project) offers the pages of every project
+from the palette index (`accountPages`, `offeredPages`), hidden projects left
+out, each with its project's name as the second line since two wikis can hold
+pages with the same title. The legacy label scan keeps the project's pages
+only. The notebook does not offer a mention of itself.
+
 Dates come from the query itself (`lib/mention-date.ts`). `parseDateQuery`
 first asks [chrono-node](https://github.com/wanasit/chrono) to read the whole
 query in the reader's language, then in the five others; a reading counts only

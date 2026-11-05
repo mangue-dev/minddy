@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 11,
+  "revision": 13,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-11-05",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -49,14 +49,16 @@
       "lib/keyboard/find-shortcut.ts",
       "components/pages/blocks/math.ts",
       "components/editor/math-edit-menu.tsx",
-      "components/editor/block-selection.ts"
+      "components/editor/block-selection.ts",
+      "lib/use-mention-sources.ts",
+      "lib/use-numo-mentionables.ts"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; the pointer to block selection (drag, Escape, Command/Ctrl+A) in the shared editor checked against components/editor/block-selection.ts and components/scratchpad/scratchpad-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 11; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 13,
+    "fact": "agent:claude-code (MIN-899: the notebook's `@` menu offering the pages of every non-hidden project with their project's name, opening a cited page in its project, and leaving out the notebook itself checked against lib/use-mention-sources.ts, lib/use-numo-mentionables.ts, lib/use-numo-mentionables.test.tsx and components/scratchpad/scratchpad-modal.tsx; the other mention types listed checked against lib/use-feature-mentions.ts; rest of the article unchanged since the previous review; no figure recaptured, the existing figure shows no `@` menu); agent:claude-code (Command/Ctrl+F find and replace bar in the open notebook checked against components/scratchpad/scratchpad-editor.tsx, components/editor/find-bar.tsx and lib/keyboard/find-shortcut.ts; equations (the `/` Equation entry, `$$…$$` typed in a line, click to edit the LaTeX with a live preview in a popover or phone sheet, red error, empty save removing it, `$…$` and `$$` fence Markdown with prices kept as text) checked against components/pages/blocks/math.ts, components/editor/math-edit-menu.tsx and lib/pages-math.test.ts; the pointer to block selection (drag, Escape, Command/Ctrl+A) in the shared editor checked against components/editor/block-selection.ts and components/scratchpad/scratchpad-editor.tsx; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the changed controls); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; equivalent meaning to en revision 12; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-05"
   },
   "related": [
     "issues",
@@ -74,7 +76,7 @@
       "src": "/documentation/pt-BR/work-task-notebook.png",
       "alt": "Tarefas pessoais de demonstração traduzidas no caderno.",
       "caption": "O caderno acompanha etapas pessoais fora da hierarquia de tickets do projeto. Os status das tarefas de exemplo permanecem iguais.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -99,6 +101,8 @@ Abra o caderno de tarefas pelos controles pessoais do aplicativo, ou use Command
 Para reencontrar uma tarefa, abra a paleta de comandos com Command+K no macOS ou Ctrl+K no Windows/Linux e digite palavras da tarefa. As tarefas ainda a fazer aparecem em **Caderno de tarefas**, com a sua seção; tarefas concluídas ou canceladas e perguntas não aparecem. Escolha uma para abrir o caderno nessa tarefa. Enquanto você não digitar nada, a paleta não lista as tarefas do caderno.
 
 O caderno usa o mesmo editor das páginas do projeto, com as mesmas alças de bloco: passe o cursor sobre um bloco para arrastá-lo, abrir seu menu ou adicionar um bloco com **+**. Digite `/` para inserir uma tarefa, oferecida primeiro, ou um título, uma lista, uma citação, um **Destaque**, um bloco de código, uma **Equação**, um **Bloco recolhível** ou um divisor, ou escolha **Ditar uma tarefa** para falar as tarefas em voz alta. O caderno continua salvo em Markdown, então Numo e os agentes conectados leem as mesmas tarefas e estados. Selecione um texto para formatá-lo ou adicionar um link. Selecione blocos inteiros como em uma página, arrastando sobre eles, com um retângulo de seleção desenhado ao lado ou abaixo das anotações, com Esc ou com Command/Ctrl+A, como explica o [guia de páginas](/pt-br/documentacao/pages#editor-formatting). Cole ou solte uma imagem, ou escolha **Imagem** no menu `/`, para inseri-la em uma nota. Os outros tipos de arquivo ficam nas páginas. No celular, a barra acima do teclado substitui as alças de bloco, a barra de seleção e o menu `@` digitado; o [guia de páginas](/pt-br/documentacao/pages#editor-formatting) a descreve. Enquanto o caderno está aberto, Command+F no macOS ou Ctrl+F no Windows/Linux abre a mesma [barra de localizar e substituir](/pt-br/documentacao/pages#find-and-replace) de uma página.
+
+Digite `@` em uma nota para mencionar uma pessoa, um projeto, um ticket, um objetivo, uma página, um pull request, uma rotina, um ciclo, um servidor MCP ou uma data, de qualquer um dos seus projetos. O menu lista as páginas de todos os projetos, cada uma seguida do nome do projeto para distinguir duas páginas com o mesmo título. Projetos ocultos ficam de fora. Clique em uma menção para abrir o que ela indica, como uma página no projeto dela.
 
 O menu **Ações do caderno** (`…`) oferece **Copiar tudo como prompt**, que copia o caderno inteiro para o seu próprio agente de código, e **Remover tarefas concluídas e descartadas**. A remoção pede confirmação, exclui as tarefas concluídas e canceladas junto com os títulos que ficam vazios e mantém as tarefas a fazer ou em andamento. Para copiar menos, use **Copiar seção como prompt** em um título ou **Copiar como prompt** em uma tarefa. Se **Iniciar o ticket ou tarefa quando eu copiar seu prompt** estiver ativado em **Configurações da conta** → **Tickets**, copiar também passa para em andamento as tarefas pendentes copiadas.
 
