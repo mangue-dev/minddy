@@ -1,4 +1,5 @@
 import { Paragraph } from "@tiptap/extension-paragraph";
+import { startInlineBlock } from "@/components/pages/blocks/paragraph";
 import { SPACER_LINE } from "@/lib/scratchpad";
 
 /**
@@ -34,6 +35,8 @@ export const ScratchpadParagraph = Paragraph.extend({
             state.closeBlock(node);
             return;
           }
+          // A bold or italic opening in a quote keeps its blank `>` line (MIN-901).
+          startInlineBlock(state, node);
           state.renderInline(node);
           state.closeBlock(node);
         },

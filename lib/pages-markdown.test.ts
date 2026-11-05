@@ -24,6 +24,7 @@ import {
   documentForEditor,
   markdownToPage,
   pageToMarkdown,
+  reconcileBodyBlocks,
 } from "@/lib/pages-markdown";
 
 /** markdown → JSON → markdown, on the BODY only. */
@@ -514,6 +515,51 @@ describe("empty paragraphs (MIN-745)", () => {
     const stored = doc(text("a"), empty, text("b"));
     const opened = documentForEditor("a\n\nc", stored) as { content?: JsonNode[] };
     expect(opened).not.toBe(stored);
+  });
+});
+
+describe("a quote whose later paragraph opens on a mark (MIN-901)", () => {
+  const quote = (second: string) => `> First paragraph.\n>\n> ${second} then text.\n>\n> Plain third.`;
+
+  it.each([
+    ["bold", "**Bold start**"],
+    ["italic", "*Italic start*"],
+    ["inline code", "`code start`"],
+    ["a link", "[link start](https://example.com)"],
+  ])("keeps the blank `>` line before %s", (_name, second) => {
+    const markdown = quote(second);
+    expect(roundTrip(markdown)).toBe(markdown);
+    // A second round trip reads the first one's output, as an agent edit does.
+    expect(roundTrip(roundTrip(markdown))).toBe(markdown);
+  });
+
+  it("keeps the separation when every paragraph opens in bold", () => {
+    const markdown = "> **One** a.\n>\n> **Two** b.\n>\n> *Three* c.";
+    expect(roundTrip(markdown)).toBe(markdown);
+  });
+
+  it("keeps it in a list item inside a quote and in a nested quote", () => {
+    const list = "> - Item.\n>\n>   **Bold** follow-up.";
+    const nested = "> > First.\n> >\n> > **Bold** second.";
+    expect(roundTrip(list)).toBe(list);
+    expect(roundTrip(nested)).toBe(nested);
+  });
+
+  it("still escapes a paragraph that would read as another block", () => {
+    const markdown = "> First.\n>\n> \\# Not a heading.\n>\n> \\- Not a list.";
+    expect(roundTrip(markdown)).toBe(markdown);
+  });
+
+  it("serializes the same quote in the notebook profile", () => {
+    const markdown = quote("**Bold start**");
+    expect(bodyToMarkdown(bodyFromMarkdown(markdown, "notebook"), "notebook")).toBe(markdown);
+  });
+
+  it("lets an agent edit elsewhere keep the untouched quote as stored", () => {
+    const stored = bodyFromMarkdown(`Intro.\n\n${quote("**Bold start**")}`);
+    const edited = bodyFromMarkdown(bodyToMarkdown(stored).replace("Intro.", "New intro."));
+    const kept = reconcileBodyBlocks(stored, edited);
+    expect(kept.content?.[1]).toBe(stored.content?.[1]);
   });
 });
 
