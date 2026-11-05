@@ -70,6 +70,12 @@ next to the mark:
 - gap between mark and name = 0.45 × the font size (8 px at 18 px);
 - the name is vertically centered on the mark, in the same color.
 
+Where a partner asks for a wordmark file (an integration directory, for
+example), link `public/minddy-wordmark.svg`, served at
+`https://www.minddy.app/minddy-wordmark.svg`: the name alone in Inter SemiBold,
+ink `#111111`, with the letters converted to outlines so it renders without the
+font.
+
 ### Clear space and minimum size
 
 - Keep empty space around the mark equal to **a quarter of its width** on
