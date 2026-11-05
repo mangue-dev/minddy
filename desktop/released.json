@@ -1,7 +1,7 @@
 {
-  "version": "0.30.0",
-  "publishedAt": "2026-11-04T23:24:51.685Z",
-  "fingerprint": "3675a1c93381dd338d9a65727433ea9e20ea65de166f5d59db826c77f01424a5",
+  "version": "0.30.1",
+  "publishedAt": "2026-11-05T08:42:05.153Z",
+  "fingerprint": "e837214510fac5ef23502bc43e8abc7b95a02f2c2e68d2cb111075e296b89a91",
   "files": {
     "app/fonts/inter-latin.woff2": "c940764593d0fe5d596be327ca7558855e018039fb78509aa21921fd3644c3e4",
     "content/changelog/metadata.json": "1644592bc75cd86aec201d4df7ae703c6bf4a4228d812ad409b5e6c5dc1af167",
@@ -143,7 +143,7 @@
     "lib/documentation-core.mjs": "e5e143988a7af4974309f216e1d6ac352b5a22032601d2add766b434a29146d5",
     "lib/public-routes.ts": "19d08230f42bc35d4425b613876a08f953893bda92388919d338cd2ce9156b46",
     "lib/repository-skills.ts": "efa453f675f59994109033767399147c2f52fa5666eec7bccbb5751061089ebb",
-    "scripts/build-desktop.mjs": "1d2155e3e161033fd66130dcc4d7801be1c586368202469d3488826d2845fdee",
+    "scripts/build-desktop.mjs": "e6d1f8b49a5b3131dbe710fd4e947f082c5b860a89664a5c47014a1c5de4c93c",
     "scripts/build-windows-store.mjs": "d33df827bdc1c184dd2d0d1a15696fa3bdb79381dfc2b7cfc4373eed56aa10a9"
   }
 }
