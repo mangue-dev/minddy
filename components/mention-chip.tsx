@@ -55,7 +55,7 @@ import {
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { MentionHover } from "@/components/mention-hover";
-import { isPreviewMentionType } from "@/lib/mention-preview";
+import { isPreviewMentionType, type PullRequestState } from "@/lib/mention-preview";
 import type { MentionMeta } from "@/lib/mention-link";
 import type { IssueStatus } from "@/lib/issue-constants";
 
@@ -147,6 +147,7 @@ function MentionChipBody({
   ariaHasPopup,
   mcpService,
   database,
+  prState,
   className,
 }: {
   type: MentionChipType;
@@ -188,6 +189,8 @@ function MentionChipBody({
   /** A page that is a database: without an emoji, it shows the database
       glyph of the page tree, not the page's (MIN-879). */
   database?: boolean;
+  /** A pull request's state: its pill takes the state's color (MIN-906). */
+  prState?: PullRequestState | null;
   className?: string;
 }) {
   // Images use the narrower left gutter; glyphs use the wider one. Every
@@ -276,7 +279,7 @@ function MentionChipBody({
     "bg-(--mention-chip) text-(--mention-chip-ink)",
   );
 
-  const tone = toneStyle(type, avatarSeed ?? id, color);
+  const tone = toneStyle(type, avatarSeed ?? id, color, prState);
 
   const text = (
     <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -356,6 +359,18 @@ const FEATURE_GLYPHS = {
 /* ── The hue ────────────────────────────── ─────────────────────────────── */
 
 /**
+ * A pull request pill wears its state, in GitHub's colors like its badge
+ * (components/pull-requests/pr-state-styles.ts): draft gray, open green,
+ * merged purple, closed red (MIN-906).
+ */
+const PULL_REQUEST_TONES: Record<PullRequestState, string> = {
+  draft: "var(--muted-foreground)",
+  open: "var(--color-green-600)",
+  merged: "var(--color-violet-600)",
+  closed: "var(--destructive)",
+};
+
+/**
  * The color of a token type. Two of them are not tokens:
  * an objective wears ITS color (that of its target everywhere else), a project
  * the color of its orb — therefore no Tailwind classes, which are fixed at the
@@ -373,6 +388,7 @@ function mentionTone(
  pill and the orb it carries remain the same color. */
   seed: string,
   color: string | null | undefined,
+  prState?: PullRequestState | null,
 ): string {
   switch (type) {
     case "member":
@@ -389,7 +405,8 @@ function mentionTone(
     case "resource":
       return "var(--color-sky-600)";
     case "pull_request":
-      return "var(--color-violet-600)";
+      // Neutral until the state is known: no color claims a state it has not read.
+      return prState ? PULL_REQUEST_TONES[prState] : "var(--muted-foreground)";
     case "routine":
     case "mcp":
       return "var(--color-amber-600)";
@@ -430,8 +447,9 @@ function toneStyle(
  must dye its pill its NEW color. */
   seed: string,
   color: string | null | undefined,
+  prState?: PullRequestState | null,
 ): CSSProperties {
-  const tone = mentionTone(type, seed, color);
+  const tone = mentionTone(type, seed, color, prState);
   return {
     "--mention-chip": `oklch(from ${tone} var(--mention-chip-l) c h / var(--mention-chip-a))`,
     "--mention-chip-hover": `oklch(from ${tone} var(--mention-chip-l) c h / var(--mention-chip-a-hover))`,

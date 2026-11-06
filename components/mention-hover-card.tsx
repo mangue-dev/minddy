@@ -108,7 +108,7 @@ export function MentionHoverCard({
         side={side}
         align={align}
         // The issue card brings its own surface, as on the board.
-        className={type === "issue" ? "w-80 bg-transparent p-0 shadow-none ring-0" : undefined}
+        className={type === "issue" ? "w-80 bg-transparent p-0 shadow-none ring-0" : type === "pull_request" ? "w-72" : undefined}
       >
         {/* A click on the card does what a click on the mention does. */}
         <div className="cursor-default" onClick={activate}>
@@ -150,7 +150,7 @@ function MentionPreviewBody({
   }
   return (
     <Suspense fallback={loading}>
-      <MentionPreviewCard preview={query.data} />
+      <MentionPreviewCard id={id} preview={query.data} />
     </Suspense>
   );
 }

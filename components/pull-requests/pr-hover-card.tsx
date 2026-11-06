@@ -6,6 +6,7 @@ import { PullRequestPreviewFace } from "@/components/pull-requests/pr-preview-fa
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import type { IssuePr } from "@/lib/agent-api";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
+import type { PullRequestPreview as PullRequestMentionPreview } from "@/lib/mention-preview";
 import { prPreviewChecks } from "@/lib/pr-preview-checks";
 import { usePullRequestReadinessBatchQuery } from "@/lib/use-agent-runs";
 import { mentionPreviewQuery, useMentionPreview } from "@/lib/use-mention-preview";
@@ -82,31 +83,52 @@ export function PullRequestHoverCard({
           onOpen();
         }}
       >
-        <PullRequestHoverBody pr={pr} readiness={readiness} />
+        <PullRequestPreview prId={pr.prId} number={pr.prNumber} state={pr.state} readiness={readiness} />
       </HoverCardContent>
     </HoverCard>
   );
 }
 
-/** Mounted only while the card is open, so nothing is read before. */
-function PullRequestHoverBody({ pr, readiness }: { pr: IssuePr; readiness?: IssuePrReadiness | null }) {
-  const preview = useMentionPreview("pull_request", pr.prId, null, true);
-  const live = pr.state === "open" || pr.state === "draft";
+/**
+ * Every pull request preview, whatever its trigger (MIN-906): the issue
+ * chip's card and a mention's. The title and repository come from the
+ * mention preview, read here unless the caller already holds it; CI comes
+ * from the readiness the caller holds, and is read for this PR alone only
+ * while it is open or a draft and the caller has none. Mounted only while
+ * the card is open, so nothing is read before.
+ */
+export function PullRequestPreview({
+  prId,
+  number,
+  state,
+  preview: given,
+  readiness,
+}: {
+  prId: string;
+  number: number;
+  /** The state to show: the board's live one wins over a preview read a minute ago. */
+  state: IssuePr["state"];
+  /** The preview a mention's card already read; read here when absent. */
+  preview?: PullRequestMentionPreview | null;
+  /** The board's readiness of this PR; read on open when absent. */
+  readiness?: IssuePrReadiness | null;
+}) {
+  const read = useMentionPreview("pull_request", prId, null, given === undefined);
+  const live = state === "open" || state === "draft";
   const readOwn = live && !readiness?.readiness && !readiness?.unavailable;
-  const own = usePullRequestReadinessBatchQuery(readOwn ? [pr.prId] : []);
+  const own = usePullRequestReadinessBatchQuery(readOwn ? [prId] : []);
   const known = readOwn
-    ? own.readinessByPrId[pr.prId] ?? null
+    ? own.readinessByPrId[prId] ?? null
     : readiness?.unavailable ? null : readiness?.readiness ?? null;
-  const data = preview.data?.type === "pull_request" ? preview.data : null;
+  const data = given !== undefined ? given : read.data?.type === "pull_request" ? read.data : null;
   return (
     <PullRequestPreviewFace
       provider={data?.provider ?? null}
       repository={data?.repository ?? null}
-      pending={preview.isPending}
-      // The live state wins over a preview read a minute ago.
-      state={pr.state}
+      pending={given === undefined && read.isPending}
+      state={state}
       title={data?.title ?? null}
-      number={pr.prNumber}
+      number={number}
       checks={!live ? null : readOwn && own.loading ? "loading" : prPreviewChecks(known)}
     />
   );

@@ -13,9 +13,11 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLo
 vi.mock("@/lib/pr-endpoint-context", () => ({ usePrEndpoint: () => null }));
 vi.mock("@/components/mention-chip", () => ({
   NUMO_MENTION_ID: "__numo__",
-  MentionChip: ({ type, label, hoverCard, icon, database }: {
+  MentionChip: ({ type, label, hoverCard, icon, database, prState }: {
     type: string; label: string; hoverCard?: unknown; icon?: string | null; database?: boolean;
+    prState?: string | null;
   }) => createElement("span", {
+    "data-pr-state": prState ?? undefined,
     "data-chip": type,
     "data-hover-card": hoverCard ? JSON.stringify(hoverCard) : undefined,
     "data-icon": icon ?? undefined,
@@ -104,6 +106,31 @@ it("shows a mention just picked from the menu at once, without asking the server
   await render(`Ask [@Jean Dupont](mention:member/${member})`, links({}));
   expect(host.querySelector("[data-chip=member]")?.textContent).toBe("Jean Dupont");
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("colors a pull request pill by the state the server resolves, even when the sources name it (MIN-906)", async () => {
+  const pr = "9f1c2a3b-0000-4000-8000-000000000004";
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ mentions: [
+    { type: "pull_request", id: pr, label: "#12 Fix login", prState: "merged" },
+  ] }))));
+  await render(`[@](mention:pull_request/${pr})`, links({ [`pull_request:${pr}`]: "#12 Fix login" }));
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+  expect(host.querySelector("[data-chip=pull_request]")?.getAttribute("data-pr-state")).toBe("merged");
+});
+
+it("shows a pull request just picked at once, and still asks the server for its state (MIN-906)", async () => {
+  const pr = "9f1c2a3b-0000-4000-8000-000000000005";
+  const fetchMock = vi.fn(async () => new Response(JSON.stringify({ mentions: [
+    { type: "pull_request", id: pr, label: "#13", prState: "open" },
+  ] })));
+  vi.stubGlobal("fetch", fetchMock);
+  primeMentionLabel("pull_request", pr, "#13");
+  await render(`[@#13](mention:pull_request/${pr})`, links({}));
+  await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
+  expect(fetchMock).toHaveBeenCalledOnce();
+  const pill = host.querySelector("[data-chip=pull_request]");
+  expect(pill?.textContent).toBe("#13");
+  expect(pill?.getAttribute("data-pr-state")).toBe("open");
 });
 
 it("names an attachment from its own surface, and never from another one (MIN-742)", async () => {

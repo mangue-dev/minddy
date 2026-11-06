@@ -14,6 +14,7 @@ import {
   type MentionMeta,
 } from "@/lib/mention-link";
 import { mentionDateFrom } from "@/lib/mention-date";
+import { isPullRequestState, type PullRequestState } from "@/lib/mention-preview";
 import { findPullRequestsWithProjects } from "@/lib/server/agent/pull-requests";
 import { getMcpConnection } from "@/lib/server/mcp-client";
 import { mcpPresetForUrl } from "@/lib/mcp-catalog";
@@ -98,14 +99,16 @@ function rows(result: { data: unknown; error: unknown }, what: string): Row[] {
  the glyph of its pill (MIN-785). `mcpServices` receives the known service
  of each MCP connection the reader owns, for the logo of its pill, and
  `pageFigures` each visible page's emoji and whether it is a database, for its
- glyph (MIN-879). */
+ glyph (MIN-879). `pullRequestStates` receives the state of each pull request
+ the reader may open, for the color of its pill (MIN-906). */
 export async function resolveMentionTargets(
   userId: string,
   refs: readonly MentionRef[],
   service: SupabaseClient = getServiceClient(),
   objectiveStatuses?: Map<string, ObjectiveStatus>,
   mcpServices?: Map<string, string>,
-  pageFigures?: Map<string, { icon: string | null; database: boolean }>
+  pageFigures?: Map<string, { icon: string | null; database: boolean }>,
+  pullRequestStates?: Map<string, PullRequestState>,
 ): Promise<MentionResolution> {
   const resolution: MentionResolution = new Map();
   const unique = new Map<string, MentionRef>();
@@ -257,6 +260,7 @@ export async function resolveMentionTargets(
     if (!linked.some((id) => allowed.has(id))) continue;
     const title = pullRequest.title?.trim();
     resolution.set(`pull_request:${pullRequest.id}`, `#${pullRequest.number}${title ? ` ${title}` : ""}`);
+    if (isPullRequestState(pullRequest.state)) pullRequestStates?.set(`pull_request:${pullRequest.id}`, pullRequest.state);
   }
   for (const [key, ref] of skills) {
     if (allowed.has(ref.meta!.project)) resolution.set(key, ref.id);

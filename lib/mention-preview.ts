@@ -156,11 +156,19 @@ export interface CyclePreview {
   issues: Array<{ status: IssueStatus; effort: IssueEffort | null }>;
 }
 
+/** A pull request's states, as minddy names them. */
+export const PULL_REQUEST_STATES = ["draft", "open", "merged", "closed"] as const;
+export type PullRequestState = (typeof PULL_REQUEST_STATES)[number];
+
+export function isPullRequestState(value: unknown): value is PullRequestState {
+  return (PULL_REQUEST_STATES as readonly unknown[]).includes(value);
+}
+
 export interface PullRequestPreview {
   type: "pull_request";
   number: number;
   title: string | null;
-  state: "draft" | "open" | "merged" | "closed";
+  state: PullRequestState;
   /** The forge, for its logo on the issue chip's card (MIN-888). */
   provider: RepoProviderId;
   repository: string;

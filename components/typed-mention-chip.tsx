@@ -112,11 +112,14 @@ export function TypedMentionChip({
   // An MCP pill shows its service's logo, and a page its emoji or the
   // database glyph: the server answers both, so it is asked even when the
   // surface's sources already named the target (MIN-879).
-  const label = useTypedMentionLabel(type, id, meta, links, type === "mcp" || type === "page");
+  // A pull request's state colors its pill (MIN-906): the server answers it
+  // too, whatever the sources hold.
+  const label = useTypedMentionLabel(type, id, meta, links,
+    type === "mcp" || type === "page" || type === "pull_request");
   // An objective's status (MIN-785), an MCP service, a page's figure: one
   // read of what the resolution returned beside the label.
   const details = useResolvedMentionDetails(
-    type === "objective" || type === "mcp" || type === "page" ? type : null, id);
+    type === "objective" || type === "mcp" || type === "page" || type === "pull_request" ? type : null, id);
   const mcpService = type === "mcp" ? details?.service : undefined;
   const pageFigure = type === "page" ? details?.page : undefined;
   // From the sources on screen, else from the server resolution — without
@@ -169,6 +172,7 @@ export function TypedMentionChip({
         iconUrl={label !== undefined && type === "project" ? appearance?.icon ?? null : null}
         icon={label !== undefined && type === "page" ? appearance?.icon || pageFigure?.icon || null : null}
         database={type === "page" && !!pageFigure?.database}
+        prState={label !== undefined && type === "pull_request" ? details?.prState ?? null : null}
       />
     </span>
   );
