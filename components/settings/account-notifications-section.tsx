@@ -20,6 +20,7 @@ const CATEGORIES: readonly NotificationCategory[] = [
   "pullRequest",
   "feedback",
   "page",
+  "numo",
 ];
 
 /**

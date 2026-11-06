@@ -66,6 +66,8 @@ function notification(id: string): MyNotification {
     via_smart_assign: false,
     via_automation: false,
     comment_excerpt: null,
+    numo_note_title: null,
+    numo_note_body: null,
     issue_id: "issue-id",
     issue_title: "A ticket",
     project_key: "MIN",

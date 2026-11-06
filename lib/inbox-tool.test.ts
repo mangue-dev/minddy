@@ -37,6 +37,8 @@ function notification(
     via_smart_assign: false,
     via_automation: false,
     comment_excerpt: null,
+    numo_note_title: null,
+    numo_note_body: null,
     ...rest,
   };
 }

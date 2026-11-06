@@ -1776,7 +1776,8 @@
     "somePageFallback": "Untitled page",
     "instanceConfigTitle": "Instance variables",
     "linePageComment": "{actor} commented on this page",
-    "lineInstanceConfigChanged": "{actor} changed an instance variable"
+    "lineInstanceConfigChanged": "{actor} changed an instance variable",
+    "lineNumoMessage": "Numo sent you a message"
   },
   "NotificationSettings": {
     "title": "Inbox notifications",
@@ -1796,7 +1797,9 @@
     "feedbackLabel": "Feedback",
     "feedbackDesc": "New feedback lands on the board of a project you belong to.",
     "pageLabel": "Pages",
-    "pageDesc": "Someone @mentions you in a page, or Numo updates one for you."
+    "pageDesc": "Someone @mentions you in a page, or Numo updates one for you.",
+    "numoLabel": "Messages from Numo",
+    "numoDesc": "Numo writes to you when something needs your attention, from a conversation or a routine."
   },
   "Push": {
     "devicesTitle": "Push notifications",
@@ -4050,7 +4053,12 @@
     "setAccountPlanFailed": "Couldn’t update the account’s plan",
     "loadingInstanceCosts": "Reading the instance costs…",
     "instanceCostsLoaded": "Instance costs read",
-    "loadInstanceCostsFailed": "Couldn’t read the instance costs"
+    "loadInstanceCostsFailed": "Couldn’t read the instance costs",
+    "sendingNumoMessage": "Sending you a message…",
+    "numoMessageSent": "Message sent to your inbox",
+    "numoMessageMuted": "Messages from Numo are turned off",
+    "numoMessageDuplicate": "Message already sent today",
+    "sendNumoMessageFailed": "Couldn't send the message"
   },
   "PullRequests": {
     "descriptionMoreActions": "Description actions",

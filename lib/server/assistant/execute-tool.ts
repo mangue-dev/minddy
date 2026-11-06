@@ -242,6 +242,7 @@ import { proposeBacklogFromBrief } from "@/lib/server/brief-to-issues";
 import { MIN_BRIEF_CHARS } from "@/lib/seed/types";
 import { getKnowledgeArticle, getKnowledgeTopicList } from "./knowledge";
 import { readInboxNotifications } from "@/lib/server/inbox";
+import { parseNumoNoteLink, sendNumoNote } from "@/lib/server/numo-notes";
 import {
   buildInboxToolResult,
   type InboxReadCategory,
@@ -1675,6 +1676,31 @@ async function executeToolUnlisted(
         });
         if (!result.ok) return libError(result);
         return { result: { comment: result.comment }, success: true };
+      }
+
+      case "notify_me": {
+        const link = parseNumoNoteLink(args.link);
+        if (link === "invalid") {
+          return toolError(
+            "link must be { type: issue | objective | page | pull_request | routine, id }.",
+          );
+        }
+        const result = await sendNumoNote({
+          service: ctx.service,
+          userId: ctx.userId,
+          projectId,
+          title: args.title,
+          body: args.body,
+          link,
+          turnId: ctx.turnId ?? null,
+        });
+        if (!result.ok) return toolError(result.error);
+        return {
+          result: result.delivered
+            ? { delivered: true }
+            : { delivered: false, reason: result.reason },
+          success: true,
+        };
       }
 
       case "add_objective_comment": {

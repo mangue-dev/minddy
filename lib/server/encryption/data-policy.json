@@ -1951,6 +1951,7 @@
         "feedback_post_id",
         "id",
         "issue_id",
+        "numo_note_id",
         "objective_id",
         "page_id",
         "project_id",
@@ -4313,6 +4314,32 @@
       "timestamp": [
         "created_at",
         "updated_at"
+      ]
+    }
+  },
+  "numo_notes": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "body",
+      "title"
+    ],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "numo_turn_id",
+        "project_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "encryption_checked_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ]
     }
   }

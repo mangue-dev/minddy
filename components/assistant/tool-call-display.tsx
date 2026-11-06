@@ -400,6 +400,17 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("commentAdded") : t("addCommentFailed");
     },
   },
+  notify_me: {
+    icon: InboxIcon,
+    getLabel: (_args, result, success, status, t) => {
+      if (status === "running") return t("sendingNumoMessage");
+      if (!success) return t("sendNumoMessageFailed");
+      const reason = (result as { reason?: unknown } | null)?.reason;
+      if (reason === "muted") return t("numoMessageMuted");
+      if (reason === "duplicate") return t("numoMessageDuplicate");
+      return t("numoMessageSent");
+    },
+  },
   add_objective_comment: {
     icon: Message01Icon,
     getLabel: (_args, _result, success, status, t) => {

@@ -1776,7 +1776,8 @@
     "somePageFallback": "Página sin título",
     "instanceConfigTitle": "Variables de la instancia",
     "linePageComment": "{actor} ha comentado en esta página",
-    "lineInstanceConfigChanged": "{actor} ha cambiado una variable de la instancia"
+    "lineInstanceConfigChanged": "{actor} ha cambiado una variable de la instancia",
+    "lineNumoMessage": "Numo te envió un mensaje"
   },
   "NotificationSettings": {
     "title": "Notificaciones de la bandeja de entrada",
@@ -1796,7 +1797,9 @@
     "feedbackLabel": "Sugerencias",
     "feedbackDesc": "Llega una nueva sugerencia al tablero de un proyecto al que perteneces.",
     "pageLabel": "Páginas",
-    "pageDesc": "Alguien te menciona en una página o Numo actualiza una para ti."
+    "pageDesc": "Alguien te menciona en una página o Numo actualiza una para ti.",
+    "numoLabel": "Mensajes de Numo",
+    "numoDesc": "Numo te escribe cuando algo necesita tu atención, desde una conversación o una rutina."
   },
   "Push": {
     "devicesTitle": "Notificaciones push",
@@ -4050,7 +4053,12 @@
     "setAccountPlanFailed": "No se pudo actualizar el plan de la cuenta",
     "loadingInstanceCosts": "Leyendo los costes de la instancia…",
     "instanceCostsLoaded": "Costes de la instancia leídos",
-    "loadInstanceCostsFailed": "No se pudieron leer los costes de la instancia"
+    "loadInstanceCostsFailed": "No se pudieron leer los costes de la instancia",
+    "sendingNumoMessage": "Enviando un mensaje…",
+    "numoMessageSent": "Mensaje enviado a tu bandeja de entrada",
+    "numoMessageMuted": "Los mensajes de Numo están desactivados",
+    "numoMessageDuplicate": "Mensaje ya enviado hoy",
+    "sendNumoMessageFailed": "No se pudo enviar el mensaje"
   },
   "PullRequests": {
     "descriptionMoreActions": "Acciones de la descripción",

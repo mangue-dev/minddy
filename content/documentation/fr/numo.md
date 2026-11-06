@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 27,
-  "sourceRevision": 27,
+  "revision": 28,
+  "sourceRevision": 28,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-06",
   "compatibility": {
@@ -72,13 +72,14 @@
       "components/assistant/assistant-shell.tsx",
       "components/assistant/chat-message.tsx",
       "components/typed-mention-chip.tsx",
-      "lib/server/assistant/prompt.ts"
+      "lib/server/assistant/prompt.ts",
+      "lib/server/numo-notes.ts"
     ]
   },
   "review": {
-    "revision": 27,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 28,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-06"
   },
   "related": [
@@ -109,7 +110,7 @@
       "src": "/documentation/fr/work-with-numo-workflow.png",
       "alt": "Conversation de démonstration Numo avec contexte, demande de changement de priorité et réponse enregistrée.",
       "caption": "Fil de démonstration existant, localisé pour l’affichage. La réponse enregistrée cite AUR-11 et AUR-7 ; la capture ne prouve pas une nouvelle exécution.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -126,7 +127,7 @@
       "src": "/documentation/fr/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.",
       "caption": "Les accès du projet et les demandes explicites bornent les actions de Numo ; un contenu externe ne donne pas de permission.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -187,7 +188,7 @@
       "src": "/documentation/fr/numo-execution-model-flow.svg",
       "alt": "Schéma: Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre votre réponse si une précision est requise. Relire les événements ; réconcilier les écritures.",
       "caption": "Lisez les étapes dans cet ordre. Persister intention, message et UUID. Prendre le tour, enregistrer outils et résultats. Attendre votre réponse si une précision est requise. Relire les événements ; réconcilier les écritures.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -219,7 +220,7 @@
       "src": "/documentation/fr/numo-mcp-connections-workflow.png",
       "alt": "Réglages MCP personnels, liste vide et commande Ajouter un autre serveur MCP.",
       "caption": "Les connexions de Numo sont personnelles ; les routines utilisent celles du propriétaire du projet.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -236,7 +237,7 @@
       "src": "/documentation/fr/numo-mcp-connections-config-workflow.png",
       "alt": "Assistant de connexion à Notion affichant la méthode de connexion connue du catalogue.",
       "caption": "Étape de connexion d’un service du catalogue. Aucun identifiant n’a été saisi et aucun serveur n’a été contacté.",
-      "revision": 27,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -304,6 +305,8 @@ Une requête peut atteindre un fournisseur externe. Désactiver sa connexion blo
 ### Contexte personnel et planifié {#context}
 
 Une conversation ne peut pas emprunter les connexions MCP d’un autre membre. Les routines utilisent les connexions et le budget IA du propriétaire. Après un transfert de propriété, les routines de l’ancien propriétaire dans le projet sont mises en pause ; le nouveau propriétaire crée les routines qui doivent continuer. Une ancienne occurrence ne peut pas conserver les identifiants du précédent. Numo s’exécute sur le serveur : il ne lit pas les fichiers de votre ordinateur et n’utilise pas vos sessions personnelles.
+
+Numo peut laisser un message dans votre Inbox, avec une alerte push, quand une routine trouve un point qui demande votre attention ou quand vous lui demandez de vous prévenir plus tard. Le message ne va qu’au compte pour lequel Numo travaille : dans une routine, son propriétaire. L’interrupteur Messages de Numo des [préférences de notification](/docs/notifications-and-inbox#notification-preferences) désactive ces messages.
 
 ![Matrice des permissions Numo pour les actions du projet, connexions personnelles et routines.](/documentation/fr/numo-permissions-and-approvals-workflow.svg)
 

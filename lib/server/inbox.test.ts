@@ -184,6 +184,46 @@ describe("readInboxNotifications target isolation", () => {
     expect(JSON.stringify(result.notifications)).not.toContain("Foreign");
   });
 
+  it("shows a Numo note only to its recipient, in its own words (MIN-914)", async () => {
+    const fixtures: Fixtures = {
+      notifications: [
+        notification("note", { type: "numo_message", numo_note_id: "note-1",
+          via_assistant: true }),
+        notification("forged", { type: "numo_message", numo_note_id: "note-2",
+          via_assistant: true }),
+      ],
+      projects: [{ id: "project-a", key: "A" }],
+      numo_notes: [
+        { id: "note-1", project_id: "project-a", user_id: "user-1",
+          title: "Release blocked", body: "The check failed.",
+          encrypted_content: null, encryption_version: 0 },
+        { id: "note-2", project_id: "project-a", user_id: "user-2",
+          title: "Someone else's note", body: "Not for user-1.",
+          encrypted_content: null, encryption_version: 0 },
+      ],
+    };
+
+    const result = await readInboxNotifications({
+      client: client(fixtures) as never,
+      service: client(fixtures) as never,
+      userId: "user-1",
+      clientIsUserScoped: true,
+    });
+
+    const byId = new Map(result.notifications.map((row) => [row.id, row]));
+    expect(byId.get("note")).toMatchObject({
+      from_numo: true,
+      actor_name: "Numo",
+      numo_note_title: "Release blocked",
+      numo_note_body: "The check failed.",
+    });
+    expect(byId.get("forged")).toMatchObject({
+      numo_note_title: null,
+      numo_note_body: null,
+    });
+    expect(JSON.stringify(result.notifications)).not.toContain("Not for user-1");
+  });
+
   it("requires every service-hydrated target kind to match the notification project", async () => {
     const notifications = [
       notification("objective-a", { objective_id: "objective-a" }),

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 9,
+  "revision": 11,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -36,14 +36,16 @@
       "components/settings/account-notifications-section.tsx",
       "components/notification-badge.tsx",
       "components/settings/account-settings-page.tsx",
-      "lib/server/notifications.ts"
+      "lib/server/notifications.ts",
+      "lib/server/numo-notes.ts",
+      "lib/notification-prefs.ts"
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-06"
   },
   "related": [
     "projects",
@@ -61,7 +63,7 @@
       "src": "/documentation/es/work-inbox.png",
       "alt": "Bandeja de entrada con menciones, asignaciones y comentarios de demostración, leídos y no leídos.",
       "caption": "La actividad de ejemplo muestra el autor, el ticket y el estado de lectura. Todos incluye notificaciones leídas y no leídas.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -85,6 +87,8 @@ Abre la bandeja de entrada con su icono en la barra superior, desde su fila en l
 
 Se abre con el filtro Sin leer. Todos muestra también las notificaciones leídas, y Menciones conserva solo las menciones en comentarios y páginas. Selecciona un elemento para abrir la incidencia, la página o la pull request correspondiente. Abrir una notificación la marca como leída. Su fila también ofrece Marcar como leído o Marcar como sin leer, y Marcar todo como leído, en el encabezado de la bandeja de entrada, quita todos los indicadores de no leído. Marcarla como no leída restaura ese indicador de actividad; no deshace el cambio en la incidencia o página. Una notificación apunta a trabajo accesible; no sustituye su contenido actual.
 
+Numo también puede dejarte un mensaje: un título corto y una o dos frases sobre algo que necesita tu atención, escrito por una de tus rutinas o en una conversación en la que le pediste que te avisara más tarde. Lleva el icono de Numo y, al seleccionarlo, abre la incidencia, el objetivo, la página, la pull request o la rutina de la que trata, o el proyecto si no nombra ninguno. Numo solo te escribe estos mensajes a ti, nunca a otros miembros, y no envía el mismo mensaje sobre el mismo elemento más de una vez al día.
+
 Eliminar, en una fila, borra esa notificación tras una confirmación, y Eliminar leídas, en el encabezado, borra todas las notificaciones leídas tras una confirmación. Ambas eliminaciones son definitivas; las notificaciones sin leer se conservan, y la incidencia, la página o la pull request a la que apunta una notificación no se ven afectadas.
 
 Las invitaciones pendientes a proyectos aparecen en Invitaciones con los filtros Sin leer y Todos. Acepta o rechaza después de comprobar el proyecto y quién te invita. Los enlaces antiguos de la bandeja de entrada abren el acceso actual, no una página independiente.
@@ -93,7 +97,7 @@ Las invitaciones pendientes a proyectos aparecen en Invitaciones con los filtros
 
 ## Elegir canales de notificación {#notification-preferences}
 
-Elige Ajustes de la bandeja de entrada en el encabezado de la bandeja de entrada, o abre Ajustes de la cuenta y la pestaña Notificaciones. En Notificaciones de entrada, un interruptor por categoría (Asignaciones, Menciones, Comentarios, Numo, Rutinas, Pull requests, Sugerencias y Páginas) decide qué llega a tu bandeja de entrada. Desactivar una categoría detiene las futuras notificaciones de ese tipo, incluidos sus avisos push; no elimina las notificaciones que ya recibiste. En una instancia self-hosted, los administradores también reciben una notificación Variables de la instancia cuando otro administrador cambia una variable de la instancia; ningún interruptor la desactiva. Consulta [Editar las variables de la instancia](/docs/instance-administration#instance-variables).
+Elige Ajustes de la bandeja de entrada en el encabezado de la bandeja de entrada, o abre Ajustes de la cuenta y la pestaña Notificaciones. En Notificaciones de entrada, un interruptor por categoría (Asignaciones, Menciones, Comentarios, Numo, Rutinas, Pull requests, Sugerencias, Páginas y Mensajes de Numo) decide qué llega a tu bandeja de entrada. Desactivar una categoría detiene las futuras notificaciones de ese tipo, incluidos sus avisos push; no elimina las notificaciones que ya recibiste. En una instancia self-hosted, los administradores también reciben una notificación Variables de la instancia cuando otro administrador cambia una variable de la instancia; ningún interruptor la desactiva. Consulta [Editar las variables de la instancia](/docs/instance-administration#instance-variables).
 
 La sección Notificaciones push de la misma pestaña muestra los dispositivos que reciben avisos. La entrega por navegador, PWA o escritorio también requiere registrar el dispositivo y obtener permiso del sistema operativo. Desactivar o quitar un dispositivo detiene los avisos solo en ese dispositivo; tu bandeja de entrada y sus categorías no cambian.
 

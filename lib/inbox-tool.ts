@@ -88,6 +88,8 @@ function searchableFields(
     "identifier" in target ? target.identifier : null,
     target.title,
     notification.comment_excerpt,
+    notification.numo_note_title,
+    notification.numo_note_body,
   ];
 }
 
@@ -147,6 +149,10 @@ export function buildInboxToolResult(
       project_key: notification.project_key,
       target: targetOf(notification),
       comment_excerpt: notification.comment_excerpt,
+      // A note Numo left for the user (MIN-914), in its own words.
+      ...(notification.type === "numo_message"
+        ? { note: { title: notification.numo_note_title, body: notification.numo_note_body } }
+        : {}),
     })),
   };
 }

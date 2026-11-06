@@ -66,3 +66,11 @@ describe("chaque catégorie a de quoi s'afficher", () => {
     }
   });
 });
+
+describe("Numo notes (MIN-914)", () => {
+  it("fall under their own switch, even when they link to a routine", () => {
+    expect(categoryOfNotification({ type: "numo_message", routine_id: "routine" }))
+      .toBe("numo");
+    expect(resolveNotificationPrefs({ notif_numo: false }).numo).toBe(false);
+  });
+});

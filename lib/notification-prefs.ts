@@ -15,6 +15,7 @@ export const NOTIF_ROUTINE_META_KEY = "notif_routine";
 export const NOTIF_PULL_REQUEST_META_KEY = "notif_pull_request";
 export const NOTIF_FEEDBACK_META_KEY = "notif_feedback";
 export const NOTIF_PAGE_META_KEY = "notif_page";
+export const NOTIF_NUMO_META_KEY = "notif_numo";
 
 /** One toggle per trigger family — finer grain would just be noise to manage.
  * Order = the settings UI's, and the one Numo's tool schema advertises.
@@ -32,6 +33,7 @@ export const NOTIFICATION_CATEGORIES = [
   "pullRequest",
   "feedback",
   "page",
+  "numo",
 ] as const;
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
@@ -45,6 +47,8 @@ export interface NotificationPrefs {
   pullRequest: boolean;
   feedback: boolean;
   page: boolean;
+  /** Notes Numo writes for the user (MIN-914). */
+  numo: boolean;
 }
 
 export const NOTIFICATION_CATEGORY_META_KEYS: Record<NotificationCategory, string> = {
@@ -56,6 +60,7 @@ export const NOTIFICATION_CATEGORY_META_KEYS: Record<NotificationCategory, strin
   pullRequest: NOTIF_PULL_REQUEST_META_KEY,
   feedback: NOTIF_FEEDBACK_META_KEY,
   page: NOTIF_PAGE_META_KEY,
+  numo: NOTIF_NUMO_META_KEY,
 };
 
 /** Read the notification preferences from a user's auth user_metadata; only an
@@ -72,6 +77,7 @@ export function resolveNotificationPrefs(
     pullRequest: meta?.[NOTIF_PULL_REQUEST_META_KEY] !== false,
     feedback: meta?.[NOTIF_FEEDBACK_META_KEY] !== false,
     page: meta?.[NOTIF_PAGE_META_KEY] !== false,
+    numo: meta?.[NOTIF_NUMO_META_KEY] !== false,
   };
 }
 
@@ -121,6 +127,10 @@ export function categoryOfNotificationType(
     // no switch can mute it.
     case "instance_config_changed":
       return null;
+    // A note Numo chose to write (MIN-914) is not a run report: it has its
+    // own switch, whatever it links to.
+    case "numo_message":
+      return "numo";
   }
 }
 
@@ -137,6 +147,8 @@ export function categoryOfNotification(n: {
   type: NotificationType;
   routine_id?: string | null;
 }): NotificationCategory | null {
+  // A Numo note may link to a routine without being that routine's run report.
+  if (n.type === "numo_message") return "numo";
   if (n.routine_id) return "routine";
   return categoryOfNotificationType(n.type);
 }

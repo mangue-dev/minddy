@@ -5,6 +5,7 @@ import { decodePullRequestContent } from "@/lib/server/agent/pull-request-conten
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { decodePageProjection } from "@/lib/server/page-content";
+import { readNumoNotes, type NumoNoteContent } from "@/lib/server/numo-note-content";
 
 import { createTranslator } from "next-intl";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -102,6 +103,8 @@ export interface PushContext {
   pullRequests: Map<string, { number: number; title: string | null }>;
   /** Title of a wiki PAGE (MIN-278) — the banner only shows it. */
   pages: Map<string, string>;
+  /** A Numo note (MIN-914): its own title and body make the banner. */
+  numoNotes: Map<string, NumoNoteContent>;
   projectKeys: Map<string, string>;
   actorNames: Map<string, string>;
   apiKeyActors: Map<string, ApiKeyActor>;
@@ -116,6 +119,7 @@ export function emptyPushContext(): PushContext {
     routines: new Map(),
     pullRequests: new Map(),
     pages: new Map(),
+    numoNotes: new Map(),
     projectKeys: new Map(),
     actorNames: new Map(),
     apiKeyActors: new Map(),
@@ -236,6 +240,13 @@ export async function loadPushContext(
     ctx.actorNames.set(id, displayName(toNamed(user), ""));
   }
   ctx.apiKeyActors = keyActors;
+  // Each note is read for its own recipient, the only user it is sent to.
+  for (const row of rows) {
+    if (!row.numo_note_id) continue;
+    const notes = await readNumoNotes(service, [row.numo_note_id], row.user_id);
+    const note = notes?.get(row.numo_note_id);
+    if (note) ctx.numoNotes.set(row.numo_note_id, note);
+  }
 
   return ctx;
 }
@@ -257,6 +268,20 @@ export function buildPushPayload(
   const t = createTranslator({ locale, messages, namespace: "Inbox" });
   const tTimeline = createTranslator({ locale, messages, namespace: "Timeline",
   });
+
+  // A Numo note (MIN-914) is pushed in its own words. Unreadable, it is not
+  // pushed at all: a banner with no content would say nothing.
+  if (row.type === "numo_message") {
+    const note = row.numo_note_id ? ctx.numoNotes.get(row.numo_note_id) : undefined;
+    if (!note) return null;
+    return {
+      title: note.title,
+      body: note.body,
+      lang: intlLocaleByLocale[locale],
+      url,
+      tag: `numo-note:${row.numo_note_id}`,
+    };
+  }
 
   // The title is WHAT we're talking about — the first line of the inbox. There
   // reference of the ticket in front: it is she who we recognize at a glance in

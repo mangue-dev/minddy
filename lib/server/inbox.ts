@@ -6,6 +6,7 @@ import { readResultForReader } from "@/lib/server/mention-access";
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { decodePageProjection } from "@/lib/server/page-content";
+import { readNumoNotes } from "@/lib/server/numo-note-content";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
@@ -273,6 +274,11 @@ export async function readInboxNotifications({
     readProjectMembers(candidateActorIds),
     readKeyAttribution(),
   ]);
+  // A Numo note (MIN-914) is read for its recipient only; a failed read keeps
+  // the row with the generic sentence.
+  const numoNotes = await readNumoNotes(service,
+    readable.map((n) => n.numo_note_id as string | null).filter(
+      (id): id is string => !!id), userId) ?? new Map();
   if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
 
   const issueMap = new Map((issues ?? []).map((item) => [item.id, item]));
@@ -480,6 +486,12 @@ export async function readInboxNotifications({
         via_automation: Boolean(n.via_automation),
         comment_excerpt: comment
           ? excerptOf(mentionPlainText(readableBodies[String(comment.id)] ?? ""))
+          : null,
+        numo_note_title: n.numo_note_id
+          ? numoNotes.get(n.numo_note_id)?.title ?? null
+          : null,
+        numo_note_body: n.numo_note_id
+          ? numoNotes.get(n.numo_note_id)?.body ?? null
           : null,
       };
     });

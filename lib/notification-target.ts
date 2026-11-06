@@ -9,7 +9,7 @@
 // PUR module (no `server-only`, no React): the page reads it, makes it
 // de charge utile aussi.
 
-import { feedbackPostHref, issueHref, objectiveHref, pagePath, pullRequestHref, routineHref } from "./app-urls";
+import { feedbackPostHref, issueHref, objectiveHref, pagePath, projectPath, pullRequestHref, routineHref } from "./app-urls";
 import type { NotificationType } from "./types";
 import type { MessageKey } from "./i18n-keys";
 
@@ -68,6 +68,8 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
     return n.block_id ? `${path}#${n.block_id}` : path;
   }
   if (n.issue_id) return issueHref(n.project_id, { id: n.issue_id });
+  // A Numo note about the project as a whole (MIN-914) opens the project.
+  if (n.type === "numo_message") return projectPath(n.project_id);
   return null;
 }
 
@@ -121,6 +123,7 @@ export const NOTIFICATION_LINE_KEYS: Record<
   page_mention: "linePageMention",
   page_agent_edit: "linePageAgentEdit",
   page_comment: "linePageComment",
+  numo_message: "lineNumoMessage",
 };
 
 /** Numo answers use a reply-specific sentence instead of the generic comment line. */

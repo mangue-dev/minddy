@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 9,
-  "sourceRevision": 9,
+  "revision": 10,
+  "sourceRevision": 10,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -36,14 +36,16 @@
       "components/settings/account-notifications-section.tsx",
       "components/notification-badge.tsx",
       "components/settings/account-settings-page.tsx",
-      "lib/server/notifications.ts"
+      "lib/server/notifications.ts",
+      "lib/server/numo-notes.ts",
+      "lib/notification-prefs.ts"
     ]
   },
   "review": {
-    "revision": 9,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 10,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-06"
   },
   "related": [
     "projects",
@@ -61,7 +63,7 @@
       "src": "/documentation/fr/work-inbox.png",
       "alt": "Boîte de réception avec des mentions, attributions et commentaires de démonstration, lus et non lus.",
       "caption": "Ces exemples d’activité affichent l’auteur, le ticket et l’état de lecture. L’onglet Toutes regroupe les notifications lues et non lues.",
-      "revision": 9,
+      "revision": 10,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -85,6 +87,8 @@ Ouvrez la boîte de réception avec son icône dans la barre supérieure, depuis
 
 Elle s’ouvre sur le filtre Non lues. Toutes affiche aussi les notifications lues, et Mentions ne garde que les mentions dans les commentaires et les pages. Sélectionnez un élément pour ouvrir le ticket, la page ou la pull request correspondant. Ouvrir une notification la marque comme lue. Sa ligne propose aussi Marquer comme lue ou Marquer comme non lue, et Tout marquer comme lu, dans l’en-tête de la boîte de réception, efface tous les repères non lus. Repasser en non lu rétablit ce repère d’activité ; cela n’annule pas le changement du ticket ou de la page. Une notification pointe vers du travail accessible ; elle ne remplace pas son contenu actuel.
 
+Numo peut aussi vous laisser un message : un titre court et une ou deux phrases sur un point qui demande votre attention, écrits par l’une de vos routines ou dans une conversation où vous lui avez demandé de vous prévenir plus tard. Il porte l’icône de Numo, et le sélectionner ouvre le ticket, l’objectif, la page, la pull request ou la routine dont il parle, ou le projet s’il n’en nomme aucun. Numo n’écrit ces messages qu’à vous, jamais aux autres membres, et n’envoie pas deux fois le même message sur le même élément dans la même journée.
+
 Supprimer, sur une ligne, retire cette notification après confirmation, et Supprimer les lues, dans l’en-tête, retire toutes les notifications lues après confirmation. Ces deux suppressions sont définitives ; les notifications non lues restent, et le ticket, la page ou la pull request visés ne sont pas touchés.
 
 Les invitations de projet en attente apparaissent sous Invitations dans les filtres Non lues et Toutes. Acceptez ou refusez après avoir vérifié le projet et la personne qui vous invite. Les anciens liens Inbox ouvrent l’accès actuel plutôt qu’une page séparée.
@@ -93,7 +97,7 @@ Les invitations de projet en attente apparaissent sous Invitations dans les filt
 
 ## Choisir les canaux {#notification-preferences}
 
-Choisissez Paramètres de l'inbox dans l’en-tête de la boîte de réception, ou ouvrez Paramètres du compte puis l’onglet Notifications. Sous Notifications de l'inbox, un interrupteur par catégorie (Assignations, Mentions, Commentaires, Numo, Routines, Pull requests, Retours et Pages) décide de ce qui arrive dans votre boîte de réception. Désactiver une catégorie arrête les futures notifications de ce type, y compris leurs alertes push ; cela ne retire pas les notifications déjà reçues. Sur une instance self-hosted, les administrateurs reçoivent aussi une notification Variables de l’instance lorsqu’un autre administrateur modifie une variable de l’instance ; aucun interrupteur ne la désactive. Voir [modifier les variables de l’instance](/docs/instance-administration#instance-variables).
+Choisissez Paramètres de l'inbox dans l’en-tête de la boîte de réception, ou ouvrez Paramètres du compte puis l’onglet Notifications. Sous Notifications de l'inbox, un interrupteur par catégorie (Assignations, Mentions, Commentaires, Numo, Routines, Pull requests, Retours, Pages et Messages de Numo) décide de ce qui arrive dans votre boîte de réception. Désactiver une catégorie arrête les futures notifications de ce type, y compris leurs alertes push ; cela ne retire pas les notifications déjà reçues. Sur une instance self-hosted, les administrateurs reçoivent aussi une notification Variables de l’instance lorsqu’un autre administrateur modifie une variable de l’instance ; aucun interrupteur ne la désactive. Voir [modifier les variables de l’instance](/docs/instance-administration#instance-variables).
 
 La section Notifications push du même onglet liste les appareils qui reçoivent des alertes. La livraison navigateur, PWA ou desktop nécessite aussi l’enregistrement de l’appareil et la permission du système. Désactiver ou retirer un appareil n’arrête les alertes que sur cet appareil ; votre boîte de réception et ses catégories ne changent pas.
 

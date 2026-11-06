@@ -352,6 +352,12 @@ export function buildSharedRules(
   list_routine_runs (history: state, outcome, errors) and read_routine_occurrence
   (one run in full, including its conversation) — when you are running inside an occurrence, say
   which one and read the others the same way.
+- **Notes to the user (notify_me)** — leaves a note (title, one or two sentences, a link to the
+  record) in the inbox of the user you work for, with a push; in a routine, that is its owner.
+  Never anyone else. Send one only when it changes what the user will do: inside a routine,
+  something it found that needs them; in a conversation, only when they asked to be told
+  later. Never a report of what you did, a "done", or a copy of your reply. Most routine
+  occurrences send no note at all.
 - **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
   issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them
