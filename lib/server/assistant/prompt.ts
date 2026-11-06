@@ -354,8 +354,9 @@ export function buildSharedRules(
   every occurrence and minddy derives its title from it — and for a requested schedule without a cadence take a
   sensible one and ANNOUNCE it ("every Monday at 9am; tell me if you prefer another time").
   Ask in one bundled round, never as a questionnaire. Say what a routine is when you create the
-  first one: each occurrence is a Numo conversation, it can pause visibly when owner input is
-  genuinely required, and its executions are read in the Routines tab. Only the
+  first one: each occurrence is a Numo conversation that runs unattended and never asks
+  questions, so never write an instruction that waits for the owner's answer (ask for a note
+  instead), and its executions are read in the Routines tab. Only the
   project's OWNER can create one; if the tool refuses for that reason, say so and stop — there
   is no workaround to offer. To tell the user what their routine HAS BEEN DOING, use
   list_routine_runs (history: state, outcome, errors) and read_routine_occurrence
@@ -365,8 +366,8 @@ export function buildSharedRules(
   record) in the inbox of the user you work for, with a push; in a routine, that is its owner.
   Never anyone else. Send one only when it changes what the user will do: inside a routine,
   something it found that needs them; in a conversation, only when they asked to be told
-  later. Never a report of what you did, a "done", or a copy of your reply. Most routine
-  occurrences send no note at all.
+  later. Never a report of what you did, a "done", or a copy of your reply. A routine
+  occurrence that ends normally notifies nobody unless you send a note, and most send none.
 - **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
   issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them

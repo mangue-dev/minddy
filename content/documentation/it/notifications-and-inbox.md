@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 10,
+  "revision": 13,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-06",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it corrected passages with catalog UI labels; fixed the All filter label to the catalog value Tutte; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "revision": 13,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (MIN-762 UI label correction: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of notifications-and-inbox-steps on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-924: which routine runs notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-762 label edit; self-reviewed; agent review, not human acceptance); agent:claude-code (it figure update after the catalog review; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it corrected passages with catalog UI labels; fixed the All filter label to the catalog value Tutte; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-06"
   },
   "related": [
@@ -63,7 +63,7 @@
       "src": "/documentation/it/work-inbox.png",
       "alt": "Posta in arrivo con menzioni, assegnazioni e commenti dimostrativi, letti e non letti.",
       "caption": "L’attività dimostrativa mostra l’autore, il ticket e lo stato di lettura. Tutti include le notifiche lette e non lette.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -88,6 +88,8 @@ Apri la posta in arrivo con la sua icona nella barra superiore, dalla sua riga n
 Si apre sul filtro Non letto. Tutti mostra anche le notifiche lette, e Menzioni mantiene solo le menzioni nei commenti e nelle pagine. Seleziona un elemento per aprire il ticket, la pagina o la pull request sottostante. Aprire una notifica la contrassegna come letta. La sua riga offre anche Segna come letta o Segna come non letta, e Marca tutto come letto, nell’intestazione della posta in arrivo, rimuove tutti gli indicatori di non letto. Segnarla come non letta cambia solo l’indicatore: non annulla la modifica al ticket o alla pagina. Apri il contenuto collegato per consultarne lo stato attuale.
 
 Numo può anche lasciarti un messaggio: un titolo breve e una o due frasi su qualcosa che richiede la tua attenzione, scritto da una delle tue routine o in una conversazione in cui gli hai chiesto di avvisarti più tardi. Ha l’icona di Numo e, selezionandolo, apre il ticket, l’obiettivo, la pagina, la pull request o la routine di cui parla, oppure il progetto se non ne nomina nessuno. Numo scrive questi messaggi solo a te, mai agli altri membri, e invia lo stesso messaggio sullo stesso elemento al massimo una volta al giorno.
+
+Una routine ti avvisa da sola quando un’esecuzione non riesce, esaurisce il budget o non può partire. Un’esecuzione che termina normalmente ti raggiunge solo come messaggio di Numo. Vedi [Routine](/docs/scheduled-routines#runs).
 
 Cancella, su una riga, elimina quella notifica dopo una conferma, e Elimina lette, nell’intestazione, elimina tutte le notifiche lette dopo una conferma. Entrambe le eliminazioni sono definitive; le notifiche non lette restano, e il ticket, la pagina o la pull request a cui punta una notifica non vengono toccati.
 

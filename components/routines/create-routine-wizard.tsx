@@ -353,6 +353,8 @@ export function CreateRoutineWizard({
               </button>
             ))}
           </div>
+
+          <p className="text-xs text-muted-foreground">{t("notifyHint")}</p>
         </div>
       ),
     },

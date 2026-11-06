@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoutineEventRow } from "./routine-event-processing";
 
-const h = vi.hoisted(() => ({ tables: {} as Record<string, Record<string, unknown>[]>, owner: true, roles: {} as Record<string, string>, start: vi.fn(), execute: vi.fn(), claims: [] as string[] }));
+const h = vi.hoisted(() => ({ tables: {} as Record<string, Record<string, unknown>[]>, owner: true, roles: {} as Record<string, string>, start: vi.fn(), execute: vi.fn(), launchFailure: vi.fn(), claims: [] as string[] }));
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async () => h.owner ? { isOwner: true } : null,
   hasProjectAccess: async (userId: string) => h.roles[userId] ? { role: h.roles[userId] } : null,
@@ -12,6 +12,7 @@ vi.mock("@/lib/server/issue-store", () => ({ decodeIssue: async (row: unknown) =
 vi.mock("@/lib/server/page-content", () => ({ decodePage: async (row: unknown) => row }));
 vi.mock("@/lib/server/routine-occurrences", () => ({ startRoutineOccurrence: h.start }));
 vi.mock("@/lib/server/numo/turns", () => ({ executeNumoTurn: h.execute }));
+vi.mock("@/lib/server/routine-hooks", () => ({ notifyRoutineLaunchFailure: h.launchFailure }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({
   from: (table: string) => {
     const filters: Array<(row: Record<string, unknown>) => boolean> = [];
@@ -54,8 +55,8 @@ function emit(id: number, event = "issue.status_changed", after: Record<string, 
   h.tables.routine_events.push({ id, project_id: project, subject_id: subject, subject_type: "issue", event, before_state: {}, after_state: after, cause_routine_id: null, cause_routine_ids: [], lease_token: String(id), attempts: 1 });
 }
 beforeEach(() => {
-  h.tables = { agent_routines: [{ id: routine,project_id:project,owner_id:"owner",enabled:true,deleted_at:null,trigger_revision:1,trigger_type:"event",trigger:{type:"event",event:"issue.status_changed",status:"triage",conditions:{field:"assignee",operator:"present"}} }],routine_events:[],routine_armings:[],issues:[{id:subject,project_id:project,status:"triage",assignee_id:null,deleted_at:null}],issue_categories:[],pages:[] };
-  h.owner=true; h.roles={}; h.claims=[]; h.start.mockReset().mockResolvedValue({turn:{id:"turn"}}); h.execute.mockReset().mockResolvedValue({});
+  h.tables = { agent_routines: [{ id: routine,project_id:project,owner_id:"owner",enabled:true,deleted_at:null,last_error:null,trigger_revision:1,trigger_type:"event",trigger:{type:"event",event:"issue.status_changed",status:"triage",conditions:{field:"assignee",operator:"present"}} }],routine_events:[],routine_armings:[],issues:[{id:subject,project_id:project,status:"triage",assignee_id:null,deleted_at:null}],issue_categories:[],pages:[] };
+  h.owner=true; h.roles={}; h.claims=[]; h.start.mockReset().mockResolvedValue({turn:{id:"turn"}}); h.execute.mockReset().mockResolvedValue({}); h.launchFailure.mockReset();
 });
 describe("durable routine orchestration", () => {
   it("bounds fan-out admissions, finishes the event and lets the Numo drain execute queued turns", async () => {
@@ -137,6 +138,20 @@ describe("durable routine orchestration", () => {
     const a=h.tables.routine_armings[0]; expect(a.error_code).toBe("quota"); expect(a.state).toBe("reserved");
     a.retry_at=new Date(0).toISOString(); await processRoutineEvents();
     expect(h.claims[0]).toBe(h.claims[1]); expect(h.start).toHaveBeenCalledTimes(2); expect(a.state).toBe("consumed");
+  });
+  it("tells the owner once when a run cannot start, not on every retry", async () => {
+    h.tables.issues[0].assignee_id="person"; emit(1);
+    h.start.mockRejectedValue(new Error("usage_budget_exceeded")); await processRoutineEvents();
+    expect(h.tables.agent_routines[0].last_error).toBe("quota");
+    expect(h.launchFailure).toHaveBeenCalledTimes(1);
+    expect(h.launchFailure.mock.calls[0][0]).toMatchObject({ id: routine, owner_id: "owner" });
+    h.tables.routine_armings[0].retry_at=new Date(0).toISOString(); await processRoutineEvents();
+    expect(h.start).toHaveBeenCalledTimes(2);
+    expect(h.launchFailure).toHaveBeenCalledTimes(1);
+    // A run that starts again clears the failure, so the next one is told.
+    h.start.mockResolvedValue({turn:{id:"turn"}});
+    h.tables.routine_armings[0].retry_at=new Date(0).toISOString(); await processRoutineEvents();
+    expect(h.tables.agent_routines[0].last_error).toBeNull();
   });
   it("refuses changed ownership and invalidates stale revisions", async () => {
     emit(1); await processRoutineEvents();

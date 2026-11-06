@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -40,10 +40,10 @@
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 13,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-06"
   },
   "related": [],
   "aliases": [],
@@ -57,7 +57,7 @@
       "src": "/documentation/de/scheduled-routines-workflow.png",
       "alt": "Modi „Geplant“ und „Ereignis“, eine Bedingungsgruppe, App-Symbole und dezente Informationsschaltflächen.",
       "caption": "Lokale Demonstration des tatsächlichen Auslösereditors. Keine Routine wurde gespeichert oder ausgeführt.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -108,7 +108,9 @@ Klicke mit der rechten Maustaste auf eine Routine in der Liste, um ihre letzte A
 
 Halte die Umschalttaste gedrückt und klicke auf Routinen in der Liste, um mehrere auszuwählen; ein Klick auf eine leere Stelle der Liste hebt die Auswahl auf. **Aktionen** in der schwebenden Leiste oder Command+K unter macOS bzw. Strg+K auf anderen Systemen führt die ausgewählten Routinen, deren Eigentümer du bist, jetzt aus, pausiert sie, setzt sie fort oder verschiebt sie nach einer Bestätigung in den Papierkorb; Routinen aus Projekten, die dir nicht gehören, bleiben unverändert, und jede Ausführung verbraucht Nutzung. **Numo fragen** öffnet Numo mit allen ausgewählten Routinen im Kontext.
 
-Jede Ausführung verwendet das KI-Budget des Eigentümers, standardmäßig mit einer Obergrenze von 15 % des Monatsbudgets einschließlich aller Numo-Aufrufe dieser Ausführung. Öffne ihre Konversation für Quelle, Ergebnis und Fragen. Antworte bei erforderlicher Eingabe in derselben Konversation; das verbleibende Ausführungsbudget bleibt erhalten. Prüfe gespeicherte Ergebnisse, bevor du ein Limit änderst oder erneut starten. Wird das Eigentum [übertragen](/docs/projects#transfer-ownership), werden die Routinen des früheren Eigentümers im Projekt pausiert und können keine neue Arbeit starten; der neue Eigentümer erstellt die Routinen, die weiterlaufen sollen.
+Jede Ausführung verwendet das KI-Budget des Eigentümers, standardmäßig mit einer Obergrenze von 15 % des Monatsbudgets einschließlich aller Numo-Aufrufe dieser Ausführung. Öffne ihre Konversation für Quelle und Ergebnis. Eine Ausführung läuft ohne dich und stellt nie Fragen: Steht eine Entscheidung nicht Numo zu, etwa in den Papierkorb verschieben oder mergen, überlässt sie sie dir in einer Nachricht. Schreibe Anweisungen, die nicht auf deine Antwort warten. Prüfe gespeicherte Ergebnisse, bevor du ein Limit änderst oder erneut starten. Wird das Eigentum [übertragen](/docs/projects#transfer-ownership), werden die Routinen des früheren Eigentümers im Projekt pausiert und können keine neue Arbeit starten; der neue Eigentümer erstellt die Routinen, die weiterlaufen sollen.
+
+Eine Ausführung, die normal endet, benachrichtigt dich nicht. Findet sie etwas, um das du dich kümmern musst, hinterlässt Numo dir eine [Nachricht](/docs/notifications-and-inbox#notifications-and-inbox), die das betreffende Element öffnet. Automatisch benachrichtigt wirst du, wenn eine Ausführung fehlschlägt, gestoppt wird oder ihr Budget aufbraucht, und wenn eine geplante oder durch ein Ereignis ausgelöste Ausführung nicht starten kann. Der Schalter **Routinen** in deinen [Benachrichtigungseinstellungen](/docs/notifications-and-inbox#notification-preferences) steuert diese Benachrichtigungen, **Nachrichten von Numo** die Nachrichten.
 
 Projektautomatisierungen aus früheren Versionen laufen nicht mehr und werden nicht in Routinen umgewandelt. Im [Übergangsleitfaden](/docs/automation-settings) liest du, wie du einen Workflow als Routine neu erstellst.
 

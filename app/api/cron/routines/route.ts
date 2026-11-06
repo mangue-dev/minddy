@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/routines";
 import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
 import { executeNumoTurn } from "@/lib/server/numo/turns";
+import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
 import { getServiceClient } from "@/lib/supabase-service";
 
 /**
@@ -67,6 +68,8 @@ async function runRoutine(routine: Routine): Promise<{ id: string; outcome: stri
       ? (error as { code: string }).code
       : (error as Error).message;
     await stampRoutineError(routine.id, launchErrorCode(code));
+    // Only the first failure in a row: the next ticks keep retrying.
+    if (!routine.last_error) notifyRoutineLaunchFailure(routine);
     return { id: routine.id, outcome: code };
   }
 }

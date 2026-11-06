@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-06",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-924: which routine runs notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-924 passage; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-06"
   },
   "related": [
@@ -63,7 +63,7 @@
       "src": "/documentation/en/work-inbox.png",
       "alt": "Inbox with demonstration mentions, assignments and comments, including read and unread items.",
       "caption": "Demonstration activity shows the author, issue and read state. All includes read and unread notifications.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -88,6 +88,8 @@ Open Inbox from its icon in the top bar, from the Inbox row of the sidebar on a 
 Inbox opens on the Unread filter. All also lists read notifications, and Mentions keeps only mentions in comments and pages. Select an item to open its underlying issue, page or pull request. Opening a notification marks it read. Its row also offers Mark as read or Mark as unread, and Mark all as read in the Inbox header clears every unread marker. Marking unread restores that activity marker; it does not undo the underlying issue or page change. A notification is a pointer to accessible work, not a replacement for its current content.
 
 Numo can also leave you a message: a short title and one or two sentences about something that needs your attention, written by one of your routines or in a conversation where you asked to be told later. It shows the Numo icon, and selecting it opens the issue, objective, page, pull request or routine it is about, or the project when it names none. Numo writes these messages only to you, never to other members, and sends the same message about the same item at most once a day.
+
+A routine notifies you on its own when an occurrence fails, runs out of budget or cannot start. An occurrence that ends normally reaches you only as a message from Numo. See [Routines](/docs/scheduled-routines#runs).
 
 Delete on a row removes that notification after a confirmation, and Delete read in the header removes every read notification after a confirmation. Both deletions are permanent; unread notifications stay, and the issue, page or pull request a notification points to is not affected.
 

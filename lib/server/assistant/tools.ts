@@ -2858,6 +2858,13 @@ export const ACCOUNT_TOOLS = new Set([
   "forget",
 ]);
 
+/** Tools that wait for the user (a question, a proposal to review), never
+ * offered to a routine run: it runs unattended, nobody would answer. */
+export const ROUTINE_UNATTENDED_EXCLUDED_TOOLS: ReadonlySet<string> = new Set([
+  "ask_user",
+  "propose_backlog",
+]);
+
 // Tools that never take a project (ask_user, the web, and the account-level
 // tools). web_search looks OUTSIDE minddy — a project_id would be meaningless.
 const NON_PROJECT_TOOLS = new Set([

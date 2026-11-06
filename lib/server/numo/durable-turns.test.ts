@@ -155,7 +155,8 @@ vi.mock("@/lib/server/assistant/skills", () => ({
 }));
 vi.mock("@/lib/server/assistant/attachment-parts", () => ({ buildAttachmentParts: async () => [] }));
 vi.mock("@/lib/server/assistant/tools", () => ({
-  CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }, { function: { name: "get_help" } }],
+  CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }, { function: { name: "get_help" } }, { function: { name: "ask_user" } }],
+  ROUTINE_UNATTENDED_EXCLUDED_TOOLS: new Set(["ask_user", "propose_backlog"]),
 }));
 vi.mock("@/lib/server/web-search", () => ({ withoutWebSearch: (tools: unknown) => tools }));
 vi.mock("@/lib/server/assistant/commands", () => ({ commandNote: () => "" }));
@@ -316,7 +317,7 @@ describe("durable Numo execution", () => {
     await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
     const [, tools] = h.processChat.mock.calls[0];
     expect(adminGate.live).not.toHaveBeenCalled();
-    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_issue", "get_help"]);
+    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_issue", "get_help", "ask_user"]);
   });
 
   it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
@@ -427,6 +428,11 @@ describe("durable Numo execution", () => {
       operationBudgetPercent: 15,
       routineId: "routine-1",
     });
+    // A routine runs unattended: no tool that waits for the user (MIN-924).
+    const offered = (h.processChat.mock.calls[0][1] as { function: { name: string } }[])
+      .map((tool) => tool.function.name);
+    expect(offered).toContain("get_issue");
+    expect(offered).not.toContain("ask_user");
   });
 
   it("finishes with unified account exhaustion details before another generation", async () => {

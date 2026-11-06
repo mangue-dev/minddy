@@ -9,8 +9,18 @@ import type { NumoTurn } from "@/lib/server/numo/turns";
  * Observe the parent Numo turn of a routine occurrence. Delegated code is only
  * one intermediate action: the routine is complete, failed, or waiting only
  * when the parent conversation reaches that state.
+ *
+ * A successful run notifies nobody (MIN-924): when it finds something worth
+ * reading, the routine writes its own note with `notify_me`. A run that
+ * failed, was stopped or ran out of budget cannot say so itself, so those
+ * still notify the owner automatically. A routine run cannot ask questions
+ * (ask_user is not offered to it); `waiting_input` is kept for occurrences
+ * that were already waiting for an answer when that changed.
  */
-export function notifyRoutineOfNumoTurn(turn: NumoTurn): void {
+export function notifyRoutineOfNumoTurn(
+  turn: NumoTurn,
+  options: { usageExhausted?: boolean } = {},
+): void {
   if (!turn.intent.routineId) return;
   if (![
     "completed",
@@ -18,6 +28,10 @@ export function notifyRoutineOfNumoTurn(turn: NumoTurn): void {
     "stopped",
     "waiting_input",
   ].includes(turn.status)) return;
+
+  const usageExhausted = turn.status === "completed" && options.usageExhausted === true;
+  const failed = turn.status === "failed" || turn.status === "stopped" || usageExhausted;
+  const waiting = turn.status === "waiting_input";
 
   afterOrNow(async () => {
     try {
@@ -36,24 +50,20 @@ export function notifyRoutineOfNumoTurn(turn: NumoTurn): void {
         .maybeSingle();
       if (!routine?.owner_id) return;
 
-      const failed = turn.status === "failed" || turn.status === "stopped";
-      if (turn.status !== "waiting_input") {
+      if (!waiting) {
         await service
           .from("agent_routines")
-          .update({ last_error: failed ? "launchFailed" : null })
+          .update({ last_error: usageExhausted ? "quota" : failed ? "launchFailed" : null })
           .eq("id", routine.id);
       }
+      if (!failed && !waiting) return;
 
       await insertNotifications(
         service,
         [{
           user_id: routine.owner_id,
           project_id: routine.project_id,
-          type: turn.status === "waiting_input"
-            ? "agent_question"
-            : failed
-              ? "agent_failed"
-              : "routine_done",
+          type: waiting ? "agent_question" : "agent_failed",
           issue_id: null,
           routine_id: routine.id,
           // The routine itself is the notification target.
@@ -64,6 +74,40 @@ export function notifyRoutineOfNumoTurn(turn: NumoTurn): void {
       );
     } catch (error) {
       console.error("[routine-hooks] Numo occurrence notification failed:", error);
+    }
+  });
+}
+
+/**
+ * A routine whose run could not even start (no budget left, Numo unavailable)
+ * has no conversation to report from, so the owner hears it from here. Call it
+ * only when the routine goes from healthy to failing: the scheduler and the
+ * event queue retry, and every retry must not notify again.
+ */
+export function notifyRoutineLaunchFailure(routine: {
+  id: string;
+  owner_id: string | null;
+  project_id: string;
+}): void {
+  if (!routine.owner_id) return;
+  const ownerId = routine.owner_id;
+  afterOrNow(async () => {
+    try {
+      await insertNotifications(
+        getServiceClient(),
+        [{
+          user_id: ownerId,
+          project_id: routine.project_id,
+          type: "agent_failed",
+          issue_id: null,
+          routine_id: routine.id,
+          actor_id: null,
+          via_assistant: true,
+        }],
+        { replaceUnread: true },
+      );
+    } catch (error) {
+      console.error("[routine-hooks] Routine launch failure notification failed:", error);
     }
   });
 }
