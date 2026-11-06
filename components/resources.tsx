@@ -1137,6 +1137,8 @@ export function ResourcePills({
         downloadHref={fileHref?.(preview, "download") ?? attachmentFileUrl(activePreviewPath, true)}
         fileName={preview.file_name}
         mimeType={preview.mime_type}
+        // A pasted text (MIN-916) reads as Markdown under its chip's label.
+        {...(preview.pasted ? { title: t("pastedText"), markdown: true } : {})}
         open
         onOpenChange={open => { if (!open) setPreview(null); }}
         onRemove={onRemove && (canRemove?.(preview) ?? true) ? () => setRemoving({ resource: preview }) : undefined}
