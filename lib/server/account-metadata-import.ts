@@ -10,7 +10,7 @@ const BOOLEAN_KEYS = [
   "notif_assigned", "notif_mention", "notif_comment", "notif_agent", "notif_routine",
   "notif_pull_request", "notif_feedback", "notif_page", "notif_numo", "onboarding_started",
   "onboarding_dismissed", "desktop_prompt_dismissed", "smart_fill_created", "smart_fill_triage",
-  "smart_fill_reevaluate", "smart_fill_title",
+  "smart_fill_reevaluate", "smart_fill_title", "numo_memory",
   THEME_TRANSPARENCY_META_KEY,
 ] as const;
 const ENUMS: Record<string, readonly string[]> = {

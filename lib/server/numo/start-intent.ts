@@ -15,6 +15,7 @@ import type {
 import type { AttachmentInput } from "@/lib/types";
 import type { PromptAttachment } from "@/lib/server/assistant/attachment-parts";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
+import { resolveNumoMemoryEnabled } from "@/lib/numo-memory";
 import { newRunId } from "@/lib/server/ai-usage";
 import {
   isNumoConversationConfigError,
@@ -197,6 +198,7 @@ export async function startNumoIntent(
         timezone: input.timezone ?? "",
         numoDefaultStatus: resolveNumoDefaultStatus(input.userMetadata),
         webSearchEnabled: true,
+        memoryEnabled: resolveNumoMemoryEnabled(input.userMetadata),
         triggerSource: input.triggerSource ?? "chat",
         ...(input.routine
           ? {

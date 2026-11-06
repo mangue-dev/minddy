@@ -40,6 +40,8 @@ export interface AccountTransferDocument {
   readme?: Record<string, string>;
   account: TransferRow;
   numo_preferences?: TransferRow[];
+  /** Numo's memory (MIN-915). Optional in older exports. */
+  numo_memories?: TransferRow[];
   owned_projects: TransferRow[];
   memberships: TransferRow[];
   issues: TransferRow[];
@@ -155,7 +157,7 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
     }
   }
 
-  for (const field of ["categories", "issue_categories", "agent_routines", "numo_preferences"] as const) {
+  for (const field of ["categories", "issue_categories", "agent_routines", "numo_preferences", "numo_memories"] as const) {
     if (input[field] !== undefined &&
       (!Array.isArray(input[field]) || !input[field].every(isRecord))) {
       return { ok: false, error: "invalidField", field };
@@ -181,6 +183,7 @@ export function validateAccountTransfer(input: unknown): TransferValidationResul
       readme: input.readme as Record<string, string> | undefined,
       account: input.account,
       numo_preferences: (input.numo_preferences as TransferRow[] | undefined) ?? [],
+      numo_memories: (input.numo_memories as TransferRow[] | undefined) ?? [],
       owned_projects: input.owned_projects as TransferRow[],
       memberships: input.memberships as TransferRow[],
       issues: input.issues as TransferRow[],

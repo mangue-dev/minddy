@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AiAutoRotateIcon, BotIcon, FileImportIcon, GiftIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AiAutoRotateIcon, AiBrain01Icon, BotIcon, FileImportIcon, GiftIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -398,6 +398,23 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("addingComment");
       return success ? t("commentAdded") : t("addCommentFailed");
+    },
+  },
+  // Numo's memory (MIN-915): the thread says that a memory changed; Numo's
+  // reply says which.
+  remember: {
+    icon: AiBrain01Icon,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "running") return t("savingMemory");
+      if (!success) return t("memoryFailed");
+      return args.replaces ? t("memoryUpdated") : t("memorySaved");
+    },
+  },
+  forget: {
+    icon: AiBrain01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("deletingMemory");
+      return success ? t("memoryDeleted") : t("memoryFailed");
     },
   },
   notify_me: {

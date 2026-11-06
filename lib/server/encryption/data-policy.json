@@ -4342,5 +4342,31 @@
         "encryption_version"
       ]
     }
+  },
+  "numo_memories": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "content"
+    ],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "project_id",
+        "source_conversation_id",
+        "user_id"
+      ],
+      "timestamp": [
+        "created_at",
+        "last_used_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
   }
 }

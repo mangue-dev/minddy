@@ -244,6 +244,12 @@ const rules = [
       "lib/server/rich-documents.ts"]),
   },
   {
+    // Numo's memory (MIN-915) is the user's sealed free text: only its
+    // repository reads or writes the table.
+    access: /\.\s*from\s*\(\s*["'`]numo_memories["'`]\s*\)/,
+    allowed: new Set(["lib/server/numo/memory-content.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]project_invitations["'`]\s*\)/,
     allowed: allowedInvitationAccess,
   },

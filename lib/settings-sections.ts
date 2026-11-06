@@ -1,7 +1,7 @@
 import { projectPath } from "./app-urls";
 import type { AppIcon } from "@/components/icon";
 import { useMemo } from "react";
-import { Mic01Icon, AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
+import { BrainIcon, Mic01Icon, AppWindowIcon as AppWindow, AiAutoRotateIcon as CycleIcon, Analytics01Icon, BlurIcon, ChartLineData01Icon, Copy01Icon, LaptopIcon, Link01Icon, Moon02Icon, PlayIcon, SearchList01Icon, Sun01Icon, UserCheck01Icon, BellRingIcon as BellRing, CalendarClockIcon, CodeSimpleIcon as Code2, Download, GitBranchIcon as GitBranch, ImportIcon, InboxIcon as Inbox, Keyboard, KeyRoundIcon as KeyRound, Languages, ListPlus, LockIcon, LogOut, MessageMultiple01Icon as MessagesSquare, Palette, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, ShieldOff, Sparkles, TagsIcon as Tags, TicketIcon as Ticket, Trash2, TriangleAlertIcon, Upload04Icon as Upload, ViewOffIcon, UserGroupIcon as Users, UserIcon as User } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { useDesktopWindowMaterial } from "@/lib/desktop/use-window-material";
 import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
@@ -97,6 +97,7 @@ export const SETTINGS_SECTIONS = {
   accountSmartFillRelations: "account-smart-fill-relations",
   accountIssueIndexing: "account-issue-indexing",
   accountNumoStatus: "account-numo-status",
+  accountNumoMemory: "account-numo-memory",
   accountCyclesEnable: "account-cycles",
   accountCyclesCadence: "account-cycles-cadence",
   accountCyclesCapture: "account-cycles-capture",
@@ -612,11 +613,14 @@ export function useSettingsSections(): SettingsSection[] {
         ],
       }),
       account({
-        id: SETTINGS_SECTIONS.accountMcpClients,
+        id: SETTINGS_SECTIONS.accountNumoMemory,
         tab: "agent",
-        icon: Plug,
-        title: tAccount("mcpClientsTab"),
-        keywords: ["mcp", "numo", "notion", "linear", "google", "connectors", "oauth"],
+        icon: BrainIcon,
+        title: tAccount("numoMemoryTitle"),
+        keywords: [
+          "numo", "mémoire", "memoire", "memory", "souvenirs", "memories",
+          "préférences", "preferences", "retenir", "remember", "oublier", "forget",
+        ],
       }),
       account({
         id: SETTINGS_SECTIONS.accountNumoStatus,
@@ -627,6 +631,13 @@ export function useSettingsSections(): SettingsSection[] {
           "numo", "statut", "status", "tickets créés", "tickets crees",
           "created issues", "triage", "backlog", "assistant",
         ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountMcpClients,
+        tab: "agent",
+        icon: Plug,
+        title: tAccount("mcpClientsTab"),
+        keywords: ["mcp", "numo", "notion", "linear", "google", "connectors", "oauth"],
       }),
       account({
         id: SETTINGS_SECTIONS.accountMcp,

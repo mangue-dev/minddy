@@ -32,6 +32,7 @@ import { encodeConversationTitle, shouldProtectConversationTitle } from
 import { newRunId } from "@/lib/server/ai-usage";
 import { parseResourcesInput } from "@/lib/server/attachments";
 import { resolveNumoDefaultStatus } from "@/lib/numo-default-status";
+import { resolveNumoMemoryEnabled } from "@/lib/numo-memory";
 import {
   ManagedAiUnavailableError,
 } from "@/lib/server/ai-runtime";
@@ -619,6 +620,7 @@ export async function POST(request: NextRequest) {
         timezone,
         numoDefaultStatus,
         webSearchEnabled: true,
+        memoryEnabled: resolveNumoMemoryEnabled(user.user_metadata),
         ...(adminSession ? { adminSession } : {}),
         ...(configuration.persistedProvider ? { provider: configuration.persistedProvider } : {}),
         ...(pageContext?.documentation ? { documentation: { articleId: pageContext.documentation.articleId,

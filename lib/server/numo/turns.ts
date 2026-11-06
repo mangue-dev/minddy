@@ -84,6 +84,9 @@ import {
   withNumoSurfaceEmitter,
 } from "./surface-projection";
 import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
+import { afterOrNow } from "@/lib/server/after-safe";
+import { loadNumoMemoryPrompt } from "./memory-prompt";
+import { touchNumoMemories } from "./memory-content";
 export interface NumoTurnIntent {
   /** Public help uses the same billing and durable lifecycle, with restricted tools. */
   documentation?: Omit<NonNullable<AssistantPageContext["documentation"]>, "locale">;
@@ -93,6 +96,11 @@ export interface NumoTurnIntent {
   numoDefaultStatus: NumoDefaultStatus;
   /** Always true since the admin switch was removed (MIN-733); turns queued before may carry false. */
   webSearchEnabled: boolean;
+  /**
+   * The user's "Let Numo remember things" switch when the turn was admitted
+   * (MIN-915). Absent on turns queued before it existed: on, its default.
+   */
+  memoryEnabled?: boolean;
   /**
    * The conversation's provider (MIN-826), frozen with its model: `minddy` or
    * a credential provider. Absent follows the Numo usage route.
@@ -435,6 +443,7 @@ async function buildExecutionInput(input: {
   messages: ChatMessage[];
   tools: AssistantToolDef[];
   adminGrant: AdminSessionGrant | null;
+  memoryWritable: boolean;
 }> {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
@@ -469,6 +478,25 @@ async function buildExecutionInput(input: {
     ? intent.adminSession
     : null;
   if (adminGrant) systemPrompt += ADMIN_PROMPT_BLOCK;
+  // Numo's memory (MIN-915): read in every turn of a user with the memory on,
+  // written only where the user talks to Numo directly. A routine runs
+  // unattended and a comment mention sits on a shared surface, so neither can
+  // change what Numo remembers.
+  const memoryOn = !intent.documentation && intent.memoryEnabled !== false;
+  const memoryWritable = memoryOn && !intent.routineId && intent.triggerSource !== "mention";
+  if (memoryOn) {
+    // An unreadable memory degrades the turn rather than failing it.
+    const memory = await loadNumoMemoryPrompt({
+      service, userId: turn.user_id, projectId: intent.projectId, writable: memoryWritable,
+    }).catch(() => {
+      console.error("[numo-memory] prompt_load_failed");
+      return null;
+    });
+    if (memory) {
+      systemPrompt += memory.block;
+      afterOrNow(() => touchNumoMemories(service, turn.user_id, memory.shownIds));
+    }
+  }
   if (intent.routineId) {
     const timing = intent.routineOrigin === "scheduled"
       ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
@@ -581,6 +609,7 @@ async function buildExecutionInput(input: {
     ? [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS]
     : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
+  if (!memoryWritable) tools = tools.filter((tool) => !MEMORY_TOOL_NAMES.has(tool.function.name));
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
   // An @Numo mention runs on the shared surface of this one project: a
   // reader's mention is offered read tools only (plus comments when allowed).
@@ -589,8 +618,10 @@ async function buildExecutionInput(input: {
   else if (readerAccess && intent.triggerSource === "mention") {
     tools = readerToolSet(tools, readerAccess.canComment);
   }
-  return { messages, tools, adminGrant };
+  return { messages, tools, adminGrant, memoryWritable };
 }
+
+const MEMORY_TOOL_NAMES = new Set(["remember", "forget"]);
 
 function createToolLedger(
   service: SupabaseClient,
@@ -1002,6 +1033,7 @@ async function executeClaimedNumoTurn(input: {
       timezone: claimed.intent.timezone,
       numoDefaultStatus: claimed.intent.numoDefaultStatus,
       adminGrant: execution.adminGrant,
+      memoryWritable: execution.memoryWritable,
       model: runtime.model,
       aiRuntime: runtime,
       conversationId: claimed.conversation_id,
