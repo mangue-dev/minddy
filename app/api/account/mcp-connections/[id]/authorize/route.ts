@@ -3,6 +3,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { getMcpConnection } from "@/lib/server/mcp-client";
 import {
   McpClientNotApprovedError,
+  McpOAuthAppRequiredError,
   startMcpOAuth,
 } from "@/lib/server/mcp-oauth";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
@@ -58,7 +59,9 @@ export async function POST(
         error:
           err instanceof McpClientNotApprovedError
             ? "oauth_client_rejected"
-            : "oauth",
+            : err instanceof McpOAuthAppRequiredError
+              ? "oauth_app_required"
+              : "oauth",
       },
       { status: 400 },
     );

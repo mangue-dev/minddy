@@ -39,6 +39,18 @@ describe("the MCP preset catalog", () => {
     }
   });
 
+  it("requests only the scopes Google's guide documents for its servers", () => {
+    const google = MCP_PRESETS.filter((preset) => preset.setup === "googlePreview");
+    expect(google.length).toBeGreaterThan(0);
+    for (const preset of google) {
+      expect(preset.scopes?.length, preset.id).toBeGreaterThan(0);
+      for (const scope of preset.scopes ?? [])
+        expect(scope, preset.id).toMatch(/^https:\/\/www\.googleapis\.com\/auth\//);
+    }
+    expect(mcpPresetForUrl("https://gmailmcp.googleapis.com/mcp/v1")?.scopes)
+      .not.toContain("https://mail.google.com/");
+  });
+
   it("does not resolve an unrelated endpoint", () => {
     expect(mcpPresetForUrl("https://mcp.elsewhere.dev/mcp")).toBeUndefined();
     expect(mcpPresetForUrl("not a url")).toBeUndefined();

@@ -125,6 +125,9 @@ export function AccountMcpClients() {
   // that connection instead of creating a second one.
   const [savedId, setSavedId] = useState<string | null>(null);
   const [check, setCheck] = useState<ConnectionCheck>({ status: "idle" });
+  // Why the provider's sign-in could not start (MIN-911): read in full in the
+  // wizard, where a one-line toast would cut the instruction off.
+  const [signInError, setSignInError] = useState<string | null>(null);
   // The public registry search (MIN-586): everything the curated catalog
   // leaves out, found by the same search box.
   const registry = useMcpRegistrySearch(search);
@@ -138,6 +141,7 @@ export function AccountMcpClients() {
     const code = err instanceof Error ? err.message : "save";
     if (code === "oauth") return t("errorOAuth");
     if (code === "oauth_client_rejected") return t("errorOAuthClientRejected");
+    if (code === "oauth_app_required") return t("errorOAuthAppRequired");
     if (code === "headers") return t("errorHeaders");
     if (code === "endpoint") return t("errorEndpoint");
     if (code === "encryption") return t("errorEncryption");
@@ -202,13 +206,16 @@ export function AccountMcpClients() {
         if (!result?.url) throw new Error("oauth");
         window.location.replace(result.url);
       })
-      .catch((err) =>
+      .catch((err) => {
+        const code = err instanceof Error ? err.message : "oauth";
         toast.error(
-          err instanceof Error && err.message === "oauth_client_rejected"
+          code === "oauth_client_rejected"
             ? t("errorOAuthClientRejected")
-            : t("errorOAuth"),
-        ),
-      )
+            : code === "oauth_app_required"
+              ? t("errorOAuthAppRequired")
+              : t("errorOAuth"),
+        );
+      })
       .finally(() => {
         setBusy(false);
         setAutoStarting(false);
@@ -223,6 +230,7 @@ export function AccountMcpClients() {
     setError(null);
     setSavedId(null);
     setCheck({ status: "idle" });
+    setSignInError(null);
   };
   const edit = useCallback(
     (
@@ -256,6 +264,7 @@ export function AccountMcpClients() {
       setStepIndex(0);
       setSavedId(null);
       setCheck({ status: "idle" });
+      setSignInError(null);
     },
     [],
   );
@@ -304,6 +313,7 @@ export function AccountMcpClients() {
     if (!tab) return;
     setBusy(true);
     setError(null);
+    setSignInError(null);
     try {
       await tab.authorize(connectionId, async () => {
         const result = await request(
@@ -316,7 +326,8 @@ export function AccountMcpClients() {
     } catch (err) {
       tab.close();
       // The saved connection stays visible with its authentication tooltip.
-      toast.error(errorText(err));
+      if (editing !== null) setSignInError(errorText(err));
+      else toast.error(errorText(err));
     } finally {
       await queryClient.invalidateQueries({ queryKey });
       setBusy(false);
@@ -731,14 +742,28 @@ export function AccountMcpClients() {
     check: {
       id: "check",
       title: awaitingSignIn ? t("checkSignInTitle") : t("checkTitle", { name }),
-      subtitle: awaitingSignIn ? t("checkSignInDescription", { name }) : undefined,
+      subtitle:
+        awaitingSignIn && !signInError
+          ? t("checkSignInDescription", { name })
+          : undefined,
       submitLabel: t("finish"),
       content: awaitingSignIn ? (
         <div className="flex flex-col items-start gap-3">
-          <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
-            <Spinner />
-            {t("checkWaiting")}
-          </p>
+          {signInError ? (
+            <p className="flex items-start gap-2 text-sm" role="alert">
+              <HugeiconsIcon
+                icon={Alert01Icon}
+                className="mt-0.5 size-4 shrink-0 text-orange-500"
+                aria-hidden
+              />
+              <span>{signInError}</span>
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+              <Spinner />
+              {t("checkWaiting")}
+            </p>
+          )}
           <Button
             type="button"
             variant="outline"

@@ -3,6 +3,7 @@ import { auth } from "@modelcontextprotocol/client";
 import { mcpFetch } from "./mcp-http";
 import {
   McpClientNotApprovedError,
+  McpOAuthAppRequiredError,
   startMcpOAuth,
   completeMcpOAuth,
   initialMcpOAuth,
@@ -17,6 +18,7 @@ import { decodeMcpAttempt, decodeMcpConnection,
 import { EncryptedStore } from "./encryption/store";
 import { randomBytes } from "node:crypto";
 
+const GMAIL = "https://gmailmcp.googleapis.com/mcp/v1";
 const state = vi.hoisted(() => ({
   tables: {} as Record<string, Record<string, unknown>[]>,
   requests: [] as Array<{
@@ -33,6 +35,7 @@ const state = vi.hoisted(() => ({
   canceled: 0,
   session: false,
   rejectRegistration: false,
+  google: false,
   store: null as EncryptedStore | null,
 }));
 vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => state.store }));
@@ -69,6 +72,26 @@ vi.mock("./safe-fetch", () => ({
           },
         );
     }
+    // Google Workspace: advertises every scope, has no registration endpoint.
+    if (state.google && url.includes("oauth-protected-resource"))
+      return Response.json({
+        resource: GMAIL,
+        authorization_servers: ["https://accounts.google.com/"],
+        scopes_supported: [
+          "https://mail.google.com/",
+          "https://www.googleapis.com/auth/gmail.readonly",
+          "https://www.googleapis.com/auth/gmail.compose",
+          "https://www.googleapis.com/auth/gmail.send",
+        ],
+      });
+    if (state.google && url.includes("oauth-authorization-server"))
+      return Response.json({
+        issuer: "https://accounts.google.com",
+        authorization_endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+        token_endpoint: "https://oauth2.googleapis.com/token",
+        response_types_supported: ["code"],
+        code_challenge_methods_supported: ["S256"],
+      });
     if (state.challengeOnly && url.includes("oauth-protected-resource"))
       return new Response(null, { status: 404 });
     if (
@@ -216,6 +239,7 @@ beforeEach(() => {
   state.canceled = 0;
   state.session = false;
   state.rejectRegistration = false;
+  state.google = false;
   const key = randomBytes(32);
   state.store = new EncryptedStore({
     current: async () => ({ version: 1, bytes: Buffer.from(key) }),
@@ -234,6 +258,42 @@ describe("generic MCP OAuth", () => {
     await expect(started).rejects.toBeInstanceOf(McpClientNotApprovedError);
     await expect(started).rejects.toMatchObject({ status: 400 });
     expect(state.tables.user_mcp_oauth_attempts).toHaveLength(0);
+  });
+  it("asks for an OAuth app when the provider cannot register clients", async () => {
+    state.google = true;
+    const gmail = { ...connection, url: GMAIL };
+    state.tables.user_mcp_connections = [{ ...gmail }];
+    const started = startMcpOAuth(gmail);
+    await expect(started).rejects.toBeInstanceOf(McpOAuthAppRequiredError);
+    expect(state.tables.user_mcp_oauth_attempts).toHaveLength(0);
+  });
+  it("requests Google's documented scopes with offline access", async () => {
+    state.google = true;
+    const gmail = {
+      ...connection,
+      url: GMAIL,
+      oauth_encrypted: initialMcpOAuth("client.apps.googleusercontent.com", "secret"),
+    };
+    state.tables.user_mcp_connections = [{ ...gmail }];
+    const url = new URL(await startMcpOAuth(gmail));
+    expect(url.origin + url.pathname).toBe(
+      "https://accounts.google.com/o/oauth2/v2/auth",
+    );
+    expect(url.searchParams.get("client_id")).toBe(
+      "client.apps.googleusercontent.com",
+    );
+    expect(url.searchParams.get("scope")?.split(" ")).toEqual([
+      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/gmail.compose",
+    ]);
+    expect(url.searchParams.get("access_type")).toBe("offline");
+    expect(url.searchParams.get("prompt")).toBe("consent");
+  });
+  it("leaves other providers' authorization requests untouched", async () => {
+    const url = new URL(await startMcpOAuth(connection));
+    expect(url.searchParams.get("access_type")).toBeNull();
+    expect(url.searchParams.get("prompt")).toBeNull();
+    expect(url.searchParams.get("scope")).toBe("tools:read tools:write");
   });
   it("keeps other authorization failures generic", async () => {
     state.challengeOnly = true;
