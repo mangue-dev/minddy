@@ -75,7 +75,9 @@
       "lib/server/assistant/prompt.ts",
       "lib/server/numo-notes.ts",
       "lib/server/numo/memory-prompt.ts",
-      "components/settings/account-numo-memory-section.tsx"
+      "components/settings/account-numo-memory-section.tsx",
+      "lib/server/assistant/long-message.ts",
+      "lib/server/assistant/create-page-database.ts"
     ]
   },
   "review": {
@@ -282,6 +284,10 @@ Para perguntar ao Numo sobre um trecho, selecione-o em um editor, como uma pági
 O Numo também pode ver as imagens da descrição de um ticket ou objetivo, de um plano, de um comentário, de uma página ou do seu caderno quando o modelo da conversa aceita imagens. Sem essa capacidade, o Numo informa que não conseguiu ver a imagem em vez de descrevê-la.
 
 O Numo também pode escrever um arquivo para baixar: um relatório ou um documento em PDF, uma exportação em CSV, ou um arquivo de texto, Markdown, HTML, JSON, XML, SVG ou de calendário. Peça na sua solicitação; o Numo pode montá-lo a partir dos arquivos que você adicionou à conversa. O arquivo aparece como um cartão abaixo da resposta: selecionar o cartão abre a visualização quando o formato permite, **Baixar** salva o arquivo, e o menu ao lado oferece **Prévia** e **Copiar o conteúdo**. O arquivo fica no armazenamento privado da sua conversa; para compartilhá-lo com o projeto, peça ao Numo para anexá-lo a um ticket, a um objetivo ou a um comentário que ele publicar lá. Um PDF usa as fontes padrão: caracteres fora dos alfabetos da Europa Ocidental e emojis não aparecem.
+
+Se você colar no campo de mensagem um texto com mais de 12.000 caracteres, como logs, ele é anexado à sua mensagem como um arquivo de texto chamado **Texto colado** seguido da data e da hora, e um aviso informa isso. O Numo lê o arquivo inteiro antes de se basear nele, então um CSV feito a partir dos seus logs inclui todas as linhas. Uma mensagem longa que chega ao Numo por outro caminho é anexada do mesmo jeito: a mensagem mantém as primeiras linhas e cita o arquivo.
+
+Quando você pede um acompanhamento, ou uma lista de itens que compartilham campos, como candidaturas com empresa, status e data, o Numo cria um [banco de dados](/docs/databases) com essas colunas e as primeiras entradas em vez de uma página.
 
 O modelo padrão do Numo vem de **Configurações da conta → IA e Numo → Modelo padrão do Numo**: o padrão do app ou um modelo pessoal do provedor ativo. Uma escolha explícita na conversa tem prioridade. Consulte [configurações de IA e uso](/docs/ai-settings-and-usage#ai-keys-and-models).
 

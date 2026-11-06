@@ -75,7 +75,9 @@
       "lib/server/assistant/prompt.ts",
       "lib/server/numo-notes.ts",
       "lib/server/numo/memory-prompt.ts",
-      "components/settings/account-numo-memory-section.tsx"
+      "components/settings/account-numo-memory-section.tsx",
+      "lib/server/assistant/long-message.ts",
+      "lib/server/assistant/create-page-database.ts"
     ]
   },
   "review": {
@@ -281,6 +283,10 @@ Um Numo zu einer Textstelle zu fragen, markiere sie in einem Editor, etwa auf ei
 Numo kann sich außerdem die Bilder in einer Ticket- oder Zielbeschreibung, einem Plan, einem Kommentar, einer Seite oder deinem Notizbuch ansehen, wenn das Modell der Unterhaltung Bilder annimmt. Ohne diese Fähigkeit sagt Numo, dass es ein Bild nicht ansehen konnte, statt es zu beschreiben.
 
 Numo kann auch eine Datei zum Herunterladen schreiben: einen Bericht oder ein Dokument als PDF, einen Export als CSV oder eine Text-, Markdown-, HTML-, JSON-, XML-, SVG- oder Kalenderdatei. Bitte in deiner Anfrage darum; Numo kann sie aus Dateien erstellen, die du der Unterhaltung hinzugefügt hast. Die Datei erscheint als Karte unter seiner Antwort: Ein Klick auf die Karte öffnet ihre Vorschau, wenn das Format es erlaubt, **Herunterladen** speichert sie, und das Menü daneben bietet **Vorschau** und **Inhalt kopieren**. Die Datei bleibt im privaten Speicher deiner Unterhaltung; um sie mit dem Projekt zu teilen, bitte Numo, sie an ein Ticket, ein Ziel oder einen Kommentar anzuhängen, den es dort schreibt. Ein PDF verwendet die Standardschriften: Zeichen außerhalb westeuropäischer Alphabete und Emojis fehlen darin.
+
+Fügst du einen Text mit mehr als 12.000 Zeichen in das Eingabefeld ein, etwa Logs, wird er deiner Nachricht als Textdatei angehängt, die **Eingefügter Text** mit Datum und Uhrzeit heißt, und ein Hinweis meldet das. Numo liest die ganze Datei, bevor es sich darauf stützt, sodass eine CSV aus deinen Logs jede Zeile enthält. Eine lange Nachricht, die Numo auf anderem Weg erreicht, wird genauso angehängt: Die Nachricht behält ihre ersten Zeilen und nennt die Datei.
+
+Bittest du um etwas zum Nachverfolgen oder um eine Liste von Einträgen mit gemeinsamen Feldern, etwa Bewerbungen mit Firma, Status und Datum, erstellt Numo eine [Datenbank](/docs/databases) mit diesen Spalten und ihren ersten Einträgen statt einer Seite.
 
 Das Standardmodell von Numo stammt aus **Kontoeinstellungen → KI & Numo → Standardmodell für Numo**: App-Standard oder ein persönliches Modell für den aktiven Anbieter. Eine ausdrückliche Modellauswahl im Gespräch hat Vorrang. Siehe [KI-Einstellungen und Nutzung](/docs/ai-settings-and-usage#ai-keys-and-models).
 

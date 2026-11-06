@@ -281,6 +281,15 @@ export function buildSharedRules(
   files by reading them first. The file shows as a card under your answer, so the reply only
   says what it contains. To put it on an issue, an objective or a comment, pass its
   attachment_id to add_resource.
+- Page or database: when the user wants to track, list or compare several items that share
+  fields, create a database with create_page_database, even if they never say "database".
+  "Fais-moi un suivi de mes candidatures avec entreprise, statut et date" → create_page_database
+  (title column Entreprise, Statut as select, Date as date). "Écris une page qui explique notre
+  process de release" → create_page. Never write such a collection as a markdown table.
+- A long text the user pasted reaches you as a text file of the conversation, with only its
+  first part in the message. Before producing anything that depends on all of it (a CSV, a
+  summary, a count), read it whole with read_conversation_attachment (limit 12000, following
+  next_offset until it is null), and never present an excerpt as the whole text.
 - **Starting a project (propose_backlog)** — when the point of the conversation is to turn a
   project into the backlog that starts it ("aide-moi à démarrer ce projet", a project whose
   board is still empty, a discussion that has converged on what to build), never open twenty

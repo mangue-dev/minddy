@@ -486,6 +486,9 @@
     "usageRefreshFailed": "Nutzung konnte nicht aktualisiert werden. Die letzten verfügbaren Daten werden angezeigt."
   },
   "Assistant": {
+    "pastedTextFileName": "Eingefügter Text {stamp}.txt",
+    "pastedTextNote": "Vollständiger Text als Datei angehängt: {fileName}",
+    "pastedTextAttached": "Langer Text als Datei angehängt, damit Numo ihn ganz liest.",
     "title": "Numo fragen",
     "replyAnnouncement": "Numo hat geantwortet.",
     "inputPlaceholder": "Frag Numo etwas…",
@@ -4031,6 +4034,9 @@
     "createPageFailed": "Seite nicht erstellt",
     "pageCreated": "Seite erstellt",
     "pageCreatedWithTitle": "„{title}“ erstellt",
+    "creatingDatabase": "Datenbank wird erstellt…",
+    "createDatabaseFailed": "Datenbank nicht erstellt",
+    "databaseCreatedWithTitle": "Datenbank „{title}“ erstellt",
     "pagesCreated": "{count, plural, one {# Seite erstellt} other {# Seiten erstellt}}",
     "updatingPage": "Seite wird aktualisiert…",
     "pageUpdated": "Seite aktualisiert",

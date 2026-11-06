@@ -24,6 +24,8 @@ import { parseSelectedSkills } from "@/lib/server/assistant/skills";
 import { parseSelfHostingHelpContext } from "@/lib/self-hosting-help-context";
 import { normalizeSelectionText } from "@/lib/assistant-selection";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
+import { longMessageAttachment } from "@/lib/server/assistant/long-message";
+import { MAX_CHAT_ATTACHMENTS, pastedTextStamp } from "@/lib/numo-message-limits";
 import { fallbackShortTitle, generateShortTitle } from "@/lib/server/short-title";
 import { mentionPlainText } from "@/lib/mention-link";
 import { markdownForReader } from "@/lib/server/mention-access";
@@ -347,7 +349,8 @@ export async function POST(request: NextRequest) {
 
   // Coerced root fields: Wacky types should neither crash nor terminate
   // in a query. A uuid is 36 characters long — beyond 100, forged body.
-  // The message is limited by sanitizeAssistantMessageContent (12,000).
+  // A message past MAX_INLINE_MESSAGE_CHARS becomes a text attachment below
+  // (MIN-916); otherwise sanitizeAssistantMessageContent cuts it with a marker.
   const projectId =
     typeof body.projectId === "string" && body.projectId ? body.projectId : undefined;
   const conversationId =
@@ -393,7 +396,7 @@ export async function POST(request: NextRequest) {
   if (!message.trim()) {
     return Response.json({ error: "message is required" }, { status: 400 });
   }
-  const sanitizedUserMessage = sanitizeAssistantMessageContent(message);
+  let sanitizedUserMessage = sanitizeAssistantMessageContent(message);
   const rawRequestId = (body as AssistantChatRequest & { requestId?: unknown }).requestId;
   const requestId = typeof rawRequestId === "string" && NUMO_UUID.test(rawRequestId)
     ? rawRequestId
@@ -462,7 +465,7 @@ export async function POST(request: NextRequest) {
   const parsedResources = parseResourcesInput(
     body.attachments,
     `chat/${user.id}/`,
-    5,
+    MAX_CHAT_ATTACHMENTS,
   );
   if (parsedResources === null) {
     return Response.json({ error: "Invalid attachments" }, { status: 400 });
@@ -483,6 +486,25 @@ export async function POST(request: NextRequest) {
   // Same for error messages: the translator is captured here then called
   // from the stream, where the request context is no longer available.
   const tApi = await getTranslations({ locale, namespace: "ApiErrors" });
+
+  // A long message (pasted logs, a document) is kept whole as a text file of
+  // the conversation rather than cut (MIN-916). The composer already does this
+  // for a paste; this covers every other client. Help conversations take no
+  // files, so their message stays truncated with its marker.
+  if (!pageContext?.documentation) {
+    const tAssistant = await getTranslations({ locale, namespace: "Assistant" });
+    const stamp = pastedTextStamp(new Date(),
+      typeof body.timezone === "string" && body.timezone.length <= 64 ? body.timezone : undefined);
+    const fileName = tAssistant("pastedTextFileName", { stamp });
+    const converted = await longMessageAttachment(service, user.id, message, {
+      fileName,
+      note: tAssistant("pastedTextNote", { fileName }),
+    });
+    if (converted) {
+      sanitizedUserMessage = converted.content;
+      attachments.push(converted.attachment);
+    }
+  }
 
   // Where Numo-created issues land without an explicit status — the user's
   // Account → Preferences choice (defaults to triage).

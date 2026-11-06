@@ -486,6 +486,9 @@
     "usageRefreshFailed": "Impossibile aggiornare l’utilizzo. Sono mostrati gli ultimi dati disponibili."
   },
   "Assistant": {
+    "pastedTextFileName": "Testo incollato {stamp}.txt",
+    "pastedTextNote": "Testo completo allegato come file: {fileName}",
+    "pastedTextAttached": "Testo lungo allegato come file, così Numo lo legge tutto.",
     "title": "Chiedi a Numo",
     "replyAnnouncement": "Numo ha risposto.",
     "inputPlaceholder": "Chiedi a Numo qualsiasi cosa…",
@@ -4031,6 +4034,9 @@
     "createPageFailed": "Pagina non creata",
     "pageCreated": "Pagina creata",
     "pageCreatedWithTitle": "«{title}» creata",
+    "creatingDatabase": "Creazione del database…",
+    "createDatabaseFailed": "Database non creato",
+    "databaseCreatedWithTitle": "Database «{title}» creato",
     "pagesCreated": "{count, plural, one {# pagina creata} other {# pagine create}}",
     "updatingPage": "Aggiornamento della pagina…",
     "pageUpdated": "Pagina aggiornata",

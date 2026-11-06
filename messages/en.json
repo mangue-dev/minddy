@@ -486,6 +486,9 @@
     "usageRefreshFailed": "Couldn’t refresh usage. Showing the last available data."
   },
   "Assistant": {
+    "pastedTextFileName": "Pasted text {stamp}.txt",
+    "pastedTextNote": "Full text attached as a file: {fileName}",
+    "pastedTextAttached": "Long text attached as a file, so Numo reads all of it.",
     "title": "Ask Numo",
     "replyAnnouncement": "Numo replied.",
     "inputPlaceholder": "Ask Numo anything…",
@@ -4031,6 +4034,9 @@
     "createPageFailed": "Page not created",
     "pageCreated": "Page created",
     "pageCreatedWithTitle": "Created “{title}”",
+    "creatingDatabase": "Creating the database…",
+    "createDatabaseFailed": "Database not created",
+    "databaseCreatedWithTitle": "Created the database “{title}”",
     "pagesCreated": "{count, plural, one {Created # page} other {Created # pages}}",
     "updatingPage": "Updating the page…",
     "pageUpdated": "Page updated",

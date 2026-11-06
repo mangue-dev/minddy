@@ -29,6 +29,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { MAX_CHAT_ATTACHMENTS, MAX_INLINE_MESSAGE_CHARS, pastedTextStamp } from "@/lib/numo-message-limits";
 import { dateMentionOptions, datesFirst } from "@/lib/mention-date";
 import { Button } from "@/components/ui/button";
 import {
@@ -502,7 +504,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     }, [isEmpty, onEmptyChange]);
     const { user } = useAuth();
     const userId = user?.id;
-    const localUploads = useAttachmentUploads(() => `chat/${userId}`, { max: 5 });
+    const localUploads = useAttachmentUploads(() => `chat/${userId}`, { max: MAX_CHAT_ATTACHMENTS });
     const uploads = attachmentUploads ?? localUploads;
     const publishedDraftRef = useRef<string | undefined>(undefined);
     const publishDraft = useCallback(() => {
@@ -1503,6 +1505,20 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         const html = e.clipboardData.getData("text/html");
         const text = e.clipboardData.getData("text/plain") || e.clipboardData.getData("text");
         e.preventDefault();
+        // A paste too long to travel inline (logs, a document) joins as a
+        // text file Numo reads in full, rather than being cut (MIN-916). With
+        // no free slot it stays inline; the server then attaches it.
+        if (
+          canAttach && userId && text.length > MAX_INLINE_MESSAGE_CHARS
+          && uploads.pending.length < MAX_CHAT_ATTACHMENTS
+        ) {
+          const fileName = t("pastedTextFileName", {
+            stamp: pastedTextStamp(new Date()),
+          });
+          uploads.addFiles([new File([text], fileName, { type: "text/plain" })]);
+          toast.info(t("pastedTextAttached"));
+          return;
+        }
         const pieces = pastedMentionPieces(html, text);
         if (!pieces.some((piece) => typeof piece !== "string")) {
           if (text) insertPlainText(text);
@@ -1521,7 +1537,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           else insertPlainText(`@${piece.label || knownMentionLabel(piece.type, piece.id, piece.meta) || "…"}`);
         }
       },
-      [canAttach, insertPill, insertPlainText, mentionables, uploads, userId],
+      [canAttach, insertPill, insertPlainText, mentionables, t, uploads, userId],
     );
 
     // Dictated text is additive: appended after the existing content, caret at

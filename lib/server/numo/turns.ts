@@ -585,7 +585,10 @@ async function buildExecutionInput(input: {
             ? `\n\n[Context captured for this message only; it does not authorize later actions]\n${buildPageContextBlock(message.context)}`
             : "")
         : "");
-    const attachments = rowAttachments(message);
+    // Each file carries its conversation reference, the one
+    // read_conversation_attachment takes (MIN-916).
+    const attachments = rowAttachments(message).map((attachment, attachmentIndex) =>
+      ({ ...attachment, attachment_id: `${message.id}:${attachmentIndex}` }));
     let content: string | ChatContentPart[] = sanitized;
     if (attachments.length > 0 && modalities) {
       content = [

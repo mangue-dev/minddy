@@ -5,7 +5,7 @@ import { EncryptedStore } from "@/lib/server/encryption/store";
 import { encodeNumoUserMessage } from "@/lib/server/numo/user-message-content";
 import { encodeNumoToolMessage } from "@/lib/server/numo/tool-content";
 import { encodeAttachmentValue } from "@/lib/server/attachment-content";
-import { attachmentOffset, copyConversationAttachment, listConversationAttachments,
+import { attachmentOffset, attachmentReadLimit, copyConversationAttachment, listConversationAttachments,
   readConversationAttachment, resolveConversationAttachment,
   withConversationAttachmentPreviews } from "./conversation-attachments";
 import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
@@ -159,6 +159,19 @@ describe("conversation file references", () => {
     h.download.mockResolvedValue(null);
     await expect(readConversationAttachment(ctx(), REF)).rejects.toThrow("unavailable");
     for (const bad of [-1, 0.5, "0", NaN]) expect(() => attachmentOffset(bad)).toThrow();
+  });
+
+  it("reads a long text in larger windows up to the cap (MIN-916)", async () => {
+    const text = "x".repeat(30_000) + "last line";
+    h.download.mockResolvedValue(Buffer.from(text));
+    const first = await readConversationAttachment(ctx(), REF, 0, attachmentReadLimit(50_000));
+    expect(first).toMatchObject({ offset: 0, total_characters: text.length, next_offset: 12_000 });
+    expect((first as { content: string }).content).toHaveLength(12_000);
+    const last = await readConversationAttachment(ctx(), REF, 24_000, attachmentReadLimit(12_000));
+    expect(last).toMatchObject({ next_offset: null });
+    expect((last as { content: string }).content.endsWith("last line")).toBe(true);
+    expect(attachmentReadLimit(undefined)).toBe(3000);
+    for (const bad of [0, -5, 1.5, "100"]) expect(() => attachmentReadLimit(bad)).toThrow();
   });
 });
 

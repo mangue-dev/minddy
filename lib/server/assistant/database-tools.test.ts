@@ -157,6 +157,73 @@ describe("Numo database tool dispatch", () => {
   });
 });
 
+describe("create_page_database (MIN-917)", () => {
+  it("creates the database, its named columns and its rows in one call", async () => {
+    h.create
+      .mockResolvedValueOnce({ ok: true, data: { page_id: "db", database_revision: 0 } })
+      .mockResolvedValue({ ok: true, data: { page_id: "row", title: "Acme" } });
+    h.update.mockResolvedValueOnce({ ok: true, data: { page_id: "db", database_revision: 1 } });
+
+    const result = await executeTool("create_page_database", {
+      title: "Candidatures",
+      icon: null,
+      parent_page_id: null,
+      title_column: "Entreprise",
+      properties: [
+        { name: "Statut", type: "select", options: ["Envoyée", "Entretien"] },
+        { name: "Date", type: "date", options: null },
+        { name: "Salaire", type: "number", options: null },
+      ],
+      rows: [
+        { title: "Acme", values: { statut: "Entretien", Date: "2026-11-02", Salaire: "52000", Ville: "Lyon" } },
+        { title: "Globex", values: { Statut: "Refusée" } },
+      ],
+    }, ctx);
+
+    expect(h.create).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      database: true, title: "Candidatures", parentPageId: null,
+    }));
+    const input = h.update.mock.calls[0][0].input;
+    expect(input).toMatchObject({ page_id: "db", operation: "schema", revision: 0, titleName: "Entreprise" });
+    const [statut, date, salaire] = input.schema;
+    expect(statut).toMatchObject({ name: "Statut", type: "select" });
+    // An option a row uses joins the declared ones.
+    expect(statut.options.map((o: { name: string }) => o.name)).toEqual(["Envoyée", "Entretien", "Refusée"]);
+    expect(date).toMatchObject({ name: "Date", type: "date" });
+
+    const interview = statut.options.find((o: { name: string }) => o.name === "Entretien").id;
+    expect(h.create).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      parentPageId: "db",
+      title: "Acme",
+      values: { [statut.id]: interview, [date.id]: "2026-11-02", [salaire.id]: 52000 },
+    }));
+    expect(result).toMatchObject({ success: true, result: {
+      page_id: "db",
+      rows: [{ index: 0, page_id: "row", ignored_properties: ["Ville"] }, { index: 1 }],
+      failed: [],
+    } });
+  });
+
+  it("refuses a database without columns before creating anything", async () => {
+    const result = await executeTool("create_page_database", {
+      title: "Empty", icon: null, parent_page_id: null, title_column: null, properties: [], rows: null,
+    }, ctx);
+    expect(result).toMatchObject({ success: false });
+    expect(h.create).not.toHaveBeenCalled();
+  });
+
+  it("points to the created page when its columns are refused, so no duplicate is made", async () => {
+    h.create.mockResolvedValueOnce({ ok: true, data: { page_id: "db", database_revision: 0 } });
+    h.update.mockResolvedValueOnce({ ok: false, message: "The schema is invalid." });
+    const result = await executeTool("create_page_database", {
+      title: "Stock", icon: null, parent_page_id: null, title_column: null,
+      properties: [{ name: "Qty", type: "number", options: null }], rows: null,
+    }, ctx);
+    expect(result).toMatchObject({ success: false });
+    expect(JSON.stringify(result)).toContain("update_page_database on that page");
+  });
+});
+
 describe("an open empty database (MIN-738)", () => {
   it("steers a database request on the open page to that page, not a new one", () => {
     const block = buildPageContextBlock({ projectId: "project", pageId: "database" });
