@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 10,
-  "sourceRevision": 10,
+  "revision": 11,
+  "sourceRevision": 11,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-06",
   "compatibility": {
@@ -42,9 +42,9 @@
     ]
   },
   "review": {
-    "revision": 10,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "revision": 11,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-924: which routine runs notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
+    "language": "agent:/root/min747 (fr translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (fr manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-06"
   },
   "related": [
@@ -63,7 +63,7 @@
       "src": "/documentation/fr/work-inbox.png",
       "alt": "Boîte de réception avec des mentions, attributions et commentaires de démonstration, lus et non lus.",
       "caption": "Ces exemples d’activité affichent l’auteur, le ticket et l’état de lecture. L’onglet Toutes regroupe les notifications lues et non lues.",
-      "revision": 10,
+      "revision": 11,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -88,6 +88,8 @@ Ouvrez la boîte de réception avec son icône dans la barre supérieure, depuis
 Elle s’ouvre sur le filtre Non lues. Toutes affiche aussi les notifications lues, et Mentions ne garde que les mentions dans les commentaires et les pages. Sélectionnez un élément pour ouvrir le ticket, la page ou la pull request correspondant. Ouvrir une notification la marque comme lue. Sa ligne propose aussi Marquer comme lue ou Marquer comme non lue, et Tout marquer comme lu, dans l’en-tête de la boîte de réception, efface tous les repères non lus. Repasser en non lu rétablit ce repère d’activité ; cela n’annule pas le changement du ticket ou de la page. Une notification pointe vers du travail accessible ; elle ne remplace pas son contenu actuel.
 
 Numo peut aussi vous laisser un message : un titre court et une ou deux phrases sur un point qui demande votre attention, écrits par l’une de vos routines ou dans une conversation où vous lui avez demandé de vous prévenir plus tard. Il porte l’icône de Numo, et le sélectionner ouvre le ticket, l’objectif, la page, la pull request ou la routine dont il parle, ou le projet s’il n’en nomme aucun. Numo n’écrit ces messages qu’à vous, jamais aux autres membres, et n’envoie pas deux fois le même message sur le même élément dans la même journée.
+
+Une routine vous prévient d’elle-même lorsqu’une occurrence échoue, épuise son budget, ne peut pas démarrer ou vous pose une question. Une occurrence qui se termine normalement ne vous parvient que sous forme de message de Numo. Voir [Routines](/docs/scheduled-routines#runs).
 
 Supprimer, sur une ligne, retire cette notification après confirmation, et Supprimer les lues, dans l’en-tête, retire toutes les notifications lues après confirmation. Ces deux suppressions sont définitives ; les notifications non lues restent, et le ticket, la page ou la pull request visés ne sont pas touchés.
 

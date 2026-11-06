@@ -365,8 +365,8 @@ export function buildSharedRules(
   record) in the inbox of the user you work for, with a push; in a routine, that is its owner.
   Never anyone else. Send one only when it changes what the user will do: inside a routine,
   something it found that needs them; in a conversation, only when they asked to be told
-  later. Never a report of what you did, a "done", or a copy of your reply. Most routine
-  occurrences send no note at all.
+  later. Never a report of what you did, a "done", or a copy of your reply. A routine
+  occurrence that ends normally notifies nobody unless you send a note, and most send none.
 - **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
   issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them

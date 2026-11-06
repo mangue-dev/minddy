@@ -166,7 +166,12 @@ export interface BeginNumoTurnInput {
 
 export type ExecuteNumoTurnResult =
   | { status: "not_claimed" }
-  | { status: NumoTurnStatus; turn: NumoTurn };
+  | {
+    status: NumoTurnStatus;
+    turn: NumoTurn;
+    /** The turn ended `completed` because the usage budget ran out. */
+    usageExhausted?: true;
+  };
 
 class NumoClaimLostError extends Error {
   constructor() {
@@ -504,7 +509,8 @@ async function buildExecutionInput(input: {
     systemPrompt += `\n## Routine occurrence
 - This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
 - Complete the routine instruction as a Numo conversation, using Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work. You cannot change a repository; when the instruction asks for code work, say so in the occurrence result.
-- If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.`;
+- If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.
+- Nobody is notified when this occurrence ends normally. Call notify_me only when the result asks the owner to act or changes one of their decisions: one or two sentences, linked to the record concerned. When there is nothing worth reading, notify nobody. A failure, a stop, an exhausted budget or an ask_user question already notifies the owner, so never send a note for those.`;
   }
 
   const { data, error } = await service
@@ -1234,7 +1240,7 @@ async function executeClaimedNumoTurn(input: {
       emitter.emit("done", { status: "completed" });
       await emitter.flush();
       emitter.close();
-      return { status: turn.status, turn };
+      return { status: turn.status, turn, usageExhausted: true };
     }
     if (error instanceof AmbiguousToolExecutionError) {
       emitter.emit("error", {
@@ -1383,7 +1389,9 @@ export async function executeNumoTurn(input: {
     });
     if (result.status !== "not_claimed") {
       await projectNumoSurfaceTurn(service, result.turn);
-      notifyRoutineOfNumoTurn(result.turn);
+      notifyRoutineOfNumoTurn(result.turn, {
+        usageExhausted: result.usageExhausted === true,
+      });
     }
     return result;
   } catch (error) {

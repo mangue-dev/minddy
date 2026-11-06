@@ -6,6 +6,7 @@ import { decodeIssue } from "@/lib/server/issue-store";
 import { decodePage } from "@/lib/server/page-content";
 import { getProjectAccess, hasProjectAccess } from "@/lib/server/project-access";
 import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
+import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
 import { assertPropertyConditions, evaluateRoutineConditions, parseRoutineTrigger, RoutineTriggerError, type ConditionContext, type RoutineTrigger } from "@/lib/routine-triggers";
 import type { Routine } from "@/lib/server/routines";
 
@@ -148,6 +149,11 @@ async function evaluateArming(arming: Arming, routine: Routine, budget: Admissio
     // model/tool execution must not hold this event's lease or delay schedules.
   } catch (error) {
     const code = (error as { code?: string }).code === "usage_budget_exceeded" || (error as Error).message === "usage_budget_exceeded" ? "quota" : "launchFailed";
+    // The routine reads as failing, and its owner hears it once: the
+    // arming retries with backoff and must not notify on every attempt.
+    const errorCode = code === "quota" ? "quota" : "launchFailed";
+    const stamped = await service.from("agent_routines").update({ last_error: errorCode }).eq("id", routine.id).is("last_error", null).select("id");
+    if (!stamped.error && (stamped.data?.length ?? 0) > 0) notifyRoutineLaunchFailure(routine);
     const result = await service.from("routine_armings").update({ state: claimed.attempts >= 8 ? "failed" : "reserved", error_code: code, lease_until: null, retry_at: new Date(Date.now() + Math.min(3600, 60 * 2 ** claimed.attempts) * 1000).toISOString() }).eq("id", claimed.id).eq("lease_token", claimed.lease_token).eq("state", "reserved");
     check(result.error);
   }
