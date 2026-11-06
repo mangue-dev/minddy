@@ -45,7 +45,7 @@ MCP for Numo like any other, where they can be edited, tested, disabled or
 removed. An unattended routine cannot create connections: this setup only runs
 in a conversation with you.
 
-Choose **Sign in** to add the service and open the provider's OAuth flow. In the desktop app, that flow opens in the system browser and returns to the app when it completes. An
+Choose **Sign in** to add the service and open the provider's OAuth flow. In the desktop app, only the provider's sign-in page opens in the system browser, which needs no minddy session; the app finishes the connection when the provider sends the user back. An
 installed OAuth connection that is not authenticated shows an orange triangle;
 hover or focus it to see its status, then use **Reconnect** to try again. Minddy
 supports discovery, dynamic registration, PKCE, and refresh tokens. Providers that

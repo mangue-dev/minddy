@@ -56,6 +56,21 @@ export class McpOAuthAppRequiredError extends Error {
  * consent prompt once the user has already granted the app. */
 const GOOGLE_AUTHORIZATION_HOST = "accounts.google.com";
 
+/**
+ * Marks the state of a flow the desktop app started (MIN-912). The provider
+ * sends the browser to the callback, where no minddy session may exist: the
+ * marker tells the callback to hand the result back to the app, which redeems
+ * it with the session that started the flow. It only steers a redirect; the
+ * exchange still requires that session.
+ */
+const DESKTOP_STATE_PREFIX = "d";
+const STATE_PATTERN = /^d?[a-f0-9]{64}$/;
+
+/** Whether this OAuth state belongs to a flow started in the desktop app. */
+export function isDesktopMcpOAuthState(state: string): boolean {
+  return STATE_PATTERN.test(state) && state.startsWith(DESKTOP_STATE_PREFIX);
+}
+
 export const mcpOAuthCallback = () =>
   `${oauthAppOrigin()}/api/account/mcp-connections/oauth/callback`;
 
@@ -212,9 +227,11 @@ export async function openMcpOAuth(connection: McpConnectionRow) {
 
 export async function startMcpOAuth(
   connection: McpConnectionRow,
+  { desktop = false }: { desktop?: boolean } = {},
 ): Promise<string> {
   if (connection.auth_mode !== "oauth") throw new Error("OAuth is not enabled");
-  const state = randomBytes(32).toString("hex");
+  const state =
+    (desktop ? DESKTOP_STATE_PREFIX : "") + randomBytes(32).toString("hex");
   const data = readData(connection.oauth_encrypted, connection.encryption_version);
   delete data.tokens;
   delete data.verifier;
@@ -353,7 +370,7 @@ export async function completeMcpOAuth(
   code: string,
   iss?: string,
 ): Promise<void> {
-  if (!/^[a-f0-9]{64}$/.test(state) || !code || code.length > 4096)
+  if (!STATE_PATTERN.test(state) || !code || code.length > 4096)
     throw new Error("Invalid OAuth callback");
   const service = getServiceClient();
   // Atomic consumption binds the transaction to this user and makes replay impossible.

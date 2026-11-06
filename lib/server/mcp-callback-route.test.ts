@@ -1,12 +1,13 @@
 import { NextRequest, type NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { decodeMcpOAuthReturn } from "@/lib/mcp-authorization";
 
 /**
- * The OAuth callback ends the browser detour. When the flow was launched from
- * the desktop app (`mcp_desktop_return`, planted by the authorize route), the
- * browser goes through `/desktop/return` so the app reopens on the settings
- * page with the outcome — success or failure. The web keeps the plain
- * settings redirect; either way the outcome is visible.
+ * The OAuth callback ends the browser detour. A web flow is redeemed here,
+ * with the browser's session. A flow started in the desktop app (its state
+ * carries the desktop marker) is not: the browser may have no minddy session,
+ * so the provider's answer goes back through `/desktop/return` and the app
+ * redeems it with its own session (MIN-912).
  */
 
 const mocks = vi.hoisted(() => ({
@@ -28,6 +29,7 @@ vi.mock("@/lib/server/app-origin", () => ({
 
 vi.mock("@/lib/server/mcp-oauth", () => ({
   completeMcpOAuth: mocks.complete,
+  isDesktopMcpOAuthState: (state: string) => /^d[a-f0-9]{64}$/.test(state),
 }));
 
 const { GET } = await import(
@@ -37,13 +39,20 @@ const { GET } = await import(
 const ORIGIN = "https://www.minddy.app";
 const SETTINGS = "/settings?tab=agent";
 
-function get(cookie?: string): Promise<Response> {
+const DESKTOP_STATE = `d${"a".repeat(64)}`;
+
+function get(query = "code=abc&state=def"): Promise<Response> {
   return GET(
     new NextRequest(
-      `${ORIGIN}/api/account/mcp-connections/oauth/callback?code=abc&state=def`,
-      { headers: cookie ? { cookie } : {} },
+      `${ORIGIN}/api/account/mcp-connections/oauth/callback?${query}`,
     ),
   ) as unknown as Promise<Response>;
+}
+
+function appReturn(response: Response) {
+  const location = new URL(response.headers.get("location")!);
+  expect(location.origin + location.pathname).toBe(`${ORIGIN}/desktop/return`);
+  return new URL(location.searchParams.get("next")!, ORIGIN);
 }
 
 beforeEach(() => {
@@ -61,24 +70,35 @@ describe("MCP OAuth callback redirect", () => {
     expect(mocks.complete).toHaveBeenCalledWith("alice", "def", "abc", undefined);
   });
 
-  it("bounces the desktop handoff back to the app and clears its marker", async () => {
-    const response = await get("mcp_desktop_return=1");
-    const location = new URL(response.headers.get("location")!);
-    expect(location.origin + location.pathname).toBe(
-      `${ORIGIN}/desktop/return`,
+  it("hands a desktop flow's answer back to the app without redeeming it", async () => {
+    mocks.userId = null;
+    const response = await get(
+      `code=4%2F0A%2Bb&state=${DESKTOP_STATE}&iss=https%3A%2F%2Fissuer.example`,
     );
-    expect(location.searchParams.get("next")).toBe(`${SETTINGS}&mcp=connected`);
-    expect(response.headers.get("set-cookie")).toContain(
-      "mcp_desktop_return=;",
-    );
+    const next = appReturn(response);
+    expect(next.pathname).toBe("/settings");
+    expect(next.searchParams.get("tab")).toBe("agent");
+    expect(decodeMcpOAuthReturn(next.searchParams.get("mcp_oauth")!)).toEqual({
+      state: DESKTOP_STATE,
+      code: "4/0A+b",
+      iss: "https://issuer.example",
+    });
+    expect(mocks.complete).not.toHaveBeenCalled();
   });
 
-  it("bounces back even when the provider round trip failed", async () => {
+  it("returns a refused desktop consent to the app as a failure", async () => {
+    const next = appReturn(await get(`error=access_denied&state=${DESKTOP_STATE}`));
+    expect(next.searchParams.get("mcp")).toBe("error");
+    expect(next.searchParams.has("mcp_oauth")).toBe(false);
+    expect(mocks.complete).not.toHaveBeenCalled();
+  });
+
+  it("reports a failed web exchange on the settings page", async () => {
     mocks.complete.mockRejectedValue(new Error("exchange failed"));
-    const response = await get("mcp_desktop_return=1");
-    const location = new URL(response.headers.get("location")!);
-    expect(location.pathname).toBe("/desktop/return");
-    expect(location.searchParams.get("next")).toBe(`${SETTINGS}&mcp=error`);
+    const response = await get();
+    expect(response.headers.get("location")).toBe(
+      `${ORIGIN}${SETTINGS}&mcp=error`,
+    );
   });
 
   it("reports a canceled authorization without consuming the transaction", async () => {

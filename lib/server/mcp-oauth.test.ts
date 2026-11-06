@@ -7,6 +7,7 @@ import {
   startMcpOAuth,
   completeMcpOAuth,
   initialMcpOAuth,
+  isDesktopMcpOAuthState,
   openMcpOAuth,
 } from "./mcp-oauth";
 import { decryptMcpToken, encryptMcpToken } from "./mcp-credentials";
@@ -459,6 +460,19 @@ describe("generic MCP OAuth", () => {
     expect(
       state.requests.some((request) => request.url.endsWith("/token")),
     ).toBe(false);
+  });
+  it("marks a desktop flow in its state and redeems it only for its own account", async () => {
+    const web = new URL(await startMcpOAuth(connection)).searchParams.get("state")!;
+    expect(isDesktopMcpOAuthState(web)).toBe(false);
+    const desktop = new URL(
+      await startMcpOAuth(connection, { desktop: true }),
+    ).searchParams.get("state")!;
+    expect(isDesktopMcpOAuthState(desktop)).toBe(true);
+    expect(isDesktopMcpOAuthState(`d${"z".repeat(64)}`)).toBe(false);
+    // The app that redeems the code must hold the session that started it.
+    await expect(completeMcpOAuth("bob", desktop, "code")).rejects.toThrow();
+    await completeMcpOAuth("alice", desktop, "code");
+    expect(state.tables.user_mcp_oauth_attempts).toHaveLength(0);
   });
   it("rejects callback issuer mismatches and changed or deleted connections", async () => {
     let url = new URL(await startMcpOAuth(connection));

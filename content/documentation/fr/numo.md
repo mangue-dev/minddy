@@ -24,7 +24,7 @@
   "revision": 27,
   "sourceRevision": 27,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -77,9 +77,9 @@
   },
   "review": {
     "revision": 27,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "date": "2026-11-06"
   },
   "related": [
     "code-work",
@@ -327,7 +327,7 @@ Arrêter Numo termine son tour. Une action externe déjà envoyée peut encore a
 
 Dans les paramètres du compte, ouvrez **IA et Numo** et utilisez la carte **MCP pour Numo**. Les liens vers l’ancien onglet MCP pour Numo y mènent. Choisissez un service du catalogue ou ajoutez un serveur MCP HTTPS public. Le catalogue et la recherche du registre ne contournent pas l’inscription ou l’approbation du fournisseur. Numo peut préparer une connexion dans une conversation interactive ; une routine autonome ne peut pas en créer.
 
-La connexion se fait dans un assistant en plusieurs étapes. Un serveur personnalisé ou issu du registre demande d’abord son nom et son adresse HTTPS ; un service du catalogue s’ouvre directement sur l’étape de connexion. Un service du catalogue, une connexion enregistrée ou une entrée du registre qui déclare un jeton connaît déjà sa méthode de connexion : l’étape l’affiche, et **Utiliser une autre méthode** permet d’en changer. Sinon, choisissez **Se connecter avec OAuth**, **Jeton Bearer** ou **Sans authentification**. Les **Paramètres avancés** contiennent le transport (Streamable HTTP par défaut, SSE historique pris en charge) et les en-têtes chiffrés. Placez les secrets dans les identifiants ou en-têtes, jamais l’URL. Les commandes locales et réseaux privés sont exclus. Pour une application OAuth existante, enregistrez l’URL de rappel affichée et saisissez son identifiant et secret. Après l’enregistrement, la dernière étape attend la connexion, puis teste le serveur et indique combien d’outils Numo a trouvés. Sur desktop, OAuth ouvre le navigateur système puis revient à l’application.
+La connexion se fait dans un assistant en plusieurs étapes. Un serveur personnalisé ou issu du registre demande d’abord son nom et son adresse HTTPS ; un service du catalogue s’ouvre directement sur l’étape de connexion. Un service du catalogue, une connexion enregistrée ou une entrée du registre qui déclare un jeton connaît déjà sa méthode de connexion : l’étape l’affiche, et **Utiliser une autre méthode** permet d’en changer. Sinon, choisissez **Se connecter avec OAuth**, **Jeton Bearer** ou **Sans authentification**. Les **Paramètres avancés** contiennent le transport (Streamable HTTP par défaut, SSE historique pris en charge) et les en-têtes chiffrés. Placez les secrets dans les identifiants ou en-têtes, jamais l’URL. Les commandes locales et réseaux privés sont exclus. Pour une application OAuth existante, enregistrez l’URL de rappel affichée et saisissez son identifiant et secret. Après l’enregistrement, la dernière étape attend la connexion, puis teste le serveur et indique combien d’outils Numo a trouvés. Sur desktop, seule la page de connexion du fournisseur s’ouvre dans le navigateur système : inutile d’y être connecté à minddy, l’application finalise la connexion à votre retour.
 
 ![Réglages MCP personnels, liste vide et commande Ajouter un autre serveur MCP.](/documentation/fr/numo-mcp-connections-workflow.png)
 

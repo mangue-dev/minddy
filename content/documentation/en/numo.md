@@ -24,7 +24,7 @@
   "revision": 27,
   "sourceRevision": 27,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -77,9 +77,9 @@
   },
   "review": {
     "revision": 27,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "date": "2026-11-06"
   },
   "related": [
     "code-work",
@@ -327,7 +327,7 @@ Stopping Numo ends its turn. An external action already sent may still complete.
 
 In account settings, open **AI & Numo** and use the **MCP for Numo** card. Links to the former MCP for Numo tab open there. Choose a catalog service or add another public HTTPS MCP server. The catalog and registry search do not bypass provider registration or approval requirements. Numo can prepare a connection in an interactive conversation, but an unattended routine cannot create one.
 
-Connecting runs as a wizard. A custom or registry server first asks for its name and HTTPS address; a catalog service opens on the sign-in step. A catalog service, a saved connection or a registry entry that declares a token already knows its sign-in method: the step shows it, and **Use another method** changes it. Otherwise, choose **Sign in with OAuth**, **Bearer token** or **No authentication**. **Advanced settings** hold the transport (Streamable HTTP by default, legacy SSE supported) and encrypted custom headers. Put secrets in credentials or headers, never the URL. Local commands and private-network endpoints are unsupported. For an existing OAuth app, register the displayed callback URL and enter its client ID and secret. After saving, the last step waits for sign-in, then tests the connection and shows how many tools Numo found. In desktop, OAuth opens the system browser and returns to the app.
+Connecting runs as a wizard. A custom or registry server first asks for its name and HTTPS address; a catalog service opens on the sign-in step. A catalog service, a saved connection or a registry entry that declares a token already knows its sign-in method: the step shows it, and **Use another method** changes it. Otherwise, choose **Sign in with OAuth**, **Bearer token** or **No authentication**. **Advanced settings** hold the transport (Streamable HTTP by default, legacy SSE supported) and encrypted custom headers. Put secrets in credentials or headers, never the URL. Local commands and private-network endpoints are unsupported. For an existing OAuth app, register the displayed callback URL and enter its client ID and secret. After saving, the last step waits for sign-in, then tests the connection and shows how many tools Numo found. In the desktop app, only the provider's sign-in page opens in the system browser: you don't need to be signed in to minddy there, and the app finishes the connection when you return.
 
 ![Personal MCP settings, empty connection list and Add another MCP server control.](/documentation/en/numo-mcp-connections-workflow.png)
 

@@ -33,7 +33,11 @@ import {
 } from "@/lib/use-mcp-registry-search";
 import {mcpConnectionNeedsAuth} from "@/lib/mcp-connection";
 import type {McpConnection} from "@/lib/mcp-connection";
-import {MCP_AUTHORIZATION_PARAM, MCP_DESKTOP_PARAM, prepareMcpAuthorization} from "@/lib/mcp-authorization";
+import {
+  decodeMcpOAuthReturn,
+  MCP_OAUTH_RETURN_PARAM,
+  prepareMcpAuthorization,
+} from "@/lib/mcp-authorization";
 import {getDesktopBridge} from "@/lib/desktop/bridge";
 import {useAuth} from "@/lib/auth-context";
 import {MCP_CONNECTIONS_QUERY_KEY as queryKey, useMcpConnections} from "@/lib/use-mcp-connections";
@@ -132,9 +136,9 @@ export function AccountMcpClients() {
   // leaves out, found by the same search box.
   const registry = useMcpRegistrySearch(search);
   const [busy, setBusy] = useState(false);
-  // The desktop handoff lands here to start OAuth in this browser session;
-  // discovery and registration can take a few seconds, so the wait is shown.
-  const [autoStarting, setAutoStarting] = useState(false);
+  // The provider's answer came back to the desktop app (MIN-912); the token
+  // exchange can take a few seconds, so the wait is shown.
+  const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const errorText = (err: unknown) => {
@@ -181,46 +185,26 @@ export function AccountMcpClients() {
 
   useEffect(() => {
     const current = new URL(window.location.href);
-    const connectionId = current.searchParams.get(MCP_AUTHORIZATION_PARAM);
-    // A desktop handoff opens this page in the system browser; the marker
-    // tells the server to bounce the browser back to the app at the end.
-    const desktopHandoff =
-      current.searchParams.get(MCP_DESKTOP_PARAM) === "1";
-    if (!connectionId || !data || getDesktopBridge()) return;
-    current.searchParams.delete(MCP_AUTHORIZATION_PARAM);
-    current.searchParams.delete(MCP_DESKTOP_PARAM);
+    const raw = current.searchParams.get(MCP_OAUTH_RETURN_PARAM);
+    if (!raw) return;
+    // The answer carries a single-use code: it leaves the address bar before
+    // anything else reads it.
+    current.searchParams.delete(MCP_OAUTH_RETURN_PARAM);
     window.history.replaceState(window.history.state, "", current);
-    // Only start for a connection owned by the signed-in browser account.
-    if (!data.connections.some((connection) => connection.id === connectionId)) {
-      toast.error(t("errorOAuth"));
+    const answer = decodeMcpOAuthReturn(raw);
+    if (!answer) {
+      toast.error(t("oauthFailed"));
       return;
     }
-    setAutoStarting(true);
-    setBusy(true);
-    void request(
-      `${endpoint}/${connectionId}/authorize`,
-      "POST",
-      desktopHandoff ? { desktop: true } : undefined,
-    )
-      .then((result) => {
-        if (!result?.url) throw new Error("oauth");
-        window.location.replace(result.url);
-      })
-      .catch((err) => {
-        const code = err instanceof Error ? err.message : "oauth";
-        toast.error(
-          code === "oauth_client_rejected"
-            ? t("errorOAuthClientRejected")
-            : code === "oauth_app_required"
-              ? t("errorOAuthAppRequired")
-              : t("errorOAuth"),
-        );
-      })
+    setFinishing(true);
+    void request(`${endpoint}/oauth/complete`, "POST", answer)
+      .then(() => toast.success(t("oauthConnected")))
+      .catch(() => toast.error(t("oauthFailed")))
       .finally(() => {
-        setBusy(false);
-        setAutoStarting(false);
+        setFinishing(false);
+        void queryClient.invalidateQueries({ queryKey });
       });
-  }, [data, t]);
+  }, [queryClient, t]);
 
   const closeDialog = () => {
     setEditing(null);
@@ -315,10 +299,11 @@ export function AccountMcpClients() {
     setError(null);
     setSignInError(null);
     try {
-      await tab.authorize(connectionId, async () => {
+      await tab.authorize(async ({ desktop }) => {
         const result = await request(
           `${endpoint}/${connectionId}/authorize`,
           "POST",
+          desktop ? { desktop: true } : undefined,
         );
         if (!result?.url) throw new Error("oauth");
         return result.url;
@@ -853,9 +838,9 @@ export function AccountMcpClients() {
   const content = (
     <section className="space-y-5" aria-label={t("title")}>
       <p className="text-sm text-muted-foreground">{t("routines")}</p>
-      {autoStarting && (
+      {finishing && (
         <p className="text-sm text-muted-foreground" role="status">
-          {t("openingSignIn")}
+          {t("finishingSignIn")}
         </p>
       )}
       {isPending && (

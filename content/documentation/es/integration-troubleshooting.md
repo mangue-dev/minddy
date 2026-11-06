@@ -17,7 +17,7 @@
   "revision": 7,
   "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -44,9 +44,9 @@
   },
   "review": {
     "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review, MIN-794: source audit of the article against the v0.20.0..0.30.0 delta of its evidence files, no correction needed; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "fact": "agent:claude-code (MIN-912: desktop MCP sign-in sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review, MIN-794: source audit of the article against the v0.20.0..0.30.0 delta of its evidence files, no correction needed; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "date": "2026-11-06"
   },
   "related": [
     "api-and-webhooks",
@@ -70,7 +70,7 @@ minddy MCP conecta un asistente externo con minddy; las conexiones MCP personale
 
 ## Reconectar con el alcance correcto {#oauth}
 
-Si el proveedor exige credenciales de una aplicación cliente existente, registra exactamente el callback mostrado. En escritorio, OAuth abre el navegador del sistema y vuelve a la aplicación. Las conexiones MCP personales de Numo necesitan HTTPS público; no se admiten comandos locales ni servidores en redes privadas. Para un asistente externo conectado a minddy MCP, consulta [el acceso de red a tu instancia](/docs/minddy-mcp#network-access). Coloca bearer tokens y secretos en autenticación o encabezados, no en los parámetros de URL. Cambiar la URL borra las credenciales y los encabezados guardados. Desactivar o eliminar una conexión impide llamadas nuevas, pero una petición ya enviada puede terminar. Las rutinas usan las conexiones del propietario actual; un cambio de propietario no reutiliza el acceso personal anterior.
+Si el proveedor exige credenciales de una aplicación cliente existente, registra exactamente el callback mostrado. En escritorio, el inicio de sesión MCP solo abre la página del proveedor en el navegador del sistema y la aplicación lo completa: el navegador no necesita una sesión de minddy. Las conexiones MCP personales de Numo necesitan HTTPS público; no se admiten comandos locales ni servidores en redes privadas. Para un asistente externo conectado a minddy MCP, consulta [el acceso de red a tu instancia](/docs/minddy-mcp#network-access). Coloca bearer tokens y secretos en autenticación o encabezados, no en los parámetros de URL. Cambiar la URL borra las credenciales y los encabezados guardados. Desactivar o eliminar una conexión impide llamadas nuevas, pero una petición ya enviada puede terminar. Las rutinas usan las conexiones del propietario actual; un cambio de propietario no reutiliza el acceso personal anterior.
 
 ## Inspeccionar antes de repetir {#webhooks}
 

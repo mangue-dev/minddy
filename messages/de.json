@@ -6659,7 +6659,7 @@
     "reconnect": "Neu verbinden",
     "oauthConnected": "Konto verbunden",
     "oauthFailed": "Die Verbindung wurde nicht abgeschlossen. Versuche, dich erneut anzumelden.",
-    "openingSignIn": "Anmeldeseite wird geöffnet…",
+    "finishingSignIn": "Anmeldung wird abgeschlossen…",
     "authentication": "Authentifizierung",
     "oauth": "Mit OAuth anmelden",
     "bearer": "Bearer-Token",

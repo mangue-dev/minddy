@@ -4,6 +4,7 @@ import { GET, POST } from "@/app/api/account/mcp-connections/route";
 import { PATCH, DELETE } from "@/app/api/account/mcp-connections/[id]/route";
 import { POST as probe } from "@/app/api/account/mcp-connections/[id]/test/route";
 import { POST as authorize } from "@/app/api/account/mcp-connections/[id]/authorize/route";
+import { POST as complete } from "@/app/api/account/mcp-connections/oauth/complete/route";
 import { executeTool, type ToolContext } from "./assistant/execute-tool";
 
 const mocks = vi.hoisted(() => ({
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
   probe: vi.fn(),
   authorize: vi.fn(),
+  complete: vi.fn(),
   ClientNotApproved: class extends Error {},
   AppRequired: class extends Error {},
 }));
@@ -46,6 +48,7 @@ vi.mock("./mcp-oauth", () => ({
   mcpOAuthCallback: () => "https://minddy.test/callback",
   initialMcpOAuth: () => "encrypted-oauth",
   startMcpOAuth: mocks.authorize,
+  completeMcpOAuth: mocks.complete,
   McpClientNotApprovedError: mocks.ClientNotApproved,
   McpOAuthAppRequiredError: mocks.AppRequired,
 }));
@@ -114,6 +117,7 @@ beforeEach(() => {
   mocks.authorize
     .mockReset()
     .mockResolvedValue("https://auth.example.com/authorize");
+  mocks.complete.mockReset().mockResolvedValue(undefined);
 });
 const context = { params: Promise.resolve({ id: ID }) };
 const request = (method: string, body?: unknown) =>
@@ -185,12 +189,30 @@ describe("MCP account routes and assistant dispatch", () => {
     expect(mocks.probe).not.toHaveBeenCalled();
     expect(mocks.authorize).not.toHaveBeenCalled();
   });
-  it("marks a desktop-launched flow with a short-lived return cookie", async () => {
-    const response = await authorize(request("POST", { desktop: true }), context);
+  it("starts a desktop-marked flow only when the app asks for one", async () => {
+    await authorize(request("POST", { desktop: true }), context);
+    await authorize(request("POST"), context);
+    expect(mocks.authorize.mock.calls.map((call) => call[1])).toEqual([
+      { desktop: true },
+      { desktop: false },
+    ]);
+  });
+  it("redeems a desktop sign-in answer for the calling account only", async () => {
+    const answer = { state: "d".padEnd(65, "a"), code: "code", iss: "https://issuer.example" };
+    const response = await complete(request("POST", answer));
     expect(response.status).toBe(200);
-    expect(response.headers.get("set-cookie")).toContain(
-      "mcp_desktop_return=1",
+    expect(mocks.complete).toHaveBeenCalledWith(
+      "alice",
+      answer.state,
+      "code",
+      "https://issuer.example",
     );
+    mocks.complete.mockRejectedValueOnce(new Error("foreign attempt"));
+    expect((await complete(request("POST", answer))).status).toBe(400);
+    expect((await complete(request("POST", { state: 1 }))).status).toBe(400);
+    mocks.authenticated = false;
+    expect((await complete(request("POST", answer))).status).toBe(401);
+    expect(mocks.complete).toHaveBeenCalledTimes(2);
   });
   it("names the reason an OAuth flow cannot start", async () => {
     const codeFor = async (error: Error) => {
@@ -204,11 +226,6 @@ describe("MCP account routes and assistant dispatch", () => {
       "oauth_client_rejected",
     );
     expect(await codeFor(new Error("discovery"))).toBe("oauth");
-  });
-  it("leaves the plain web flow without the desktop return cookie", async () => {
-    const response = await authorize(request("POST"), context);
-    expect(response.status).toBe(200);
-    expect(response.headers.get("set-cookie")).toBeNull();
   });
   it("uses optimistic endpoint matching and clears pending OAuth when editing", async () => {
     await PATCH(request("PATCH", { name: "Renamed" }), context);

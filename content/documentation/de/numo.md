@@ -24,7 +24,7 @@
   "revision": 28,
   "sourceRevision": 27,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -77,9 +77,9 @@
   },
   "review": {
     "revision": 28,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "date": "2026-11-06"
   },
   "related": [
     "code-work",
@@ -327,7 +327,7 @@ Wenn du Numo stoppst, endet sein Turn. Eine bereits gesendete externe Aktion kan
 
 Öffne in den Kontoeinstellungen **KI & Numo** und verwende die Karte **MCP für Numo**. Links auf den früheren Tab MCP für Numo führen dorthin. Wähle einen Katalogdienst oder einen weiteren öffentlichen HTTPS-MCP-Server. Katalog und Registry-Suche umgehen keine Registrierungs- oder Freigabevorgaben des Anbieters. Numo kann im interaktiven Gespräch eine Verbindung vorbereiten; unbeaufsichtigte Routinen können keine erstellen.
 
-Die Verbindung läuft in einem Assistenten. Ein eigener oder im Verzeichnis gefundener Server fragt zuerst Name und HTTPS-Adresse ab; ein Katalogdienst öffnet direkt beim Anmeldeschritt. Ein Katalogdienst, eine gespeicherte Verbindung oder ein Verzeichniseintrag, der ein Token angibt, kennt seine Anmeldemethode bereits: Der Schritt zeigt sie an, und **Andere Methode verwenden** ändert sie. Andernfalls wählst du **Mit OAuth anmelden**, **Bearer-Token** oder **Keine Authentifizierung**. Unter **Erweiterte Einstellungen** liegen Transport (standardmäßig Streamable HTTP, älteres SSE wird unterstützt) und verschlüsselte Header. Geheimnisse gehören in Zugangsdaten oder Header, nie in die URL. Lokale Befehle und private Netzwerkziele sind ausgeschlossen. Bei einer bestehenden OAuth-App registrierst du die angezeigte Callback-URL und trägst Client-ID und Geheimnis ein. Nach dem Speichern wartet der letzte Schritt auf die Anmeldung, testet dann die Verbindung und zeigt, wie viele Tools Numo gefunden hat. Desktop-OAuth öffnet den Systembrowser und kehrt zur App zurück.
+Die Verbindung läuft in einem Assistenten. Ein eigener oder im Verzeichnis gefundener Server fragt zuerst Name und HTTPS-Adresse ab; ein Katalogdienst öffnet direkt beim Anmeldeschritt. Ein Katalogdienst, eine gespeicherte Verbindung oder ein Verzeichniseintrag, der ein Token angibt, kennt seine Anmeldemethode bereits: Der Schritt zeigt sie an, und **Andere Methode verwenden** ändert sie. Andernfalls wählst du **Mit OAuth anmelden**, **Bearer-Token** oder **Keine Authentifizierung**. Unter **Erweiterte Einstellungen** liegen Transport (standardmäßig Streamable HTTP, älteres SSE wird unterstützt) und verschlüsselte Header. Geheimnisse gehören in Zugangsdaten oder Header, nie in die URL. Lokale Befehle und private Netzwerkziele sind ausgeschlossen. Bei einer bestehenden OAuth-App registrierst du die angezeigte Callback-URL und trägst Client-ID und Geheimnis ein. Nach dem Speichern wartet der letzte Schritt auf die Anmeldung, testet dann die Verbindung und zeigt, wie viele Tools Numo gefunden hat. In der Desktop-App öffnet sich im Systembrowser nur die Anmeldeseite des Anbieters: Dort musst du nicht bei minddy angemeldet sein, und die App schließt die Verbindung ab, wenn du zurückkehrst.
 
 ![Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.](/documentation/de/numo-mcp-connections-workflow.png)
 
