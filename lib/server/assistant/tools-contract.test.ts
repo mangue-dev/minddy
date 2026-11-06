@@ -298,6 +298,26 @@ describe("Numo tool contracts", () => {
     );
   });
 
+  it("lets Numo notify only the user it works for, about a record of the project (MIN-914)", () => {
+    const notify = tool("notify_me");
+    const parameters = notify?.function.parameters;
+    expect(parameters?.required).toEqual(["title", "body"]);
+    // No recipient parameter: another member's Numo would notify them twice.
+    expect(Object.keys(parameters?.properties ?? {}).sort()).toEqual(["body", "link", "title"]);
+    const link = parameters?.properties.link as
+      | { properties: { type: { enum: string[] } } }
+      | undefined;
+    expect(link?.properties.type.enum).toEqual(
+      ["issue", "objective", "page", "pull_request", "routine"]);
+    expect(PROJECT_SCOPED_TOOLS.has("notify_me")).toBe(true);
+    const global = GLOBAL_ASSISTANT_TOOLS.find(
+      (candidate) => candidate.function.name === "notify_me",
+    );
+    expect(global?.function.parameters.required).toContain("project_id");
+    expect(tool("update_account_settings")?.function.parameters.properties)
+      .toHaveProperty("notif_numo");
+  });
+
   it("requires the get_issue revision when updating plan task indices", () => {
     const updatePlanTasks = tool("update_plan_tasks");
     expect(updatePlanTasks?.function.parameters.required).toContain(

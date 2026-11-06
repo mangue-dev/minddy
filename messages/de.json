@@ -1776,7 +1776,8 @@
     "somePageFallback": "Unbenannte Seite",
     "instanceConfigTitle": "Variablen der Instanz",
     "linePageComment": "{actor} hat diese Seite kommentiert",
-    "lineInstanceConfigChanged": "{actor} hat eine Variable der Instanz geändert"
+    "lineInstanceConfigChanged": "{actor} hat eine Variable der Instanz geändert",
+    "lineNumoMessage": "Numo hat dir eine Nachricht geschickt"
   },
   "NotificationSettings": {
     "title": "Posteingangsbenachrichtigungen",
@@ -1796,7 +1797,9 @@
     "feedbackLabel": "Feedback",
     "feedbackDesc": "Neues Feedback landet auf dem Board eines Projekts, zu dem du gehörst.",
     "pageLabel": "Seiten",
-    "pageDesc": "Jemand erwähnt dich auf einer Seite oder Numo aktualisiert eine Seite für dich."
+    "pageDesc": "Jemand erwähnt dich auf einer Seite oder Numo aktualisiert eine Seite für dich.",
+    "numoLabel": "Nachrichten von Numo",
+    "numoDesc": "Numo schreibt dir, wenn etwas deine Aufmerksamkeit braucht, aus einer Unterhaltung oder einer Routine."
   },
   "Push": {
     "devicesTitle": "Push-Benachrichtigungen",
@@ -4050,7 +4053,12 @@
     "setAccountPlanFailed": "Plan des Kontos konnte nicht aktualisiert werden",
     "loadingInstanceCosts": "Kosten der Instanz werden gelesen…",
     "instanceCostsLoaded": "Kosten der Instanz gelesen",
-    "loadInstanceCostsFailed": "Kosten der Instanz konnten nicht gelesen werden"
+    "loadInstanceCostsFailed": "Kosten der Instanz konnten nicht gelesen werden",
+    "sendingNumoMessage": "Nachricht wird gesendet…",
+    "numoMessageSent": "Nachricht in deinen Posteingang gesendet",
+    "numoMessageMuted": "Nachrichten von Numo sind deaktiviert",
+    "numoMessageDuplicate": "Nachricht heute schon gesendet",
+    "sendNumoMessageFailed": "Die Nachricht konnte nicht gesendet werden"
   },
   "PullRequests": {
     "descriptionMoreActions": "Beschreibungsaktionen",

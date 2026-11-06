@@ -42,6 +42,7 @@ const ALL_TYPES: readonly NotificationType[] = [
   "page_agent_edit",
   "page_comment",
   "instance_config_changed",
+  "numo_message",
 ];
 
 /** The table above should be COMPLETE: a type added to the product without its
@@ -69,7 +70,8 @@ const issueRow = (type: NotificationType, extra: Partial<NotificationRow> = {}) 
   }) as NotificationRow;
 
 describe("buildPushPayload", () => {
-  it.each(ALL_TYPES)("rend une phrase substituée en EN et en FR — %s", (type) => {
+  // A Numo note is pushed in its own words, not a sentence: tested below.
+  it.each(ALL_TYPES.filter((type) => type !== "numo_message"))("rend une phrase substituée en EN et en FR — %s", (type) => {
     const ctx = ctxWithIssue();
     for (const locale of ["en", "fr"] as const) {
       const payload = buildPushPayload(ctx, issueRow(type), locale);
@@ -89,6 +91,20 @@ describe("buildPushPayload", () => {
       body: en.Inbox.lineInstanceConfigChanged.replace("{actor}", "Alice"),
       url: "/admin?tab=instance",
     });
+  });
+
+  it("pushes a Numo note in its own words, and nothing when the note is unreadable", () => {
+    const ctx = ctxWithIssue();
+    ctx.numoNotes.set("note-1", { title: "Release blocked", body: "The check failed." });
+    const row = issueRow("numo_message", { numo_note_id: "note-1", actor_id: null,
+      via_assistant: true });
+    expect(buildPushPayload(ctx, row, "fr")).toMatchObject({
+      title: "Release blocked",
+      body: "The check failed.",
+      url: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
+      tag: "numo-note:note-1",
+    });
+    expect(buildPushPayload(ctx, { ...row, numo_note_id: "missing" }, "en")).toBeNull();
   });
 
   it("titre = référence + titre du ticket, destination = le board", () => {

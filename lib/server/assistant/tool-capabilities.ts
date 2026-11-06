@@ -86,6 +86,8 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   list_routine_runs: "read",
   read_routine_occurrence: "read",
   read_pull_request: "read",
+  // Writes only the requesting user's own inbox, about a project they read.
+  notify_me: "read",
 
   // Internal comments.
   add_comment: "comment",

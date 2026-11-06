@@ -424,7 +424,7 @@ describe("notification failure diagnostics", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const { service, inserted } = stubService({ insertThrow:
       new TypeError("private endpoint", { cause: { code: "ECONNRESET" } }) });
-    await expect(insertNotifications(service, [routineRow(ALICE)])).resolves.toBeUndefined();
+    await expect(insertNotifications(service, [routineRow(ALICE)])).resolves.toBe(0);
     expect(inserted).toHaveLength(1);
     expect(log).toHaveBeenCalledWith("[notifications] insert_failed", expect.objectContaining({
       kind: "transport", code: "ECONNRESET",

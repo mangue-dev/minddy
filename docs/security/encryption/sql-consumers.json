@@ -929,6 +929,19 @@
       "protectedRelations": [],
       "functionReferences": []
     },
+    "guard_numo_note_content()": {
+      "sha256": "c592437f65891714f4ea9ccbaeccec0e28a31fad12f4e9e3c0d2d9dff05875e0",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "project_content_encryption_scope"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "guard_numo_tool_message()": {
       "sha256": "319b93fa879a0c9211a1aa86b4d75fb7849992e17addac1c5763bc19338dde85",
       "securityDefiner": true,
@@ -2406,6 +2419,21 @@
         "require_encryption_read_committed"
       ]
     },
+    "delete_notification_numo_note()": {
+      "sha256": "8457606e9566423f4b68665bc6b35e4fbda8cca1bcd1562542b3041c12158f48",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "numo_notes"
+      ],
+      "protectedRelations": [
+        "numo_notes"
+      ],
+      "functionReferences": []
+    },
     "feedback_votes_maintain_count()": {
       "sha256": "3a5ae3a84cc040283825abe9ee6582a2509e3ceb07e8575d047cb6790098c1cc",
       "securityDefiner": true,
@@ -3158,6 +3186,21 @@
       "protectedRelations": [
         "conversations",
         "numo_assistant_turns"
+      ],
+      "functionReferences": []
+    },
+    "validate_notification_numo_note()": {
+      "sha256": "29e2d81ec595ede63f2bc4b38103467c525c7cc41142256a1aef967c01379913",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "numo_notes"
+      ],
+      "protectedRelations": [
+        "numo_notes"
       ],
       "functionReferences": []
     },
@@ -7568,6 +7611,10 @@
       "function": "issues_sync_objective_status()",
       "definition": "CREATE TRIGGER issues_sync_objective_status AFTER INSERT OR DELETE OR UPDATE ON issues FOR EACH ROW EXECUTE FUNCTION issues_sync_objective_status()"
     },
+    "numo_notes.numo_notes_guard_content": {
+      "function": "guard_numo_note_content()",
+      "definition": "CREATE TRIGGER numo_notes_guard_content BEFORE INSERT OR UPDATE ON numo_notes FOR EACH ROW EXECUTE FUNCTION guard_numo_note_content()"
+    },
     "page_files.page_file_metadata_guard": {
       "function": "guard_attachment_metadata()",
       "definition": "CREATE TRIGGER page_file_metadata_guard BEFORE INSERT OR UPDATE ON page_files FOR EACH ROW EXECUTE FUNCTION guard_attachment_metadata()"
@@ -7976,6 +8023,10 @@
       "function": "guard_github_comment_url_parent_scope()",
       "definition": "CREATE TRIGGER github_comment_url_parent_scope_guard BEFORE UPDATE OF project_id ON issues FOR EACH ROW EXECUTE FUNCTION guard_github_comment_url_parent_scope()"
     },
+    "notifications.notifications_delete_numo_note": {
+      "function": "delete_notification_numo_note()",
+      "definition": "CREATE TRIGGER notifications_delete_numo_note AFTER DELETE ON notifications FOR EACH ROW EXECUTE FUNCTION delete_notification_numo_note()"
+    },
     "numo_assistant_turns.numo_turn_outcome_guard": {
       "function": "guard_numo_turn_outcome()",
       "definition": "CREATE TRIGGER numo_turn_outcome_guard BEFORE INSERT OR UPDATE ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION guard_numo_turn_outcome()"
@@ -8139,6 +8190,10 @@
     "issue_encryption_scopes.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",
       "definition": "CREATE TRIGGER a_min591_marker_change BEFORE INSERT OR DELETE OR UPDATE ON issue_encryption_scopes FOR EACH ROW EXECUTE FUNCTION guard_encryption_marker_change()"
+    },
+    "notifications.notifications_validate_numo_note": {
+      "function": "validate_notification_numo_note()",
+      "definition": "CREATE TRIGGER notifications_validate_numo_note BEFORE INSERT OR UPDATE OF user_id, project_id, numo_note_id ON notifications FOR EACH ROW EXECUTE FUNCTION validate_notification_numo_note()"
     },
     "numo_tool_content_scope.a_min591_marker_change": {
       "function": "guard_encryption_marker_change()",

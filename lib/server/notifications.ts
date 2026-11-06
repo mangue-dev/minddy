@@ -42,6 +42,9 @@ export interface NotificationRow {
   /** The block referred to in this page, when the mention was made: the click
  then falls on the paragraph, not just on the document. */
   block_id?: string | null;
+  /** The note Numo wrote for a `numo_message` (MIN-914): its title and body,
+      sealed in `numo_notes`. */
+  numo_note_id?: string | null;
   comment_id?: string | null;
   actor_id: string | null;
   /** The action is taken by the MCP server: the actor displayed in the inbox is
@@ -393,8 +396,8 @@ export async function insertNotifications(
     /** Atomically retain one opening announcement per recipient and pull request. */
     deduplicatePullRequestOpened?: boolean;
   } = {}
-): Promise<void> {
-  if (rows.length === 0) return;
+): Promise<number> {
+  if (rows.length === 0) return 0;
 
   // Per-recipient preference filter (MIN-82): a category switched off in the
   // account settings drops the row here, at the single insertion point every
@@ -429,7 +432,7 @@ export async function insertNotifications(
     const category = categoryOfNotification(r);
     return !prefs || category === null || prefs[category];
   });
-  if (kept.length === 0) return;
+  if (kept.length === 0) return 0;
 
   // replaceUnread: the fresh notification displaces its unread predecessor for
   // the same recipient/target (agent runs — a long session must not stack one
@@ -501,7 +504,7 @@ export async function insertNotifications(
       ...failureDiagnostics(error),
       ...(status && status >= 400 && status <= 599 ? { status } : {}),
     });
-    return;
+    return 0;
   }
 
   // Web Push (MIN-183): the same lines go to system notification, on
@@ -524,6 +527,7 @@ export async function insertNotifications(
   if (inserted.length > 0) {
     pushNotifications(service, inserted, localeByUserId);
   }
+  return inserted.length;
 }
 
 /** The push pane of `insertNotifications`, isolated to read alone. Best-effort

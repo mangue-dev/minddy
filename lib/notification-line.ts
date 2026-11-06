@@ -57,6 +57,9 @@ export function notificationTitle(
 ): string {
   // An instance variable (MIN-847): no ticket behind it, so never “a ticket”.
   if (n.type === "instance_config_changed") return labels.instanceConfigTitle;
+  // A Numo note (MIN-914) carries its own title; its link only decides where
+  // the click leads.
+  if (n.type === "numo_message" && n.numo_note_title) return n.numo_note_title;
   if (n.objective_id) return n.objective_name ?? "";
   if (n.feedback_post_id) return n.feedback_title ?? "";
   // A routine (MIN-185): its title IS the line — it has no ticket

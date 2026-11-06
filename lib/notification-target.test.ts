@@ -62,6 +62,13 @@ describe("notificationTargetPath", () => {
     expect(notificationTargetPath({ project_id: null, issue_id: "iss" })).toBeNull();
     expect(notificationTargetPath({ project_id: P, issue_id: null })).toBeNull();
   });
+
+  it("opens the project for a Numo note without a link, and the link otherwise", () => {
+    expect(notificationTargetPath({ type: "numo_message", project_id: P, issue_id: null }))
+      .toBe(`/projects/${P.slice(0, 8)}`);
+    expect(notificationTargetPath({ type: "numo_message", project_id: P,
+      issue_id: null, page_id: "pg" })).toBe(`/projects/${P.slice(0, 8)}/pages/pg`);
+  });
 });
 
 describe("NOTIFICATION_LINE_KEYS", () => {

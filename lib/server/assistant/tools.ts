@@ -1065,6 +1065,40 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "notify_me",
+      description:
+        "Leave a note in the inbox of the user you work for (in a routine, its owner), with a push to their devices. Only that user receives it: never other members, who have their own Numo. Send a note only when it changes what the user will do — something found, blocked, due or decided that they would otherwise miss while away. Never send a summary of your work, a confirmation or a copy of your reply: in a conversation the user is reading you already, so notify only when they asked to be told later. At most 5 notes per turn; the same note to the same target is sent once a day. Write in the user's language. The result says `delivered: false` when the user turned these notes off or the note is a duplicate; do not retry then.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "What it is about, in a few words (120 characters at most). Plain text.",
+          },
+          body: {
+            type: "string",
+            description: "One or two plain sentences: what happened and what it means for the user (600 characters at most). No markdown.",
+          },
+          link: {
+            type: "object",
+            description: "The record the note is about, opened when the user clicks it. Omit it only when the note concerns the project as a whole.",
+            properties: {
+              type: {
+                type: "string",
+                enum: ["issue", "objective", "page", "pull_request", "routine"],
+              },
+              id: { type: "string", description: "The record's UUID in this project." },
+            },
+            required: ["type", "id"],
+          },
+        },
+        required: ["title", "body"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "add_objective_comment",
       description: "Add a comment (markdown) on an objective: objectives have their own comment thread, like issues. Use it for a note about the goal itself (where it stands, a decision, a scope change); a note about one issue goes on that issue. Read get_objective first, which returns the thread. Attach a file or link to the new comment with add_resource and the returned comment id.",
       parameters: {
@@ -1933,6 +1967,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "Inbox: notify on wiki-page activity — the user is mentioned in a page, someone comments on a page they wrote or on a thread they took part in, or the agent writes in one on their behalf.",
+          },
+          notif_numo: {
+            type: "boolean",
+            description:
+              "Inbox: receive the notes Numo writes for the user with notify_me, in conversations and routines.",
           },
           analytics_consent: {
             type: ["string", "null"],

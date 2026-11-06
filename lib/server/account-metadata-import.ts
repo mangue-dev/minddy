@@ -8,7 +8,7 @@ const BOOLEAN_KEYS = [
   "auto_assign_created", "auto_assign_on_start", "prompt_copy_auto_start", "smart_fill",
   "cycles_enabled", "cycle_auto_capture_started", "cycle_auto_capture_completed",
   "notif_assigned", "notif_mention", "notif_comment", "notif_agent", "notif_routine",
-  "notif_pull_request", "notif_feedback", "notif_page", "onboarding_started",
+  "notif_pull_request", "notif_feedback", "notif_page", "notif_numo", "onboarding_started",
   "onboarding_dismissed", "desktop_prompt_dismissed", "smart_fill_created", "smart_fill_triage",
   "smart_fill_reevaluate", "smart_fill_title",
   THEME_TRANSPARENCY_META_KEY,

@@ -240,7 +240,10 @@ export type NotificationType =
   | "page_agent_edit"
   /** Someone commented on a page I wrote, or a thread I participated in
  (MIN-282) — the exact counterpart of `comment` on a ticket. */
-  | "page_comment";
+  | "page_comment"
+  /** A note Numo wrote for the user it works for (MIN-914): its own title and
+      body, sealed in `numo_notes`, and an optional link to what it is about. */
+  | "numo_message";
 
 /** A notification enriched for the Inbox UI. */
 export interface MyNotification {
@@ -293,6 +296,10 @@ export interface MyNotification {
   via_automation: boolean;
   /** First characters of the comment that triggered a mention/comment row. */
   comment_excerpt: string | null;
+  /** The title and body of a `numo_message` note (MIN-914), decrypted for
+      its recipient. Null on every other type, or when the note is unreadable. */
+  numo_note_title: string | null;
+  numo_note_body: string | null;
 }
 
 /**

@@ -261,6 +261,10 @@ export default function InboxContent({
     notificationTitle(notification, labels);
 
   const sentenceOf = (notification: MyNotification): string => {
+    // A Numo note (MIN-914) says it in its own words.
+    if (notification.type === "numo_message" && notification.numo_note_body) {
+      return notification.numo_note_body;
+    }
     const sentence = t(
       notificationLineKey(notification.type, notification.from_numo),
       { actor: notificationActor(notification, labels) },

@@ -123,7 +123,10 @@ export function useDesktopNotifications(): void {
       bridge.showLocalNotification({
         id: n.id,
         title: notificationTitle(n, labels) || "minddy",
-        body: n.comment_excerpt ? `${sentence}: ${n.comment_excerpt}` : sentence,
+        // A Numo note (MIN-914) is shown in its own words.
+        body: n.type === "numo_message" && n.numo_note_body
+          ? n.numo_note_body
+          : n.comment_excerpt ? `${sentence}: ${n.comment_excerpt}` : sentence,
         target,
       });
       shown.current.add(n.id);
