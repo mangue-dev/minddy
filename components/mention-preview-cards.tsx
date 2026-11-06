@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useTranslations } from "next-intl";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { Book02Icon, DatabaseIcon, File02Icon, GitBranchIcon, Layers01Icon } from "@hugeicons/core-free-icons";
+import { Book02Icon, DatabaseIcon, File02Icon, Layers01Icon } from "@hugeicons/core-free-icons";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AppIcon } from "@/components/icon";
 import { OptionBadge } from "@/components/pages/database-select-cell";
@@ -19,7 +19,8 @@ import { ProjectOrb } from "@/components/project-orb";
 import { RelationChips } from "@/components/relation-chips";
 import { UserAvatar } from "@/components/user-avatar";
 import { LazyDocumentEditor } from "@/components/editor/document-editor-lazy";
-import { PULL_REQUEST_ICON, ROUTINE_ICON, SCRATCHPAD_ICON, CYCLE_ICON } from "@/components/feature-icons";
+import { PullRequestPreview } from "@/components/pull-requests/pr-hover-card";
+import { ROUTINE_ICON, SCRATCHPAD_ICON, CYCLE_ICON } from "@/components/feature-icons";
 import { McpServiceLogo } from "@/components/mcp-service-logo";
 import { ROUTINE_STATE_ICONS, ROUTINE_STATE_STYLES } from "@/components/routines/routine-detail-sections";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +38,11 @@ import type { IssueCardCategory, IssueCardObjective, Member, Project } from "@/l
  */
 
 /** The body of a card, for a preview already in hand. */
-export function MentionPreviewCard({ preview }: { preview: MentionPreview }) {
+export function MentionPreviewCard({ id, preview }: {
+  /** The mentioned target's id: a pull request reads its CI by it. */
+  id: string;
+  preview: MentionPreview;
+}) {
   switch (preview.type) {
     case "issue": return <IssuePreviewCard preview={preview} />;
     case "objective": return <ObjectivePreviewCard preview={preview} />;
@@ -47,7 +52,7 @@ export function MentionPreviewCard({ preview }: { preview: MentionPreview }) {
     case "routine": return <RoutinePreviewCard preview={preview} />;
     case "scratchpad": return <ScratchpadPreviewCard preview={preview} />;
     case "cycle": return <CyclePreviewCard preview={preview} />;
-    case "pull_request": return <PullRequestPreviewCard preview={preview} />;
+    case "pull_request": return <PullRequestPreviewCard id={id} preview={preview} />;
     case "mcp": return <McpPreviewCard preview={preview} />;
     case "skill": return <SkillPreviewCard preview={preview} />;
   }
@@ -68,22 +73,6 @@ function Head({ figure, title, aside, style, titleClassName }: {
       <span className="flex size-4 shrink-0 items-center justify-center">{figure}</span>
       <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", titleClassName)}>{title}</span>
       {aside}
-    </div>
-  );
-}
-
-/** Small grey facts under a head line, separated by dots. */
-function Facts({ children }: { children: ReactNode[] }) {
-  const items = children.filter(Boolean);
-  if (items.length === 0) return null;
-  return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
-      {items.map((item, index) => (
-        <span key={index} className="flex min-w-0 items-center gap-1.5">
-          {index > 0 && <span aria-hidden>·</span>}
-          {item}
-        </span>
-      ))}
     </div>
   );
 }
@@ -498,47 +487,10 @@ function CyclePreviewCard({ preview }: { preview: Extract<MentionPreview, { type
   );
 }
 
-function PullRequestPreviewCard({ preview }: { preview: Extract<MentionPreview, { type: "pull_request" }> }) {
-  const t = useTranslations("MentionPreview");
-  const relative = useRelativeTime();
-  const tone = {
-    open: "text-emerald-600 dark:text-emerald-500",
-    draft: "text-muted-foreground",
-    merged: "text-violet-700 dark:text-violet-400",
-    closed: "text-red-600 dark:text-red-400",
-  }[preview.state];
-  const when = preview.state === "merged" ? relative(preview.mergedAt) : relative(preview.openedAt);
-  return (
-    <div className="flex flex-col gap-2">
-      <Head
-        figure={<HugeiconsIcon icon={PULL_REQUEST_ICON} className={cn("size-4", tone)} aria-hidden />}
-        title={<><span className="font-mono text-muted-foreground">#{preview.number}</span> {preview.title ?? ""}</>}
-      />
-      <div className="pl-6">
-        <Facts>{[
-          <span key="state" className={cn("font-medium", tone)}>{t(`pr_${preview.state}`)}</span>,
-          <span key="repo" className="truncate">{preview.repository}</span>,
-          when ? <span key="when">{preview.state === "merged" ? t("merged", { when }) : t("opened", { when })}</span> : null,
-        ]}</Facts>
-      </div>
-      {(preview.headBranch || preview.author) && (
-        <div className="flex min-w-0 items-center gap-2 pl-6 text-xs text-muted-foreground">
-          {preview.author && (
-            <span className="flex min-w-0 items-center gap-1">
-              <UserAvatar url={preview.author.avatarUrl} seed={preview.author.login} className="size-4 shrink-0" />
-              <span className="truncate">{preview.author.login}</span>
-            </span>
-          )}
-          {preview.headBranch && (
-            <span className="flex min-w-0 items-center gap-1 font-mono text-[11px]">
-              <HugeiconsIcon icon={GitBranchIcon} className="size-3 shrink-0" aria-hidden />
-              <span className="truncate">{preview.headBranch}{preview.baseBranch ? ` → ${preview.baseBranch}` : ""}</span>
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
+/** The face every pull request preview shows (MIN-906), the issue chip's
+    card included: the mention's preview is already in hand. */
+function PullRequestPreviewCard({ id, preview }: { id: string; preview: Extract<MentionPreview, { type: "pull_request" }> }) {
+  return <PullRequestPreview prId={id} number={preview.number} state={preview.state} preview={preview} />;
 }
 
 /** How many tools a server exposes takes a live connection: asked only

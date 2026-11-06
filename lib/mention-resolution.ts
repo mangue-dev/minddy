@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { mentionTargetKey, type MentionLinkType, type MentionMeta } from "@/lib/mention-link";
 import { isObjectiveStatus, type ObjectiveStatus } from "@/lib/objective-validation";
+import { isPullRequestState, type PullRequestState } from "@/lib/mention-preview";
 
 /**
  * What the signed-in reader may see of a typed mention (MIN-734), resolved by
@@ -23,10 +24,14 @@ type Entry = {
   service?: string;
   /** A page's emoji and whether it is a database, for its glyph (MIN-879). */
   page?: { icon: string | null; database: boolean };
+  /** A pull request's state, for the color of its pill (MIN-906). */
+  prState?: PullRequestState;
   at: number;
 };
 
 const TTL_MS = 60_000;
+/** Types whose pill shows something only the resolution answers. */
+const SERVER_FIGURES: ReadonlySet<MentionLinkType> = new Set(["mcp", "page", "pull_request"]);
 const BATCH = 200;
 
 const cache = new Map<string, Entry>();
@@ -64,7 +69,7 @@ async function flush() {
         const { mentions } = (await response.json()) as {
           mentions: Array<{
             type: string; id: string; label: string | null;
-            status?: unknown; service?: unknown; icon?: unknown; database?: unknown;
+            status?: unknown; service?: unknown; icon?: unknown; database?: unknown; prState?: unknown;
           }>;
         };
         for (const [index, mention] of mentions.entries()) {
@@ -76,6 +81,7 @@ async function flush() {
             ...(typeof mention.database === "boolean"
               ? { page: { icon: typeof mention.icon === "string" ? mention.icon : null, database: mention.database } }
               : {}),
+            ...(isPullRequestState(mention.prState) ? { prState: mention.prState } : {}),
             at: now,
           });
         }
@@ -132,13 +138,14 @@ export function useResolvedMentionLabel(
  * What the server returned with a resolved mention besides its label, read
  * from the same cache and in ONE subscription: an objective's status for the
  * glyph of its pill (MIN-785), an MCP connection's service for its logo, a
- * page's emoji and database flag for its glyph (MIN-879). `undefined` until
+ * page's emoji and database flag for its glyph (MIN-879), a pull request's
+ * state for its color (MIN-906). `undefined` until
  * it is known. It never requests: the label hook beside it does.
  */
 export function useResolvedMentionDetails(
   type: MentionLinkType | null,
   id: string | null,
-): Pick<Entry, "status" | "service" | "page"> | undefined {
+): Pick<Entry, "status" | "service" | "page" | "prState"> | undefined {
   const current = useSyncExternalStore(subscribe, () => version, () => -1);
   if (!type || !id || current === -1) return undefined;
   return cache.get(keyOf(type, id));
@@ -156,7 +163,10 @@ export function primeMentionLabel(
   status?: ObjectiveStatus,
   meta?: MentionMeta | null
 ): void {
-  cache.set(keyOf(type, id, meta), { label, ...(status ? { status } : {}), at: Date.now() });
+  // A pill whose figure only the server knows (an MCP logo, a page's emoji,
+  // a pull request's state) shows the picked label at once, and still asks.
+  const at = SERVER_FIGURES.has(type) ? 0 : Date.now();
+  cache.set(keyOf(type, id, meta), { label, ...(status ? { status } : {}), at });
   notify();
 }
 

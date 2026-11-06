@@ -636,7 +636,7 @@ export function MentionBento() {
       <MentionChip key="a" type="issue" id="figure-41" label={`AUR-41 ${t("heroFlow_still_onboarding")}`} status="todo" />,
       <MentionChip key="b" type="member" id="camille" label={camille.full_name ?? ""} avatarSeed={camille.avatar_seed} />,
       <MentionChip key="c" type="page" id="figure-page" label={t("pagesFigure_title")} icon="🚀" />,
-      <MentionChip key="d" type="pull_request" id="figure-pr" label="#128" />,
+      <MentionChip key="d" type="pull_request" id="figure-pr" label="#128" prState="open" />,
     ],
     [
       <MentionChip key="a" type="date" id="date" label={date(14)} />,
@@ -659,7 +659,7 @@ export function MentionBento() {
     [
       <MentionChip key="a" type="page" id="figure-page2" label={t("cardWiki_design")} icon="🎨" />,
       <MentionChip key="b" type="issue" id="figure-38" label={`AUR-38 ${t("heroFlow_still_search")}`} status="in_progress" />,
-      <MentionChip key="c" type="pull_request" id="figure-pr2" label="#121" />,
+      <MentionChip key="c" type="pull_request" id="figure-pr2" label="#121" prState="merged" />,
       <MentionChip key="d" type="numo" id="numo2" label="Numo" />,
     ],
   ];

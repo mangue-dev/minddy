@@ -14,6 +14,19 @@ import type { MentionPreview, PreviewProject } from "@/lib/mention-preview";
 vi.mock("@/components/user-avatar", () => ({ UserAvatar: () => null }));
 vi.mock("@/components/project-orb", () => ({ ProjectOrb: () => null }));
 vi.mock("@/components/issue-card", () => ({ IssueCardBody: () => null }));
+// A pull request's CI comes from its readiness, read for this PR alone.
+const readinessCalls: string[][] = [];
+vi.mock("@/lib/use-agent-runs", () => ({
+  usePullRequestReadinessBatchQuery: (ids: string[]) => {
+    readinessCalls.push(ids);
+    return {
+      readinessByPrId: Object.fromEntries(ids.map((id) => [id, {
+        state: "open", blockers: [], passed: [{ kind: "checks", count: 3 }],
+      }])),
+      loading: false,
+    };
+  },
+}));
 // The excerpt is the read-only document editor, covered on its own.
 vi.mock("@/components/editor/document-editor-lazy", () => ({
   LazyDocumentEditor: ({ value, readOnly }: { value: string; readOnly?: boolean }) =>
@@ -49,12 +62,37 @@ async function render(preview: MentionPreview) {
       }),
     });
   await act(async () => {
-    root.render(wrap(createElement(MentionPreviewCard, { preview })));
+    root.render(wrap(createElement(MentionPreviewCard, { id: "pr-1", preview })));
     await new Promise((resolve) => setTimeout(resolve, 10));
   });
 }
 
 describe("MentionPreviewCard", () => {
+  it("shows a pull request as the issue chip's card does, with its CI (MIN-906)", async () => {
+    readinessCalls.length = 0;
+    await render({
+      type: "pull_request", number: 616, title: "Serve the brand assets", state: "open", provider: "github",
+      repository: "mangue-dev/minddy", headBranch: "work/x", baseBranch: "main", author: null,
+      openedAt: null, mergedAt: null,
+    });
+    expect(host.textContent).toContain("mangue-dev/minddy");
+    expect(host.textContent).toContain("Serve the brand assets #616");
+    expect(host.textContent).toContain(messages.Agent.prStateOpen);
+    expect(readinessCalls).toContainEqual(["pr-1"]);
+    expect(host.textContent).toContain("All 3 required checks passed");
+  });
+
+  it("reads no CI for a merged pull request (MIN-906)", async () => {
+    readinessCalls.length = 0;
+    await render({
+      type: "pull_request", number: 12, title: "Fix login", state: "merged", provider: "gitlab",
+      repository: "aurora/web", headBranch: null, baseBranch: null, author: null,
+      openedAt: null, mergedAt: null,
+    });
+    expect(host.textContent).toContain(messages.Agent.prStateMerged);
+    expect(readinessCalls.every((ids) => ids.length === 0)).toBe(true);
+  });
+
   it("shows a page's first lines through the read-only editor", async () => {
     await render({
       type: "page", project, title: "Launch plan", icon: "🚀", updatedAt: null, database: null,

@@ -70,8 +70,8 @@ const MCP_OTHER = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2";
 
 vi.mock("@/lib/server/agent/pull-requests", () => ({
   findPullRequestsWithProjects: async (ids: string[]) => [
-    { pullRequest: { id: PR_OK, number: 12, title: "Fix login" }, projectIds: [HIDDEN, ALLOWED] },
-    { pullRequest: { id: PR_HIDDEN, number: 13, title: "Secret branch" }, projectIds: [HIDDEN] },
+    { pullRequest: { id: PR_OK, number: 12, title: "Fix login", state: "merged" }, projectIds: [HIDDEN, ALLOWED] },
+    { pullRequest: { id: PR_HIDDEN, number: 13, title: "Secret branch", state: "open" }, projectIds: [HIDDEN] },
   ].filter((row) => ids.includes(row.pullRequest.id)),
 }));
 vi.mock("@/lib/server/routine-content", () => ({
@@ -137,6 +137,15 @@ describe("resolving mention targets", () => {
       { type: "page", id: PAGE_HIDDEN },
     ], undefined, undefined, undefined, pages);
     expect(Object.fromEntries(pages)).toEqual({ [`page:${PAGE_DATABASE}`]: { icon: null, database: true } });
+  });
+
+  it("gives the state of a pull request the reader can open, and nothing of a hidden one (MIN-906)", async () => {
+    const states = new Map<string, string>();
+    await resolveMentionTargets("reader", [
+      { type: "pull_request", id: PR_OK },
+      { type: "pull_request", id: PR_HIDDEN },
+    ], undefined, undefined, undefined, undefined, states as never);
+    expect(Object.fromEntries(states)).toEqual({ [`pull_request:${PR_OK}`]: "merged" });
   });
 
   it("names a resource by its decoded name, only inside a project the reader can open", async () => {

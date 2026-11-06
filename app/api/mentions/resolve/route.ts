@@ -5,6 +5,7 @@ import { boundedText } from "@/lib/server/bounded-body";
 import { rateLimitRefusal } from "@/lib/server/session-rate-limit";
 import { isMentionLinkType } from "@/lib/mention-link";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
+import type { PullRequestState } from "@/lib/mention-preview";
 import {
   MAX_MENTION_REFS,
   mentionKey,
@@ -24,7 +25,8 @@ const RESOLVES_PER_MINUTE = 600;
  * the reader's to see — the three are indistinguishable on purpose. An
  * objective the reader may see also carries its `status`, and an MCP
  * connection of a known service its `service`, for its logo, and a page its
- * `icon` and whether it is a `database`, for its glyph (MIN-879). See
+ * `icon` and whether it is a `database`, for its glyph (MIN-879), and a
+ * pull request its `prState`, for the color of its pill (MIN-906). See
  * lib/server/mention-access.ts.
  */
 export async function POST(request: NextRequest) {
@@ -57,18 +59,21 @@ export async function POST(request: NextRequest) {
   const statuses = new Map<string, ObjectiveStatus>();
   const services = new Map<string, string>();
   const pages = new Map<string, { icon: string | null; database: boolean }>();
-  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses, services, pages);
+  const prStates = new Map<string, PullRequestState>();
+  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses, services, pages, prStates);
   return NextResponse.json({
     mentions: refs.map((ref) => {
       const status = statuses.get(mentionKey(ref));
       const service = services.get(mentionKey(ref));
       const page = pages.get(mentionKey(ref));
+      const prState = prStates.get(mentionKey(ref));
       return {
         ...ref,
         label: resolution.get(mentionKey(ref)) ?? null,
         ...(status ? { status } : {}),
         ...(service ? { service } : {}),
         ...(page ? { icon: page.icon, database: page.database } : {}),
+        ...(prState ? { prState } : {}),
       };
     }),
   }, { headers: NO_STORE });
