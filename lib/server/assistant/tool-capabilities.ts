@@ -44,6 +44,10 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   // The cycle core reconciles only projects where the user can still write.
   get_cycle: "personal",
   get_scratchpad: "personal",
+  // Numo's memory (MIN-915) writes only the user's own memory. Classified
+  // personal so a Reader keeps it too: it changes no project.
+  remember: "personal",
+  forget: "personal",
   list_views: "personal",
   update_account_settings: "personal_write",
   fill_cycle: "personal_write",

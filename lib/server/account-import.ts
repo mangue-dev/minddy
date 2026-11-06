@@ -1,4 +1,6 @@
 import { withRoutineEventsSuppressed } from "@/lib/server/supabase-fetch";
+import { NumoMemoryError, createNumoMemory, listNumoMemories } from "@/lib/server/numo/memory-content";
+import { normalizeNumoMemoryContent } from "@/lib/numo-memory";
 import { remapRoutineTrigger, parseRoutineTrigger } from "@/lib/routine-triggers";
 import { validateRoutineTrigger } from "@/lib/server/routine-trigger-validation";
 import { nextRunAt } from "@/lib/routine-schedule";
@@ -827,6 +829,40 @@ async function importAccountTransferCore(
     }, { onConflict: "user_id,provider" });
     if (error) throw new Error("Could not import Numo preferences");
     result.personalData += 1;
+  }
+  // Numo's memory (MIN-915): a project memory follows its imported project;
+  // one whose project is not part of the import is skipped. The account's
+  // limit still applies, so the import stops adding at it.
+  // A memory already kept with the same text and scope is not added again,
+  // so importing the same file twice changes nothing.
+  let memoryWarning = false;
+  const memories = document.numo_memories ?? [];
+  const keptMemories = new Set(memories.length
+    ? (await listNumoMemories(service, userId)).map((memory) =>
+        `${memory.project_id ?? ""}\n${memory.content}`)
+    : []);
+  for (const memory of memories) {
+    const sourceProjectId = uuidValue(memory, "project_id");
+    const projectId = sourceProjectId ? projects.projectIds.get(sourceProjectId) ?? null : null;
+    if (sourceProjectId && !projectId) continue;
+    const content = normalizeNumoMemoryContent(memory.content);
+    if (content && keptMemories.has(`${projectId ?? ""}\n${content}`)) continue;
+    try {
+      await createNumoMemory(service, userId, { content: memory.content, projectId });
+      if (content) keptMemories.add(`${projectId ?? ""}\n${content}`);
+      result.personalData += 1;
+    } catch (error) {
+      if (!(error instanceof NumoMemoryError) || error.code === "database") {
+        throw new Error("Could not import Numo's memory");
+      }
+      if (!memoryWarning) {
+        warnings.push(error.code === "limit_reached"
+          ? "Some of Numo's memories were not imported: the account already keeps the maximum."
+          : "Some of Numo's memories were invalid and were not imported.");
+        memoryWarning = true;
+      }
+      if (error.code === "limit_reached") break;
+    }
   }
   if (document.scratchpad) {
     if (typeof document.scratchpad.content !== "string") throw new Error("Invalid imported scratchpad content");

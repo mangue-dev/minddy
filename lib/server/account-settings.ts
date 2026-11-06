@@ -1,5 +1,6 @@
 import "server-only";
 
+import { NUMO_MEMORY_META_KEY, resolveNumoMemoryEnabled } from "@/lib/numo-memory";
 import { getServiceClient } from "@/lib/supabase-service";
 import { locales, type Locale } from "@/i18n/config";
 import {
@@ -105,6 +106,8 @@ export interface AccountSettings {
   /** Translucent, blurred popovers and menus. */
   theme_transparency: boolean;
   numo_default_status: ReturnType<typeof resolveNumoDefaultStatus>;
+  /** Numo's memory (MIN-915): Numo reads and keeps memories about the user. */
+  numo_memory: boolean;
   auto_assign_created: boolean;
   auto_assign_on_start: boolean;
   prompt_copy_auto_start: boolean;
@@ -165,6 +168,7 @@ function toSettings(
       };
     })(),
     numo_default_status: resolveNumoDefaultStatus(meta),
+    numo_memory: resolveNumoMemoryEnabled(meta),
     auto_assign_created: meta.auto_assign_created === true,
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
@@ -309,6 +313,12 @@ export async function updateAccountSettings({
     }
     next[AUTO_ASSIGN_ON_START_META_KEY] = input.auto_assign_on_start;
   }
+  if (NUMO_MEMORY_META_KEY in input) {
+    if (typeof input[NUMO_MEMORY_META_KEY] !== "boolean") {
+      return { ok: false, error: "numo_memory must be a boolean." };
+    }
+    next[NUMO_MEMORY_META_KEY] = input[NUMO_MEMORY_META_KEY];
+  }
   if ("prompt_copy_auto_start" in input) {
     if (typeof input.prompt_copy_auto_start !== "boolean") {
       return { ok: false, error: "prompt_copy_auto_start must be a boolean." };
@@ -416,6 +426,7 @@ export async function updateAccountSettings({
     THEME_PRESET_META_KEYS.dark,
     THEME_TRANSPARENCY_META_KEY,
     "numo_default_status",
+    NUMO_MEMORY_META_KEY,
     "send_shortcut",
     WEEK_START_META_KEY,
     "auto_assign_created",

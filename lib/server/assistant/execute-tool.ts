@@ -244,6 +244,13 @@ import { getKnowledgeArticle, getKnowledgeTopicList } from "./knowledge";
 import { readInboxNotifications } from "@/lib/server/inbox";
 import { parseNumoNoteLink, sendNumoNote } from "@/lib/server/numo-notes";
 import {
+  NumoMemoryError,
+  createNumoMemory,
+  deleteNumoMemory,
+  updateNumoMemory,
+} from "@/lib/server/numo/memory-content";
+import { NUMO_MEMORY_LIMIT } from "@/lib/numo-memory";
+import {
   buildInboxToolResult,
   type InboxReadCategory,
   type InboxReadState,
@@ -304,6 +311,12 @@ export interface ToolContext {
    * re-verifies it before running.
    */
   adminGrant?: AdminSessionGrant | null;
+  /**
+   * Numo may write the user's memory in this turn (MIN-915): only in a
+   * conversation the user holds with Numo, with the memory switched on. A
+   * routine or an @Numo mention reads the memory but never writes it.
+   */
+  memoryWritable?: boolean;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -828,6 +841,64 @@ export async function executeTool(
   return { ...execution, result: { ...result, images, read_images_with: "view_image" } };
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function executeMemoryTool(
+  toolName: "remember" | "forget",
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  if (!ctx.memoryWritable) {
+    return toolError("Memory is not available here: it is switched off, or this is a routine or a comment mention. Do not retry.");
+  }
+  const id = (value: unknown) => typeof value === "string" && UUID_PATTERN.test(value.trim())
+    ? value.trim().toLowerCase()
+    : null;
+  try {
+    if (toolName === "forget") {
+      const memoryId = id(args.id);
+      if (!memoryId || !(await deleteNumoMemory(ctx.service, ctx.userId, memoryId))) {
+        return toolError("No memory with this id. Take ids from your memory list.");
+      }
+      return { result: { forgotten: memoryId }, success: true };
+    }
+    let projectId: string | null = null;
+    if (args.project_id !== null && args.project_id !== undefined && args.project_id !== "") {
+      projectId = id(args.project_id);
+      if (!projectId || !(await getProjectAccess(ctx.userId, projectId))) {
+        return toolError("project_id must be the id of a project the user can open (use list_projects), or null.");
+      }
+    }
+    const replaces = args.replaces === null || args.replaces === undefined || args.replaces === ""
+      ? null
+      : id(args.replaces);
+    if (args.replaces && !replaces) {
+      return toolError("replaces must be the id of an existing memory, or null.");
+    }
+    const memory = replaces
+      ? await updateNumoMemory(ctx.service, ctx.userId, replaces,
+          { content: args.content, projectId })
+      : await createNumoMemory(ctx.service, ctx.userId, {
+          content: args.content, projectId,
+          sourceConversationId: ctx.conversationId ?? null,
+        });
+    return {
+      result: { remembered: { id: memory.id, content: memory.content, project_id: memory.project_id } },
+      success: true,
+    };
+  } catch (error) {
+    if (!(error instanceof NumoMemoryError)) throw error;
+    if (error.code === "limit_reached") {
+      return toolError(`The user already keeps ${NUMO_MEMORY_LIMIT} memories, the maximum. Ask them which memory to replace (pass its id in replaces) or forget; do not drop one on your own.`);
+    }
+    if (error.code === "not_found") {
+      return toolError("No memory with this id. Take ids from your memory list, or pass replaces: null.");
+    }
+    if (error.code === "invalid_content") return toolError(error.message);
+    throw error;
+  }
+}
+
 async function mentionsForNumo(execution: ToolExecution, userId: string): Promise<ToolExecution> {
   const mentions = (value: unknown) => {
     const text = JSON.stringify(value ?? null);
@@ -1042,6 +1113,11 @@ async function executeToolUnlisted(
       toolName === "set_scratchpad"
     ) {
       return executeScratchpadTool(toolName, args, ctx);
+    }
+
+    // ── Numo's memory (MIN-915 — the user's own, never a project's) ────
+    if (toolName === "remember" || toolName === "forget") {
+      return executeMemoryTool(toolName, args, ctx);
     }
 
     if (toolName === "list_conversation_attachments") {

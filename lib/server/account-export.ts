@@ -1,4 +1,5 @@
 import { issueStore } from "@/lib/server/issue-store";
+import { listNumoMemories } from "@/lib/server/numo/memory-content";
 import { materializePendingProjectPages } from "@/lib/server/pages";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
@@ -159,6 +160,8 @@ export interface AccountExport {
   readme: Record<string, string>;
   account: Row;
   numo_preferences?: Row[];
+  /** Numo's memory (MIN-915), decrypted for its owner. */
+  numo_memories?: Row[];
   owned_projects: Row[];
   memberships: Row[];
   /** Projects hidden from my own navigation (MIN-692). Optional in older exports. */
@@ -502,6 +505,10 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       user_metadata: user.user_metadata ?? {},
     },
     numo_preferences: list("user_numo_preferences", numoPreferences),
+    numo_memories: (await listNumoMemories(service, userId)).map((memory) => ({
+      id: memory.id, project_id: memory.project_id, content: memory.content,
+      created_at: memory.created_at, updated_at: memory.updated_at,
+    })),
     owned_projects: exportedProjects,
     memberships: list("project_members", memberships),
     hidden_projects: hiddenProjects,

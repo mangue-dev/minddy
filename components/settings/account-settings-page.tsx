@@ -26,6 +26,7 @@ import { AccountAnalyticsSection } from "@/components/settings/account-analytics
 import { AccountDataSection } from "@/components/settings/account-data-section";
 import { AccountIssuesSection, AccountNumoIssuesSection } from "@/components/settings/account-issues-section";
 import { AccountSmartFillSection } from "@/components/settings/account-smart-fill-section";
+import { AccountNumoMemorySection } from "@/components/settings/account-numo-memory-section";
 import {
   ACCOUNT_SETTINGS_DEFAULT_TAB,
   ACCOUNT_SETTINGS_TAB_ALIASES,
@@ -117,8 +118,9 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
         </>
       ),
     },
-    // Everything Numo and the AI features use: the provider key, the MCP
-    // servers Numo connects to, and where the issues it creates land.
+    // Everything Numo and the AI features use: the provider key, what Numo
+    // remembers, where the issues it creates land, and last the MCP servers
+    // Numo connects to, the longest card.
     {
       value: "agent",
       label: t("agentTab"),
@@ -126,8 +128,9 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
       content: (
         <>
           <AccountAiKeysSection />
-          <AccountMcpClientsSection />
+          <AccountNumoMemorySection />
           <AccountNumoIssuesSection />
+          <AccountMcpClientsSection />
         </>
       ),
     },

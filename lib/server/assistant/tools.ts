@@ -1065,6 +1065,47 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "remember",
+      description:
+        "Keep a memory about the user you work for, used in every later conversation: a stable preference (\"write my issue titles in English\"), a lasting fact (\"the X project is paused until January\"), a way of working, or a standing instruction they give you. Save one when the user asks you to remember something, or when they state a preference they clearly want applied next time. Never save the content of an issue, page or conversation, a one-off request, or anything the user did not say about themselves or their work. One statement per memory, in the user's words and language. To change a memory, pass its id in `replaces` instead of adding a near-duplicate. The user keeps at most 100 memories; when the result says the limit is reached, ask which one to replace or forget. After saving, tell the user in one short line what you remembered.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: {
+            type: "string",
+            description: "The memory: one plain statement, 1,000 characters at most.",
+          },
+          project_id: {
+            type: ["string", "null"],
+            description: "null when the memory applies to all the user's work; a project id (from list_projects) when it only concerns that project. When you cannot tell, ask the user.",
+          },
+          replaces: {
+            type: ["string", "null"],
+            description: "The id of the memory this one rewrites, from your memory list; null for a new memory.",
+          },
+        },
+        required: ["content", "project_id", "replaces"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "forget",
+      description:
+        "Delete one memory you keep about the user, by its id from your memory list. Use it when the user asks you to forget something, or when a memory is no longer true. Removing a standing instruction also withdraws what it allowed.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The id of the memory to delete." },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "notify_me",
       description:
         "Leave a note in the inbox of the user you work for (in a routine, its owner), with a push to their devices. Only that user receives it: never other members, who have their own Numo. Send a note only when it changes what the user will do — something found, blocked, due or decided that they would otherwise miss while away. Never send a summary of your work, a confirmation or a copy of your reply: in a conversation the user is reading you already, so notify only when they asked to be told later. At most 5 notes per turn; the same note to the same target is sent once a day. Write in the user's language. The result says `delivered: false` when the user turned these notes off or the note is a duplicate; do not retry then.",
@@ -1836,6 +1877,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: [...WEEK_START_OPTIONS],
             description:
               "The first day of the week for date pickers, routine day lists and the activity calendar. 'auto' (default) follows the interface language: Sunday in English and Brazilian Portuguese, Monday otherwise.",
+          },
+          numo_memory: {
+            type: "boolean",
+            description:
+              "Numo's memory: when false, Numo neither reads nor saves memories about the user. Existing memories are kept and come back when it is turned on again.",
           },
           numo_default_status: {
             type: "string",
@@ -2761,6 +2807,8 @@ export const ACCOUNT_TOOLS = new Set([
   "update_scratchpad_tasks",
   "edit_scratchpad_text",
   "set_scratchpad",
+  "remember",
+  "forget",
 ]);
 
 // Tools that never take a project (ask_user, the web, and the account-level

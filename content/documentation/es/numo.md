@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 29,
-  "sourceRevision": 28,
+  "revision": 30,
+  "sourceRevision": 29,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-06",
   "compatibility": {
@@ -73,13 +73,15 @@
       "components/assistant/chat-message.tsx",
       "components/typed-mention-chip.tsx",
       "lib/server/assistant/prompt.ts",
-      "lib/server/numo-notes.ts"
+      "lib/server/numo-notes.ts",
+      "lib/server/numo/memory-prompt.ts",
+      "components/settings/account-numo-memory-section.tsx"
     ]
   },
   "review": {
-    "revision": 29,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "revision": 30,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-06"
   },
   "related": [
@@ -110,7 +112,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -127,7 +129,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -188,7 +190,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Sigue las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -220,7 +222,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -237,7 +239,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
       "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 29,
+      "revision": 30,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -309,6 +311,14 @@ Las conversaciones no usan conexiones MCP personales de otros miembros. Las ruti
 Numo puede dejar un mensaje en tu bandeja de entrada, con una alerta push, cuando una rutina encuentra algo que necesita tu atención o cuando le pides que te avise más tarde. El mensaje solo llega a la cuenta para la que trabaja Numo, que en una rutina es su propietario. El interruptor Mensajes de Numo de las [preferencias de notificación](/docs/notifications-and-inbox#notification-preferences) desactiva estos mensajes.
 
 ![Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.](/documentation/es/numo-permissions-and-approvals-workflow.svg)
+
+### Memoria de Numo {#memory}
+
+Numo guarda recuerdos breves sobre ti para que no tengas que repetirte: una preferencia como «escribe los títulos de mis incidencias en inglés», un hecho como «el proyecto Mobile está en pausa hasta enero» o una instrucción permanente. Guarda uno cuando se lo pides («recuerda que…») o cuando expresas una preferencia que claramente quieres que se aplique la próxima vez, y lo dice en su respuesta. Desde entonces, tus recuerdos se aplican en cada conversación.
+
+Un recuerdo vale para todos tus proyectos o para uno solo; Numo te pregunta cuando no sabe cuál. Un recuerdo de proyecto se usa en las conversaciones de ese proyecto y cuando Numo trabaja en ese proyecto desde otra conversación. Tus recuerdos son solo tuyos: los demás miembros no los ven y su Numo no los usa. Las rutinas y `@Numo` en un comentario leen tus recuerdos, pero no pueden cambiarlos. Puedes guardar hasta 100 recuerdos de 1000 caracteres cada uno; al llegar al límite, Numo te pregunta cuál reemplazar.
+
+**Ajustes de cuenta → IA y Numo → Memoria de Numo** muestra cada recuerdo con el proyecto al que se aplica. **Editar** cambia su texto, **Eliminar** lo quita y **Olvidarlo todo** los quita todos; una eliminación no se puede deshacer. También puedes pedirle a Numo que olvide algo. El interruptor junto al título de la sección desactiva la memoria: Numo deja de leer y guardar recuerdos, y los guardados se conservan.
 
 ## Comprender los turnos duraderos de Numo {#numo-execution-model}
 
