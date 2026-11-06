@@ -89,7 +89,7 @@ Er öffnet sich mit dem Filter Ungelesen. Alle zeigt auch gelesene Benachrichtig
 
 Numo kann dir auch eine Nachricht hinterlassen: einen kurzen Titel und ein, zwei Sätze zu etwas, das deine Aufmerksamkeit braucht, geschrieben von einer deiner Routinen oder in einer Unterhaltung, in der du darum gebeten hast, später Bescheid zu bekommen. Sie trägt das Numo-Symbol; wählst du sie aus, öffnet sich das Ticket, das Ziel, die Seite, der Pull Request oder die Routine, um die es geht, oder das Projekt, wenn sie nichts davon nennt. Numo schreibt diese Nachrichten nur an dich, nie an andere Mitglieder, und schickt dieselbe Nachricht zum selben Element höchstens einmal am Tag.
 
-Eine Routine benachrichtigt dich von selbst, wenn eine Ausführung fehlschlägt, ihr Budget aufbraucht, nicht starten kann oder dir eine Frage stellt. Eine normal beendete Ausführung erreicht dich nur als Nachricht von Numo. Siehe [Routinen](/docs/scheduled-routines#runs).
+Eine Routine benachrichtigt dich von selbst, wenn eine Ausführung fehlschlägt, ihr Budget aufbraucht oder nicht starten kann. Eine normal beendete Ausführung erreicht dich nur als Nachricht von Numo. Siehe [Routinen](/docs/scheduled-routines#runs).
 
 Löschen in einer Zeile entfernt diese Benachrichtigung nach einer Bestätigung, und Gelesen löschen in der Kopfzeile entfernt nach einer Bestätigung alle gelesenen Benachrichtigungen. Beide Löschungen sind endgültig; ungelesene Benachrichtigungen bleiben, und das Ticket, die Seite oder der Pull Request, auf die eine Benachrichtigung verweist, bleibt unberührt.
 

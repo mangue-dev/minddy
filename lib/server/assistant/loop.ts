@@ -856,7 +856,10 @@ export async function processChat(
       allToolCalls.push(...assistantToolCalls);
 
       // ask_user pauses immediately: the loop stops and waits for the user.
-      const hasAskUser = [...toolCallAccumulators.values()].some(
+      // A routine runs unattended: its ask_user goes to executeTool, which
+      // refuses it, and the run carries on.
+      const askUserPauses = !context.routineId;
+      const hasAskUser = askUserPauses && [...toolCallAccumulators.values()].some(
         (acc) => acc.name === "ask_user"
       );
       // A tool can also help (propose_backlog, MIN-173): this
@@ -870,7 +873,7 @@ export async function processChat(
         if (await context.shouldStop?.()) observeStop();
         if (stopObserved) break;
         const alreadyCompleted = completedToolCallIds.has(acc.id);
-        if (acc.name === "ask_user") {
+        if (acc.name === "ask_user" && askUserPauses) {
           // ask_user: emit a synthetic result and do NOT continue the loop
           let parsed: Record<string, unknown> = {};
           try {

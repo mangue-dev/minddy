@@ -45,6 +45,7 @@ import { buildDocumentationHelpPrompt } from "@/lib/server/assistant/documentati
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
 import {
   CONVERSATION_ASSISTANT_TOOLS,
+  ROUTINE_UNATTENDED_EXCLUDED_TOOLS,
   type AssistantToolDef,
 } from "@/lib/server/assistant/tools";
 import { readerToolSet } from "@/lib/server/assistant/tool-capabilities";
@@ -509,8 +510,8 @@ async function buildExecutionInput(input: {
     systemPrompt += `\n## Routine occurrence
 - This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
 - Complete the routine instruction as a Numo conversation, using Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work. You cannot change a repository; when the instruction asks for code work, say so in the occurrence result.
-- If a real decision or missing fact requires the owner, use ask_user. Leave the occurrence visibly waiting for input instead of guessing or failing silently.
-- Nobody is notified when this occurrence ends normally. Call notify_me only when the result asks the owner to act or changes one of their decisions: one or two sentences, linked to the record concerned. When there is nothing worth reading, notify nobody. A failure, a stop, an exhausted budget or an ask_user question already notifies the owner, so never send a note for those.`;
+- This occurrence runs unattended: nobody can answer a question, so never ask one. When a choice is yours to make, take the reasonable one and state it in your result. When it is not (anything a tool says needs the user's confirmation first, such as trashing or merging, or a fact you cannot find), do not act: leave it to the owner in a note.
+- Nobody is notified when this occurrence ends normally. Call notify_me only when the result asks the owner to act or changes one of their decisions: one or two sentences, linked to the record concerned. When there is nothing worth reading, notify nobody. A failure, a stop or an exhausted budget already notifies the owner, so never send a note for those.`;
   }
 
   const { data, error } = await service
@@ -619,6 +620,11 @@ async function buildExecutionInput(input: {
     : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
   if (!memoryWritable) tools = tools.filter((tool) => !MEMORY_TOOL_NAMES.has(tool.function.name));
+  // A routine runs unattended: nobody is there to answer a question or review
+  // a proposal, so the tools that wait for the user are not offered.
+  if (intent.routineId) {
+    tools = tools.filter((tool) => !ROUTINE_UNATTENDED_EXCLUDED_TOOLS.has(tool.function.name));
+  }
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
   // An @Numo mention runs on the shared surface of this one project: a
   // reader's mention is offered read tools only (plus comments when allowed).

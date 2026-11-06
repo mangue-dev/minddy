@@ -89,7 +89,7 @@ Elle s’ouvre sur le filtre Non lues. Toutes affiche aussi les notifications lu
 
 Numo peut aussi vous laisser un message : un titre court et une ou deux phrases sur un point qui demande votre attention, écrits par l’une de vos routines ou dans une conversation où vous lui avez demandé de vous prévenir plus tard. Il porte l’icône de Numo, et le sélectionner ouvre le ticket, l’objectif, la page, la pull request ou la routine dont il parle, ou le projet s’il n’en nomme aucun. Numo n’écrit ces messages qu’à vous, jamais aux autres membres, et n’envoie pas deux fois le même message sur le même élément dans la même journée.
 
-Une routine vous prévient d’elle-même lorsqu’une occurrence échoue, épuise son budget, ne peut pas démarrer ou vous pose une question. Une occurrence qui se termine normalement ne vous parvient que sous forme de message de Numo. Voir [Routines](/docs/scheduled-routines#runs).
+Une routine vous prévient d’elle-même lorsqu’une occurrence échoue, épuise son budget ou ne peut pas démarrer. Une occurrence qui se termine normalement ne vous parvient que sous forme de message de Numo. Voir [Routines](/docs/scheduled-routines#runs).
 
 Supprimer, sur une ligne, retire cette notification après confirmation, et Supprimer les lues, dans l’en-tête, retire toutes les notifications lues après confirmation. Ces deux suppressions sont définitives ; les notifications non lues restent, et le ticket, la page ou la pull request visés ne sont pas touchés.
 

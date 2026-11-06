@@ -89,7 +89,7 @@ Ela abre no filtro Não lidas. Todas mostra também as notificações lidas, e M
 
 O Numo também pode deixar uma mensagem para você: um título curto e uma ou duas frases sobre algo que precisa da sua atenção, escrita por uma das suas rotinas ou em uma conversa em que você pediu um aviso para depois. Ela traz o ícone do Numo e, ao selecioná-la, abre o ticket, o objetivo, a página, a pull request ou a rotina de que trata, ou o projeto quando não cita nenhum. O Numo escreve essas mensagens só para você, nunca para outros membros, e envia a mesma mensagem sobre o mesmo item no máximo uma vez por dia.
 
-Uma rotina avisa você por conta própria quando uma execução falha, esgota o orçamento, não consegue iniciar ou faz uma pergunta. Uma execução que termina normalmente só chega a você como mensagem do Numo. Veja [Rotinas](/docs/scheduled-routines#runs).
+Uma rotina avisa você por conta própria quando uma execução falha, esgota o orçamento ou não consegue iniciar. Uma execução que termina normalmente só chega a você como mensagem do Numo. Veja [Rotinas](/docs/scheduled-routines#runs).
 
 Excluir, em uma linha, remove essa notificação após uma confirmação, e Excluir lidas, no cabeçalho, remove todas as notificações lidas após uma confirmação. As duas exclusões são definitivas; as notificações não lidas permanecem, e o ticket, a página ou o pull request para o qual uma notificação aponta não é afetado.
 

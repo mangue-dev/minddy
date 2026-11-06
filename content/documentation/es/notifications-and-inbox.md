@@ -89,7 +89,7 @@ Se abre con el filtro Sin leer. Todos muestra también las notificaciones leída
 
 Numo también puede dejarte un mensaje: un título corto y una o dos frases sobre algo que necesita tu atención, escrito por una de tus rutinas o en una conversación en la que le pediste que te avisara más tarde. Lleva el icono de Numo y, al seleccionarlo, abre la incidencia, el objetivo, la página, la pull request o la rutina de la que trata, o el proyecto si no nombra ninguno. Numo solo te escribe estos mensajes a ti, nunca a otros miembros, y no envía el mismo mensaje sobre el mismo elemento más de una vez al día.
 
-Una rutina te avisa por sí sola cuando una ejecución falla, agota su presupuesto, no puede iniciarse o te hace una pregunta. Una ejecución que termina con normalidad solo te llega como mensaje de Numo. Consulta [Rutinas](/docs/scheduled-routines#runs).
+Una rutina te avisa por sí sola cuando una ejecución falla, agota su presupuesto o no puede iniciarse. Una ejecución que termina con normalidad solo te llega como mensaje de Numo. Consulta [Rutinas](/docs/scheduled-routines#runs).
 
 Eliminar, en una fila, borra esa notificación tras una confirmación, y Eliminar leídas, en el encabezado, borra todas las notificaciones leídas tras una confirmación. Ambas eliminaciones son definitivas; las notificaciones sin leer se conservan, y la incidencia, la página o la pull request a la que apunta una notificación no se ven afectadas.
 

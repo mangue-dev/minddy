@@ -230,6 +230,46 @@ describe("Numo chat loop resilience", () => {
     }));
   });
 
+  it("never suspends a routine run for input: its ask_user is refused and the run goes on", async () => {
+    fetchOpenRouter
+      .mockResolvedValueOnce({
+        model: "model",
+        response: stream({
+          tool_calls: [{
+            index: 0,
+            id: "call-question",
+            function: {
+              name: "ask_user",
+              arguments: JSON.stringify({ questions: [{ question: "Which scope?" }] }),
+            },
+          }],
+        }),
+      })
+      .mockResolvedValueOnce({ model: "model", response: stream({ content: "Done without asking." }) });
+    executeTool.mockResolvedValue({ result: { error: "unattended" }, success: false });
+
+    const result = await processChat(
+      [{ role: "user", content: "Run the routine" }],
+      [],
+      { emit: vi.fn() } as never,
+      {
+        model: "model",
+        conversationId: "conversation",
+        projectId: "project",
+        userId: "user",
+        supabase: fakeService(),
+        service: fakeService(),
+        locale: "en",
+        routineId: "routine",
+      },
+    );
+
+    expect(result.suspension).toBeNull();
+    expect(executeTool).toHaveBeenCalledWith("ask_user", expect.anything(), expect.anything());
+    expect(fetchOpenRouter).toHaveBeenCalledTimes(2);
+    expect(result.fullContent).toContain("Done without asking.");
+  });
+
   it("commits a durable tool round before executing its tools", async () => {
     fetchOpenRouter.mockResolvedValue({
       model: "model",

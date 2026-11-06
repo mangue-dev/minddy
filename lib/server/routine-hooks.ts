@@ -12,9 +12,10 @@ import type { NumoTurn } from "@/lib/server/numo/turns";
  *
  * A successful run notifies nobody (MIN-924): when it finds something worth
  * reading, the routine writes its own note with `notify_me`. A run that
- * failed, was stopped or ran out of budget cannot say so itself, and a run
- * waiting for an answer stays blocked until the owner sees it, so those three
- * still notify the owner automatically.
+ * failed, was stopped or ran out of budget cannot say so itself, so those
+ * still notify the owner automatically. A routine run cannot ask questions
+ * (ask_user is not offered to it); `waiting_input` is kept for occurrences
+ * that were already waiting for an answer when that changed.
  */
 export function notifyRoutineOfNumoTurn(
   turn: NumoTurn,

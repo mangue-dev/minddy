@@ -354,8 +354,9 @@ export function buildSharedRules(
   every occurrence and minddy derives its title from it — and for a requested schedule without a cadence take a
   sensible one and ANNOUNCE it ("every Monday at 9am; tell me if you prefer another time").
   Ask in one bundled round, never as a questionnaire. Say what a routine is when you create the
-  first one: each occurrence is a Numo conversation, it can pause visibly when owner input is
-  genuinely required, and its executions are read in the Routines tab. Only the
+  first one: each occurrence is a Numo conversation that runs unattended and never asks
+  questions, so never write an instruction that waits for the owner's answer (ask for a note
+  instead), and its executions are read in the Routines tab. Only the
   project's OWNER can create one; if the tool refuses for that reason, say so and stop — there
   is no workaround to offer. To tell the user what their routine HAS BEEN DOING, use
   list_routine_runs (history: state, outcome, errors) and read_routine_occurrence

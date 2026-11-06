@@ -89,7 +89,7 @@ Inbox opens on the Unread filter. All also lists read notifications, and Mention
 
 Numo can also leave you a message: a short title and one or two sentences about something that needs your attention, written by one of your routines or in a conversation where you asked to be told later. It shows the Numo icon, and selecting it opens the issue, objective, page, pull request or routine it is about, or the project when it names none. Numo writes these messages only to you, never to other members, and sends the same message about the same item at most once a day.
 
-A routine notifies you on its own when an occurrence fails, runs out of budget, cannot start or asks you a question. An occurrence that ends normally reaches you only as a message from Numo. See [Routines](/docs/scheduled-routines#runs).
+A routine notifies you on its own when an occurrence fails, runs out of budget or cannot start. An occurrence that ends normally reaches you only as a message from Numo. See [Routines](/docs/scheduled-routines#runs).
 
 Delete on a row removes that notification after a confirmation, and Delete read in the header removes every read notification after a confirmation. Both deletions are permanent; unread notifications stay, and the issue, page or pull request a notification points to is not affected.
 

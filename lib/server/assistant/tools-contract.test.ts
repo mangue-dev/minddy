@@ -1,4 +1,4 @@
-import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
+import { CONVERSATION_ASSISTANT_TOOLS, ROUTINE_UNATTENDED_EXCLUDED_TOOLS } from "./tools";
 import { describe, expect, it } from "vitest";
 import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS } from "@/lib/theme-presets";
 
@@ -334,6 +334,12 @@ describe("Numo tool contracts", () => {
     expect(global?.function.parameters.required).toContain("project_id");
     expect(tool("update_account_settings")?.function.parameters.properties)
       .toHaveProperty("notif_numo");
+  });
+
+  it("keeps the tools that wait for the user out of routine runs, by names that exist (MIN-924)", () => {
+    // A renamed tool would silently reach unattended runs again.
+    expect([...ROUTINE_UNATTENDED_EXCLUDED_TOOLS].sort()).toEqual(["ask_user", "propose_backlog"]);
+    for (const name of ROUTINE_UNATTENDED_EXCLUDED_TOOLS) expect(tool(name)).toBeDefined();
   });
 
   it("requires the get_issue revision when updating plan task indices", () => {

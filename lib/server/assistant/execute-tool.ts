@@ -361,6 +361,10 @@ export interface ToolExecution {
   pause?: boolean;
 }
 
+/** Why a routine run cannot use a tool that waits for the user. */
+const UNATTENDED_REFUSAL =
+  "This routine runs unattended: nobody can answer or review. Make the reasonable choice and state it in your result, or leave the decision to the owner with notify_me.";
+
 function toolError(message: string): ToolExecution {
   return { result: { error: message }, success: false };
 }
@@ -1455,6 +1459,7 @@ async function executeToolUnlisted(
       // NOTHING — what is written is what the preview of the thread will have validated, by
       // `/api/projects/[id]/brief/apply`, exactly like from the board.
       case "propose_backlog": {
+        if (ctx.routineId) return toolError(UNATTENDED_REFUSAL);
         // Reserved for the owner, like the modal: it is he who pays
         // the call, and it's a batch of tickets all at once in HIS project.
         if (!access.isOwner) {
@@ -1760,6 +1765,11 @@ async function executeToolUnlisted(
         if (!result.ok) return libError(result);
         return { result: { comment: result.comment }, success: true };
       }
+
+      // Reached only from an unattended routine run: in a conversation the
+      // loop pauses on ask_user before any tool executes.
+      case "ask_user":
+        return toolError(UNATTENDED_REFUSAL);
 
       case "notify_me": {
         const link = parseNumoNoteLink(args.link);

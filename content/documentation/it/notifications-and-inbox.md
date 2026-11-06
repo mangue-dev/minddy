@@ -89,7 +89,7 @@ Si apre sul filtro Non letto. Tutti mostra anche le notifiche lette, e Menzioni 
 
 Numo può anche lasciarti un messaggio: un titolo breve e una o due frasi su qualcosa che richiede la tua attenzione, scritto da una delle tue routine o in una conversazione in cui gli hai chiesto di avvisarti più tardi. Ha l’icona di Numo e, selezionandolo, apre il ticket, l’obiettivo, la pagina, la pull request o la routine di cui parla, oppure il progetto se non ne nomina nessuno. Numo scrive questi messaggi solo a te, mai agli altri membri, e invia lo stesso messaggio sullo stesso elemento al massimo una volta al giorno.
 
-Una routine ti avvisa da sola quando un’esecuzione non riesce, esaurisce il budget, non può partire o ti fa una domanda. Un’esecuzione che termina normalmente ti raggiunge solo come messaggio di Numo. Vedi [Routine](/docs/scheduled-routines#runs).
+Una routine ti avvisa da sola quando un’esecuzione non riesce, esaurisce il budget o non può partire. Un’esecuzione che termina normalmente ti raggiunge solo come messaggio di Numo. Vedi [Routine](/docs/scheduled-routines#runs).
 
 Cancella, su una riga, elimina quella notifica dopo una conferma, e Elimina lette, nell’intestazione, elimina tutte le notifiche lette dopo una conferma. Entrambe le eliminazioni sono definitive; le notifiche non lette restano, e il ticket, la pagina o la pull request a cui punta una notifica non vengono toccati.
 
