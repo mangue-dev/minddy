@@ -470,9 +470,19 @@ export async function POST(request: NextRequest) {
   if (parsedResources === null) {
     return Response.json({ error: "Invalid attachments" }, { status: 400 });
   }
-  const attachments = parsedResources.filter(
-    (a): a is AttachmentInput => a.kind !== "link"
-  );
+  // A pasted text keeps its flag on the message (MIN-916), so its chip reads
+  // "Pasted text" rather than the generated file name. Only the boolean is
+  // taken from the raw descriptor, matched by its validated path.
+  const pastedPaths = new Set<string>();
+  for (const raw of Array.isArray(body.attachments) ? body.attachments as unknown[] : []) {
+    const item = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+    if (item.pasted === true && typeof item.storage_path === "string") {
+      pastedPaths.add(item.storage_path.trim());
+    }
+  }
+  const attachments = parsedResources
+    .filter((a): a is AttachmentInput => a.kind !== "link")
+    .map((a) => pastedPaths.has(a.storage_path) ? { ...a, pasted: true } : a);
 
   const service = getServiceClient();
   const routineContinuation = convId
@@ -502,7 +512,7 @@ export async function POST(request: NextRequest) {
     });
     if (converted) {
       sanitizedUserMessage = converted.content;
-      attachments.push(converted.attachment);
+      attachments.push({ ...converted.attachment, pasted: true });
     }
   }
 

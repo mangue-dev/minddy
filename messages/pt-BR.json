@@ -308,6 +308,7 @@
     "back": "Voltar às configurações"
   },
   "Resources": {
+    "pastedText": "Texto colado",
     "downloadFailed": "Não foi possível baixar este arquivo. Tente novamente.",
     "actions": "Ações do arquivo",
     "downloadOptions": "Opções de download",
@@ -488,7 +489,6 @@
   "Assistant": {
     "pastedTextFileName": "Texto colado {stamp}.txt",
     "pastedTextNote": "Texto completo anexado como arquivo: {fileName}",
-    "pastedTextAttached": "Texto longo anexado como arquivo para o Numo ler tudo.",
     "title": "Pergunte ao Numo",
     "replyAnnouncement": "O Numo respondeu.",
     "inputPlaceholder": "Pergunte qualquer coisa ao Numo…",

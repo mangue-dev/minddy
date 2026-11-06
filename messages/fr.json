@@ -308,6 +308,7 @@
     "back": "Retour aux paramètres"
   },
   "Resources": {
+    "pastedText": "Texte copié",
     "downloadFailed": "Impossible de télécharger ce fichier. Réessayez.",
     "actions": "Actions du fichier",
     "downloadOptions": "Options de téléchargement",
@@ -488,7 +489,6 @@
   "Assistant": {
     "pastedTextFileName": "Texte collé {stamp}.txt",
     "pastedTextNote": "Texte complet joint en fichier : {fileName}",
-    "pastedTextAttached": "Texte long joint en fichier : Numo le lira en entier.",
     "title": "Demander à Numo",
     "replyAnnouncement": "Numo a répondu.",
     "inputPlaceholder": "Demandez quelque chose à Numo…",

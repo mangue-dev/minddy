@@ -308,6 +308,7 @@
     "back": "Back to settings"
   },
   "Resources": {
+    "pastedText": "Pasted text",
     "downloadFailed": "Couldn’t download this file. Try again.",
     "actions": "File actions",
     "downloadOptions": "Download options",
@@ -488,7 +489,6 @@
   "Assistant": {
     "pastedTextFileName": "Pasted text {stamp}.txt",
     "pastedTextNote": "Full text attached as a file: {fileName}",
-    "pastedTextAttached": "Long text attached as a file, so Numo reads all of it.",
     "title": "Ask Numo",
     "replyAnnouncement": "Numo replied.",
     "inputPlaceholder": "Ask Numo anything…",

@@ -308,6 +308,7 @@
     "back": "Zurück zu den Einstellungen"
   },
   "Resources": {
+    "pastedText": "Eingefügter Text",
     "downloadFailed": "Diese Datei konnte nicht heruntergeladen werden. Versuche es erneut.",
     "actions": "Dateiaktionen",
     "downloadOptions": "Download-Optionen",
@@ -488,7 +489,6 @@
   "Assistant": {
     "pastedTextFileName": "Eingefügter Text {stamp}.txt",
     "pastedTextNote": "Vollständiger Text als Datei angehängt: {fileName}",
-    "pastedTextAttached": "Langer Text als Datei angehängt, damit Numo ihn ganz liest.",
     "title": "Numo fragen",
     "replyAnnouncement": "Numo hat geantwortet.",
     "inputPlaceholder": "Frag Numo etwas…",

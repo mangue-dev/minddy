@@ -36,6 +36,8 @@ export interface PendingResource {
   page_id?: string;
   page?: { id: string; title: string; icon: string | null } | null;
   project_id?: string;
+  /** See {@link AttachmentInput.pasted}. */
+  pasted?: boolean;
 }
 
 /** Re-encoding a gif kills the animation, an svg its vectors — upload as-is. */
@@ -120,7 +122,7 @@ export function useAttachmentUploads(
   }, []);
 
   const addFiles = useCallback(
-    (files: Iterable<File>) => {
+    (files: Iterable<File>, { pasted = false }: { pasted?: boolean } = {}) => {
       const list = Array.from(files);
       if (list.length === 0) return;
       const prefix = getPrefix().replace(/\/+$/, "");
@@ -146,6 +148,7 @@ export function useAttachmentUploads(
           file_name: file.name || "fichier",
           mime_type: file.type || "application/octet-stream",
           size_bytes: file.size,
+          ...(pasted ? { pasted: true } : {}),
         };
         setPending((prev) => [...prev, entry]);
         const signal = begin(localId);
@@ -452,6 +455,7 @@ export function useAttachmentUploads(
                 file_name: p.file_name,
                 mime_type: p.mime_type,
                 size_bytes: p.size_bytes,
+                ...(p.pasted ? { pasted: true } : {}),
               }
         ),
     [pending]

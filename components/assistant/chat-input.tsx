@@ -29,7 +29,6 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
-import { toast } from "sonner";
 import { MAX_CHAT_ATTACHMENTS, MAX_INLINE_MESSAGE_CHARS, pastedTextStamp } from "@/lib/numo-message-limits";
 import { dateMentionOptions, datesFirst } from "@/lib/mention-date";
 import { Button } from "@/components/ui/button";
@@ -1515,8 +1514,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           const fileName = t("pastedTextFileName", {
             stamp: pastedTextStamp(new Date()),
           });
-          uploads.addFiles([new File([text], fileName, { type: "text/plain" })]);
-          toast.info(t("pastedTextAttached"));
+          uploads.addFiles([new File([text], fileName, { type: "text/plain" })], { pasted: true });
           return;
         }
         const pieces = pastedMentionPieces(html, text);
