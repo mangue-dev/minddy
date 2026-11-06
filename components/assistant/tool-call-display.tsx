@@ -3,6 +3,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Activity01Icon, AiAutoRotateIcon, AiBrain01Icon, BotIcon, FileImportIcon, GiftIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ import { useGroupedActions } from "./grouped-actions-context";
 import type { MessageKey } from "@/lib/i18n-keys";
 import type { SeedProposal } from "@/lib/seed/types";
 import { ROUTINE_ICON } from "@/components/feature-icons";
+import { issueHref, objectiveHref, pagePath } from "@/lib/app-urls";
 
 export interface ToolCallItem {
   id: string;
@@ -1130,10 +1132,63 @@ export function toolCallLabel(item: ToolCallItem, t: TranslateFn): string {
     : getDefaultLabel(item.status, t);
 }
 
+/** The icon of a tool's line, shared by the line and its group heading. */
+export function toolCallIcon(name: string): AppIcon {
+  return TOOL_META[name]?.icon ?? DEFAULT_ICON;
+}
+
 function getToolView(item: ToolCallItem, t: TranslateFn) {
-  const meta = TOOL_META[item.name];
-  const Icon = meta?.icon ?? DEFAULT_ICON;
-  return { Icon, label: toolCallLabel(item, t) };
+  return { Icon: toolCallIcon(item.name), label: toolCallLabel(item, t) };
+}
+
+const ISSUE_TOOLS = new Set(["create_issue", "get_issue"]);
+const PAGE_TOOLS = new Set([
+  "create_page",
+  "create_page_database",
+  "get_page",
+  "read_page",
+  "update_page",
+  "update_page_database",
+  "append_to_page",
+  "edit_page_text",
+]);
+const OBJECTIVE_TOOLS = new Set(["create_objective", "get_objective", "update_objective"]);
+
+const stringField = (record: Record<string, unknown> | undefined, key: string) =>
+  typeof record?.[key] === "string" && record[key] ? (record[key] as string) : null;
+
+/**
+ * Where the object a completed action touched lives, so its line opens it:
+ * the ticket it created or read, the page it wrote, the objective it set.
+ * Built with `lib/app-urls.ts` (short codes, never titles). `null` when the
+ * action has no single object, failed, or its result lacks the ids.
+ */
+export function toolCallTarget(item: ToolCallItem): string | null {
+  if (item.status !== "complete" || item.success === false) return null;
+  const args = safeParseArgs(item.arguments);
+  const result = item.result as Record<string, unknown> | undefined;
+  const argProject = stringField(args, "project_id");
+
+  if (ISSUE_TOOLS.has(item.name)) {
+    const issue = result?.issue as Record<string, unknown> | undefined;
+    const id = stringField(issue, "id");
+    const projectId = stringField(issue, "project_id") ?? argProject;
+    if (!id || !projectId) return null;
+    const number = typeof issue?.number === "number" ? issue.number : null;
+    return issueHref(projectId, { id, number, project_id: projectId });
+  }
+  if (PAGE_TOOLS.has(item.name)) {
+    const pageId = stringField(result, "page_id") ?? stringField(args, "page_id");
+    const projectId = stringField(result, "project_id") ?? argProject;
+    return pageId && projectId ? pagePath(projectId, pageId) : null;
+  }
+  if (OBJECTIVE_TOOLS.has(item.name)) {
+    const objective = result?.objective as Record<string, unknown> | undefined;
+    const objectiveId = stringField(objective, "id") ?? stringField(args, "objective_id");
+    const projectId = stringField(objective, "project_id") ?? argProject;
+    return objectiveId && projectId ? objectiveHref(projectId, objectiveId) : null;
+  }
+  return null;
 }
 
 // ── Summary of a burst of actions ────────────────────── ──────────────────────
@@ -1233,19 +1288,19 @@ function AskUserSummaryRow({
         variant="ghost"
         size="sm"
         onClick={() => setOpen((o) => !o)}
-        className="group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
+        className={cn(TOOL_LINE_CLASS, "group h-auto w-fit max-w-full justify-start bg-transparent px-0 text-left font-normal text-muted-foreground hover:bg-transparent hover:text-foreground")}
       >
+        <AppIcon icon={MessageCircleQuestion} className={TOOL_ICON_CLASS} />
+        <span className="min-w-0 truncate">{label}</span>
         <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
-                          "h-3 w-3 shrink-0 transition-transform",
+                          "size-3.5 shrink-0 transition-transform",
                           open && "rotate-90",
                         )} />
-        <AppIcon icon={MessageCircleQuestion} className="h-3 w-3 shrink-0" />
-        <span className="flex-1 truncate">{label}</span>
       </Button>
       {open && (
-        <div className="ml-5 flex flex-col gap-1.5 py-1">
+        <div className="ml-6 flex flex-col gap-1.5 py-1">
           {entries.map((e, i) => (
-            <div key={i} className="flex flex-col text-xs">
+            <div key={i} className="flex flex-col text-sm">
               <span className="text-muted-foreground">{e.question}</span>
               {matched && e.answer && (
                 <span className="text-foreground">{e.answer}</span>
@@ -1254,7 +1309,7 @@ function AskUserSummaryRow({
           ))}
           {/* Unmatchable response (skip, free text outside the map): in bulk. */}
           {answer && !matched && (
-            <div className="text-xs text-foreground">{answer}</div>
+            <div className="text-sm text-foreground">{answer}</div>
           )}
         </div>
       )}
@@ -1262,29 +1317,47 @@ function AskUserSummaryRow({
   );
 }
 
+/**
+ * Work lines read at the size of the answer, only greyed (MIN-918): an
+ * action is something the reader checks, not a footnote.
+ */
+export const TOOL_LINE_CLASS = "flex items-center gap-2 py-0.5 text-sm leading-relaxed";
+export const TOOL_ICON_CLASS = "size-4 shrink-0";
+
 function ToolCallRow({ item, t }: { item: ToolCallItem; t: TranslateFn }) {
   const { Icon, label } = getToolView(item, t);
   const isError = item.status === "complete" && item.success === false;
+  const href = toolCallTarget(item);
 
   return (
     <div
       className={cn(
-        "flex items-center gap-2 py-0.5 text-xs",
+        TOOL_LINE_CLASS,
         isError ? "text-destructive" : "text-muted-foreground",
       )}
     >
-      <AppIcon icon={Icon} className="h-3 w-3 shrink-0" />
-      {/* Action IN PROGRESS → the label itself shimmer (no spinner: the text
- which breathes already says “it spins”, without adding a rotating object). */}
-      <span
-        className={cn(
-          "flex-1 truncate",
-          item.status === "running" && "text-shimmer",
-        )}
-      >
-        {label}
-      </span>
-      {isError ? <HugeiconsIcon icon={Cancel01Icon} className="h-3 w-3 shrink-0" /> : null}
+      <AppIcon icon={Icon} className={TOOL_ICON_CLASS} />
+      {/* Action IN PROGRESS → the label itself shimmers (no spinner: the text
+          which breathes already says “it runs”). A completed action that
+          touched one object opens it. */}
+      {href ? (
+        <Link
+          href={href}
+          className="min-w-0 truncate underline-offset-4 transition-colors hover:text-foreground hover:underline"
+        >
+          {label}
+        </Link>
+      ) : (
+        <span
+          className={cn(
+            "min-w-0 truncate",
+            item.status === "running" && "text-shimmer",
+          )}
+        >
+          {label}
+        </span>
+      )}
+      {isError ? <HugeiconsIcon icon={Cancel01Icon} className={TOOL_ICON_CLASS} /> : null}
     </div>
   );
 }
@@ -1363,22 +1436,24 @@ export function ToolCallList({
           size="sm"
           onClick={() => setExpanded((o) => !o)}
           className={cn(
-            "group h-auto w-full justify-start gap-2 bg-transparent px-0 py-0.5 text-left text-xs font-normal hover:bg-transparent",
+            TOOL_LINE_CLASS,
+            "group h-auto w-fit max-w-full justify-start bg-transparent px-0 text-left font-normal hover:bg-transparent",
             headerError
               ? "text-destructive"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
-          <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
-                              "h-3 w-3 shrink-0 transition-transform",
-                              expanded && "rotate-90",
-                            )} />
-          <span className={cn("flex-1 truncate", anyRunning && "text-shimmer")}>
+          <AppIcon icon={toolCallIcon(lastItem.name)} className={TOOL_ICON_CLASS} />
+          <span className={cn("min-w-0 truncate", anyRunning && "text-shimmer")}>
             {label}
           </span>
+          <HugeiconsIcon icon={ArrowRight01Icon} className={cn(
+                              "size-3.5 shrink-0 transition-transform",
+                              expanded && "rotate-90",
+                            )} />
         </Button>
         {expanded && (
-          <div className="ml-5 flex flex-col">
+          <div className="ml-6 flex flex-col">
             {rowItems.map((item) => (
               <ToolCallRow key={item.id} item={item} t={t} />
             ))}
