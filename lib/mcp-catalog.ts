@@ -14,9 +14,19 @@ export interface McpPreset {
     | "approvedClient"
     | "slackApp";
   docs: string;
+  /** Scopes to request when the provider documents a narrower set than the
+   * `scopes_supported` it advertises; otherwise discovery decides. */
+  scopes?: string[];
 }
 const googleDocs =
   "https://developers.google.com/workspace/guides/configure-mcp-servers";
+/** The scopes Google's MCP guide asks users to add to their consent screen,
+ * checked on 2026-11-06. Gmail advertises twenty, including the restricted
+ * `https://mail.google.com/`; requesting them all asks for more than the
+ * guide's consent screen grants (MIN-911). */
+const google = (...names: string[]) =>
+  names.map((name) => `https://www.googleapis.com/auth/${name}`);
+const googleDrive = google("drive.readonly", "drive.file");
 
 /** Provider identity survives connection-specific query parameters. */
 export function mcpPresetForUrl(raw: string): McpPreset | undefined {
@@ -51,23 +61,65 @@ export const MCP_PRESETS: McpPreset[] = [
     setup: "standard",
     docs: "https://linear.app/docs/mcp",
   },
-  ...[
-    ["gmail", "Gmail", "gmailmcp"],
-    ["drive", "Google Drive", "drivemcp"],
-    ["calendar", "Google Calendar", "calendarmcp"],
-    ["docs", "Google Docs", "docsmcp"],
-    ["sheets", "Google Sheets", "sheetsmcp"],
-    ["slides", "Google Slides", "slidesmcp"],
-    ["chat", "Google Chat", "chatmcp"],
-    ["people", "Google Contacts", "people"],
-  ].map(
-    ([id, name, host]): McpPreset => ({
+  ...([
+    ["gmail", "Gmail", "gmailmcp", google("gmail.readonly", "gmail.compose")],
+    ["drive", "Google Drive", "drivemcp", googleDrive],
+    [
+      "calendar",
+      "Google Calendar",
+      "calendarmcp",
+      google(
+        "calendar.calendarlist.readonly",
+        "calendar.events.freebusy",
+        "calendar.events.readonly",
+      ),
+    ],
+    [
+      "docs",
+      "Google Docs",
+      "docsmcp",
+      [...googleDrive, ...google("documents.readonly", "documents")],
+    ],
+    [
+      "sheets",
+      "Google Sheets",
+      "sheetsmcp",
+      [...googleDrive, ...google("spreadsheets.readonly", "spreadsheets")],
+    ],
+    [
+      "slides",
+      "Google Slides",
+      "slidesmcp",
+      [...googleDrive, ...google("presentations.readonly", "presentations")],
+    ],
+    [
+      "chat",
+      "Google Chat",
+      "chatmcp",
+      google(
+        "chat.spaces.readonly",
+        "chat.memberships.readonly",
+        "chat.messages.readonly",
+        "chat.messages.create",
+        "chat.users.readstate",
+        "chat.users.spacesettings",
+      ),
+    ],
+    [
+      "people",
+      "Google Contacts",
+      "people",
+      google("directory.readonly", "userinfo.profile", "contacts.readonly"),
+    ],
+  ] satisfies Array<[string, string, string, string[]]>).map(
+    ([id, name, host, scopes]): McpPreset => ({
       id: `google-${id}`,
       name,
       url: `https://${host}.googleapis.com/mcp/v1`,
       auth: "oauth",
       setup: "googlePreview",
       docs: googleDocs,
+      scopes,
     }),
   ),
   {

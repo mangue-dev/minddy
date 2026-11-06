@@ -18,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
   probe: vi.fn(),
   authorize: vi.fn(),
+  ClientNotApproved: class extends Error {},
+  AppRequired: class extends Error {},
 }));
 const ID = "33b8b032-d967-4f06-aabd-dc165e988335";
 vi.mock("./api-auth", () => ({
@@ -44,6 +46,8 @@ vi.mock("./mcp-oauth", () => ({
   mcpOAuthCallback: () => "https://minddy.test/callback",
   initialMcpOAuth: () => "encrypted-oauth",
   startMcpOAuth: mocks.authorize,
+  McpClientNotApprovedError: mocks.ClientNotApproved,
+  McpOAuthAppRequiredError: mocks.AppRequired,
 }));
 vi.mock("./safe-fetch", () => ({
   assertPublicHttpUrl: async (url: string) => {
@@ -187,6 +191,19 @@ describe("MCP account routes and assistant dispatch", () => {
     expect(response.headers.get("set-cookie")).toContain(
       "mcp_desktop_return=1",
     );
+  });
+  it("names the reason an OAuth flow cannot start", async () => {
+    const codeFor = async (error: Error) => {
+      mocks.authorize.mockRejectedValueOnce(error);
+      const response = await authorize(request("POST"), context);
+      expect(response.status).toBe(400);
+      return (await response.json()).error;
+    };
+    expect(await codeFor(new mocks.AppRequired())).toBe("oauth_app_required");
+    expect(await codeFor(new mocks.ClientNotApproved())).toBe(
+      "oauth_client_rejected",
+    );
+    expect(await codeFor(new Error("discovery"))).toBe("oauth");
   });
   it("leaves the plain web flow without the desktop return cookie", async () => {
     const response = await authorize(request("POST"), context);

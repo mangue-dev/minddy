@@ -7,6 +7,7 @@ import {
   RegistrationRejectedError,
   type OAuthClientProvider,
 } from "@modelcontextprotocol/client";
+import { mcpPresetForUrl } from "@/lib/mcp-catalog";
 import { getServiceClient } from "@/lib/supabase-service";
 import { oauthAppOrigin } from "./app-origin";
 import { assertPublicHttpUrl } from "./safe-fetch";
@@ -37,6 +38,23 @@ export class McpClientNotApprovedError extends Error {
     this.name = "McpClientNotApprovedError";
   }
 }
+
+/**
+ * The authorization server has no registration endpoint, so minddy cannot
+ * register itself: the user must create an OAuth app with the provider and
+ * save its client ID and secret on the connection. Google Workspace MCP
+ * servers work this way (MIN-911).
+ */
+export class McpOAuthAppRequiredError extends Error {
+  constructor() {
+    super("The OAuth provider requires a client ID registered in advance");
+    this.name = "McpOAuthAppRequiredError";
+  }
+}
+
+/** Google only issues a refresh token for offline access, and only on a
+ * consent prompt once the user has already granted the app. */
+const GOOGLE_AUTHORIZATION_HOST = "accounts.google.com";
 
 export const mcpOAuthCallback = () =>
   `${oauthAppOrigin()}/api/account/mcp-connections/oauth/callback`;
@@ -268,7 +286,10 @@ export async function startMcpOAuth(
       }
     }
   }
-  data.scope = challenge.scope;
+  // Without a server challenge, a provider that documents narrower scopes
+  // than it advertises gets those rather than every `scopes_supported`.
+  data.scope =
+    challenge.scope ?? mcpPresetForUrl(connection.url)?.scopes?.join(" ");
   let authorizationUrl: string | undefined;
   const provider = providerFor(
     data,
@@ -277,6 +298,10 @@ export async function startMcpOAuth(
       if (url.protocol !== "https:" || url.username || url.password)
         throw new Error("Invalid OAuth authorization endpoint");
       await assertPublicHttpUrl(url);
+      if (url.hostname === GOOGLE_AUTHORIZATION_HOST) {
+        url.searchParams.set("access_type", "offline");
+        url.searchParams.set("prompt", "consent");
+      }
       authorizationUrl = url.toString();
     },
     state,
@@ -292,6 +317,13 @@ export async function startMcpOAuth(
   } catch (err) {
     if (err instanceof RegistrationRejectedError)
       throw new McpClientNotApprovedError(err.status);
+    // Discovery is saved before registration is attempted, so its metadata
+    // tells a missing registration endpoint apart from any other failure.
+    // The provider's callbacks set it; control flow still sees the delete above.
+    const saved: OAuthData = data;
+    const metadata = saved.discovery?.authorizationServerMetadata;
+    if (!data.client && metadata && !metadata.registration_endpoint)
+      throw new McpOAuthAppRequiredError();
     throw err;
   }
   if (!authorizationUrl || !data.verifier || !data.discovery)

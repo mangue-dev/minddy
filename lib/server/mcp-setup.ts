@@ -24,6 +24,7 @@ import {
 import { mcpSettingsUpdate } from "./mcp-settings";
 import {
   McpClientNotApprovedError,
+  McpOAuthAppRequiredError,
   mcpOAuthCallback,
   startMcpOAuth,
 } from "./mcp-oauth";
@@ -187,6 +188,7 @@ async function authenticationResult(
   const nextSteps: string[] = [];
   let authorizationUrl: string | undefined;
   let clientRejected = false;
+  let appRequired = false;
 
   if (row.auth_mode === "oauth" && !row.oauth_connected) {
     try {
@@ -194,8 +196,13 @@ async function authenticationResult(
     } catch (err) {
       // The connection stays saved; the user retries from the settings page.
       clientRejected = err instanceof McpClientNotApprovedError;
+      appRequired = err instanceof McpOAuthAppRequiredError;
     }
-    if (clientRejected) {
+    if (appRequired) {
+      nextSteps.push(
+        "The provider does not let minddy register itself as an OAuth client, so signing in cannot start yet. Tell the user to create an OAuth app in the provider's developer console with the callback URL below, then update this connection with its client id and secret.",
+      );
+    } else if (clientRejected) {
       nextSteps.push(
         "The provider refused to register minddy as an OAuth client: it only accepts MCP clients it has approved, so retrying will not help. Tell the user the provider must approve minddy first, or, if the provider lets them create their own OAuth app, register one with the callback URL below and update this connection with its client id and secret.",
       );

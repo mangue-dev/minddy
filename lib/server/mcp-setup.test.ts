@@ -5,6 +5,7 @@ import { executeMcpSetupTool } from "./mcp-setup";
 
 const mocks = vi.hoisted(() => ({
   ClientNotApproved: class extends Error {},
+  AppRequired: class extends Error {},
   startOAuth: vi.fn(),
   rateLimit: vi.fn(),
   assertEndpoint: vi.fn(),
@@ -34,6 +35,7 @@ vi.mock("./mcp-registry", () => ({
 
 vi.mock("./mcp-oauth", () => ({
   McpClientNotApprovedError: mocks.ClientNotApproved,
+  McpOAuthAppRequiredError: mocks.AppRequired,
   initialMcpOAuth: (clientId?: string, clientSecret?: string) =>
     JSON.stringify(
       clientId ? { client: { client_id: clientId, clientSecret } } : {},
@@ -504,5 +506,25 @@ describe("configure_mcp_connection — update", () => {
       .join(" ");
     expect(steps).toMatch(/approved/i);
     expect(steps).not.toMatch(/press Sign in/i);
+  });
+
+  it("says when the provider needs an OAuth app of the user's own", async () => {
+    // Google Workspace has no registration endpoint (MIN-911).
+    mocks.startOAuth.mockRejectedValue(new mocks.AppRequired());
+    const execution = await executeMcpSetupTool(
+      USER,
+      "configure_mcp_connection",
+      { connection_id: CONNECTION_ID },
+    );
+
+    expect(execution.success).toBe(true);
+    const result = execution.result as {
+      next_steps: string[];
+      callback_url: string;
+    };
+    const steps = result.next_steps.join(" ");
+    expect(steps).toMatch(/create an OAuth app/i);
+    expect(steps).not.toMatch(/press Sign in/i);
+    expect(result.callback_url).toContain("/oauth/callback");
   });
 });

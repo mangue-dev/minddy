@@ -6677,6 +6677,7 @@
     "popupBlocked": "Autorisez les fenêtres pop-up pour minddy, puis réessayez de vous connecter.",
     "errorOAuth": "Autorisation impossible. Vérifiez le guide du fournisseur, les identifiants OAuth et l’URL de retour, puis reconnectez-vous.",
     "errorOAuthClientRejected": "Ce fournisseur n’accepte que les clients MCP qu’il a approuvés, et minddy n’en fait pas encore partie. S’il vous permet de créer votre propre application OAuth, saisissez ses identifiants dans « Paramètres de l’application OAuth (si nécessaire) ».",
+    "errorOAuthAppRequired": "Ce fournisseur demande votre propre application OAuth. Créez-en une dans sa console développeur avec l’URL de retour indiquée dans « Paramètres de l’application OAuth (si nécessaire) », puis saisissez-y son identifiant client et son secret.",
     "saveAndConnect": "Enregistrer et connecter",
     "unauthenticated": "Ce MCP n'est pas authentifié",
     "manage": "Gérer {name}",

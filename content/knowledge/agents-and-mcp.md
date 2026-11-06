@@ -52,7 +52,12 @@ supports discovery, dynamic registration, PKCE, and refresh tokens. Providers th
 require an existing OAuth application can use the client ID and secret under
 **Advanced settings → OAuth app settings**; register the callback URL shown there with the provider.
 Google services are in developer preview and require an OAuth app and
-preview access. Slack requires an internal or Marketplace app, Asana requires a
+preview access: in Google Auth Platform, create a **Web application** client
+with the callback URL, select **Use this client for an AI-powered agent**, and
+add the scopes Google's guide lists for that service to the consent screen.
+minddy requests those scopes and offline access, so the connection keeps
+working after the first hour. Without a client ID and secret, signing in stops
+with a message asking for the OAuth app. Slack requires an internal or Marketplace app, Asana requires a
 registered MCP app, and Figma requires provider approval of the MCP client. An
 entry in the catalog does not bypass these provider restrictions.
 
