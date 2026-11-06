@@ -11,7 +11,6 @@ import { Add01Icon, FilterIcon, GitPullRequestIcon, Link02Icon, UserGroupIcon, T
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { loadPullRequestDetailSurface, preparedPullRequestDetailSurface } from "@/lib/app-tab-surfaces";
-import { useRouter } from "next/navigation";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
 import { canConsumePrDeepLink } from "@/lib/pr-navigation";
 import { prefetchPullRequestDetail } from "@/lib/prefetch-tab-destination";
@@ -399,7 +398,6 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const tProjects = useTranslations("Projects");
   const tCommon = useTranslations("Common");
   const format = useFormatter();
-  const router = useRouter();
   const tabActive = useAppTabActive();
   const navigation = useOptionalAppTabNavigation();
   const { projects, openCreateProject, loading: projectsLoading } = useProjects();
@@ -423,17 +421,21 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
    * effect saw a target outside the lens and forced “all”, again and again).
    * The selection stays in memory and the published view keeps `?pr=`; only
    * the address stops carrying the link.
+   *
+   * The address changes through the history, not the router (MIN-908): the
+   * page stays the one on screen, and Next's patched history keeps
+   * `useSearchParams` in sync. A router navigation here re-rendered the whole
+   * app route from the server right after a merge, reloading the page and
+   * every retained tab.
    */
   const consumeDeepLink = useCallback(() => {
     if (!deepLink) return;
     const expected = `/pull-requests?${searchParams.toString()}`;
     if (!canConsumePrDeepLink(expected, navigation?.activeId ?? null,
       navigation?.session.getSnapshot(), window.location.pathname + window.location.search)) return;
-    router.replace(
-      consumedDeepLinkHref("/pull-requests", searchParams.toString()),
-      { scroll: false },
-    );
-  }, [deepLink, navigation, router, searchParams]);
+    window.history.replaceState(null, "",
+      consumedDeepLinkHref("/pull-requests", searchParams.toString()) + window.location.hash);
+  }, [deepLink, navigation, searchParams]);
 
   const [sections, setSections] = useMobileCollectionState<ReadonlySet<string>>("/pull-requests", "sections", () => new Set(DEFAULT_PULL_REQUEST_SECTIONS));
   const [query, setQuery] = useMobileCollectionState("/pull-requests", "query", "");
@@ -647,8 +649,11 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     setMergeIntentPrId(prParam);
     const remaining = new URLSearchParams(searchParams);
     remaining.delete("action");
-    router.replace(`/pull-requests${remaining.size ? `?${remaining}` : ""}`, { scroll: false });
-  }, [tabActive, actionParam, prParam, router, searchParams]);
+    // Same page, so no server navigation (see `consumeDeepLink`).
+    if (window.location.pathname === "/pull-requests") {
+      window.history.replaceState(null, "", `/pull-requests${remaining.size ? `?${remaining}` : ""}${window.location.hash}`);
+    }
+  }, [tabActive, actionParam, prParam, searchParams]);
   // The same request from a board card (lib/pr-merge-intent.ts).
   const boardMergePrId = usePrMergeIntentStore((state) => state.prId);
   useEffect(() => {
