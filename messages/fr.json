@@ -6659,7 +6659,7 @@
     "reconnect": "Reconnecter",
     "oauthConnected": "Compte connecté",
     "oauthFailed": "La connexion n'a pas abouti. Essayez de vous connecter à nouveau.",
-    "openingSignIn": "Ouverture de la page de connexion…",
+    "finishingSignIn": "Finalisation de la connexion…",
     "authentication": "Authentification",
     "oauth": "Se connecter avec OAuth",
     "bearer": "Jeton Bearer",

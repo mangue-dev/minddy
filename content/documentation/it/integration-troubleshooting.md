@@ -17,7 +17,7 @@
   "revision": 7,
   "sourceRevision": 7,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-22",
+  "updatedAt": "2026-11-06",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -44,9 +44,9 @@
   },
   "review": {
     "revision": 7,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review, MIN-794: source audit of the article against the v0.20.0..0.30.0 delta of its evidence files, no correction needed; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "fact": "agent:claude-code (MIN-912: desktop MCP sign-in sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, no correction needed; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review, MIN-794: source audit of the article against the v0.20.0..0.30.0 delta of its evidence files, no correction needed; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
     "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "date": "2026-11-06"
   },
   "related": [
     "api-and-webhooks",
@@ -68,7 +68,7 @@ minddy MCP collega un assistente esterno a minddy; il MCP personale permette a N
 
 ## Riconnettere con i permessi corretti {#oauth}
 
-Se il provider richiede un’app client già registrata, inserisci esattamente il callback mostrato. Sul desktop OAuth apre il browser di sistema e poi torna all’app. Per i server MCP personali usati da Numo serve HTTPS pubblico: comandi locali e reti private non sono ammessi. Per un assistente esterno collegato al MCP di minddy, consulta [l’accesso di rete alla tua istanza](/docs/minddy-mcp#network-access). Inserisci bearer token e segreti nei campi di autenticazione o negli header, non nell’URL. Cambiare l’URL cancella credenziali e header. Disattivare o rimuovere una connessione impedisce nuovi invii, ma quelli già partiti possono terminare. Le routine usano il proprietario corrente e non ereditano il precedente accesso personale.
+Se il provider richiede un’app client già registrata, inserisci esattamente il callback mostrato. Sul desktop, l’accesso MCP apre nel browser di sistema solo la pagina del fornitore e l’app lo completa: il browser non ha bisogno di una sessione minddy. Per i server MCP personali usati da Numo serve HTTPS pubblico: comandi locali e reti private non sono ammessi. Per un assistente esterno collegato al MCP di minddy, consulta [l’accesso di rete alla tua istanza](/docs/minddy-mcp#network-access). Inserisci bearer token e segreti nei campi di autenticazione o negli header, non nell’URL. Cambiare l’URL cancella credenziali e header. Disattivare o rimuovere una connessione impedisce nuovi invii, ma quelli già partiti possono terminare. Le routine usano il proprietario corrente e non ereditano il precedente accesso personale.
 
 ## Controllare prima di ripetere {#webhooks}
 
