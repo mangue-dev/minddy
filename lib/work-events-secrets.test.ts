@@ -152,7 +152,7 @@ describe("one-time credentials in work accordions", () => {
     expect(actionToggle().querySelector(".text-shimmer")).toBeNull();
   });
 
-  it("wraps a running thinking that stands alone in the actions accordion", async () => {
+  it("leaves a running thinking that stands alone as its own line", async () => {
     const events: WorkEvent<ReactNode>[] = [
       { key: "reasoning", kind: "action", active: true, content: "Reasoning" },
     ];
@@ -168,8 +168,8 @@ describe("one-time credentials in work accordions", () => {
         children: createElement(WorkEvents, { events }),
       }),
     })));
-    expect(actionToggle().textContent).toContain("Thinking…");
-    expect(actionToggle().querySelector(".text-shimmer")).not.toBeNull();
+    expect(actionToggle()).toBeUndefined();
+    expect(container.textContent).toContain("Reasoning");
   });
 
   it("opens an existing group when a running integration call returns its credential", async () => {

@@ -1048,7 +1048,7 @@ export const AssistantShell = forwardRef<
                   })}
 
                   {(showThinking || isGeneratingServer) && (
-                    <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
                       <NumoIcon
                         state="thinking"
                         className="size-4 text-muted-foreground"

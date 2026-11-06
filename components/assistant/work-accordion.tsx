@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNow, useTranslations } from "next-intl";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -62,14 +62,17 @@ export function WorkAccordion({
 
   return (
     <Collapsible open={open} onOpenChange={active ? undefined : setOpen}>
+      {/* Body size, greyed like the action lines (MIN-918), and like them it
+          darkens on hover. Only its text and chevron are the toggle, so the
+          row does not darken when the pointer is elsewhere on it. */}
       {active ? (
-        <div className="flex w-full items-center pb-2.5 text-xs font-medium text-muted-foreground">
+        <div className="flex w-full items-center pb-2.5 text-sm text-muted-foreground">
           <span className="text-shimmer">{label}</span>
         </div>
       ) : (
-        <CollapsibleTrigger className="group flex w-full items-center gap-1.5 pb-2.5 text-xs font-medium text-muted-foreground outline-hidden transition-colors hover:text-foreground">
-          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+        <CollapsibleTrigger className="group flex w-fit items-center gap-1.5 pb-2.5 text-sm text-muted-foreground outline-hidden transition-colors hover:text-foreground">
           <span>{label}</span>
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-180" />
         </CollapsibleTrigger>
       )}
       {/* Full-width fixed border under the toggle: separates the indicator from the
@@ -77,7 +80,7 @@ export function WorkAccordion({
  the content animates below. */}
       <div className="border-t border-border" />
       <CollapsibleContent>
-        <div className="flex flex-col gap-3 pt-3">{children}</div>
+        <div className="flex flex-col gap-4 pt-4">{children}</div>
       </CollapsibleContent>
     </Collapsible>
   );
