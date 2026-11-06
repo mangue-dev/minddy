@@ -108,6 +108,7 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   update_plan_tasks: "write",
   edit_issue_text: "write",
   create_page: "write",
+  create_page_database: "write",
   update_page_database: "write",
   update_page_database_views: "write",
   update_page: "write",

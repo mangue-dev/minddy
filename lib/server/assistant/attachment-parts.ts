@@ -41,6 +41,12 @@ export type PromptAttachment = {
   file_name: string;
   mime_type: string;
   size_bytes: number;
+  /**
+   * The conversation reference (`<message id>:<index>`) that
+   * `read_conversation_attachment` takes, when the file belongs to a Numo
+   * conversation. Named in the prompt so Numo can read past the excerpt.
+   */
+  attachment_id?: string;
 };
 
 /** A line of `attachments` as read by the three modes of
@@ -103,11 +109,18 @@ function isTextLike(mime: string, name: string): boolean {
   );
 }
 
-function note(a: PromptAttachment, suffix = "not included"): ChatContentPart {
+function note(
+  a: PromptAttachment,
+  suffix = "not included",
+  reference?: string,
+): ChatContentPart {
   const kb = Math.max(1, Math.round(a.size_bytes / 1024));
+  const read = reference
+    ? `; read it with read_conversation_attachment (attachment_id: ${reference})`
+    : "";
   return {
     type: "text",
-    text: `[Attachment: ${a.file_name} (${a.mime_type}, ${kb} KB) — ${suffix}]`,
+    text: `[Attachment: ${a.file_name} (${a.mime_type}, ${kb} KB) — ${suffix}${read}]`,
   };
 }
 
@@ -143,6 +156,7 @@ export async function buildAttachmentParts(
   }: { modalities: Set<string>; includeHeavy: boolean }
 ): Promise<ChatContentPart[]> {
   const partFor = async (stored: PromptAttachment): Promise<ChatContentPart> => {
+    const reference = stored.attachment_id;
     const a = stored.id && stored.project_id
       ? await decodeAttachmentRow("attachments", stored as
         PromptAttachment & Record<string, unknown>) : stored;
@@ -204,15 +218,20 @@ export async function buildAttachmentParts(
         if (buf) {
           let text = buf.toString("utf8");
           if (text.length > MAX_TEXT_CHARS) {
-            text = `${text.slice(0, MAX_TEXT_CHARS)}\n… [truncated]`;
+            // Say how much is missing and how to get it (MIN-916): a model
+            // that sees an unmarked excerpt answers as if it had the whole file.
+            const rest = reference
+              ? ` Read the rest with read_conversation_attachment (attachment_id: ${reference}, offset: ${MAX_TEXT_CHARS}) before producing anything that depends on the whole file.`
+              : "";
+            text = `${text.slice(0, MAX_TEXT_CHARS)}\n… [truncated: first ${MAX_TEXT_CHARS} of ${text.length} characters.${rest}]`;
           }
           return {
             type: "text",
-            text: `[Attachment: ${a.file_name}]\n"""\n${text}\n"""`,
+            text: `[Attachment: ${a.file_name}${reference ? ` (attachment_id: ${reference})` : ""}]\n"""\n${text}\n"""`,
           };
         }
       }
-      return note(a);
+      return note(a, "not included", reference);
     }
 
     return note(a, "not viewable");

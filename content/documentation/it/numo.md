@@ -75,7 +75,9 @@
       "lib/server/assistant/prompt.ts",
       "lib/server/numo-notes.ts",
       "lib/server/numo/memory-prompt.ts",
-      "components/settings/account-numo-memory-section.tsx"
+      "components/settings/account-numo-memory-section.tsx",
+      "lib/server/assistant/long-message.ts",
+      "lib/server/assistant/create-page-database.ts"
     ]
   },
   "review": {
@@ -282,6 +284,10 @@ Per chiedere a Numo di un passaggio, selezionalo in un editor, come una pagina o
 Numo può anche guardare le immagini nella descrizione di un ticket o di un obiettivo, in un piano, in un commento, in una pagina o nel tuo taccuino quando il modello della conversazione accetta immagini. Senza questa capacità, Numo dice di non aver potuto vedere l’immagine invece di descriverla.
 
 Numo può anche scrivere un file da scaricare: un report o un documento in PDF, un’esportazione in CSV, oppure un file di testo, Markdown, HTML, JSON, XML, SVG o di calendario. Chiedilo nella tua richiesta; Numo può costruirlo a partire dai file che hai aggiunto alla conversazione. Il file compare come scheda sotto la sua risposta: selezionando la scheda si apre l’anteprima quando il formato lo consente, **Scarica** lo salva e il menu accanto offre **Anteprima** e **Copia il contenuto**. Il file resta nello spazio privato della tua conversazione; per condividerlo con il progetto, chiedi a Numo di allegarlo a un ticket, a un obiettivo o a un commento che vi pubblica. Un PDF usa i font standard: i caratteri fuori dagli alfabeti dell’Europa occidentale e le emoji non compaiono.
+
+Se incolli nel composer un testo di oltre 12.000 caratteri, ad esempio dei log, viene allegato al tuo messaggio come **Testo incollato** invece di riempire il composer. Numo legge tutto il file prima di basarsi su di esso, quindi un CSV ricavato dai tuoi log include ogni riga. Un messaggio lungo che arriva a Numo per un’altra via viene allegato allo stesso modo: il messaggio conserva le prime righe e indica il file.
+
+Quando chiedi qualcosa da tenere sotto controllo, o un elenco di elementi con campi in comune, come candidature con azienda, stato e data, Numo crea un [database](/docs/databases) con quelle colonne e le prime voci invece di una pagina.
 
 Il modello predefinito di Numo si configura in **Impostazioni account → IA e Numo → Modello predefinito di Numo**: il valore dell’app o un modello personale del fornitore attivo. Una scelta esplicita nella conversazione ha la precedenza. Consulta [le impostazioni IA e l’utilizzo](/docs/ai-settings-and-usage#ai-keys-and-models).
 

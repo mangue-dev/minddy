@@ -114,6 +114,24 @@ describe("Numo tool contracts", () => {
       .not.toHaveProperty("filter_property_id");
   });
 
+  it("offers a dedicated database tool a small model fills completely (MIN-917)", () => {
+    const create = tool("create_page_database");
+    expect(PROJECT_ASSISTANT_TOOLS.map((t) => t.function.name)).toContain("create_page_database");
+    expect(PROJECT_SCOPED_TOOLS.has("create_page_database")).toBe(true);
+    // Small models skip optional fields: every field is required, nullable when optional.
+    expect(create?.function.parameters.required).toEqual(
+      ["title", "icon", "parent_page_id", "title_column", "properties", "rows"],
+    );
+    const properties = create?.function.parameters.properties as Record<string, {
+      items?: { required?: string[]; properties?: Record<string, unknown> };
+    }>;
+    expect(properties.properties.items?.required).toEqual(["name", "type", "options"]);
+    expect(properties.rows.items?.required).toEqual(["title", "values"]);
+    expect(create?.function.description).toMatch(/tracker/);
+    // create_page sends any collection to the database tool.
+    expect(tool("create_page")?.function.description).toContain("use create_page_database instead");
+  });
+
   it("advertises the owner-only backlog proposal", () => {
     expect(tool("propose_backlog")?.function.description).toMatch(
       /OWNER ONLY/i,

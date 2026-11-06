@@ -308,6 +308,7 @@
     "back": "Torna alle impostazioni"
   },
   "Resources": {
+    "pastedText": "Testo incollato",
     "downloadFailed": "Impossibile scaricare questo file. Riprova.",
     "actions": "Azioni del file",
     "downloadOptions": "Opzioni di download",
@@ -486,6 +487,8 @@
     "usageRefreshFailed": "Impossibile aggiornare l’utilizzo. Sono mostrati gli ultimi dati disponibili."
   },
   "Assistant": {
+    "pastedTextFileName": "Testo incollato {stamp}.txt",
+    "pastedTextNote": "Testo completo allegato come file: {fileName}",
     "title": "Chiedi a Numo",
     "replyAnnouncement": "Numo ha risposto.",
     "inputPlaceholder": "Chiedi a Numo qualsiasi cosa…",
@@ -4031,6 +4034,9 @@
     "createPageFailed": "Pagina non creata",
     "pageCreated": "Pagina creata",
     "pageCreatedWithTitle": "«{title}» creata",
+    "creatingDatabase": "Creazione del database…",
+    "createDatabaseFailed": "Database non creato",
+    "databaseCreatedWithTitle": "Database «{title}» creato",
     "pagesCreated": "{count, plural, one {# pagina creata} other {# pagine create}}",
     "updatingPage": "Aggiornamento della pagina…",
     "pageUpdated": "Pagina aggiornata",

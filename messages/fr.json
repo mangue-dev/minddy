@@ -308,6 +308,7 @@
     "back": "Retour aux paramètres"
   },
   "Resources": {
+    "pastedText": "Texte copié",
     "downloadFailed": "Impossible de télécharger ce fichier. Réessayez.",
     "actions": "Actions du fichier",
     "downloadOptions": "Options de téléchargement",
@@ -486,6 +487,8 @@
     "usageRefreshFailed": "Impossible d’actualiser l’usage. Les dernières données disponibles sont affichées."
   },
   "Assistant": {
+    "pastedTextFileName": "Texte collé {stamp}.txt",
+    "pastedTextNote": "Texte complet joint en fichier : {fileName}",
     "title": "Demander à Numo",
     "replyAnnouncement": "Numo a répondu.",
     "inputPlaceholder": "Demandez quelque chose à Numo…",
@@ -4031,6 +4034,9 @@
     "createPageFailed": "Page non créée",
     "pageCreated": "Page créée",
     "pageCreatedWithTitle": "Page « {title} » créée",
+    "creatingDatabase": "Création de la base de données…",
+    "createDatabaseFailed": "Base de données non créée",
+    "databaseCreatedWithTitle": "Base de données « {title} » créée",
     "pagesCreated": "{count, plural, one {# page créée} other {# pages créées}}",
     "updatingPage": "Mise à jour de la page…",
     "pageUpdated": "Page mise à jour",

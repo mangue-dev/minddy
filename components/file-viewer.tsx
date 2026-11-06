@@ -117,15 +117,19 @@ function AttachmentPreview({
   src,
   fileName,
   mimeType,
+  markdown = false,
 }: {
   kind: Exclude<AttachmentPreviewKind, "image">;
   src: string;
   fileName: string;
   mimeType?: string | null;
+  /** Render a text file as Markdown whatever its extension. */
+  markdown?: boolean;
 }) {
   const { resolvedTheme } = useTheme();
-  if (kind === "document" && (isMarkdownFileName(fileName) || (!isCsvAttachment(mimeType, fileName) && isPlainTextAttachment(mimeType, fileName)))) {
-    return <TextAttachmentPreview key={src} src={src} markdown={isMarkdownFileName(fileName)} />;
+  const asMarkdown = isMarkdownFileName(fileName) || (markdown && isPlainTextAttachment(mimeType, fileName));
+  if (kind === "document" && (asMarkdown || (!isCsvAttachment(mimeType, fileName) && isPlainTextAttachment(mimeType, fileName)))) {
+    return <TextAttachmentPreview key={src} src={src} markdown={asMarkdown} />;
   }
 
   if (kind === "audio") {
@@ -278,11 +282,15 @@ function FilePreviewActions({ close, downloadHref, fileName, onRemove, onRename 
 }
 
 /** One full-screen reader for stored issue resources and page files. */
-export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpenChange, onRemove, onRename, layoutId }: {
+export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpenChange, onRemove, onRename, layoutId, title, markdown }: {
   src: string;
   downloadHref: string;
   fileName: string;
   mimeType?: string | null;
+  /** The header's label when it is not the file name (a pasted text, MIN-916). */
+  title?: string;
+  /** Render a plain text file as Markdown (a pasted text, MIN-916). */
+  markdown?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Asked once the viewer has closed; the caller confirms (MIN-742). */
@@ -294,12 +302,12 @@ export function FileViewer({ src, downloadHref, fileName, mimeType, open, onOpen
   const kind = attachmentPreviewKind(mimeType, fileName);
   if (!kind) return null;
   const action = (close: () => void) => <FilePreviewActions close={close} downloadHref={downloadHref} fileName={fileName} onRemove={onRemove} onRename={onRename} />;
-  const props = { label: fileName, open, onOpenChange, action };
+  const props = { label: title ?? fileName, open, onOpenChange, action };
   if (kind === "image") return <ImageViewer {...props} src={src} alt={fileName} layoutId={layoutId} />;
   return <PreviewViewer {...props}>
     <div className="flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden border border-border bg-background shadow-lg">
-      <div className="shrink-0 truncate border-b border-border px-5 py-3 text-sm font-medium">{fileName}</div>
-      <div className="relative min-h-0 flex-1"><AttachmentPreview kind={kind} src={src} fileName={fileName} mimeType={mimeType} /></div>
+      <div className="shrink-0 truncate border-b border-border px-5 py-3 text-sm font-medium">{title ?? fileName}</div>
+      <div className="relative min-h-0 flex-1"><AttachmentPreview kind={kind} src={src} fileName={fileName} mimeType={mimeType} markdown={markdown} /></div>
     </div>
   </PreviewViewer>;
 }

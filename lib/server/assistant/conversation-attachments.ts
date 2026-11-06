@@ -168,7 +168,20 @@ export async function resolveConversationAttachment(ctx: ToolContext, reference:
   return { ...file, id: undefined, project_id: undefined };
 }
 
-export async function readConversationAttachment(ctx: ToolContext, reference: unknown, offset = 0) {
+/** Characters of text one read returns by default, and at most (MIN-916). */
+export const ATTACHMENT_READ_DEFAULT_CHARS = 3000;
+export const ATTACHMENT_READ_MAX_CHARS = 12_000;
+
+export function attachmentReadLimit(raw: unknown): number {
+  if (raw === undefined || raw === null) return ATTACHMENT_READ_DEFAULT_CHARS;
+  if (typeof raw !== "number" || !Number.isSafeInteger(raw) || raw < 1) {
+    throw new Error("limit must be a positive integer.");
+  }
+  return Math.min(raw, ATTACHMENT_READ_MAX_CHARS);
+}
+
+export async function readConversationAttachment(ctx: ToolContext, reference: unknown, offset = 0,
+  limit = ATTACHMENT_READ_DEFAULT_CHARS) {
   const file = await resolveConversationAttachment(ctx, reference);
   const textLike = (!file.mime_type.startsWith("image/") || file.mime_type === "image/svg+xml")
     && file.mime_type !== "application/pdf"
@@ -178,8 +191,9 @@ export async function readConversationAttachment(ctx: ToolContext, reference: un
     const bytes = await downloadAttachment(ctx.service, file.storage_path!);
     if (!bytes) throw new Error("Attachment file is unavailable.");
     const text = bytes.toString("utf8").replace(/^\ufeff/, "");
-    return { ...summary(file), content: text.slice(offset, offset + 3000), offset,
-      total_characters: text.length, next_offset: offset + 3000 < text.length ? offset + 3000 : null };
+    const end = Math.min(offset + limit, text.length);
+    return { ...summary(file), content: text.slice(offset, end), offset,
+      total_characters: text.length, next_offset: end < text.length ? end : null };
   }
   if (offset) throw new Error("offset is only supported for text files.");
   return { ...summary(file), preview_attachment_id: file.attachment_id,

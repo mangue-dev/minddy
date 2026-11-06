@@ -75,7 +75,9 @@
       "lib/server/assistant/prompt.ts",
       "lib/server/numo-notes.ts",
       "lib/server/numo/memory-prompt.ts",
-      "components/settings/account-numo-memory-section.tsx"
+      "components/settings/account-numo-memory-section.tsx",
+      "lib/server/assistant/long-message.ts",
+      "lib/server/assistant/create-page-database.ts"
     ]
   },
   "review": {
@@ -281,6 +283,10 @@ Pour interroger Numo sur un passage, sélectionnez-le dans un éditeur, par exem
 Numo peut aussi regarder les images d’une description de ticket ou d’objectif, d’un plan, d’un commentaire, d’une page ou de votre carnet lorsque le modèle de la conversation accepte les images. Sans cette capacité, Numo indique qu’il n’a pas pu voir l’image au lieu de la décrire.
 
 Numo peut aussi rédiger un fichier à télécharger : un rapport ou un document en PDF, un export en CSV, ou un fichier texte, Markdown, HTML, JSON, XML, SVG ou calendrier. Demandez-le dans votre requête ; Numo peut le construire à partir des fichiers ajoutés à la conversation. Le fichier apparaît dans une carte sous sa réponse : un clic sur la carte ouvre son aperçu quand le format le permet, **Télécharger** l’enregistre, et le menu voisin propose **Aperçu** et **Copier le contenu**. Le fichier reste dans le stockage privé de votre conversation ; pour le partager avec le projet, demandez à Numo de le joindre à un ticket, à un objectif ou à un commentaire qu’il y publie. Un PDF utilise les polices standard : les caractères hors des alphabets d’Europe de l’Ouest et les emoji n’y figurent pas.
+
+Un texte de plus de 12 000 caractères que vous collez dans la zone de saisie, des logs par exemple, rejoint votre message sous forme de pièce jointe **Texte copié** au lieu de remplir la zone de saisie. Numo lit ce fichier en entier avant de s’appuyer dessus : un CSV construit à partir de vos logs couvre donc chaque ligne. Un long message qui parvient à Numo par un autre chemin est joint de la même façon : le message garde ses premières lignes et nomme le fichier.
+
+Quand vous demandez un suivi, ou une liste d’éléments qui partagent des champs, par exemple des candidatures avec leur entreprise, leur statut et leur date, Numo crée une [base de données](/docs/databases) avec ces colonnes et ses premières entrées plutôt qu’une page.
 
 Le modèle par défaut de Numo vient de **Paramètres du compte → IA et Numo → Modèle par défaut de Numo** : le réglage de l’app ou un modèle personnel pour le fournisseur actif. Un choix explicite dans la conversation est prioritaire. Consultez [les paramètres IA et l’usage](/docs/ai-settings-and-usage#ai-keys-and-models).
 

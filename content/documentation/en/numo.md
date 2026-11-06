@@ -75,7 +75,9 @@
       "lib/server/assistant/prompt.ts",
       "lib/server/numo-notes.ts",
       "lib/server/numo/memory-prompt.ts",
-      "components/settings/account-numo-memory-section.tsx"
+      "components/settings/account-numo-memory-section.tsx",
+      "lib/server/assistant/long-message.ts",
+      "lib/server/assistant/create-page-database.ts"
     ]
   },
   "review": {
@@ -281,6 +283,10 @@ To ask about a passage, select it in an editor, such as a page or an issue descr
 Numo can also look at the images in an issue or objective description, a plan, a comment, a page or your notebook when the conversation model accepts images. Without that capability, Numo says it could not view an image instead of describing it.
 
 Numo can also write a file for you to download: a report or a document as PDF, an export as CSV, or a text, Markdown, HTML, JSON, XML, SVG or calendar file. Ask for it in your request; Numo can build it from files you added to the conversation. The file appears as a card under its answer: selecting the card opens its preview when the format allows it, **Download** saves it, and the menu next to it offers **Preview** and **Copy contents**. The file stays in your conversation’s private storage; to share it with the project, ask Numo to attach it to an issue, an objective or a comment it posts there. A PDF uses the standard fonts: characters outside Western European alphabets, and emoji, are left out.
+
+When you paste a text longer than 12,000 characters into the composer, such as logs, it joins your message as a **Pasted text** attachment instead of filling the composer. Numo reads the whole file before relying on it, so a CSV built from your logs covers every line. A long message that reaches Numo another way is attached the same way: the message keeps its first lines and names the file.
+
+When you ask for something to track, or for a list of items that share fields, such as job applications with their company, status and date, Numo creates a [database](/docs/databases) with those columns and its first entries rather than a page.
 
 The default Numo model comes from **Account settings → AI & Numo → Default Numo model**: App default or a personal model for the active provider. An explicit conversation choice takes precedence. See [AI settings and usage](/docs/ai-settings-and-usage#ai-keys-and-models).
 

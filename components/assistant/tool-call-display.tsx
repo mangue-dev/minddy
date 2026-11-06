@@ -350,6 +350,17 @@ const TOOL_META: Record<string, ToolMeta> = {
       return title ? t("pageCreatedWithTitle", { title }) : t("pageCreated");
     },
   },
+  create_page_database: {
+    icon: Book01Icon,
+    getLabel: (args, result, success, status, t) => {
+      const title = typeof args.title === "string" ? args.title.trim() : "";
+      if (status === "running") return t("creatingDatabase");
+      // A refused row leaves the database itself created: the label says so.
+      const created = success || typeof result?.page_id === "string";
+      if (!created) return t("createDatabaseFailed");
+      return title ? t("databaseCreatedWithTitle", { title }) : t("pageCreated");
+    },
+  },
   update_page_database: {
     icon: Book02Icon,
     getLabel: (_args, _result, success, status, t) => {

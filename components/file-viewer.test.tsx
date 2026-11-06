@@ -263,3 +263,19 @@ it("closes its actions menu when the open trigger is clicked again", async () =>
   expect(document.querySelector('[role="menu"]')).toBeNull();
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
 });
+
+it("renders a pasted text as Markdown under its own title (MIN-916)", async () => {
+  await act(() => root.render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <FileViewer src="/api/attachments/file?path=pasted&preview=1" downloadHref="/api/attachments/file?path=pasted&download=1"
+        fileName="Pasted text 2026-11-06 21.30.txt" mimeType="text/plain" title="Pasted text" markdown
+        open onOpenChange={() => {}} />
+    </NextIntlClientProvider>,
+  ));
+  await flush();
+  const dialog = document.querySelector("dialog")!;
+  expect(dialog.querySelector("article")?.textContent).toContain("Meeting notes");
+  expect(dialog.querySelector("pre")).toBeNull();
+  expect(dialog.textContent).toContain("Pasted text");
+  expect(dialog.textContent).not.toContain("2026-11-06 21.30");
+});

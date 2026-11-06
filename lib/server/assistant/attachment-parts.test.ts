@@ -184,6 +184,33 @@ describe("groupPromptAttachments", () => {
     ]);
   });
 
+  it("marks a cut text excerpt and names how to read the rest (MIN-916)", async () => {
+    const service = fakeService();
+    const long = "line\n".repeat(2_000);
+    (service.storage as unknown as { from: () => { download: unknown } }).from = () => ({
+      download: async () => ({ data: new Blob([Buffer.from(long)]), error: null }),
+    });
+    const [part] = await buildAttachmentParts(
+      service,
+      [{ ...csv, attachment_id: "message-1:0" }],
+      { modalities: ALL_MODALITIES, includeHeavy: true },
+    );
+    const text = (part as { text: string }).text;
+    expect(text).toContain(`first 4000 of ${long.length} characters`);
+    expect(text).toContain("attachment_id: message-1:0, offset: 4000");
+  });
+
+  it("names the reference of a file left out of an older message (MIN-916)", async () => {
+    const [part] = await buildAttachmentParts(
+      fakeService(),
+      [{ ...csv, attachment_id: "message-1:2" }],
+      { modalities: ALL_MODALITIES, includeHeavy: false },
+    );
+    expect((part as { text: string }).text).toContain(
+      "read it with read_conversation_attachment (attachment_id: message-1:2)",
+    );
+  });
+
   it("tolère l'absence de lot", () => {
     expect(groupPromptAttachments(null).size).toBe(0);
     expect(groupPromptAttachments(undefined).size).toBe(0);

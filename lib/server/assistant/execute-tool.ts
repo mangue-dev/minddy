@@ -60,6 +60,7 @@ import {
   updateDatabaseForAgent,
   type PageToolResult,
 } from "@/lib/server/page-tools";
+import { createPageDatabase } from "./create-page-database";
 import {
   listDatabaseViewsForAgent,
   updateDatabaseViewsForAgent,
@@ -83,7 +84,7 @@ import {
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
-import { attachmentOffset, listConversationAttachments, readConversationAttachment,
+import { attachmentOffset, attachmentReadLimit, listConversationAttachments, readConversationAttachment,
   copyConversationAttachment, createGeneratedFile, viewDocumentImage } from "./conversation-attachments";
 import { GeneratedFileError } from "./generated-files";
 import { insertAttachments } from "@/lib/server/attachments";
@@ -1124,7 +1125,7 @@ async function executeToolUnlisted(
       return { result: await listConversationAttachments(ctx, attachmentOffset(args.offset)), success: true };
     }
     if (toolName === "read_conversation_attachment") {
-      return { result: await readConversationAttachment(ctx, args.attachment_id, attachmentOffset(args.offset)), success: true };
+      return { result: await readConversationAttachment(ctx, args.attachment_id, attachmentOffset(args.offset), attachmentReadLimit(args.limit)), success: true };
     }
     if (toolName === "create_file") {
       try {
@@ -1510,6 +1511,12 @@ async function executeToolUnlisted(
       // this block only translates Numo's arguments and renders his refusals.
       case "create_page":
         return executeCreatePage(args, ctx, projectId);
+      case "create_page_database": {
+        const result = await createPageDatabase(args, { projectId, actorId: ctx.userId });
+        return result.ok
+          ? { result: result.data, success: result.success }
+          : toolError(result.message);
+      }
       case "list_pages":
       case "search_pages":
       case "get_page":

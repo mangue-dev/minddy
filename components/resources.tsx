@@ -3,7 +3,7 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon, AttachmentIcon, Cancel01Icon, Delete02Icon, Download01Icon, Edit04Icon, File02Icon, Link02Icon, LinkSquare02Icon, ViewIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, AttachmentIcon, Cancel01Icon, ClipboardTypeIcon, Delete02Icon, Download01Icon, Edit04Icon, File02Icon, Link02Icon, LinkSquare02Icon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { isPlainNavigationClick } from "@/components/editor-node-link";
@@ -97,6 +97,9 @@ export interface ResourceLike {
   page?: { id: string; title: string; icon: string | null } | null;
   /** Where the page lives — the chip links to it inside the app. */
   project_id?: string | null;
+  /** A long text pasted into Numo's composer (MIN-916): the chip reads
+      "Pasted text" with a clipboard icon instead of the generated file name. */
+  pasted?: boolean;
 }
 
 /** Paperclip button + hidden multi-file input, shared by every composer that
@@ -836,9 +839,12 @@ export function ResourcePills({
         const mime = a.mime_type ?? "application/octet-stream";
         const previewKind =
           !url && !pageId ? attachmentPreviewKind(mime, a.file_name) : null;
+        const pasted = !!a.pasted && !url && !pageId;
         const fullName = pageId
           ? (a.page?.title?.trim() || a.file_name)
-          : a.file_name;
+          : pasted
+            ? t("pastedText")
+            : a.file_name;
         const label = url
           ? t("openLink")
           : pageId
@@ -856,11 +862,15 @@ export function ResourcePills({
                 ? pageIcon(a.page?.icon)
                 : (
                     <ResourceFigure>
-                      <ResourceTypeIcon
-                        mime={mime}
-                        name={a.file_name}
-                        className="size-4"
-                      />
+                      {pasted ? (
+                        <HugeiconsIcon icon={ClipboardTypeIcon} className="size-4" aria-hidden />
+                      ) : (
+                        <ResourceTypeIcon
+                          mime={mime}
+                          name={a.file_name}
+                          className="size-4"
+                        />
+                      )}
                     </ResourceFigure>
                   )}
             <span
@@ -877,7 +887,8 @@ export function ResourcePills({
           </>
         );
         const removable = !!onRemove && (canRemove?.(a) ?? true);
-        const renamable = !!onRename && isRenamableResource(a) &&
+        // A pasted text shows no file name, so there is nothing to rename.
+        const renamable = !!onRename && !pasted && isRenamableResource(a) &&
           (canRename?.(a) ?? canRemove?.(a) ?? true);
         // The pill's hover commands; a card puts them in its menu instead.
         const actions = [
@@ -901,7 +912,9 @@ export function ResourcePills({
         if (cards) {
           const typeTile = (
             <ResourceTile
-              icon={<ResourceTypeIcon mime={mime} name={a.file_name} className="size-6" />}
+              icon={pasted
+                ? <HugeiconsIcon icon={ClipboardTypeIcon} className="size-6" aria-hidden />
+                : <ResourceTypeIcon mime={mime} name={a.file_name} className="size-6" />}
               label={tileExtension(a.file_name)}
             />
           );
@@ -1079,7 +1092,7 @@ export function ResourcePills({
           <ResourceCard
             key={p.localId}
             busy
-            name={p.file_name}
+            name={p.pasted ? t("pastedText") : p.file_name}
             detail={formatFileSize(p.size_bytes, locale)}
             figure={<ResourceTile icon={<Spinner className="size-5 text-muted-foreground" />} label={tileExtension(p.file_name)} />}
             menuLabel={t("actions")}
@@ -1111,9 +1124,9 @@ export function ResourcePills({
             <ResourceFigure>
               <Spinner className="size-4 text-muted-foreground" />
             </ResourceFigure>
-            <AppTooltip label={p.file_name}>
+            <AppTooltip label={p.pasted ? t("pastedText") : p.file_name}>
               <span className="min-w-0 truncate">
-                <CompactResourceName name={p.file_name} />
+                <CompactResourceName name={p.pasted ? t("pastedText") : p.file_name} />
               </span>
             </AppTooltip>
           </EntityPill>
@@ -1124,6 +1137,8 @@ export function ResourcePills({
         downloadHref={fileHref?.(preview, "download") ?? attachmentFileUrl(activePreviewPath, true)}
         fileName={preview.file_name}
         mimeType={preview.mime_type}
+        // A pasted text (MIN-916) reads as Markdown under its chip's label.
+        {...(preview.pasted ? { title: t("pastedText"), markdown: true } : {})}
         open
         onOpenChange={open => { if (!open) setPreview(null); }}
         onRemove={onRemove && (canRemove?.(preview) ?? true) ? () => setRemoving({ resource: preview }) : undefined}

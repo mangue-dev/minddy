@@ -87,6 +87,10 @@ export interface AttachmentInput {
   file_name: string;
   mime_type: string;
   size_bytes: number;
+  /** Text pasted into Numo's composer and attached because it was too long
+      to send inline (MIN-916): shown as "Pasted text", not by its file name.
+      Kept on chat message metadata only; attachment rows have no such column. */
+  pasted?: boolean;
 }
 
 /** The file half of a resource — the historical `AttachmentInput`, kept under
