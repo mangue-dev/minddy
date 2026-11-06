@@ -4,7 +4,7 @@ import { Activity, act, type ComponentProps, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { PullRequestsPage } from "@/components/pull-requests/pull-requests-page";
 import type { PrDetail } from "@/components/pull-requests/pr-detail";
 import { AppTabRouteProvider } from "./app-tab-route-context";
@@ -103,6 +103,13 @@ let client: QueryClient;
 let rows: PullRequestListItem[];
 let search: string;
 let activation: number;
+let historyReplace: MockInstance<History["replaceState"]>;
+/** The page drops `?pr=` in place, without a router navigation (MIN-908). */
+function expectConsumed(consumed: boolean) {
+  if (consumed) expect(historyReplace).toHaveBeenCalledWith(null, "", "/pull-requests");
+  else expect(historyReplace).not.toHaveBeenCalledWith(null, "", "/pull-requests");
+  expect(h.replace).not.toHaveBeenCalled();
+}
 
 async function render(active = true) {
   window.history.replaceState(null, "", active ? `/pull-requests?${search}` : "/projects/project");
@@ -156,6 +163,7 @@ beforeEach(() => {
   rows = [item()];
   search = "pr=pr";
   activation = 0;
+  historyReplace = vi.spyOn(window.history, "replaceState");
   h.fetchList.mockImplementation(async ({ state, pin }) => response(
     rows.filter((pr) => state === "completed"
       ? ["merged", "closed"].includes(pr.pr_state)
@@ -225,7 +233,7 @@ describe("Pull Requests completed filter", () => {
     await render(false);
     rows = [item("merged")];
     await act(async () => { confirm(); });
-    expect(h.replace).not.toHaveBeenCalled();
+    expectConsumed(false);
     await render();
     await flush();
     await refetch();
@@ -235,10 +243,23 @@ describe("Pull Requests completed filter", () => {
     await toggle();
     expectCompleted(true);
     expect(container.querySelector('[data-navigation-href="/pull-requests?pr=pr"]')).not.toBeNull();
-    expect(h.replace).toHaveBeenCalledWith("/pull-requests", { scroll: false });
+    expectConsumed(true);
     await toggle();
     await refetch();
     expectCompleted(false);
+  });
+
+  it("drops the link in place when a merge is confirmed on the active tab", async () => {
+    h.merge.mockResolvedValue(undefined);
+    client.setQueryData(allPullRequestsQueryKey("open", PULL_REQUESTS_PAGE, { pr: "pr" }), response(rows));
+    await render();
+    await flush();
+    const merge = [...container.querySelectorAll("button")].find((button) => button.textContent === "Merge pr")!;
+    rows = [item("merged")];
+    await act(() => merge.click());
+    await flush();
+    expectConsumed(true);
+    expect(window.location.pathname + window.location.search).toBe("/pull-requests");
   });
 
   it.each(["merged", "closed"] as const)("requires manual activation for a link pointing to a %s PR", async (state) => {
@@ -281,7 +302,7 @@ describe("Pull Requests completed filter", () => {
     await act(() => showAll.click());
     await flush();
     expectCompleted(true);
-    expect(h.replace).toHaveBeenCalledWith("/pull-requests", { scroll: false });
+    expectConsumed(true);
     await toggle();
     await refetch();
     expectCompleted(false);
