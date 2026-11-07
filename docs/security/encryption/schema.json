@@ -9778,6 +9778,31 @@
         "type": "uuid[]",
         "nullable": false,
         "generated": false
+      },
+      "actor_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "actor_kind": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "changed_fields": {
+        "type": "text[]",
+        "nullable": true,
+        "generated": false
+      },
+      "recipient_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "numo_routed_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -9787,6 +9812,70 @@
       {
         "table": "projects",
         "column": "project_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "numo_event_batches": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "opened_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "due_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "event_ids": {
+        "type": "bigint[]",
+        "nullable": false,
+        "generated": false
+      },
+      "status": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "claimed_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "attempts": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "closed_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "error_code": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "users",
+        "column": "user_id",
         "targetColumn": "id"
       }
     ]

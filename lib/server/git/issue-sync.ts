@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import { issueStore } from "@/lib/server/issue-store";
 import { commentStore, syncGithubComment } from "@/lib/server/comment-store";
 import { encodeGithubIssueMetadata, shouldEncryptGithubIssueMetadata } from
@@ -207,7 +208,7 @@ export async function setIssueSyncEnabled(params: {
  * this issue lives. The ticket is the REFLECTION, and a reflection that diverges from what it reflects is no longer useful. What has no remote equivalent — the
  * plan, the minddy comments, the goal, the cycle — is never touched.
  */
-export async function applyRemoteIssue(
+async function applyRemoteIssueUntagged(
   target: IssueSyncTarget,
   remote: RemoteIssue,
   /** Login index → ​​member, built once per BATCH when there is one
@@ -1080,4 +1081,9 @@ async function runRemoteIssueBackfill(target: IssueSyncTarget): Promise<number> 
     .eq("id", target.linkId);
 
   return created;
+}
+
+/** An issue opened or edited on the forge is not the link owner's gesture, though the row names them as its creator (MIN-926). */
+export function applyRemoteIssue(...args: Parameters<typeof applyRemoteIssueUntagged>): ReturnType<typeof applyRemoteIssueUntagged> {
+  return withEventActor({ kind: "system" }, () => applyRemoteIssueUntagged(...args));
 }

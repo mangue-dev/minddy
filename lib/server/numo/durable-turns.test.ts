@@ -192,6 +192,7 @@ vi.mock("@/lib/server/assistant/admin-tools", () => ({
 
 const { createDurableNumoEmitter, drainNumoTurns, executeNumoTurn } = await import("./turns");
 const { NumoCompletionError } = await import("@/lib/server/assistant/loop");
+const { supabaseServerFetch } = await import("@/lib/server/supabase-fetch");
 
 const runtime = {
   apiKey: "key",
@@ -346,6 +347,25 @@ describe("durable Numo execution", () => {
     } finally {
       releaseCatalog();
       await execution;
+    }
+  });
+
+  it("marks every database write of the turn as Numo's (MIN-926)", async () => {
+    // A tool such as update_issues writes through the turn's clients, whose
+    // transport adds the actor headers the event journal records.
+    const transport = vi.fn<typeof fetch>(async () => new Response("[]"));
+    vi.stubGlobal("fetch", transport);
+    try {
+      h.processChat.mockImplementationOnce(async () => {
+        await supabaseServerFetch("https://project.supabase.co/rest/v1/issues?id=eq.1", { method: "PATCH" });
+        return { fullContent: "Done.", finalReasoning: null, allToolCalls: [], generations: [], suspension: null };
+      });
+      await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
+      const headers = new Headers(transport.mock.calls[0]?.[1]?.headers);
+      expect(headers.get("x-minddy-actor-kind")).toBe("numo");
+      expect(headers.get("x-minddy-actor-id")).toBe(h.turn!.user_id);
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
 

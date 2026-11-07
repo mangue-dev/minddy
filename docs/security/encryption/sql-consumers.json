@@ -476,27 +476,31 @@
       ]
     },
     "capture_routine_event()": {
-      "sha256": "59351f6abdebd4526014704561ccaac1698741183a1eeec94b8da3ef276366c8",
+      "sha256": "b41474fa2afd56cfc8f08f54087d35fc31137d1aed14f68b83ae325fdcec3d33",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""
       ],
-      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "acl": "{postgres=X/postgres}",
       "relations": [
         "issues",
         "comments",
         "projects",
+        "objectives",
         "feedback_posts",
-        "routine_events",
-        "issue_categories"
+        "issue_categories",
+        "routine_events"
       ],
       "protectedRelations": [
         "issues",
         "comments",
         "projects",
+        "objectives",
         "feedback_posts"
       ],
-      "functionReferences": []
+      "functionReferences": [
+        "routine_event_actor"
+      ]
     },
     "effective_plan_id(uuid)": {
       "sha256": "f7fac589841217a5452bc0e5922781593e063a0b7ebe03a68729bc67b8fcdba5",
@@ -7428,6 +7432,116 @@
         "github_issue_comment_syncs"
       ],
       "functionReferences": []
+    },
+    "routine_event_actor(uuid)": {
+      "sha256": "b7b4ce216d763a27f2453cf471939622abc0afdddbd60c9aa907d94347f95058",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "capture_numo_event()": {
+      "sha256": "b513b71e06645761b7e975d165b492ccf70e11d0bafc54bfbb56759e307928f4",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres}",
+      "relations": [
+        "pages",
+        "issues",
+        "projects",
+        "objectives",
+        "issue_events",
+        "notifications",
+        "page_comments",
+        "agent_routines",
+        "feedback_posts",
+        "numo_routine_occurrences",
+        "routine_events"
+      ],
+      "protectedRelations": [
+        "pages",
+        "issues",
+        "projects",
+        "objectives",
+        "issue_events",
+        "page_comments",
+        "agent_routines",
+        "feedback_posts",
+        "numo_routine_occurrences"
+      ],
+      "functionReferences": [
+        "routine_event_actor"
+      ]
+    },
+    "numo_event_recipients(uuid,uuid)": {
+      "sha256": "d6d154de16fb2ec8ad4accfb6d278377488e3ef1f64dfe7b13b065a87033b408",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\"",
+        "TimeZone=UTC"
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "projects",
+        "project_members"
+      ],
+      "protectedRelations": [
+        "projects"
+      ],
+      "functionReferences": []
+    },
+    "claim_numo_event_batches(integer)": {
+      "sha256": "ba101f2dcb9e69a9deaeb60865eafebae43e1c68d7a7a965506f1e0dd243ae26",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "numo_event_batches"
+      ],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
+    "route_numo_event(bigint,boolean)": {
+      "sha256": "d5b81fe892fb53618cc1e80c03f241d369144f5fb6f5add14e814740cd837db7",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "routine_events",
+        "numo_event_batches"
+      ],
+      "protectedRelations": [],
+      "functionReferences": [
+        "numo_event_recipients"
+      ]
+    },
+    "journal_pull_request_signal(uuid,uuid,text,text,uuid)": {
+      "sha256": "08e5f70d99afde92fc34897c5b6ad6d8c009cae90d5ca5c2a93f47173bf3a435",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "issues",
+        "projects",
+        "routine_events"
+      ],
+      "protectedRelations": [
+        "issues",
+        "projects"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {
@@ -8926,6 +9040,26 @@
     "github_issue_sync_metadata.github_issue_sync_metadata_content_encryption_checked_at_attemp": {
       "function": "rotate_encryption_backfill_attempt()",
       "definition": "CREATE TRIGGER github_issue_sync_metadata_content_encryption_checked_at_attemp BEFORE UPDATE ON github_issue_sync_metadata FOR EACH ROW EXECUTE FUNCTION rotate_encryption_backfill_attempt('content_encryption_checked_at', 'content_encryption_attempted_at')"
+    },
+    "objectives.numo_objective_event": {
+      "function": "capture_numo_event()",
+      "definition": "CREATE TRIGGER numo_objective_event AFTER UPDATE OF status, target_date ON objectives FOR EACH ROW EXECUTE FUNCTION capture_numo_event()"
+    },
+    "issue_events.numo_pull_request_event": {
+      "function": "capture_numo_event()",
+      "definition": "CREATE TRIGGER numo_pull_request_event AFTER INSERT ON issue_events FOR EACH ROW EXECUTE FUNCTION capture_numo_event()"
+    },
+    "numo_assistant_turns.numo_routine_finished_event": {
+      "function": "capture_numo_event()",
+      "definition": "CREATE TRIGGER numo_routine_finished_event AFTER UPDATE OF status ON numo_assistant_turns FOR EACH ROW EXECUTE FUNCTION capture_numo_event()"
+    },
+    "page_comments.numo_page_comment_event": {
+      "function": "capture_numo_event()",
+      "definition": "CREATE TRIGGER numo_page_comment_event AFTER INSERT ON page_comments FOR EACH ROW EXECUTE FUNCTION capture_numo_event()"
+    },
+    "notifications.numo_mention_event": {
+      "function": "capture_numo_event()",
+      "definition": "CREATE TRIGGER numo_mention_event AFTER INSERT ON notifications FOR EACH ROW WHEN (new.type = ANY (ARRAY['mention'::text, 'page_mention'::text])) EXECUTE FUNCTION capture_numo_event()"
     }
   }
 }

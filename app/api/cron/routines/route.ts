@@ -14,6 +14,7 @@ import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
 import { executeNumoTurn } from "@/lib/server/numo/turns";
 import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
 import { getServiceClient } from "@/lib/supabase-service";
+import { drainNumoEventBatches } from "@/lib/server/numo/event-batches";
 
 /**
  * The routines clock (MIN-185). Every five minutes it claims due schedules,
@@ -31,6 +32,15 @@ export const maxDuration = 300;
 
 /** The next five-minute tick handles anything beyond this batch. */
 const MAX_PER_TICK = 10;
+/** Journal rows read per tick; each costs a few queries and no model call. */
+const MAX_EVENTS_PER_TICK = 200;
+/** Due Numo event batches handed out per tick (MIN-926). */
+const MAX_BATCHES_PER_TICK = 20;
+/**
+ * The journal stops being read after this, so a backlog cannot crowd out the
+ * schedules that follow; a killed tick would also strand its leased rows.
+ */
+const EVENT_BUDGET_MS = 120_000;
 
 /** Translates a launch refusal into a `last_error` code. */
 function launchErrorCode(error: string): RoutineErrorCode {
@@ -79,7 +89,10 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const eventWork = await processRoutineEvents(MAX_PER_TICK);
+  const eventWork = await processRoutineEvents(MAX_PER_TICK, {
+    eventLimit: MAX_EVENTS_PER_TICK,
+    deadline: Date.now() + EVENT_BUDGET_MS,
+  });
   const due = await dueRoutines(MAX_PER_TICK);
   const results: Array<{ id: string; outcome: string }> = [];
   for (const routine of due) {
@@ -92,7 +105,13 @@ async function handle(request: NextRequest) {
       results.push({ id: routine.id, outcome: "threw" });
     }
   }
-  return NextResponse.json({ ok: true, due: due.length, results, eventWork });
+  // Last: a batch is minutes old by design and can wait for the schedules.
+  // Routing ran above, so a batch that fell due during this tick goes out now.
+  const batchWork = await drainNumoEventBatches(MAX_BATCHES_PER_TICK).catch((error: Error) => {
+    console.error("[cron/routines] numo batches:", error.message);
+    return { claimed: 0, outcomes: [] };
+  });
+  return NextResponse.json({ ok: true, due: due.length, results, eventWork, batchWork: { claimed: batchWork.claimed } });
 }
 
 export const GET = handle;

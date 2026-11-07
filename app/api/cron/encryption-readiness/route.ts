@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import { NextResponse, type NextRequest } from "next/server";
 import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { verifyCriticalBackfillReadiness } from
@@ -8,7 +9,12 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 /** Run a read-only, content-free verification during a quiescent staging window. */
-export async function GET(request: NextRequest) {
+/** Backfill writes are maintenance for the event journal (MIN-926). */
+export function GET(request: NextRequest) {
+  return withEventActor({ kind: "maintenance" }, () => runReadiness(request));
+}
+
+async function runReadiness(request: NextRequest) {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

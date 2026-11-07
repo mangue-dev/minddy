@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
@@ -121,7 +122,7 @@ export async function applySmartAssign(
  * moment nothing is written yet, and to pretend otherwise would lie to
  * the caller as well as to the sweeper who account.
  */
-export async function runSmartAssign(
+async function runSmartAssignUntagged(
   params: SmartAssignParams
 ): Promise<string | null> {
   const service = getServiceClient();
@@ -520,4 +521,9 @@ export async function loadSmartAssignConfigWarnings(
     console.error("[smart-assign] warnings failed:", (err as Error).message);
     return [];
   }
+}
+
+/** Smart Assign's writes are automated news for the assignee, whoever triggered them (MIN-926). */
+export function runSmartAssign(...args: Parameters<typeof runSmartAssignUntagged>): ReturnType<typeof runSmartAssignUntagged> {
+  return withEventActor({ kind: "system" }, () => runSmartAssignUntagged(...args));
 }

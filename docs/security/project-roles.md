@@ -78,8 +78,31 @@ the feedback SSO secret.
 - Routines are owner-only to manage and always run as `routine.owner_id`, who
   pays. `ensure_numo_routine_occurrence` requires the routine owner to still be
   the project owner, and event processing cancels otherwise.
-- `routine_events` stores no initiating actor. For comments, `source_id` is the
-  comment id, so the author can be recovered.
+- `routine_events` records its actor since MIN-926. API routes write through
+  the service role, so `getAuthedUser` and its variants fill a request-scoped
+  slot (`openRequestActorSlot` in `lib/server/supabase-fetch.ts`) and every
+  later write of the request sends the verified user as
+  `x-minddy-actor-id`. The database trusts that header from the service role
+  only, then falls back to `auth.uid()`, then to the row's authoring column
+  (comment author, page editor, issue creator).
+- `actor_kind` comes from `withEventActor`, whose innermost scope wins:
+  `numo` for a Numo turn (and any comment stored with `via_assistant`),
+  `system` for automated news such as Smart Assign or forge sync (service
+  role only; it drops the row's author), `maintenance` for re-sealing,
+  rollovers and recurrence, `user` for a known person. `numo` and
+  `maintenance` are accepted from any caller: forging either only hides the
+  caller's own write from teammates' background Numo. The kind is not an
+  authorization input and must not become one.
+- Background Numo batches (`numo_event_batches`, service-only) route an event
+  to every member with access to its project except its actor, members inactive
+  for 30 days and members with Numo's memory or `numo_background` off; a
+  mention reaches the mentioned member only, and so do a forge review request
+  and failing CI when the reviewer or the pull request's author maps to a
+  member through their linked forge account (`lib/server/numo/forge-signals.ts`);
+  unmapped, every member hears them. A batch holds journal ids only,
+  never content, and ignores per-subject visibility (private pages, unpublished
+  feedback): whatever reads a batch must check the reader's access to each
+  subject again.
 - `@Numo` in a comment (issue, objective, page, feedback) or a reply under a
   Numo comment runs a Numo turn as the commenter, with the full tool set,
   billed to the commenter. Tools re-check access on every call

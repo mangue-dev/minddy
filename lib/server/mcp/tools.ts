@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import { readProjectStats } from "@/lib/server/project-stats";
 import { ROUTINE_TRIGGER_SCHEMA, CREATE_ROUTINE_DESCRIPTION, UPDATE_ROUTINE_DESCRIPTION } from "@/lib/server/routine-tool-schema";
 import { materializePendingDescription } from "@/lib/server/description-collaboration";
@@ -1051,12 +1052,17 @@ function withToolCapabilities(server: McpServer): McpServer {
     const scoped = async (...args: unknown[]) => {
       // What the agent writes stores its mentions without a label (MIN-872).
       const [input, ...rest] = args;
-      const result = await runWithToolCapability(capability, () =>
+      const userId = getUserId((args[1] ?? {}) as ToolExtra);
+      const run = () => runWithToolCapability(capability, () =>
         (handler as (...a: unknown[]) => unknown)(withoutMentionLabels(input), ...rest),
       );
+      // The agent acts as the user who connected it: its writes are that
+      // user's gestures in the event journal (MIN-926).
+      const result = userId
+        ? await withEventActor({ kind: "user", userId }, async () => run())
+        : await run();
       // Typed mentions in what the agent reads carry the target's current
       // label, or a neutral one when the caller may not see it (MIN-734).
-      const userId = getUserId((args[1] ?? {}) as ToolExtra);
       return userId ? mentionsForReader(result as ToolResult, userId) : result;
     };
     return original(name, config, scoped);

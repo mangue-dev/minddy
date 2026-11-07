@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -136,7 +137,7 @@ export type ReevaluationOutcome =
  * still there. An edit arriving meanwhile therefore keeps its own, later,
  * pass, and a run killed mid-pass leaves the lease to expire and run again.
  */
-export async function runDueSmartFillReevaluations(
+async function runDueSmartFillReevaluationsUntagged(
   limit = BATCH_SIZE,
 ): Promise<{ due: number; outcomes: Partial<Record<ReevaluationOutcome, number>> }> {
   const startedAt = Date.now();
@@ -314,4 +315,9 @@ async function readState(
       category_ids: (categories ?? []).map((c) => c.category_id as string),
     },
   };
+}
+
+/** Re-deriving fields from text the user already wrote is no news for background Numo (MIN-926). */
+export function runDueSmartFillReevaluations(...args: Parameters<typeof runDueSmartFillReevaluationsUntagged>): ReturnType<typeof runDueSmartFillReevaluationsUntagged> {
+  return withEventActor({ kind: "maintenance" }, () => runDueSmartFillReevaluationsUntagged(...args));
 }

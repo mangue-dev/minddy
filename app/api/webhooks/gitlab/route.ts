@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { repositoryStorageName } from "@/lib/server/git/repository-name-content";
 import { afterOrNow } from "@/lib/server/after-safe";
+import { addedGitlabReviewers, journalPullRequestSignal } from "@/lib/server/numo/forge-signals";
 import {
   applyForgePrToIssue,
   isPrActionEcho,
@@ -145,7 +146,12 @@ interface MergeRequestEvent {
   project?: { path_with_namespace?: string };
   object_attributes?: MergeRequestAttributes;
   /** Fields modified by a `update` (present only on this action). */
-  changes?: { title?: unknown; draft?: unknown };
+  changes?: {
+    title?: unknown;
+    draft?: unknown;
+    /** Reviewers before and after the update, when they changed. */
+    reviewers?: { previous?: GitlabUserPayload[]; current?: GitlabUserPayload[] };
+  };
 }
 
 /**
@@ -287,6 +293,18 @@ async function handleMergeRequest(
   // Ignore an older or replayed delivery consistently across the PR row,
   // run state, issue status, activity, and notifications.
   if (ingestion && !ingestion.applied) return;
+
+  // Background Numo (MIN-926): reviewers this update asked. The service
+  // account asking is Numo's own gesture, which never wakes Numo.
+  const newReviewers = action === "update" ? addedGitlabReviewers(payload.changes) : [];
+  if (ingested && newReviewers.length > 0 && !(await isServiceAccount(repoFullName, payload.user))) {
+    await journalPullRequestSignal({
+      provider: "gitlab",
+      pullRequest: ingested,
+      type: "pr_review_requested",
+      reviewerLogins: newReviewers,
+    });
+  }
 
   // Inbox: The project learns that a merge request is waiting for eyes. Here, right
   // after ingestion, and not lower with the other notifications: these
@@ -512,13 +530,23 @@ interface PipelineEvent {
   object_kind?: string;
   project?: { path_with_namespace?: string };
   merge_request?: { iid?: number };
+  object_attributes?: { status?: string; sha?: string };
 }
 
 async function handlePipeline(
   payload: PipelineEvent,
   repoFullName: string,
 ): Promise<void> {
-  await broadcastGitlabPr(repoFullName, payload.merge_request?.iid, ["pr"]);
+  const iid = payload.merge_request?.iid;
+  await broadcastGitlabPr(repoFullName, iid, ["pr"]);
+  // Failing CI on a merge request reaches background Numo (MIN-926), once
+  // per head commit. A pipeline on an older commit says nothing about the MR.
+  const sha = payload.object_attributes?.sha;
+  if (payload.object_attributes?.status !== "failed" || iid == null || !sha) return;
+  const pr = await findPullRequestByNumber({ provider: "gitlab", repoFullName, number: iid });
+  if (pr && (!pr.head_sha || pr.head_sha === sha)) {
+    await journalPullRequestSignal({ provider: "gitlab", pullRequest: pr, type: "pr_checks_failed", headSha: sha });
+  }
 }
 
 /**

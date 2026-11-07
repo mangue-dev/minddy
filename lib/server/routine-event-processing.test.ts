@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RoutineEventRow } from "./routine-event-processing";
 
-const h = vi.hoisted(() => ({ tables: {} as Record<string, Record<string, unknown>[]>, owner: true, roles: {} as Record<string, string>, start: vi.fn(), execute: vi.fn(), launchFailure: vi.fn(), claims: [] as string[] }));
+const h = vi.hoisted(() => ({ tables: {} as Record<string, Record<string, unknown>[]>, owner: true, roles: {} as Record<string, string>, start: vi.fn(), execute: vi.fn(), launchFailure: vi.fn(), claims: [] as string[], route: vi.fn(), sweep: vi.fn() }));
 vi.mock("@/lib/server/project-access", () => ({
   getProjectAccess: async () => h.owner ? { isOwner: true } : null,
   hasProjectAccess: async (userId: string) => h.roles[userId] ? { role: h.roles[userId] } : null,
@@ -13,6 +13,7 @@ vi.mock("@/lib/server/page-content", () => ({ decodePage: async (row: unknown) =
 vi.mock("@/lib/server/routine-occurrences", () => ({ startRoutineOccurrence: h.start }));
 vi.mock("@/lib/server/numo/turns", () => ({ executeNumoTurn: h.execute }));
 vi.mock("@/lib/server/routine-hooks", () => ({ notifyRoutineLaunchFailure: h.launchFailure }));
+vi.mock("@/lib/server/numo/event-batches", () => ({ routeEventToBatches: h.route, sweepUnroutedEvents: h.sweep }));
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => ({
   from: (table: string) => {
     const filters: Array<(row: Record<string, unknown>) => boolean> = [];
@@ -56,7 +57,7 @@ function emit(id: number, event = "issue.status_changed", after: Record<string, 
 }
 beforeEach(() => {
   h.tables = { agent_routines: [{ id: routine,project_id:project,owner_id:"owner",enabled:true,deleted_at:null,last_error:null,trigger_revision:1,trigger_type:"event",trigger:{type:"event",event:"issue.status_changed",status:"triage",conditions:{field:"assignee",operator:"present"}} }],routine_events:[],routine_armings:[],issues:[{id:subject,project_id:project,status:"triage",assignee_id:null,deleted_at:null}],issue_categories:[],pages:[] };
-  h.owner=true; h.roles={}; h.claims=[]; h.start.mockReset().mockResolvedValue({turn:{id:"turn"}}); h.execute.mockReset().mockResolvedValue({}); h.launchFailure.mockReset();
+  h.owner=true; h.roles={}; h.claims=[]; h.start.mockReset().mockResolvedValue({turn:{id:"turn"}}); h.execute.mockReset().mockResolvedValue({}); h.launchFailure.mockReset(); h.route.mockReset().mockResolvedValue(0); h.sweep.mockReset().mockResolvedValue(0);
 });
 describe("durable routine orchestration", () => {
   it("bounds fan-out admissions, finishes the event and lets the Numo drain execute queued turns", async () => {
@@ -251,4 +252,58 @@ it("reevaluates conditions after a quota reservation before admitting its first 
   expect(h.start).toHaveBeenCalledTimes(2);
   expect(h.claims[0]).toBe(h.claims[1]);
   expect(arming.state).toBe("consumed");
+});
+
+describe("Numo event batches (MIN-926)", () => {
+  it("routes every journal row to the batches, even in a project without routines", async () => {
+    h.tables.agent_routines = [];
+    emit(1, "issue.updated", { status: "triage" });
+    emit(2, "issue.comment_added", {});
+    await processRoutineEvents();
+    expect(h.route.mock.calls.map(([event]) => event.id)).toEqual([1, 2]);
+    expect(h.tables.routine_events.every(row => row.processed_at)).toBe(true);
+  });
+
+  it("finishes a row whose routing failed, so the subject's routines are not held", async () => {
+    h.tables.agent_routines = [];
+    h.route.mockRejectedValueOnce(new Error("database unavailable"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    emit(1);
+    emit(2);
+    await processRoutineEvents();
+    expect(h.tables.routine_events.every(row => row.processed_at && !row.error_code)).toBe(true);
+    // The sweep routes it on a later tick.
+    expect(h.sweep).toHaveBeenCalled();
+  });
+
+  it("reads more journal rows than the routine admissions it allows", async () => {
+    h.tables.issues[0].assignee_id = "person";
+    const first = h.tables.agent_routines[0];
+    h.tables.agent_routines = Array.from({ length: 4 }, (_, i) => ({ ...first, id: i ? randomUUID() : routine }));
+    for (let id = 1; id <= 5; id++) emit(id);
+    await processRoutineEvents(2, { eventLimit: 5 });
+    expect(h.route).toHaveBeenCalledTimes(5);
+    expect(h.start).toHaveBeenCalledTimes(2);
+  });
+
+  it("claims no row once its deadline has passed", async () => {
+    h.tables.agent_routines = [];
+    emit(1);
+    await processRoutineEvents(2, { eventLimit: 5, deadline: Date.now() - 1 });
+    expect(h.route).not.toHaveBeenCalled();
+    expect(h.sweep).not.toHaveBeenCalled();
+    expect(h.tables.routine_events[0].processed_at).toBeUndefined();
+  });
+
+  it("keeps routines away from events only background Numo reads", async () => {
+    // A routine listening to that event name would arm on it if it reached
+    // routine evaluation at all (or fail the row on an unknown trigger).
+    h.tables.agent_routines[0].trigger = { type: "event", event: "mention.received" };
+    emit(1, "mention.received", {});
+    await processRoutineEvents();
+    expect(h.tables.routine_armings).toHaveLength(0);
+    expect(h.tables.routine_events[0].processed_at).toBeTruthy();
+    expect(h.tables.routine_events[0].error_code).toBeNull();
+    expect(h.route).toHaveBeenCalledTimes(1);
+  });
 });
