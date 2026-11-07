@@ -11,6 +11,7 @@
     "saving": "Enregistrement…",
     "saved": "Enregistré",
     "saveRetrying": "Non enregistré. Nouvelle tentative…",
+    "saveRefused": "Non enregistré. Modifiez le carnet pour réessayer.",
     "savedAgo": "Enregistré {time}",
     "savedJustNow": "Enregistré à l'instant",
     "removeSettled": "Retirer les tâches terminées et annulées",

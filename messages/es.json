@@ -11,6 +11,7 @@
     "saving": "Guardando…",
     "saved": "Guardado",
     "saveRetrying": "Sin guardar. Reintentando…",
+    "saveRefused": "Sin guardar. Edita el cuaderno para intentarlo de nuevo.",
     "savedAgo": "Guardado {time}",
     "savedJustNow": "Guardado ahora mismo",
     "removeSettled": "Eliminar las tareas completadas y descartadas",

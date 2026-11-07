@@ -8,6 +8,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { RenameResourceDialog, ResourcePills } from "./resources";
 
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { error: toastError } }));
 vi.mock("./resource-type-icon", () => ({ ResourceTypeIcon: () => <svg /> }));
 vi.mock("./ui/app-tooltip", () => ({
   AppTooltip: ({ children }: { children: ReactNode }) => children,
@@ -174,6 +176,8 @@ it("keeps a rename from a previous opening out of the reopened dialog", async ()
   await act(async () => finish(new Error("Read-only project")));
   expect(openChange).not.toHaveBeenCalled();
   expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain("Read-only project");
+  // The failure is still told, outside the dialog that no longer owns it.
+  expect(toastError).toHaveBeenCalledWith("Read-only project");
 });
 
 it("sets Remove apart from the other entries with a separator", async () => {

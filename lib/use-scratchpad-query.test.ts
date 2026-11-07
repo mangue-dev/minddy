@@ -59,13 +59,24 @@ describe("useScratchpadDoc saving", () => {
 
     await act(async () => { latest!.save("note"); });
     expect(latest!.isSaving).toBe(false);
-    expect(latest!.saveFailed).toBe(true);
+    expect(latest!.saveRetrying).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({ content: "note" });
-    expect(latest!.saveFailed).toBe(false);
+    expect(latest!.saveRetrying).toBe(false);
     expect(latest!.isSaving).toBe(false);
+  });
+
+  it("does not retry a save the server refuses", async () => {
+    fetchMock.mockResolvedValueOnce(response(413, { error: "too large" }));
+
+    await act(async () => { latest!.save("a very long note"); });
+    expect(latest!.saveRefused).toBe(true);
+    expect(latest!.saveRetrying).toBe(false);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

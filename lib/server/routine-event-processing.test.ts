@@ -127,7 +127,8 @@ describe("durable routine orchestration", () => {
     emit(1); await processRoutineEvents();
     expect(h.start).toHaveBeenCalledTimes(1);
     expect(h.tables.routine_armings[0].state).toBe("cancelled");
-    expect(h.tables.agent_routines[0].last_run_at).toBeUndefined();
+    // The admitted occurrence still runs, so the routine records the run.
+    expect(h.tables.agent_routines[0].last_run_at).toEqual(expect.any(String));
   });
   it("cancels waiting status entries on exit and rearms a subsequent entry", async () => {
     emit(1); await processRoutineEvents();

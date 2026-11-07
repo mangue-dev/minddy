@@ -57,8 +57,8 @@ export function scheduleFeedbackStatusSync(
   issueStatus: unknown,
   actorId: string | null = null
 ): void {
-  // `null` only for a value that is not a known status — not for
-  // un statut qu'on aurait choisi d'ignorer : il n'y en a plus.
+  // `null` only for a value that is not a known status, never for a status
+  // chosen to be ignored: there are none left.
   if (!feedbackStatusForIssue(issueStatus)) return;
   // The deferred job maps the issue's status AS IT IS when it runs, not the one
   // captured here: background runs can finish out of order, and the last one

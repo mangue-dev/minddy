@@ -11,6 +11,7 @@
     "saving": "Salvataggio…",
     "saved": "Salvato",
     "saveRetrying": "Non salvato. Nuovo tentativo…",
+    "saveRefused": "Non salvato. Modifica il taccuino per riprovare.",
     "savedAgo": "Salvato {time}",
     "savedJustNow": "Salvato ora",
     "removeSettled": "Rimuovi le attività completate e annullate",

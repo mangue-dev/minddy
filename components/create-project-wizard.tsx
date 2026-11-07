@@ -621,7 +621,9 @@ export function CreateProjectWizard({
     setCandidates(null);
     fetchAccountGitCandidatesApi(activeConnectionId)
       .then((res) => {
-        if (!cancelled) setCandidates(res.candidates);
+        // Loading is derived from `null`: a response without a list must
+        // still end it.
+        if (!cancelled) setCandidates(res.candidates ?? []);
       })
       .catch((err) => {
         if (!cancelled) {

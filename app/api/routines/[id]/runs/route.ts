@@ -63,7 +63,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       kind: "numo",
       project_id: found.routine.project_id,
       issue_id: null,
-      status: occurrence.error_code && !turn ? "failed" : routineRunStatus(status),
+      status: routineRunStatus(status, occurrence.error_code ?? null),
       numo_status: status,
       model: turn?.model ?? null,
       model_forced: false,
@@ -75,11 +75,13 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       cost_usd: spend.get(occurrence.conversation_id)?.totalUsd ?? 0,
       outcome: turn ? await decodeNumoTurnOutcome(found.routine.owner_id,
         turn.id as string, turn.outcome as string | null, auth.user.id) : null,
-      error_message: occurrence.error_message ?? (turn
+      // An admission error a later turn superseded is history: the turn's
+      // own error (or none) describes the run.
+      error_message: turn
         ? await decodeNumoError(found.routine.owner_id,
             "numo_assistant_turns", turn.id as string,
             turn.error_message as string | null, auth.user.id)
-        : null),
+        : occurrence.error_message ?? null,
       started_at: turn?.started_at ?? null,
       completed_at: turn?.completed_at ?? null,
       created_at: createdAt,

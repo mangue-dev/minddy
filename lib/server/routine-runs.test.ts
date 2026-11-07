@@ -169,11 +169,12 @@ describe("Numo routine run reads", () => {
 
   it("lets an admission error decide the status only while no turn exists", async () => {
     world.tables.numo_routine_occurrences = [
-      occurrenceRow({ error_code: "launchFailed" }),
+      occurrenceRow({ error_code: "launchFailed", error_message: "Admission failed" }),
       occurrenceRow({
         id: "99999999-9999-4999-8999-999999999999",
         conversation_id: CONVERSATION_B,
         error_code: "quota",
+        error_message: "Usage budget exceeded",
       }),
     ];
     world.tables.numo_assistant_turns = [
@@ -182,9 +183,12 @@ describe("Numo routine run reads", () => {
     ];
     const { routineRunSummaries } = await import("./routine-runs");
     const summaries = await routineRunSummaries({ id: ROUTINE_ID } as never);
-    const byConversation = new Map(summaries.map((summary) => [summary.conversation_id, summary.status]));
-    expect(byConversation.get(CONVERSATION_A)).toBe("completed");
-    expect(byConversation.get(CONVERSATION_B)).toBe("failed");
+    const byConversation = new Map(summaries.map((summary) => [summary.conversation_id, summary]));
+    expect(byConversation.get(CONVERSATION_A)).toMatchObject({ status: "completed", error_message: null });
+    expect(byConversation.get(CONVERSATION_B)).toMatchObject({
+      status: "failed",
+      error_message: "Usage budget exceeded",
+    });
   });
 
   it("reads the latest state and the complete ledger across resumed occurrence turns", async () => {

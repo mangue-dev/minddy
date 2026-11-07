@@ -11,6 +11,7 @@
     "saving": "Saving…",
     "saved": "Saved",
     "saveRetrying": "Not saved. Retrying…",
+    "saveRefused": "Not saved. Edit the notebook to try again.",
     "savedAgo": "Saved {time}",
     "savedJustNow": "Saved just now",
     "removeSettled": "Remove done and dropped tasks",

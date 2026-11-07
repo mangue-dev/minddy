@@ -11,6 +11,7 @@
     "saving": "Salvando…",
     "saved": "Salvo",
     "saveRetrying": "Não salvo. Tentando de novo…",
+    "saveRefused": "Não salvo. Edite o caderno para tentar de novo.",
     "savedAgo": "Salvo {time}",
     "savedJustNow": "Salvo agora mesmo",
     "removeSettled": "Remover tarefas concluídas e descartadas",

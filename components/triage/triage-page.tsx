@@ -328,10 +328,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   } | null>(null);
   const [message, setMessage] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
-  // One confirmation run at a time (Enter in the editor bypasses the disabled
-  // button), and whether this opening already posted its message: a retry
-  // after a failed status update must not post the comment twice.
-  const confirmRunRef = useRef({ busy: false, commentPosted: false });
+  // One confirmation run at a time: Enter in the editor bypasses the
+  // disabled button.
+  const confirmRunRef = useRef({ busy: false });
 
   const {
     items: timelineItems,
@@ -427,7 +426,6 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
   const openConfirm = (action: "accept" | "decline", issue: Issue) => {
     if (confirmRunRef.current.busy) return;
-    confirmRunRef.current.commentPosted = false;
     setMessage("");
     setConfirming({ action, issue });
   };
@@ -442,9 +440,12 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
       // Post the message first so it lands while the issue is still selected;
       // then flip the status (the issue leaves the triage list).
       const body = message.trim();
-      if (body && !run.commentPosted) {
+      if (body) {
         await addCommentApi(issue.id, body, extractMentions(message, members));
-        run.commentPosted = true;
+        // The message is posted: the field empties, so a retry after a failed
+        // status update does not post it twice, and nothing typed afterwards
+        // is mistaken for the text already sent.
+        setMessage("");
       }
       await updateIssue(issue.id, {
         status: action === "accept" ? "backlog" : "canceled",

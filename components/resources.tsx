@@ -393,6 +393,9 @@ function useOpeningRequest() {
           onStart: () => void;
           onSuccess: () => void;
           onError: (err: unknown) => void;
+          /** The failure of a request whose dialog was closed since: it can no
+              longer show in the field, but must still be told. */
+          onClosedError: (err: unknown) => void;
           onSettled: () => void;
         },
       ) => {
@@ -405,6 +408,7 @@ function useOpeningRequest() {
           if (sentFrom === opening.current) handlers.onSuccess();
         } catch (err) {
           if (sentFrom === opening.current) handlers.onError(err);
+          else handlers.onClosedError(err);
         } finally {
           running.current = false;
           handlers.onSettled();
@@ -476,6 +480,7 @@ export function AddLinkDialog({
               },
               onSuccess: () => onOpenChange(false),
               onError: (err) => setError((err as Error).message || t("linkFailed")),
+              onClosedError: (err) => toast.error((err as Error).message || t("linkFailed")),
               onSettled: () => setBusy(false),
             });
           }}
@@ -584,6 +589,7 @@ export function RenameResourceDialog({
               },
               onSuccess: () => onOpenChange(false),
               onError: (err) => setError((err as Error).message || t("renameFailed")),
+              onClosedError: (err) => toast.error((err as Error).message || t("renameFailed")),
               onSettled: () => setBusy(false),
             });
           }}

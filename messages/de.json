@@ -11,6 +11,7 @@
     "saving": "Wird gespeichert…",
     "saved": "Gespeichert",
     "saveRetrying": "Nicht gespeichert. Neuer Versuch…",
+    "saveRefused": "Nicht gespeichert. Bearbeite das Notizbuch, um es erneut zu versuchen.",
     "savedAgo": "Gespeichert {time}",
     "savedJustNow": "Gerade eben gespeichert",
     "removeSettled": "Erledigte und verworfene Aufgaben entfernen",

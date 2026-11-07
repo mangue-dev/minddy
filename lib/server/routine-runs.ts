@@ -87,9 +87,17 @@ const RUN_STATUS_FOR_TURN: Record<NumoTurnStatus, RoutineRunSummary["status"]> =
   stopped: "canceled",
 };
 
-/** No turn yet: the occurrence is still waiting for admission. */
-export function routineRunStatus(status: NumoTurnStatus | null): RoutineRunSummary["status"] {
-  return status ? RUN_STATUS_FOR_TURN[status] : "queued";
+/**
+ * The run status of an occurrence. Without a turn, the occurrence is still
+ * waiting for admission, unless admission failed. Once a turn exists (a retry
+ * admitted one), the turn's own state is the truth.
+ */
+export function routineRunStatus(
+  status: NumoTurnStatus | null,
+  admissionErrorCode: string | null = null,
+): RoutineRunSummary["status"] {
+  if (status) return RUN_STATUS_FOR_TURN[status];
+  return admissionErrorCode ? "failed" : "queued";
 }
 
 function turnForConversation(
@@ -118,15 +126,14 @@ function runSummary(
     subject_type: occurrence.subject_type ?? null,
     scheduled_for: occurrence.scheduled_for,
     created_at: occurrence.scheduled_for ?? occurrence.created_at,
-    // An admission error only decides the status while no turn exists: once a
-    // retry admitted one, the turn's own state is the truth.
-    status: occurrence.error_code && !turn
-      ? "failed"
-      : routineRunStatus(status),
+    status: routineRunStatus(status, occurrence.error_code ?? null),
     numo_status: status,
     waiting_input: status === "waiting_input",
     outcome: (turn?.outcome as string | null) ?? null,
-    error_message: occurrence.error_message ?? (turn?.error_message as string | null) ?? null,
+    // Like the status: an admission error a later turn superseded is history.
+    error_message: turn
+      ? (turn.error_message as string | null) ?? null
+      : occurrence.error_message ?? null,
     cost_usd: turn ? spend.get(occurrence.conversation_id)?.totalUsd ?? 0 : null,
     started_at: (turn?.started_at as string | null) ?? null,
     completed_at: (turn?.completed_at as string | null) ?? null,

@@ -115,7 +115,7 @@ function ScratchpadBody() {
   const removeSettledRef = useRef<(() => number) | null>(null);
   const startAllRef = useRef<(() => number) | null>(null);
 
-  const { content, updatedAt, isLoading, isSaving, saveFailed, save } = useScratchpadDoc({
+  const { content, updatedAt, isLoading, isSaving, saveRetrying, saveRefused, save } = useScratchpadDoc({
     open: isOpen,
     liveRef: markdownRef,
     applyRef,
@@ -179,8 +179,15 @@ function ScratchpadBody() {
     );
   };
 
+  const saveFailed = saveRetrying || saveRefused;
   const showSaveState = !isLoading && (isSaving || saveFailed || content.trim() !== "");
-  const saveLabel = isSaving ? t("saving") : saveFailed ? t("saveRetrying") : t("saved");
+  const saveLabel = isSaving
+    ? t("saving")
+    : saveRetrying
+      ? t("saveRetrying")
+      : saveRefused
+        ? t("saveRefused")
+        : t("saved");
 
   return (
     <>
