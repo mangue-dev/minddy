@@ -9,15 +9,18 @@ import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
 import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
 import { assertPropertyConditions, evaluateRoutineConditions, parseRoutineTrigger, RoutineTriggerError, type ConditionContext, type RoutineTrigger } from "@/lib/routine-triggers";
 import type { Routine } from "@/lib/server/routines";
+import { routeEventToBatches, sweepUnroutedEvents } from "@/lib/server/numo/event-batches";
 
 export interface RoutineEventRow {
-  id: number; project_id: string; subject_type: "issue" | "page" | "feedback"; subject_id: string;
+  id: number; project_id: string; subject_type: "issue" | "page" | "feedback" | "objective" | "routine"; subject_id: string;
   event: string; source_id: string | null; before_state: Record<string, unknown>; after_state: Record<string, unknown>;
   cause_routine_id: string | null; cause_routine_ids?: string[]; created_at: string; lease_token: string; attempts: number;
+  /** Who caused it (MIN-926); null on rows journaled before the column existed. */
+  actor_id?: string | null; actor_kind?: "user" | "numo" | "system" | null; changed_fields?: string[] | null;
 }
 interface Arming {
   id: string; routine_id: string; revision: number; event_id: number; project_id: string;
-  subject_type: RoutineEventRow["subject_type"]; subject_id: string;
+  subject_type: "issue" | "page" | "feedback"; subject_id: string;
   retry_at: string; state: string; request_id: string; lease_token: string | null; attempts: number;
 }
 /** Exactly the `Arming` fields, so the read carries nothing evaluation ignores. */
@@ -163,7 +166,19 @@ async function evaluateArming(arming: Arming, routine: Routine, budget: Admissio
   }
 }
 
+/**
+ * Journal events only background Numo reads (MIN-926). No routine trigger
+ * listens to them, and they must not re-evaluate or cancel armings either: a
+ * comment on a database entry would otherwise read as the page leaving it.
+ */
+const NUMO_ONLY_EVENTS = new Set([
+  "issue.pull_request", "objective.status_changed", "objective.target_date_changed",
+  "objective.comment_added", "feedback.comment_added", "page.comment_added",
+  "mention.received", "routine.finished",
+]);
+
 async function processEvent(event: RoutineEventRow, budget: AdmissionBudget) {
+  if (NUMO_ONLY_EVENTS.has(event.event)) return;
   const service = getServiceClient();
   const result = await service.from("agent_routines").select("*").eq("project_id", event.project_id).eq("enabled", true).is("deleted_at", null).neq("trigger_type", "schedule");
   check(result.error);
@@ -181,13 +196,41 @@ async function processEvent(event: RoutineEventRow, budget: AdmissionBudget) {
   }
 }
 
-/** Bound journal rows and total admissions, including retries; never execute turns inline. */
-export async function processRoutineEvents(limit = 20): Promise<{ events: number; retries: number }> {
+/**
+ * Background Numo's batches (MIN-926) read the same journal, after routines.
+ * A routing failure must not hold the row: `claim_routine_events` serves a
+ * subject's rows in order, so it would delay that subject's routines. The
+ * row is finished anyway and `sweepUnroutedEvents` routes it on a later tick.
+ */
+async function routeAfterRoutines(event: RoutineEventRow) {
+  try {
+    await routeEventToBatches(event);
+  } catch (error) {
+    console.error("[routine-events] numo routing deferred:", (error as Error).message);
+  }
+}
+
+export interface RoutineEventLimits {
+  /** Journal rows read; defaults to the admission limit. */
+  eventLimit?: number;
+  /** Epoch ms after which no further journal row is claimed. */
+  deadline?: number;
+}
+
+/**
+ * Bound journal rows and total admissions, including retries; never execute
+ * turns inline. `eventLimit` bounds the rows read: Numo's batches debounce on
+ * the journal (MIN-926), so it must keep up with a busy workspace, while
+ * `limit` still caps the routine occurrences a tick may admit.
+ */
+export async function processRoutineEvents(limit = 20, limits: RoutineEventLimits = {}): Promise<{ events: number; retries: number; routed: number }> {
   const service = getServiceClient();
   const budget: AdmissionBudget = { remaining: limit };
+  const eventLimit = limits.eventLimit ?? limit;
+  const pastDeadline = () => limits.deadline !== undefined && Date.now() >= limits.deadline;
   let events = 0;
-  while (events < limit) {
-    const batch = await service.rpc("claim_routine_events", { p_limit: Math.min(limit - events, 10) });
+  while (events < eventLimit && !pastDeadline()) {
+    const batch = await service.rpc("claim_routine_events", { p_limit: Math.min(eventLimit - events, 10) });
     check(batch.error);
     if (!batch.data?.length) break;
     for (const event of batch.data as RoutineEventRow[]) {
@@ -195,6 +238,7 @@ export async function processRoutineEvents(limit = 20): Promise<{ events: number
         await processEvent(event, budget);
         const done = await service.from("routine_events").update({ processed_at: new Date().toISOString(), lease_until: null, error_code: null }).eq("id", event.id).eq("lease_token", event.lease_token);
         check(done.error);
+        await routeAfterRoutines(event);
       } catch {
         const failed = await service.from("routine_events").update({ error_code: "processingFailed", ...(event.attempts >= 8 ? { processed_at: new Date().toISOString() } : {}), lease_until: new Date(Date.now() + 60_000).toISOString() }).eq("id", event.id).eq("lease_token", event.lease_token);
         check(failed.error);
@@ -209,6 +253,12 @@ export async function processRoutineEvents(limit = 20): Promise<{ events: number
     check(row.error);
     if (row.data) await evaluateArming(arming as Arming, await decodeRoutine(row.data, row.data.owner_id) as unknown as Routine, budget);
   }
+  // Rows whose routing failed, or that a previous release finished without
+  // routing them.
+  const routed = pastDeadline() ? 0 : await sweepUnroutedEvents(eventLimit).catch((error: Error) => {
+    console.error("[routine-events] numo routing sweep failed:", error.message);
+    return 0;
+  });
   check((await service.rpc("cleanup_routine_events")).error);
-  return { events, retries: retry.data?.length ?? 0 };
+  return { events, retries: retry.data?.length ?? 0, routed };
 }

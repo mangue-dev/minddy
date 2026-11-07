@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -430,5 +431,58 @@ describe("live authorization shared within one document's reads", () => {
     expect(rpc).toHaveBeenCalledTimes(3);
     await getAuthedUser(request());
     expect(rpc).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("the request's event actor (MIN-926)", () => {
+  // A route handler as they are written: authenticate first, then write
+  // through the service-role client, where the database sees no session.
+  async function handler(tag: string) {
+    const auth = await getAuthedUser(request());
+    if (!auth.ok) return null;
+    // Interleave the two requests before they write.
+    await new Promise((resolve) => setTimeout(resolve, tag === "first" ? 5 : 1));
+    await supabaseServerFetch(`https://project.supabase.co/rest/v1/issues?tag=${tag}`, { method: "PATCH" });
+    return auth.user.id;
+  }
+
+  it("attributes each handler's later writes to its own verified user", async () => {
+    const transport = vi.fn<typeof fetch>(async () => new Response("[]"));
+    vi.stubGlobal("fetch", transport);
+    const other = "33333333-3333-4333-8333-333333333333";
+    const claims = (sub: string) => ({ data: { claims: { sub, session_id: SESSION_ID, aal: "aal1", amr: [], app_metadata: {} } }, error: null });
+    // Each request verifies its own session, in the order the handlers start.
+    getClaims.mockResolvedValueOnce(claims(USER_ID)).mockResolvedValueOnce(claims(other));
+    try {
+      // Next.js runs every request in a context of its own.
+      const requestScope = new AsyncLocalStorage<object>();
+      await Promise.all([
+        requestScope.run({}, () => handler("first")),
+        requestScope.run({}, () => handler("second")),
+      ]);
+      const byTag = Object.fromEntries(transport.mock.calls.map(([url, init]) => [
+        new URL(String(url)).searchParams.get("tag"),
+        new Headers(init?.headers),
+      ]));
+      expect(byTag.first.get("x-minddy-actor-id")).toBe(USER_ID);
+      expect(byTag.second.get("x-minddy-actor-id")).toBe(other);
+      expect(byTag.first.get("x-minddy-actor-kind")).toBe("user");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("does not name anyone when authentication fails", async () => {
+    const transport = vi.fn<typeof fetch>(async () => new Response("[]"));
+    vi.stubGlobal("fetch", transport);
+    try {
+      authorizationAbortSignal.mockResolvedValue({ data: { sessionActive: false, mfaAllowed: true }, error: null });
+      const auth = await getAuthedUser(request());
+      expect(auth.ok).toBe(false);
+      await supabaseServerFetch("https://project.supabase.co/rest/v1/issues", { method: "PATCH" });
+      expect(new Headers(transport.mock.calls.at(-1)?.[1]?.headers).get("x-minddy-actor-id")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

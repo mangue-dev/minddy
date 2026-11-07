@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -85,7 +86,7 @@ async function syncFeedbackStatusFromCurrentIssue(
   await syncFeedbackStatusForIssue(issueId, mapped, actorId);
 }
 
-export async function syncFeedbackStatusForIssue(
+async function syncFeedbackStatusForIssueUntagged(
   issueId: string,
   status: FeedbackPostStatus,
   actorId: string | null = null
@@ -116,4 +117,9 @@ export async function syncFeedbackStatusForIssue(
       updates: { status },
     });
   }
+}
+
+/** Mirrors the issue status change, which is already journaled (MIN-926). */
+export function syncFeedbackStatusForIssue(...args: Parameters<typeof syncFeedbackStatusForIssueUntagged>): ReturnType<typeof syncFeedbackStatusForIssueUntagged> {
+  return withEventActor({ kind: "maintenance" }, () => syncFeedbackStatusForIssueUntagged(...args));
 }

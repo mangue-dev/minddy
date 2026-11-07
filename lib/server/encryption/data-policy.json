@@ -3978,19 +3978,49 @@
         "lease_token",
         "subject_type",
         "cause_routine_id",
-        "cause_routine_ids"
+        "cause_routine_ids",
+        "actor_id",
+        "recipient_id"
       ],
       "timestamp": [
         "created_at",
         "lease_until",
-        "processed_at"
+        "processed_at",
+        "numo_routed_at"
       ],
       "bounded_metadata": [
         "event",
         "attempts",
         "error_code",
         "after_state",
-        "before_state"
+        "before_state",
+        "actor_kind",
+        "changed_fields"
+      ]
+    }
+  },
+  "numo_event_batches": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "user_id",
+        "event_ids"
+      ],
+      "timestamp": [
+        "opened_at",
+        "due_at",
+        "claimed_at",
+        "closed_at"
+      ],
+      "bounded_metadata": [
+        "status",
+        "attempts",
+        "error_code"
       ]
     }
   },

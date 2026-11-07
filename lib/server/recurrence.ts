@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -22,7 +23,7 @@ import { insertEvents } from "@/lib/server/issue-events";
  * Called from the deferred effects of lib/server/update-issue.ts — the only
  * status write path (UI, MCP, Numo, agent, sync of deposit).
  */
-export async function spawnNextOccurrence({
+async function spawnNextOccurrenceUntagged({
   service,
   completed,
   actorId,
@@ -142,4 +143,9 @@ export async function spawnNextOccurrence({
       to_value: result.issue.id as string,
     },
   ]);
+}
+
+/** The next occurrence follows from the completion, which is already journaled (MIN-926). */
+export function spawnNextOccurrence(...args: Parameters<typeof spawnNextOccurrenceUntagged>): ReturnType<typeof spawnNextOccurrenceUntagged> {
+  return withEventActor({ kind: "maintenance" }, () => spawnNextOccurrenceUntagged(...args));
 }

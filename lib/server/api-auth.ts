@@ -1,4 +1,6 @@
 import {
+  openRequestActorSlot,
+  setRequestActor,
   supabaseServerFetchWithTimeout as supabaseServerFetch,
   withSupabaseAuthorizationGate,
 } from "@/lib/server/supabase-fetch";
@@ -239,6 +241,9 @@ export async function getAuthedUser(
   request: NextRequest,
   options?: { allowAal1?: boolean }
 ): Promise<AuthedResult> {
+  // Synchronously, before any await: the route handler resumes in this
+  // context and its later writes are attributed to the verified user.
+  openRequestActorSlot();
   if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
     console.error("[api-auth] cross_origin_request_refused");
     return {
@@ -337,6 +342,9 @@ async function authorizeVerifiedSession(
   }
 
   const user = userFromClaims(claims);
+  // The rest of the request writes as this person (MIN-926), whichever
+  // client it uses: see `openRequestActorSlot`.
+  setRequestActor(user.id);
   return { ok: true, user, supabase, claims: claims as unknown as Record<string, unknown> };
 }
 
@@ -349,6 +357,9 @@ export async function authorizeUserClient(
   supabase: SupabaseClient,
   options?: { allowAal1?: boolean },
 ): Promise<AuthedResult> {
+  // Synchronously, before any await: the route handler resumes in this
+  // context and its later writes are attributed to the verified user.
+  openRequestActorSlot();
   const verified = await verifySessionClaims(supabase);
   if (!verified.ok) return verified;
   return authorizeVerifiedSession(supabase, verified, options);
@@ -384,6 +395,9 @@ export async function getAuthedUserAlongside<T>(
   request: NextRequest,
   alongside: (verified: { user: User; claims: Record<string, unknown> }) => Promise<T>,
 ): Promise<AuthedAlongsideResult<T>> {
+  // Synchronously, before any await: the route handler resumes in this
+  // context and its later writes are attributed to the verified user.
+  openRequestActorSlot();
   if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
     console.error("[api-auth] cross_origin_request_refused");
     return {
@@ -433,6 +447,9 @@ export async function getAuthedUserWithRlsReads<T>(
   request: NextRequest,
   readRls: RlsReads<T>,
 ): Promise<AuthedReadsResult<T>> {
+  // Synchronously, before any await: the route handler resumes in this
+  // context and its later writes are attributed to the verified user.
+  openRequestActorSlot();
   if (isMutatingMethod(request.method) && hasForeignOrigin(request)) {
     console.error("[api-auth] cross_origin_request_refused");
     return {

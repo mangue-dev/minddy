@@ -17,6 +17,67 @@ export function withRoutineEventsSuppressed<T>(work: () => Promise<T>): Promise<
   return eventSuppression.run(true, work);
 }
 
+/**
+ * Who the product writes of an async scope act for (MIN-926). The event
+ * journal reads it so background Numo's batches know whose gesture an event
+ * is:
+ * - `numo`: a Numo turn's writes. Never batched, so Numo cannot wake itself
+ *   or another member's Numo.
+ * - `user`: a person's own gesture. Batched to everyone else.
+ * - `system`: automated work that is real news for every member (Smart
+ *   Assign, an issue opened on the forge). It never borrows a row's author.
+ * - `maintenance`: derived or housekeeping writes (re-sealing, cycle
+ *   rollover, recurrence). Journaled for routines, never batched.
+ */
+export type EventActor =
+  | { kind: "numo" | "user"; userId: string }
+  | { kind: "system" | "maintenance"; userId?: undefined };
+
+const eventActor = new AsyncLocalStorage<EventActor>();
+
+/**
+ * Attribute the event journal rows of `work`'s writes. The innermost scope
+ * wins, so automated follow-up work started from a turn or a request can name
+ * itself. The database trusts the actor id only from service-role requests
+ * and otherwise uses the session's user.
+ */
+export function withEventActor<T>(actor: EventActor, work: () => Promise<T>): Promise<T> {
+  return eventActor.run(actor, work);
+}
+
+/**
+ * The person an authenticated request acts for. API routes write through the
+ * service-role client, where the database cannot see the session, so the
+ * authentication boundary (lib/server/api-auth.ts) fills this slot and every
+ * later write of the request carries it.
+ */
+interface RequestActorSlot { userId: string | null }
+const requestActor = new AsyncLocalStorage<RequestActorSlot>();
+
+/**
+ * Open the slot in the CALLER's async context. It must run synchronously,
+ * before the caller's first `await`, so the continuation that resumes the
+ * route handler sees the same slot that authentication fills later. Only an
+ * authentication helper calls this, at its very start.
+ */
+export function openRequestActorSlot(): void {
+  requestActor.enterWith({ userId: null });
+}
+
+/** Record the authenticated user in the slot opened for this request. */
+export function setRequestActor(userId: string): void {
+  const slot = requestActor.getStore();
+  if (slot) slot.userId = userId;
+}
+
+/** The actor whose headers the current write carries, if any. */
+export function currentEventActor(): EventActor | null {
+  const explicit = eventActor.getStore();
+  if (explicit) return explicit;
+  const userId = requestActor.getStore()?.userId;
+  return userId ? { kind: "user", userId } : null;
+}
+
 const requestSignal = new AsyncLocalStorage<AbortSignal>();
 
 /** Apply a maintenance deadline to its SDK calls without affecting other requests. */
@@ -59,13 +120,18 @@ function deliverAfter(authorized: Promise<boolean>, send: () => Promise<Response
 function scopedOptions(input: Parameters<typeof fetch>[0], init?: RequestInit): RequestInit | undefined {
   const scoped = requestSignal.getStore();
   const cause = routineCause.getStore();
-  if (cause?.length || eventSuppression.getStore()) {
+  const actor = currentEventActor();
+  if (cause?.length || eventSuppression.getStore() || actor) {
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
     if (cause?.length) {
       headers.set("x-minddy-routine-cause", cause.at(-1)!);
       headers.set("x-minddy-routine-ancestors", JSON.stringify(cause));
     }
     if (eventSuppression.getStore()) headers.set("x-minddy-routine-suppress", "true");
+    if (actor) {
+      headers.set("x-minddy-actor-kind", actor.kind);
+      if (actor.userId) headers.set("x-minddy-actor-id", actor.userId);
+    }
     init = { ...init, headers };
   }
   if (!scoped) return init;

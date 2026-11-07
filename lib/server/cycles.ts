@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import "server-only";
@@ -153,7 +154,7 @@ export async function ensureCycles({
   }
 }
 
-async function reconcileCycles({
+async function reconcileCyclesUntagged({
   service,
   userId,
   prefs,
@@ -1015,4 +1016,9 @@ export async function runCycleBlockerPull(params: CycleBlockerPullParams): Promi
     .from("cycles")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", cycle.id);
+}
+
+/** Rolling unfinished issues into the new cycle is housekeeping, not a gesture (MIN-926). */
+function reconcileCycles(...args: Parameters<typeof reconcileCyclesUntagged>): ReturnType<typeof reconcileCyclesUntagged> {
+  return withEventActor({ kind: "maintenance" }, () => reconcileCyclesUntagged(...args));
 }

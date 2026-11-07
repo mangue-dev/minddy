@@ -1,4 +1,4 @@
-import { withRoutineCause } from "@/lib/server/supabase-fetch";
+import { withEventActor, withRoutineCause } from "@/lib/server/supabase-fetch";
 import "server-only";
 import { markdownForReader } from "@/lib/server/mention-access";
 
@@ -1037,7 +1037,9 @@ async function executeClaimedNumoTurn(input: {
     });
     console.info("[numo-chat] timing", { requestId: claimed.request_id,
       phase: "execution_prepared", executionElapsedMs: Math.round(performance.now() - executionStartedAt) });
-    const result = await withRoutineCause(claimed.intent.routineId ?? null, () => processChat(execution.messages, execution.tools, emitter, {
+    // Every write of the turn is Numo's (MIN-926): the journal marks it so
+    // background batches never wake Numo, this user's or a teammate's, on it.
+    const result = await withEventActor({ kind: "numo", userId: claimed.user_id }, () => withRoutineCause(claimed.intent.routineId ?? null, () => processChat(execution.messages, execution.tools, emitter, {
       projectId: claimed.intent.projectId,
       documentationHelp: !!claimed.intent.documentation,
       requireExplicitProjectTarget: true,
@@ -1165,7 +1167,7 @@ async function executeClaimedNumoTurn(input: {
           routineId: claimed.intent.routineId ?? null,
         });
       },
-    }), claimed.intent.routineProvenance?.causeRoutineIds ?? []);
+    }), claimed.intent.routineProvenance?.causeRoutineIds ?? []));
 
     if (input.isStopRequestedLocally() || await stopRequested(service, claimed.id, claimToken)) {
       const turn = await checkpointTurn({

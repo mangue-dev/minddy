@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { verifyCronSecret } from "@/lib/server/cron-auth";
@@ -28,5 +29,9 @@ async function handle(request: NextRequest) {
   }
 }
 
-export const GET = handle;
-export const POST = handle;
+/** Index backfill writes are maintenance for the event journal (MIN-926). */
+const handleAsMaintenance = (request: Parameters<typeof handle>[0]) =>
+  withEventActor({ kind: "maintenance" }, () => handle(request));
+
+export const GET = handleAsMaintenance;
+export const POST = handleAsMaintenance;

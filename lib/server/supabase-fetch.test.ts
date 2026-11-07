@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { supabaseServerFetch, supabaseServerFetchWithTimeout } from "./supabase-fetch";
+import { openRequestActorSlot, setRequestActor, supabaseServerFetch, supabaseServerFetchWithTimeout, withEventActor, withRoutineCause } from "./supabase-fetch";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
@@ -90,4 +91,34 @@ it("cancels maintenance SDK requests without leaking its deadline to concurrent 
   expect(scoped.every(([, init]) => init?.signal?.aborted)).toBe(true);
   await supabaseServerFetch("https://project.supabase.co/rest/v1/issues");
   expect(transport.mock.calls.at(-1)?.[1]).toBeUndefined();
+});
+
+it("tags the writes of an event actor's scope, and only those (MIN-926)", async () => {
+  const transport = vi.fn<typeof fetch>(async () => new Response("ok"));
+  vi.stubGlobal("fetch", transport);
+  const sent = () => new Headers(transport.mock.calls.at(-1)?.[1]?.headers);
+  await withEventActor({ kind: "numo", userId: "user-1" }, () =>
+    withRoutineCause("routine-1", () => supabaseServerFetch("https://project.supabase.co/rest/v1/issues", { method: "PATCH" })));
+  expect(sent().get("x-minddy-actor-kind")).toBe("numo");
+  expect(sent().get("x-minddy-actor-id")).toBe("user-1");
+  expect(sent().get("x-minddy-routine-cause")).toBe("routine-1");
+  await supabaseServerFetch("https://project.supabase.co/rest/v1/issues", { method: "PATCH" });
+  expect(sent().get("x-minddy-actor-kind")).toBeNull();
+});
+
+it("lets automated work started inside a request name itself instead of the person", async () => {
+  const transport = vi.fn<typeof fetch>(async () => new Response("ok"));
+  vi.stubGlobal("fetch", transport);
+  const sent = () => new Headers(transport.mock.calls.at(-1)?.[1]?.headers);
+  await new AsyncLocalStorage<object>().run({}, async () => {
+    openRequestActorSlot();
+    setRequestActor("person-1");
+    await supabaseServerFetch("https://project.supabase.co/rest/v1/issues", { method: "PATCH" });
+    expect(sent().get("x-minddy-actor-kind")).toBe("user");
+    expect(sent().get("x-minddy-actor-id")).toBe("person-1");
+    await withEventActor({ kind: "system" }, () =>
+      supabaseServerFetch("https://project.supabase.co/rest/v1/issues", { method: "PATCH" }));
+    expect(sent().get("x-minddy-actor-kind")).toBe("system");
+    expect(sent().get("x-minddy-actor-id")).toBeNull();
+  });
 });

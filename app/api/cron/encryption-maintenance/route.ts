@@ -1,3 +1,4 @@
+import { withEventActor } from "@/lib/server/supabase-fetch";
 import { MaintenanceRunner } from "@/lib/server/encryption/maintenance-runner";
 import { maintenanceDiagnostics } from "@/lib/server/encryption/maintenance-diagnostics";
 import { backfillCommentsBatch } from "@/lib/server/encryption/comment-backfill";
@@ -118,8 +119,16 @@ import {
 
 export const maxDuration = 60;
 
-/** A bounded pass; the next hourly run resumes any remaining legacy rows. */
-export async function GET(request: NextRequest) {
+/**
+ * A bounded pass; the next hourly run resumes any remaining legacy rows.
+ * Re-sealing rewrites rows without changing what they say, so its journal
+ * events are maintenance: background Numo never batches them (MIN-926).
+ */
+export function GET(request: NextRequest) {
+  return withEventActor({ kind: "maintenance" }, () => runMaintenance(request));
+}
+
+async function runMaintenance(request: NextRequest) {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
