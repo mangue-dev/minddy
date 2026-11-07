@@ -177,12 +177,15 @@ export function RoutineDetail({
   const schedule = useMemo(() => routineSchedule(routine), [routine]);
 
   // Saved in place, section by section: nothing is grayed while it writes.
+  // A failure is told here and still rejects, so the section can put its
+  // fields back to the saved values instead of showing an unsaved one.
   const save = async (fields: Parameters<typeof updateRoutineApi>[1]) => {
     try {
       await updateRoutineApi(routine.id, fields);
       onChanged();
     } catch (err) {
       toast.error((err as Error).message);
+      throw err;
     }
   };
 

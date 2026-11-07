@@ -6,7 +6,7 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { ResourcePills } from "./resources";
+import { RenameResourceDialog, ResourcePills } from "./resources";
 
 vi.mock("./resource-type-icon", () => ({ ResourceTypeIcon: () => <svg /> }));
 vi.mock("./ui/app-tooltip", () => ({
@@ -141,6 +141,39 @@ it("renames a file and keeps a failed rename in the dialog", async () => {
   await submit();
   expect(rename).toHaveBeenCalledTimes(2);
   expect(document.querySelector('[role="dialog"] input')).toBeNull();
+});
+
+it("keeps a rename from a previous opening out of the reopened dialog", async () => {
+  let finish: (error?: Error) => void = () => {};
+  const rename = vi.fn(() => new Promise<void>((resolve, reject) => {
+    finish = (error) => (error ? reject(error) : resolve());
+  }));
+  const openChange = vi.fn();
+  const show = (resource: typeof file | null) =>
+    render(<RenameResourceDialog resource={resource} onOpenChange={openChange} onSubmit={rename} />);
+  const input = () => document.querySelector<HTMLInputElement>('[role="dialog"] input')!;
+  const type = async (value: string) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+    await act(async () => {
+      setter.call(input(), value);
+      input().dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  };
+  const submit = () => act(async () => { input().form!.requestSubmit(); });
+
+  await show(file);
+  await type("Spec v2.pdf");
+  await submit();
+  // Closed and reopened while the first rename still runs.
+  await show(null);
+  await show({ ...file });
+  await type("Spec v3.pdf");
+  await submit();
+  expect(rename).toHaveBeenCalledOnce();
+
+  await act(async () => finish(new Error("Read-only project")));
+  expect(openChange).not.toHaveBeenCalled();
+  expect(document.querySelector('[role="dialog"]')?.textContent).not.toContain("Read-only project");
 });
 
 it("sets Remove apart from the other entries with a separator", async () => {

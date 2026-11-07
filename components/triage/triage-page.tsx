@@ -14,7 +14,7 @@ import { Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, Check
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
@@ -328,6 +328,10 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   } | null>(null);
   const [message, setMessage] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
+  // One confirmation run at a time (Enter in the editor bypasses the disabled
+  // button), and whether this opening already posted its message: a retry
+  // after a failed status update must not post the comment twice.
+  const confirmRunRef = useRef({ busy: false, commentPosted: false });
 
   const {
     items: timelineItems,
@@ -422,19 +426,26 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   };
 
   const openConfirm = (action: "accept" | "decline", issue: Issue) => {
+    if (confirmRunRef.current.busy) return;
+    confirmRunRef.current.commentPosted = false;
     setMessage("");
     setConfirming({ action, issue });
   };
 
   const runConfirm = async () => {
-    if (!confirming) return;
+    if (!confirming || confirmRunRef.current.busy) return;
+    const run = confirmRunRef.current;
     const { action, issue } = confirming;
+    run.busy = true;
     setConfirmBusy(true);
     try {
       // Post the message first so it lands while the issue is still selected;
       // then flip the status (the issue leaves the triage list).
       const body = message.trim();
-      if (body) await addCommentApi(issue.id, body, extractMentions(message, members));
+      if (body && !run.commentPosted) {
+        await addCommentApi(issue.id, body, extractMentions(message, members));
+        run.commentPosted = true;
+      }
       await updateIssue(issue.id, {
         status: action === "accept" ? "backlog" : "canceled",
       });
@@ -444,6 +455,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
+      run.busy = false;
       setConfirmBusy(false);
     }
   };

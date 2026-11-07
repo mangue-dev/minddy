@@ -229,17 +229,24 @@ export function ConversationList({
     const convId = pendingDelete;
     setDeletingId(convId);
     setPendingDelete(null);
-    const ok = await deleteConversation(convId);
-    if (ok) {
+    try {
+      // A network failure throws, a refusal answers `false`: both leave the
+      // conversation in place, and both are said.
+      const ok = await deleteConversation(convId).catch(() => false);
+      if (!ok) {
+        toast.error(t("deleteFailed"));
+        return;
+      }
       const next = conversationsRef.current.filter((c) => c.id !== convId);
       conversationsRef.current = next;
       setConversations(next);
       if (activeConversationId === convId) {
         onNew();
       }
+    } finally {
+      setDeletingId(null);
     }
-    setDeletingId(null);
-  }, [pendingDelete, activeConversationId, onNew]);
+  }, [pendingDelete, activeConversationId, onNew, t]);
 
   const grouped = useMemo(() => {
     const g: Record<Bucket, ConversationWithProject[]> = {

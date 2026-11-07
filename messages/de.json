@@ -523,6 +523,7 @@
     "archiveConversation": "Unterhaltung archivieren",
     "unarchiveConversation": "Archivierung der Unterhaltung aufheben",
     "historyUpdateFailed": "Die Unterhaltung konnte nicht aktualisiert werden.",
+    "deleteFailed": "Die Unterhaltung konnte nicht gelöscht werden.",
     "routines": "Routinen",
     "deleteConversation": "Unterhaltung löschen",
     "deleteConfirm": {

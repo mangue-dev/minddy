@@ -523,6 +523,7 @@
     "archiveConversation": "Archiver la conversation",
     "unarchiveConversation": "Désarchiver la conversation",
     "historyUpdateFailed": "La conversation n’a pas pu être mise à jour.",
+    "deleteFailed": "La conversation n’a pas pu être supprimée.",
     "routines": "Routines",
     "deleteConversation": "Supprimer la conversation",
     "deleteConfirm": {

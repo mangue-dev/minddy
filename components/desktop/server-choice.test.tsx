@@ -109,6 +109,28 @@ describe("DesktopServerChoice", () => {
     expect(bridge.useExistingInstallation).toHaveBeenCalledOnce();
   });
 
+  it("starts one local installation at a time and says a refusal in red", async () => {
+    let answer: (value: { error?: { code: "localStartFailed" } }) => void = () => {};
+    const bridge = serverChoice({
+      useExistingInstallation: vi.fn(
+        () => new Promise<{ error?: { code: "localStartFailed" } }>((resolve) => { answer = resolve; })
+      ),
+    });
+    state.bridge = { serverChoice: bridge, openExternal: vi.fn() };
+    await render();
+    await click(messages.DesktopWelcome.existingTitle);
+    await click(messages.DesktopWelcome.localFolderTitle);
+    await click(messages.DesktopWelcome.localFolderTitle);
+    expect(bridge.useExistingInstallation).toHaveBeenCalledOnce();
+    const notice = () => container.querySelector("#server-message")!;
+    expect(notice().textContent).toBe(messages.DesktopWelcome.startingLocal);
+    expect(notice().className).toContain("text-muted-foreground");
+
+    await act(async () => answer({ error: { code: "localStartFailed" } }));
+    expect(notice().textContent).toBe(messages.DesktopWelcome.localStartFailed);
+    expect(notice().className).toContain("text-destructive");
+  });
+
   it("opens the server installation guide in the browser", async () => {
     const openExternal = vi.fn();
     state.bridge = { serverChoice: serverChoice(), openExternal };

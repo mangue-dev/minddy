@@ -7,7 +7,7 @@ import {
   FilterIcon,
   CheckIcon,
 } from "@hugeicons/core-free-icons";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,9 +62,13 @@ export function PrUnresolvedConversations({
   const t = useTranslations("PullRequests");
   const tCommon = useTranslations("Common");
   const [confirmOutdated, setConfirmOutdated] = useState(false);
-  const [resolvingOutdated, setResolvingOutdated] = useState(false);
   const [confirmResolveAll, setConfirmResolveAll] = useState(false);
-  const [resolvingAll, setResolvingAll] = useState(false);
+  // One bulk resolution at a time: both act on the same threads, so while
+  // either runs, neither can start. The ref answers before React commits.
+  const [bulk, setBulk] = useState<null | "outdated" | "all">(null);
+  const bulkRef = useRef<null | "outdated" | "all">(null);
+  const resolvingOutdated = bulk === "outdated";
+  const resolvingAll = bulk === "all";
   const replies = useReviewReplies(endpoint, onThreadChanged);
   const resolution = useThreadResolution(endpoint, onResolutionChanged);
   const unresolved = useMemo(
@@ -91,39 +95,49 @@ export function PrUnresolvedConversations({
     [context, t],
   );
 
+  /** Resolves `threads` as one bulk run; the count resolved, or `null` when
+      another bulk run already holds the threads. */
+  const runBulk = useCallback(
+    async (kind: "outdated" | "all", threads: PullRequestFeedbackThread[]) => {
+      if (bulkRef.current) return null;
+      bulkRef.current = kind;
+      setBulk(kind);
+      try {
+        const results = await Promise.all(
+          threads.map((thread) => resolution.setResolved(thread, true, false)),
+        );
+        return results.filter(Boolean).length;
+      } finally {
+        bulkRef.current = null;
+        setBulk(null);
+      }
+    },
+    [resolution],
+  );
+
   const resolveOutdated = useCallback(async () => {
-    if (resolvingOutdated) return;
-    setResolvingOutdated(true);
-    const results = await Promise.all(
-      outdated.map((thread) => resolution.setResolved(thread, true, false)),
-    );
-    const resolved = results.filter(Boolean).length;
+    const resolved = await runBulk("outdated", outdated);
+    if (resolved === null) return;
     setConfirmOutdated(false);
-    setResolvingOutdated(false);
     if (resolved > 0) {
       toast.success(t("outdatedResolvedToast", { count: resolved }));
       await onResolutionChanged();
     }
-  }, [onResolutionChanged, outdated, resolution, resolvingOutdated, t]);
+  }, [onResolutionChanged, outdated, runBulk, t]);
 
   // Resolve EVERY open conversation at once — the gesture of a review
   // someone chose to settle by hand rather than fix in code. It asks for
   // confirmation first: resolving silences the threads without touching
   // the code, and doing it by accident would hide real feedback.
   const resolveAll = useCallback(async () => {
-    if (resolvingAll) return;
-    setResolvingAll(true);
-    const results = await Promise.all(
-      unresolved.map((thread) => resolution.setResolved(thread, true, false)),
-    );
-    const resolved = results.filter(Boolean).length;
+    const resolved = await runBulk("all", unresolved);
+    if (resolved === null) return;
     setConfirmResolveAll(false);
-    setResolvingAll(false);
     if (resolved > 0) {
       toast.success(t("allResolvedToast", { count: resolved }));
       await onResolutionChanged();
     }
-  }, [onResolutionChanged, resolution, resolvingAll, t, unresolved]);
+  }, [onResolutionChanged, runBulk, t, unresolved]);
 
   return (
     <>
@@ -167,6 +181,7 @@ export function PrUnresolvedConversations({
                   data-testid="pr-resolve-outdated"
                   variant="outline"
                   size="sm"
+                  disabled={bulk !== null}
                   onClick={() => setConfirmOutdated(true)}
                 >
                   <HugeiconsIcon icon={CheckIcon} />
@@ -198,6 +213,7 @@ export function PrUnresolvedConversations({
                     {canResolve ? (
                       <DropdownMenuItem
                         data-testid="pr-fix-all-resolve"
+                        disabled={bulk !== null}
                         onSelect={() => setConfirmResolveAll(true)}
                       >
                         <HugeiconsIcon icon={CheckIcon} />
@@ -289,7 +305,7 @@ export function PrUnresolvedConversations({
             </Button>
             <Button
               data-testid="pr-resolve-outdated-confirm"
-              disabled={resolvingOutdated}
+              disabled={bulk !== null}
               onClick={() => void resolveOutdated()}
             >
               {resolvingOutdated ? (
@@ -323,7 +339,7 @@ export function PrUnresolvedConversations({
             </Button>
             <Button
               data-testid="pr-resolve-all-confirm"
-              disabled={resolvingAll}
+              disabled={bulk !== null}
               onClick={() => void resolveAll()}
             >
               {resolvingAll ? <Spinner /> : <HugeiconsIcon icon={CheckIcon} />}

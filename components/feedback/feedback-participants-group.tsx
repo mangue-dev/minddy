@@ -37,6 +37,15 @@ interface ErasureReport {
   votes: number;
 }
 
+/** The outcome of the last erasure, one at a time: a success report and a
+    failure message never show together. */
+type ErasureResult =
+  | { kind: "idle" }
+  | { kind: "done"; report: ErasureReport }
+  | { kind: "failed" };
+
+const IDLE: ErasureResult = { kind: "idle" };
+
 export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) {
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
@@ -45,8 +54,7 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
   const [query, setQuery] = useState("");
   const [target, setTarget] = useState<TeamFeedbackUserOption | null>(null);
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState<ErasureReport | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [result, setResult] = useState<ErasureResult>(IDLE);
 
   // Typing should not trigger a letter query — and a search
   // less than two characters would bring back half the board.
@@ -74,25 +82,25 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
   const erase = async () => {
     if (!target) return;
     setBusy(true);
-    setFailed(false);
+    setResult(IDLE);
     try {
       const res = await fetch(
         `/api/projects/${projectId}/feedback/users?userId=${encodeURIComponent(target.id)}`,
         { method: "DELETE" }
       );
       if (!res.ok) {
-        setFailed(true);
+        setResult({ kind: "failed" });
         return;
       }
       const json = (await res.json()) as { report: ErasureReport };
-      setDone(json.report);
+      setResult({ kind: "done", report: json.report });
       // The deleted person leaves the results: the list must show this without
       // that we have to retype the search.
       await queryClient.invalidateQueries({
         queryKey: ["feedback-participants", projectId],
       });
     } catch {
-      setFailed(true);
+      setResult({ kind: "failed" });
     } finally {
       setBusy(false);
       setTarget(null);
@@ -111,8 +119,7 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
-            setDone(null);
-            setFailed(false);
+            setResult(IDLE);
           }}
           placeholder={t("feedbackParticipantsSearchPlaceholder")}
           aria-label={t("feedbackParticipantsSearchPlaceholder")}
@@ -162,17 +169,17 @@ export function FeedbackParticipantsGroup({ projectId }: { projectId: string }) 
           </ul>
         )}
 
-        {done && (
+        {result.kind === "done" && (
           <p className="text-xs text-muted-foreground">
-            {done.alreadyErased
+            {result.report.alreadyErased
               ? t("feedbackParticipantsAlready")
               : t("feedbackParticipantsDone", {
-                  posts: done.posts,
-                  comments: done.comments,
+                  posts: result.report.posts,
+                  comments: result.report.comments,
                 })}
           </p>
         )}
-        {failed && (
+        {result.kind === "failed" && (
           <p role="alert" className="text-xs text-destructive">
             {t("feedbackParticipantsFailed")}
           </p>

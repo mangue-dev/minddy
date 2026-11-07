@@ -523,6 +523,7 @@
     "archiveConversation": "Archivia conversazione",
     "unarchiveConversation": "Ripristina conversazione",
     "historyUpdateFailed": "Impossibile aggiornare la conversazione.",
+    "deleteFailed": "Impossibile eliminare la conversazione.",
     "routines": "Routine",
     "deleteConversation": "Elimina conversazione",
     "deleteConfirm": {

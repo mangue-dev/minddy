@@ -15,8 +15,8 @@ vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
 // The trigger fields report the trigger the test sets, and expose the highlight.
 vi.mock("@/components/routines/routine-trigger-fields", () => ({
   RoutineTriggerSummary: () => null,
-  RoutineTriggerFields: ({ onChange, highlightMissing }: { onChange: (value: RoutineTrigger) => void; highlightMissing?: boolean }) => (
-    <button type="button" data-highlight={highlightMissing ? "on" : "off"} onClick={() => state.next && onChange(state.next)}>change</button>
+  RoutineTriggerFields: ({ value, onChange, highlightMissing }: { value: RoutineTrigger; onChange: (value: RoutineTrigger) => void; highlightMissing?: boolean }) => (
+    <button type="button" data-trigger={value.type} data-highlight={highlightMissing ? "on" : "off"} onClick={() => state.next && onChange(state.next)}>change</button>
   ),
 }));
 vi.mock("@/components/routines/routine-schedule-fields", () => ({ RoutineScheduleFields: () => null }));
@@ -85,6 +85,20 @@ it("waits for a complete trigger before saving, and outlines what is missing mea
   await act(() => vi.advanceTimersByTimeAsync(1_000));
   expect(save).toHaveBeenCalledWith(expect.objectContaining({ trigger: state.next }));
   expect(host.textContent).not.toContain("triggerIncompleteHint");
+});
+
+it("puts a trigger whose save failed back to the saved one", async () => {
+  const save = vi.fn().mockRejectedValue(new Error("offline"));
+  await act(() => root.render(<RoutineSettings routine={routine} isOwner schedule={schedule} onSave={save} />));
+  const button = () => host.querySelector("button")!;
+
+  state.next = { type: "database", databaseId: "6cd36606-c297-4920-8ce3-31b5f3697be8" };
+  await act(async () => { button().click(); });
+  expect(button().getAttribute("data-trigger")).toBe("database");
+  await act(() => vi.advanceTimersByTimeAsync(1_000));
+  expect(save).toHaveBeenCalledOnce();
+  // The routine still carries its event trigger: the field shows it again.
+  expect(button().getAttribute("data-trigger")).toBe("event");
 });
 
 /** Types into the instruction field, then moves the focus out of it. */

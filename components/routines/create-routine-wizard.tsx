@@ -6,7 +6,7 @@ import { parseRoutineTrigger, type RoutineTrigger } from "@/lib/routine-triggers
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { PlayIcon } from "@hugeicons/core-free-icons";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -126,20 +126,26 @@ export function CreateRoutineWizard({
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<Routine | null>(null);
   const [launchingNow, setLaunchingNow] = useState(false);
+  /** One number per opening of the wizard, bumped by `reset()`. The close
+      button stays live while a request runs: a result that comes back after
+      the wizard was closed belongs to an opening that no longer exists, and
+      must not write into the fresh one. */
+  const sessionRef = useRef(0);
 
   /** “Launch now” from the final screen: the first pass without
       wait until Monday. The window closes behind — the routine is already
       selected in the column, and its passage is displayed live. */
   const launchNow = async (routineId: string) => {
+    const session = sessionRef.current;
     setLaunchingNow(true);
     try {
       await runRoutineNowApi(routineId);
       toast.success(t("runStarted"));
-      handleOpenChange(false);
+      if (session === sessionRef.current) handleOpenChange(false);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
-      setLaunchingNow(false);
+      if (session === sessionRef.current) setLaunchingNow(false);
     }
   };
 
@@ -156,6 +162,8 @@ export function CreateRoutineWizard({
     (skipProject ? (initialProjectId ?? eligible[0]?.id ?? "") : "");
 
   const reset = () => {
+    sessionRef.current += 1;
+    setCreating(false);
     setChosenProjectId(initialProjectId ?? "");
     setPrompt("");
     setPromptMentions([]);
@@ -223,6 +231,7 @@ export function CreateRoutineWizard({
 
   const create = async () => {
     if (creating) return;
+    const session = sessionRef.current;
     setCreating(true);
     setError(null);
     try {
@@ -241,10 +250,14 @@ export function CreateRoutineWizard({
         } : {}),
         timezone: schedule.timezone,
       });
-      setCreated(routine);
+      // The routine exists whether or not the wizard is still open: the
+      // caller always hears about it, the closed wizard does not.
       onCreated(routine);
+      if (session !== sessionRef.current) return;
+      setCreated(routine);
       setStepIndex(steps.length - 1);
     } catch (err) {
+      if (session !== sessionRef.current) return;
       const code = (err as { code?: string }).code;
       // A known code is translated; the rest is said as it is rather than being
       // replaced by a vague sentence.
@@ -254,8 +267,15 @@ export function CreateRoutineWizard({
           : (err as Error).message,
       );
     } finally {
-      setCreating(false);
+      if (session === sessionRef.current) setCreating(false);
     }
+  };
+
+  /** Stepping back leaves the failed request behind: its message no longer
+      describes the step on screen. */
+  const changeStep = (index: number) => {
+    setError(null);
+    setStepIndex(index);
   };
 
   const stepDefs: Record<StepId, WizardStep<StepId>> = {
@@ -460,7 +480,7 @@ export function CreateRoutineWizard({
       label={t("newRoutine")}
       steps={steps}
       stepIndex={stepIndex}
-      onStepIndexChange={setStepIndex}
+      onStepIndexChange={changeStep}
       submitting={creating}
       error={error}
       /**

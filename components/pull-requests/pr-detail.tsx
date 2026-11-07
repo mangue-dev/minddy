@@ -789,11 +789,40 @@ export function PrDetail({
   // wait until the broadcast settles it one way or the other. The marker
   // survives navigation (sessionStorage): the job belongs to the PR, not to
   // the page that launched it — coming back must still show it running.
-  const [numoMerging, setNumoMerging] = useState(false);
-  const [numoMergeStartedAt, setNumoMergeStartedAt] = useState<string | null>(
-    null,
-  );
+  // One value for the wait: `null`, or the launch time of the job being
+  // waited for. The expiry timer and the ref below follow it, and every exit
+  // goes through `stopNumoMergeWait` so none of them outlives the wait (a
+  // timer left behind fired a false "merge failed" toast minutes after a
+  // successful merge).
+  const [numoMerge, setNumoMerge] = useState<{ startedAt: string } | null>(null);
+  const numoMerging = numoMerge !== null;
   const numoMergeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Epoch ms of the wait in progress, read after an await to tell whether
+      the wait it started is still the current one. */
+  const numoMergeWaitRef = useRef<number | null>(null);
+  const stopNumoMergeWait = useCallback(() => {
+    if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
+    numoMergeTimer.current = null;
+    numoMergeWaitRef.current = null;
+    writeNumoMergeMarker(null);
+    setNumoMerge(null);
+  }, []);
+  const beginNumoMergeWait = useCallback((startedAt: number) => {
+    if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
+    numoMergeTimer.current = null;
+    numoMergeWaitRef.current = startedAt;
+    setNumoMerge({ startedAt: new Date(startedAt).toISOString() });
+  }, []);
+  /** A lost background job must not pin the panel forever: past the wait
+      ceiling, the wait ends as a failure. */
+  const armNumoMergeExpiry = useCallback((delayMs: number) => {
+    if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
+    numoMergeTimer.current = setTimeout(() => {
+      numoMergeTimer.current = null;
+      stopNumoMergeWait();
+      toast.error(t("numoMergeFailed"));
+    }, delayMs);
+  }, [stopNumoMergeWait, t]);
   const [mergeTab, setMergeTab] = useState<"numo" | "manual">("numo");
   const [reviewVerdict, setReviewVerdict] = useState<ReviewVerdict | null>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
@@ -876,11 +905,9 @@ export function PrDetail({
   useEffect(() => {
     if (!numoMerging) return;
     if (pr?.state === "merged" || item.pr_state === "merged") {
-      setNumoMerging(false);
-      setNumoMergeStartedAt(null);
-      writeNumoMergeMarker(null);
+      stopNumoMergeWait();
     }
-  }, [numoMerging, pr?.state, item.pr_state]);
+  }, [numoMerging, pr?.state, item.pr_state, stopNumoMergeWait]);
   useEffect(() => {
     return () => {
       if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
@@ -901,14 +928,8 @@ export function PrDetail({
       writeNumoMergeMarker(null);
       return;
     }
-    setNumoMerging(true);
-    setNumoMergeStartedAt(new Date(marker.startedAt).toISOString());
-    numoMergeTimer.current = setTimeout(() => {
-      setNumoMerging(false);
-      setNumoMergeStartedAt(null);
-      writeNumoMergeMarker(null);
-      toast.error(t("numoMergeFailed"));
-    }, NUMO_MERGE_WAIT_MS - elapsed);
+    beginNumoMergeWait(marker.startedAt);
+    armNumoMergeExpiry(NUMO_MERGE_WAIT_MS - elapsed);
     // Mount only: the marker is read once per PR page, the timer and the
     // broadcast own everything after.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1113,28 +1134,20 @@ export function PrDetail({
   const startNumoMerge = async (method?: MergeMethod) => {
     if (numoMerging || !item.project) return;
     const startedAt = Date.now();
-    setNumoMerging(true);
-    setNumoMergeStartedAt(new Date(startedAt).toISOString());
+    beginNumoMergeWait(startedAt);
     writeNumoMergeMarker({ prId: item.prId, startedAt });
     setConfirmAction(null);
     setMergeCommitDraft(null);
     setMergeCommitDraftEdited(false);
-    if (numoMergeTimer.current) clearTimeout(numoMergeTimer.current);
     try {
       await mergeWithNumoApi(item.prId, method ?? null);
       // The answer only says the job started: the wait ends when the
-      // broadcast shows the PR merged — or after a generous timeout, since
-      // a lost background job must not pin the panel forever.
-      numoMergeTimer.current = setTimeout(() => {
-        setNumoMerging(false);
-        setNumoMergeStartedAt(null);
-        writeNumoMergeMarker(null);
-        toast.error(t("numoMergeFailed"));
-      }, NUMO_MERGE_WAIT_MS);
+      // broadcast shows the PR merged — or after a generous timeout. The
+      // merge may already have landed while the request was answering.
+      if (numoMergeWaitRef.current !== startedAt) return;
+      armNumoMergeExpiry(NUMO_MERGE_WAIT_MS);
     } catch (err) {
-      setNumoMerging(false);
-      setNumoMergeStartedAt(null);
-      writeNumoMergeMarker(null);
+      if (numoMergeWaitRef.current === startedAt) stopNumoMergeWait();
       toast.error((err as Error).message);
     }
   };
@@ -1244,11 +1257,12 @@ export function PrDetail({
       setReviewVerdict(null);
       setReviewDialogOpen(false);
       setReviewMessage("");
-      if (reviewFromFiles) {
-        setFileReviewActive(false);
-        setReviewedFiles(new Set());
-        setReviewFromFiles(false);
-      }
+      // A published review ends the file review too, whichever button opened
+      // the dialog: a verdict sent from the header leaves no review in
+      // progress for the file marks to belong to.
+      setFileReviewActive(false);
+      setReviewedFiles(new Set());
+      setReviewFromFiles(false);
       onRefetchList();
       await Promise.all([refetchComments(), refetchPr()]);
     } catch (err) {
@@ -1866,7 +1880,7 @@ export function PrDetail({
               aiReviews={aiReviews}
               requestingReviewer={requestingReviewer}
               onRequestAiReview={canRequestExternalReview ? (provider) => void requestAiReview(provider) : undefined}
-              numoMerge={numoMerging ? { startedAt: numoMergeStartedAt } : null}
+              numoMerge={numoMerge}
               checksOpen={checksDetailsOpen}
               onChecksOpenChange={setChecksDetailsOpen}
               fix={fixCard}
@@ -2164,9 +2178,7 @@ export function PrDetail({
             setConfirmAction(null);
             setMergeCommitDraft(null);
             setMergeCommitDraftEdited(false);
-            if (numoMerging) writeNumoMergeMarker(null);
-            setNumoMerging(false);
-            setNumoMergeStartedAt(null);
+            if (numoMerging) stopNumoMergeWait();
           }
         }}
       >
