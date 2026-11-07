@@ -43,6 +43,11 @@ import {
 } from "@/lib/server/agent/pull-requests";
 import { recordPrCommentEditQuiet } from "@/lib/server/agent/pr-comment-edits";
 import { afterOrNow } from "@/lib/server/after-safe";
+import {
+  FAILED_CHECK_CONCLUSIONS,
+  FAILED_STATUS_STATES,
+  journalPullRequestSignal,
+} from "@/lib/server/numo/forge-signals";
 import { backfillPendingPrComments, syncPrCommentToIssues } from "@/lib/server/agent/pr-comment-sync";
 import {
   mirrorFromGithubConversationComment,
@@ -192,6 +197,9 @@ interface PullRequestEvent {
       BEFORE the rewrite: the snapshot the edit history records for the
       thread's opening message (MIN-548). */
   changes?: { body?: { from?: string | null } } | null;
+  /** On `review_requested`: the person asked, or the team instead. */
+  requested_reviewer?: { login?: string } | null;
+  requested_team?: { slug?: string } | null;
 }
 
 /**
@@ -343,6 +351,20 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
       editedBy: payload.sender?.login ?? null,
       occurredAt: payload.pull_request?.updated_at,
     });
+  }
+
+  // Background Numo (MIN-926): a review request is addressed to someone.
+  // The App bot asking is Numo's own gesture, which never wakes Numo.
+  if (action === "review_requested" && !isBot(payload.sender)) {
+    const pr = await findPullRequestByNumber({ provider: "github", repoFullName, number });
+    if (pr) {
+      await journalPullRequestSignal({
+        provider: "github",
+        pullRequest: pr,
+        type: "pr_review_requested",
+        reviewerLogins: payload.requested_reviewer?.login ? [payload.requested_reviewer.login] : [],
+      });
+    }
   }
 
   // Dated, replay-safe snapshots preserve history even when a newer PR won.
@@ -703,6 +725,7 @@ interface CheckSuiteEvent {
   action?: string;
   check_suite?: {
     head_sha?: string;
+    conclusion?: string | null;
     pull_requests?: Array<{ number?: number }>;
   };
   repository?: { full_name?: string };
@@ -747,6 +770,29 @@ async function broadcastChecksChanged(
   for (const pr of prs) broadcastPrChanged(pr.id, ["pr"]);
 }
 
+/**
+ * Failing CI is the one CI fact background Numo hears (MIN-926): the PRs at
+ * that head, by number when the payload lists them, else by SHA (forks and
+ * commit statuses carry no number). Deduplicated per head in SQL.
+ */
+async function journalChecksFailed(
+  repoFullName: string | undefined,
+  headSha: string | undefined,
+  numbers: number[],
+): Promise<void> {
+  if (!repoFullName || !headSha) return;
+  const prs = numbers.length > 0
+    ? (await Promise.all(numbers.map((number) =>
+      findPullRequestByNumber({ provider: "github", repoFullName, number }))))
+      .filter((pr): pr is NonNullable<typeof pr> => !!pr)
+    : await findPullRequestsByHeadSha({ provider: "github", repoFullName, headSha });
+  for (const pr of prs) {
+    // A suite reporting on an older commit says nothing about the PR now.
+    if (pr.head_sha && pr.head_sha !== headSha) continue;
+    await journalPullRequestSignal({ provider: "github", pullRequest: pr, type: "pr_checks_failed", headSha });
+  }
+}
+
 async function handleCheckSuite(payload: CheckSuiteEvent): Promise<void> {
   // `requested`/`rerequested` flips the banner to "in progress" — the reader
   // sees it too. `completed` changes the verdict itself. The other actions
@@ -758,13 +804,13 @@ async function handleCheckSuite(payload: CheckSuiteEvent): Promise<void> {
   ) {
     return;
   }
-  await broadcastChecksChanged(
-    payload.repository?.full_name,
-    payload.check_suite?.head_sha,
-    (payload.check_suite?.pull_requests ?? [])
-      .map((p) => p.number)
-      .filter((n): n is number => n != null),
-  );
+  const numbers = (payload.check_suite?.pull_requests ?? [])
+    .map((p) => p.number)
+    .filter((n): n is number => n != null);
+  await broadcastChecksChanged(payload.repository?.full_name, payload.check_suite?.head_sha, numbers);
+  if (payload.action === "completed" && FAILED_CHECK_CONCLUSIONS.has(payload.check_suite?.conclusion ?? "")) {
+    await journalChecksFailed(payload.repository?.full_name, payload.check_suite?.head_sha, numbers);
+  }
 }
 
 async function handleCheckRun(payload: CheckRunEvent): Promise<void> {
@@ -786,6 +832,9 @@ async function handleStatus(payload: StatusEvent): Promise<void> {
   // `pending` is the start of a check, not its result — but it passes the
   // banner to “in progress”, which the reader should also see.
   await broadcastChecksChanged(payload.repository?.full_name, payload.sha, []);
+  if (FAILED_STATUS_STATES.has(payload.state ?? "")) {
+    await journalChecksFailed(payload.repository?.full_name, payload.sha, []);
+  }
 }
 
 async function handleDeploymentStatus(payload: DeploymentStatusEvent): Promise<void> {

@@ -1046,14 +1046,14 @@
     "file": "app/api/webhooks/github/route.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 956,
+    "line": 1005,
     "storage": false
   },
   {
     "file": "app/api/webhooks/gitlab/route.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 223,
+    "line": 229,
     "storage": false
   },
   {
@@ -8026,6 +8026,20 @@
     "operation": "from",
     "resource": "assistant_messages",
     "line": 162,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/forge-signals.ts",
+    "operation": "from",
+    "resource": "pull_request_issues",
+    "line": 67,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/forge-signals.ts",
+    "operation": "rpc",
+    "resource": "journal_pull_request_signal",
+    "line": 82,
     "storage": false
   },
   {

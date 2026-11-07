@@ -96,7 +96,10 @@ the feedback SSO secret.
 - Background Numo batches (`numo_event_batches`, service-only) route an event
   to every member with access to its project except its actor, members inactive
   for 30 days and members with Numo's memory or `numo_background` off; a
-  mention reaches the mentioned member only. A batch holds journal ids only,
+  mention reaches the mentioned member only, and so do a forge review request
+  and failing CI when the reviewer or the pull request's author maps to a
+  member through their linked forge account (`lib/server/numo/forge-signals.ts`);
+  unmapped, every member hears them. A batch holds journal ids only,
   never content, and ignores per-subject visibility (private pages, unpublished
   feedback): whatever reads a batch must check the reader's access to each
   subject again.

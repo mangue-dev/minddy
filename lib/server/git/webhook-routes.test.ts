@@ -121,9 +121,10 @@ const upsertPullRequestWithOutcome = vi.fn(
 );
 const recordPrCommentEditQuiet = vi.fn(async () => {});
 vi.mock("@/lib/server/agent/pr-comment-edits", () => ({ recordPrCommentEditQuiet }));
+const findPullRequestsByHeadSha = vi.fn(async (): Promise<Record<string, unknown>[]> => []);
 vi.mock("@/lib/server/agent/pull-requests", () => ({
   findPullRequestByNumber: (...a: unknown[]) => findPullRequestByNumber(...(a as [])),
-  findPullRequestsByHeadSha: async () => [],
+  findPullRequestsByHeadSha: (...a: unknown[]) => findPullRequestsByHeadSha(...(a as [])),
   resolveIssueForPr: async () => null,
   upsertPullRequest: async () => null,
   upsertPullRequestWithOutcome,
@@ -137,6 +138,12 @@ vi.mock("@/lib/server/agent/pr-comment-sync", () => ({
 const handleForgeNumoMention = vi.fn(async () => {});
 vi.mock("@/lib/server/agent/pr-mention", () => ({
   handleForgeNumoMention: (...a: unknown[]) => handleForgeNumoMention(...(a as [])),
+}));
+// Background Numo's forge signals (MIN-926): the journal write is the probe.
+const journalPullRequestSignal = vi.fn(async (_input: Record<string, unknown>) => 1);
+vi.mock("@/lib/server/numo/forge-signals", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/server/numo/forge-signals")>(),
+  journalPullRequestSignal: (input: Record<string, unknown>) => journalPullRequestSignal(input),
 }));
 vi.mock("@/lib/server/agent/pr-live", () => ({
   broadcastPrChanged: () => {},
@@ -219,6 +226,7 @@ function link(overrides: Row = {}): Row {
 beforeEach(() => {
   vi.clearAllMocks();
   findPullRequestByNumber.mockResolvedValue(null);
+  findPullRequestsByHeadSha.mockResolvedValue([]);
   verifyGithubSignature.mockReturnValue(true);
   managedForge = false;
   enqueueRelayDeliveryForPayload.mockResolvedValue(null);
@@ -770,5 +778,79 @@ describe("POST /api/webhooks/github — relayed deliveries", () => {
 
     expect(response.status).toBe(200);
     expect(handleForgeNumoMention).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("forge signals for background Numo (MIN-926)", () => {
+  const repository = { id: 9001, full_name: "acme/app" };
+  const pr = { id: "pr-1", state: "open", head_sha: "head-2", author_login: "octocat" };
+
+  it("journals a review a person requested on GitHub, not one the App bot requested", async () => {
+    findPullRequestByNumber.mockResolvedValue(pr);
+    const body = (sender: Record<string, unknown>) => ({
+      action: "review_requested", number: 7, repository,
+      pull_request: { number: 7, state: "open" },
+      requested_reviewer: { login: "reviewer" }, sender,
+    });
+    await githubPOST(githubRequest({ event: "pull_request", body: body({ login: "octocat" }) }));
+    await vi.waitFor(() => expect(journalPullRequestSignal).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "github", type: "pr_review_requested", reviewerLogins: ["reviewer"],
+      pullRequest: expect.objectContaining({ id: "pr-1" }),
+    })));
+    journalPullRequestSignal.mockClear();
+    await githubPOST(githubRequest({ event: "pull_request", body: body({ login: "minddy[bot]", type: "Bot" }) }));
+    expect(journalPullRequestSignal).not.toHaveBeenCalled();
+  });
+
+  it("journals a failed check suite on the PR's current head only", async () => {
+    findPullRequestByNumber.mockResolvedValue(pr);
+    const suite = (conclusion: string, headSha: string) => githubRequest({
+      event: "check_suite",
+      body: { action: "completed", repository, check_suite: { head_sha: headSha, conclusion, pull_requests: [{ number: 7 }] } },
+    });
+    await githubPOST(suite("success", "head-2"));
+    await githubPOST(suite("failure", "head-1"));
+    expect(journalPullRequestSignal).not.toHaveBeenCalled();
+    await githubPOST(suite("failure", "head-2"));
+    await vi.waitFor(() => expect(journalPullRequestSignal).toHaveBeenCalledWith(expect.objectContaining({
+      type: "pr_checks_failed", headSha: "head-2", pullRequest: expect.objectContaining({ id: "pr-1" }),
+    })));
+  });
+
+  it("finds the PR of a failed commit status by its SHA", async () => {
+    findPullRequestsByHeadSha.mockResolvedValue([pr]);
+    await githubPOST(githubRequest({ event: "status", body: { sha: "head-2", state: "pending", repository } }));
+    expect(journalPullRequestSignal).not.toHaveBeenCalled();
+    await githubPOST(githubRequest({ event: "status", body: { sha: "head-2", state: "error", repository } }));
+    await vi.waitFor(() => expect(journalPullRequestSignal).toHaveBeenCalledWith(expect.objectContaining({
+      type: "pr_checks_failed", headSha: "head-2",
+    })));
+  });
+
+  it("journals a failed GitLab merge request pipeline and newly added reviewers", async () => {
+    const secret = await ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" });
+    const project = { id: 1001, path_with_namespace: "acme/app" };
+    findPullRequestByNumber.mockResolvedValue(pr);
+    await gitlabPOST(gitlabRequest(secret, { body: {
+      object_kind: "pipeline", project, merge_request: { iid: 7 }, object_attributes: { status: "success", sha: "head-2" },
+    } }));
+    expect(journalPullRequestSignal).not.toHaveBeenCalled();
+    await gitlabPOST(gitlabRequest(secret, { body: {
+      object_kind: "pipeline", project, merge_request: { iid: 7 }, object_attributes: { status: "failed", sha: "head-2" },
+    } }));
+    await vi.waitFor(() => expect(journalPullRequestSignal).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "gitlab", type: "pr_checks_failed", headSha: "head-2",
+    })));
+
+    journalPullRequestSignal.mockClear();
+    upsertPullRequestWithOutcome.mockResolvedValueOnce({ row: pr, applied: true });
+    await gitlabPOST(gitlabRequest(secret, { body: {
+      object_kind: "merge_request", user: { id: 3, username: "jdoe" }, project,
+      object_attributes: { iid: 7, action: "update", state: "opened" },
+      changes: { reviewers: { previous: [{ username: "kept" }], current: [{ username: "kept" }, { username: "asked" }] } },
+    } }));
+    await vi.waitFor(() => expect(journalPullRequestSignal).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "gitlab", type: "pr_review_requested", reviewerLogins: ["asked"],
+    })));
   });
 });

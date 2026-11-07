@@ -52,6 +52,7 @@ describe.skipIf(!enabled)("Numo event batches on isolated PostgreSQL (MIN-926)",
       "supabase/migrations/20270109200071_routine_event_cascade_guard.sql",
       "supabase/migrations/20270109200103_numo_event_batches.sql",
       "supabase/migrations/20270109200104_numo_event_batches_review.sql",
+      "supabase/migrations/20270109200105_numo_pull_request_signals.sql",
     ]) await sql(readFileSync(file, "utf8"));
     await sql(`INSERT INTO projects VALUES('${project}','${owner}',NULL);
       INSERT INTO auth.users(id,raw_user_meta_data,last_sign_in_at) VALUES
@@ -195,5 +196,27 @@ describe.skipIf(!enabled)("Numo event batches on isolated PostgreSQL (MIN-926)",
       UPDATE issues SET priority='none' WHERE id='${issue}';`);
     expect(await sql("SELECT actor_kind FROM routine_events ORDER BY id DESC LIMIT 1;")).toBe("maintenance");
     expect(await route(await lastEvent())).toBe(0);
+  });
+  it("journals failing CI once per head commit and a review request once per reviewer", async () => {
+    const pr = randomUUID();
+    const signal = (type: string, sha: string | null, recipient: string | null) =>
+      sql(`SELECT journal_pull_request_signal('${issue}','${pr}','${type}',${sha ? `'${sha}'` : "NULL"},${recipient ? `'${recipient}'` : "NULL"});`);
+    expect(await signal("pr_checks_failed", "head-1", owner)).toBe("t");
+    expect(await signal("pr_checks_failed", "head-1", owner)).toBe("f");
+    expect(await signal("pr_checks_failed", "head-2", owner)).toBe("t");
+    expect(await signal("pr_review_requested", null, member)).toBe("t");
+    expect(await signal("pr_review_requested", null, member)).toBe("f");
+    expect(await signal("pr_review_requested", null, owner)).toBe("t");
+    const id = Number(await sql(`SELECT max(id) FROM routine_events WHERE event='issue.pull_request' AND recipient_id='${member}';`));
+    expect(await sql(`SELECT actor_kind||','||(after_state->>'type') FROM routine_events WHERE id=${id};`)).toBe("system,pr_review_requested");
+    expect(await route(id)).toBe(1);
+    expect((await batchOf(member))?.event_ids).toEqual([id]);
+    expect(await batchOf(owner)).toBeNull();
+  });
+
+  it("journals nothing for a deleted issue", async () => {
+    const gone = randomUUID();
+    await sql(`INSERT INTO issues(id,project_id,title,deleted_at) VALUES('${gone}','${project}','Gone',now());`);
+    expect(await sql(`SELECT journal_pull_request_signal('${gone}','${randomUUID()}','pr_checks_failed','x',NULL);`)).toBe("f");
   });
 });
