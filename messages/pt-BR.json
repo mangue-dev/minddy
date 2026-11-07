@@ -4819,6 +4819,7 @@
         "faq_ask": "Caixa de perguntas da FAQ"
       },
       "loadingCalls": "Carregando chamadas…",
+      "callsLoadError": "Não foi possível carregar as chamadas. Abra a execução de novo para tentar outra vez.",
       "noData": "Nenhuma chamada de IA neste período.",
       "recentRunsHint": "Uma execução agrupa as chamadas de uma ação.",
       "logsTitle": "Execuções recentes",

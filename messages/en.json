@@ -4819,6 +4819,7 @@
         "faq_ask": "FAQ question box"
       },
       "loadingCalls": "Loading calls…",
+      "callsLoadError": "Couldn’t load the calls. Reopen the run to try again.",
       "noData": "No AI calls over this period.",
       "recentRunsHint": "A run groups the calls of one action.",
       "logsTitle": "Recent runs",

@@ -4819,6 +4819,7 @@
         "faq_ask": "Riquadro domande delle FAQ"
       },
       "loadingCalls": "Caricamento delle chiamate…",
+      "callsLoadError": "Impossibile caricare le chiamate. Riapri l’esecuzione per riprovare.",
       "noData": "Nessuna chiamata IA in questo periodo.",
       "recentRunsHint": "Un'esecuzione raggruppa le chiamate di un'azione.",
       "logsTitle": "Esecuzioni recenti",

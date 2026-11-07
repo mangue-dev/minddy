@@ -4819,6 +4819,7 @@
         "faq_ask": "Boîte à questions de la FAQ"
       },
       "loadingCalls": "Chargement des appels…",
+      "callsLoadError": "Impossible de charger les appels. Rouvrez l’exécution pour réessayer.",
       "noData": "Aucun appel IA sur cette période.",
       "recentRunsHint": "Un run regroupe les appels d'une même action.",
       "logsTitle": "Exécutions récentes",

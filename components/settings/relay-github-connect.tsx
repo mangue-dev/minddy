@@ -4,7 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { AlertCircleIcon, ArrowRight01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Github } from "@/components/git/provider-icons";
@@ -29,6 +29,47 @@ import { useTranslations } from "next-intl";
 const POLL_INTERVAL_MS = 2_000;
 const POLL_MAX_MS = 10 * 60_000;
 
+type ClaimState =
+  | { kind: "waiting" }
+  | { kind: "connected" }
+  | { kind: "failed"; reason: string };
+
+/**
+ * One poll of the claim endpoint. `result` is set only when the claim has
+ * resolved; transient errors (network, 5xx, still pending) leave it empty so
+ * the wait goes on.
+ */
+async function pollClaim(code: string): Promise<{
+  claimUrl?: string;
+  result?: Exclude<ClaimState, { kind: "waiting" }>;
+}> {
+  try {
+    const response = await fetch(
+      `/api/git/github/relay-claim?code=${encodeURIComponent(code)}`,
+    );
+    const data = (await response.json()) as {
+      status?: string;
+      connectionId?: string;
+      claimUrl?: string;
+      error?: string;
+    };
+    const claimUrl = typeof data.claimUrl === "string" && data.claimUrl ? data.claimUrl : undefined;
+    if (!response.ok) {
+      // A definite refusal (invalid or expired code) stops the loop;
+      // transient server errors keep the wait going.
+      if (response.status === 400 || response.status === 403) {
+        return { claimUrl, result: { kind: "failed", reason: data.error ?? "refused" } };
+      }
+      return { claimUrl };
+    }
+    if (data.status === "connected") return { claimUrl, result: { kind: "connected" } };
+    return { claimUrl };
+  } catch {
+    // Transient network error: keep polling until the deadline.
+    return {};
+  }
+}
+
 function safeReturnPath(value: string | null): string {
   return value && value.startsWith("/") && !value.startsWith("//")
     ? value
@@ -44,68 +85,52 @@ export function RelayGithubConnect() {
   const code = searchParams.get("code");
   const returnPath = safeReturnPath(searchParams.get("return"));
 
-  const [status, setStatus] = useState<"waiting" | "connected" | "failed">(
-    "waiting",
-  );
-  const [error, setError] = useState<string | null>(null);
+  // One lifecycle: waiting until the claim resolves, then a terminal state
+  // that no later poll response can leave.
+  const [state, setState] = useState<ClaimState>({ kind: "waiting" });
   const [claimUrl, setClaimUrl] = useState<string | null>(null);
   const openedRef = useRef(false);
 
-  const poll = useCallback(async () => {
-    if (!code) return;
-    try {
-      const response = await fetch(
-        `/api/git/github/relay-claim?code=${encodeURIComponent(code)}`,
-      );
-      const data = (await response.json()) as {
-        status?: string;
-        connectionId?: string;
-        claimUrl?: string;
-        error?: string;
-      };
-      if (data.claimUrl && typeof data.claimUrl === "string") {
-        setClaimUrl(data.claimUrl);
-      }
-      if (!response.ok) {
-        // A definite refusal (invalid or expired code) stops the loop;
-        // transient server errors keep the wait going.
-        if (response.status === 400 || response.status === 403) {
-          setStatus("failed");
-          setError(data.error ?? "refused");
-        }
-        return;
-      }
-      if (data.status === "connected") {
-        setStatus("connected");
-        void queryClient.invalidateQueries({
-          queryKey: gitConnectionsQueryKey,
-        });
-        void queryClient.invalidateQueries({ queryKey: gitIdentitiesQueryKey });
-        setTimeout(() => router.replace(returnPath), 800);
-      }
-    } catch {
-      // Transient network error: keep polling until the deadline.
-    }
-  }, [code, queryClient, returnPath, router]);
-
   useEffect(() => {
     if (!code) {
-      setStatus("failed");
-      setError("missing-code");
+      setState({ kind: "failed", reason: "missing-code" });
       return;
     }
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     const startedAt = Date.now();
-    const timer = setInterval(() => {
+    const finish = (next: Exclude<ClaimState, { kind: "waiting" }>) => {
+      stopped = true;
+      setState(next);
+      if (next.kind === "connected") {
+        void queryClient.invalidateQueries({ queryKey: gitConnectionsQueryKey });
+        void queryClient.invalidateQueries({ queryKey: gitIdentitiesQueryKey });
+        timer = setTimeout(() => router.replace(returnPath), 800);
+      }
+    };
+    // Each poll schedules the next one only once it has settled, so two
+    // requests never overlap and nothing runs after a terminal state.
+    const poll = async () => {
+      if (stopped) return;
       if (Date.now() - startedAt > POLL_MAX_MS) {
-        setStatus("failed");
-        setError("timeout");
+        finish({ kind: "failed", reason: "timeout" });
         return;
       }
-      void poll();
-    }, POLL_INTERVAL_MS);
+      const outcome = await pollClaim(code);
+      if (stopped) return;
+      if (outcome.claimUrl) setClaimUrl(outcome.claimUrl);
+      if (outcome.result) {
+        finish(outcome.result);
+        return;
+      }
+      timer = setTimeout(() => { void poll(); }, POLL_INTERVAL_MS);
+    };
     void poll();
-    return () => clearInterval(timer);
-  }, [code, poll]);
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [code, queryClient, returnPath, router]);
 
   // Try to open the claim page right away; popup blockers may refuse without
   // a user gesture, so the manual button below always stays available.
@@ -115,7 +140,7 @@ export function RelayGithubConnect() {
     window.open(claimUrl, "_blank", "noopener,noreferrer");
   }, [claimUrl]);
 
-  if (status === "connected") {
+  if (state.kind === "connected") {
     return (
       <ClaimCard title={t("title")}>
         <AppIcon icon={CheckIcon} className="h-10 w-10 text-primary" aria-hidden />
@@ -124,12 +149,12 @@ export function RelayGithubConnect() {
     );
   }
 
-  if (status === "failed") {
+  if (state.kind === "failed") {
     return (
       <ClaimCard title={t("title")}>
         <HugeiconsIcon icon={AlertCircleIcon} className="h-10 w-10 text-destructive" aria-hidden />
         <p role="alert" className="text-sm text-muted-foreground">
-          {t("failed", { reason: error ?? "unknown" })}
+          {t("failed", { reason: state.reason })}
         </p>
         <Button type="button" variant="outline" className="mt-2" onClick={() => router.replace(returnPath)}>
           {t("back")}

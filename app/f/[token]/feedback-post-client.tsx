@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GitMergeIcon } from "@hugeicons/core-free-icons";
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { MessageResponse } from "@/components/ai-elements/message";
@@ -71,23 +71,37 @@ export function FeedbackPostClient({
     }
   };
 
+  // The optimistic vote shadows the server props only while a toggle is in
+  // flight: it is cleared in the same transition as the refresh, so the fresh
+  // props take over as soon as they arrive.
   const [optimistic, setOptimistic] = useState<{ voted: boolean; count: number } | null>(null);
+  const voteInFlight = useRef(false);
+  const [, startRefresh] = useTransition();
   const voted = optimistic?.voted ?? post.votedByMe;
   const count = optimistic?.count ?? post.voteCount;
 
   const toggleVote = () => {
+    if (voteInFlight.current) return;
+    voteInFlight.current = true;
     const next = { voted: !voted, count: count + (voted ? -1 : 1) };
     setOptimistic(next);
     void togglePostVoteAction(token, post.id, next.voted)
       .then((result) => {
+        voteInFlight.current = false;
         if (!result.ok) {
           setOptimistic(null);
           if (result.notAuthenticated) requireAuth(toggleVote);
           return;
         }
-        router.refresh();
+        startRefresh(() => {
+          router.refresh();
+          setOptimistic(null);
+        });
       })
-      .catch(() => setOptimistic(null));
+      .catch(() => {
+        voteInFlight.current = false;
+        setOptimistic(null);
+      });
   };
 
   return (

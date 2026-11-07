@@ -520,6 +520,7 @@ function ComposerDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const similarRequest = useRef(0);
   // The LazyDocumentEditor only commits to blur — the ref always carries the
   // last committed value, and submit() forces the blur before reading.
   const bodyRef = useRef("");
@@ -536,20 +537,47 @@ function ComposerDialog({
   const [draftReload, setDraftReload] = useState(0);
   const [legacyDraft, setLegacyDraft] = useState<FeedbackDraft | null>(null);
   const store = () => draftStore.current ??= new FeedbackDraftStorage(token, localStorage);
-  const saveDraft = async () => {
+  // Set when the visitor closed the composer although its text could not be
+  // saved: the text stays in memory and the next opening shows it again
+  // instead of an older stored copy.
+  const unsavedDraft = useRef(false);
+  // The draft whose save failed on the last close attempt. Closing again on
+  // the same text closes the composer anyway, so a failing server never
+  // traps the visitor in the dialog.
+  const closeFailedDraft = useRef<FeedbackDraft | null>(null);
+  const saveDraft = async (): Promise<boolean> => {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = null;
-    const value = latestDraft.current;
-    try {
-      await store().save(value);
-      if (latestDraft.current !== value) return false;
+    // The text can change while a save is in flight: save again until the
+    // stored copy matches the latest text, rather than reporting a failure.
+    for (;;) {
+      const value = latestDraft.current;
+      try {
+        await store().save(value);
+      } catch {
+        if (latestDraft.current !== value) continue;
+        setDraftError(tDrafts("saveFailed"));
+        return false;
+      }
+      if (latestDraft.current !== value) continue;
       setDraftError(null);
       return true;
-    } catch {
-      if (latestDraft.current !== value) return false;
-      setDraftError(tDrafts("saveFailed"));
-      return false;
     }
+  };
+  const closeAfterSave = async () => {
+    if (await saveDraft()) {
+      closeFailedDraft.current = null;
+      reset();
+      onOpenChange(false);
+      return;
+    }
+    if (closeFailedDraft.current === latestDraft.current) {
+      closeFailedDraft.current = null;
+      unsavedDraft.current = true;
+      onOpenChange(false);
+      return;
+    }
+    closeFailedDraft.current = latestDraft.current;
   };
   const persistDraft = (nextTitle: string, nextBody: string) => {
     latestDraft.current = { title: nextTitle, body: nextBody };
@@ -583,6 +611,15 @@ function ComposerDialog({
     setLegacyDraft(null);
     setDraftRestoreFailed(false);
     setDraftError(null);
+    if (unsavedDraft.current) {
+      // Show the text kept in memory when the last close could not save it,
+      // and try to save it again.
+      unsavedDraft.current = false;
+      restoreDraft(latestDraft.current);
+      setDraftLoading(false);
+      void saveDraft();
+      return () => { active = false; };
+    }
     void Promise.resolve().then(() => store().load()).then((draft) => {
       if (active && draft) restoreDraft(draft);
     }).catch((failure: unknown) => {
@@ -600,18 +637,22 @@ function ComposerDialog({
   // not show a “searching…” state that can never find anything.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    // Every title change supersedes the requests already in flight: only the
+    // latest one may write the results and end the “searching” state.
+    const request = ++similarRequest.current;
     const trimmed = title.trim();
     if (!open || !identified || trimmed.length < SIMILAR_MIN_CHARS) {
       setSimilar([]);
+      setChecking(false);
       return;
     }
     debounceRef.current = setTimeout(() => {
       // The “search…” state makes the system visible even without results.
       setChecking(true);
       void findSimilarPostsAction(token, trimmed)
-        .then(setSimilar)
-        .catch(() => setSimilar([]))
-        .finally(() => setChecking(false));
+        .then((posts) => { if (similarRequest.current === request) setSimilar(posts); })
+        .catch(() => { if (similarRequest.current === request) setSimilar([]); })
+        .finally(() => { if (similarRequest.current === request) setChecking(false); });
     }, SIMILAR_DEBOUNCE_MS);
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -706,6 +747,7 @@ function ComposerDialog({
     latestDraft.current = { title: "", body: "" };
     setTitle("");
     setIsPublic(true);
+    similarRequest.current += 1;
     setSimilar([]);
     setChecking(false);
     setError(null);
@@ -765,11 +807,7 @@ function ComposerDialog({
         if (next) { onOpenChange(true); return; }
         if (legacyDraft || draftLoading || draftRestoreFailed) { onOpenChange(false); return; }
         (document.activeElement as HTMLElement | null)?.blur();
-        void new Promise((resolve) => setTimeout(resolve, 0)).then(async () => {
-          if (!await saveDraft()) return;
-          reset();
-          onOpenChange(false);
-        });
+        void new Promise((resolve) => setTimeout(resolve, 0)).then(closeAfterSave);
       }}
     >
       {/* ⌘/Ctrl+Enter sends from ANY field in the modal — the title

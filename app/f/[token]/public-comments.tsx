@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowTurnDownIcon, Delete02Icon, LockIcon } from "@hugeicons/core-free-icons";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -143,24 +143,30 @@ export function PublicComments({
     return roots.map((root) => ({ root, replies: repliesByRoot.get(root.id) ?? [] }));
   }, [allComments]);
 
+  // `onDone` runs once the comment is posted, including when the post is
+  // replayed after the sign-in door, so the composer clears its text only then.
   const post = (body: string, parentId: string | null, onDone: () => void) =>
-    new Promise<string | null>((resolve) => {
+    new Promise<PostResult>((resolve) => {
       startTransition(async () => {
-        const result = await addPublicCommentAction(token, postId, body, parentId);
-        if (result.ok) {
-          onDone();
-          router.refresh();
-          resolve(null);
-          return;
+        try {
+          const result = await addPublicCommentAction(token, postId, body, parentId);
+          if (result.ok) {
+            onDone();
+            router.refresh();
+            resolve({ kind: "posted" });
+            return;
+          }
+          if (result.error === "notAuthenticated") {
+            // The OTP door, then the SAME text: no one rewrites their message
+            // because he was asked for his email when sending it.
+            onNeedAuth(() => void post(body, parentId, onDone));
+            resolve({ kind: "needsSignIn" });
+            return;
+          }
+          resolve({ kind: "failed", error: result.error });
+        } catch {
+          resolve({ kind: "failed", error: "failed" });
         }
-        if (result.error === "notAuthenticated") {
-          // The OTP door, then the SAME text: no one rewrites their message
-          // because he was asked for his email when sending it.
-          onNeedAuth(() => void post(body, parentId, onDone));
-          resolve(null);
-          return;
-        }
-        resolve(result.error);
       });
     });
 
@@ -242,8 +248,11 @@ export function PublicComments({
                         label={t("commentReplySend")}
                         placeholder={t("commentReplyPlaceholder")}
                         onCancel={() => setReplyingTo(null)}
-                        onSubmit={(body) =>
-                          post(body, root.id, () => setReplyingTo(null))
+                        onSubmit={(body, clearDraft) =>
+                          post(body, root.id, () => {
+                            clearDraft();
+                            setReplyingTo(null);
+                          })
                         }
                       />
                     </li>
@@ -263,7 +272,7 @@ export function PublicComments({
             identity ? t("commentPlaceholder") : t("commentSignedOutPlaceholder")
           }
           notice={t("commentAnonymousNotice")}
-          onSubmit={(body) => post(body, null, () => {})}
+          onSubmit={(body, clearDraft) => post(body, null, clearDraft)}
         />
       ) : showClosedNotice && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -289,11 +298,20 @@ export function PublicComments({
 }
 
 /**
+ * The outcome of posting a comment. `needsSignIn` is distinct from `posted`:
+ * the text must survive the sign-in door, since it is posted again after it.
+ */
+type PostResult =
+  | { kind: "posted" }
+  | { kind: "needsSignIn" }
+  | { kind: "failed"; error: string };
+
+/**
  * The writing area — the same for a new message and for a reply.
  *
- * `onSubmit` returns the error CODE, or null if it's gone (or if the door
- * identity has taken control): the composer then keeps his text, and the one who
- * just wrote three sentences don't lose them on a network failure.
+ * `onSubmit` receives `clearDraft`, which runs only once the comment is
+ * posted: on a failure or while the sign-in door is open the composer keeps
+ * its text, and the one who just wrote three sentences doesn't lose them.
  */
 function Composer({
   pending,
@@ -313,7 +331,7 @@ function Composer({
   notice?: string;
   autoFocus?: boolean;
   onCancel?: () => void;
-  onSubmit: (body: string) => Promise<string | null>;
+  onSubmit: (body: string, clearDraft: () => void) => Promise<PostResult>;
 }) {
   const t = useTranslations("PublicFeedback");
   const tCommon = useTranslations("Common");
@@ -324,13 +342,17 @@ function Composer({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // Guards the keyboard shortcut as well as the button: a second ⌘/Ctrl+Enter
+  // while the first comment is in flight must not post it twice.
+  const sending = useRef(false);
   const send = () => {
     const body = draft.trim();
-    if (!body) return;
+    if (!body || pending || sending.current) return;
+    sending.current = true;
     setError(null);
-    void onSubmit(body).then((failure) => {
-      if (failure) setError(failure);
-      else setDraft("");
+    void onSubmit(body, () => setDraft("")).then((result) => {
+      sending.current = false;
+      if (result.kind === "failed") setError(result.error);
     });
   };
 

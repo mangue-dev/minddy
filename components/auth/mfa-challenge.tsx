@@ -26,7 +26,8 @@ export function MfaChallenge({
   onRecovered,
 }: {
   onVerified: () => void;
-  onRecovered: () => void;
+  /** Awaited: the challenge stays busy until the caller's follow-up ends. */
+  onRecovered: () => void | Promise<void>;
 }) {
   const t = useTranslations("Auth");
   const { firstTotpFactorId, verifyTotp, signOut } = useAuth();
@@ -37,6 +38,10 @@ export function MfaChallenge({
   const [recoveryCode, setRecoveryCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Loading the TOTP factor fails independently of a verification: kept
+  // apart so switching modes, which clears `error`, never hides why Verify
+  // stays disabled.
+  const [factorError, setFactorError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +50,7 @@ export function MfaChallenge({
         const id = await firstTotpFactorId();
         if (!cancelled) setFactorId(id);
       } catch (e) {
-        if (!cancelled) setError((e as Error).message);
+        if (!cancelled) setFactorError((e as Error).message);
       }
     })();
     return () => {
@@ -83,7 +88,7 @@ export function MfaChallenge({
         const body = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? t("mfaGenericError"));
       }
-      onRecovered();
+      await onRecovered();
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -121,7 +126,7 @@ export function MfaChallenge({
               disabled={busy}
               autoFocus
               aria-label={t("mfaCodeLabel")}
-              errorId={error ? "mfa-code-error" : undefined}
+              errorId={error ?? factorError ? "mfa-code-error" : undefined}
               // Six digits entered (or pasted, or filled in by the manager
               // password entry) = intent to validate. Wait for a click from
               // more adds nothing: there is no other field to fill in.
@@ -129,7 +134,9 @@ export function MfaChallenge({
             />
           </div>
 
-          {error && <p id="mfa-code-error" role="alert" className="text-sm text-destructive">{error}</p>}
+          {(error ?? factorError) && (
+            <p id="mfa-code-error" role="alert" className="text-sm text-destructive">{error ?? factorError}</p>
+          )}
 
           <Button
             type="submit"

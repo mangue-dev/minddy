@@ -109,6 +109,8 @@ export function ResetPasswordForm() {
       }
       track("password_reset_completed", {});
       toast.success(t("resetDone"));
+      // The form stays disabled while the navigation runs: the password is
+      // already changed, so nothing on this screen may be submitted again.
       router.replace(AFTER_RESET);
     } catch (err) {
       // Keep the raw refusal in the console. Expected cases include
@@ -116,7 +118,6 @@ export function ResetPasswordForm() {
       console.error("[reset-password] Supabase Auth rejected the reset:", err);
       track("password_reset_failed", { reason: errorReason(err) });
       setError(authErrorMessage(err, t));
-    } finally {
       setBusy(false);
     }
   };

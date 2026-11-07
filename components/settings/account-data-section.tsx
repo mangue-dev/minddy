@@ -152,14 +152,21 @@ export function AccountDataSection() {
         const body = (await response.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? t("genericError"));
       }
-      // The account no longer exists: the pending session must leave with it,
-      // otherwise the next page turns to a token which does not designate anyone.
-      await signOut();
-      window.location.href = "/";
     } catch (e) {
       toast.error((e as Error).message);
       setDeleting(false);
+      return;
     }
+    // The account no longer exists: the pending session must leave with it,
+    // otherwise the next page turns to a token which does not designate anyone.
+    // A failed sign-out does not undo the deletion, so the dialog stays
+    // disabled and the page leaves either way.
+    try {
+      await signOut();
+    } catch (e) {
+      console.error("[account] sign-out after deletion failed:", e);
+    }
+    window.location.href = "/";
   };
 
   const ownedCount = preview?.ownedProjects.length ?? 0;
