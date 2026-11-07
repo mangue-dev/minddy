@@ -167,9 +167,12 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // Local undo history (MIN-35): creations from the global dialog record too.
   const { record } = useUndoHistory();
 
-  // Project whose members/categories/objectives feed the open dialog. Set on the
-  // first open and left in place (dialogs stay mounted for reuse).
-  const [target, setTarget] = useState<string | null>(null);
+  // Project whose members/categories/objectives feed each dialog. Set on the
+  // first open and left in place (dialogs stay mounted for reuse). One per
+  // dialog: an objective quick-added from the open issue dialog's picker must
+  // not move that issue form to another project mid-edit.
+  const [issueTarget, setIssueTarget] = useState<string | null>(null);
+  const [objectiveTarget, setObjectiveTarget] = useState<string | null>(null);
   const [issueMounted, setIssueMounted] = useState(false);
   const [issueOpen, setIssueOpen] = useState(false);
   // Does the dialog open in dictation? Rested at EVERY opening, never
@@ -194,10 +197,13 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   const [objectiveName, setObjectiveName] = useState<string | undefined>(undefined);
   const objectiveCreatedRef = useRef<((objective: Objective) => void) | null>(null);
 
-  const anyDialogMounted = issueMounted || objectiveMounted;
-  const { members } = useMembersQuery(target, anyDialogMounted && !!target);
-  const { categories } = useCategoriesQuery(issueMounted ? target : null);
-  const { objectives } = useObjectivesQuery(issueMounted ? target : null);
+  const { members: issueMembers } = useMembersQuery(issueTarget, issueMounted && !!issueTarget);
+  const { members: objectiveMembers } = useMembersQuery(
+    objectiveTarget,
+    objectiveMounted && !!objectiveTarget
+  );
+  const { categories } = useCategoriesQuery(issueMounted ? issueTarget : null);
+  const { objectives } = useObjectivesQuery(issueMounted ? issueTarget : null);
 
   // Optimistic (MIN-40): the card appears in the project cache AND the board
   // aggregated upon opening, the dialog closes without waiting for POST; reconciled
@@ -299,14 +305,14 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     preloadSurface(loadCreateIssueDialog);
     const pid = resolveTarget();
     if (!pid) return;
-    setTarget(pid);
+    setIssueTarget(pid);
     startTransition(() => setIssueMounted(true));
   }, [resolveTarget]);
   const warmCreateObjective = useCallback(() => {
     preloadSurface(loadObjectiveDialog);
     const pid = resolveTarget();
     if (!pid) return;
-    setTarget(pid);
+    setObjectiveTarget(pid);
     startTransition(() => setObjectiveMounted(true));
   }, [resolveTarget]);
 
@@ -325,7 +331,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
           : pid === projectIdFromPath(targetInputs.current.pathname)
             ? activeObjectiveIdFromUrl()
             : null;
-      setTarget(pid);
+      setIssueTarget(pid);
       setIssuePresets({
         status: opts?.status,
         objectiveId,
@@ -352,7 +358,7 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     (opts?: OpenObjectiveOptions) => {
       const pid = resolveTarget(opts?.projectId, true);
       if (!pid) return;
-      setTarget(pid);
+      setObjectiveTarget(pid);
       setObjectiveName(opts?.name?.trim() || undefined);
       objectiveCreatedRef.current = opts?.onCreated ?? null;
       setObjectiveDraftId(opts?.draftId ?? null);
@@ -422,9 +428,13 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   // inputs when invoked, without broadcasting route changes to card pickers.
   const canCreate = projects.length > 0;
   // The dialogs' project picker: what may be offered, plus the target itself.
-  const pickerProjects = useMemo(
-    () => projects.filter((p) => p.id === target || offeredProjects.includes(p)),
-    [projects, offeredProjects, target]
+  const issuePickerProjects = useMemo(
+    () => projects.filter((p) => p.id === issueTarget || offeredProjects.includes(p)),
+    [projects, offeredProjects, issueTarget]
+  );
+  const objectivePickerProjects = useMemo(
+    () => projects.filter((p) => p.id === objectiveTarget || offeredProjects.includes(p)),
+    [projects, offeredProjects, objectiveTarget]
   );
   const value = useMemo(
     () => ({
@@ -446,29 +456,29 @@ export function CreateProvider({ children }: { children: ReactNode }) {
   return (
     <CreateContext.Provider value={value}>
       {children}
-      {target && issueMounted ? (
+      {issueTarget && issueMounted ? (
         <CreateIssueDialog
           open={issueOpen}
           onOpenChange={setIssueOpen}
-          projectId={target}
-          projects={pickerProjects}
-          members={members}
+          projectId={issueTarget}
+          projects={issuePickerProjects}
+          members={issueMembers}
           categories={categories}
           objectives={objectives}
-          onCreate={(input) => createIssueGlobal(target, input)}
+          onCreate={(input) => createIssueGlobal(issueTarget, input)}
           onCreateInProject={createIssueGlobal}
           initialStatus={issuePresets.status}
           initialObjectiveId={issuePresets.objectiveId}
           initialAssigneeId={issuePresets.assigneeId}
           initialSubIssueOf={issuePresets.parentId ? {
             id: issuePresets.parentId,
-            label: parentRelationLabel(target, issuePresets.parentId),
+            label: parentRelationLabel(issueTarget, issuePresets.parentId),
           } : null}
           autoDictate={issueDictate}
           initialDraftId={issueDraftId}
         />
       ) : null}
-      {target && objectiveMounted ? (
+      {objectiveTarget && objectiveMounted ? (
         <ObjectiveDialog
           open={objectiveOpen}
           onOpenChange={(next) => {
@@ -476,12 +486,12 @@ export function CreateProvider({ children }: { children: ReactNode }) {
             if (!next) objectiveCreatedRef.current = null;
             setObjectiveOpen(next);
           }}
-          members={members}
-          projects={pickerProjects}
-          projectId={target}
+          members={objectiveMembers}
+          projects={objectivePickerProjects}
+          projectId={objectiveTarget}
           initialName={objectiveName}
           initialDraftId={objectiveDraftId}
-          onCreate={(input) => createObjectiveForTarget(target, input)}
+          onCreate={(input) => createObjectiveForTarget(objectiveTarget, input)}
           onCreateInProject={createObjectiveGlobal}
           onUpdate={async () => {}}
         />

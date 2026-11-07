@@ -10,6 +10,7 @@
     "slashDictate": "Dictar una tarea",
     "saving": "Guardando…",
     "saved": "Guardado",
+    "saveRetrying": "Sin guardar. Reintentando…",
     "savedAgo": "Guardado {time}",
     "savedJustNow": "Guardado ahora mismo",
     "removeSettled": "Eliminar las tareas completadas y descartadas",

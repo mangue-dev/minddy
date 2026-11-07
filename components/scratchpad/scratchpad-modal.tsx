@@ -3,11 +3,12 @@
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/kbd";
 import {
   DropdownMenu,
@@ -114,7 +115,7 @@ function ScratchpadBody() {
   const removeSettledRef = useRef<(() => number) | null>(null);
   const startAllRef = useRef<(() => number) | null>(null);
 
-  const { content, updatedAt, isLoading, isSaving, save } = useScratchpadDoc({
+  const { content, updatedAt, isLoading, isSaving, saveFailed, save } = useScratchpadDoc({
     open: isOpen,
     liveRef: markdownRef,
     applyRef,
@@ -178,7 +179,8 @@ function ScratchpadBody() {
     );
   };
 
-  const showSaveState = !isLoading && (isSaving || content.trim() !== "");
+  const showSaveState = !isLoading && (isSaving || saveFailed || content.trim() !== "");
+  const saveLabel = isSaving ? t("saving") : saveFailed ? t("saveRetrying") : t("saved");
 
   return (
     <>
@@ -188,18 +190,25 @@ function ScratchpadBody() {
             <TooltipTrigger asChild>
               <span
                 role="status"
-                aria-label={isSaving ? t("saving") : t("saved")}
-                className="flex text-muted-foreground/60 transition-colors hover:text-muted-foreground"
+                aria-label={saveLabel}
+                className={cn(
+                  "flex transition-colors",
+                  saveFailed
+                    ? "text-destructive"
+                    : "text-muted-foreground/60 hover:text-muted-foreground"
+                )}
               >
                 {isSaving ? (
                   <Spinner className="size-3.5" />
+                ) : saveFailed ? (
+                  <HugeiconsIcon icon={AlertCircleIcon} className="size-3.5" />
                 ) : (
                   <HugeiconsIcon icon={CheckIcon} className="size-3.5" />
                 )}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              {isSaving ? t("saving") : <SavedAgo updatedAt={updatedAt} />}
+              {isSaving || saveFailed ? saveLabel : <SavedAgo updatedAt={updatedAt} />}
             </TooltipContent>
           </Tooltip>
         </div>

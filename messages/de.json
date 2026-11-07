@@ -10,6 +10,7 @@
     "slashDictate": "Eine Aufgabe diktieren",
     "saving": "Wird gespeichert…",
     "saved": "Gespeichert",
+    "saveRetrying": "Nicht gespeichert. Neuer Versuch…",
     "savedAgo": "Gespeichert {time}",
     "savedJustNow": "Gerade eben gespeichert",
     "removeSettled": "Erledigte und verworfene Aufgaben entfernen",

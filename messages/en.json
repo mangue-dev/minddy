@@ -10,6 +10,7 @@
     "slashDictate": "Dictate a task",
     "saving": "Saving…",
     "saved": "Saved",
+    "saveRetrying": "Not saved. Retrying…",
     "savedAgo": "Saved {time}",
     "savedJustNow": "Saved just now",
     "removeSettled": "Remove done and dropped tasks",

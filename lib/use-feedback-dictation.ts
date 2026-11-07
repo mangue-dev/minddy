@@ -49,14 +49,19 @@ export function useFeedbackDictation({
   // The listening run that has just taken place: put it back in storage
   // both calls under a single ledger line. Consumed once.
   const runIdRef = useRef<string | null>(null);
-  const abortedRef = useRef(false);
+  // Each run holds its own token; `reset()` and a newer run replace it, so a
+  // run that settles after either can neither patch the draft nor clear
+  // `busy` for the run that replaced it.
+  const activeRunRef = useRef<symbol | null>(null);
 
   const run = async (transcript: string) => {
     if (!transcript.trim()) return;
     const runId = runIdRef.current;
     runIdRef.current = null;
+    const token = Symbol("feedback-dictation-run");
+    activeRunRef.current = token;
+    const isCurrent = () => activeRunRef.current === token;
     setBusy(true);
-    abortedRef.current = false;
     try {
       const result = await dictate({
         runId,
@@ -64,7 +69,7 @@ export function useFeedbackDictation({
         draft: getDraft(),
         history: historyRef.current,
       });
-      if (abortedRef.current) return;
+      if (!isCurrent()) return;
       if (!result.ok) {
         if (!result.handled) toast.error(t("error"));
         return;
@@ -82,11 +87,14 @@ export function useFeedbackDictation({
         toast.info(result.reply);
       }
     } catch (err) {
-      if (abortedRef.current) return;
+      if (!isCurrent()) return;
       console.error("[feedback-dictation] failed", err);
       toast.error(t("error"));
     } finally {
-      if (!abortedRef.current) setBusy(false);
+      if (isCurrent()) {
+        activeRunRef.current = null;
+        setBusy(false);
+      }
     }
   };
 
@@ -110,7 +118,7 @@ export function useFeedbackDictation({
   const reset = useCallback(() => {
     historyRef.current = [];
     runIdRef.current = null;
-    abortedRef.current = true;
+    activeRunRef.current = null;
     setBusy(false);
   }, []);
 

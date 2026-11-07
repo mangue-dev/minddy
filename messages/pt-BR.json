@@ -10,6 +10,7 @@
     "slashDictate": "Ditar uma tarefa",
     "saving": "Salvando…",
     "saved": "Salvo",
+    "saveRetrying": "Não salvo. Tentando de novo…",
     "savedAgo": "Salvo {time}",
     "savedJustNow": "Salvo agora mesmo",
     "removeSettled": "Remover tarefas concluídas e descartadas",

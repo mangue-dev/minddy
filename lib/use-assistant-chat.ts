@@ -1098,6 +1098,9 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         }
       } catch (err) {
         console.error("[assistant] loadConversation failed", err);
+        // A failure of a load the user has since replaced (another
+        // conversation, or a new one) must not land on the current chat.
+        if (loadGeneration !== loadGenerationRef.current) return;
         dispatch({
           type: "ERROR",
           message: (err as Error)?.message ?? tApi("conversationLoadFailed"),

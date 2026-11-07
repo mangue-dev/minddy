@@ -97,6 +97,7 @@ export function useCsvImport({
   // A proposal that returns after the user has changed files (or
   // touched on the board) must not crush anything: we throw it away.
   const planRequestRef = useRef(0);
+  const readRequestRef = useRef(0);
 
   // The advancement hook changes each time the caller renders: keep it
   // in a ref avoids remanufacturing `handleFile`, whose pilot identity
@@ -106,6 +107,7 @@ export function useCsvImport({
 
   const reset = useCallback(() => {
     planRequestRef.current += 1;
+    readRequestRef.current += 1;
     setPrepared(null);
     setMapping(null);
     setAiApplied(false);
@@ -118,7 +120,11 @@ export function useCsvImport({
         toast.error(t("importErrorTooLarge"));
         return;
       }
+      // Two quick drops may finish reading out of order: only the latest
+      // read may replace the file on screen.
+      const read = ++readRequestRef.current;
       const text = await file.text();
+      if (read !== readRequestRef.current) return;
       const result = prepareImport(text, contextRef.current);
       if (!result.ok) {
         toast.error(
@@ -130,6 +136,11 @@ export function useCsvImport({
       }
       const { table, stats, source, mapping: base } = result;
 
+      // The new file replaces the previous one, so the previous file's
+      // proposal is stale from here on, even when this file never asks the
+      // model for one.
+      const request = ++planRequestRef.current;
+
       setPrepared({
         fileName: file.name,
         csvText: text,
@@ -140,6 +151,7 @@ export function useCsvImport({
       });
       setMapping(base);
       setAiApplied(false);
+      setAiPending(false);
       onPreparedRef.current?.();
 
       // The model only passes if there is something left to gain: a
@@ -148,7 +160,6 @@ export function useCsvImport({
       // project whose people we already know does not trigger any.
       if (!mappingHasGaps(stats, base, source)) return;
 
-      const request = ++planRequestRef.current;
       setAiPending(true);
       const proposed = await fetchImportMappingApi(
         projectId,

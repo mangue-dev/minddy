@@ -4,7 +4,7 @@ import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useMountedWhileClosing } from "@/components/ui/overlay-freeze";
 import { ImageNotFound01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import type { NodeViewRenderer } from "@tiptap/core";
 import {
@@ -64,6 +64,10 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
 
   const wrapper = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+  // Ends the resize gesture in progress, if any. Kept in a ref so an unmount
+  // mid-drag (the node view is destroyed) also removes the window listeners.
+  const stopResizeRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopResizeRef.current?.(), []);
 
   /* ── Resizing ─────────────────────── ──────────────────────── */
 
@@ -79,6 +83,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
       const full = container.getBoundingClientRect().width;
       if (full <= 0) return;
       const left = container.getBoundingClientRect().left;
+      stopResizeRef.current?.();
       setDragging(true);
 
       const move = (moveEvent: PointerEvent) => {
@@ -90,13 +95,19 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
           ),
         });
       };
+      // A cancelled touch gesture fires `pointercancel`, never `pointerup`:
+      // both end the drag, or the listener would keep resizing on every move.
       const stop = () => {
+        stopResizeRef.current = null;
         setDragging(false);
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", stop);
+        window.removeEventListener("pointercancel", stop);
       };
+      stopResizeRef.current = stop;
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", stop);
+      window.addEventListener("pointercancel", stop);
     },
     [editor, updateAttributes]
   );

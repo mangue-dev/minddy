@@ -95,6 +95,11 @@ async function putScratchpad(
  * Warming the cache also makes opening the notebook instant — it renders the
  * cached note while it revalidates.
  */
+
+/** Backoff between retries of a failed scratchpad save. */
+const RETRY_BASE_MS = 2_000;
+const RETRY_MAX_MS = 30_000;
+
 export function useScratchpadProgress(): PlanProgress {
   return useScratchpadSummary().progress;
 }
@@ -159,7 +164,10 @@ export function useScratchpadDoc({
 
   const baseRef = useRef<{ content: string; rev: number }>({ content: "", rev: 0 });
   const seededRef = useRef(false);
-  const [isSaving, setSaving] = useState(false);
+  // One save lifecycle: idle, writing, or failed and waiting to retry. A
+  // failure is never shown as "saved": the indicator says so until a retry
+  // reaches the server.
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "failed">("idle");
 
   // Seed the merge base from the first load (the editor is created with it), and
   // reset on close so a reopen re-seeds from fresh server state.
@@ -233,6 +241,15 @@ export function useScratchpadDoc({
   const runningRef = useRef(false);
   const commitRef = useRef(commitOnce);
   commitRef.current = commitOnce;
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryDelayRef = useRef(RETRY_BASE_MS);
+  const saveRef = useRef<(content: string, document?: JSONContent | null) => void>(() => {});
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    },
+    []
+  );
 
   const save = useCallback((content: string, document?: JSONContent | null) => {
     // Blur and unmount can both flush the editor. Avoid starting a CAS write
@@ -242,14 +259,23 @@ export function useScratchpadDoc({
       pendingRef.current === null &&
       content === baseRef.current.content
     ) {
+      // The server already holds this content (a failed write may have
+      // landed before its error): nothing is left to retry.
+      setSaveStatus((status) => (status === "failed" ? "idle" : status));
       return;
     }
     pendingRef.current = content;
     pendingDocumentRef.current = document ?? null;
     if (runningRef.current) return;
+    // A new edit supersedes a scheduled retry: it carries the full content.
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     runningRef.current = true;
-    setSaving(true);
+    setSaveStatus("saving");
     void (async () => {
+      let failed: { content: string; document: JSONContent | null } | null = null;
       try {
         while (pendingRef.current !== null) {
           const next = pendingRef.current;
@@ -258,17 +284,32 @@ export function useScratchpadDoc({
           pendingDocumentRef.current = null;
           try {
             await commitRef.current(next, nextDocument);
+            failed = null;
           } catch {
-            // Transient failure — drop this attempt; the next edit's full-content
-            // save includes it, so nothing the user typed is lost.
+            // Keep the failed content: unless a newer edit replaces it, it is
+            // retried below, so a last edit is not lost when no other follows.
+            failed = { content: next, document: nextDocument };
           }
         }
       } finally {
         runningRef.current = false;
-        setSaving(false);
+        if (failed) {
+          const retry = failed;
+          setSaveStatus("failed");
+          const delay = retryDelayRef.current;
+          retryDelayRef.current = Math.min(delay * 2, RETRY_MAX_MS);
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            saveRef.current(retry.content, retry.document);
+          }, delay);
+        } else {
+          retryDelayRef.current = RETRY_BASE_MS;
+          setSaveStatus("idle");
+        }
       }
     })();
   }, []);
+  saveRef.current = save;
 
   // Idle adoption: when the server advances past our base (the agent wrote) and
   // the editor has no unsaved edits, pull the fresh content in. If the editor IS
@@ -297,7 +338,9 @@ export function useScratchpadDoc({
     /** When the note last reached the server — the save indicator's "… ago". */
     updatedAt: data?.updated_at ?? null,
     isLoading: open && isPending,
-    isSaving,
+    isSaving: saveStatus === "saving",
+    /** The last write failed; it is retried with backoff until it lands. */
+    saveFailed: saveStatus === "failed",
     save,
   };
 }

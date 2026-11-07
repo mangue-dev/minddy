@@ -229,6 +229,12 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   const pendingOptionsRef = useRef<OpenAssistantOptions | null>(null);
   pendingOptionsRef.current = pendingOptions;
 
+  // The restore depends on the request alone. `loadConversationRaw` changes
+  // identity with its translator (a locale change Numo itself can make): as
+  // a dependency it would replay a finished restore and block the panel again.
+  const loadConversationRawRef = useRef(loadConversationRaw);
+  loadConversationRawRef.current = loadConversationRaw;
+
   useEffect(() => {
     if (!restoreRequested) return;
     purgeLegacyStorage();
@@ -253,7 +259,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
             serverPointerRef.current = null;
           } else {
             void updateConversation(conversationId, { read: true }).catch(() => {});
-            await loadConversationRaw(conversationId, projectId);
+            await loadConversationRawRef.current(conversationId, projectId);
           }
         }
       } catch {
@@ -270,7 +276,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [restoreRequested, loadConversationRaw]);
+  }, [restoreRequested]);
 
   // Mirror the pointer to the server: open a conversation in writing,
   // starting a new one erases it. `restored` is in the dependencies so that
