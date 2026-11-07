@@ -104,8 +104,9 @@ vi.mock("@/lib/server/agent/issue-status-sync", () => ({
   syncIssueStatusFromPr: async () => {},
 }));
 const recordForgePrGesture = vi.fn(async () => {});
+const applyForgePrToIssue = vi.fn(async (_opts: Record<string, unknown>) => {});
 vi.mock("@/lib/server/agent/pr-activity", () => ({
-  applyForgePrToIssue: async () => {},
+  applyForgePrToIssue: (opts: Record<string, unknown>) => applyForgePrToIssue(opts),
   isPrActionEcho: async () => false,
   recordForgePrActionEvents: async () => {},
   recordForgePrGesture,
@@ -115,7 +116,9 @@ vi.mock("@/lib/server/agent/pr-opened-notify", () => ({
   notifyPullRequestOpened: async () => {},
 }));
 const findPullRequestByNumber = vi.fn(async (): Promise<Record<string, unknown> | null> => null);
-const upsertPullRequestWithOutcome = vi.fn(async () => ({ row: null, applied: false }));
+const upsertPullRequestWithOutcome = vi.fn(
+  async (): Promise<{ row: Record<string, unknown> | null; applied: boolean }> => ({ row: null, applied: false }),
+);
 const recordPrCommentEditQuiet = vi.fn(async () => {});
 vi.mock("@/lib/server/agent/pr-comment-edits", () => ({ recordPrCommentEditQuiet }));
 vi.mock("@/lib/server/agent/pull-requests", () => ({
@@ -215,6 +218,7 @@ function link(overrides: Row = {}): Row {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  findPullRequestByNumber.mockResolvedValue(null);
   verifyGithubSignature.mockReturnValue(true);
   managedForge = false;
   enqueueRelayDeliveryForPayload.mockResolvedValue(null);
@@ -330,6 +334,24 @@ describe("POST /api/webhooks/gitlab", () => {
     });
   });
 
+  it("records an MR push without re-applying the stored state to the tickets", async () => {
+    upsertPullRequestWithOutcome.mockResolvedValueOnce({ row: null, applied: true });
+    findPullRequestByNumber.mockResolvedValue({ id: "pr-1", state: "open" });
+    const secret = await ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" });
+    const response = await gitlabPOST(gitlabRequest(secret, {
+      body: {
+        object_kind: "merge_request",
+        user: { id: 3, username: "jdoe" },
+        project: { id: 1001, path_with_namespace: "acme/app" },
+        object_attributes: { iid: 7, action: "update", state: "opened", oldrev: "abc123" },
+      },
+    }));
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => expect(applyForgePrToIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 7, prState: null, actionType: "pr_committed" }),
+    ));
+  });
+
   it("a missing token returns 401", async () => {
     await ensureRepoWebhookSecret({ provider: "gitlab", externalRepoId: "1001" });
     const response = await gitlabPOST(gitlabRequest(null));
@@ -437,6 +459,42 @@ describe("POST /api/webhooks/github", () => {
     }));
     expect(upsertPullRequestWithOutcome).toHaveBeenCalledOnce();
     expect(recordForgePrGesture).not.toHaveBeenCalled();
+  });
+
+  it("records a synchronize push without re-applying the stored state to the tickets", async () => {
+    upsertPullRequestWithOutcome.mockResolvedValueOnce({ row: null, applied: true });
+    findPullRequestByNumber.mockResolvedValue({ id: "pr-1", state: "open" });
+    const response = await githubPOST(githubRequest({
+      event: "pull_request",
+      body: {
+        action: "synchronize", number: 7,
+        repository: { id: 9001, full_name: "acme/app" },
+        pull_request: { number: 7, state: "open", updated_at: "2026-10-04T11:00:00Z" },
+        sender: { login: "octocat" },
+      },
+    }));
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => expect(applyForgePrToIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 7, prState: null, actionType: "pr_committed" }),
+    ));
+  });
+
+  it("still syncs the tickets when the event changes the PR state", async () => {
+    upsertPullRequestWithOutcome.mockResolvedValueOnce({ row: null, applied: true });
+    findPullRequestByNumber.mockResolvedValue({ id: "pr-1", state: "merged" });
+    const response = await githubPOST(githubRequest({
+      event: "pull_request",
+      body: {
+        action: "closed", number: 7,
+        repository: { id: 9001, full_name: "acme/app" },
+        pull_request: { number: 7, state: "closed", merged: true, updated_at: "2026-10-04T11:00:00Z" },
+        sender: { login: "octocat" },
+      },
+    }));
+    expect(response.status).toBe(200);
+    await vi.waitFor(() => expect(applyForgePrToIssue).toHaveBeenCalledWith(
+      expect.objectContaining({ prNumber: 7, prState: "merged", actionType: "pr_accepted" }),
+    ));
   });
 
   it("dates a PR comment edit by its updated time instead of its creation or delivery time", async () => {

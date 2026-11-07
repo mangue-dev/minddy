@@ -327,8 +327,15 @@ async function handleMergeRequest(
   const prEventAt = actionType ? mrEventOccurredAt(attrs) : null;
   if (!prState && !actionType) return;
 
-  const linkedPr = await findPullRequestByNumber({ provider: "gitlab", repoFullName, number: iid });
-  const currentPrState = linkedPr?.state ?? ingested?.state ?? prState;
+  // Only an event that itself changes the MR state may move the tickets. A
+  // push (`oldrev`) carries no state: falling back to the stored state would
+  // put a ticket the user moved by hand back to `in_review` on every push.
+  const linkedPr = prState
+    ? await findPullRequestByNumber({ provider: "gitlab", repoFullName, number: iid })
+    : null;
+  const currentPrState = prState
+    ? (linkedPr?.state ?? ingested?.state ?? prState)
+    : null;
   // Echo of an in-app action performed through the service account that linked
   // the repository: already traced by the route with the human actor.
   const echoed =

@@ -182,15 +182,21 @@ export async function linkFeedbackIssue(params: {
   // and all subsequent ones must give the same result, otherwise link a ticket
   // and moving it a notch would say two different things about the same state.
   const status = feedbackStatusForIssue(issue.status) ?? "open";
-  const { error } = await service
+  const { data: linked, error } = await service
     .from("feedback_posts")
     .update({ issue_id: issue.id as string, status })
     .is("deleted_at", null)
     .eq("id", params.postId)
-    .is("issue_id", null);
+    .is("issue_id", null)
+    .select("id");
   if (error) {
     console.error("[feedback-promote] link_existing_failed");
     return { ok: false, status: 500, errorKey: "databaseError" };
+  }
+  // Lost the race: another link (or a deletion) won after the read above. Same
+  // answer as a post that was already linked, and no "linked" event.
+  if (!linked?.length) {
+    return { ok: false, status: 404, errorKey: "feedbackNotFound" };
   }
   await emitFeedbackLinked(service, {
     postId: params.postId,

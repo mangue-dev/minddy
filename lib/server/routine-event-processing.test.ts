@@ -117,6 +117,18 @@ describe("durable routine orchestration", () => {
     expect(h.start).toHaveBeenCalledTimes(1); expect(h.tables.routine_armings[0].state).toBe("consumed");
     expect(h.start).toHaveBeenCalledWith(expect.objectContaining({origin:"event",provenance:expect.objectContaining({subjectId:subject,eventId:"1"})}));
   });
+  it("does not resurrect an arming cancelled while its occurrence was admitted", async () => {
+    h.tables.issues[0].assignee_id = "person";
+    h.start.mockImplementation(async () => {
+      // A concurrent tick cancels the reserved arming during admission.
+      h.tables.routine_armings[0].state = "cancelled";
+      return { turn: { id: "turn" } };
+    });
+    emit(1); await processRoutineEvents();
+    expect(h.start).toHaveBeenCalledTimes(1);
+    expect(h.tables.routine_armings[0].state).toBe("cancelled");
+    expect(h.tables.agent_routines[0].last_run_at).toBeUndefined();
+  });
   it("cancels waiting status entries on exit and rearms a subsequent entry", async () => {
     emit(1); await processRoutineEvents();
     emit(2,"issue.status_changed",{status:"backlog"}); await processRoutineEvents();

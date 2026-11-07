@@ -65,12 +65,31 @@ export interface RoutineOccurrenceDetail {
   transcript_note: string | null;
 }
 
-/** Same mapping as the Routines tab run list. */
+/**
+ * Durable turn state → run status, shared with the Routines tab run list
+ * (`app/api/routines/[id]/runs`). Exhaustive, so a new turn state cannot fall
+ * through to "running" forever.
+ */
+const RUN_STATUS_FOR_TURN: Record<NumoTurnStatus, RoutineRunSummary["status"]> = {
+  queued: "queued",
+  // Waits for the drain to pick it up again, exactly like a queued turn.
+  retryable: "queued",
+  running: "running",
+  // Still active: the paused state is reported by `waiting_input`.
+  waiting_input: "running",
+  // Active until the worker acknowledges the stop.
+  stopping: "running",
+  completed: "completed",
+  failed: "failed",
+  // A tool may have acted without a recorded result: the run does not resume
+  // on its own and needs the owner's review.
+  reconciling: "failed",
+  stopped: "canceled",
+};
+
+/** No turn yet: the occurrence is still waiting for admission. */
 export function routineRunStatus(status: NumoTurnStatus | null): RoutineRunSummary["status"] {
-  if (status === "completed") return "completed";
-  if (status === "failed") return "failed";
-  if (status === "stopped") return "canceled";
-  return status ? "running" : "queued";
+  return status ? RUN_STATUS_FOR_TURN[status] : "queued";
 }
 
 function turnForConversation(
@@ -99,7 +118,9 @@ function runSummary(
     subject_type: occurrence.subject_type ?? null,
     scheduled_for: occurrence.scheduled_for,
     created_at: occurrence.scheduled_for ?? occurrence.created_at,
-    status: occurrence.error_code
+    // An admission error only decides the status while no turn exists: once a
+    // retry admitted one, the turn's own state is the truth.
+    status: occurrence.error_code && !turn
       ? "failed"
       : routineRunStatus(status),
     numo_status: status,

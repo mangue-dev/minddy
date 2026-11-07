@@ -405,8 +405,15 @@ async function handlePullRequest(payload: PullRequestEvent): Promise<void> {
   // did it `if (!prState) return`, amounted to never tracing it.
   if (!prState && !actionType) return;
 
-  const linkedPr = await findPullRequestByNumber({ provider: "github", repoFullName, number });
-  const currentPrState = linkedPr?.state ?? ingested?.state ?? prState;
+  // Only an event that itself changes the PR state may move the tickets. A
+  // `synchronize` push carries no state: falling back to the stored state
+  // would put a ticket the user moved by hand back to `in_review` on every push.
+  const linkedPr = prState
+    ? await findPullRequestByNumber({ provider: "github", repoFullName, number })
+    : null;
+  const currentPrState = prState
+    ? (linkedPr?.state ?? ingested?.state ?? prState)
+    : null;
   const byHuman = !isBot(payload.sender);
 
   // Align every linked ticket's status and record the human gesture (MIN-46,

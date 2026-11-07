@@ -6,6 +6,7 @@ import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { routineRunUsagePercent } from "@/lib/routine-run-metrics";
 import { occurrencesForRoutine } from "@/lib/server/routine-occurrences";
 import { routineOccurrenceSpend } from "@/lib/server/routine-spend";
+import { routineRunStatus } from "@/lib/server/routine-runs";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { NumoTurnStatus } from "@/lib/assistant-types";
 import { decodeNumoError } from "@/lib/server/numo/error-content";
@@ -19,13 +20,6 @@ import { decodeNumoTurnOutcome } from "@/lib/server/numo/final-content";
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function agentStatusForNumo(status: NumoTurnStatus | null) {
-  if (status === "completed") return "completed";
-  if (status === "failed") return "failed";
-  if (status === "stopped") return "canceled";
-  return status ? "running" : "queued";
-}
 
 export async function GET(request: NextRequest, ctx: RouteContext) {
   const auth = await getAuthedUser(request);
@@ -69,7 +63,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       kind: "numo",
       project_id: found.routine.project_id,
       issue_id: null,
-      status: occurrence.error_code ? "failed" : agentStatusForNumo(status),
+      status: occurrence.error_code && !turn ? "failed" : routineRunStatus(status),
       numo_status: status,
       model: turn?.model ?? null,
       model_forced: false,
