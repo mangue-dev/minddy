@@ -366,6 +366,36 @@ describe("finishing step", () => {
   });
 });
 
+describe("closing while Finish runs", () => {
+  it("creates nothing when the wizard is discarded before the create request is sent", async () => {
+    let briefReady: (value: unknown) => void = () => {};
+    mocks.prepareBrief.mockImplementation(() => new Promise((resolve) => { briefReady = resolve; }));
+    await mount({ step: "finish", seed: { kind: "brief", text: "Plan" } });
+    await submit();
+    await act(async () => mocks.closeDialog!.onDiscard());
+    await act(async () => briefReady({ type: "doc", content: [] }));
+    expect(mocks.createProject).not.toHaveBeenCalled();
+    expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it("finishes a project already being created, without writing into the fresh wizard or navigating", async () => {
+    let created: (value: { id: string; name: string }) => void = () => {};
+    mocks.createProject.mockImplementation(() => new Promise((resolve) => { created = resolve; }));
+    await mount({ step: "finish", invitees: ["ana@example.com"] });
+    await submit();
+    await act(async () => mocks.closeDialog!.onDiscard());
+    expect(mocks.close).toHaveBeenCalledExactlyOnceWith(false);
+
+    await act(async () => created({ id: draft.id, name: draft.name }));
+    // The project exists: its setup completes and the toast says so.
+    expect(mocks.invite).toHaveBeenCalledExactlyOnceWith(draft.id, "ana@example.com");
+    expect(mocks.toastSuccess).toHaveBeenCalledOnce();
+    // The user closed the wizard: they stay where they are.
+    expect(mocks.push).not.toHaveBeenCalled();
+    expect(mocks.close).toHaveBeenCalledOnce();
+  });
+});
+
 describe("member invitations", () => {
   it("queues normalized addresses, refuses invalid, duplicate and own ones, and sends nothing before Finish", async () => {
     await mount({ step: "members" });

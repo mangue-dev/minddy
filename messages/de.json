@@ -10,6 +10,8 @@
     "slashDictate": "Eine Aufgabe diktieren",
     "saving": "Wird gespeichert…",
     "saved": "Gespeichert",
+    "saveRetrying": "Nicht gespeichert. Neuer Versuch…",
+    "saveRefused": "Nicht gespeichert. Bearbeite das Notizbuch, um es erneut zu versuchen.",
     "savedAgo": "Gespeichert {time}",
     "savedJustNow": "Gerade eben gespeichert",
     "removeSettled": "Erledigte und verworfene Aufgaben entfernen",
@@ -522,6 +524,7 @@
     "archiveConversation": "Unterhaltung archivieren",
     "unarchiveConversation": "Archivierung der Unterhaltung aufheben",
     "historyUpdateFailed": "Die Unterhaltung konnte nicht aktualisiert werden.",
+    "deleteFailed": "Die Unterhaltung konnte nicht gelöscht werden.",
     "routines": "Routinen",
     "deleteConversation": "Unterhaltung löschen",
     "deleteConfirm": {
@@ -4818,6 +4821,7 @@
         "faq_ask": "FAQ-Fragefeld"
       },
       "loadingCalls": "Aufrufe werden geladen…",
+      "callsLoadError": "Die Aufrufe konnten nicht geladen werden. Öffne die Ausführung erneut, um es noch einmal zu versuchen.",
       "noData": "Keine KI-Aufrufe in diesem Zeitraum.",
       "recentRunsHint": "Ein Lauf gruppiert die Aufrufe einer Aktion.",
       "logsTitle": "Letzte Ausführungen",

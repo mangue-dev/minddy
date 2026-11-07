@@ -3,7 +3,7 @@
 import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
-import {useEffect, useState, type SVGProps} from "react";
+import {useEffect, useRef, useState, type SVGProps} from "react";
 import Link from "@/components/app-link";
 import {useTranslations} from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +45,14 @@ const UserCircleSceneIcon = ({
 
  The rules remain in VERTICAL rows: a free text of 500 characters
  does not fit at the end of a line. This is the assumed exception to key/value. */
+/** Two rule maps say the same thing once blank texts and edge spaces are ignored. */
+function sameRules(a: Record<string, string>, b: Record<string, string>): boolean {
+  for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    if ((a[id] ?? "").trim() !== (b[id] ?? "").trim()) return false;
+  }
+  return true;
+}
+
 export function SmartAssignSection({
   project,
   isOwner,
@@ -87,8 +95,16 @@ export function SmartAssignSection({
   const savedRules = project.smart_assign_rules ?? {};
   const [rules, setRules] = useState<Record<string, string>>(savedRules);
   const [savingRules, setSavingRules] = useState(false);
+  // A refetch (Realtime, focus) brings a new saved map: adopt it only when
+  // the draft holds no unsaved edit, so typing in progress is never wiped.
+  const syncedRules = useRef(savedRules);
   useEffect(() => {
-    setRules(project.smart_assign_rules ?? {});
+    const next = project.smart_assign_rules ?? {};
+    const previous = syncedRules.current;
+    syncedRules.current = next;
+    setRules((draft) =>
+      sameRules(draft, previous) || sameRules(draft, next) ? next : draft
+    );
   }, [project.smart_assign_rules]);
 
   const dirty = members.some(

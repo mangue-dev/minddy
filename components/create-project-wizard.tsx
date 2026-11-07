@@ -178,6 +178,11 @@ export function CreateProjectWizard({
   const { track } = useAnalytics();
   const { maxMembersPerProject } = usePlanGates();
   const createdProjectRef = useRef<Awaited<ReturnType<typeof createProject>> | null>(null);
+  /** One number per opening of the wizard, bumped by `reset()`. The close
+      button stays live while `finish()` runs: a result that comes back after
+      the wizard was closed belongs to an opening that no longer exists, and
+      must not write into the fresh one. */
+  const sessionRef = useRef(0);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -223,7 +228,10 @@ export function CreateProjectWizard({
     null,
   );
   const [candidates, setCandidates] = useState<CandidateRepo[] | null>(null);
-  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  // Derived, not stored: a connection is open and its repositories have not
+  // arrived yet. A separate flag stayed on when the connection was closed or
+  // the wizard reset mid-request.
+  const candidatesLoading = !!activeConnectionId && candidates === null;
   const [repo, setRepo] = useState<DraftRepo | null>(null);
 
   // “Prime” stage. She collects, she does not write: the brief remains a
@@ -278,6 +286,7 @@ export function CreateProjectWizard({
     empty ? tCommon("skip") : undefined;
 
   const reset = useCallback(() => {
+    sessionRef.current += 1;
     createdProjectRef.current = null;
     setStepIndex(0);
     setSubmitting(false);
@@ -609,20 +618,18 @@ export function CreateProjectWizard({
       return;
     }
     let cancelled = false;
-    setCandidatesLoading(true);
     setCandidates(null);
     fetchAccountGitCandidatesApi(activeConnectionId)
       .then((res) => {
-        if (!cancelled) setCandidates(res.candidates);
+        // Loading is derived from `null`: a response without a list must
+        // still end it.
+        if (!cancelled) setCandidates(res.candidates ?? []);
       })
       .catch((err) => {
         if (!cancelled) {
           toast.error((err as Error).message);
           setActiveConnectionId(null);
         }
-      })
-      .finally(() => {
-        if (!cancelled) setCandidatesLoading(false);
       });
     return () => {
       cancelled = true;
@@ -684,10 +691,23 @@ export function CreateProjectWizard({
 
   // ── Creation (last step) ────────────────────── ───────────────────────
   const finish = async () => {
+    if (submitting) return;
     if (initialBriefTooLong) {
       setStepIndex(steps.indexOf("seed"));
       return;
     }
+    /**
+     * Closing the wizard while this runs (its close button stays live) ends
+     * this opening: nothing below may write into the fresh wizard. What still
+     * happens depends on how far it got. Closed before the create request is
+     * sent: no project is created, the close wins. Closed after: the project
+     * exists whatever the wizard does, so its setup (icon, repository,
+     * settings, invitations the user confirmed with Finish) still completes
+     * and the success toast says it exists, but the user is not navigated
+     * away from where they chose to stay.
+     */
+    const session = sessionRef.current;
+    const stale = () => session !== sessionRef.current;
     setSubmitting(true);
     setError(null);
 
@@ -696,6 +716,7 @@ export function CreateProjectWizard({
       try {
         briefContent = await prepareInitialBriefApi(seed.text);
       } catch (err) {
+        if (stale()) return;
         setStepIndex(steps.indexOf("seed"));
         setError((err as Error).message);
         setSubmitting(false);
@@ -711,6 +732,7 @@ export function CreateProjectWizard({
       // foreign returns. This is the only time you can read it — the app
       // fits in a cookie, never on the account.
       if (!created) {
+        if (stale()) return;
         created = await createProject({
           id: draftId,
           orb_seed: orbSeed,
@@ -723,8 +745,12 @@ export function CreateProjectWizard({
           has_git_link: !!repo,
         });
       }
-      createdProjectRef.current = created;
+      if (!stale()) createdProjectRef.current = created;
     } catch (err) {
+      if (stale()) {
+        toast.error((err as Error).message);
+        return;
+      }
       // Name, key already taken, plan limit: everything is settled in the first step,
       // and the draft remains intact — nothing has been lost.
       setStepIndex(0);
@@ -741,6 +767,11 @@ export function CreateProjectWizard({
           content: briefContent,
         });
       } catch (err) {
+        // The user discarded the wizard: there is no form left to keep.
+        if (stale()) {
+          toast.error((err as Error).message);
+          return;
+        }
         setError((err as Error).message);
         // Keep the form even if the same outage also prevents saving its draft.
         try {
@@ -854,6 +885,7 @@ export function CreateProjectWizard({
       invitations: toInvite.length,
     });
     toast.success(t("wizardDoneToast", { name: created.name }));
+    if (stale()) return;
     setSubmitting(false);
     // `closeWizard` and not `handleOpenChange`: the project is created, there is no
     // no more draft to offer to keep.

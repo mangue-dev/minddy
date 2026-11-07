@@ -10,6 +10,8 @@
     "slashDictate": "Dictate a task",
     "saving": "Saving…",
     "saved": "Saved",
+    "saveRetrying": "Not saved. Retrying…",
+    "saveRefused": "Not saved. Edit the notebook to try again.",
     "savedAgo": "Saved {time}",
     "savedJustNow": "Saved just now",
     "removeSettled": "Remove done and dropped tasks",
@@ -522,6 +524,7 @@
     "archiveConversation": "Archive conversation",
     "unarchiveConversation": "Unarchive conversation",
     "historyUpdateFailed": "The conversation could not be updated.",
+    "deleteFailed": "The conversation could not be deleted.",
     "routines": "Routines",
     "deleteConversation": "Delete conversation",
     "deleteConfirm": {
@@ -4818,6 +4821,7 @@
         "faq_ask": "FAQ question box"
       },
       "loadingCalls": "Loading calls…",
+      "callsLoadError": "Couldn’t load the calls. Reopen the run to try again.",
       "noData": "No AI calls over this period.",
       "recentRunsHint": "A run groups the calls of one action.",
       "logsTitle": "Recent runs",

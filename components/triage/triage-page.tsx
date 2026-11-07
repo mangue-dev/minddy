@@ -14,7 +14,7 @@ import { Cancel01Icon, CircleDotDashedIcon as CircleDotDashed, Copy01Icon, Check
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 import Link from "@/components/app-link";
@@ -328,6 +328,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   } | null>(null);
   const [message, setMessage] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
+  // One confirmation run at a time: Enter in the editor bypasses the
+  // disabled button.
+  const confirmRunRef = useRef({ busy: false });
 
   const {
     items: timelineItems,
@@ -422,19 +425,28 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   };
 
   const openConfirm = (action: "accept" | "decline", issue: Issue) => {
+    if (confirmRunRef.current.busy) return;
     setMessage("");
     setConfirming({ action, issue });
   };
 
   const runConfirm = async () => {
-    if (!confirming) return;
+    if (!confirming || confirmRunRef.current.busy) return;
+    const run = confirmRunRef.current;
     const { action, issue } = confirming;
+    run.busy = true;
     setConfirmBusy(true);
     try {
       // Post the message first so it lands while the issue is still selected;
       // then flip the status (the issue leaves the triage list).
       const body = message.trim();
-      if (body) await addCommentApi(issue.id, body, extractMentions(message, members));
+      if (body) {
+        await addCommentApi(issue.id, body, extractMentions(message, members));
+        // The message is posted: the field empties, so a retry after a failed
+        // status update does not post it twice, and nothing typed afterwards
+        // is mistaken for the text already sent.
+        setMessage("");
+      }
       await updateIssue(issue.id, {
         status: action === "accept" ? "backlog" : "canceled",
       });
@@ -444,6 +456,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
+      run.busy = false;
       setConfirmBusy(false);
     }
   };

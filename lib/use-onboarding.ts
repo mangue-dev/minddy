@@ -173,6 +173,7 @@ export function useOnboarding(): UseOnboardingResult {
   );
 
   const dismiss = useCallback(async () => {
+    const wasFinalScreen = finalScreen;
     setFinalScreen(false);
     if (!user) return;
     track("onboarding_dismissed", {
@@ -183,10 +184,13 @@ export function useOnboarding(): UseOnboardingResult {
     try {
       await updateUserMetadata({ [ONBOARDING_DISMISSED_META_KEY]: true });
     } catch (e) {
+      // The dismissal was not saved: bring back the screen it hid, since the
+      // visibility effect will not run again on unchanged inputs.
       setPendingDismiss(false);
+      if (wasFinalScreen) setFinalScreen(true);
       toast.error((e as Error).message);
     }
-  }, [user, updateUserMetadata, track, state.currentStepId, state.completedCount]);
+  }, [user, updateUserMetadata, track, state.currentStepId, state.completedCount, finalScreen]);
 
   return {
     ...state,

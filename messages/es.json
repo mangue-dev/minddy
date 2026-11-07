@@ -10,6 +10,8 @@
     "slashDictate": "Dictar una tarea",
     "saving": "Guardando…",
     "saved": "Guardado",
+    "saveRetrying": "Sin guardar. Reintentando…",
+    "saveRefused": "Sin guardar. Edita el cuaderno para intentarlo de nuevo.",
     "savedAgo": "Guardado {time}",
     "savedJustNow": "Guardado ahora mismo",
     "removeSettled": "Eliminar las tareas completadas y descartadas",
@@ -522,6 +524,7 @@
     "archiveConversation": "Archivar conversación",
     "unarchiveConversation": "Desarchivar conversación",
     "historyUpdateFailed": "No se pudo actualizar la conversación.",
+    "deleteFailed": "No se pudo eliminar la conversación.",
     "routines": "Rutinas",
     "deleteConversation": "Eliminar conversación",
     "deleteConfirm": {
@@ -4818,6 +4821,7 @@
         "faq_ask": "Cuadro de preguntas de la FAQ"
       },
       "loadingCalls": "Cargando llamadas...",
+      "callsLoadError": "No se pudieron cargar las llamadas. Vuelve a abrir la ejecución para intentarlo de nuevo.",
       "noData": "Ninguna llamada de IA en este periodo.",
       "recentRunsHint": "Una ejecución agrupa las llamadas de una misma acción.",
       "logsTitle": "Ejecuciones recientes",

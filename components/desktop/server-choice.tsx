@@ -12,7 +12,7 @@ import {
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -171,8 +171,30 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
   const [step, setStep] = useState<Step>("selfhost");
 
   const [serverAddress, setServerAddress] = useState("");
-  const [serverMessage, setServerMessage] = useState("");
-  const [serverMessageIsError, setServerMessageIsError] = useState(true);
+  // What the "existing installation" step says: nothing, a step in progress,
+  // or a refusal. One value, so a progress line never shows in red and a
+  // refusal never shows in grey.
+  const [serverNotice, setServerNotice] = useState<
+    null | { tone: "progress" | "error"; text: string }
+  >(null);
+  // One way in at a time: a second click on the local folder or Connect
+  // while the first request runs is ignored. The ref answers before React
+  // commits the state.
+  const [serverPending, setServerPending] = useState(false);
+  const serverPendingRef = useRef(false);
+  const runServerChoice = async (run: () => Promise<void>) => {
+    if (serverPendingRef.current) return;
+    serverPendingRef.current = true;
+    setServerPending(true);
+    try {
+      await run();
+    } finally {
+      serverPendingRef.current = false;
+      setServerPending(false);
+    }
+  };
+  /** Numbers each requirements check: only the latest one may answer. */
+  const requirementsRequest = useRef(0);
   const [requirements, setRequirements] = useState<LocalPrerequisiteResult[] | null>(null);
   const [folder, setFolder] = useState("");
   const [folderMessage, setFolderMessage] = useState("");
@@ -207,13 +229,17 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
 
   const checkRequirements = useCallback(async () => {
     if (!bridge) return;
+    const request = ++requirementsRequest.current;
     setRequirements(null);
+    let result: LocalPrerequisiteResult[];
     try {
-      setRequirements(await bridge.prerequisites());
+      result = await bridge.prerequisites();
     } catch {
       // Unknown states: Install still offers to install what is missing.
-      setRequirements([]);
+      result = [];
     }
+    // A newer check (Recheck, or the step reopened) owns the list.
+    if (request === requirementsRequest.current) setRequirements(result);
   }, [bridge]);
 
   useEffect(() => {
@@ -284,13 +310,11 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
                 icon={Folder01Icon}
                 title={t("localFolderTitle")}
                 body={t("localFolderBody")}
-                onClick={async () => {
-                  setServerMessageIsError(false);
-                  setServerMessage(t("startingLocal"));
+                onClick={() => void runServerChoice(async () => {
+                  setServerNotice({ tone: "progress", text: t("startingLocal") });
                   const result = await bridge.useExistingInstallation();
-                  setServerMessageIsError(true);
-                  setServerMessage(say(t, result.error));
-                }}
+                  setServerNotice(result.error ? { tone: "error", text: say(t, result.error) } : null);
+                })}
               />
             </div>
           </Enter>
@@ -306,10 +330,11 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
               className={cn("rounded-lg p-5", CARD_TONES.sky)}
               onSubmit={async (event) => {
                 event.preventDefault();
-                setServerMessageIsError(true);
-                setServerMessage("");
-                const result = await bridge.connect(serverAddress);
-                if (result.error) setServerMessage(say(t, result.error));
+                await runServerChoice(async () => {
+                  setServerNotice(null);
+                  const result = await bridge.connect(serverAddress);
+                  if (result.error) setServerNotice({ tone: "error", text: say(t, result.error) });
+                });
               }}
             >
               <label htmlFor="server-address" className="text-sm font-semibold">
@@ -327,7 +352,7 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
                   onChange={(event) => setServerAddress(event.target.value)}
                   aria-describedby="server-help server-message"
                 />
-                <Button type="submit" className="h-10 rounded-full px-4">
+                <Button type="submit" disabled={serverPending} className="h-10 rounded-full px-4">
                   {t("connect")}
                 </Button>
               </div>
@@ -336,8 +361,8 @@ export function DesktopServerChoice({ env }: { env: AppEnv }) {
               </p>
             </form>
           </Enter>
-          <p id="server-message" role="alert" className={cn("mt-2 min-h-4 text-xs", serverMessageIsError ? "text-destructive" : "text-muted-foreground")}>
-            {serverMessage}
+          <p id="server-message" role="alert" className={cn("mt-2 min-h-4 text-xs", serverNotice?.tone === "progress" ? "text-muted-foreground" : "text-destructive")}>
+            {serverNotice?.text}
           </p>
           {choice?.isCustomServer && (
             <Enter index={6}>

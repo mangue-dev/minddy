@@ -183,21 +183,26 @@ export function AccountPushDevicesSection() {
 
   const handleRemove = async () => {
     if (!toRemove) return;
+    let removed = false;
     try {
-      // Remove THE CURRENT DEVICE also unsubscribe it on the browser side: without
-      // that, permission would remain granted with a subscription that no longer
-      // no one knows, and the next “enable” would create a line
-      // carrying the same endpoint that we just deleted.
+      // The server row goes first: unsubscribing before it would leave an
+      // enabled row for an endpoint this browser no longer holds whenever
+      // the delete fails.
+      await deletePushDeviceApi(toRemove.id);
+      removed = true;
+      // Removing THE CURRENT DEVICE also unsubscribes it on the browser side:
+      // without that, permission would remain granted with a subscription no
+      // one knows, and the next “enable” would create a row carrying the
+      // endpoint that was just deleted.
       if (toRemove.endpoint === thisEndpoint) {
         await unsubscribeThisDevice();
         setThisEndpoint(null);
       }
-      await deletePushDeviceApi(toRemove.id);
       toast.success(t("removedToast", { name: deviceName(toRemove) }));
-      await refresh();
     } catch (e) {
       toast.error((e as Error).message);
     }
+    if (removed) await refresh();
   };
 
   const sendTest = async (device: PushDevice) => {

@@ -6,6 +6,7 @@ import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { routineRunUsagePercent } from "@/lib/routine-run-metrics";
 import { occurrencesForRoutine } from "@/lib/server/routine-occurrences";
 import { routineOccurrenceSpend } from "@/lib/server/routine-spend";
+import { routineRunStatus } from "@/lib/server/routine-runs";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { NumoTurnStatus } from "@/lib/assistant-types";
 import { decodeNumoError } from "@/lib/server/numo/error-content";
@@ -19,13 +20,6 @@ import { decodeNumoTurnOutcome } from "@/lib/server/numo/final-content";
 export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function agentStatusForNumo(status: NumoTurnStatus | null) {
-  if (status === "completed") return "completed";
-  if (status === "failed") return "failed";
-  if (status === "stopped") return "canceled";
-  return status ? "running" : "queued";
-}
 
 export async function GET(request: NextRequest, ctx: RouteContext) {
   const auth = await getAuthedUser(request);
@@ -69,7 +63,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       kind: "numo",
       project_id: found.routine.project_id,
       issue_id: null,
-      status: occurrence.error_code ? "failed" : agentStatusForNumo(status),
+      status: routineRunStatus(status, occurrence.error_code ?? null),
       numo_status: status,
       model: turn?.model ?? null,
       model_forced: false,
@@ -81,11 +75,13 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       cost_usd: spend.get(occurrence.conversation_id)?.totalUsd ?? 0,
       outcome: turn ? await decodeNumoTurnOutcome(found.routine.owner_id,
         turn.id as string, turn.outcome as string | null, auth.user.id) : null,
-      error_message: occurrence.error_message ?? (turn
+      // An admission error a later turn superseded is history: the turn's
+      // own error (or none) describes the run.
+      error_message: turn
         ? await decodeNumoError(found.routine.owner_id,
             "numo_assistant_turns", turn.id as string,
             turn.error_message as string | null, auth.user.id)
-        : null),
+        : occurrence.error_message ?? null,
       started_at: turn?.started_at ?? null,
       completed_at: turn?.completed_at ?? null,
       created_at: createdAt,

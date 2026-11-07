@@ -10,6 +10,8 @@
     "slashDictate": "Dicter une tâche",
     "saving": "Enregistrement…",
     "saved": "Enregistré",
+    "saveRetrying": "Non enregistré. Nouvelle tentative…",
+    "saveRefused": "Non enregistré. Modifiez le carnet pour réessayer.",
     "savedAgo": "Enregistré {time}",
     "savedJustNow": "Enregistré à l'instant",
     "removeSettled": "Retirer les tâches terminées et annulées",
@@ -522,6 +524,7 @@
     "archiveConversation": "Archiver la conversation",
     "unarchiveConversation": "Désarchiver la conversation",
     "historyUpdateFailed": "La conversation n’a pas pu être mise à jour.",
+    "deleteFailed": "La conversation n’a pas pu être supprimée.",
     "routines": "Routines",
     "deleteConversation": "Supprimer la conversation",
     "deleteConfirm": {
@@ -4818,6 +4821,7 @@
         "faq_ask": "Boîte à questions de la FAQ"
       },
       "loadingCalls": "Chargement des appels…",
+      "callsLoadError": "Impossible de charger les appels. Rouvrez l’exécution pour réessayer.",
       "noData": "Aucun appel IA sur cette période.",
       "recentRunsHint": "Un run regroupe les appels d'une même action.",
       "logsTitle": "Exécutions récentes",

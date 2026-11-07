@@ -6,7 +6,7 @@ import { AddToListIcon, Clock01Icon, Copy01Icon, MessageMultiple01Icon, CheckIco
 import type { IconSvgElement } from "@hugeicons/react";
 import { ObjectiveValue, PropertyRow } from "@/components/issue-property-fields";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +104,10 @@ export function CreateIntegrationWizard({
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
+  /** One number per opening of the wizard, bumped by `reset()`. The close
+      button stays live while the key is being created: a result that comes
+      back after the wizard was closed must not write into the fresh one. */
+  const sessionRef = useRef(0);
 
   // Go back to answer “not now” — or to change the
   // type of key — abandons what had been set: this is the answer that
@@ -113,6 +116,8 @@ export function CreateIntegrationWizard({
     kind === "issues" && wantsWebhook === true && !!webhook.url.trim();
 
   const reset = () => {
+    sessionRef.current += 1;
+    setCreating(false);
     setKind("issues");
     setName("");
     setObjectiveId(null);
@@ -145,12 +150,17 @@ export function CreateIntegrationWizard({
   /** Last configuration step: we create, we plug in, we write. */
   const finish = async () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || creating) return;
+    const session = sessionRef.current;
+    const stale = () => session !== sessionRef.current;
     setCreating(true);
     try {
       const created = await createIntegrationApi(projectId, trimmed, kind, kind === "feedback" ? objectiveId : null);
-      setCreatedKey(created.key);
+      // The key exists either way: the list refreshes even if the wizard
+      // was closed meanwhile.
       onCreated();
+      if (stale()) return;
+      setCreatedKey(created.key);
 
       // We renormalize here rather than relying on the field: validate using the keyboard
       // (Enter) submits without going through the field exit, therefore without the
@@ -182,6 +192,7 @@ export function CreateIntegrationWizard({
               }
             : null,
         });
+        if (stale()) return;
         setPrompt(text);
       } catch (err) {
         // Without a prompt, the final step at least shows the key: it's her
@@ -189,11 +200,14 @@ export function CreateIntegrationWizard({
         console.error("[create-integration] prompt failed:", err);
       }
 
+      if (stale()) return;
       setStepIndex(steps.length - 1);
     } catch (err) {
+      // A toast is not wizard state: the failure is worth knowing even
+      // after the wizard was closed.
       toast.error((err as Error).message);
     } finally {
-      setCreating(false);
+      if (!stale()) setCreating(false);
     }
   };
 

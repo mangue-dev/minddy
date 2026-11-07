@@ -211,6 +211,8 @@ export async function failNumoSurfaceEvent(
       projected_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", eventId);
+    .eq("id", eventId)
+    // A settled projection (`projected` or `failed`) is final.
+    .in("projection_status", ["pending", "projecting"]);
   if (error) console.error("[numo-surface] event_status_write_failed", eventId);
 }

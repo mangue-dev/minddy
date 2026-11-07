@@ -589,6 +589,13 @@ function AccountCount() {
   );
 }
 
+type LookupState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | { kind: "found"; account: AdminAccountSummary }
+  | { kind: "notFound" }
+  | { kind: "failed" };
+
 export function AdminAccountsDashboard() {
   const t = useTranslations("Admin");
   const billingAvailable = useAdminCapabilities().configured("managedBilling");
@@ -597,12 +604,14 @@ export function AdminAccountsDashboard() {
     [billingAvailable],
   );
   const [search, setSearch] = useState("");
-  const [account, setAccount] = useState<AdminAccountSummary | null>(null);
+  // One lookup lifecycle: an empty result and a failed lookup can no longer
+  // be shown together.
+  const [lookupState, setLookupState] = useState<LookupState>({ kind: "idle" });
+  const account = lookupState.kind === "found" ? lookupState.account : null;
+  const loading = lookupState.kind === "loading";
   const [selected, setSelected] = useState<AdminUserRow | null>(null);
-  const [searched, setSearched] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [detailsError, setDetailsError] = useState(false);
   const requestRef = useRef(0);
   const selectedIdRef = useRef<string | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
@@ -619,11 +628,9 @@ export function AdminAccountsDashboard() {
     requestRef.current++;
     controllerRef.current?.abort();
     setSearch(value);
-    setAccount(null);
+    setLookupState({ kind: "idle" });
     setSelected(null);
-    setSearched(false);
-    setError(null);
-    setLoading(false);
+    setDetailsError(false);
     setLoadingDetails(false);
   };
 
@@ -632,13 +639,11 @@ export function AdminAccountsDashboard() {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    setLoading(true);
+    setLookupState({ kind: "loading" });
     setLoadingDetails(false);
-    setAccount(null);
     selectedIdRef.current = null;
     setSelected(null);
-    setError(null);
-    setSearched(true);
+    setDetailsError(false);
     try {
       const response = await fetch("/api/admin/users", {
         method: "POST",
@@ -649,11 +654,11 @@ export function AdminAccountsDashboard() {
       });
       if (!response.ok) throw new Error("Lookup failed");
       const data = await response.json() as { account: AdminAccountSummary | null };
-      if (token === requestRef.current) setAccount(data.account);
+      if (token === requestRef.current) {
+        setLookupState(data.account ? { kind: "found", account: data.account } : { kind: "notFound" });
+      }
     } catch {
-      if (token === requestRef.current) setError(t("users.lookupFailed"));
-    } finally {
-      if (token === requestRef.current) setLoading(false);
+      if (token === requestRef.current) setLookupState({ kind: "failed" });
     }
   };
 
@@ -663,7 +668,7 @@ export function AdminAccountsDashboard() {
     const controller = new AbortController();
     controllerRef.current = controller;
     setLoadingDetails(true);
-    setError(null);
+    setDetailsError(false);
     try {
       const response = await fetch(`/api/admin/users?userId=${encodeURIComponent(userId)}`, {
         cache: "no-store",
@@ -677,9 +682,15 @@ export function AdminAccountsDashboard() {
       }
     } catch {
       if (token === requestRef.current) {
-        selectedIdRef.current = null;
-        setSelected(null);
-        setError(t("users.detailsFailed"));
+        if (selectedIdRef.current === userId) {
+          // A refresh after a support action failed: the action itself
+          // succeeded and its patch is applied, so the panel stays open.
+          toast.error(t("users.detailsFailed"));
+        } else {
+          selectedIdRef.current = null;
+          setSelected(null);
+          setDetailsError(true);
+        }
       }
     } finally {
       if (token === requestRef.current) setLoadingDetails(false);
@@ -743,8 +754,9 @@ export function AdminAccountsDashboard() {
             </div>
             {loadingDetails ? <Spinner /> : <span className="text-xs text-muted-foreground">{t("users.openAccount")}</span>}
           </button>
-        ) : searched ? <p className="text-sm text-muted-foreground">{t("users.empty")}</p> : null}
-        {error ? <p role="alert" className="mt-2 text-sm text-destructive">{error}</p> : null}
+        ) : lookupState.kind === "notFound" ? <p className="text-sm text-muted-foreground">{t("users.empty")}</p> : null}
+        {lookupState.kind === "failed" ? <p role="alert" className="mt-2 text-sm text-destructive">{t("users.lookupFailed")}</p> : null}
+        {detailsError ? <p role="alert" className="mt-2 text-sm text-destructive">{t("users.detailsFailed")}</p> : null}
       </div>
       </div>
       {selected ? <UserSheet key={selected.userId} user={selected} giftVisible={giftVisible} onClose={closeDetails} onChanged={applyChange} /> : null}

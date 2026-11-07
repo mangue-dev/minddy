@@ -2398,7 +2398,7 @@ async function executeToolUnlisted(
         ) {
           return toolError("decision must be accept, decline, or duplicate.");
         }
-        const { data: issue } = await issueStore(ctx.supabase).select("id, status")
+        const { data: issue } = await issueStore(ctx.supabase).select("id, status, updated_at")
           .is("deleted_at", null)
           .eq("id", issueId)
           .eq("project_id", projectId)
@@ -2418,7 +2418,24 @@ async function executeToolUnlisted(
           );
         }
 
-        // Mirror the triage page: optional comment first, then the status change.
+        const input: Record<string, unknown> =
+          decision === "accept"
+            ? { status: "backlog" }
+            : decision === "decline"
+              ? { status: "canceled" }
+              : { status: "duplicate", duplicate_of_id: args.duplicate_of_id };
+        // The status check above is only a read: the write is a CAS on that
+        // snapshot, so a member's concurrent triage decision is not overwritten.
+        // It runs BEFORE the comment, so a lost decision posts no explanation.
+        const result = await updateIssueFields({
+          issueId,
+          actorId: ctx.userId,
+          input,
+          viaAssistant: true,
+          expectedUpdatedAt: issue.updated_at as string,
+        });
+        if (!result.ok) return libError(result);
+
         if (typeof args.comment === "string" && args.comment.trim()) {
           const commented = await addCommentToIssue({
             issueId,
@@ -2426,22 +2443,13 @@ async function executeToolUnlisted(
             body: args.comment,
             viaAssistant: true,
           });
-          if (!commented.ok) return libError(commented);
+          if (!commented.ok) {
+            const failure = libError(commented).result as { error: string };
+            return toolError(
+              `The status changed to ${String(input.status)}, but the comment was not posted: ${failure.error}`,
+            );
+          }
         }
-
-        const input: Record<string, unknown> =
-          decision === "accept"
-            ? { status: "backlog" }
-            : decision === "decline"
-              ? { status: "canceled" }
-              : { status: "duplicate", duplicate_of_id: args.duplicate_of_id };
-        const result = await updateIssueFields({
-          issueId,
-          actorId: ctx.userId,
-          input,
-          viaAssistant: true,
-        });
-        if (!result.ok) return libError(result);
         return {
           result: { decision, issue_id: issueId, status: input.status },
           success: true,

@@ -30,9 +30,13 @@ export function commentDisplay(
 
   // Serialize snapshots so a late partial write cannot truncate the final answer.
   let writes: Promise<void> = Promise.resolve();
-  const write = (fields: Record<string, unknown>): Promise<void> => {
+  const write = (fields: Record<string, unknown>, settle = false): Promise<void> => {
     writes = writes.catch(() => {}).then(async () => {
-      const { error } = await commentStore(service, table).update(fields).eq("id", commentId);
+      let query = commentStore(service, table).update(fields).eq("id", commentId);
+      // `working` is the only state that may settle: a late failure must not
+      // blank an answer that is already `done`, nor overwrite another outcome.
+      if (settle) query = query.eq("assistant_status", "working");
+      const { error } = await query;
       if (error) throw new Error("Unable to persist assistant comment");
     });
     return writes;
@@ -68,7 +72,7 @@ export function commentDisplay(
         body,
         assistant_status: "done",
         assistant_tool: null,
-      });
+      }, true);
     },
 
     async fail() {
@@ -77,7 +81,7 @@ export function commentDisplay(
         body: "",
         assistant_status: "error",
         assistant_tool: null,
-      });
+      }, true);
     },
   };
 }

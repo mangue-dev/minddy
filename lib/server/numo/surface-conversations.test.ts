@@ -13,6 +13,7 @@ vi.mock("./surface-destination-content", () => ({
 }));
 
 import {
+  failNumoSurfaceEvent,
   reserveNumoSurfaceEvent,
 } from "./surface-conversations";
 
@@ -94,4 +95,44 @@ describe("Numo shared-surface event admission", () => {
     encryption.enabled = false;
   });
 
+});
+
+describe("Numo shared-surface event failure", () => {
+  function eventTable(row: Record<string, unknown>) {
+    return {
+      from(table: string) {
+        expect(table).toBe("numo_surface_events");
+        let patch: Record<string, unknown> = {};
+        const matches: ((value: Record<string, unknown>) => boolean)[] = [];
+        const builder = {
+          update(value: Record<string, unknown>) { patch = value; return builder; },
+          eq(column: string, value: unknown) {
+            matches.push((candidate) => candidate[column] === value);
+            return builder;
+          },
+          in(column: string, values: unknown[]) {
+            matches.push((candidate) => values.includes(candidate[column]));
+            return builder;
+          },
+          then(resolve: (value: unknown) => unknown) {
+            if (matches.every((match) => match(row))) Object.assign(row, patch);
+            return Promise.resolve({ error: null }).then(resolve);
+          },
+        };
+        return builder;
+      },
+    } as never;
+  }
+
+  it("fails a projection that has not settled yet", async () => {
+    const row = { id: "event-id", projection_status: "projecting" };
+    await failNumoSurfaceEvent(eventTable(row), "event-id");
+    expect(row.projection_status).toBe("failed");
+  });
+
+  it("leaves a delivered projection as projected", async () => {
+    const row = { id: "event-id", projection_status: "projected", projected_at: "2026-09-13T00:00:00Z" };
+    await failNumoSurfaceEvent(eventTable(row), "event-id");
+    expect(row).toEqual({ id: "event-id", projection_status: "projected", projected_at: "2026-09-13T00:00:00Z" });
+  });
 });

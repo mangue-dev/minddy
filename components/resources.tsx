@@ -371,6 +371,55 @@ function PagePalettePicker({
 }
 
 /**
+ * One request at a time for a dialog that can be closed and reopened while
+ * its request runs. Each opening gets a number: a request answers only the
+ * opening that sent it, so a late success does not close the reopened dialog
+ * and a late failure does not write its error there. A second submit is
+ * refused while any request runs, whichever opening sent it; `onSettled`
+ * always runs so the busy state ends with the request.
+ */
+function useOpeningRequest() {
+  const opening = useRef(0);
+  const running = useRef(false);
+  return useMemo(
+    () => ({
+      nextOpening: () => {
+        opening.current += 1;
+      },
+      inFlight: () => running.current,
+      run: async (
+        send: () => unknown,
+        handlers: {
+          onStart: () => void;
+          onSuccess: () => void;
+          onError: (err: unknown) => void;
+          /** The failure of a request whose dialog was closed since: it can no
+              longer show in the field, but must still be told. */
+          onClosedError: (err: unknown) => void;
+          onSettled: () => void;
+        },
+      ) => {
+        if (running.current) return;
+        const sentFrom = opening.current;
+        running.current = true;
+        handlers.onStart();
+        try {
+          await send();
+          if (sentFrom === opening.current) handlers.onSuccess();
+        } catch (err) {
+          if (sentFrom === opening.current) handlers.onError(err);
+          else handlers.onClosedError(err);
+        } finally {
+          running.current = false;
+          handlers.onSettled();
+        }
+      },
+    }),
+    [],
+  );
+}
+
+/**
  * “Paste a link”: a field, a validation, nothing more. `https://` is
  * prefixed when the schema is missing ([url-normalize.ts](../lib/url-normalize.ts)) —
  * no one types a schema, and refusing "linear.app" for that would be like
@@ -389,13 +438,17 @@ export function AddLinkDialog({
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const request = useOpeningRequest();
 
   useEffect(() => {
+    request.nextOpening();
     if (!open) return;
     setValue("");
     setError(null);
-    setBusy(false);
-  }, [open]);
+    // A request sent from a previous opening may still run: the button stays
+    // busy until it settles, so the same link is not sent twice.
+    setBusy(request.inFlight());
+  }, [open, request]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -420,16 +473,16 @@ export function AddLinkDialog({
               setError(t("linkInvalid"));
               return;
             }
-            setBusy(true);
-            setError(null);
-            try {
-              await onSubmit(url);
-              onOpenChange(false);
-            } catch (err) {
-              setError((err as Error).message || t("linkFailed"));
-            } finally {
-              setBusy(false);
-            }
+            await request.run(() => onSubmit(url), {
+              onStart: () => {
+                setBusy(true);
+                setError(null);
+              },
+              onSuccess: () => onOpenChange(false),
+              onError: (err) => setError((err as Error).message || t("linkFailed")),
+              onClosedError: (err) => toast.error((err as Error).message || t("linkFailed")),
+              onSettled: () => setBusy(false),
+            });
           }}
         >
           {/* NOT `type="url"`: the browser would validate the field BEFORE the
@@ -485,13 +538,17 @@ export function RenameResourceDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const request = useOpeningRequest();
 
   useEffect(() => {
+    request.nextOpening();
     if (!resource) return;
     setValue(resource.file_name);
     setError(null);
-    setBusy(false);
-  }, [resource]);
+    // See AddLinkDialog: a rename from a previous opening keeps the button
+    // busy until it settles.
+    setBusy(request.inFlight());
+  }, [resource, request]);
 
   return (
     <Dialog open={resource !== null} onOpenChange={onOpenChange}>
@@ -525,16 +582,16 @@ export function RenameResourceDialog({
               onOpenChange(false);
               return;
             }
-            setBusy(true);
-            setError(null);
-            try {
-              await onSubmit(resource, name);
-              onOpenChange(false);
-            } catch (err) {
-              setError((err as Error).message || t("renameFailed"));
-            } finally {
-              setBusy(false);
-            }
+            await request.run(() => onSubmit(resource, name), {
+              onStart: () => {
+                setBusy(true);
+                setError(null);
+              },
+              onSuccess: () => onOpenChange(false),
+              onError: (err) => setError((err as Error).message || t("renameFailed")),
+              onClosedError: (err) => toast.error((err as Error).message || t("renameFailed")),
+              onSettled: () => setBusy(false),
+            });
           }}
         >
           <Input

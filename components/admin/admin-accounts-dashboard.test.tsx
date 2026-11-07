@@ -159,6 +159,26 @@ describe("account support flow", () => {
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("Could not load billing");
   });
 
+  it("a failed lookup reports the failure without also claiming no account exists", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 500 }));
+    await type(account.email); await submit();
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe(messages.Admin.users.lookupFailed);
+    expect(host.textContent).not.toContain(messages.Admin.users.empty);
+  });
+
+  it("keeps the account open when the refresh after a support action fails", async () => {
+    fetchMock.mockResolvedValueOnce(json({ account }));
+    await type(account.email); await submit();
+    fetchMock.mockResolvedValueOnce(json({ user })).mockResolvedValueOnce(json({ resets: [] }));
+    await flush(() => button("Open account").click());
+    // The reset succeeds; the details refresh that follows falls on the default 500.
+    fetchMock.mockResolvedValueOnce(json({ resets: [], usage: { spentUsd: 0, blocked: false } }));
+    await flush(() => button("Reset").click());
+    await flush();
+    expect(fetchMock.mock.calls.at(-1)?.[0]).toBe(`/api/admin/users?userId=${account.userId}`);
+    expect(host.querySelector("[data-sheet]")).not.toBeNull();
+  });
+
   it("a late support mutation cannot reopen a closed account", async () => {
     fetchMock.mockResolvedValueOnce(json({ account }));
     await type(account.email); await submit();

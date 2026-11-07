@@ -120,6 +120,10 @@ export function FeedbackSetupWizard({
   const [envCopied, setEnvCopied] = useState(false);
   /** Did this journey light up the board itself? Only this case falls apart. */
   const [provisionedBoard, setProvisionedBoard] = useState(false);
+  /** One number per opening of the wizard, bumped by `reset()`. The close
+      button stays live while a request runs: a result that comes back after
+      the wizard was closed must not write into the fresh one. */
+  const sessionRef = useRef(0);
 
   const {
     board,
@@ -164,6 +168,9 @@ export function FeedbackSetupWizard({
       : ["type", "review", "placement", "done"];
 
   const reset = () => {
+    sessionRef.current += 1;
+    setWorking(false);
+    setGenerating(false);
     setPlacement("");
     setStepIndex(0);
     setPrompt(null);
@@ -199,20 +206,22 @@ export function FeedbackSetupWizard({
    */
   const applyType = async () => {
     const alreadyOn = board?.enabled === true;
+    const session = sessionRef.current;
+    const stale = () => session !== sessionRef.current;
     setWorking(true);
     try {
       if (mode === "board") {
         if (!alreadyOn) {
-          if (!(await patchBoard({ enabled: true }))) return;
+          if (!(await patchBoard({ enabled: true })) || stale()) return;
           setProvisionedBoard(true);
         }
       } else if (provisionedBoard) {
-        if (!(await patchBoard({ enabled: false }))) return;
+        if (!(await patchBoard({ enabled: false })) || stale()) return;
         setProvisionedBoard(false);
       }
       setStepIndex((i) => i + 1);
     } finally {
-      setWorking(false);
+      if (!stale()) setWorking(false);
     }
   };
 
@@ -228,16 +237,20 @@ export function FeedbackSetupWizard({
       setStepIndex((i) => i + 1);
       return;
     }
+    const session = sessionRef.current;
+    const stale = () => session !== sessionRef.current;
     setWorking(true);
     try {
-      if (!(await post(sso ? "rotate_sso" : "clear_sso"))) return;
+      if (!(await post(sso ? "rotate_sso" : "clear_sso")) || stale()) return;
       setStepIndex((i) => i + 1);
     } finally {
-      setWorking(false);
+      if (!stale()) setWorking(false);
     }
   };
 
   const generate = async () => {
+    const session = sessionRef.current;
+    const stale = () => session !== sessionRef.current;
     setGenerating(true);
     try {
       const response = await fetch(
@@ -262,6 +275,15 @@ export function FeedbackSetupWizard({
       if (!response.ok || !data?.prompt) {
         throw new Error(data?.error || tBoard("errorGeneric"));
       }
+      // The board/key could be provisioned: refresh the settings views,
+      // whether or not the wizard is still open.
+      void queryClient.invalidateQueries({
+        queryKey: feedbackSettingsKey(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: integrationsQueryKey(projectId),
+      });
+      if (stale()) return;
       setPrompt(data.prompt);
       setKeyCreated(data.key_created === true);
       // The credential that the prompt EXPECTS without carrying it. The API key is in
@@ -280,19 +302,13 @@ export function FeedbackSetupWizard({
               }
             : null,
       );
-      // The board/key could be provisioned: refresh the settings views.
-      void queryClient.invalidateQueries({
-        queryKey: feedbackSettingsKey(projectId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: integrationsQueryKey(projectId),
-      });
       await copyToClipboard(data.prompt);
+      if (stale()) return;
       setStepIndex((i) => i + 1);
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
-      setGenerating(false);
+      if (!stale()) setGenerating(false);
     }
   };
 

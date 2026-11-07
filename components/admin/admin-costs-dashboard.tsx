@@ -697,25 +697,31 @@ function RunRowItem({
 }) {
   const format = useFormatter();
   const [open, setOpen] = useState(false);
-  const [calls, setCalls] = useState<RunCall[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  // A failed read is its own state, not an empty list: reopening the run
+  // tries again instead of showing “no calls” for good.
+  const [calls, setCalls] = useState<
+    | { kind: "idle" }
+    | { kind: "loading" }
+    | { kind: "loaded"; calls: RunCall[] }
+    | { kind: "failed" }
+  >({ kind: "idle" });
   const ui = GROUP_UI[costGroupOf(run.feature)];
 
   const toggle = useCallback(async () => {
     const next = !open;
     setOpen(next);
-    if (next && calls === null && !loading) {
-      setLoading(true);
+    if (next && (calls.kind === "idle" || calls.kind === "failed")) {
+      setCalls({ kind: "loading" });
       try {
         const res = await fetch(`/api/admin/ai-usage?run=${run.run_id}`);
-        setCalls(res.ok ? ((await res.json()) as { calls: RunCall[] }).calls ?? [] : []);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { calls?: RunCall[] };
+        setCalls({ kind: "loaded", calls: data.calls ?? [] });
       } catch {
-        setCalls([]);
-      } finally {
-        setLoading(false);
+        setCalls({ kind: "failed" });
       }
     }
-  }, [open, calls, loading, run.run_id]);
+  }, [open, calls.kind, run.run_id]);
 
   return (
     <li>
@@ -744,9 +750,11 @@ function RunRowItem({
       </button>
       {open ? (
         <div className="bg-muted/20 px-4 pb-3 pl-10">
-          {loading ? (
+          {calls.kind === "idle" || calls.kind === "loading" ? (
             <RowsSkeleton rows={3} label={t("costs.loadingCalls")} className="gap-2 py-3" />
-          ) : !calls || calls.length === 0 ? (
+          ) : calls.kind === "failed" ? (
+            <p role="alert" className="py-3 text-xs text-destructive">{t("costs.callsLoadError")}</p>
+          ) : calls.calls.length === 0 ? (
             <p className="py-3 text-xs text-muted-foreground">{t("costs.empty")}</p>
           ) : (
             <div className="overflow-x-auto">
@@ -761,7 +769,7 @@ function RunRowItem({
                   </tr>
                 </thead>
                 <tbody>
-                  {calls.map((c) => (
+                  {calls.calls.map((c) => (
                     <tr key={c.id} className="border-t border-border/50">
                       <td className="py-1 pr-3 tabular-nums text-muted-foreground">{c.seq + 1}</td>
                       <td className="py-1 pr-3">

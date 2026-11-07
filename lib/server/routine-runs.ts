@@ -65,12 +65,39 @@ export interface RoutineOccurrenceDetail {
   transcript_note: string | null;
 }
 
-/** Same mapping as the Routines tab run list. */
-export function routineRunStatus(status: NumoTurnStatus | null): RoutineRunSummary["status"] {
-  if (status === "completed") return "completed";
-  if (status === "failed") return "failed";
-  if (status === "stopped") return "canceled";
-  return status ? "running" : "queued";
+/**
+ * Durable turn state → run status, shared with the Routines tab run list
+ * (`app/api/routines/[id]/runs`). Exhaustive, so a new turn state cannot fall
+ * through to "running" forever.
+ */
+const RUN_STATUS_FOR_TURN: Record<NumoTurnStatus, RoutineRunSummary["status"]> = {
+  queued: "queued",
+  // Waits for the drain to pick it up again, exactly like a queued turn.
+  retryable: "queued",
+  running: "running",
+  // Still active: the paused state is reported by `waiting_input`.
+  waiting_input: "running",
+  // Active until the worker acknowledges the stop.
+  stopping: "running",
+  completed: "completed",
+  failed: "failed",
+  // A tool may have acted without a recorded result: the run does not resume
+  // on its own and needs the owner's review.
+  reconciling: "failed",
+  stopped: "canceled",
+};
+
+/**
+ * The run status of an occurrence. Without a turn, the occurrence is still
+ * waiting for admission, unless admission failed. Once a turn exists (a retry
+ * admitted one), the turn's own state is the truth.
+ */
+export function routineRunStatus(
+  status: NumoTurnStatus | null,
+  admissionErrorCode: string | null = null,
+): RoutineRunSummary["status"] {
+  if (status) return RUN_STATUS_FOR_TURN[status];
+  return admissionErrorCode ? "failed" : "queued";
 }
 
 function turnForConversation(
@@ -99,13 +126,14 @@ function runSummary(
     subject_type: occurrence.subject_type ?? null,
     scheduled_for: occurrence.scheduled_for,
     created_at: occurrence.scheduled_for ?? occurrence.created_at,
-    status: occurrence.error_code
-      ? "failed"
-      : routineRunStatus(status),
+    status: routineRunStatus(status, occurrence.error_code ?? null),
     numo_status: status,
     waiting_input: status === "waiting_input",
     outcome: (turn?.outcome as string | null) ?? null,
-    error_message: occurrence.error_message ?? (turn?.error_message as string | null) ?? null,
+    // Like the status: an admission error a later turn superseded is history.
+    error_message: turn
+      ? (turn.error_message as string | null) ?? null
+      : occurrence.error_message ?? null,
     cost_usd: turn ? spend.get(occurrence.conversation_id)?.totalUsd ?? 0 : null,
     started_at: (turn?.started_at as string | null) ?? null,
     completed_at: (turn?.completed_at as string | null) ?? null,

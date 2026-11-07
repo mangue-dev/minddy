@@ -10,6 +10,8 @@
     "slashDictate": "Detta un'attività",
     "saving": "Salvataggio…",
     "saved": "Salvato",
+    "saveRetrying": "Non salvato. Nuovo tentativo…",
+    "saveRefused": "Non salvato. Modifica il taccuino per riprovare.",
     "savedAgo": "Salvato {time}",
     "savedJustNow": "Salvato ora",
     "removeSettled": "Rimuovi le attività completate e annullate",
@@ -522,6 +524,7 @@
     "archiveConversation": "Archivia conversazione",
     "unarchiveConversation": "Ripristina conversazione",
     "historyUpdateFailed": "Impossibile aggiornare la conversazione.",
+    "deleteFailed": "Impossibile eliminare la conversazione.",
     "routines": "Routine",
     "deleteConversation": "Elimina conversazione",
     "deleteConfirm": {
@@ -4818,6 +4821,7 @@
         "faq_ask": "Riquadro domande delle FAQ"
       },
       "loadingCalls": "Caricamento delle chiamate…",
+      "callsLoadError": "Impossibile caricare le chiamate. Riapri l’esecuzione per riprovare.",
       "noData": "Nessuna chiamata IA in questo periodo.",
       "recentRunsHint": "Un'esecuzione raggruppa le chiamate di un'azione.",
       "logsTitle": "Esecuzioni recenti",

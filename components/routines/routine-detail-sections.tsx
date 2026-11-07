@@ -82,7 +82,8 @@ export function RoutineInstruction({
       setDraft(null);
       return;
     }
-    void onSave({ prompt, promptMentions: draft.mentions });
+    // On failure the caller has said so (its toast) and the draft stays open.
+    onSave({ prompt, promptMentions: draft.mentions }).catch(() => {});
   };
 
   return (
@@ -158,6 +159,9 @@ export function RoutineSettings({
   // made the fields jump back before the save landed.
   const remote = JSON.stringify([routine.trigger ?? null, schedule, routine.max_spend_percent ?? null]);
   const lastRemote = useRef(remote);
+  // The saved values as of this render, read when a failed save settles.
+  const saved = useRef({ routine, schedule });
+  saved.current = { routine, schedule };
   useEffect(() => {
     if (remote === lastRemote.current) return;
     lastRemote.current = remote;
@@ -166,11 +170,39 @@ export function RoutineSettings({
     setDraftSchedule(schedule);
     setSpendCap(routine.max_spend_percent ?? DEFAULT_MAX_SPEND_PERCENT);
   }, [remote]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** Fields whose last save failed. A later save of the same field clears
+      its entry: that value supersedes the one that failed. */
+  const failed = useRef(new Set<"trigger" | "spendCap">());
+  /**
+   * A failed save would leave its field showing a value that was never
+   * saved. Once nothing else waits or writes (a pending change still owns the
+   * field), the failed fields go back to the saved values.
+   */
+  const revertFailed = () => {
+    if (pending.current !== null || saving.current > 0 || failed.current.size === 0) return;
+    const { routine: current, schedule: currentSchedule } = saved.current;
+    if (failed.current.has("trigger")) {
+      setTrigger(current.trigger ?? { type: "schedule" });
+      setDraftSchedule(currentSchedule);
+    }
+    if (failed.current.has("spendCap")) {
+      setSpendCap(current.max_spend_percent ?? DEFAULT_MAX_SPEND_PERCENT);
+    }
+    failed.current.clear();
+  };
   const write = (patch: RoutinePatch) => {
+    const field = "maxSpendPercent" in patch ? "spendCap" : "trigger";
+    failed.current.delete(field);
     saving.current += 1;
-    void onSave(patch).finally(() => {
-      saving.current -= 1;
-    });
+    void onSave(patch)
+      .catch(() => {
+        // The caller says what failed (its toast); the field is put back below.
+        failed.current.add(field);
+      })
+      .finally(() => {
+        saving.current -= 1;
+        revertFailed();
+      });
   };
   useEffect(() => () => {
     if (pending.current !== null) window.clearTimeout(pending.current);

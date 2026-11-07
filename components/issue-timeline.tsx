@@ -571,6 +571,9 @@ export function CommentBlock({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  // The keyboard submit bypasses the disabled Save button, and `saving` only
+  // updates on the next render: the ref blocks a second save while one runs.
+  const savingRef = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const mine = !!currentUserId && comment.author_id === currentUserId;
   // A mirrored GitHub comment is "edited" when GitHub says so: the local row is
@@ -610,10 +613,12 @@ export function CommentBlock({
 
   const saveEdit = async () => {
     const body = draft.trim();
+    if (savingRef.current) return;
     if (!body || body === comment.body) {
       setEditing(false);
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     try {
       await onEdit(comment.id, body);
@@ -621,6 +626,7 @@ export function CommentBlock({
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -946,6 +952,9 @@ export function ReplyComposer({
     (threadIsPublic ? t("replyPublicPlaceholder") : t("replyPlaceholder"));
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  // Enter in the editor bypasses the disabled button: block a second post
+  // while one is in flight (state updates land a render later).
+  const postingRef = useRef(false);
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   const drop = useFileDrop(uploads.addFiles);
   const meName = actorName(members, currentUserId, t);
@@ -961,7 +970,8 @@ export function ReplyComposer({
   const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
 
   const submit = async () => {
-    if (!canPost) return;
+    if (!canPost || postingRef.current) return;
+    postingRef.current = true;
     setPosting(true);
     try {
       await onReply(rootId, draft.trim(), extractMentions(draft, members), uploads.inputs);
@@ -969,6 +979,7 @@ export function ReplyComposer({
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
+      postingRef.current = false;
       setPosting(false);
     }
   };
@@ -1422,6 +1433,9 @@ export const CommentComposer = memo(function CommentComposer({
   const t = useTranslations("Timeline");
   const [draft, setDraft] = useState("");
   const [posting, setPosting] = useState(false);
+  // Enter in the editor bypasses the disabled button: block a second post
+  // while one is in flight (state updates land a render later).
+  const postingRef = useRef(false);
   const [visibility, setVisibility] = useState<CommentVisibility>("internal");
   const uploads = useAttachmentUploads(() => `projects/${projectId}`);
   // The comment cites the attachments added to it (MIN-742).
@@ -1441,7 +1455,8 @@ export const CommentComposer = memo(function CommentComposer({
   const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
 
   const submit = async () => {
-    if (!canPost) return;
+    if (!canPost || postingRef.current) return;
+    postingRef.current = true;
     setPosting(true);
     try {
       await onSubmit(
@@ -1461,6 +1476,7 @@ export const CommentComposer = memo(function CommentComposer({
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
+      postingRef.current = false;
       setPosting(false);
     }
   };

@@ -142,7 +142,11 @@ async function evaluateArming(arming: Arming, routine: Routine, budget: Admissio
     check(sourceResult.error);
     const source = sourceResult.data;
     await startRoutineOccurrence({ routine, origin: trigger.type === "database" ? "database" : "event", requestId: claimed.request_id, armingId: claimed.id, provenance: { eventId: String(claimed.event_id), subjectId: claimed.subject_id, subjectType: claimed.subject_type, causeRoutineIds: source?.cause_routine_ids ?? [] } });
-    const bound = await service.from("routine_armings").update({ state: "consumed", lease_until: null, error_code: null }).eq("id", claimed.id).eq("lease_token", claimed.lease_token);
+    // Only a still-reserved arming may be consumed: one cancelled while the
+    // occurrence was admitted stays cancelled instead of reading consumed.
+    // The occurrence itself is already admitted and runs, so the routine is
+    // stamped as having run either way.
+    const bound = await service.from("routine_armings").update({ state: "consumed", lease_until: null, error_code: null }).eq("id", claimed.id).eq("lease_token", claimed.lease_token).eq("state", "reserved");
     check(bound.error);
     await service.from("agent_routines").update({ last_run_at: new Date().toISOString(), last_error: null }).eq("id", routine.id);
     // Admission persists a queued turn. The bounded Numo drain executes it;

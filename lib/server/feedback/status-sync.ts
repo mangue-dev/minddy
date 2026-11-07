@@ -2,6 +2,7 @@ import "server-only";
 
 import { afterOrNow } from "@/lib/server/after-safe";
 import { getServiceClient } from "@/lib/supabase-service";
+import { issueStore } from "@/lib/server/issue-store";
 import { emitFeedbackFieldChanges } from "@/lib/server/feedback/events";
 import type { FeedbackPostStatus } from "@/lib/feedback/types";
 import type { IssueStatus } from "@/lib/issue-constants";
@@ -56,15 +57,32 @@ export function scheduleFeedbackStatusSync(
   issueStatus: unknown,
   actorId: string | null = null
 ): void {
-  // `null` only for a value that is not a known status — not for
-  // un statut qu'on aurait choisi d'ignorer : il n'y en a plus.
-  const mapped = feedbackStatusForIssue(issueStatus);
-  if (!mapped) return;
+  // `null` only for a value that is not a known status, never for a status
+  // chosen to be ignored: there are none left.
+  if (!feedbackStatusForIssue(issueStatus)) return;
+  // The deferred job maps the issue's status AS IT IS when it runs, not the one
+  // captured here: background runs can finish out of order, and the last one
+  // to write must not leave the post at an older status.
   afterOrNow(() =>
-    syncFeedbackStatusForIssue(issueId, mapped, actorId).catch(() =>
+    syncFeedbackStatusFromCurrentIssue(issueId, actorId).catch(() =>
       console.error("[feedback-status-sync] sync_failed")
     )
   );
+}
+
+async function syncFeedbackStatusFromCurrentIssue(
+  issueId: string,
+  actorId: string | null
+): Promise<void> {
+  const { data: issue, error } = await issueStore(getServiceClient())
+    .select("status")
+    .is("deleted_at", null)
+    .eq("id", issueId)
+    .maybeSingle();
+  if (error) throw new Error("issue_status_read_failed");
+  const mapped = feedbackStatusForIssue(issue?.status);
+  if (!mapped) return;
+  await syncFeedbackStatusForIssue(issueId, mapped, actorId);
 }
 
 export async function syncFeedbackStatusForIssue(

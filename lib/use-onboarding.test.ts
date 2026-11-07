@@ -135,6 +135,19 @@ describe("useOnboarding", () => {
     expect(latest!.showChecklist).toBe(true);
   });
 
+  it("brings the completion screen back if its dismissal cannot be saved", async () => {
+    mocks.projects.loading = false;
+    mocks.summary.loading = false;
+    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo", "mcp"];
+    renderHook();
+    await act(async () => { await latest!.acknowledgeStep("cycles"); });
+    expect(latest!.finalScreen).toBe(true);
+    mocks.auth.updateUserMetadata.mockRejectedValueOnce(new Error("Save failed"));
+    await act(async () => { await latest!.dismiss(); });
+    expect(latest!.finalScreen).toBe(true);
+    expect(latest!.showChecklist).toBe(true);
+  });
+
   it("shows completion once and closes it without a dismissal analytics event", async () => {
     mocks.projects.loading = false;
     mocks.summary.loading = false;
