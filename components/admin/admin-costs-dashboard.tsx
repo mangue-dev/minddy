@@ -112,6 +112,8 @@ const FEATURES = [
   "issue_relation",
   // Issue search by meaning (MIN-718): one query embedding per distinct search.
   "issue_search",
+  // Background Numo (MIN-928): the LLM fallback of the wake decision.
+  "numo_wake",
   // FAQ question box (MIN-590): a visitor's question, paid by the instance.
   "faq_ask",
   // Landing Dictation Demo (MIN-150): the ONLY line that no one

@@ -453,6 +453,7 @@
     "historyFeatureIssueEmbedding": "Smart Fill · index des tickets",
     "historyFeatureIssueRelation": "Smart Fill · relations",
     "historyFeatureIssueSearch": "Recherche de tickets",
+    "historyFeatureNumoWake": "Numo · tri des événements",
     "agentsGateTitle": "Le travail avec Numo n’est pas disponible",
     "agentsGateDescription": "Le travail avec Numo n’est pas activé sur ce compte.",
     "agentsGateCta": "Voir les offres",
@@ -3063,6 +3064,8 @@
     "aiUsageKeyHint_conversation_title_model": "Nomme une conversation à partir de son premier message",
     "aiUsageKey_web_search_model": "Recherche web",
     "aiUsageKeyHint_web_search_model": "Recherches web de Numo ; nécessite minddy Cloud ou une clé OpenRouter",
+    "aiUsageKey_numo_wake_model": "Tri des événements",
+    "aiUsageKeyHint_numo_wake_model": "Décide si de nouveaux événements demandent Numo",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Assigne un ticket qui sort du triage sans responsable",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4684,6 +4687,10 @@
         "label": "Titres des conversations",
         "desc": "Nomme une conversation de Numo en quelques mots, d'après son premier message. Un petit modèle suffit."
       },
+      "numo_wake_model": {
+        "label": "Modèle de tri des événements",
+        "desc": "Décide si un lot d'événements de l'espace de travail doit réveiller Numo quand le modèle de décision hésite. Personne n'attend sa réponse."
+      },
       "web_search_model": {
         "label": "Modèle de recherche web",
         "desc": "Lit les résultats de recherche et en tire la réponse. Un petit modèle suffit."
@@ -4823,6 +4830,7 @@
         "issue_embedding": "Embeddings des tickets",
         "issue_relation": "Relations Smart Fill",
         "issue_search": "Recherche de tickets",
+        "numo_wake": "Tri des événements de Numo",
         "faq_ask": "Boîte à questions de la FAQ"
       },
       "loadingCalls": "Chargement des appels…",

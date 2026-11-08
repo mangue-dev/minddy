@@ -76,6 +76,18 @@ const LLM_PASSES: Record<DecisionSpec["useCase"], LlmPassProfile> = {
     preferNonReasoning: true,
     timeoutMs: 30_000,
   },
+  // Background Numo (MIN-928): one call per due batch of events, nobody waits.
+  // Three small fields, so a low output budget is enough.
+  numo_wake: {
+    modelKey: "numo_wake_model",
+    feature: "numo_wake",
+    xTitle: "minddy Numo wake",
+    logPrefix: "[numo-wake]",
+    maxTokens: 1_024,
+    reasoning: "low",
+    preferNonReasoning: true,
+    timeoutMs: 30_000,
+  },
 };
 
 /** One allowed-value check for a choice answer. */
@@ -109,6 +121,23 @@ export function mapLlmAnswers(spec: DecisionSpec, raw: Record<string, unknown>):
       for (const q of spec.questions) {
         const verdict = choiceAnswer(raw[q.key], options(q.key));
         if (verdict) answers[q.key] = verdict;
+      }
+      break;
+    }
+    case "numo_wake": {
+      if (typeof raw.wake === "boolean") {
+        answers.wake = { value: raw.wake, probability: null, confidence: null };
+      }
+      const reason = choiceAnswer(raw.reason, options("reason"));
+      if (reason) answers.reason = reason;
+      const allowed = options("event_ids");
+      if (Array.isArray(raw.event_ids)) {
+        const picked = raw.event_ids
+          .map((id) => (typeof id === "number" ? String(id) : id))
+          .filter((id): id is string => typeof id === "string" && allowed.includes(id));
+        // Ids picked then all filtered out were garbage, not a verdict.
+        if (picked.length === 0 && raw.event_ids.length > 0) break;
+        answers.event_ids = { value: [...new Set(picked)], probability: null, confidence: null };
       }
       break;
     }

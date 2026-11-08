@@ -261,6 +261,9 @@ export function parseDecisionAnswers(
           value: selected,
           probability: picked[0]?.p ?? null,
           confidence,
+          optionProbabilities: Object.fromEntries(
+            question.options.map((o, i) => [o.value, allP[i] ?? 0])
+          ),
         };
         break;
       }

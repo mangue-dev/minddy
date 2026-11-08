@@ -108,7 +108,7 @@ it("groups every precise usage under its category, Numo included, with no code-a
   }
   expect(text).not.toContain("Numo code work");
   // One provider choice per call type.
-  expect(providerSelects()).toHaveLength(14);
+  expect(providerSelects()).toHaveLength(15);
 });
 
 it("moves Numo conversations to another provider and restarts on that provider's default model", async () => {

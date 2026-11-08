@@ -453,6 +453,7 @@
     "historyFeatureIssueEmbedding": "Smart Fill · Ticketindex",
     "historyFeatureIssueRelation": "Smart Fill · Beziehungen",
     "historyFeatureIssueSearch": "Ticketsuche",
+    "historyFeatureNumoWake": "Numo · Ereignisprüfung",
     "agentsGateTitle": "Numo-Arbeit ist nicht verfügbar",
     "agentsGateDescription": "Numo-Arbeit ist für dieses Konto nicht aktiviert.",
     "agentsGateCta": "Pläne anzeigen",
@@ -3063,6 +3064,8 @@
     "aiUsageKeyHint_conversation_title_model": "Benennt eine Unterhaltung anhand ihrer ersten Nachricht",
     "aiUsageKey_web_search_model": "Websuche",
     "aiUsageKeyHint_web_search_model": "Websuchen für Numo; braucht minddy Cloud oder einen OpenRouter-Schlüssel",
+    "aiUsageKey_numo_wake_model": "Ereignisprüfung",
+    "aiUsageKeyHint_numo_wake_model": "Entscheidet, ob neue Ereignisse Numo brauchen",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Weist ein Ticket zu, das die Triage ohne zuständige Person verlässt",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4684,6 +4687,10 @@
         "label": "Unterhaltungstitel",
         "desc": "Benennt eine Numo-Unterhaltung anhand ihrer ersten Nachricht in wenigen Worten. Ein kleines Modell reicht aus."
       },
+      "numo_wake_model": {
+        "label": "Modell für die Ereignisprüfung",
+        "desc": "Entscheidet, ob ein Stapel von Ereignissen im Arbeitsbereich Numo wecken soll, wenn das Entscheidungsmodell unsicher ist. Niemand wartet auf die Antwort."
+      },
       "web_search_model": {
         "label": "Websuchmodell",
         "desc": "Liest die Suchergebnisse und schreibt die Antwort. Ein kleines Modell reicht aus."
@@ -4823,6 +4830,7 @@
         "issue_embedding": "Ticket-Embeddings",
         "issue_relation": "Smart Fill · Beziehungen",
         "issue_search": "Ticketsuche",
+        "numo_wake": "Ereignisprüfung von Numo",
         "faq_ask": "FAQ-Fragefeld"
       },
       "loadingCalls": "Aufrufe werden geladen…",

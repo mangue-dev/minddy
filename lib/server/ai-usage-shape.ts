@@ -120,7 +120,13 @@ export type AiFeature =
    * typed in an issue picker, billed to the searching user. Cached per user,
    * so a repeated query is not billed again.
    */
-  | "issue_search";
+  | "issue_search"
+  /**
+   * Background Numo (MIN-928): the LLM fallback of the wake decision — ONE
+   * call per due batch of events, billed to the batch's user. The
+   * decision-model half rides `jev_decision`.
+   */
+  | "numo_wake";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

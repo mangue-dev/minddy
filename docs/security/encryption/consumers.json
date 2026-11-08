@@ -3552,7 +3552,7 @@
     "file": "lib/server/decisions/shadow.ts",
     "operation": "from",
     "resource": "ai_decision_evaluations",
-    "line": 133,
+    "line": 134,
     "storage": false
   },
   {
@@ -7990,28 +7990,28 @@
     "file": "lib/server/numo/event-batches.ts",
     "operation": "rpc",
     "resource": "route_numo_event",
-    "line": 93,
+    "line": 76,
     "storage": false
   },
   {
     "file": "lib/server/numo/event-batches.ts",
     "operation": "from",
     "resource": "routine_events",
-    "line": 110,
+    "line": 93,
     "storage": false
   },
   {
     "file": "lib/server/numo/event-batches.ts",
     "operation": "rpc",
     "resource": "claim_numo_event_batches",
-    "line": 126,
+    "line": 109,
     "storage": false
   },
   {
     "file": "lib/server/numo/event-batches.ts",
     "operation": "from",
     "resource": "numo_event_batches",
-    "line": 147,
+    "line": 131,
     "storage": false
   },
   {
@@ -8621,6 +8621,55 @@
     "operation": "from",
     "resource": "assistant_messages",
     "line": 110,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/wake-context.ts",
+    "operation": "from",
+    "resource": "pages",
+    "line": 272,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/wake-context.ts",
+    "operation": "from",
+    "resource": "pages",
+    "line": 274,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/wake-context.ts",
+    "operation": "from",
+    "resource": "agent_routines",
+    "line": 282,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/wake-context.ts",
+    "operation": "from",
+    "resource": "agent_routines",
+    "line": 284,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/wake-context.ts",
+    "operation": "from",
+    "resource": "routine_events",
+    "line": 325,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/wake-context.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 346,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/wake-context.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 351,
     "storage": false
   },
   {

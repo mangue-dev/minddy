@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServiceClient } from "@/lib/supabase-service";
+import { isNoiseField } from "./event-noise";
 
 /**
  * Background Numo's event batches (MIN-926, first brick of MIN-925).
@@ -11,7 +12,8 @@ import { getServiceClient } from "@/lib/supabase-service";
  * recipients and the debounce are decided under one row lock). A batch is due
  * five minutes after its last event and never later than ten minutes after its
  * first. The routines clock then claims due batches and hands each to
- * `processNumoEventBatch` exactly once.
+ * `processNumoEventBatch` exactly once, with the wake decision
+ * (`wake-triage.ts`, MIN-928) as its triage.
  *
  * Nothing here calls a model: without an event there is no batch, and the
  * filter keeps background maintenance and Numo's own writes out.
@@ -36,25 +38,6 @@ export interface NumoEventBatch {
   status: "open" | "processing" | "done";
   claimed_at: string | null;
   attempts: number;
-}
-
-/** Columns whose change alone is no news: order, maintenance, derived data. */
-const NOISE_FIELDS = new Set([
-  "position", "sort_order", "favorite", "version", "search_text", "search_tsv",
-  "embedding", "analyzed_at", "analysis_claimed_at", "analysis_failures", "classified_at",
-  "vote_count", "suggested_merge_into_id", "suggested_confidence", "sensitivity", "moderation_reason",
-  "translated_title", "translated_body", "translated_language", "source_language",
-  "remote_url", "updated_kind", "updated_api_key_id",
-  // Who saved last: it changes with the content, never meaningfully alone.
-  "updated_by",
-  // Bumped by every write of a protected or collaborative row, whatever it
-  // changed (the collaboration reset bumps only these).
-  "encryption_revision", "content_revision", "body_revision", "title_revision",
-]);
-const NOISE_SUFFIX = /_(checked|attempted|synced)_at$/;
-
-function isNoiseField(field: string): boolean {
-  return NOISE_FIELDS.has(field) || NOISE_SUFFIX.test(field);
 }
 
 /**
@@ -135,10 +118,11 @@ export async function claimDueBatches(limit: number): Promise<NumoEventBatch[]> 
 const MAX_BATCH_ATTEMPTS = 3;
 
 /**
- * What happens to a claimed batch. The decision model's triage (MIN-928)
- * replaces this default, which wakes nobody: the batch is only closed.
+ * What happens to a claimed batch. The clock passes the wake decision
+ * (`triageNumoEventBatch`, MIN-928); this default, used by the tests, wakes
+ * nobody: the batch is only closed.
  */
-export type NumoBatchTriage = (batch: NumoEventBatch) => Promise<void>;
+export type NumoBatchTriage = (batch: NumoEventBatch) => Promise<unknown>;
 
 const closeWithoutWaking: NumoBatchTriage = async () => {};
 
@@ -163,18 +147,39 @@ export async function processNumoEventBatch(batch: NumoEventBatch, triage: NumoB
   return await closeBatch(batch, null) ? "done" as const : "superseded" as const;
 }
 
-/** The clock's share of the work: claim due batches and process each once. */
-export async function drainNumoEventBatches(limit = 20, triage?: NumoBatchTriage) {
-  const batches = await claimDueBatches(limit);
+/**
+ * Batches triaged at once. A triage waits on the decision model (5 s at
+ * most) and, when it is unsure, on the LLM fallback (30 s at most).
+ */
+const BATCH_CONCURRENCY = 5;
+/** The longest a round of triages should take: claiming one needs this much time left. */
+export const BATCH_ROUND_MS = 45_000;
+
+/**
+ * The clock's share of the work: claim due batches round by round and
+ * process each once. A round is claimed only while `deadline` leaves time
+ * for it, so a tick that ran long never claims batches it cannot finish:
+ * a claimed batch left behind would wait out its lease and lose an attempt.
+ */
+export async function drainNumoEventBatches(limit = 20, triage?: NumoBatchTriage,
+  options: { deadline?: number } = {}) {
   const outcomes: Array<{ id: string; outcome: string }> = [];
-  for (const batch of batches) {
+  let claimed = 0;
+  const processOne = async (batch: NumoEventBatch) => {
     try {
-      outcomes.push({ id: batch.id, outcome: await processNumoEventBatch(batch, triage) });
+      return { id: batch.id, outcome: await processNumoEventBatch(batch, triage) as string };
     } catch (error) {
       // The batch stays processing; it is handed out again after its lease.
       console.error("[numo-batches] triage failed:", (error as Error).message);
-      outcomes.push({ id: batch.id, outcome: "retry" });
+      return { id: batch.id, outcome: "retry" };
     }
+  };
+  while (claimed < limit) {
+    if (options.deadline !== undefined && Date.now() + BATCH_ROUND_MS > options.deadline) break;
+    const batches = await claimDueBatches(Math.min(BATCH_CONCURRENCY, limit - claimed));
+    if (batches.length === 0) break;
+    claimed += batches.length;
+    outcomes.push(...await Promise.all(batches.map(processOne)));
   }
-  return { claimed: batches.length, outcomes };
+  return { claimed, outcomes };
 }

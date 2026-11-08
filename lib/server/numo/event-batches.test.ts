@@ -109,19 +109,20 @@ describe("draining due batches", () => {
     const claimed = batch();
     h.batches = [claimed];
     // The second tick finds nothing: the claim moved the batch out of `open`.
-    h.rpc.mockResolvedValueOnce({ data: [claimed], error: null }).mockResolvedValueOnce({ data: [], error: null });
+    h.rpc.mockResolvedValueOnce({ data: [claimed], error: null }).mockResolvedValue({ data: [], error: null });
     const triage = vi.fn(async () => {});
     expect(await drainNumoEventBatches(10, triage)).toEqual({ claimed: 1, outcomes: [{ id: claimed.id, outcome: "done" }] });
     expect(await drainNumoEventBatches(10, triage)).toEqual({ claimed: 0, outcomes: [] });
     expect(triage).toHaveBeenCalledTimes(1);
     expect(claimed.status).toBe("done");
-    expect(h.rpc).toHaveBeenCalledWith("claim_numo_event_batches", { p_limit: 10 });
+    // Claimed one round of five at a time.
+    expect(h.rpc).toHaveBeenCalledWith("claim_numo_event_batches", { p_limit: 5 });
   });
 
   it("closes without waking anyone until the decision model exists", async () => {
     const claimed = batch();
     h.batches = [claimed];
-    h.rpc.mockResolvedValue({ data: [claimed], error: null });
+    h.rpc.mockResolvedValueOnce({ data: [claimed], error: null }).mockResolvedValue({ data: [], error: null });
     await drainNumoEventBatches(10);
     expect(claimed).toMatchObject({ status: "done", error_code: null });
   });
@@ -130,7 +131,7 @@ describe("draining due batches", () => {
     const retried = batch({ attempts: 1 });
     const exhausted = batch({ attempts: 3 });
     h.batches = [retried, exhausted];
-    h.rpc.mockResolvedValue({ data: [retried, exhausted], error: null });
+    h.rpc.mockResolvedValueOnce({ data: [retried, exhausted], error: null }).mockResolvedValue({ data: [], error: null });
     vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await drainNumoEventBatches(10, async () => { throw new Error("model down"); });
     expect(result.outcomes).toEqual([{ id: retried.id, outcome: "retry" }, { id: exhausted.id, outcome: "failed" }]);
@@ -141,9 +142,25 @@ describe("draining due batches", () => {
   it("does not close a batch another worker reclaimed meanwhile", async () => {
     const claimed = batch({ attempts: 1 });
     h.batches = [claimed];
-    h.rpc.mockResolvedValue({ data: [{ ...claimed }], error: null });
+    h.rpc.mockResolvedValueOnce({ data: [{ ...claimed }], error: null }).mockResolvedValue({ data: [], error: null });
     const result = await drainNumoEventBatches(10, async () => { claimed.attempts = 2; });
     expect(result.outcomes).toEqual([{ id: claimed.id, outcome: "superseded" }]);
     expect(claimed.status).toBe("processing");
+  });
+
+  it("claims round by round, and no round the deadline leaves no time for", async () => {
+    const first = Array.from({ length: 5 }, () => batch());
+    const second = [batch()];
+    h.batches = [...first, ...second];
+    h.rpc.mockResolvedValueOnce({ data: first, error: null }).mockResolvedValueOnce({ data: second, error: null })
+      .mockResolvedValue({ data: [], error: null });
+    const result = await drainNumoEventBatches(20, async () => {});
+    expect(result.claimed).toBe(6);
+    expect(h.rpc.mock.calls.map(([, args]) => args)).toEqual([{ p_limit: 5 }, { p_limit: 5 }, { p_limit: 5 }]);
+
+    h.rpc.mockClear();
+    expect(await drainNumoEventBatches(20, async () => {}, { deadline: Date.now() + 1_000 }))
+      .toEqual({ claimed: 0, outcomes: [] });
+    expect(h.rpc).not.toHaveBeenCalled();
   });
 });

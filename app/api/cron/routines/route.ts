@@ -15,6 +15,7 @@ import { executeNumoTurn } from "@/lib/server/numo/turns";
 import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
 import { getServiceClient } from "@/lib/supabase-service";
 import { drainNumoEventBatches } from "@/lib/server/numo/event-batches";
+import { triageNumoEventBatch } from "@/lib/server/numo/wake-triage";
 
 /**
  * The routines clock (MIN-185). Every five minutes it claims due schedules,
@@ -89,6 +90,7 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const startedAt = Date.now();
   const eventWork = await processRoutineEvents(MAX_PER_TICK, {
     eventLimit: MAX_EVENTS_PER_TICK,
     deadline: Date.now() + EVENT_BUDGET_MS,
@@ -107,7 +109,10 @@ async function handle(request: NextRequest) {
   }
   // Last: a batch is minutes old by design and can wait for the schedules.
   // Routing ran above, so a batch that fell due during this tick goes out now.
-  const batchWork = await drainNumoEventBatches(MAX_BATCHES_PER_TICK).catch((error: Error) => {
+  const batchWork = await drainNumoEventBatches(MAX_BATCHES_PER_TICK, triageNumoEventBatch, {
+    // Ten seconds of margin under `maxDuration` for the response.
+    deadline: startedAt + (maxDuration - 10) * 1_000,
+  }).catch((error: Error) => {
     console.error("[cron/routines] numo batches:", error.message);
     return { claimed: 0, outcomes: [] };
   });

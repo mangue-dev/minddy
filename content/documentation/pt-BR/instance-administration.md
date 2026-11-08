@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-08",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -58,10 +58,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 15,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-08"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +79,7 @@
       "src": "/documentation/pt-BR/instance-administration-overview.png",
       "alt": "Aba Contas com o número de contas e a busca de uma conta pelo e-mail exato.",
       "caption": "Contas mostra o número de contas e a busca de suporte; a captura vem de uma instância de demonstração.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/pt-BR/instance-administration-models.png",
       "alt": "Aba Modelos com um modelo padrão por categoria e os modelos por tarefa recolhidos.",
       "caption": "Modelos mostra um modelo padrão por categoria; os modelos por tarefa ficam recolhidos. Nenhuma configuração de modelo ou provedor foi alterada para esta captura.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/pt-BR/instance-administration-instance.png",
       "alt": "Aba Instância com a origem de cada variável, uma chave do OpenRouter mascarada definida aqui e os endereços de administradores vindos do arquivo.",
       "caption": "Instância mostra de onde vem cada valor; os segredos mostram só os últimos caracteres. Esta captura vem de uma instância auto-hospedada local descartável.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -154,7 +154,7 @@ O console tem três abas: **Contas**, **Custos**, **Modelos** e, onde for permit
 
 ## Escolher os modelos por categoria {#models}
 
-Cada cartão de **Modelos** tem um **Modelo padrão** para sua categoria: **Assistente** (Numo, títulos de conversa, busca na web), **Automações** (Smart Fill e seus títulos, Smart Assign, decisões de relação, mapeamento de importações CSV, divisão de resumos, mensagens de commit ao mesclar), **Embeddings** (embeddings de tickets e de feedback) e **Feedback e site público** (análise de feedback, caixa de perguntas da FAQ). Uma tarefa segue o modelo padrão da sua categoria até você dar a ela um modelo próprio em **Modelos por tarefa**; para que ela volte a seguir a categoria, escolha no seletor o modelo da categoria, mostrado pelo próprio nome e marcado enquanto a tarefa o segue. **Modelo padrão** só continua como opção quando esse modelo não está no catálogo. Enquanto o modelo padrão de uma categoria não está definido, cada tarefa mantém seu próprio padrão integrado. **Nível de raciocínio**, **Modelo de decisão** e as duas configurações de **Voz** têm linhas próprias. Definir o modelo padrão de uma categoria libera as tarefas que ainda têm o padrão integrado, como as que uma instância nova recebe; uma tarefa configurada com outro modelo o mantém. **Modelos recomendados** define a lista curta com que cada seletor de modelo abre. **Chaves pessoais** fica recolhida no fim: só diz respeito a membros que usam a própria chave do provedor.
+Cada cartão de **Modelos** tem um **Modelo padrão** para sua categoria: **Assistente** (Numo, títulos de conversa, busca na web, análise de eventos), **Automações** (Smart Fill e seus títulos, Smart Assign, decisões de relação, mapeamento de importações CSV, divisão de resumos, mensagens de commit ao mesclar), **Embeddings** (embeddings de tickets e de feedback) e **Feedback e site público** (análise de feedback, caixa de perguntas da FAQ). Uma tarefa segue o modelo padrão da sua categoria até você dar a ela um modelo próprio em **Modelos por tarefa**; para que ela volte a seguir a categoria, escolha no seletor o modelo da categoria, mostrado pelo próprio nome e marcado enquanto a tarefa o segue. **Modelo padrão** só continua como opção quando esse modelo não está no catálogo. Enquanto o modelo padrão de uma categoria não está definido, cada tarefa mantém seu próprio padrão integrado. **Nível de raciocínio**, **Modelo de decisão** e as duas configurações de **Voz** têm linhas próprias. Definir o modelo padrão de uma categoria libera as tarefas que ainda têm o padrão integrado, como as que uma instância nova recebe; uma tarefa configurada com outro modelo o mantém. **Modelos recomendados** define a lista curta com que cada seletor de modelo abre. **Chaves pessoais** fica recolhida no fim: só diz respeito a membros que usam a própria chave do provedor.
 
 ## Exportar e importar a configuração de modelos {#models-file}
 

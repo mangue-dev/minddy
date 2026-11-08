@@ -77,6 +77,7 @@ export function compareDecisionAnswers(
   model: DecisionAnswers,
   llm: DecisionAnswers
 ): boolean | null {
+  if (spec.agreement) return spec.agreement(model, llm);
   let compared = 0;
   let agree = true;
   for (const question of spec.questions) {
