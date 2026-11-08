@@ -252,6 +252,14 @@ import {
 } from "@/lib/server/numo/memory-content";
 import { NUMO_MEMORY_LIMIT } from "@/lib/numo-memory";
 import {
+  NUMO_JOURNAL_OPEN_LIMIT,
+  NumoJournalError,
+  closeJournalEntry,
+  writeJournalEntry,
+  type JournalScope,
+  type NumoJournalSource,
+} from "@/lib/server/numo/journal-content";
+import {
   buildInboxToolResult,
   type InboxReadCategory,
   type InboxReadState,
@@ -318,6 +326,17 @@ export interface ToolContext {
    * routine or an @Numo mention reads the memory but never writes it.
    */
   memoryWritable?: boolean;
+  /**
+   * The kind of turn that may write the user's journal (MIN-927): a
+   * conversation, an @Numo mention, a routine occurrence or a background
+   * wake. Absent where Numo has no journal (public help).
+   */
+  journalSource?: NumoJournalSource | null;
+  /**
+   * Set on a shared surface (a mention, a routine): the journal entries this
+   * turn may close, those of its project and those about no project.
+   */
+  journalScope?: JournalScope | null;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -904,6 +923,51 @@ async function executeMemoryTool(
   }
 }
 
+async function executeJournalTool(
+  toolName: "journal_write" | "journal_close",
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  if (!ctx.journalSource) {
+    return toolError("The journal is not available here. Do not retry.");
+  }
+  const id = (value: unknown) => typeof value === "string" && UUID_PATTERN.test(value.trim())
+    ? value.trim().toLowerCase()
+    : null;
+  try {
+    if (toolName === "journal_close") {
+      const entryId = id(args.entry_id);
+      if (!entryId) return toolError("No open journal entry with this id. Take ids from your journal list.");
+      const entry = await closeJournalEntry(ctx.service, ctx.userId, entryId, args.reason,
+        { scope: ctx.journalScope ?? undefined });
+      return { result: { closed: { id: entry.id, reason: entry.closed_reason } }, success: true };
+    }
+    let projectId: string | null = null;
+    if (args.project_id !== null && args.project_id !== undefined && args.project_id !== "") {
+      projectId = id(args.project_id);
+      if (!projectId || !(await getProjectAccess(ctx.userId, projectId))) {
+        return toolError("project_id must be the id of a project the user can open (use list_projects), or null.");
+      }
+    }
+    const entry = await writeJournalEntry(ctx.service, ctx.userId, {
+      content: args.content, projectId, source: ctx.journalSource,
+      sourceConversationId: ctx.conversationId ?? null,
+    });
+    // Numo just wrote the sentence: the result carries only its id.
+    return { result: { journaled: { id: entry.id, project_id: entry.project_id } }, success: true };
+  } catch (error) {
+    if (!(error instanceof NumoJournalError)) throw error;
+    if (error.code === "limit_reached") {
+      return toolError(`The journal already holds ${NUMO_JOURNAL_OPEN_LIMIT} open entries, the maximum. Close the entries that no longer apply with journal_close, then write this one.`);
+    }
+    if (error.code === "not_found") {
+      return toolError("No open journal entry with this id: it is closed already, or the id is not from your journal list.");
+    }
+    if (error.code === "invalid_content" || error.code === "invalid_reason") return toolError(error.message);
+    throw error;
+  }
+}
+
 async function mentionsForNumo(execution: ToolExecution, userId: string): Promise<ToolExecution> {
   const mentions = (value: unknown) => {
     const text = JSON.stringify(value ?? null);
@@ -1123,6 +1187,11 @@ async function executeToolUnlisted(
     // ── Numo's memory (MIN-915 — the user's own, never a project's) ────
     if (toolName === "remember" || toolName === "forget") {
       return executeMemoryTool(toolName, args, ctx);
+    }
+
+    // ── Numo's journal (MIN-927 — the user's own, never a project's) ────
+    if (toolName === "journal_write" || toolName === "journal_close") {
+      return executeJournalTool(toolName, args, ctx);
     }
 
     if (toolName === "list_conversation_attachments") {

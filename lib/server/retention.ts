@@ -11,6 +11,7 @@ import {
   removeProjectSideBuckets,
 } from "@/lib/server/project-storage";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
+import { purgeJournalEntries } from "@/lib/server/numo/journal-content";
 import {
   ORPHAN_ATTACHMENT_DAYS,
   removeStorageObjects,
@@ -116,6 +117,24 @@ export const RETENTION_DAYS = {
  * resource to finally be attached, or for an edit to be undone.
  */
   orphanAttachments: ORPHAN_ATTACHMENT_DAYS,
+  /**
+   * Numo's journal (MIN-927): entries Numo closed and the user saw on the
+   * home page. Nothing reads a closed, seen entry again; ninety days keeps it
+   * at hand for a support question about what Numo did, then it goes.
+   */
+  closedJournalEntries: 90,
+  /**
+   * Closed entries the user never saw, because they did not come back: the
+   * home page would no longer show something that old.
+   */
+  unseenClosedJournalEntries: 180,
+  /**
+   * Open entries Numo never closed: one it could no longer reach (a project
+   * the user left, a row that no longer decodes). Nothing still waits for
+   * the user after half a year, and the entry would hold a place under the
+   * cap of open entries for good.
+   */
+  staleOpenJournalEntries: 180,
 } as const;
 
 const DAY_MS = 86_400_000;
@@ -407,6 +426,11 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       sweepOrphanAttachments(service, cutoff(RETENTION_DAYS.orphanAttachments, now), 500, { now })
     ),
     await step("trash", () => purgeTrash(service, now)),
+    await step("numo_journal_entries", () => purgeJournalEntries(service, {
+      closedBefore: cutoff(RETENTION_DAYS.closedJournalEntries, now),
+      unseenClosedBefore: cutoff(RETENTION_DAYS.unseenClosedJournalEntries, now),
+      openBefore: cutoff(RETENTION_DAYS.staleOpenJournalEntries, now),
+    })),
     // Per-account OpenRouter keys no account references any more (MIN-761):
     // an issuance that died half-way, a failed delete on account deletion.
     // Swept here since MIN-829 removed the admin button that did it by hand.

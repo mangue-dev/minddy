@@ -4398,5 +4398,35 @@
         "encryption_version"
       ]
     }
+  },
+  "numo_journal_entries": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "closed_reason",
+      "content"
+    ],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "project_id",
+        "source_conversation_id",
+        "user_id"
+      ],
+      "bounded_metadata": [
+        "source"
+      ],
+      "timestamp": [
+        "closed_at",
+        "created_at",
+        "seen_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
   }
 }

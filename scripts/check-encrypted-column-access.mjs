@@ -250,6 +250,12 @@ const rules = [
     allowed: new Set(["lib/server/numo/memory-content.ts"]),
   },
   {
+    // Numo's journal (MIN-927) is the user's sealed free text too: only its
+    // repository reads or writes the table, the retention sweep included.
+    access: /\.\s*from\s*\(\s*["'`]numo_journal_entries["'`]\s*\)/,
+    allowed: new Set(["lib/server/numo/journal-content.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]project_invitations["'`]\s*\)/,
     allowed: allowedInvitationAccess,
   },

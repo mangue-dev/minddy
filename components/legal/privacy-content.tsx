@@ -41,6 +41,7 @@ export async function PrivacyContent({ locale }: { locale: Locale }) {
     { term: t("retentionAccount"), desc: t("retentionAccountDesc") },
     { term: t("retentionContent"), desc: t("retentionContentDesc") },
     { term: t("retentionNotifications"), desc: t("retentionNotificationsDesc") },
+    { term: t("retentionNumoJournal"), desc: t("retentionNumoJournalDesc") },
     { term: t("retentionFeedback"), desc: t("retentionFeedbackDesc") },
     { term: t("retentionAnalytics"), desc: t("retentionAnalyticsDesc") },
     { term: t("retentionBilling"), desc: t("retentionBillingDesc") },

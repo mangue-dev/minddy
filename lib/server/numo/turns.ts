@@ -88,6 +88,8 @@ import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { loadNumoMemoryPrompt } from "./memory-prompt";
 import { touchNumoMemories } from "./memory-content";
+import { loadNumoJournalPrompt } from "./journal-prompt";
+import type { JournalScope, NumoJournalSource } from "./journal-content";
 export interface NumoTurnIntent {
   /** Public help uses the same billing and durable lifecycle, with restricted tools. */
   documentation?: Omit<NonNullable<AssistantPageContext["documentation"]>, "locale">;
@@ -450,6 +452,8 @@ async function buildExecutionInput(input: {
   tools: AssistantToolDef[];
   adminGrant: AdminSessionGrant | null;
   memoryWritable: boolean;
+  journalSource: NumoJournalSource | null;
+  journalScope: JournalScope | null;
 }> {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
@@ -502,6 +506,28 @@ async function buildExecutionInput(input: {
       systemPrompt += memory.block;
       afterOrNow(() => touchNumoMemories(service, turn.user_id, memory.shownIds));
     }
+  }
+  // Numo's journal (MIN-927): every turn but public help reads and writes
+  // it, a routine and an @Numo mention included: what Numo did there, or
+  // found waiting for the user, belongs on their home page as much.
+  const journalSource: NumoJournalSource | null = intent.documentation
+    ? null
+    : intent.routineId ? "routine" : intent.triggerSource === "mention" ? "mention" : "conversation";
+  // A mention replies on a project's shared thread, and a routine runs on
+  // instructions and content other members wrote: both see and close only
+  // the entries of their project and those about no project.
+  const journalScope: JournalScope | null = journalSource === "routine" || journalSource === "mention"
+    ? { projectId: intent.projectId }
+    : null;
+  if (journalSource) {
+    // An unreadable journal degrades the turn rather than failing it.
+    const journal = await loadNumoJournalPrompt({
+      service, userId: turn.user_id, scope: journalScope ?? undefined,
+    }).catch(() => {
+      console.error("[numo-journal] prompt_load_failed");
+      return null;
+    });
+    if (journal) systemPrompt += journal;
   }
   if (intent.routineId) {
     const timing = intent.routineOrigin === "scheduled"
@@ -620,6 +646,7 @@ async function buildExecutionInput(input: {
     : CONVERSATION_ASSISTANT_TOOLS;
   if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
   if (!memoryWritable) tools = tools.filter((tool) => !MEMORY_TOOL_NAMES.has(tool.function.name));
+  if (!journalSource) tools = tools.filter((tool) => !JOURNAL_TOOL_NAMES.has(tool.function.name));
   // A routine runs unattended: nobody is there to answer a question or review
   // a proposal, so the tools that wait for the user are not offered.
   if (intent.routineId) {
@@ -633,10 +660,11 @@ async function buildExecutionInput(input: {
   else if (readerAccess && intent.triggerSource === "mention") {
     tools = readerToolSet(tools, readerAccess.canComment);
   }
-  return { messages, tools, adminGrant, memoryWritable };
+  return { messages, tools, adminGrant, memoryWritable, journalSource, journalScope };
 }
 
 const MEMORY_TOOL_NAMES = new Set(["remember", "forget"]);
+const JOURNAL_TOOL_NAMES = new Set(["journal_write", "journal_close"]);
 
 function createToolLedger(
   service: SupabaseClient,
@@ -1051,6 +1079,8 @@ async function executeClaimedNumoTurn(input: {
       numoDefaultStatus: claimed.intent.numoDefaultStatus,
       adminGrant: execution.adminGrant,
       memoryWritable: execution.memoryWritable,
+      journalSource: execution.journalSource,
+      journalScope: execution.journalScope,
       model: runtime.model,
       aiRuntime: runtime,
       conversationId: claimed.conversation_id,

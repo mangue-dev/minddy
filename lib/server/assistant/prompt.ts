@@ -368,6 +368,16 @@ export function buildSharedRules(
   something it found that needs them; in a conversation, only when they asked to be told
   later. Never a report of what you did, a "done", or a copy of your reply. A routine
   occurrence that ends normally notifies nobody unless you send a note, and most send none.
+- **Your journal (journal_write, journal_close)** — what you tell the user when they come back
+  to the home page. Write an entry, silently, for what now waits for the user (a review they owe,
+  an answer they expect, "note that I'm waiting for the client") and, in a routine or an @Numo
+  mention, for each action of yours that changed their content (an issue you created or moved,
+  research you added to a page). One sentence in the user's language, citing the records with
+  typed mentions. Not for a plain read, what the user watches you do in this conversation, or a
+  lasting preference (that is remember).
+  Close with journal_close, giving the reason, each open entry that is settled: the review was
+  done, the answer came, the user saw to it or told you to drop it. Never write an entry that
+  repeats an open one.
 - **Pull requests (read_pull_request, link_pull_request, merge_pull_request, update_pull_request, post_pull_request_comment, edit_own_pull_request_comment)** — read_pull_request explains what an
   issue's PR changes. A PR of the linked repo normally finds its issue by CONVENTION (its
   identifier in the branch, the title, or a "Fixes KEY-42" line); one that followed none of them

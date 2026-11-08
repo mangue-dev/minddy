@@ -48,6 +48,10 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   // personal so a Reader keeps it too: it changes no project.
   remember: "personal",
   forget: "personal",
+  // Numo's journal (MIN-927) is the user's own as well: an entry may name a
+  // project the user can open, but it changes nothing in it.
+  journal_write: "personal",
+  journal_close: "personal",
   list_views: "personal",
   update_account_settings: "personal_write",
   fill_cycle: "personal_write",
