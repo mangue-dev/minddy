@@ -453,6 +453,7 @@
     "historyFeatureIssueEmbedding": "Smart Fill · indice dei ticket",
     "historyFeatureIssueRelation": "Smart Fill · relazioni",
     "historyFeatureIssueSearch": "Ricerca dei ticket",
+    "historyFeatureNumoWake": "Numo · smistamento eventi",
     "agentsGateTitle": "Il lavoro con Numo non è disponibile",
     "agentsGateDescription": "Il lavoro con Numo non è attivo per questo account.",
     "agentsGateCta": "Visualizza piani",
@@ -3063,6 +3064,8 @@
     "aiUsageKeyHint_conversation_title_model": "Dà un nome a una conversazione dal suo primo messaggio",
     "aiUsageKey_web_search_model": "Ricerca web",
     "aiUsageKeyHint_web_search_model": "Ricerche web di Numo; richiede minddy Cloud o una chiave OpenRouter",
+    "aiUsageKey_numo_wake_model": "Smistamento eventi",
+    "aiUsageKeyHint_numo_wake_model": "Decide se i nuovi eventi richiedono Numo",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Assegna un ticket che esce dal triage senza responsabile",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4684,6 +4687,10 @@
         "label": "Titoli di conversazione",
         "desc": "Dà un nome in poche parole a una conversazione di Numo, a partire dal primo messaggio. Basta un modello piccolo."
       },
+      "numo_wake_model": {
+        "label": "Modello di smistamento eventi",
+        "desc": "Decide se un gruppo di eventi dello spazio di lavoro deve svegliare Numo quando il modello di decisione è incerto. Nessuno aspetta la risposta."
+      },
       "web_search_model": {
         "label": "Modello di ricerca web",
         "desc": "Legge i risultati della ricerca e scrive la risposta. Basta un modello piccolo."
@@ -4823,6 +4830,7 @@
         "issue_embedding": "Embedding dei ticket",
         "issue_relation": "Relazioni Smart Fill",
         "issue_search": "Ricerca dei ticket",
+        "numo_wake": "Smistamento eventi di Numo",
         "faq_ask": "Riquadro domande delle FAQ"
       },
       "loadingCalls": "Caricamento delle chiamate…",

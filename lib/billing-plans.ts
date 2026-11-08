@@ -217,6 +217,8 @@ export const BILLABLE_FEATURES = [
   "issue_relation",
   // Issue search by meaning (MIN-718): the query embeddings of the pickers.
   "issue_search",
+  // Background Numo (MIN-928): the LLM fallback of the wake decision.
+  "numo_wake",
 ] as const;
 
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
@@ -256,7 +258,7 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
   // look alone, not a few pennies drowned.)
   {
     id: "numo",
-    features: ["numo_chat", "numo_comment", "web_search"],
+    features: ["numo_chat", "numo_comment", "web_search", "numo_wake"],
     barClass: "bg-blue-500",
   },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },

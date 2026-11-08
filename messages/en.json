@@ -453,6 +453,7 @@
     "historyFeatureIssueEmbedding": "Smart Fill · issue index",
     "historyFeatureIssueRelation": "Smart Fill · relations",
     "historyFeatureIssueSearch": "Issue search",
+    "historyFeatureNumoWake": "Numo · event screening",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
     "agentsGateCta": "View plans",
@@ -3063,6 +3064,8 @@
     "aiUsageKeyHint_conversation_title_model": "Names a conversation from its first message",
     "aiUsageKey_web_search_model": "Web search",
     "aiUsageKeyHint_web_search_model": "Searches the web for Numo; needs minddy Cloud or an OpenRouter key",
+    "aiUsageKey_numo_wake_model": "Event screening",
+    "aiUsageKeyHint_numo_wake_model": "Decides whether new events need Numo",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Assigns an issue that leaves triage without an owner",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4684,6 +4687,10 @@
         "label": "Conversation titles",
         "desc": "Names a Numo conversation in a few words, from its first message. A small model is enough."
       },
+      "numo_wake_model": {
+        "label": "Event screening model",
+        "desc": "Decides whether a batch of workspace events should wake Numo when the decision model is unsure. It never runs while anyone waits."
+      },
       "web_search_model": {
         "label": "Web search model",
         "desc": "Reads the search results and writes the answer. A small model is enough."
@@ -4823,6 +4830,7 @@
         "issue_embedding": "Issue embeddings",
         "issue_relation": "Smart Fill relations",
         "issue_search": "Issue search",
+        "numo_wake": "Numo event screening",
         "faq_ask": "FAQ question box"
       },
       "loadingCalls": "Loading calls…",

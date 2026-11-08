@@ -453,6 +453,7 @@
     "historyFeatureIssueEmbedding": "Smart Fill · índice de tickets",
     "historyFeatureIssueRelation": "Smart Fill · relações",
     "historyFeatureIssueSearch": "Busca de tickets",
+    "historyFeatureNumoWake": "Numo · análise de eventos",
     "agentsGateTitle": "O trabalho com o Numo não está disponível",
     "agentsGateDescription": "O trabalho com o Numo não está ativado nesta conta.",
     "agentsGateCta": "Ver planos",
@@ -3063,6 +3064,8 @@
     "aiUsageKeyHint_conversation_title_model": "Dá nome a uma conversa a partir da primeira mensagem",
     "aiUsageKey_web_search_model": "Busca na web",
     "aiUsageKeyHint_web_search_model": "Buscas na web do Numo; exige o minddy Cloud ou uma chave da OpenRouter",
+    "aiUsageKey_numo_wake_model": "Análise de eventos",
+    "aiUsageKeyHint_numo_wake_model": "Decide se novos eventos precisam do Numo",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Atribui um ticket que sai da triagem sem responsável",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4684,6 +4687,10 @@
         "label": "Títulos de conversas",
         "desc": "Nomeia uma conversa com o Numo em poucas palavras, a partir da primeira mensagem. Um modelo pequeno é suficiente."
       },
+      "numo_wake_model": {
+        "label": "Modelo de análise de eventos",
+        "desc": "Decide se um lote de eventos do espaço de trabalho deve acordar o Numo quando o modelo de decisão está em dúvida. Ninguém espera pela resposta."
+      },
       "web_search_model": {
         "label": "Modelo de pesquisa na web",
         "desc": "Lê os resultados da pesquisa e escreve a resposta. Um modelo pequeno é suficiente."
@@ -4823,6 +4830,7 @@
         "issue_embedding": "Embeddings de tickets",
         "issue_relation": "Relações do Smart Fill",
         "issue_search": "Busca de tickets",
+        "numo_wake": "Análise de eventos do Numo",
         "faq_ask": "Caixa de perguntas da FAQ"
       },
       "loadingCalls": "Carregando chamadas…",

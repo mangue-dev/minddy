@@ -203,6 +203,10 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // a few dozen tokens per new conversation — a small model is enough,
   // and that's exactly the kind of call where a big guy doesn't justify himself.
   { key: "conversation_title_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
+  // Background Numo (lib/server/numo/wake-triage.ts, MIN-928): the LLM
+  // fallback of the wake decision, when the decision model is unsure. One
+  // call per due batch of events, nobody waits on it.
+  { key: "numo_wake_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
   // Correspondance des colonnes d'un import CSV (lib/server/import-mapping-ai.ts) :
   // ONE call per file submitted, never per line — the model only sees one
   // column summary. It is the price of an import which loses nothing.

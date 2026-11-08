@@ -23,7 +23,9 @@ export type DecisionUseCase =
   | "smart_assign"
   | "feedback_review"
   /** Smart Fill relations (MIN-717): is a retrieved candidate related, blocking or blocked? */
-  | "issue_relations";
+  | "issue_relations"
+  /** Background Numo (MIN-928): should a batch of workspace events wake Numo, and for which events? */
+  | "numo_wake";
 
 /** Every known use case, for config parsing (`jev_llm_first`, MIN-567). */
 export const DECISION_USE_CASES: DecisionUseCase[] = [
@@ -31,6 +33,7 @@ export const DECISION_USE_CASES: DecisionUseCase[] = [
   "smart_assign",
   "feedback_review",
   "issue_relations",
+  "numo_wake",
 ];
 
 /**
@@ -153,6 +156,20 @@ export interface DecisionSpec {
   state: Record<string, unknown>;
   questions: DecisionQuestion[];
   llm: DecisionLlmRecipe;
+  /**
+   * Which answers gate the confidence floor, when not all of them should.
+   * Returns the global confidence of `answers`, or `null` for the default
+   * (the weakest answer). Numo's wake decision (MIN-928) uses it: a confident
+   * "stay asleep" must not be discarded because one of forty per-event
+   * verdicts is borderline.
+   */
+  confidence?: (answers: DecisionAnswers) => number | null;
+  /**
+   * Whether two engines agree, for the shadow comparison, when comparing
+   * every answer would count differences the use case ignores. `null` when
+   * nothing is comparable.
+   */
+  agreement?: (model: DecisionAnswers, llm: DecisionAnswers) => boolean | null;
 }
 
 /** What one engine says about ONE question. */
@@ -173,6 +190,11 @@ export interface DecisionAnswer {
    * none — the LLM passes only produce one for the duplicate verdict today.
    */
   confidence: number | null;
+  /**
+   * P(yes) of each option of a multi_choice answer, by option value, when
+   * the engine gives them (the decision model answers each option on its own).
+   */
+  optionProbabilities?: Record<string, number>;
 }
 
 /** Answers of one engine, by question key. */
@@ -228,6 +250,8 @@ export function confidentAnswers(answers: DecisionAnswers, floor: number): Decis
  * the per-use-case policy decides what a missing answer is worth.
  */
 export function decisionConfidence(spec: DecisionSpec, answers: DecisionAnswers): number {
+  const custom = spec.confidence?.(answers);
+  if (custom !== undefined && custom !== null) return clamp01(custom) ?? 0;
   let confidence = 1;
   let seen = false;
   for (const question of spec.questions) {

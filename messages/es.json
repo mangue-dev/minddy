@@ -453,6 +453,7 @@
     "historyFeatureIssueEmbedding": "Smart Fill · índice de incidencias",
     "historyFeatureIssueRelation": "Smart Fill · relaciones",
     "historyFeatureIssueSearch": "Búsqueda de incidencias",
+    "historyFeatureNumoWake": "Numo · revisión de eventos",
     "agentsGateTitle": "El trabajo con Numo no está disponible",
     "agentsGateDescription": "El trabajo con Numo no está activado en esta cuenta.",
     "agentsGateCta": "Ver los planes",
@@ -3063,6 +3064,8 @@
     "aiUsageKeyHint_conversation_title_model": "Pone nombre a una conversación a partir de su primer mensaje",
     "aiUsageKey_web_search_model": "Búsqueda web",
     "aiUsageKeyHint_web_search_model": "Búsquedas web de Numo; necesita minddy Cloud o una clave de OpenRouter",
+    "aiUsageKey_numo_wake_model": "Revisión de eventos",
+    "aiUsageKeyHint_numo_wake_model": "Decide si los eventos nuevos necesitan a Numo",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Asigna una incidencia que sale de Clasificación sin responsable",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4684,6 +4687,10 @@
         "label": "Títulos de conversación",
         "desc": "Pone nombre a una conversación de Numo en pocas palabras, a partir de su primer mensaje. Basta con un modelo pequeño."
       },
+      "numo_wake_model": {
+        "label": "Modelo de revisión de eventos",
+        "desc": "Decide si un lote de eventos del espacio de trabajo debe despertar a Numo cuando el modelo de decisión duda. Nadie espera su respuesta."
+      },
       "web_search_model": {
         "label": "Modelo de búsqueda web",
         "desc": "Lee los resultados de la búsqueda y escribe la respuesta. Un modelo pequeño es suficiente."
@@ -4823,6 +4830,7 @@
         "issue_embedding": "Embeddings de incidencias",
         "issue_relation": "Relaciones de Smart Fill",
         "issue_search": "Búsqueda de incidencias",
+        "numo_wake": "Revisión de eventos de Numo",
         "faq_ask": "Cuadro de preguntas de la FAQ"
       },
       "loadingCalls": "Cargando llamadas...",

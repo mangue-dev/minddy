@@ -129,7 +129,12 @@ describe("parseDecisionAnswers", () => {
         priority: { value: "high", probability: 0.9, confidence: 0.87 },
         // cat-c (0.81) selected, cat-b (0.05) not; the weakest verdict —
         // a confident no at 0.95 — does not win, the 0.81 yes does.
-        category_ids: { value: ["cat-a", "cat-c"], probability: 0.92, confidence: 0.81 },
+        category_ids: {
+          value: ["cat-a", "cat-c"],
+          probability: 0.92,
+          confidence: 0.81,
+          optionProbabilities: { "cat-a": 0.92, "cat-b": 0.05, "cat-c": 0.81 },
+        },
         is_junk: { value: false, probability: 0.02, confidence: 0.98 },
         effort: { value: 2, probability: 0.6, confidence: 0.7 },
       },

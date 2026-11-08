@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-08",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -58,10 +58,10 @@
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 15,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-08"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +79,7 @@
       "src": "/documentation/it/instance-administration-overview.png",
       "alt": "Scheda Account con il numero di account e la ricerca di un account tramite email esatta.",
       "caption": "Account mostra il numero di account e la ricerca per il supporto; l’immagine proviene da un’istanza dimostrativa.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/it/instance-administration-models.png",
       "alt": "Scheda Modelli con un modello predefinito per categoria e i modelli per attività chiusi.",
       "caption": "Modelli mostra un modello predefinito per categoria; i modelli per attività restano chiusi. Per questa immagine non è stata modificata alcuna impostazione di modello o fornitore.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/it/instance-administration-instance.png",
       "alt": "Scheda Istanza con l’origine di ogni variabile, una chiave OpenRouter mascherata impostata qui e gli indirizzi degli amministratori presi dal file.",
       "caption": "Istanza mostra da dove viene ogni valore; i segreti mostrano solo gli ultimi caratteri. Questa cattura proviene da un’istanza self-hosted locale usa e getta.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -154,7 +154,7 @@ La console ha tre schede: **Account**, **Costi**, **Modelli** e, dove consentito
 
 ## Scegliere i modelli per categoria {#models}
 
-Ogni scheda di **Modelli** ha un **Modello predefinito** per la sua categoria: **Assistente** (Numo, titoli delle conversazioni, ricerca web), **Automazioni** (Smart Fill e i suoi titoli, Smart Assign, decisioni sulle relazioni, mappatura delle importazioni CSV, suddivisione dei brief, messaggi di commit per le unioni), **Embedding** (embedding di ticket e feedback) e **Feedback e sito pubblico** (analisi dei feedback, riquadro domande delle FAQ). Un’attività segue il modello predefinito della sua categoria finché non le dai un modello proprio in **Modelli per attività**; perché torni a seguire la categoria, scegli nel suo selettore il modello della categoria, mostrato con il suo nome e spuntato finché l’attività lo segue. **Modello predefinito** resta un’opzione solo quando quel modello non è nel catalogo. Finché il modello predefinito di una categoria non è impostato, ogni attività mantiene il proprio valore integrato. **Livello di ragionamento**, **Modello di decisione** e le due impostazioni di **Voce** hanno righe proprie. Impostare il modello predefinito di una categoria libera le attività che hanno ancora il valore integrato, come quelle con cui viene creata una nuova istanza; un’attività impostata su un altro modello lo mantiene. **Modelli consigliati** fissa la breve lista con cui si apre ogni selettore di modelli. **Chiavi personali** è chiusa in fondo: riguarda solo i membri che usano la propria chiave del fornitore.
+Ogni scheda di **Modelli** ha un **Modello predefinito** per la sua categoria: **Assistente** (Numo, titoli delle conversazioni, ricerca web, smistamento eventi), **Automazioni** (Smart Fill e i suoi titoli, Smart Assign, decisioni sulle relazioni, mappatura delle importazioni CSV, suddivisione dei brief, messaggi di commit per le unioni), **Embedding** (embedding di ticket e feedback) e **Feedback e sito pubblico** (analisi dei feedback, riquadro domande delle FAQ). Un’attività segue il modello predefinito della sua categoria finché non le dai un modello proprio in **Modelli per attività**; perché torni a seguire la categoria, scegli nel suo selettore il modello della categoria, mostrato con il suo nome e spuntato finché l’attività lo segue. **Modello predefinito** resta un’opzione solo quando quel modello non è nel catalogo. Finché il modello predefinito di una categoria non è impostato, ogni attività mantiene il proprio valore integrato. **Livello di ragionamento**, **Modello di decisione** e le due impostazioni di **Voce** hanno righe proprie. Impostare il modello predefinito di una categoria libera le attività che hanno ancora il valore integrato, come quelle con cui viene creata una nuova istanza; un’attività impostata su un altro modello lo mantiene. **Modelli consigliati** fissa la breve lista con cui si apre ogni selettore di modelli. **Chiavi personali** è chiusa in fondo: riguarda solo i membri che usano la propria chiave del fornitore.
 
 ## Esportare e importare la configurazione dei modelli {#models-file}
 
