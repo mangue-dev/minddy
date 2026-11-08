@@ -15,6 +15,11 @@
  * via `aiModelFallback` instead of redeclaring the constant on its side.
  */
 import { AGENT_PROVIDERS } from "@/lib/agent-providers";
+import {
+  NUMO_WAKE_DAILY_LIMIT_DEFAULT,
+  NUMO_WAKE_DAILY_LIMIT_KEY,
+  NUMO_WAKE_DAILY_LIMIT_MAX,
+} from "@/lib/numo-background";
 import { BYOK_MODEL_KEYS, byokFeatureDefaultModelKey } from "@/lib/ai-surfaces";
 import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
@@ -29,7 +34,8 @@ import {
  * `modelId` → id entered as is, in the namespace of a BYOK provider (`gpt-…`,
  * `claude-…`): the platform catalog would write invalid ids;
  * `recommended` → JSON list of ids, in the order of display of the picker ;
- * `reasoning` → one of the shared Numo reasoning levels.
+ * `reasoning` → one of the shared Numo reasoning levels;
+ * `count` → a whole number from 0 to `max` (a cap, not a model).
  *
  * There is no on/off switch here: every AI feature is always on (MIN-733).
  */
@@ -37,7 +43,9 @@ export type AiConfigKind =
   | "model"
   | "modelId"
   | "reasoning"
-  | "recommended";
+  | "recommended"
+  /** A whole number, such as a daily cap. Not part of the models file. */
+  | "count";
 
 export type AiConfigGroup =
   | "assistant"
@@ -88,6 +96,8 @@ export interface AiConfigField {
   category?: AiModelCategoryId;
   /** This field IS the default of that category. */
   categoryDefault?: AiModelCategoryId;
+  /** Highest value of a `count`. */
+  max?: number;
 }
 
 /** `app_config` key holding a category's default model. */
@@ -207,6 +217,16 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // fallback of the wake decision, when the decision model is unsure. One
   // call per due batch of events, nobody waits on it.
   { key: "numo_wake_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
+  // Background Numo (lib/server/numo/wake.ts, MIN-929): background turns one
+  // user gets in 24 hours. Past it, a due batch closes without waking Numo.
+  // 0 turns background Numo off on the instance.
+  {
+    key: NUMO_WAKE_DAILY_LIMIT_KEY,
+    kind: "count",
+    fallback: String(NUMO_WAKE_DAILY_LIMIT_DEFAULT),
+    max: NUMO_WAKE_DAILY_LIMIT_MAX,
+    group: "assistant",
+  },
   // Correspondance des colonnes d'un import CSV (lib/server/import-mapping-ai.ts) :
   // ONE call per file submitted, never per line — the model only sees one
   // column summary. It is the price of an import which loses nothing.

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-08",
   "compatibility": {
@@ -58,9 +58,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-08"
   },
   "related": [
@@ -79,7 +79,7 @@
       "src": "/documentation/fr/instance-administration-overview.png",
       "alt": "Onglet Comptes avec le nombre de comptes et la recherche d’un compte par adresse e-mail exacte.",
       "caption": "Comptes affiche le nombre de comptes et la recherche de support ; la capture provient d’une instance de démonstration.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/fr/instance-administration-models.png",
       "alt": "Onglet Modèles avec un modèle par défaut par catégorie et les modèles par tâche repliés.",
       "caption": "Modèles affiche un modèle par défaut par catégorie ; les modèles par tâche restent repliés. Aucun réglage de modèle ou de fournisseur n’a été modifié pour cette capture.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/fr/instance-administration-instance.png",
       "alt": "Onglet Instance avec la source de chaque variable, une clé OpenRouter masquée définie ici et les adresses des administrateurs issues du fichier.",
       "caption": "Instance indique d’où vient chaque valeur ; les secrets ne gardent que leurs derniers caractères. Cette capture provient d’une instance auto-hébergée locale jetable.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -154,7 +154,7 @@ La console compte trois onglets : **Comptes**, **Coûts**, **Modèles** et, là 
 
 ## Choisir les modèles par catégorie {#models}
 
-Chaque carte de **Modèles** a un **Modèle par défaut** pour sa catégorie : **Assistant** (Numo, titres de conversation, recherche web, tri des événements), **Automatisations** (Smart Fill et ses titres, Smart Assign, décisions de relation, correspondance des imports CSV, découpage des briefs, messages de commit de fusion), **Embeddings** (embeddings des tickets et des retours) et **Retours et site public** (analyse des retours, boîte à questions de la FAQ). Une tâche suit le modèle par défaut de sa catégorie jusqu’à ce que vous lui donniez son propre modèle dans **Modèles par tâche** ; pour qu’elle suive à nouveau la catégorie, choisissez dans son sélecteur le modèle de la catégorie, affiché sous son propre nom et coché tant que la tâche le suit. **Modèle par défaut** ne reste une option que si ce modèle ne figure pas au catalogue. Tant que le modèle par défaut d’une catégorie n’est pas renseigné, chaque tâche garde sa propre valeur intégrée. **Niveau de raisonnement**, **Modèle de décision** et les deux réglages **Voix** ont leur propre ligne. Renseigner le modèle par défaut d’une catégorie libère les tâches qui portent encore leur valeur intégrée, comme celles qu’une nouvelle instance reçoit à l’installation ; une tâche réglée sur un autre modèle le garde. **Modèles conseillés** fixe la courte liste sur laquelle s’ouvre chaque sélecteur de modèle. **Clés personnelles** est replié en bas de page : il ne concerne que les membres qui utilisent leur propre clé de fournisseur.
+Chaque carte de **Modèles** a un **Modèle par défaut** pour sa catégorie : **Assistant** (Numo, titres de conversation, recherche web, tri des événements), **Automatisations** (Smart Fill et ses titres, Smart Assign, décisions de relation, correspondance des imports CSV, découpage des briefs, messages de commit de fusion), **Embeddings** (embeddings des tickets et des retours) et **Retours et site public** (analyse des retours, boîte à questions de la FAQ). Une tâche suit le modèle par défaut de sa catégorie jusqu’à ce que vous lui donniez son propre modèle dans **Modèles par tâche** ; pour qu’elle suive à nouveau la catégorie, choisissez dans son sélecteur le modèle de la catégorie, affiché sous son propre nom et coché tant que la tâche le suit. **Modèle par défaut** ne reste une option que si ce modèle ne figure pas au catalogue. Tant que le modèle par défaut d’une catégorie n’est pas renseigné, chaque tâche garde sa propre valeur intégrée. **Niveau de raisonnement**, **Modèle de décision** et les deux réglages **Voix** ont leur propre ligne. Dans la carte **Assistant**, **Tours en arrière-plan par jour** plafonne les tours que [Numo en arrière-plan](/docs/numo#background) effectue pour un membre sur 24 heures : 20 si le champ est vide, 0 pour désactiver Numo en arrière-plan pour tous. Le fichier de modèles ne le contient pas et ne le réinitialise pas. Renseigner le modèle par défaut d’une catégorie libère les tâches qui portent encore leur valeur intégrée, comme celles qu’une nouvelle instance reçoit à l’installation ; une tâche réglée sur un autre modèle le garde. **Modèles conseillés** fixe la courte liste sur laquelle s’ouvre chaque sélecteur de modèle. **Clés personnelles** est replié en bas de page : il ne concerne que les membres qui utilisent leur propre clé de fournisseur.
 
 ## Exporter et importer la configuration des modèles {#models-file}
 

@@ -844,6 +844,8 @@ function ConfigRow({
       );
     case "modelId":
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
+    case "count":
+      return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} numeric />;
     case "model":
       return (
         <ModelRow
@@ -1095,12 +1097,15 @@ function ModelIdRow({
   desc,
   value,
   onSaved,
+  numeric = false,
 }: {
   field: AiConfigField;
   label: string;
   desc: string | null;
   value: string | null;
   onSaved: OnSaved;
+  /** A `count`: a whole number, empty for the default. */
+  numeric?: boolean;
 }) {
   const t = useTranslations("Admin");
   const saved = (value ?? "").trim();
@@ -1109,7 +1114,9 @@ function ModelIdRow({
   const [busy, setBusy] = useState(false);
 
   const commit = async () => {
-    const next = draft.trim();
+    const trimmed = draft.trim();
+    // A count is stored without leading zeros: compare and reflect it the same way.
+    const next = numeric && /^\d+$/.test(trimmed) ? String(Number(trimmed)) : trimmed;
     if (busy || next === saved) return;
     setBusy(true);
     try {
@@ -1138,7 +1145,8 @@ function ModelIdRow({
             placeholder={field.fallback}
             disabled={busy}
             spellCheck={false}
-            className="w-64"
+            inputMode={numeric ? "numeric" : undefined}
+            className={numeric ? "w-24" : "w-64"}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => void commit()}
             onKeyDown={(e) => {

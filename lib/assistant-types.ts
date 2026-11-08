@@ -329,7 +329,9 @@ export type NumoIntentSource =
   | "code_worker"
   | "pull_request"
   | "routine"
-  | "bulk";
+  | "bulk"
+  /** Background Numo (MIN-929): a wake on workspace events, never a client gesture. */
+  | "background";
 
 /** The distinction the originating action promised to preserve. */
 export type NumoIntentAction =

@@ -1971,6 +1971,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Numo's memory: when false, Numo neither reads nor saves memories about the user. Existing memories are kept and come back when it is turned on again.",
           },
+          numo_background: {
+            type: "boolean",
+            description:
+              "Numo in the background: when true, Numo acts on workspace events while the user is away and reports in its journal. It needs numo_memory on.",
+          },
           numo_default_status: {
             type: "string",
             enum: [...NUMO_DEFAULT_STATUS_OPTIONS],

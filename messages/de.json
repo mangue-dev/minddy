@@ -3033,6 +3033,10 @@
     "numoMemoryForgetAll": "Alles vergessen",
     "numoMemoryForgetAllTitle": "{count, plural, one {# Erinnerung löschen?} other {Alle # Erinnerungen löschen?}}",
     "numoMemoryForgetAllDescription": "Numo nutzt sie dann nicht mehr. Das lässt sich nicht rückgängig machen.",
+    "numoBackgroundTitle": "Numo im Hintergrund",
+    "numoBackgroundHelp": "Wenn dich in deinen Projekten etwas betrifft, handelt Numo, während du weg bist, und notiert in seinem Journal, was es getan hat und was auf dich wartet; frag Numo in einer Unterhaltung danach. In einem geteilten Projekt ändert es nur, was zu dir gehört: Tickets, die dir zugewiesen sind oder die du erstellt hast, Ziele, die du leitest, Seiten, die du erstellt hast. In allen Projekten löscht es nichts, führt keine Aktion an Pull Requests aus, ruft keine externen MCP-Werkzeuge auf, verwaltet das Projekt nicht und benachrichtigt dich nur bei Dringendem, außer eine deiner Erinnerungen erlaubt es. Die Prüfung deiner Ereignisse und jedes Aufwachen zählen zu deiner KI-Nutzung.",
+    "numoBackgroundSwitch": "Numo im Hintergrund arbeiten lassen",
+    "numoBackgroundNeedsMemory": "Schalte zuerst Numos Gedächtnis ein: Im Hintergrund folgt Numo den Anweisungen und Erlaubnissen, die dort gespeichert sind.",
     "dictationSectionTitle": "Spracheingabe",
     "dictationCleanupLabel": "Diktate bereinigen",
     "dictationCleanupDesc": "Korrigiert Zeichensetzung, Füllwörter und Selbstkorrekturen, bevor der Text eingefügt wird. Deaktiviert wird die Rohtranskription so eingefügt, wie sie gehört wurde.",
@@ -4690,6 +4694,10 @@
       "numo_wake_model": {
         "label": "Modell für die Ereignisprüfung",
         "desc": "Entscheidet, ob ein Stapel von Ereignissen im Arbeitsbereich Numo wecken soll, wenn das Entscheidungsmodell unsicher ist. Niemand wartet auf die Antwort."
+      },
+      "numo_wake_daily_limit": {
+        "label": "Hintergrund-Turns pro Tag",
+        "desc": "Hintergrund-Turns, die ein Mitglied in 24 Stunden bekommt. Danach bleibt Numo inaktiv, bis wieder Platz frei wird. 0 schaltet Numo im Hintergrund für alle aus. Leer bedeutet 20."
       },
       "web_search_model": {
         "label": "Websuchmodell",

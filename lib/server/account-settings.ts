@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NUMO_MEMORY_META_KEY, resolveNumoMemoryEnabled } from "@/lib/numo-memory";
+import { NUMO_BACKGROUND_META_KEY, resolveNumoBackgroundEnabled } from "@/lib/numo-background";
 import { getServiceClient } from "@/lib/supabase-service";
 import { locales, type Locale } from "@/i18n/config";
 import {
@@ -108,6 +109,8 @@ export interface AccountSettings {
   numo_default_status: ReturnType<typeof resolveNumoDefaultStatus>;
   /** Numo's memory (MIN-915): Numo reads and keeps memories about the user. */
   numo_memory: boolean;
+  /** Background Numo (MIN-929): Numo acts on workspace events while the user is away. Needs the memory. */
+  numo_background: boolean;
   auto_assign_created: boolean;
   auto_assign_on_start: boolean;
   prompt_copy_auto_start: boolean;
@@ -169,6 +172,7 @@ function toSettings(
     })(),
     numo_default_status: resolveNumoDefaultStatus(meta),
     numo_memory: resolveNumoMemoryEnabled(meta),
+    numo_background: resolveNumoBackgroundEnabled(meta),
     auto_assign_created: meta.auto_assign_created === true,
     auto_assign_on_start: resolveAutoAssignOnStart(meta),
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
@@ -319,6 +323,17 @@ export async function updateAccountSettings({
     }
     next[NUMO_MEMORY_META_KEY] = input[NUMO_MEMORY_META_KEY];
   }
+  if (NUMO_BACKGROUND_META_KEY in input) {
+    if (typeof input[NUMO_BACKGROUND_META_KEY] !== "boolean") {
+      return { ok: false, error: "numo_background must be a boolean." };
+    }
+    // Background Numo reads its standing instructions and authorizations
+    // from the memory: it cannot be turned on while the memory is off.
+    if (input[NUMO_BACKGROUND_META_KEY] && !resolveNumoMemoryEnabled(next)) {
+      return { ok: false, error: "numo_background needs numo_memory: turn Numo's memory on first." };
+    }
+    next[NUMO_BACKGROUND_META_KEY] = input[NUMO_BACKGROUND_META_KEY];
+  }
   if ("prompt_copy_auto_start" in input) {
     if (typeof input.prompt_copy_auto_start !== "boolean") {
       return { ok: false, error: "prompt_copy_auto_start must be a boolean." };
@@ -427,6 +442,7 @@ export async function updateAccountSettings({
     THEME_TRANSPARENCY_META_KEY,
     "numo_default_status",
     NUMO_MEMORY_META_KEY,
+    NUMO_BACKGROUND_META_KEY,
     "send_shortcut",
     WEEK_START_META_KEY,
     "auto_assign_created",

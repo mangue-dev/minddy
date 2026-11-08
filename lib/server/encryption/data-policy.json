@@ -4370,6 +4370,9 @@
       "encryption_metadata": [
         "encrypted_content",
         "encryption_version"
+      ],
+      "bounded_metadata": [
+        "urgent"
       ]
     }
   },
@@ -4426,6 +4429,42 @@
       "encryption_metadata": [
         "encrypted_content",
         "encryption_version"
+      ]
+    }
+  },
+  "numo_wakes": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "user_id",
+        "batch_id",
+        "conversation_id",
+        "turn_id"
+      ],
+      "timestamp": [
+        "created_at"
+      ]
+    }
+  },
+  "numo_urgent_note_claims": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "id",
+        "user_id",
+        "numo_turn_id"
+      ],
+      "timestamp": [
+        "created_at"
       ]
     }
   }

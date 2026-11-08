@@ -155,7 +155,8 @@ export function wakeEventValue(event: Pick<WakeEvent, "id">): string {
   return String(event.id);
 }
 
-function eventLine(event: WakeEvent): string {
+/** One event as a line of text, for the engines and for Numo's wake message. */
+export function describeWakeEvent(event: WakeEvent): string {
   // JSON quoting: a title cannot close its quotes and pass for a field.
   const object = [event.object.kind, event.object.reference, event.object.title ? JSON.stringify(event.object.title) : null]
     .filter(Boolean).join(" ");
@@ -214,7 +215,7 @@ export function buildNumoWakeUserMessage(input: WakeInput): string {
   const memories = withinBudget(input.memories, WAKE_MEMORY_BUDGET);
   const journal = withinBudget(input.journal, WAKE_JOURNAL_BUDGET);
   return `## Events
-${shown.map((event) => `- [${wakeEventValue(event)}] ${eventLine({
+${shown.map((event) => `- [${wakeEventValue(event)}] ${describeWakeEvent({
     ...event,
     object: { ...event.object, title: truncate(event.object.title, WAKE_TITLE_CHARS) },
   })}`).join("\n")}${omitted > 0 ? `\n(${omitted} less relevant events of this batch are not shown.)` : ""}
@@ -253,7 +254,7 @@ export function buildNumoWakeSpec(input: WakeInput): DecisionSpec | null {
   if (shown.length === 0) return null;
   const options: DecisionOption[] = shown.map((event) => ({
     value: wakeEventValue(event),
-    label: eventLine({ ...event, object: { ...event.object, title: truncate(event.object.title, WAKE_TITLE_CHARS) } }),
+    label: describeWakeEvent({ ...event, object: { ...event.object, title: truncate(event.object.title, WAKE_TITLE_CHARS) } }),
   }));
   return {
     useCase: "numo_wake",

@@ -56,9 +56,12 @@ export type ModelConfigValues = Record<string, string | null | undefined>;
 
 const RECOMMENDED_KEY = "recommended_models";
 
-/** Every key an import may write: the registry and its suffixes. */
+/**
+ * Every key an import may write: the registry and its suffixes. Counts are
+ * instance limits, not model choices: the file neither carries nor resets them.
+ */
 export const MODEL_CONFIG_FILE_KEYS: string[] = [
-  ...AI_MODEL_CONFIG_FIELDS.map((field) => field.key),
+  ...AI_MODEL_CONFIG_FIELDS.filter((field) => field.kind !== "count").map((field) => field.key),
   ...AI_MODEL_CONFIG_FIELDS.filter(isSuffixableField).map((field) => modelSuffixKey(field.key)),
 ];
 
