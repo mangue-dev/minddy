@@ -36,6 +36,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:tooling": "node scripts/test-tooling.mjs",
+    "preview:crons": "node --env-file=.env scripts/preview-crons.mjs",
     "test:watch": "vitest",
     "bootstrap:supabase": "node -- scripts/bootstrap-supabase.mjs",
     "verify:supabase": "node scripts/verify-supabase-bootstrap.mjs",
