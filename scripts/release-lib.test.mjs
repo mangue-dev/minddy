@@ -22,7 +22,7 @@ function compatibilityEntry(overrides = {}) {
     tag: "v1.2.3",
     supportedTopologies: ["simple-managed-supabase", "complete-official-supabase"],
     referenceCompose: { minddyImage: "ghcr.io/mangue-dev/minddy:v1.2.3" },
-    supabase: { completeOfficial: { release: "self-hosted/v0.8.3" } },
+    supabase: { completeOfficial: { release: "self-hosted/v0.8.4" } },
     ...overrides,
   };
 }
@@ -80,10 +80,12 @@ test("release compatibility refuses an official Supabase release with vulnerable
     { schemaVersion: 1, entries: [compatibilityEntry({ supabase: { completeOfficial: { release } } })] },
     "1.2.3",
   );
-  assert.doesNotThrow(() => publish("self-hosted/v0.8.3"));
+  assert.doesNotThrow(() => publish("self-hosted/v0.8.4"));
   assert.doesNotThrow(() => publish("self-hosted/v0.10.0"));
-  assert.throws(() => publish("self-hosted/v0.7.2"), /self-hosted\/v0\.8\.3 or later, not self-hosted\/v0\.7\.2/);
-  assert.throws(() => publish("v0.8.3"), /self-hosted\/v0\.8\.3 or later/);
+  // v0.8.3 ships storage-api v1.81.0, affected by GHSA-fgvp-cqg6-q8h2.
+  assert.throws(() => publish("self-hosted/v0.8.3"), /self-hosted\/v0\.8\.4 or later, not self-hosted\/v0\.8\.3/);
+  assert.throws(() => publish("self-hosted/v0.7.2"), /self-hosted\/v0\.8\.4 or later, not self-hosted\/v0\.7\.2/);
+  assert.throws(() => publish("v0.8.4"), /self-hosted\/v0\.8\.4 or later/);
   assert.throws(
     () => assertReleaseCompatibility({ schemaVersion: 1, entries: [compatibilityEntry({ supabase: undefined })] }, "1.2.3"),
     /not nothing/,
@@ -101,17 +103,23 @@ test("version floors compare numerically and reject unparseable tags", () => {
 test("the pinned upstream Compose file must ship patched Realtime and Storage images", () => {
   const compose = (realtime, storage) =>
     `services:\n  realtime:\n    image: supabase/realtime:${realtime}\n  storage:\n    image: supabase/storage-api:${storage}\n`;
-  assert.doesNotThrow(() => assertOfficialSupabaseImages(compose("v2.143.3", "v1.81.0")));
+  assert.doesNotThrow(() => assertOfficialSupabaseImages(compose("v2.148.3", "v1.89.12")));
+  assert.doesNotThrow(() => assertOfficialSupabaseImages(compose("v2.148.3", "v1.89.9")));
   assert.throws(
-    () => assertOfficialSupabaseImages(compose("v2.102.3", "v1.81.0")),
+    () => assertOfficialSupabaseImages(compose("v2.102.3", "v1.89.12")),
     /supabase\/realtime:v2\.102\.3; 2\.137\.15 or later/,
   );
+  // GHSA-fgvp-cqg6-q8h2: Storage up to 1.89.8 accepts a signed `role: "none"` token.
   assert.throws(
-    () => assertOfficialSupabaseImages(compose("v2.143.3", "v1.60.4")),
-    /supabase\/storage-api:v1\.60\.4; 1\.80\.2 or later/,
+    () => assertOfficialSupabaseImages(compose("v2.148.3", "v1.89.8")),
+    /supabase\/storage-api:v1\.89\.8; 1\.89\.9 or later/,
   );
   assert.throws(
-    () => assertOfficialSupabaseImages("services:\n  realtime:\n    image: supabase/realtime:v2.143.3\n"),
+    () => assertOfficialSupabaseImages(compose("v2.143.3", "v1.81.0")),
+    /supabase\/storage-api:v1\.81\.0; 1\.89\.9 or later/,
+  );
+  assert.throws(
+    () => assertOfficialSupabaseImages("services:\n  realtime:\n    image: supabase/realtime:v2.148.3\n"),
     /does not declare supabase\/storage-api/,
   );
 });

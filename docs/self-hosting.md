@@ -58,8 +58,8 @@ Storage, and Realtime.
 A Supabase Cloud project receives Storage and Realtime security updates from
 Supabase. An operator-run Supabase must not run a Storage (`storage-api`) or
 Realtime image older than the floors in `MINIMUM_OFFICIAL_SUPABASE_IMAGES`
-(`scripts/release-lib.mjs`): Storage 1.80.2 for GHSA-67rp-h2mf-ph72 and
-GHSA-8rrf-w776-x75g, and Realtime later than 2.137.14 for GHSA-hg9h-6mhq-6c2v
+(`scripts/release-lib.mjs`): Storage 1.89.9 for GHSA-67rp-h2mf-ph72,
+GHSA-8rrf-w776-x75g and GHSA-fgvp-cqg6-q8h2, and Realtime later than 2.137.14 for GHSA-hg9h-6mhq-6c2v
 (CVE-2026-54238) and GHSA-9vjf-j9f7-j42c. The signed-upload bypass in
 GHSA-8rrf-w776-x75g affects private buckets even though minddy never issues
 signed upload URLs, because the vulnerable route ships with every Storage
@@ -71,6 +71,18 @@ release ships the fix yet, and minddy never uses the Storage S3 protocol, so
 the full profile sets `S3_PROTOCOL_ENABLED: "false"` on `storage` and Caddy
 answers 404 on `/storage/v1/s3`. An operator-run Supabase behind the managed
 profile needs Storage 1.84.14 or later, or the same setting.
+
+Storage up to 1.89.8 runs a request signed with `role: "none"` as its own
+database user, which owns the Storage tables, so the request bypasses their
+row-level security (GHSA-fgvp-cqg6-q8h2, fixed in 1.89.9). Only a trusted
+token issuer can produce such a token. minddy signs `anon` and `service_role`
+keys at installation, GoTrue signs the `role` column of `auth.users`, which
+minddy never writes, and neither reference profile enables a custom
+access-token hook. A Supabase Cloud project is already patched. Until the
+next minddy release pins a fixed official release, an operator-run Supabase
+must not enable an access-token hook or another issuer that can sign
+`role: "none"`; [the operations reference](self-hosting-operations.md#storage-role-none-advisory)
+gives the check for an existing instance.
 
 GitHub integration targets `github.com` and GitLab integration targets
 `gitlab.com`. GitHub Enterprise Server and self-managed GitLab are not silently
