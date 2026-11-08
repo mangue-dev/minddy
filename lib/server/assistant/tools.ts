@@ -2046,7 +2046,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           numo_background: {
             type: "boolean",
             description:
-              "Numo in the background: when true, Numo acts on workspace events while the user is away and reports in its journal. It needs numo_memory on.",
+              "Numo in the background, on by default: when true, Numo acts on workspace events while the user is away and reports in its journal; false turns it off. It needs numo_memory on.",
           },
           numo_default_status: {
             type: "string",
