@@ -217,6 +217,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("projectStatsLoaded") : t("loadProjectStatsFailed");
     },
   },
+  find_isolated_items: {
+    icon: Search01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("findingIsolatedItems");
+      return success ? t("isolatedItemsFound") : t("findIsolatedItemsFailed");
+    },
+  },
   get_objective: {
     icon: Target01Icon,
     getLabel: (_args, result, success, status, t) => {

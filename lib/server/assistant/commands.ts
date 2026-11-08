@@ -1,4 +1,4 @@
-// ── Commandes « / » du composer de Numo (MIN-159) ────────────────────
+// ── Slash commands of Numo's composer (MIN-159) ─────────────────────
 //
 // A command is chosen in the slash menu of the composer; its CANONICAL id
 // travel through the query (the label is localized — “/create issue” /
@@ -20,8 +20,18 @@ const CREATE_ISSUE_NOTE = `[Command: the user invoked the guided issue-creation 
 3. Without a project scope (global mode), resolve the target project first via list_projects; if ambiguous, make the project one of the ask_user questions.
 4. Then call create_issue and confirm with the issue's identifier.]`;
 
+// MIN-932: Numo looks for what fell through the cracks, as a ready-made task.
+// The tool gives candidates; the note keeps the answer a short, useful list.
+const FIND_ISOLATED_NOTE = `[Command: the user asked you to find isolated items (the "/find isolated" slash command). For THIS request:
+1. Scope: the project in context; in global mode, the projects the text names, otherwise the user's projects from list_projects (at most 5, the most recently active first).
+2. Call find_isolated_items for each project in scope.
+3. Keep only real findings: the forgotten issues it lists, and the pages whose excerpt describes work to do (a fix, a problem, a task). Drop notes, references and finished specs.
+4. Answer with a short list grouped by project: each item a typed mention and a few words on why it is isolated ("idle for 45 days", "describes a login bug, no issue"). Eight items at most in all; no statistics, no audit. When nothing is isolated, say so in one sentence.
+5. Offer to create issues for the pages, or to plan or close the forgotten issues, and do nothing until the user agrees.]`;
+
 const COMMAND_NOTES: Record<AssistantCommandId, string> = {
   "create-issue": CREATE_ISSUE_NOTE,
+  "find-isolated": FIND_ISOLATED_NOTE,
 };
 
 /** The order id sent by the client, strictly validated — everything else

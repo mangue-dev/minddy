@@ -125,6 +125,8 @@ export default function HomePage() {
           // Once you write, the greeting leaves and Numo's word stays as the
           // opening message of the conversation; without a word, nothing stays.
           keptIntro={brief ? <HomeNumoBrief brief={brief} /> : null}
+          // Numo receives it too: the conversation opens with it (MIN-933).
+          openingBriefId={brief?.id ?? null}
           starterItems={brief ? brief.suggestions : null}
           startersPending={briefLoading}
           unavailableFallback={

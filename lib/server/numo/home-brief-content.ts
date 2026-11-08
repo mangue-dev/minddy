@@ -137,6 +137,21 @@ export async function getLatestHomeBrief(service: SupabaseClient,
   }
 }
 
+/** One version of the user, decoded, or `null` when it is not theirs or no longer decodes. */
+export async function getHomeBrief(service: SupabaseClient, userId: string,
+  id: string): Promise<NumoHomeBrief | null> {
+  const { data, error } = await service.from("numo_home_briefs").select(COLUMNS)
+    .eq("user_id", userId).eq("id", id).maybeSingle();
+  if (error) throw new NumoHomeBriefError("database", "Unable to read Numo's home brief");
+  if (!data) return null;
+  try {
+    return await decodeNumoHomeBriefRow(data as Row, userId);
+  } catch {
+    console.error("[numo-home-brief] decode_failed");
+    return null;
+  }
+}
+
 /** The digest of the latest version, without decoding it. */
 export async function getLatestHomeBriefDigest(service: SupabaseClient,
   userId: string): Promise<string | null> {

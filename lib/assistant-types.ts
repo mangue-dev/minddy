@@ -167,7 +167,7 @@ export interface AssistantPinnedContext {
  * it is he who travels in the request and persists on `metadata.command`
  * of the user message, where the server unfolds it into instructions for Numo.
  */
-export type AssistantCommandId = "create-issue";
+export type AssistantCommandId = "create-issue" | "find-isolated";
 
 /**
  * An "@" mention written IN the message (team member, project, ticket
@@ -376,6 +376,11 @@ export interface AssistantChatRequest {
   message: string;
   /** Voluntary entry provenance, persisted with the user message. */
   intent?: Pick<NumoIntent, "source" | "action">;
+  /**
+   * The version of Numo's Home summary this first message answers (MIN-933):
+   * the new conversation opens with it as Numo's first message.
+   */
+  homeBriefId?: string;
   /** Exact pending delegated-worker question answered by this card submission. */
   workerInput?: {
     parentTurnId: string;

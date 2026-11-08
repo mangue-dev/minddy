@@ -812,6 +812,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         skills?: AssistantSkillSelection[];
         /** Voluntary entry provenance from the common Numo intent contract. */
         intent?: AssistantChatRequest["intent"];
+        /** Numo's Home summary this first message answers (MIN-933). */
+        homeBriefId?: string;
       },
     ) => {
       if (!message.trim()) return;
@@ -883,6 +885,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             ? { skills: options.skills }
             : {}),
           ...(options?.intent ? { intent: options.intent } : {}),
+          ...(options?.homeBriefId && !requestConversationId ? { homeBriefId: options.homeBriefId } : {}),
           // The browser's time zone travels with each message: Numo has it
           // need to set a routine at the time we tell him (MIN-185).
           ...(browserTimezone() ? { timezone: browserTimezone() } : {}),

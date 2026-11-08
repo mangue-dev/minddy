@@ -154,6 +154,12 @@ export interface AssistantShellProps {
    * Nothing stays when absent.
    */
   keptIntro?: ReactNode;
+  /**
+   * Numo's Home summary shown under the intro (MIN-933): the first message
+   * sent there carries it, and the server opens the conversation with it as
+   * Numo's first message.
+   */
+  openingBriefId?: string | null;
   /** Rows written for the user in place of the page's fixed suggestions; null keeps them. */
   starterItems?: ReadonlyArray<{ label: string; prompt: string }> | null;
   /** The written rows are still loading: show no row yet. */
@@ -180,6 +186,7 @@ export const AssistantShell = forwardRef<
     startFresh = false,
     intro = null,
     keptIntro = null,
+    openingBriefId = null,
     starterItems = null,
     startersPending = false,
     unavailableFallback = null,
@@ -387,6 +394,8 @@ export const AssistantShell = forwardRef<
   const [kept, setKept] = useState<{ node: ReactNode; conversationId: string | null } | null>(null);
   const keptIntroRef = useRef<ReactNode>(keptIntro);
   keptIntroRef.current = keptIntro;
+  const openingBriefRef = useRef<string | null>(openingBriefId);
+  openingBriefRef.current = openingBriefId;
   const blankRef = useRef(true);
   blankRef.current = !state.conversationId && state.messages.length === 0;
 
@@ -400,6 +409,7 @@ export const AssistantShell = forwardRef<
       intent?: AssistantChatRequest["intent"],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
+      const opening = blankRef.current ? openingBriefRef.current : null;
       if (blankRef.current) {
         setKept(keptIntroRef.current ? { node: keptIntroRef.current, conversationId: null } : null);
       }
@@ -411,6 +421,7 @@ export const AssistantShell = forwardRef<
         command,
         skills,
         intent,
+        ...(opening ? { homeBriefId: opening } : {}),
       });
       // A quoted selection is asked about once. Unlike the page context, which
       // keeps riding on follow-ups while the session stays on that page, and
@@ -486,7 +497,11 @@ export const AssistantShell = forwardRef<
       setKept({ ...kept, conversationId: state.conversationId });
     }
   }, [kept, state.conversationId]);
-  const keptOnTop = kept !== null &&
+  // Once the stored messages load, the summary is among them (MIN-933): it
+  // is not shown a second time on top.
+  const storedOpening = state.messages.some((message) =>
+    message.role === "assistant" && typeof message.metadata?.home_brief === "string");
+  const keptOnTop = kept !== null && !storedOpening &&
     (kept.conversationId === null || kept.conversationId === state.conversationId);
   // One announcement per reply, once it has ended (see the log below).
   const [replyStatus, setReplyStatus] = useState("");

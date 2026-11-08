@@ -51,6 +51,7 @@ import { MAX_SELECTED_SKILL_BYTES } from "@/lib/repository-skills";
 import type { RepositorySkill } from "@/lib/repository-skills";
 import { NUMO_UUID } from "@/lib/server/numo/conversations";
 import { beginNumoTurn, executeNumoTurn } from "@/lib/server/numo/turns";
+import { openConversationWithHomeBrief } from "@/lib/server/numo/home-brief-opening";
 import { routineContinuationForConversation } from "@/lib/server/routine-occurrences";
 import { ensureNumoRequestConversation } from "@/lib/server/numo/request-conversation";
 
@@ -632,6 +633,17 @@ export async function POST(request: NextRequest) {
     }
     convId = reservedConversationId;
     if (created) pendingTitle = { conversationId: reservedConversationId, fallback: title };
+    // Sent from under Numo's summary on Home (MIN-933): the summary opens the
+    // new conversation as Numo's first message, so Numo answers in its
+    // continuation. Only a version of this user's; a failure costs nothing
+    // but that context.
+    const homeBriefId = typeof body.homeBriefId === "string" && NUMO_UUID.test(body.homeBriefId)
+      ? body.homeBriefId : null;
+    if (created && homeBriefId && !pageContext?.documentation) {
+      await openConversationWithHomeBrief(service, {
+        userId: user.id, conversationId: reservedConversationId, briefId: homeBriefId,
+      }).catch(() => console.error("[numo-home-brief] opening_failed"));
+    }
   }
   const timezone =
     typeof body.timezone === "string" && body.timezone.length <= 64

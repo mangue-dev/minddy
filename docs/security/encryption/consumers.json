@@ -241,49 +241,49 @@
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 414,
+    "line": 415,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 422,
+    "line": 423,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 533,
+    "line": 534,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 554,
+    "line": 555,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "conversations",
-    "line": 718,
+    "line": 730,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 757,
+    "line": 769,
     "storage": false
   },
   {
     "file": "app/api/assistant/chat/route.ts",
     "operation": "from",
     "resource": "numo_assistant_turns",
-    "line": 772,
+    "line": 784,
     "storage": false
   },
   {
@@ -2502,77 +2502,77 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 722,
+    "line": 723,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 745,
+    "line": 746,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 781,
+    "line": 782,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 786,
+    "line": 787,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 803,
+    "line": 804,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 842,
+    "line": 843,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1543,
+    "line": 1549,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1618,
+    "line": 1624,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1667,
+    "line": 1673,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2158,
+    "line": 2164,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2330,
+    "line": 2336,
     "storage": false
   },
   {
@@ -2586,14 +2586,14 @@
     "file": "lib/server/assistant/loop.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 322,
+    "line": 323,
     "storage": false
   },
   {
     "file": "lib/server/assistant/loop.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 808,
+    "line": 809,
     "storage": false
   },
   {
@@ -8116,35 +8116,49 @@
     "file": "lib/server/numo/home-brief-content.ts",
     "operation": "from",
     "resource": "numo_home_briefs",
-    "line": 155,
+    "line": 158,
     "storage": false
   },
   {
     "file": "lib/server/numo/home-brief-content.ts",
     "operation": "from",
     "resource": "numo_home_briefs",
-    "line": 165,
+    "line": 170,
     "storage": false
   },
   {
     "file": "lib/server/numo/home-brief-content.ts",
     "operation": "from",
     "resource": "numo_home_briefs",
-    "line": 202,
+    "line": 180,
     "storage": false
   },
   {
     "file": "lib/server/numo/home-brief-content.ts",
     "operation": "from",
     "resource": "numo_home_briefs",
-    "line": 212,
+    "line": 217,
     "storage": false
   },
   {
     "file": "lib/server/numo/home-brief-content.ts",
     "operation": "from",
     "resource": "numo_home_briefs",
-    "line": 218,
+    "line": 227,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/home-brief-content.ts",
+    "operation": "from",
+    "resource": "numo_home_briefs",
+    "line": 233,
+    "storage": false
+  },
+  {
+    "file": "lib/server/numo/home-brief-opening.ts",
+    "operation": "from",
+    "resource": "assistant_messages",
+    "line": 38,
     "storage": false
   },
   {

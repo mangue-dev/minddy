@@ -52,6 +52,8 @@ export function getToolResultCharLimit(
     case "get_plan_usage":
     // Up to 25 overdue and 25 stalled rows with their titles.
     case "get_project_stats":
+    // Up to 8 issues and 6 page excerpts of 400 characters.
+    case "find_isolated_items":
       return 8_000;
     // A targeted routine may contain a 20,000-character instruction. The
     // default call stays compact, while this ceiling preserves the full JSON

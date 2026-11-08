@@ -455,6 +455,15 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "find_isolated_items",
+      description:
+        "Find the selected project's isolated items, read-only: forgotten_issues, open issues nobody touched for a while (30 days, 90 for backlog; none in a project with fewer than 10 open issues, where a lone issue is in plain sight), the longest idle first, up to 8; and pages_without_issue, recent pages whose text cites no issue and that no issue cites, with an excerpt, up to 6. These are candidates: keep the pages whose text describes work to do (a fix, a problem, a task) and drop notes, references or finished specs. Report a short list, each item with its typed mention and a few words on why it is isolated, never an exhaustive audit; when nothing is isolated, say so. Offer to create issues for the pages or to close or plan the forgotten issues, and act only once the user agrees.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "get_objective",
       description:
         "Read an objective's id, name, description, status, lead_user_id and target_date, its comment thread (comments, with their resources), plus linked_feedback (requests associated with the objective) and its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
