@@ -24,7 +24,7 @@ import {WizardChoiceCard} from "@/components/wizard/wizard-choice-card";
 import {McpServiceLogo} from "@/components/mcp-service-logo";
 import {SettingsGroup} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
-import {MCP_PRESETS, mcpPresetForUrl} from "@/lib/mcp-catalog";
+import {LISTED_MCP_PRESETS, mcpPresetForUrl} from "@/lib/mcp-catalog";
 import type {McpPreset} from "@/lib/mcp-catalog";
 import type {McpRegistryServer} from "@/lib/mcp-registry";
 import {
@@ -283,7 +283,8 @@ export function AccountMcpClients() {
   };
 
   // The registry is searched with the same box; catalog presets win, so a
-  // match never shows twice. Only a settled, error-free search renders.
+  // match never shows twice. Unlisted presets count too, so a hidden service
+  // does not come back through the registry. Only a settled, error-free search renders.
   const registryResults = (registry.servers ?? []).filter(
     (server) => !mcpPresetForUrl(server.url),
   );
@@ -975,7 +976,7 @@ export function AccountMcpClients() {
           placeholder={t("search")}
         />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {MCP_PRESETS.filter((item) =>
+          {LISTED_MCP_PRESETS.filter((item) =>
             `${item.name} ${item.id}`
               .toLowerCase()
               .includes(search.toLowerCase()),

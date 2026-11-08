@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MCP_PRESETS, mcpPresetForUrl } from "./mcp-catalog";
+import { LISTED_MCP_PRESETS, MCP_PRESETS, mcpPresetForUrl } from "./mcp-catalog";
 
 describe("the MCP preset catalog", () => {
   it("stays a curated list with unique ids and endpoints", () => {
@@ -49,6 +49,31 @@ describe("the MCP preset catalog", () => {
     }
     expect(mcpPresetForUrl("https://gmailmcp.googleapis.com/mcp/v1")?.scopes)
       .not.toContain("https://mail.google.com/");
+  });
+
+  it("offers no service the provider must validate first, except Vercel", () => {
+    const listed = new Set(LISTED_MCP_PRESETS.map((preset) => preset.id));
+    const hidden = MCP_PRESETS.filter((preset) => !listed.has(preset.id));
+    expect(hidden.map((preset) => preset.id).sort()).toEqual(
+      [
+        "figma",
+        "google-calendar",
+        "google-chat",
+        "google-docs",
+        "google-drive",
+        "google-gmail",
+        "google-people",
+        "google-sheets",
+        "google-slides",
+      ],
+    );
+    expect(listed.has("vercel")).toBe(true);
+    for (const id of ["slack", "asana", "github", "notion"])
+      expect(listed.has(id), id).toBe(true);
+    // A hidden service is still recognized by URL, so existing and hand-added
+    // connections keep their logo, setup note and scopes.
+    for (const preset of hidden)
+      expect(mcpPresetForUrl(preset.url)?.id).toBe(preset.id);
   });
 
   it("does not resolve an unrelated endpoint", () => {
