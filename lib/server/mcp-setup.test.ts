@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { decryptMcpToken } from "./mcp-credentials";
-import { MCP_PRESETS } from "@/lib/mcp-catalog";
+import { LISTED_MCP_PRESETS, MCP_PRESETS } from "@/lib/mcp-catalog";
 import { executeMcpSetupTool } from "./mcp-setup";
 
 const mocks = vi.hoisted(() => ({
@@ -171,12 +171,16 @@ describe("list_mcp_presets", () => {
       settings_url: string;
     };
     expect(result.presets.map((preset) => preset.id)).toEqual(
-      MCP_PRESETS.map((preset) => preset.id),
+      LISTED_MCP_PRESETS.map((preset) => preset.id),
     );
     expect(result.presets[0].setup_note).toBeTruthy();
-    // A google preset carries the developer-preview note.
-    const gmail = result.presets.find((preset) => preset.id === "google-gmail");
-    expect(gmail?.setup_note).toMatch(/developer preview/i);
+    // Services the provider must validate first are not offered (MIN-913),
+    // except Vercel, whose approval is under review.
+    const ids = result.presets.map((preset) => preset.id);
+    expect(ids).not.toContain("google-gmail");
+    expect(ids).not.toContain("figma");
+    const vercel = result.presets.find((preset) => preset.id === "vercel");
+    expect(vercel?.setup_note).toMatch(/approve/i);
     expect(result.connections).toEqual([
       expect.objectContaining({ id: CONNECTION_ID, needs_auth: true }),
     ]);
@@ -288,13 +292,33 @@ describe("configure_mcp_connection — creation", () => {
     expect(mocks.startOAuth).toHaveBeenCalledOnce();
   });
 
-  it("carries the provider prerequisite note for a google preset", async () => {
+  it("refuses a hidden preset and points to adding the server by URL", async () => {
     const execution = await executeMcpSetupTool(
       USER,
       "configure_mcp_connection",
       { preset_id: "google-gmail" },
     );
 
+    expect(execution.success).toBe(false);
+    const { error } = execution.result as { error: string };
+    expect(error).toMatch(/does not offer "Gmail"/);
+    expect(error).toContain("https://gmailmcp.googleapis.com/mcp/v1");
+    expect(mocks.db.inserts).toEqual([]);
+  });
+
+  it("carries the provider prerequisite note for a google server added by URL", async () => {
+    const execution = await executeMcpSetupTool(
+      USER,
+      "configure_mcp_connection",
+      {
+        name: "Gmail",
+        url: "https://gmailmcp.googleapis.com/mcp/v1",
+        oauth_client_id: "client-id",
+        oauth_client_secret: "client-secret",
+      },
+    );
+
+    expect(execution.success).toBe(true);
     const result = execution.result as { next_steps: string[] };
     expect(result.next_steps.join(" ")).toMatch(/developer preview/i);
     expect(result.next_steps.join(" ")).toMatch(/OAuth app/i);

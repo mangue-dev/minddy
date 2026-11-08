@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import {
+  LISTED_MCP_PRESETS,
   MCP_PRESETS,
   type McpPreset,
 } from "@/lib/mcp-catalog";
@@ -137,7 +138,8 @@ async function listMcpPresets(
   }
   // The search extends the catalog with the public registry (MIN-586):
   // a query brings back the servers beyond the curated presets, already
-  // stripped of what the catalog or an existing connection covers.
+  // stripped of what the catalog or an existing connection covers. Unlisted
+  // presets are stripped too: a hidden service must not return this way.
   let registry: Awaited<ReturnType<typeof searchMcpRegistry>> = [];
   if (query) {
     const presetUrls = new Set(MCP_PRESETS.map((preset) => canonicalUrl(preset.url)));
@@ -150,7 +152,7 @@ async function listMcpPresets(
   return {
     success: true,
     result: {
-      presets: MCP_PRESETS.map(({ id, name, url, auth, setup, docs }) => ({
+      presets: LISTED_MCP_PRESETS.map(({ id, name, url, auth, setup, docs }) => ({
         id,
         name,
         url,
@@ -249,6 +251,10 @@ async function createConnection(
   const preset = args.preset_id
     ? MCP_PRESETS.find((candidate) => candidate.id === args.preset_id)
     : undefined;
+  if (preset?.listed === false)
+    return failure(
+      `minddy does not offer "${preset.name}": the provider must validate minddy as a client before a connection can succeed. If the user has their own OAuth app with this provider, create the connection with name + url (${preset.url}) and the app's client id and secret.`,
+    );
   if (args.preset_id && !preset)
     return failure(
       `Unknown preset_id "${args.preset_id}". Call list_mcp_presets for the catalog.`,
@@ -319,7 +325,12 @@ async function createConnection(
     .select("id")
     .single();
   if (error || !data) return failure("Could not save the connection.");
-  return authenticationResult(userId, data.id, preset, { created: true });
+  return authenticationResult(
+    userId,
+    data.id,
+    preset ?? presetForUrl(parsed.data.url),
+    { created: true },
+  );
 }
 
 async function updateConnection(

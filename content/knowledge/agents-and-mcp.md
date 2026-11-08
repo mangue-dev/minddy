@@ -5,7 +5,7 @@ summary: Work with Numo in minddy and connect external agents or personal MCP to
 category: automation
 audience: both
 tags: [agent, mcp, oauth, codex, claude, cursor]
-lastReviewed: 2026-10-25
+lastReviewed: 2026-11-08
 ---
 
 Numo is minddy's built-in conversation for understanding and acting on project work. The floating Numo button is the one place conversations live: it opens the Numo panel, adds the current page as context, and keeps every conversation reachable from its conversation list. Contextual actions such as **Ask Numo** enter this same conversation instead of opening a separate agent destination, and links to the retired dedicated Numo page open the panel too.
@@ -25,13 +25,19 @@ minddy also exposes an OAuth-based MCP server for external tools. This is how co
 In **Account settings → MCP for Numo**, choose a service or
 select **Add another MCP server**. The catalog is a shortcut, not an allowlist:
 unlisted public HTTPS servers work through the same connection flow, and the same
-search also reaches servers in the public MCP registry. The catalog includes Gmail
-and the other Google services (Drive, Calendar, Docs, Sheets, Slides, Chat,
-Contacts), Notion, Linear, GitHub, GitLab, Atlassian, Slack, Figma, Asana, Canva,
-Sentry, Supabase, Vercel, Stripe, HubSpot, Dropbox, Box, ClickUp, Airtable,
-Webflow, and many more. Services open a connection dialog with
-their configuration already filled in. Provider prerequisites and setup links
-appear when needed.
+search also reaches servers in the public MCP registry. The catalog includes
+Notion, Linear, GitHub, GitLab, Atlassian, Slack, Asana, Canva, Sentry, Supabase,
+Vercel, Stripe, HubSpot, Dropbox, Box, ClickUp, Airtable, Webflow, and many more.
+Services open a connection dialog with their configuration already filled in.
+Provider prerequisites and setup links appear when needed.
+
+minddy does not offer Gmail and the other Google Workspace services (Drive,
+Calendar, Docs, Sheets, Slides, Chat, Contacts), or Figma: their provider must
+validate minddy as a client before a connection can succeed. Neither the catalog
+nor the registry search lists them, and Numo says so when asked. A connection
+that already exists keeps working, and you can still add one of these servers
+with **Add another MCP server** and its address if you have your own OAuth app
+with that provider.
 
 Numo can do this setup for you in a conversation: ask it to configure a service
 ("configure the Notion MCP") and it resolves the service in the catalog, checks
@@ -51,14 +57,14 @@ hover or focus it to see its status, then use **Reconnect** to try again. Minddy
 supports discovery, dynamic registration, PKCE, and refresh tokens. Providers that
 require an existing OAuth application can use the client ID and secret under
 **Advanced settings → OAuth app settings**; register the callback URL shown there with the provider.
-Google services are in developer preview and require an OAuth app and
-preview access: in Google Auth Platform, create a **Web application** client
+For a Google server added this way, the account needs developer-preview
+access and an OAuth app: in Google Auth Platform, create a **Web application** client
 with the callback URL, select **Use this client for an AI-powered agent**, and
 add the scopes Google's guide lists for that service to the consent screen.
 minddy requests those scopes and offline access, so the connection keeps
 working after the first hour. Without a client ID and secret, signing in stops
 with a message asking for the OAuth app. Slack requires an internal or Marketplace app, Asana requires a
-registered MCP app, and Figma requires provider approval of the MCP client. An
+registered MCP app, and Vercel requires provider approval of the MCP client. An
 entry in the catalog does not bypass these provider restrictions.
 
 Alternatively, choose **Bearer token** or **No authentication** in advanced settings. These settings

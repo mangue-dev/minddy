@@ -72,7 +72,7 @@ export const MCP_SETUP_TOOLS = [
     function: {
       name: "list_mcp_presets",
       description:
-        "List the MCP server catalog AND the user's existing personal MCP connections. Call it before configuring any service the user asks to connect: match the service to a preset id (e.g. 'configure the Gmail MCP' → google-gmail), check whether a connection for it already exists, and read the preset's setup note to learn what the provider requires. With a query, the public MCP registry is searched too: registry entries beyond the catalog come back with their URL, ready to be configured by name + url. Then research the provider's current prerequisites with web_search before creating anything.",
+        "List the MCP server catalog AND the user's existing personal MCP connections. Call it before configuring any service the user asks to connect: match the service to a preset id (e.g. 'configure the Linear MCP' → linear), check whether a connection for it already exists, and read the preset's setup note to learn what the provider requires. Services whose provider must first validate minddy as a client (Google Workspace, Figma) are left out of the catalog on purpose: say minddy does not offer them, and only add one by name + url when the user has their own OAuth app with that provider. With a query, the public MCP registry is searched too: registry entries beyond the catalog come back with their URL, ready to be configured by name + url. Then research the provider's current prerequisites with web_search before creating anything.",
       parameters: {
         type: "object" as const,
         properties: {
@@ -97,7 +97,7 @@ export const MCP_SETUP_TOOLS = [
           preset_id: {
             type: "string",
             description:
-              "Catalog id from list_mcp_presets ('notion', 'google-gmail', …). Fills name, URL and the expected authentication from the catalog.",
+              "Catalog id from list_mcp_presets ('notion', 'linear', …). Fills name, URL and the expected authentication from the catalog.",
           },
           connection_id: {
             type: "string",

@@ -17,6 +17,11 @@ export interface McpPreset {
   /** Scopes to request when the provider documents a narrower set than the
    * `scopes_supported` it advertises; otherwise discovery decides. */
   scopes?: string[];
+  /** `false` keeps the preset out of what minddy offers (settings catalog and
+   * Numo's `list_mcp_presets`) while `mcpPresetForUrl` still recognizes it, so
+   * existing and hand-added connections keep their logo, setup note and
+   * scopes. */
+  listed?: false;
 }
 const googleDocs =
   "https://developers.google.com/workspace/guides/configure-mcp-servers";
@@ -120,6 +125,10 @@ export const MCP_PRESETS: McpPreset[] = [
       setup: "googlePreview",
       docs: googleDocs,
       scopes,
+      // Hidden since 2026-11-08 (MIN-911, MIN-913): the developer preview
+      // needs preview access and a verified OAuth app, and verifying minddy
+      // with Google means a paid yearly CASA audit.
+      listed: false,
     }),
   ),
   {
@@ -153,6 +162,9 @@ export const MCP_PRESETS: McpPreset[] = [
     auth: "oauth",
     setup: "approvedClient",
     docs: "https://developers.figma.com/docs/figma-mcp-server/",
+    // Hidden since 2026-11-08 (MIN-913): Figma only accepts MCP clients it
+    // has approved, and minddy is not one of them.
+    listed: false,
   },
   {
     id: "asana",
@@ -201,7 +213,8 @@ export const MCP_PRESETS: McpPreset[] = [
     auth: "oauth",
     // Vercel only accepts MCP clients it has reviewed: its registration
     // endpoint refuses minddy's callback with `invalid_redirect_uri`
-    // (verified 2026-10-28, MIN-828).
+    // (verified 2026-10-28, MIN-828). It stays listed, unlike Figma, because
+    // minddy's approval request is under review (MIN-835).
     setup: "approvedClient",
     docs: "https://vercel.com/docs/agent-resources/vercel-mcp",
   },
@@ -366,3 +379,9 @@ export const MCP_PRESETS: McpPreset[] = [
     docs: "https://docs.ramp.com/agent/mcp",
   },
 ];
+
+/** The presets minddy offers: the catalog minus the services a user cannot
+ * connect until the provider validates minddy as a client (MIN-913). */
+export const LISTED_MCP_PRESETS: McpPreset[] = MCP_PRESETS.filter(
+  (preset) => preset.listed !== false,
+);

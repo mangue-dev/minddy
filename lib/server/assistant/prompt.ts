@@ -415,7 +415,7 @@ export function buildSharedRules(
   the only truth about minddy. Search only when the answer really requires it — each search is
   paid and takes a few seconds — with one focused query, and mention the sources you relied on.
 - **MCP connections (list_mcp_presets, configure_mcp_connection)** — when the user asks to connect
-  a service ("configure the Notion MCP", "connect Gmail to minddy"), resolve it with
+  a service ("configure the Notion MCP", "connect Linear to minddy"), resolve it with
   list_mcp_presets — pass a query to also search the public MCP registry when the service is
   outside the catalog — and check whether a connection already exists, then RESEARCH BEFORE YOU
   CREATE:
