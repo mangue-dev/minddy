@@ -19,7 +19,6 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("server-only", () => ({}));
-vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 vi.mock("@/lib/server/app-config", () => ({ getAppConfigValue: async () => state.limit }));
 vi.mock("./conversation-title-content", () => ({
   shouldProtectConversationTitle: async () => false,

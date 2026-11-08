@@ -2,8 +2,9 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getTranslations } from "next-intl/server";
+import { createTranslator } from "next-intl";
 import { defaultLocale, locales, type Locale } from "@/i18n/config";
+import { loadMessages } from "@/i18n/messages";
 import {
   NUMO_WAKE_DAILY_LIMIT_KEY,
   parseNumoWakeDailyLimit,
@@ -86,7 +87,8 @@ function localeOf(metadata: Record<string, unknown>): Locale {
 
 async function createConversation(service: SupabaseClient, userId: string, id: string,
   locale: Locale): Promise<void> {
-  const t = await getTranslations({ locale, namespace: "Account" });
+  // Outside any request (the routines clock): the catalog is loaded directly.
+  const t = createTranslator({ locale, messages: await loadMessages(locale), namespace: "Account" });
   const title = t("numoBackgroundTitle");
   const stored = await shouldProtectConversationTitle(service)
     ? await encodeConversationTitle(userId, id, title)
