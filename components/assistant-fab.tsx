@@ -40,12 +40,14 @@ export function AssistantFab() {
   // to read a value that only moves twice per revolution.
   const chatBusy = useAssistantBusy();
   const unreadConversationId = useAssistantUnreadResponseConversationId();
-  const { isOpen } = useAssistantPanel();
+  const { isOpen, fabSuppressed } = useAssistantPanel();
   // The beam is a "Numo is working, look over here" signal for a shell the
-  // user is NOT looking at. Panel open → the activity is already on screen;
-  // the border would only re-signal what the user is watching.
-  const beamActive = chatBusy && !isOpen;
-  const unread = !!unreadConversationId && !isOpen && !beamActive;
+  // user is NOT looking at. Panel open, or a page showing the conversation
+  // (Home) → the activity is already on screen; the border would only
+  // re-signal what the user is watching.
+  const watching = isOpen || fabSuppressed;
+  const beamActive = chatBusy && !watching;
+  const unread = !!unreadConversationId && !watching && !beamActive;
   const question = useAssistantUnreadAwaitsAnswer() && unread;
   const chordArmed = useChordPrefix() === CHORD_PREFIX;
   const t = useTranslations("Assistant");

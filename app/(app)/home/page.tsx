@@ -71,7 +71,9 @@ export default function HomePage() {
   useSuppressAssistantFab(true);
   // The open panel shows the same conversation and owns the keyboard.
   const { isOpen: panelOpen } = useAssistantPanel();
-  const { loadConversation } = useAssistantChatContext();
+  const { loadConversation, state: chat, isBusy } = useAssistantChatContext();
+  // Already on a blank conversation: starting another would change nothing.
+  const blankConversation = !chat.conversationId && chat.messages.length === 0 && !isBusy;
   const aiAvailability = useAiSurfaceAvailability("assistant");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
 
@@ -87,7 +89,7 @@ export default function HomePage() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <h1 className="sr-only">{greeting}</h1>
       <AppContentHeader contentClassName="justify-end gap-2">
-        {aiUnavailable ? null : (
+        {aiUnavailable || blankConversation ? null : (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

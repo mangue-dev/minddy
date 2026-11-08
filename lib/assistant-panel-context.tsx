@@ -109,10 +109,11 @@ export interface AssistantPanelContextValue {
     ownerId: string,
   ) => void;
   /**
- * Does a surface already display a composer pinned to the bottom of the screen, where
- * the FAB lands? Declared by the surface itself (`useSuppressAssistantFab`)
- * rather than deduced from a list of routes: on the same road, a page can
- * show one or not depending on the open tab.
+ * Does a surface already show Numo's conversation on screen (Home, MIN-930)?
+ * Declared by the surface itself (`useSuppressAssistantFab`) rather than
+ * deduced from a list of routes. The Numo launchers then stop signalling
+ * Numo's activity, as they do while the panel is open: the user is watching
+ * it already.
  */
   fabSuppressed: boolean;
   /** `ownerId` counts surfaces: several can be mounted at once. */

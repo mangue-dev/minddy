@@ -25,10 +25,11 @@ const SLOT_CLASS = "flex h-full min-w-0 items-center justify-center rounded-full
 export function MobileNumoButton() {
   const tk = useTranslations("Keyboard.shortcuts");
   const ta = useTranslations("Assistant");
-  const { isOpen } = useAssistantPanel();
+  const { isOpen, fabSuppressed } = useAssistantPanel();
   const busy = useAssistantBusy();
   const unreadConversationId = useAssistantUnreadResponseConversationId();
-  const unread = !!unreadConversationId && !isOpen && !busy;
+  // Panel open, or a page showing the conversation (Home): nothing to signal.
+  const unread = !!unreadConversationId && !isOpen && !fabSuppressed && !busy;
   const question = useAssistantUnreadAwaitsAnswer() && unread;
   const numoLabel = unread
     ? `${tk("navAssistant")} — ${ta(question ? "unreadQuestion" : "unreadConversation")}`
