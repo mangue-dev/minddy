@@ -77,6 +77,8 @@ export interface StartNumoIntentInput {
     budgetUsd: number | null;
     budgetPercent: number;
   };
+  /** Server-owned background wake (MIN-929): the batch that woke Numo. */
+  wake?: { batchId: string };
 }
 
 export interface StartedNumoIntent {
@@ -210,6 +212,7 @@ export async function startNumoIntent(
               operationBudgetPercent: input.routine.budgetPercent,
             }
           : {}),
+        ...(input.wake ? { wake: { batchId: input.wake.batchId } } : {}),
       },
       model: configuration.model,
       reasoningLevel: configuration.reasoningLevel,

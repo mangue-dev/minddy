@@ -6,6 +6,7 @@ import { hasUsageBudget } from "@/lib/server/usage";
 import { getServiceClient } from "@/lib/supabase-service";
 import type { NumoEventBatch } from "./event-batches";
 import { loadWakeInput } from "./wake-context";
+import { hasNumoWakeLeft, numoWake, type NumoWakeOutcome } from "./wake";
 import {
   buildNumoWakeSpec,
   numoWakeVerdict,
@@ -21,6 +22,8 @@ import {
  *
  * - Background Numo or Numo's memory switched off since the batch was
  *   routed: no triage, the batch closes.
+ * - The user's daily wake cap is reached (`wake.ts`): no triage, the batch
+ *   closes.
  * - No budget left: no triage, the batch closes. Both engines are checked
  *   the way they bill: the decision model reads the user's automations key,
  *   the LLM fallback their assistant key.
@@ -46,25 +49,18 @@ export interface NumoWakeRequest {
   engine: DecisionEngine;
 }
 
-export type NumoWake = (request: NumoWakeRequest) => Promise<void>;
-
-/**
- * Until the wake ships (MIN-929), a decision to wake is only logged, with
- * identifiers and fixed codes.
- */
-const logWake: NumoWake = async (request) => {
-  console.info(
-    `[numo-wake] batch=${request.batchId} wake events=${request.eventIds.length} reason=${request.reason} engine=${request.engine}`
-  );
-};
+/** What a wake did: `started` admitted Numo's turn; the others started nothing. */
+export type NumoWake = (request: NumoWakeRequest) => Promise<NumoWakeOutcome>;
 
 export type NumoTriageOutcome =
   | "empty"
   | "switched_off"
   | "budget_exhausted"
+  | "capped"
   | "no_decision"
   | "asleep"
   | "woken"
+  | "already_woken"
   | "wake_failed";
 
 export async function triageNumoEventBatch(
@@ -79,6 +75,11 @@ export async function triageNumoEventBatch(
   const metadata = (account?.user?.user_metadata ?? {}) as Record<string, unknown>;
   if (String(metadata.numo_background) !== "true" || String(metadata.numo_memory) === "false") {
     return "switched_off";
+  }
+  // Past the daily cap no wake can follow: the decision is not even paid for.
+  if (!(await hasNumoWakeLeft(batch.user_id))) {
+    console.warn(`[numo-wake] batch=${batch.id} skipped: capped`);
+    return "capped";
   }
   const input = await loadWakeInput(service, batch);
   const spec = buildNumoWakeSpec(input);
@@ -102,8 +103,9 @@ export async function triageNumoEventBatch(
   }
   const verdict = numoWakeVerdict(outcome.answers, selectWakeEvents(input.events).shown);
   if (!verdict.wake) return "asleep";
+  let woke: NumoWakeOutcome;
   try {
-    await (deps.wake ?? logWake)({
+    woke = await (deps.wake ?? numoWake)({
       batchId: batch.id,
       userId: batch.user_id,
       eventIds: verdict.eventIds,
@@ -115,5 +117,11 @@ export async function triageNumoEventBatch(
     console.error(`[numo-wake] batch=${batch.id} wake_failed:`, (error as Error).name);
     return "wake_failed";
   }
-  return "woken";
+  switch (woke) {
+    case "started": return "woken";
+    case "duplicate": return "already_woken";
+    case "empty": return "empty";
+    case "switched_off": return "switched_off";
+    case "capped": return "capped";
+  }
 }

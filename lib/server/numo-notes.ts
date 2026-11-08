@@ -130,6 +130,8 @@ export async function sendNumoNote(input: {
   body: unknown;
   link: NumoNoteLink | null;
   turnId?: string | null;
+  /** A background turn's urgent note (MIN-929): counted by the daily urgent cap. */
+  urgent?: boolean;
   now?: Date;
 }): Promise<SendNumoNoteResult> {
   const { service, userId, projectId, link } = input;
@@ -188,7 +190,8 @@ export async function sendNumoNote(input: {
     id, project_id: projectId, user_id: userId,
     numo_turn_id: input.turnId ?? null, title, body,
   }, { service });
-  const { error: noteError } = await service.from("numo_notes").insert(note);
+  const { error: noteError } = await service.from("numo_notes")
+    .insert(input.urgent ? { ...note, urgent: true } : note);
   if (noteError) {
     console.error("[numo-notes] insert_failed", { code: noteError.code });
     return { ok: false, error: "Unable to send the note." };

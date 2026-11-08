@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-08",
   "compatibility": {
@@ -58,9 +58,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-08"
   },
   "related": [
@@ -79,7 +79,7 @@
       "src": "/documentation/es/instance-administration-overview.png",
       "alt": "Pestaña Cuentas con el número de cuentas y la búsqueda de una cuenta por su correo exacto.",
       "caption": "Cuentas muestra el número de cuentas y la búsqueda de soporte; la captura procede de una instancia de demostración.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/es/instance-administration-models.png",
       "alt": "Pestaña Modelos con un modelo predeterminado por categoría y los modelos por tarea plegados.",
       "caption": "Modelos muestra un modelo predeterminado por categoría; los modelos por tarea quedan plegados. No se cambió ningún ajuste de modelo ni de proveedor para esta captura.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/es/instance-administration-instance.png",
       "alt": "Pestaña Instancia con el origen de cada variable, una clave de OpenRouter enmascarada definida aquí y las direcciones de administradores del archivo.",
       "caption": "Instancia muestra de dónde viene cada valor; los secretos solo muestran sus últimos caracteres. Esta captura procede de una instancia autoalojada local desechable.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -156,7 +156,7 @@ La consola tiene tres pestañas: **Cuentas**, **Costes**, **Modelos** y, donde s
 
 ## Elegir los modelos por categoría {#models}
 
-Cada tarjeta de **Modelos** tiene un **Modelo predeterminado** para su categoría: **Asistente** (Numo, títulos de conversación, búsqueda web, revisión de eventos), **Automatizaciones** (Smart Fill y sus títulos, Smart Assign, decisiones de relación, asignación de importaciones CSV, división de briefs, mensajes de commit al fusionar), **Embeddings** (embeddings de incidencias y sugerencias) y **Sugerencias y sitio público** (análisis de sugerencias, cuadro de preguntas de la FAQ). Una tarea sigue el modelo predeterminado de su categoría hasta que le das su propio modelo en **Modelos por tarea**; para que vuelva a seguir la categoría, elige en su selector el modelo de la categoría, que aparece con su propio nombre y marcado mientras la tarea lo sigue. **Modelo predeterminado** solo sigue siendo una opción cuando ese modelo no está en el catálogo. Mientras el modelo predeterminado de una categoría no está definido, cada tarea conserva su propio valor integrado. **Nivel de razonamiento**, **Modelo de decisión** y los dos ajustes de **Voz** tienen su propia fila. Definir el modelo predeterminado de una categoría libera las tareas que aún tienen su valor integrado, como las que recibe una instancia nueva; una tarea configurada con otro modelo lo conserva. **Modelos recomendados** fija la lista corta con la que se abre cada selector de modelo. **Claves personales** está plegado al final: solo afecta a los miembros que usan su propia clave de proveedor.
+Cada tarjeta de **Modelos** tiene un **Modelo predeterminado** para su categoría: **Asistente** (Numo, títulos de conversación, búsqueda web, revisión de eventos), **Automatizaciones** (Smart Fill y sus títulos, Smart Assign, decisiones de relación, asignación de importaciones CSV, división de briefs, mensajes de commit al fusionar), **Embeddings** (embeddings de incidencias y sugerencias) y **Sugerencias y sitio público** (análisis de sugerencias, cuadro de preguntas de la FAQ). Una tarea sigue el modelo predeterminado de su categoría hasta que le das su propio modelo en **Modelos por tarea**; para que vuelva a seguir la categoría, elige en su selector el modelo de la categoría, que aparece con su propio nombre y marcado mientras la tarea lo sigue. **Modelo predeterminado** solo sigue siendo una opción cuando ese modelo no está en el catálogo. Mientras el modelo predeterminado de una categoría no está definido, cada tarea conserva su propio valor integrado. **Nivel de razonamiento**, **Modelo de decisión** y los dos ajustes de **Voz** tienen su propia fila. En la tarjeta **Asistente**, **Turnos en segundo plano por día** limita los turnos que [Numo en segundo plano](/docs/numo#background) ejecuta para un miembro en 24 horas: 20 si está vacío, 0 para desactivar Numo en segundo plano para todos. El archivo de modelos no lo incluye ni lo restablece. Definir el modelo predeterminado de una categoría libera las tareas que aún tienen su valor integrado, como las que recibe una instancia nueva; una tarea configurada con otro modelo lo conserva. **Modelos recomendados** fija la lista corta con la que se abre cada selector de modelo. **Claves personales** está plegado al final: solo afecta a los miembros que usan su propia clave de proveedor.
 
 ## Exportar e importar la configuración de modelos {#models-file}
 

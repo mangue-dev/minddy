@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createTranslator } from "next-intl";
 
 import { getServiceClient } from "@/lib/supabase-service";
@@ -725,4 +726,17 @@ export async function listPendingInvitations(
     }, { actorId, reason: "assistant_member_list" }),
     created_at: r.created_at as string,
   })));
+}
+
+/**
+ * How many invitations to the project still wait for an answer: the
+ * background guard (MIN-929) treats a project with one as shared. Reads no
+ * address, only the count.
+ */
+export async function countPendingInvitations(service: SupabaseClient, projectId: string): Promise<number> {
+  const { count, error } = await service.from("project_invitations")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId).eq("status", "pending");
+  if (error) throw new Error("Unable to count the project's pending invitations");
+  return count ?? 0;
 }

@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-08",
   "compatibility": {
@@ -58,9 +58,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-08"
   },
   "related": [
@@ -79,7 +79,7 @@
       "src": "/documentation/de/instance-administration-overview.png",
       "alt": "Tab Konten mit der Anzahl der Konten und der Kontosuche über die exakte E-Mail-Adresse.",
       "caption": "Konten zeigt die Anzahl der Konten und die Support-Suche; die Aufnahme stammt von einer Demo-Instanz.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/de/instance-administration-models.png",
       "alt": "Tab Modelle mit einem Standardmodell pro Kategorie und eingeklappten Modellen pro Aufgabe.",
       "caption": "Modelle zeigt ein Standardmodell pro Kategorie; die Modelle pro Aufgabe bleiben eingeklappt. Für diese Aufnahme wurde keine Modell- oder Anbietereinstellung geändert.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/de/instance-administration-instance.png",
       "alt": "Tab Instanz mit der Quelle jeder Variablen, einem hier gesetzten, maskierten OpenRouter-Schlüssel und den Administratoradressen aus der Datei.",
       "caption": "Instanz zeigt, woher jeder Wert stammt; Geheimnisse zeigen nur ihre letzten Zeichen. Diese Aufnahme stammt von einer lokalen selbst gehosteten Wegwerf-Instanz.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -154,7 +154,7 @@ Die Konsole hat drei Tabs: **Konten**, **Kosten**, **Modelle** und, wo erlaubt, 
 
 ## Modelle nach Kategorie wählen {#models}
 
-Jede Karte unter **Modelle** hat ein **Standardmodell** für ihre Kategorie: **Assistent** (Numo, Unterhaltungstitel, Websuche, Ereignisprüfung), **Automatisierungen** (Smart Fill und seine Titel, Smart Assign, Beziehungsentscheidungen, Zuordnung von CSV-Importen, Aufteilung von Briefings, Merge-Commit-Nachrichten), **Embeddings** (Embeddings von Tickets und Feedback) und **Feedback und öffentliche Website** (Feedback-Analyse, FAQ-Fragefeld). Eine Aufgabe folgt dem Standardmodell ihrer Kategorie, bis du ihr unter **Modelle pro Aufgabe** ein eigenes Modell gibst; damit sie wieder der Kategorie folgt, wähle in ihrer Auswahl das Modell der Kategorie, das unter seinem eigenen Namen steht und abgehakt ist, solange die Aufgabe ihm folgt. **Standardmodell** bleibt nur dann eine Option, wenn dieses Modell nicht im Katalog steht. Solange das Standardmodell einer Kategorie nicht gesetzt ist, behält jede Aufgabe ihren eigenen integrierten Standard. **Reasoning-Stufe**, **Entscheidungsmodell** und die beiden Einstellungen unter **Spracheingabe** haben eigene Zeilen. Das Setzen eines Standardmodells gibt die Aufgaben frei, die noch ihren integrierten Standard tragen, etwa die, mit denen eine neue Instanz eingerichtet wird; eine Aufgabe mit einem anderen Modell behält es. **Empfohlene Modelle** legt die kurze Liste fest, mit der sich jede Modellauswahl öffnet. **Persönliche Schlüssel** ist unten eingeklappt: Es betrifft nur Mitglieder, die ihren eigenen Anbieterschlüssel nutzen.
+Jede Karte unter **Modelle** hat ein **Standardmodell** für ihre Kategorie: **Assistent** (Numo, Unterhaltungstitel, Websuche, Ereignisprüfung), **Automatisierungen** (Smart Fill und seine Titel, Smart Assign, Beziehungsentscheidungen, Zuordnung von CSV-Importen, Aufteilung von Briefings, Merge-Commit-Nachrichten), **Embeddings** (Embeddings von Tickets und Feedback) und **Feedback und öffentliche Website** (Feedback-Analyse, FAQ-Fragefeld). Eine Aufgabe folgt dem Standardmodell ihrer Kategorie, bis du ihr unter **Modelle pro Aufgabe** ein eigenes Modell gibst; damit sie wieder der Kategorie folgt, wähle in ihrer Auswahl das Modell der Kategorie, das unter seinem eigenen Namen steht und abgehakt ist, solange die Aufgabe ihm folgt. **Standardmodell** bleibt nur dann eine Option, wenn dieses Modell nicht im Katalog steht. Solange das Standardmodell einer Kategorie nicht gesetzt ist, behält jede Aufgabe ihren eigenen integrierten Standard. **Reasoning-Stufe**, **Entscheidungsmodell** und die beiden Einstellungen unter **Spracheingabe** haben eigene Zeilen. In der Karte **Assistent** begrenzt **Hintergrund-Turns pro Tag** die Turns, die [Numo im Hintergrund](/docs/numo#background) für ein Mitglied in 24 Stunden ausführt: 20, wenn das Feld leer ist, 0 schaltet Numo im Hintergrund für alle aus. Die Modelldatei enthält diesen Wert nicht und setzt ihn nicht zurück. Das Setzen eines Standardmodells gibt die Aufgaben frei, die noch ihren integrierten Standard tragen, etwa die, mit denen eine neue Instanz eingerichtet wird; eine Aufgabe mit einem anderen Modell behält es. **Empfohlene Modelle** legt die kurze Liste fest, mit der sich jede Modellauswahl öffnet. **Persönliche Schlüssel** ist unten eingeklappt: Es betrifft nur Mitglieder, die ihren eigenen Anbieterschlüssel nutzen.
 
 ## Die Modellkonfiguration exportieren und importieren {#models-file}
 

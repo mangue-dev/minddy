@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 15,
-  "sourceRevision": 15,
+  "revision": 16,
+  "sourceRevision": 16,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-08",
   "compatibility": {
@@ -58,9 +58,9 @@
     ]
   },
   "review": {
-    "revision": 15,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 16,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-929 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-08"
   },
   "related": [
@@ -79,7 +79,7 @@
       "src": "/documentation/en/instance-administration-overview.png",
       "alt": "Accounts tab with the number of accounts and the exact-email account lookup.",
       "caption": "Accounts shows the number of accounts and the support lookup; this capture comes from a demonstration instance.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +96,7 @@
       "src": "/documentation/en/instance-administration-models.png",
       "alt": "Models tab with one default model per category and folded per-task models.",
       "caption": "Models shows one default per category; per-task models stay folded. No model or provider setting was changed for this capture.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +113,7 @@
       "src": "/documentation/en/instance-administration-instance.png",
       "alt": "Instance tab with each variable's source, a masked OpenRouter key set here and the administrator addresses from the file.",
       "caption": "Instance shows where each value comes from; secrets keep only their last characters. This capture comes from a disposable local self-hosted instance.",
-      "revision": 15,
+      "revision": 16,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -154,7 +154,7 @@ The console has three tabs: **Accounts**, **Costs**, **Models** and, where it is
 
 ## Choose models by category {#models}
 
-Each card of **Models** has one **Default model** for its category: **Assistant** (Numo, conversation titles, web search, event screening), **Automations** (Smart Fill and its titles, Smart Assign, relation decisions, CSV import mapping, brief breakdown, merge commit messages), **Embeddings** (issue and feedback embeddings) and **Feedback and public site** (feedback analysis, FAQ question box). A task follows its category’s default until you give it its own model under **Per-task models**; to make it follow the category again, choose the category's model in its picker, listed under its own name and checked while the task follows it. **Default model** remains as an option only when that model is not in the catalog. While a category’s default is unset, each task keeps its own built-in default. **Reasoning level**, **Decision model** and the two **Voice** settings have rows of their own. Setting a category default releases the task rows that still hold their built-in default, such as the ones a new instance is seeded with; a task set to another model keeps it. **Recommended models** sets the short list every model picker opens on. **Personal keys** is folded at the bottom: it only concerns members who use their own provider key.
+Each card of **Models** has one **Default model** for its category: **Assistant** (Numo, conversation titles, web search, event screening), **Automations** (Smart Fill and its titles, Smart Assign, relation decisions, CSV import mapping, brief breakdown, merge commit messages), **Embeddings** (issue and feedback embeddings) and **Feedback and public site** (feedback analysis, FAQ question box). A task follows its category’s default until you give it its own model under **Per-task models**; to make it follow the category again, choose the category's model in its picker, listed under its own name and checked while the task follows it. **Default model** remains as an option only when that model is not in the catalog. While a category’s default is unset, each task keeps its own built-in default. **Reasoning level**, **Decision model** and the two **Voice** settings have rows of their own. In the **Assistant** card, **Background turns per day** caps the turns [Numo in the background](/docs/numo#background) runs for one member in 24 hours: 20 when empty, 0 to switch background Numo off for everyone. The models file neither carries nor resets it. Setting a category default releases the task rows that still hold their built-in default, such as the ones a new instance is seeded with; a task set to another model keeps it. **Recommended models** sets the short list every model picker opens on. **Personal keys** is folded at the bottom: it only concerns members who use their own provider key.
 
 ## Export and import the model configuration {#models-file}
 

@@ -135,6 +135,13 @@ export const RETENTION_DAYS = {
    * cap of open entries for good.
    */
   staleOpenJournalEntries: 180,
+  /**
+   * Background wakes (MIN-929): one row per woken batch, and the background
+   * conversation it ran in. The daily cap reads the last 24 hours and a closed
+   * batch never wakes Numo again, so a month keeps enough to answer a support
+   * question; the urgent-note claims go at the same age.
+   */
+  numoWakes: 30,
 } as const;
 
 const DAY_MS = 86_400_000;
@@ -272,6 +279,32 @@ async function purgeForgeWebhookDeliveries(service: Service, now: Date) {
       .delete({ count: "exact" })
       .lt("received_at", cutoff(RETENTION_DAYS.forgeWebhookDeliveries, now))
   );
+}
+
+/**
+ * Background wakes older than `numoWakes` days, with the conversation each
+ * one ran in (its turns and messages go with it), and the urgent-note claims
+ * of the same age. Bounded per run like the other sweeps.
+ */
+async function purgeNumoWakes(service: Service, now: Date) {
+  const before = cutoff(RETENTION_DAYS.numoWakes, now);
+  const { data, error } = await service.from("numo_wakes")
+    .select("id, user_id, conversation_id").lt("created_at", before).limit(500);
+  if (error) throw error;
+  const rows = (data ?? []) as Array<{ id: string; user_id: string; conversation_id: string }>;
+  for (const row of rows) {
+    const { error: conversationError } = await service.from("conversations").delete()
+      .eq("id", row.conversation_id).eq("user_id", row.user_id);
+    if (conversationError) throw conversationError;
+  }
+  if (rows.length > 0) {
+    const { error: wakeError } = await service.from("numo_wakes").delete().in("id", rows.map((row) => row.id));
+    if (wakeError) throw wakeError;
+  }
+  const claims = counted(
+    await service.from("numo_urgent_note_claims").delete({ count: "exact" }).lt("created_at", before)
+  );
+  return rows.length + claims;
 }
 
 /**
@@ -431,6 +464,7 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       unseenClosedBefore: cutoff(RETENTION_DAYS.unseenClosedJournalEntries, now),
       openBefore: cutoff(RETENTION_DAYS.staleOpenJournalEntries, now),
     })),
+    await step("numo_wakes", () => purgeNumoWakes(service, now)),
     // Per-account OpenRouter keys no account references any more (MIN-761):
     // an issuance that died half-way, a failed delete on account deletion.
     // Swept here since MIN-829 removed the admin button that did it by hand.

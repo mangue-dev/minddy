@@ -46,6 +46,24 @@ function setup({ meta = {} as Meta } = {}) {
 beforeEach(() => { setup(); });
 
 describe("updateAccountSettings — the settings Numo could not reach before", () => {
+  it("turns Numo in the background on only with the memory on (MIN-929)", async () => {
+    setup({ meta: { numo_memory: false } });
+    const refused = await updateAccountSettings({ userId: "user-1", input: { numo_background: true } });
+    expect(refused.ok).toBe(false);
+    const both = await updateAccountSettings({
+      userId: "user-1", input: { numo_memory: true, numo_background: true },
+    });
+    expect(both.ok && both.settings.numo_background).toBe(true);
+    // The key alone is a change, both ways.
+    const off = await updateAccountSettings({ userId: "user-1", input: { numo_background: false } });
+    expect(off.ok && off.settings.numo_background).toBe(false);
+    const on = await updateAccountSettings({ userId: "user-1", input: { numo_background: true } });
+    expect(on.ok && on.settings.numo_background).toBe(true);
+    // Turning the memory off reads background Numo as off too.
+    const memoryOff = await updateAccountSettings({ userId: "user-1", input: { numo_memory: false } });
+    expect(memoryOff.ok && memoryOff.settings.numo_background).toBe(false);
+  });
+
   it("writes the keyboard send shortcut", async () => {
     const r = await updateAccountSettings({ userId: "user-1", input: { send_shortcut: "enter" } });
     expect(r.ok).toBe(true);

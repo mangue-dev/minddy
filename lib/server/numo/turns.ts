@@ -89,6 +89,8 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { loadNumoMemoryPrompt } from "./memory-prompt";
 import { touchNumoMemories } from "./memory-content";
 import { loadNumoJournalPrompt } from "./journal-prompt";
+import { NUMO_WAKE_PROMPT_BLOCK } from "./wake-prompt";
+import { proactiveToolSet } from "@/lib/server/assistant/proactive-guard";
 import type { JournalScope, NumoJournalSource } from "./journal-content";
 export interface NumoTurnIntent {
   /** Public help uses the same billing and durable lifecycle, with restricted tools. */
@@ -126,6 +128,11 @@ export interface NumoTurnIntent {
    * before offering the admin tools, and each admin call verifies it again.
    */
   adminSession?: AdminSessionGrant | null;
+  /**
+   * A background turn (MIN-929): the batch of workspace events that woke
+   * Numo. The turn runs unattended, under the background guard.
+   */
+  wake?: { batchId: string } | null;
 }
 
 export type NumoTurnCheckpoint =
@@ -493,7 +500,7 @@ async function buildExecutionInput(input: {
   // unattended and a comment mention sits on a shared surface, so neither can
   // change what Numo remembers.
   const memoryOn = !intent.documentation && intent.memoryEnabled !== false;
-  const memoryWritable = memoryOn && !intent.routineId && intent.triggerSource !== "mention";
+  const memoryWritable = memoryOn && !intent.routineId && !intent.wake && intent.triggerSource !== "mention";
   if (memoryOn) {
     // An unreadable memory degrades the turn rather than failing it.
     const memory = await loadNumoMemoryPrompt({
@@ -512,6 +519,7 @@ async function buildExecutionInput(input: {
   // found waiting for the user, belongs on their home page as much.
   const journalSource: NumoJournalSource | null = intent.documentation
     ? null
+    : intent.wake ? "wake"
     : intent.routineId ? "routine" : intent.triggerSource === "mention" ? "mention" : "conversation";
   // A mention replies on a project's shared thread, and a routine runs on
   // instructions and content other members wrote: both see and close only
@@ -529,6 +537,9 @@ async function buildExecutionInput(input: {
     });
     if (journal) systemPrompt += journal;
   }
+  // Background Numo (MIN-929): the rules of a turn nobody watches. Its writes
+  // go through the background guard, set on the tool context below.
+  if (intent.wake) systemPrompt += NUMO_WAKE_PROMPT_BLOCK;
   if (intent.routineId) {
     const timing = intent.routineOrigin === "scheduled"
       ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
@@ -652,6 +663,9 @@ async function buildExecutionInput(input: {
   if (intent.routineId) {
     tools = tools.filter((tool) => !ROUTINE_UNATTENDED_EXCLUDED_TOOLS.has(tool.function.name));
   }
+  // A background turn is unattended too, and its guarded tools take the
+  // memory that allows them (`authorized_by`).
+  if (intent.wake) tools = proactiveToolSet(tools);
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
   // An @Numo mention runs on the shared surface of this one project: a
   // reader's mention is offered read tools only (plus comments when allowed).
@@ -1081,6 +1095,7 @@ async function executeClaimedNumoTurn(input: {
       memoryWritable: execution.memoryWritable,
       journalSource: execution.journalSource,
       journalScope: execution.journalScope,
+      proactive: !!claimed.intent.wake,
       model: runtime.model,
       aiRuntime: runtime,
       conversationId: claimed.conversation_id,
@@ -1566,7 +1581,7 @@ export async function drainNumoTurns(options?: { limit?: number }) {
   const { error: recoveryError } = await service.rpc("recover_stale_numo_turns");
   if (recoveryError) throw new Error(recoveryError.message);
   const { data, error } = await service.from("numo_assistant_turns")
-    .select("id, status")
+    .select("id, status, user_id, conversation_id, request_id")
     .in("status", ["queued", "retryable"])
     .lte("not_before", new Date().toISOString())
     .order("not_before", { ascending: true })
@@ -1574,7 +1589,14 @@ export async function drainNumoTurns(options?: { limit?: number }) {
     .limit(options?.limit ?? 10);
   if (error) throw new Error(error.message);
   let claimed = 0;
+  // A background wake (MIN-929) whose user switched it off since admission
+  // is stopped instead of run.
+  const { stopIfBackgroundOff, wakeTurnIds } = await import("./wake");
+  const wakes = await wakeTurnIds(service, (data ?? []).map((row) => row.id as string));
   for (const row of data ?? []) {
+    if (wakes.has(row.id as string) && await stopIfBackgroundOff(service, row as {
+      user_id: string; conversation_id: string; request_id: string;
+    })) continue;
     // A `retryable` turn carries a checkpoint and waits on nobody: for a turn
     // started server-side (PR review, routine, automation) there is no
     // interactive client to press "Retry", so the drain is the only thing

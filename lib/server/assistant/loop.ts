@@ -856,9 +856,9 @@ export async function processChat(
       allToolCalls.push(...assistantToolCalls);
 
       // ask_user pauses immediately: the loop stops and waits for the user.
-      // A routine runs unattended: its ask_user goes to executeTool, which
-      // refuses it, and the run carries on.
-      const askUserPauses = !context.routineId;
+      // A routine or a background turn runs unattended: its ask_user goes to
+      // executeTool, which refuses it, and the run carries on.
+      const askUserPauses = !context.routineId && !context.proactive;
       const hasAskUser = askUserPauses && [...toolCallAccumulators.values()].some(
         (acc) => acc.name === "ask_user"
       );

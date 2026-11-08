@@ -48,7 +48,7 @@ vi.mock("@/lib/server/app-config", () => ({
 vi.mock("@/lib/server/decisions/model-validation", () => ({ validateDecisionModelChoice }));
 vi.mock("@/lib/server/model-capability-validation", () => ({ validateCatalogCapabilityChoice }));
 
-const { PATCH, POST } = await import("@/app/api/admin/app-config/route");
+const { GET, PATCH, POST } = await import("@/app/api/admin/app-config/route");
 const { MODEL_CONFIG_FILE_FORMAT } = await import("@/lib/ai-model-config-file");
 
 function patch(body: unknown) {
@@ -113,6 +113,29 @@ describe("PATCH /api/admin/app-config — decision model", () => {
     await patch({ key: "smart_fill_model", value: "deepseek/deepseek-v4-flash" });
     expect(validateDecisionModelChoice).not.toHaveBeenCalled();
     expect(setAppConfigValue).toHaveBeenCalledWith("smart_fill_model", "deepseek/deepseek-v4-flash");
+  });
+});
+
+describe("PATCH /api/admin/app-config — background turns per day (MIN-929)", () => {
+  it("stores a whole number and refuses anything else", async () => {
+    expect((await patch({ key: "numo_wake_daily_limit", value: " 05 " })).status).toBe(200);
+    expect(setAppConfigValue).toHaveBeenCalledWith("numo_wake_daily_limit", "5");
+    for (const value of ["-1", "2.5", "many", "501"]) {
+      expect((await patch({ key: "numo_wake_daily_limit", value })).status).toBe(400);
+    }
+    expect(setAppConfigValue).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads back for the dashboard", async () => {
+    getAppConfigValues.mockResolvedValue({ numo_wake_daily_limit: "5" });
+    const response = await GET(new NextRequest("http://localhost/api/admin/app-config"));
+    expect(getAppConfigValues.mock.calls[0][0]).toContain("numo_wake_daily_limit");
+    await expect(response.json()).resolves.toMatchObject({ values: { numo_wake_daily_limit: "5" } });
+  });
+
+  it("is neither exported nor reset by a models file", async () => {
+    const { MODEL_CONFIG_FILE_KEYS } = await import("@/lib/ai-model-config-file");
+    expect(MODEL_CONFIG_FILE_KEYS).not.toContain("numo_wake_daily_limit");
   });
 });
 

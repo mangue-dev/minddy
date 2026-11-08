@@ -3033,6 +3033,10 @@
     "numoMemoryForgetAll": "Forget everything",
     "numoMemoryForgetAllTitle": "{count, plural, one {Delete # memory?} other {Delete all # memories?}}",
     "numoMemoryForgetAllDescription": "Numo will stop using them. This can't be undone.",
+    "numoBackgroundTitle": "Numo in the background",
+    "numoBackgroundHelp": "When something in your projects concerns you, Numo acts on it while you're away and notes in its journal what it did and what waits for you; ask Numo in a conversation to see it. In a shared project it only changes what is yours: issues assigned to you or that you created, objectives you lead, pages you created. In every project, it doesn't delete anything, act on pull requests, call external MCP tools, administer the project or notify you, except for something urgent, unless one of your memories allows it. Screening your events and each wake count toward your AI usage.",
+    "numoBackgroundSwitch": "Let Numo work in the background",
+    "numoBackgroundNeedsMemory": "Turn on Numo's memory first: Numo in the background follows the instructions and permissions saved there.",
     "dictationSectionTitle": "Voice dictation",
     "dictationCleanupLabel": "Clean up dictations",
     "dictationCleanupDesc": "Fix punctuation, filler words and self-corrections before the text is inserted. Off, the raw transcription is inserted as it was heard.",
@@ -4690,6 +4694,10 @@
       "numo_wake_model": {
         "label": "Event screening model",
         "desc": "Decides whether a batch of workspace events should wake Numo when the decision model is unsure. It never runs while anyone waits."
+      },
+      "numo_wake_daily_limit": {
+        "label": "Background turns per day",
+        "desc": "Background turns one member gets in 24 hours. Past it, Numo stays asleep until the window frees up. 0 turns Numo in the background off for everyone. Empty uses 20."
       },
       "web_search_model": {
         "label": "Web search model",

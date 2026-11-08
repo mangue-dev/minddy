@@ -6,6 +6,7 @@ import {
   setAppConfigValue,
 } from "@/lib/server/app-config";
 import {
+  AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_KEYS,
   categoryMembers,
   getAiConfigField,
@@ -52,9 +53,13 @@ export type AiConfigRefusal = {
 
 export type AiConfigCheck = { ok: true; value: string } | AiConfigRefusal;
 
-/** Every stored value of the registry and its suffixes. */
+/**
+ * Every stored value of the registry and its suffixes, counts included: the
+ * models file leaves counts out, the dashboard and the admin tools do not.
+ */
 export function readAiConfigValues(): Promise<Record<string, string | null>> {
-  return getAppConfigValues(MODEL_CONFIG_FILE_KEYS);
+  const counts = AI_MODEL_CONFIG_FIELDS.filter((field) => field.kind === "count").map((field) => field.key);
+  return getAppConfigValues([...MODEL_CONFIG_FILE_KEYS, ...counts]);
 }
 
 /**
@@ -72,6 +77,13 @@ export async function checkAiConfigValue(key: string, value: unknown): Promise<A
   if (!trimmed) return { ok: true, value: "" };
   const field = getAiConfigField(key);
 
+  if (field?.kind === "count") {
+    const max = field.max ?? Number.MAX_SAFE_INTEGER;
+    if (!/^\d+$/.test(trimmed) || Number(trimmed) > max) {
+      return { ok: false, status: 400, error: `Value must be a whole number from 0 to ${max}` };
+    }
+    return { ok: true, value: String(Number(trimmed)) };
+  }
   if (field?.kind === "reasoning" && !isReasoningLevel(trimmed)) {
     return {
       ok: false,

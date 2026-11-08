@@ -98,6 +98,7 @@ export const SETTINGS_SECTIONS = {
   accountIssueIndexing: "account-issue-indexing",
   accountNumoStatus: "account-numo-status",
   accountNumoMemory: "account-numo-memory",
+  accountNumoBackground: "account-numo-background",
   accountCyclesEnable: "account-cycles",
   accountCyclesCadence: "account-cycles-cadence",
   accountCyclesCapture: "account-cycles-capture",
@@ -620,6 +621,16 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "numo", "mémoire", "memoire", "memory", "souvenirs", "memories",
           "préférences", "preferences", "retenir", "remember", "oublier", "forget",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountNumoBackground,
+        tab: "agent",
+        icon: BrainIcon,
+        title: tAccount("numoBackgroundTitle"),
+        keywords: [
+          "numo", "arrière-plan", "arriere-plan", "background", "proactif",
+          "proactive", "journal", "réveil", "reveil", "wake", "autonome",
         ],
       }),
       account({

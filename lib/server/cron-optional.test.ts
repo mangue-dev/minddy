@@ -5,10 +5,12 @@ import { readFileSync } from "node:fs";
 const h = vi.hoisted(() => ({
   getServiceClient: vi.fn(),
   drainNumoTurns: vi.fn(),
+  drainNumoWakeTurns: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: h.getServiceClient }));
 vi.mock("@/lib/server/numo/turns", () => ({ drainNumoTurns: h.drainNumoTurns }));
+vi.mock("@/lib/server/numo/wake", () => ({ drainNumoWakeTurns: h.drainNumoWakeTurns }));
 
 import { GET as GET_NUMO } from "@/app/api/cron/numo-turns/route";
 
@@ -62,6 +64,7 @@ describe("optional scheduler", () => {
   it("drains one durable Numo continuation with the cron secret", async () => {
     vi.stubEnv("CRON_SECRET", "x".repeat(32));
     h.drainNumoTurns.mockResolvedValue({ claimed: 1 });
+    h.drainNumoWakeTurns.mockResolvedValue({ ran: 2 });
 
     const response = await GET_NUMO(
       new NextRequest("http://localhost/api/cron/numo-turns", {
@@ -71,7 +74,20 @@ describe("optional scheduler", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, claimed: 1 });
+    expect(await response.json()).toEqual({ ok: true, claimed: 1, wakes: 2 });
     expect(h.drainNumoTurns).toHaveBeenCalledWith({ limit: 1 });
+  });
+
+  it("keeps draining continuations when the background wakes fail (MIN-929)", async () => {
+    vi.stubEnv("CRON_SECRET", "x".repeat(32));
+    h.drainNumoTurns.mockResolvedValue({ claimed: 0 });
+    h.drainNumoWakeTurns.mockRejectedValue(new Error("down"));
+    const response = await GET_NUMO(
+      new NextRequest("http://localhost/api/cron/numo-turns", {
+        method: "POST",
+        headers: { authorization: `Bearer ${"x".repeat(32)}` },
+      }),
+    );
+    expect(await response.json()).toEqual({ ok: true, claimed: 0, wakes: 0 });
   });
 });

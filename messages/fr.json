@@ -3033,6 +3033,10 @@
     "numoMemoryForgetAll": "Tout oublier",
     "numoMemoryForgetAllTitle": "{count, plural, one {Supprimer # souvenir ?} other {Supprimer les # souvenirs ?}}",
     "numoMemoryForgetAllDescription": "Numo ne s'en servira plus. Cette action est irréversible.",
+    "numoBackgroundTitle": "Numo en arrière-plan",
+    "numoBackgroundHelp": "Quand un événement de vos projets vous concerne, Numo agit pendant votre absence et note dans son journal ce qu'il a fait et ce qui vous attend ; demandez-le à Numo dans une conversation pour le consulter. Dans un projet partagé, il ne modifie que ce qui vous revient : les tickets qui vous sont assignés ou que vous avez créés, les objectifs que vous pilotez, les pages que vous avez créées. Dans tous vos projets, il ne supprime rien, ne touche à aucune pull request, n'appelle aucun outil MCP externe, n'administre pas le projet et ne vous notifie que d'une urgence, sauf si l'un de vos souvenirs l'y autorise. Le tri de vos événements et chaque réveil comptent dans votre usage de l'IA.",
+    "numoBackgroundSwitch": "Laisser Numo travailler en arrière-plan",
+    "numoBackgroundNeedsMemory": "Activez d'abord la mémoire de Numo : en arrière-plan, Numo suit les consignes et les autorisations qui y sont enregistrées.",
     "dictationSectionTitle": "Dictée vocale",
     "dictationCleanupLabel": "Nettoyer les dictées",
     "dictationCleanupDesc": "Corrige la ponctuation, les hésitations et les reprises avant d’insérer le texte. Désactivé, la transcription brute est insérée telle qu’elle a été entendue.",
@@ -4690,6 +4694,10 @@
       "numo_wake_model": {
         "label": "Modèle de tri des événements",
         "desc": "Décide si un lot d'événements de l'espace de travail doit réveiller Numo quand le modèle de décision hésite. Personne n'attend sa réponse."
+      },
+      "numo_wake_daily_limit": {
+        "label": "Tours en arrière-plan par jour",
+        "desc": "Tours en arrière-plan accordés à un membre sur 24 heures. Au-delà, Numo ne se réveille plus jusqu'à ce que la fenêtre se libère. 0 désactive Numo en arrière-plan pour tous. Vide : 20."
       },
       "web_search_model": {
         "label": "Modèle de recherche web",

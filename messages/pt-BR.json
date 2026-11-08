@@ -3033,6 +3033,10 @@
     "numoMemoryForgetAll": "Esquecer tudo",
     "numoMemoryForgetAllTitle": "{count, plural, =0 {Excluir # lembranças?} one {Excluir # lembrança?} other {Excluir as # lembranças?}}",
     "numoMemoryForgetAllDescription": "O Numo vai parar de usá-las. Não é possível desfazer.",
+    "numoBackgroundTitle": "Numo em segundo plano",
+    "numoBackgroundHelp": "Quando algo nos seus projetos tem a ver com você, o Numo age enquanto você está fora e anota no diário dele o que fez e o que espera por você; peça ao Numo em uma conversa para ver. Em um projeto compartilhado, ele só altera o que é seu: os tickets atribuídos a você ou criados por você, os objetivos que você lidera, as páginas que você criou. Em todos os projetos, ele não exclui nada, não age em pull requests, não chama ferramentas MCP externas, não administra o projeto e só notifica você de algo urgente, a menos que uma das suas lembranças permita. A triagem dos seus eventos e cada vez que ele acorda contam no seu uso de IA.",
+    "numoBackgroundSwitch": "Deixar o Numo trabalhar em segundo plano",
+    "numoBackgroundNeedsMemory": "Ative primeiro a memória do Numo: em segundo plano, o Numo segue as instruções e as permissões salvas nela.",
     "dictationSectionTitle": "Ditado por voz",
     "dictationCleanupLabel": "Limpar ditados",
     "dictationCleanupDesc": "Corrige pontuação, vícios de linguagem e autocorreções antes de inserir o texto. Desativado, a transcrição é inserida exatamente como foi ouvida.",
@@ -4690,6 +4694,10 @@
       "numo_wake_model": {
         "label": "Modelo de análise de eventos",
         "desc": "Decide se um lote de eventos do espaço de trabalho deve acordar o Numo quando o modelo de decisão está em dúvida. Ninguém espera pela resposta."
+      },
+      "numo_wake_daily_limit": {
+        "label": "Turnos em segundo plano por dia",
+        "desc": "Turnos em segundo plano que um membro recebe em 24 horas. Depois disso, o Numo não acorda até a janela liberar. 0 desativa o Numo em segundo plano para todos. Vazio equivale a 20."
       },
       "web_search_model": {
         "label": "Modelo de pesquisa na web",

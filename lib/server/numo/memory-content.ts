@@ -186,3 +186,16 @@ export async function touchNumoMemories(service: SupabaseClient, userId: string,
     .eq("user_id", userId).in("id", ids as string[]);
   if (error) console.error("[numo-memory] touch_failed", { code: error.code });
 }
+
+/**
+ * The scope of one memory of the user, without its text: what the background
+ * guard (MIN-929) checks when a sensitive action names the memory that
+ * allows it. `null` when the user keeps no memory with this id.
+ */
+export async function getNumoMemoryScope(service: SupabaseClient, userId: string,
+  id: string): Promise<{ id: string; project_id: string | null } | null> {
+  const { data, error } = await service.from("numo_memories")
+    .select("id, project_id").eq("user_id", userId).eq("id", id).maybeSingle();
+  if (error) throw new NumoMemoryError("database", "Unable to read Numo's memory");
+  return data ? { id: data.id as string, project_id: (data.project_id as string | null) ?? null } : null;
+}

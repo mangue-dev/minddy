@@ -27,6 +27,7 @@ import { AccountDataSection } from "@/components/settings/account-data-section";
 import { AccountIssuesSection, AccountNumoIssuesSection } from "@/components/settings/account-issues-section";
 import { AccountSmartFillSection } from "@/components/settings/account-smart-fill-section";
 import { AccountNumoMemorySection } from "@/components/settings/account-numo-memory-section";
+import { AccountNumoBackgroundSection } from "@/components/settings/account-numo-background-section";
 import {
   ACCOUNT_SETTINGS_DEFAULT_TAB,
   ACCOUNT_SETTINGS_TAB_ALIASES,
@@ -129,6 +130,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
         <>
           <AccountAiKeysSection />
           <AccountNumoMemorySection />
+          <AccountNumoBackgroundSection />
           <AccountNumoIssuesSection />
           <AccountMcpClientsSection />
         </>

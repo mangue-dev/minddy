@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 31,
-  "sourceRevision": 30,
+  "revision": 32,
+  "sourceRevision": 31,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-08",
   "compatibility": {
@@ -79,13 +79,16 @@
       "lib/server/assistant/long-message.ts",
       "lib/server/assistant/create-page-database.ts",
       "lib/server/numo/journal-content.ts",
-      "lib/server/numo/journal-prompt.ts"
+      "lib/server/numo/journal-prompt.ts",
+      "lib/server/numo/wake.ts",
+      "lib/server/assistant/proactive-guard.ts",
+      "components/settings/account-numo-background-section.tsx"
     ]
   },
   "review": {
-    "revision": 31,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 32,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-08"
   },
   "related": [
@@ -116,7 +119,7 @@
       "src": "/documentation/de/work-with-numo-workflow.png",
       "alt": "Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.",
       "caption": "Vorhandener Demonstrationsverlauf, für die Anzeige übersetzt. Die gespeicherte Antwort nennt AUR-11 und AUR-7. Die Aufnahme belegt keine neue Ausführung.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -133,7 +136,7 @@
       "src": "/documentation/de/numo-permissions-and-approvals-workflow.svg",
       "alt": "Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.",
       "caption": "Projektzugriff und ausdrückliche Aufträge begrenzen Numo-Aktionen. Externe Inhalte können keine Berechtigung erteilen.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -194,7 +197,7 @@
       "src": "/documentation/de/numo-execution-model-flow.svg",
       "alt": "Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
       "caption": "Lies die Schritte in dieser Reihenfolge. Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -226,7 +229,7 @@
       "src": "/documentation/de/numo-mcp-connections-workflow.png",
       "alt": "Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.",
       "caption": "Numo-Verbindungen sind persönlich. Projektroutinen verwenden die Verbindungen des Projektinhabers.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -243,7 +246,7 @@
       "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
       "alt": "Notion-Verbindungsassistent mit der aus dem Katalog bekannten Anmeldemethode.",
       "caption": "Anmeldeschritt eines Katalogdienstes. Es wurden keine Zugangsdaten eingegeben und kein Server kontaktiert.",
-      "revision": 31,
+      "revision": 32,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -331,6 +334,14 @@ Eine Erinnerung gilt für alle deine Projekte oder für eines; wenn Numo nicht w
 ### Numos Journal {#journal}
 
 Numo führt ein Journal über das, was auf dich wartet, und über das, was es für dich erledigt hat, während du nicht dabei warst: „PR #12 wartet seit 3 Tagen auf dein Review“, „Ich habe die in MIN-42 gewünschte Websuche gemacht“. Es schreibt einen Eintrag, wenn du es bittest, etwas im Blick zu behalten („notier, dass ich auf die Antwort des Kunden warte“), und in einer Routine oder einem `@Numo`-Kommentar, wenn es deine Inhalte ändert. Ist die Sache erledigt, schließt es den Eintrag. Die Unterhaltung zeigt dann **Im Journal notiert** oder **Journaleintrag geschlossen**. Das Journal gehört nur dir, verschickt keine Benachrichtigung, und geschlossene Einträge werden innerhalb von 180 Tagen gelöscht. Durchsuchen kannst du das Journal noch nicht; frag Numo in einer Unterhaltung, was es notiert hat, oder bitte es, einen Eintrag zu schließen.
+
+### Numo im Hintergrund {#background}
+
+Ist **Kontoeinstellungen → KI & Numo → Numo im Hintergrund** eingeschaltet, arbeitet Numo für dich, während du weg bist. Wenn in deinen Projekten etwas passiert, das dich betrifft, etwa ein dir zugewiesenes Ticket, eine Erwähnung oder eine fehlgeschlagene Routine, oder das zu einer deiner Erinnerungen passt, wacht Numo einige Minuten später auf und handelt mit denselben Werkzeugen und demselben Modell wie in einer Unterhaltung. Mit der Erinnerung „recherchiere für jedes neue Ticket in MIN, das eine Websuche braucht, und poste das Ergebnis als Kommentar“ recherchiert es zu jedem neuen Ticket, postet den Kommentar und notiert es in seinem Journal, wo es festhält, was es getan hat und was auf dich wartet. Was es notiert hat, erfährst du, wenn du Numo in einer Unterhaltung fragst. Der Schalter braucht Numos Gedächtnis: Solange das Gedächtnis aus ist, ist auch Numo im Hintergrund aus, und mit dem Gedächtnis kommt es wieder.
+
+In einem geteilten Projekt ändert Numo nur, was zu dir gehört: Tickets, die dir zugewiesen sind oder die du erstellt hast, Ziele, die du leitest, Seiten, die du erstellt hast. Dort Inhalte zu erstellen oder etwas anderes zu ändern, braucht eine Erinnerung, die darum bittet. In allen Projekten, auch in einem, in dem du allein arbeitest, verschiebt es nichts in den Papierkorb und stellt nichts wieder her, führt keine Aktion an einem Pull Request aus, ruft kein externes MCP-Werkzeug auf, verwaltet das Projekt nicht (Einstellungen, Mitglieder, Integrationen), ändert deine Kontoeinstellungen nicht und antwortet nicht öffentlich auf Feedback, außer eine deiner Erinnerungen erlaubt diese Aktion. Der Server prüft, dass die Erinnerung existiert, dir gehört und für das Projekt gilt, das die Aktion betrifft. Eine Nachricht im Posteingang schickt Numo nur, wenn eine Erinnerung darum bittet, oder bei etwas Dringendem, und dann höchstens zweimal in 24 Stunden.
+
+Braucht eine Aktion eine Erlaubnis, die Numo nicht hat, fragt es in seinem Journal und bietet an, sie beim nächsten Mal selbst zu erledigen. Um sie zu erlauben, sag es Numo in einer Unterhaltung, zum Beispiel „ja, mach das immer“: Es speichert eine Erinnerung und nutzt sie beim nächsten Aufwachen. Um Numo einzuschränken, gib ihm eine Erinnerung wie „im Projekt Design nur im Journal notieren“, bearbeite oder lösche die Erinnerung, die eine Aktion erlaubt hat, oder schalte den Schalter aus: Ein Aufwachen, das noch nicht begonnen hat, wird dann abgebrochen, und ein bereits laufendes wird zu Ende geführt. Die Prüfung deiner Ereignisse und jedes Aufwachen zählen zu deiner KI-Nutzung, und ein Administrator legt fest, wie oft ein Mitglied in 24 Stunden geweckt werden kann, standardmäßig 20-mal. Jedes Aufwachen läuft in einer eigenen Unterhaltung, die nicht in deiner Liste der Unterhaltungen steht und nach 30 Tagen gelöscht wird.
 
 ## Dauerhafte Numo-Turns verstehen {#numo-execution-model}
 

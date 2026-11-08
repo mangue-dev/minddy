@@ -34,6 +34,7 @@ import {
   type ProjectAccess,
 } from "@/lib/server/project-access";
 import { resolveProjectRole } from "@/lib/project-roles";
+import { guardProactiveTool } from "./proactive-guard";
 import {
   COMMENT_NOT_ALLOWED_MESSAGE,
   READ_ONLY_PROJECT_MESSAGE,
@@ -337,6 +338,11 @@ export interface ToolContext {
    * turn may close, those of its project and those about no project.
    */
   journalScope?: JournalScope | null;
+  /**
+   * A background turn (MIN-929): nobody is watching, so every call first
+   * goes through `guardProactiveTool` (sensitive actions and scope).
+   */
+  proactive?: boolean;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -850,6 +856,13 @@ export async function executeTool(
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
+  // A background turn acts while the user is away: the server decides what
+  // it may do on its own, before any tool runs (MIN-929).
+  if (ctx.proactive) {
+    const guard = await guardProactiveTool(toolName, args, ctx);
+    if (!guard.ok) return toolError(guard.error);
+    args = guard.args;
+  }
   // What Numo writes stores its mentions without a label (MIN-872).
   const raw = await executeToolUnlisted(toolName, withoutMentionLabels(args), ctx);
   // Typed mentions in what Numo reads carry the target's current label, or a
@@ -1528,7 +1541,7 @@ async function executeToolUnlisted(
       // NOTHING — what is written is what the preview of the thread will have validated, by
       // `/api/projects/[id]/brief/apply`, exactly like from the board.
       case "propose_backlog": {
-        if (ctx.routineId) return toolError(UNATTENDED_REFUSAL);
+        if (ctx.routineId || ctx.proactive) return toolError(UNATTENDED_REFUSAL);
         // Reserved for the owner, like the modal: it is he who pays
         // the call, and it's a batch of tickets all at once in HIS project.
         if (!access.isOwner) {
@@ -1855,6 +1868,8 @@ async function executeToolUnlisted(
           body: args.body,
           link,
           turnId: ctx.turnId ?? null,
+          // Set only by the background guard, once it accepted the urgency.
+          urgent: ctx.proactive === true && args.urgent === true,
         });
         if (!result.ok) return toolError(result.error);
         return {

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   runModelDecision: vi.fn(),
   runLlmDecision: vi.fn(),
   metadata: { numo_background: true } as Record<string, unknown>,
+  hasNumoWakeLeft: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -21,6 +22,7 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 vi.mock("./wake-context", () => ({ loadWakeInput: mocks.loadWakeInput }));
+vi.mock("./wake", () => ({ hasNumoWakeLeft: mocks.hasNumoWakeLeft, numoWake: async () => "started" }));
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: mocks.hasUsageBudget }));
 vi.mock("@/lib/server/app-config", () => ({ getAppConfigValues: async () => ({}) }));
 vi.mock("@/lib/server/after-safe", () => ({ afterOrNow: () => {} }));
@@ -57,6 +59,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.loadWakeInput.mockResolvedValue(input());
   mocks.hasUsageBudget.mockResolvedValue(true);
+  mocks.hasNumoWakeLeft.mockResolvedValue(true);
   mocks.metadata = { numo_background: true };
 });
 
@@ -66,7 +69,7 @@ describe("triageNumoEventBatch", () => {
       model: "jev-1",
       answers: { wake: confident(true), event_ids: confident(["7"]), reason: confident("concerns_user") },
     });
-    const wake = vi.fn(async () => {});
+    const wake = vi.fn(async () => "started" as const);
     await expect(triageNumoEventBatch(batch, { wake })).resolves.toBe("woken");
     expect(wake).toHaveBeenCalledWith({
       batchId: batch.id,
@@ -88,7 +91,7 @@ describe("triageNumoEventBatch", () => {
       event_ids: { value: [], probability: null, confidence: null },
       reason: { value: "none", probability: null, confidence: null },
     });
-    const wake = vi.fn(async () => {});
+    const wake = vi.fn(async () => "started" as const);
     await expect(triageNumoEventBatch(batch, { wake })).resolves.toBe("asleep");
     expect(wake).not.toHaveBeenCalled();
     const [modelCtx] = mocks.runModelDecision.mock.calls.map((call) => call[1]);
@@ -99,7 +102,7 @@ describe("triageNumoEventBatch", () => {
   it("does not wake Numo when both engines fail", async () => {
     mocks.runModelDecision.mockResolvedValue(null);
     mocks.runLlmDecision.mockResolvedValue(null);
-    const wake = vi.fn(async () => {});
+    const wake = vi.fn(async () => "started" as const);
     await expect(triageNumoEventBatch(batch, { wake })).resolves.toBe("no_decision");
     expect(wake).not.toHaveBeenCalled();
   });
@@ -120,6 +123,26 @@ describe("triageNumoEventBatch", () => {
     });
     const wake = vi.fn(async () => { throw new Error("wake down"); });
     await expect(triageNumoEventBatch(batch, { wake })).resolves.toBe("wake_failed");
+  });
+
+  it("pays for no decision once the user's daily wakes are spent", async () => {
+    mocks.hasNumoWakeLeft.mockResolvedValue(false);
+    await expect(triageNumoEventBatch(batch)).resolves.toBe("capped");
+    expect(mocks.hasNumoWakeLeft).toHaveBeenCalledWith("user-1");
+    expect(mocks.loadWakeInput).not.toHaveBeenCalled();
+    expect(mocks.runModelDecision).not.toHaveBeenCalled();
+  });
+
+  it("reports what the wake really did", async () => {
+    mocks.runModelDecision.mockResolvedValue({
+      model: "jev-1",
+      answers: { wake: confident(true), event_ids: confident(["7"]), reason: confident("concerns_user") },
+    });
+    for (const [woke, outcome] of [
+      ["duplicate", "already_woken"], ["capped", "capped"], ["switched_off", "switched_off"], ["empty", "empty"],
+    ] as const) {
+      await expect(triageNumoEventBatch(batch, { wake: async () => woke })).resolves.toBe(outcome);
+    }
   });
 
   it("checks the budget of both engines", async () => {
