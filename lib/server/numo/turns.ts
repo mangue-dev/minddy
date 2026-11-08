@@ -90,6 +90,7 @@ import { loadNumoMemoryPrompt } from "./memory-prompt";
 import { touchNumoMemories } from "./memory-content";
 import { loadNumoJournalPrompt } from "./journal-prompt";
 import { NUMO_WAKE_PROMPT_BLOCK } from "./wake-prompt";
+import { buildNumoReminderPromptBlock, type NumoReminderIntent } from "./watch-prompt";
 import { proactiveToolSet } from "@/lib/server/assistant/proactive-guard";
 import type { JournalScope, NumoJournalSource } from "./journal-content";
 export interface NumoTurnIntent {
@@ -133,6 +134,12 @@ export interface NumoTurnIntent {
    * Numo. The turn runs unattended, under the background guard.
    */
   wake?: { batchId: string } | null;
+  /**
+   * A reminder the user set (MIN-923) that fired with the action `act`. The
+   * turn runs unattended: no memory writes, no tool that waits for an
+   * answer, no reminder tools, and no sensitive action.
+   */
+  reminder?: NumoReminderIntent | null;
 }
 
 export type NumoTurnCheckpoint =
@@ -500,7 +507,8 @@ async function buildExecutionInput(input: {
   // unattended and a comment mention sits on a shared surface, so neither can
   // change what Numo remembers.
   const memoryOn = !intent.documentation && intent.memoryEnabled !== false;
-  const memoryWritable = memoryOn && !intent.routineId && !intent.wake && intent.triggerSource !== "mention";
+  const memoryWritable = memoryOn && !intent.routineId && !intent.wake && !intent.reminder &&
+    intent.triggerSource !== "mention";
   if (memoryOn) {
     // An unreadable memory degrades the turn rather than failing it.
     const memory = await loadNumoMemoryPrompt({
@@ -540,6 +548,7 @@ async function buildExecutionInput(input: {
   // Background Numo (MIN-929): the rules of a turn nobody watches. Its writes
   // go through the background guard, set on the tool context below.
   if (intent.wake) systemPrompt += NUMO_WAKE_PROMPT_BLOCK;
+  if (intent.reminder) systemPrompt += buildNumoReminderPromptBlock(intent.reminder);
   if (intent.routineId) {
     const timing = intent.routineOrigin === "scheduled"
       ? `scheduled for ${intent.routineScheduledFor ?? "an unspecified time"}`
@@ -660,8 +669,16 @@ async function buildExecutionInput(input: {
   if (!journalSource) tools = tools.filter((tool) => !JOURNAL_TOOL_NAMES.has(tool.function.name));
   // A routine runs unattended: nobody is there to answer a question or review
   // a proposal, so the tools that wait for the user are not offered.
-  if (intent.routineId) {
+  if (intent.routineId || intent.reminder) {
     tools = tools.filter((tool) => !ROUTINE_UNATTENDED_EXCLUDED_TOOLS.has(tool.function.name));
+  }
+  // Reminders (MIN-923) are set and cancelled only in a conversation the
+  // user holds with Numo: not by a routine or a mention, whose instructions
+  // come from other people, nor by a reminder's own turn. A routine and a
+  // mention do not list them either: a mention replies on a shared thread.
+  if (intent.routineId || intent.reminder || intent.triggerSource === "mention") {
+    const hidden = intent.reminder ? WATCH_WRITE_TOOL_NAMES : WATCH_TOOL_NAMES;
+    tools = tools.filter((tool) => !hidden.has(tool.function.name));
   }
   // A background turn is unattended too, and its guarded tools take the
   // memory that allows them (`authorized_by`).
@@ -678,6 +695,8 @@ async function buildExecutionInput(input: {
 }
 
 const MEMORY_TOOL_NAMES = new Set(["remember", "forget"]);
+const WATCH_WRITE_TOOL_NAMES = new Set(["create_watch", "cancel_watch"]);
+const WATCH_TOOL_NAMES = new Set([...WATCH_WRITE_TOOL_NAMES, "list_watches"]);
 const JOURNAL_TOOL_NAMES = new Set(["journal_write", "journal_close"]);
 
 function createToolLedger(
@@ -1096,6 +1115,7 @@ async function executeClaimedNumoTurn(input: {
       journalSource: execution.journalSource,
       journalScope: execution.journalScope,
       proactive: !!claimed.intent.wake,
+      reminder: !!claimed.intent.reminder,
       model: runtime.model,
       aiRuntime: runtime,
       conversationId: claimed.conversation_id,
@@ -1445,6 +1465,11 @@ export async function executeNumoTurn(input: {
       notifyRoutineOfNumoTurn(result.turn, {
         usageExhausted: result.usageExhausted === true,
       });
+      if (result.turn.intent.reminder) {
+        // A reminder turn that did not finish tells the user (MIN-923).
+        const { notifyReminderOfNumoTurn } = await import("./watch-clock");
+        notifyReminderOfNumoTurn(result.turn, { usageExhausted: result.usageExhausted === true });
+      }
     }
     return result;
   } catch (error) {

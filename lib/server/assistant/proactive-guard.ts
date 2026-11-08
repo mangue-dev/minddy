@@ -82,6 +82,13 @@ export const SENSITIVE_TOOLS: Readonly<Record<string, SensitiveCategory>> = {
 export const PROACTIVE_EXCLUDED_TOOLS: ReadonlySet<string> = new Set(["ask_user", "propose_backlog"]);
 
 /**
+ * Reminders (MIN-923) are set and cancelled at the user's request only: a
+ * reminder that acts later would run outside this guard, so a background
+ * turn must not set one from what it read. It may still list them.
+ */
+export const PROACTIVE_REQUEST_ONLY_TOOLS: ReadonlySet<string> = new Set(["create_watch", "cancel_watch"]);
+
+/**
  * The user's own planning and notes: never sensitive. Cycle moves stay
  * within the user's own cycles; adding an issue to a cycle is not here,
  * since it assigns the issue to the user (`add_issues_to_cycle` below).
@@ -199,7 +206,8 @@ const AUTHORIZED_BY = {
  * urgency fields on notify_me.
  */
 export function proactiveToolSet(tools: readonly AssistantToolDef[]): AssistantToolDef[] {
-  return tools.filter((tool) => !PROACTIVE_EXCLUDED_TOOLS.has(tool.function.name)).map((tool) => {
+  return tools.filter((tool) => !PROACTIVE_EXCLUDED_TOOLS.has(tool.function.name) &&
+    !PROACTIVE_REQUEST_ONLY_TOOLS.has(tool.function.name)).map((tool) => {
     const name = tool.function.name;
     if (!mayNeedAuthorization(name)) return tool;
     const properties: Record<string, unknown> = {
@@ -379,6 +387,9 @@ export async function guardProactiveTool(toolName: string, rawArgs: Record<strin
   const { authorized_by: rawAuthorizedBy, urgent, urgency_reason: urgencyReason, ...args } = rawArgs;
   if (PROACTIVE_EXCLUDED_TOOLS.has(toolName)) {
     return { ok: false, error: `${toolName} is not available in the background: nobody is there to answer. Write a journal entry instead.` };
+  }
+  if (PROACTIVE_REQUEST_ONLY_TOOLS.has(toolName)) {
+    return { ok: false, error: `${toolName} is not available in the background: reminders are set and cancelled only when the user asks in a conversation. Write a journal entry instead.` };
   }
   // Anything but a memory id ("none", null, "") counts as no authorization.
   const authorizedBy = typeof rawAuthorizedBy === "string" && UUID_RE.test(rawAuthorizedBy.trim())

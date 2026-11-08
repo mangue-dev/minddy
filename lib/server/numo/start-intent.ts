@@ -34,6 +34,7 @@ import {
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
 import { beginNumoTurn, executeNumoTurn } from "./turns";
+import type { NumoReminderIntent } from "./watch-prompt";
 
 export class NumoIntentStartError extends Error {
   constructor(
@@ -79,6 +80,8 @@ export interface StartNumoIntentInput {
   };
   /** Server-owned background wake (MIN-929): the batch that woke Numo. */
   wake?: { batchId: string };
+  /** Server-owned reminder (MIN-923) whose `act` turn this is. */
+  reminder?: NumoReminderIntent;
 }
 
 export interface StartedNumoIntent {
@@ -213,6 +216,7 @@ export async function startNumoIntent(
             }
           : {}),
         ...(input.wake ? { wake: { batchId: input.wake.batchId } } : {}),
+        ...(input.reminder ? { reminder: input.reminder } : {}),
       },
       model: configuration.model,
       reasoningLevel: configuration.reasoningLevel,

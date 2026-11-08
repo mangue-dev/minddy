@@ -52,6 +52,7 @@ describe("RETENTION_DAYS", () => {
     ["unseenClosedJournalEntries", 180, "Numo's journal: closed entries never seen, 180 days"],
     ["staleOpenJournalEntries", 180, "Numo's journal: entries left open, 180 days"],
     ["numoWakes", 30, "background wakes: 30 days"],
+    ["finishedNumoWatches", 90, "Numo's reminders: 90 days after they fire, are cancelled or expire"],
   ] as const)("%s has %i days of retention — %s", (key, days, _promise) => {
     expect(RETENTION_DAYS[key]).toBe(days);
   });

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-29",
+  "updatedAt": "2026-11-08",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -46,10 +46,10 @@
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:claude-code (MIN-847 MINDDY_CONFIG_OVERRIDES sentence checked against lib/server/instance-variables.ts and scripts/self-hosting-install.mjs); agent:claude-code (MIN-829 MINDDY_PUBLISH_MODEL_CONFIG sentence checked against app/api/recommended-models/route.ts); agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es MIN-829 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min750 (es table row and release delta sentence; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-788 changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 14,
+    "fact": "agent:claude-code (MIN-847 MINDDY_CONFIG_OVERRIDES sentence checked against lib/server/instance-variables.ts and scripts/self-hosting-install.mjs); agent:claude-code (MIN-829 MINDDY_PUBLISH_MODEL_CONFIG sentence checked against app/api/recommended-models/route.ts); agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-923: scheduler sentence extended to Numo's reminders, checked against app/api/cron/routines/route.ts and vercel.json; rest unchanged; no figure recaptured)",
+    "language": "agent:claude-code (es MIN-829 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min750 (es table row and release delta sentence; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-923 sentence; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-08"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +74,7 @@
       "src": "/documentation/es/optional-providers-flow.svg",
       "alt": "Diagrama: Operador elige capacidad opcional. Credenciales completas y condiciones. Destino de datos externo explícito. Verificar conducta y controlar costes.",
       "caption": "Antes de activar una integración, comprueba adónde envía los datos y qué costes continuados genera.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +106,7 @@
       "src": "/documentation/es/proxy-network-and-jobs-flow.svg",
       "alt": "Diagrama: Proxy HTTPS público. Orígenes públicos de la aplicación y Supabase. Base de datos y puertos internos privados. Tareas autenticadas; paradas en mantenimiento.",
       "caption": "El acceso público queda separado de los servicios internos; el trabajo programado se autentica y se detiene durante el mantenimiento.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -204,4 +204,4 @@ Respecto al planificador de v0.11.0, esta versión añade `numo-turns`, `forge-r
 
 ### Parar tareas durante mantenimiento {#maintenance}
 
-Antes de una copia o migración, detén el planificador, la aplicación, los workers y el acceso público a Supabase. Detener solo el servidor web deja posibles escrituras directas por API. Ejecuta las comprobaciones en mantenimiento, con entradas y trabajos cerrados, y reabre solo cuando se hayan verificado la base de datos, Auth, Storage y la aplicación. Si un trabajo no arranca, comprueba en privado el planificador, la URL de origen y el secreto. Las rutinas requieren un planificador de servidor activo; no es necesario mantener abierta una aplicación de escritorio.
+Antes de una copia o migración, detén el planificador, la aplicación, los workers y el acceso público a Supabase. Detener solo el servidor web deja posibles escrituras directas por API. Ejecuta las comprobaciones en mantenimiento, con entradas y trabajos cerrados, y reabre solo cuando se hayan verificado la base de datos, Auth, Storage y la aplicación. Si un trabajo no arranca, comprueba en privado el planificador, la URL de origen y el secreto. Las rutinas y los recordatorios de Numo requieren un planificador de servidor activo; no es necesario mantener abierta una aplicación de escritorio.

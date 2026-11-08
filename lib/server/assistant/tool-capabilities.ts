@@ -52,6 +52,12 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   // project the user can open, but it changes nothing in it.
   journal_write: "personal",
   journal_close: "personal",
+  // Numo's reminders (MIN-923) are the user's own too. Listing and
+  // cancelling change no project; setting one reads its target, so it needs
+  // read access to that project, checked where the tool runs.
+  list_watches: "personal",
+  cancel_watch: "personal",
+  create_watch: "read",
   list_views: "personal",
   update_account_settings: "personal_write",
   fill_cycle: "personal_write",

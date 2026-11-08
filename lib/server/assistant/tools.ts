@@ -1153,6 +1153,78 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "create_watch",
+      description:
+        "Set a reminder for the user you work for: a condition on one record plus an instruction, fired once when the condition holds (\"once MIN-42 is done, remind me to tell the client\", \"when the 0.40 objective is done, create the release issue\", \"remind me on Friday at 9:00 to send the invoice\"). Use it for any one-off \"when X, do Y\" request, never a routine (a routine is for recurring or every-time work). Nothing runs until the condition holds. Then, with action 'notify', the user gets a note with the instruction; with action 'act', you get a turn in this conversation to carry the instruction out, with the user's tools and rights at that time. Prefer 'notify' when the instruction is something the user does themselves (\"remind me to…\"); 'act' when they asked you to do something. A reminder fires once and expires after 90 days; the user keeps at most 20 active ones. To change a reminder, pass its id in `replaces`. After setting it, tell the user in one short line what you will watch and what will happen.",
+      parameters: {
+        type: "object",
+        properties: {
+          when: {
+            type: "string",
+            enum: ["issue_status", "issue_comment", "objective_status", "date"],
+            description: "issue_status: an issue reaches a status. issue_comment: someone else comments on an issue. objective_status: an objective reaches a status. date: a date and time comes.",
+          },
+          issue: {
+            type: ["string", "null"],
+            description: "For issue_status and issue_comment: the issue, as its id, identifier (MIN-42) or number. null otherwise.",
+          },
+          objective_id: {
+            type: ["string", "null"],
+            description: "For objective_status: the objective's id. null otherwise.",
+          },
+          status: {
+            type: ["string", "null"],
+            description: "For issue_status (triage, backlog, todo, in_progress, in_review, done, canceled, duplicate) and objective_status (planned, in_progress, done, canceled): the status that fires the reminder. null means done.",
+          },
+          at: {
+            type: ["string", "null"],
+            description: "For date: when, as an ISO 8601 date-time with its offset in the user's time zone (2026-11-13T09:00:00+01:00), within 90 days. null otherwise.",
+          },
+          action: {
+            type: "string",
+            enum: ["notify", "act"],
+            description: "notify: a note to the user, no model call. act: you carry the instruction out.",
+          },
+          instruction: {
+            type: "string",
+            description: "What to remind the user of, or what to do, written so it reads on its own later, in the user's language. 1,000 characters at most.",
+          },
+          replaces: {
+            type: ["string", "null"],
+            description: "The id of an active reminder this one replaces (it is cancelled), from list_watches; null for a new reminder.",
+          },
+        },
+        required: ["when", "issue", "objective_id", "status", "at", "action", "instruction", "replaces"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_watches",
+      description:
+        "List the user's active reminders, with their ids, conditions, actions and instructions. Use it when the user asks what you are watching, or before changing or cancelling a reminder.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancel_watch",
+      description:
+        "Cancel one of the user's active reminders, by its id from list_watches, when the user asks you to drop it.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The id of the reminder to cancel." },
+        },
+        required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "journal_write",
       description:
         "Add one entry to your journal for the user you work for (in a routine, its owner): the material of what you tell them when they come back to the home page. Write one when something now waits for the user (\"PR #12 waits for your review\", \"the client has not answered yet\"; your journal list shows each entry's age), or when, in a routine or an @Numo mention, you did something that changed their content (\"I did the web research asked for in MIN-42\"). Not for what the user watches you do in this conversation, a plain read, a summary of your reply, or a lasting preference (use remember). One sentence in the user's language, citing records with typed mentions. Never add an entry that repeats an open one: close the old one instead when it changed. The journal is silent: nobody is notified. At most 50 open entries; when the result says the limit is reached, close the settled ones first.",
@@ -2905,6 +2977,10 @@ export const ACCOUNT_TOOLS = new Set([
   // Numo's journal (MIN-927) is the user's own; an entry names its project.
   "journal_write",
   "journal_close",
+  // Numo's reminders (MIN-923): each names its project; listing and
+  // cancelling span all of them.
+  "list_watches",
+  "cancel_watch",
 ]);
 
 /** Tools that wait for the user (a question, a proposal to review), never

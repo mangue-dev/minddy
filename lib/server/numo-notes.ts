@@ -132,6 +132,11 @@ export async function sendNumoNote(input: {
   turnId?: string | null;
   /** A background turn's urgent note (MIN-929): counted by the daily urgent cap. */
   urgent?: boolean;
+  /**
+   * Skip the 24-hour duplicate check. A reminder (MIN-923) fires once by its
+   * own claim, and two reminders may rightly carry the same instruction.
+   */
+  dedupe?: boolean;
   now?: Date;
 }): Promise<SendNumoNoteResult> {
   const { service, userId, projectId, link } = input;
@@ -167,22 +172,24 @@ export async function sendNumoNote(input: {
 
   const targets = targetColumns(link);
   const now = input.now ?? new Date();
-  const since = new Date(now.getTime() - NUMO_NOTE_DEDUP_WINDOW_MS).toISOString();
-  let recent = service.from("notifications")
-    .select("numo_note_id")
-    .eq("user_id", userId).eq("project_id", projectId)
-    .eq("type", "numo_message").gte("created_at", since);
-  for (const [column, value] of Object.entries(targets)) {
-    recent = value ? recent.eq(column, value) : recent.is(column, null);
-  }
-  const { data: recentRows, error: recentError } = await recent.limit(50);
-  if (recentError) return { ok: false, error: "Unable to send the note." };
-  const previous = await readNumoNotes(service,
-    (recentRows ?? []).map((row) => row.numo_note_id as string), userId);
-  if (previous === null) return { ok: false, error: "Unable to send the note." };
-  const sameText = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
-  if ([...previous.values()].some((note) => sameText(note.body, body))) {
-    return { ok: true, delivered: false, reason: "duplicate" };
+  if (input.dedupe !== false) {
+    const since = new Date(now.getTime() - NUMO_NOTE_DEDUP_WINDOW_MS).toISOString();
+    let recent = service.from("notifications")
+      .select("numo_note_id")
+      .eq("user_id", userId).eq("project_id", projectId)
+      .eq("type", "numo_message").gte("created_at", since);
+    for (const [column, value] of Object.entries(targets)) {
+      recent = value ? recent.eq(column, value) : recent.is(column, null);
+    }
+    const { data: recentRows, error: recentError } = await recent.limit(50);
+    if (recentError) return { ok: false, error: "Unable to send the note." };
+    const previous = await readNumoNotes(service,
+      (recentRows ?? []).map((row) => row.numo_note_id as string), userId);
+    if (previous === null) return { ok: false, error: "Unable to send the note." };
+    const sameText = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+    if ([...previous.values()].some((note) => sameText(note.body, body))) {
+      return { ok: true, delivered: false, reason: "duplicate" };
+    }
   }
 
   const id = randomUUID();

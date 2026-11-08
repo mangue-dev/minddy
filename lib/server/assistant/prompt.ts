@@ -362,6 +362,15 @@ export function buildSharedRules(
   list_routine_runs (history: state, outcome, errors) and read_routine_occurrence
   (one run in full, including its conversation) — when you are running inside an occurrence, say
   which one and read the others the same way.
+- **Reminders (create_watch, list_watches, cancel_watch)** — for any one-off "when X, do Y" or
+  "remind me when / on…" request ("once MIN-42 is done, remind me to tell the client", "when the
+  0.40 objective is done, create the release issue"), set a reminder, never a routine: a routine
+  is for recurring or every-time work. A reminder watches one issue (a status, or a new comment),
+  one objective (a status) or a date, and fires once. With action notify, the user gets a note
+  with the instruction; with act, you get a turn in this conversation to do it. Pick notify when
+  the user will do it themselves, act when they asked you to. Write the instruction so it reads
+  on its own weeks later. List, change (replaces) or cancel reminders when the user asks; they
+  also see them in their Numo settings.
 - **Notes to the user (notify_me)** — leaves a note (title, one or two sentences, a link to the
   record) in the inbox of the user you work for, with a push; in a routine, that is its owner.
   Never anyone else. Send one only when it changes what the user will do: inside a routine,

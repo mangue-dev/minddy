@@ -12,6 +12,7 @@ import {
 } from "@/lib/server/project-storage";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
 import { purgeJournalEntries } from "@/lib/server/numo/journal-content";
+import { purgeFinishedNumoWatches } from "@/lib/server/numo/watches";
 import {
   ORPHAN_ATTACHMENT_DAYS,
   removeStorageObjects,
@@ -142,6 +143,11 @@ export const RETENTION_DAYS = {
    * question; the urgent-note claims go at the same age.
    */
   numoWakes: 30,
+  /**
+   * Numo's reminders (MIN-923) once fired, cancelled or expired: nothing
+   * reads them again; ninety days keeps them for a support question.
+   */
+  finishedNumoWatches: 90,
 } as const;
 
 const DAY_MS = 86_400_000;
@@ -465,6 +471,9 @@ export async function runRetentionSweep(now: Date = new Date()): Promise<Retenti
       openBefore: cutoff(RETENTION_DAYS.staleOpenJournalEntries, now),
     })),
     await step("numo_wakes", () => purgeNumoWakes(service, now)),
+    await step("numo_watches", () =>
+      purgeFinishedNumoWatches(service, cutoff(RETENTION_DAYS.finishedNumoWatches, now))
+    ),
     // Per-account OpenRouter keys no account references any more (MIN-761):
     // an issuance that died half-way, a failed delete on account deletion.
     // Swept here since MIN-829 removed the admin button that did it by hand.
