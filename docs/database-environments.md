@@ -90,8 +90,9 @@ with a version absent from `supabase/migrations/`.
   Storage buckets (`node scripts/reconcile-storage-buckets.mjs` with the preview
   variables), replay the capture world (`captures/world/seed/`, see the
   `capture-world` skill), recreate the capture admin
-  (`node captures/world/admin-account.mjs --apply --reset`) and refresh the
-  saved sessions.
+  (`node captures/world/admin-account.mjs --apply --reset`), refresh the
+  saved sessions and reapply the preview crons (`npm run preview:crons --
+  apply`, see below): a reset drops their `pg_cron` jobs and Vault secret.
 
 Preview never receives a copy of production data. A copy would make preview a
 production data store and would need the production encryption root key.
@@ -125,11 +126,8 @@ See [the Auth configuration record](auth-supabase-config.md).
 
 ## What preview does not run
 
-- **Vercel crons** run on production only. Interactive work still runs inline,
-  but on preview no scheduled routine fires, event-triggered routines stay
-  queued, retryable Numo turns are not resumed, and key rotation, billing sync,
-  FX rates and retention sweeps do not run. Call a cron route with
-  `Authorization: Bearer <preview CRON_SECRET>` to exercise it.
+- **Vercel crons** run on production only. Preview runs the same list from its
+  own database instead (see [Scheduled jobs on preview](#scheduled-jobs-on-preview)).
 - **Forge and Stripe webhooks** target production. Pull request
   synchronization, forge mentions and Stripe events reach preview only through
   a separately registered app or test-mode endpoint.
@@ -140,6 +138,35 @@ See [the Auth configuration record](auth-supabase-config.md).
   The desktop app therefore has no preview channel (MIN-765): it opens
   production, and the team opens preview in a development shell with
   `MINDDY_DESKTOP_ORIGIN=https://preview.minddy.app`.
+
+## Scheduled jobs on preview
+
+Vercel runs the `crons` of `vercel.json` on production deployments only. On
+preview, `pg_cron` on the preview database runs the same list: each job calls
+the route on `https://preview.minddy.app` through `pg_net`, with the preview
+`CRON_SECRET` read from Supabase Vault (`preview_cron_secret`). Reminders,
+routines, background Numo, retries, key rotation, billing sync, FX rates and
+retention sweeps therefore run on preview as they do in production.
+
+The jobs are not a migration, so production never gets them.
+`scripts/preview-crons.mjs` manages them, reading `CRON_SECRET` from the local
+`.env` (which points to preview) and refusing any linked project other than
+the preview branch:
+
+```bash
+npm run preview:crons -- apply    # (re)schedule from vercel.json and store the secret
+npm run preview:crons -- status   # each job's last run, and the last hour's HTTP statuses
+npm run preview:crons -- remove   # unschedule every job and delete the secret
+```
+
+Run `apply` again after a change to the `crons` of `vercel.json`, after
+rotating the preview `CRON_SECRET` on Vercel, and after a full refresh of the
+preview database. Each job is named `preview-cron:<route>`; the script touches
+no other job.
+
+A route call can last up to 300 seconds (`maxDuration`); `pg_net` waits as
+long. Jobs report their HTTP statuses in `net._http_response` for a few hours:
+a `401` means the Vault secret no longer matches the deployed `CRON_SECRET`.
 
 ## Preview is for the team only
 
