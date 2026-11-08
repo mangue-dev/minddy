@@ -7,7 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 // container, never a connection URL. MINDDY_ROUTINE_DB_TEST=1 enables it.
 const enabled = process.env.MINDDY_ROUTINE_DB_TEST === "1";
 const container = `minddy-numo-batches-test-${randomUUID()}`;
-const owner = randomUUID(), member = randomUUID(), dormant = randomUUID(), memoryOff = randomUUID();
+const owner = randomUUID(), member = randomUUID(), dormant = randomUUID(), memoryOff = randomUUID(), backgroundOff = randomUUID();
 const project = randomUUID(), issue = randomUUID();
 
 function sql(statement: string): Promise<string> {
@@ -53,21 +53,24 @@ describe.skipIf(!enabled)("Numo event batches on isolated PostgreSQL (MIN-926)",
       "supabase/migrations/20270109200103_numo_event_batches.sql",
       "supabase/migrations/20270109200104_numo_event_batches_review.sql",
       "supabase/migrations/20270109200105_numo_pull_request_signals.sql",
+      "supabase/migrations/20270109200112_numo_background_default_on.sql",
     ]) await sql(readFileSync(file, "utf8"));
     await sql(`INSERT INTO projects VALUES('${project}','${owner}',NULL);
       INSERT INTO auth.users(id,raw_user_meta_data,last_sign_in_at) VALUES
-        ('${owner}','{"numo_background":true}',now()),
+        ('${owner}','{}',now()),
+        ('${backgroundOff}','{"numo_background":false}',now()),
         ('${member}','{"numo_background":true}',now()-interval '60 days'),
         ('${dormant}','{"numo_background":true}',now()-interval '60 days'),
         ('${memoryOff}','{"numo_background":true,"numo_memory":false}',now());
       INSERT INTO auth.sessions(user_id,created_at,refreshed_at) VALUES('${member}',now()-interval '40 days',(now()-interval '1 day')::timestamp);
-      INSERT INTO project_members(project_id,user_id) VALUES('${project}','${member}'),('${project}','${dormant}'),('${project}','${memoryOff}');
+      INSERT INTO project_members(project_id,user_id) VALUES('${project}','${member}'),('${project}','${dormant}'),('${project}','${memoryOff}'),('${project}','${backgroundOff}');
       INSERT INTO issues(id,project_id,title) VALUES('${issue}','${project}','Fixture');`);
   }, 30_000);
   afterAll(() => { if (enabled) execFileSync("docker", ["rm", "-f", container], { stdio: "pipe" }); });
   beforeEach(async () => { await sql("DELETE FROM numo_event_batches;"); });
 
-  it("reaches active members only: not a dormant account, not one with the memory off", async () => {
+  // Background Numo is on by default: the owner never set it and hears.
+  it("reaches active members only: not a dormant account, not one with the memory or background Numo off", async () => {
     const recipients = (await sql(`SELECT string_agg(r::text, ',') FROM numo_event_recipients('${project}', NULL) r;`)).split(",");
     expect(recipients.sort()).toEqual([owner, member].sort());
   });

@@ -109,6 +109,9 @@ const NON_PERSISTED_KEY_PREFIXES: string[][] = [
   ["pr-comments"],
   ["pr-review-comments"],
   ["billing"],
+  // Numo's reminders (MIN-923): instructions sealed at rest, decrypted for the
+  // settings list only; they also change on the server's clock.
+  ["numo-watches"],
   ["admin"], // Operator-only payloads (accounts, costs, config, instance variables): memory only.
   ["auth-sessions"], // lib/use-auth-sessions-query.ts: device list of live sign-ins, always re-read
   ["version"], // lib/use-new-version.ts

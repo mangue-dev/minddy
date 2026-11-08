@@ -99,6 +99,7 @@ export const SETTINGS_SECTIONS = {
   accountNumoStatus: "account-numo-status",
   accountNumoMemory: "account-numo-memory",
   accountNumoBackground: "account-numo-background",
+  accountNumoWatches: "account-numo-watches",
   accountCyclesEnable: "account-cycles",
   accountCyclesCadence: "account-cycles-cadence",
   accountCyclesCapture: "account-cycles-capture",
@@ -631,6 +632,16 @@ export function useSettingsSections(): SettingsSection[] {
         keywords: [
           "numo", "arrière-plan", "arriere-plan", "background", "proactif",
           "proactive", "journal", "réveil", "reveil", "wake", "autonome",
+        ],
+      }),
+      account({
+        id: SETTINGS_SECTIONS.accountNumoWatches,
+        tab: "agent",
+        icon: CalendarClockIcon,
+        title: tAccount("numoWatchesTitle"),
+        keywords: [
+          "numo", "rappels", "rappel", "reminders", "reminder", "veille", "watch",
+          "quand", "when", "plus tard", "later",
         ],
       }),
       account({

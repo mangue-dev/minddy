@@ -6,11 +6,13 @@ const h = vi.hoisted(() => ({
   getServiceClient: vi.fn(),
   drainNumoTurns: vi.fn(),
   drainNumoWakeTurns: vi.fn(),
+  drainNumoWatchTurns: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: h.getServiceClient }));
 vi.mock("@/lib/server/numo/turns", () => ({ drainNumoTurns: h.drainNumoTurns }));
 vi.mock("@/lib/server/numo/wake", () => ({ drainNumoWakeTurns: h.drainNumoWakeTurns }));
+vi.mock("@/lib/server/numo/watch-clock", () => ({ drainNumoWatchTurns: h.drainNumoWatchTurns }));
 
 import { GET as GET_NUMO } from "@/app/api/cron/numo-turns/route";
 
@@ -65,6 +67,7 @@ describe("optional scheduler", () => {
     vi.stubEnv("CRON_SECRET", "x".repeat(32));
     h.drainNumoTurns.mockResolvedValue({ claimed: 1 });
     h.drainNumoWakeTurns.mockResolvedValue({ ran: 2 });
+    h.drainNumoWatchTurns.mockResolvedValue({ ran: 3 });
 
     const response = await GET_NUMO(
       new NextRequest("http://localhost/api/cron/numo-turns", {
@@ -74,20 +77,21 @@ describe("optional scheduler", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, claimed: 1, wakes: 2 });
+    expect(await response.json()).toEqual({ ok: true, claimed: 1, wakes: 2, reminders: 3 });
     expect(h.drainNumoTurns).toHaveBeenCalledWith({ limit: 1 });
   });
 
-  it("keeps draining continuations when the background wakes fail (MIN-929)", async () => {
+  it("keeps draining continuations when the background wakes and reminders fail (MIN-929, MIN-923)", async () => {
     vi.stubEnv("CRON_SECRET", "x".repeat(32));
     h.drainNumoTurns.mockResolvedValue({ claimed: 0 });
     h.drainNumoWakeTurns.mockRejectedValue(new Error("down"));
+    h.drainNumoWatchTurns.mockRejectedValue(new Error("down"));
     const response = await GET_NUMO(
       new NextRequest("http://localhost/api/cron/numo-turns", {
         method: "POST",
         headers: { authorization: `Bearer ${"x".repeat(32)}` },
       }),
     );
-    expect(await response.json()).toEqual({ ok: true, claimed: 0, wakes: 0 });
+    expect(await response.json()).toEqual({ ok: true, claimed: 0, wakes: 0, reminders: 0 });
   });
 });

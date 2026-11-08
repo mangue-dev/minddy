@@ -331,7 +331,9 @@ export type NumoIntentSource =
   | "routine"
   | "bulk"
   /** Background Numo (MIN-929): a wake on workspace events, never a client gesture. */
-  | "background";
+  | "background"
+  /** A reminder the user asked Numo for (MIN-923) whose condition was met. */
+  | "reminder";
 
 /** The distinction the originating action promised to preserve. */
 export type NumoIntentAction =

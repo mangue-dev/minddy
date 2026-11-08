@@ -16,6 +16,7 @@ import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
 import { getServiceClient } from "@/lib/supabase-service";
 import { drainNumoEventBatches } from "@/lib/server/numo/event-batches";
 import { triageNumoEventBatch } from "@/lib/server/numo/wake-triage";
+import { runNumoWatchClock } from "@/lib/server/numo/watch-clock";
 
 /**
  * The routines clock (MIN-185). Every five minutes it claims due schedules,
@@ -42,6 +43,8 @@ const MAX_BATCHES_PER_TICK = 20;
  * schedules that follow; a killed tick would also strand its leased rows.
  */
 const EVENT_BUDGET_MS = 120_000;
+/** Numo's reminders get this long, so the schedules after them still run. */
+const WATCH_BUDGET_MS = 45_000;
 
 /** Translates a launch refusal into a `last_error` code. */
 function launchErrorCode(error: string): RoutineErrorCode {
@@ -95,6 +98,12 @@ async function handle(request: NextRequest) {
     eventLimit: MAX_EVENTS_PER_TICK,
     deadline: Date.now() + EVENT_BUDGET_MS,
   });
+  // Numo's reminders (MIN-923): state reads only, and a few notes or
+  // queued turns for the ones whose condition holds.
+  const watchWork = await runNumoWatchClock({ deadline: Date.now() + WATCH_BUDGET_MS }).catch((error: Error) => {
+    console.error("[cron/routines] numo watches:", error.message);
+    return { expired: 0, fired: 0, canceled: 0, retried: 0 };
+  });
   const due = await dueRoutines(MAX_PER_TICK);
   const results: Array<{ id: string; outcome: string }> = [];
   for (const routine of due) {
@@ -116,7 +125,7 @@ async function handle(request: NextRequest) {
     console.error("[cron/routines] numo batches:", error.message);
     return { claimed: 0, outcomes: [] };
   });
-  return NextResponse.json({ ok: true, due: due.length, results, eventWork, batchWork: { claimed: batchWork.claimed } });
+  return NextResponse.json({ ok: true, due: due.length, results, eventWork, watchWork, batchWork: { claimed: batchWork.claimed } });
 }
 
 export const GET = handle;

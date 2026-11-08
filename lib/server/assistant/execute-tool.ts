@@ -34,7 +34,7 @@ import {
   type ProjectAccess,
 } from "@/lib/server/project-access";
 import { resolveProjectRole } from "@/lib/project-roles";
-import { guardProactiveTool } from "./proactive-guard";
+import { SENSITIVE_TOOLS, guardProactiveTool } from "./proactive-guard";
 import {
   COMMENT_NOT_ALLOWED_MESSAGE,
   READ_ONLY_PROJECT_MESSAGE,
@@ -196,6 +196,8 @@ import {
   listIssues,
   listMembers,
   resolveEntityRelations,
+  resolveIssueRef,
+  resolveObjectiveRef,
   searchIssues,
   type ReadContext,
 } from "@/lib/server/issue-reads";
@@ -260,6 +262,23 @@ import {
   type JournalScope,
   type NumoJournalSource,
 } from "@/lib/server/numo/journal-content";
+import {
+  NumoWatchError,
+  cancelNumoWatch,
+  createNumoWatch,
+  listActiveNumoWatches,
+  restoreNumoWatch,
+  validateNumoWatchInput,
+} from "@/lib/server/numo/watches";
+import {
+  NUMO_WATCH_LIMIT,
+  NUMO_WATCH_WHEN,
+  isNumoWatchIssueStatus,
+  isNumoWatchObjectiveStatus,
+  parseNumoWatchDate,
+  type NumoWatchItem,
+  type NumoWatchTarget,
+} from "@/lib/numo-watches";
 import {
   buildInboxToolResult,
   type InboxReadCategory,
@@ -343,6 +362,42 @@ export interface ToolContext {
    * goes through `guardProactiveTool` (sensitive actions and scope).
    */
   proactive?: boolean;
+  /**
+   * The turn of a reminder that fired (MIN-923): unattended, so it refuses
+   * what waits for an answer, the reminder tools and the sensitive actions.
+   */
+  reminder?: boolean;
+}
+
+const WATCH_WRITE_TOOLS = new Set(["create_watch", "cancel_watch"]);
+const WATCH_TOOLS = new Set([...WATCH_WRITE_TOOLS, "list_watches"]);
+
+/**
+ * Who may use the reminder tools (MIN-923). Setting or cancelling one is the
+ * user's own request in a conversation with Numo; a routine or a mention
+ * runs on other people's words, and a mention replies on a shared thread,
+ * so neither sees the reminders at all.
+ */
+function watchToolRefusal(toolName: string, ctx: ToolContext): string | null {
+  if (!WATCH_TOOLS.has(toolName)) return null;
+  if (ctx.journalSource === "routine" || ctx.journalSource === "mention") {
+    return `${toolName} is not available here: reminders are set, listed and cancelled only in a conversation with the user. Do not retry.`;
+  }
+  if (WATCH_WRITE_TOOLS.has(toolName) && (ctx.reminder || ctx.journalSource !== "conversation")) {
+    return `${toolName} is not available in this turn: reminders are set and cancelled only when the user asks in a conversation. Do not retry.`;
+  }
+  return null;
+}
+
+/** What a reminder's unattended turn refuses, with the reason the model reads. */
+function reminderRefusal(toolName: string): string | null {
+  if (toolName === "ask_user" || toolName === "propose_backlog") {
+    return `${toolName} is not available: this reminder turn runs unattended and nobody can answer. Decide, or leave it to the user in your reply.`;
+  }
+  if (toolName in SENSITIVE_TOOLS) {
+    return `${toolName} is refused in a reminder turn: it needs the user. Say in your reply what you would do and leave it to them.`;
+  }
+  return null;
 }
 
 /** Status of web search for ONE round (one Numo response, one @Numo). */
@@ -858,6 +913,12 @@ export async function executeTool(
 ): Promise<ToolExecution> {
   // A background turn acts while the user is away: the server decides what
   // it may do on its own, before any tool runs (MIN-929).
+  const watchRefusal = watchToolRefusal(toolName, ctx);
+  if (watchRefusal) return toolError(watchRefusal);
+  if (ctx.reminder) {
+    const refusal = reminderRefusal(toolName);
+    if (refusal) return toolError(refusal);
+  }
   if (ctx.proactive) {
     const guard = await guardProactiveTool(toolName, args, ctx);
     if (!guard.ok) return toolError(guard.error);
@@ -978,6 +1039,129 @@ async function executeJournalTool(
     }
     if (error.code === "invalid_content" || error.code === "invalid_reason") return toolError(error.message);
     throw error;
+  }
+}
+
+/** How a reminder reads in Numo's tool results. */
+function watchForModel(watch: NumoWatchItem) {
+  return {
+    id: watch.id,
+    project_id: watch.project_id,
+    when: watch.target_type === "date"
+      ? "date"
+      : watch.condition.kind === "comment" ? "issue_comment" : `${watch.target_type}_status`,
+    ...(watch.target_type === "issue" ? { issue_id: watch.target_id } : {}),
+    ...(watch.target_type === "objective" ? { objective_id: watch.target_id } : {}),
+    ...(watch.condition.kind === "status" ? { status: watch.condition.status } : {}),
+    ...(watch.fire_at ? { at: watch.fire_at } : {}),
+    action: watch.action,
+    instruction: watch.instruction,
+    expires_at: watch.expires_at,
+  };
+}
+
+/** list_watches and cancel_watch: the user's own reminders, in every project. */
+async function executeWatchListTool(
+  toolName: "list_watches" | "cancel_watch",
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  try {
+    if (toolName === "cancel_watch") {
+      const id = typeof args.id === "string" && UUID_PATTERN.test(args.id.trim())
+        ? args.id.trim().toLowerCase()
+        : null;
+      if (!id || !(await cancelNumoWatch(ctx.service, ctx.userId, id))) {
+        return toolError("No active reminder with this id. Take ids from list_watches.");
+      }
+      return { result: { canceled: id }, success: true };
+    }
+    const watches = await listActiveNumoWatches(ctx.service, ctx.userId);
+    return { result: { watches: watches.map(watchForModel), limit: NUMO_WATCH_LIMIT }, success: true };
+  } catch (error) {
+    if (error instanceof NumoWatchError) return toolError("Reminders are unavailable right now.");
+    throw error;
+  }
+}
+
+/** create_watch, once the project and the user's read access are resolved. */
+async function executeCreateWatch(
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string,
+  access: ProjectAccess,
+): Promise<ToolExecution> {
+  const when = typeof args.when === "string" && (NUMO_WATCH_WHEN as readonly string[]).includes(args.when)
+    ? args.when as (typeof NUMO_WATCH_WHEN)[number]
+    : null;
+  if (!when) return toolError("when must be issue_status, issue_comment, objective_status or date.");
+  if (args.action !== "notify" && args.action !== "act") return toolError("action must be notify or act.");
+  const status = args.status === null || args.status === undefined || args.status === "" ? "done" : args.status;
+  let target: NumoWatchTarget;
+  if (when === "issue_status" || when === "issue_comment") {
+    const resolved = await resolveIssueRef(ctx.supabase, { projectId, projectKey: access.project.key }, args.issue);
+    if ("error" in resolved) return toolError(resolved.error);
+    if (when === "issue_comment") {
+      target = { type: "issue", id: resolved.issue.id, condition: { kind: "comment" } };
+    } else {
+      if (!isNumoWatchIssueStatus(status)) return toolError("status is not an issue status.");
+      const { data } = await issueStore(ctx.supabase).select("status").eq("id", resolved.issue.id).maybeSingle();
+      if (data?.status === status) {
+        return toolError(`${resolved.issue.identifier} is already ${status}: there is nothing to wait for. Tell the user, and do it now if they want.`);
+      }
+      target = { type: "issue", id: resolved.issue.id, condition: { kind: "status", status } };
+    }
+  } else if (when === "objective_status") {
+    const resolved = await resolveObjectiveRef(ctx.supabase, { projectId }, args.objective_id);
+    if ("error" in resolved) return toolError(resolved.error);
+    if (!isNumoWatchObjectiveStatus(status)) return toolError("status is not an objective status.");
+    if (resolved.objective.status === status) {
+      return toolError(`This objective is already ${status}: there is nothing to wait for. Tell the user, and do it now if they want.`);
+    }
+    target = { type: "objective", id: resolved.objective.id, condition: { kind: "status", status } };
+  } else {
+    const at = parseNumoWatchDate(args.at);
+    if (!at) {
+      return toolError("at must be an ISO 8601 date-time with its offset, such as 2026-11-13T09:00:00+01:00.");
+    }
+    target = { type: "date", id: null, condition: { kind: "date" }, fireAt: at.toISOString() };
+  }
+  const replaces = args.replaces === null || args.replaces === undefined || args.replaces === ""
+    ? null
+    : typeof args.replaces === "string" && UUID_PATTERN.test(args.replaces.trim())
+      ? args.replaces.trim().toLowerCase()
+      : "invalid";
+  if (replaces === "invalid") return toolError("replaces must be the id of an active reminder, or null.");
+  let canceled: string | null = null;
+  try {
+    // Checked before the replaced reminder is cancelled, so a refused
+    // replacement keeps it.
+    validateNumoWatchInput({ target, instruction: args.instruction });
+    if (replaces) {
+      if (!(await cancelNumoWatch(ctx.service, ctx.userId, replaces))) {
+        return toolError("No active reminder with the id in replaces. Take ids from list_watches.");
+      }
+      canceled = replaces;
+    }
+    const watch = await createNumoWatch(ctx.service, ctx.userId, {
+      projectId,
+      target,
+      action: args.action as "notify" | "act",
+      instruction: args.instruction,
+      // Only a conversation the user holds with Numo reaches this point
+      // (watchToolRefusal): the reminder's turn runs there later.
+      conversationId: ctx.conversationId ?? null,
+      timezone: ctx.timezone || null,
+    });
+    return { result: { watch: watchForModel(watch) }, success: true };
+  } catch (error) {
+    if (canceled) await restoreNumoWatch(ctx.service, ctx.userId, canceled);
+    if (!(error instanceof NumoWatchError)) throw error;
+    if (error.code === "limit_reached") {
+      return toolError(`The user already keeps ${NUMO_WATCH_LIMIT} active reminders, the maximum. Ask them which one to cancel or replace; do not drop one on your own.`);
+    }
+    if (error.code === "invalid_instruction" || error.code === "invalid_date") return toolError(error.message);
+    return toolError("Reminders are unavailable right now.");
   }
 }
 
@@ -1205,6 +1389,11 @@ async function executeToolUnlisted(
     // ── Numo's journal (MIN-927 — the user's own, never a project's) ────
     if (toolName === "journal_write" || toolName === "journal_close") {
       return executeJournalTool(toolName, args, ctx);
+    }
+
+    // ── Numo's reminders (MIN-923 — the user's own, across projects) ────
+    if (toolName === "list_watches" || toolName === "cancel_watch") {
+      return executeWatchListTool(toolName, args, ctx);
     }
 
     if (toolName === "list_conversation_attachments") {
@@ -1852,6 +2041,9 @@ async function executeToolUnlisted(
       // loop pauses on ask_user before any tool executes.
       case "ask_user":
         return toolError(UNATTENDED_REFUSAL);
+
+      case "create_watch":
+        return executeCreateWatch(args, ctx, projectId, access);
 
       case "notify_me": {
         const link = parseNumoNoteLink(args.link);

@@ -49,6 +49,7 @@ describe("unified Numo lifecycle boundary", () => {
       "lib/server/agent/pr-actions.ts",
       "lib/server/assistant/comment-agent.ts",
       "lib/server/numo/wake.ts",
+      "lib/server/numo/watch-clock.ts",
       "lib/server/routine-occurrences.ts",
     ]);
   });

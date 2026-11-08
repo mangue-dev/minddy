@@ -155,7 +155,8 @@ vi.mock("@/lib/server/assistant/skills", () => ({
 }));
 vi.mock("@/lib/server/assistant/attachment-parts", () => ({ buildAttachmentParts: async () => [] }));
 vi.mock("@/lib/server/assistant/tools", () => ({
-  CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }, { function: { name: "get_help" } }, { function: { name: "ask_user" } }],
+  CONVERSATION_ASSISTANT_TOOLS: [{ function: { name: "get_issue" } }, { function: { name: "get_help" } }, { function: { name: "ask_user" } },
+    { function: { name: "create_watch" } }, { function: { name: "list_watches" } }, { function: { name: "remember" } }],
   ROUTINE_UNATTENDED_EXCLUDED_TOOLS: new Set(["ask_user", "propose_backlog"]),
 }));
 vi.mock("@/lib/server/web-search", () => ({ withoutWebSearch: (tools: unknown) => tools }));
@@ -172,6 +173,7 @@ vi.mock("@/lib/managed-services", () => ({
   isManagedAiEnabled: () => h.managedAi,
 }));
 vi.mock("@/lib/server/project-access", () => ({ getProjectAccess: vi.fn() }));
+vi.mock("./watch-clock", () => ({ notifyReminderOfNumoTurn: vi.fn() }));
 // A typed mention reaches the model named for the conversation's user.
 vi.mock("@/lib/server/mention-access", async () => {
   const { relabelMentions } = await import("@/lib/mention-link");
@@ -318,7 +320,7 @@ describe("durable Numo execution", () => {
     await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
     const [, tools] = h.processChat.mock.calls[0];
     expect(adminGate.live).not.toHaveBeenCalled();
-    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_issue", "get_help", "ask_user"]);
+    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toEqual(["get_issue", "get_help", "ask_user", "create_watch", "list_watches", "remember"]);
   });
 
   it("streams a text answer before a cold OpenRouter catalog finishes loading", async () => {
@@ -453,6 +455,26 @@ describe("durable Numo execution", () => {
       .map((tool) => tool.function.name);
     expect(offered).toContain("get_issue");
     expect(offered).not.toContain("ask_user");
+  });
+
+  it("runs a reminder's turn unattended: no question, no memory write, no new reminder (MIN-923)", async () => {
+    h.turn = {
+      ...h.turn,
+      intent: {
+        ...(h.turn?.intent as Record<string, unknown>),
+        reminder: { watchId: "watch-1", projectId: "project-1", targetType: "issue", targetId: "issue-1" },
+      },
+    };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: runtime });
+    const offered = (h.processChat.mock.calls[0][1] as { function: { name: string } }[])
+      .map((tool) => tool.function.name);
+    expect(offered).toEqual(expect.arrayContaining(["get_issue", "list_watches"]));
+    expect(offered).not.toContain("ask_user");
+    expect(offered).not.toContain("create_watch");
+    expect(offered).not.toContain("remember");
+    expect(h.processChat.mock.calls[0][3]).toMatchObject({ reminder: true, memoryWritable: false, proactive: false });
+    expect(String((h.processChat.mock.calls[0][0] as Array<{ content: unknown }>)[0].content))
+      .toContain("## Reminder turn");
   });
 
   it("finishes with unified account exhaustion details before another generation", async () => {

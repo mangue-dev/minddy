@@ -34,6 +34,7 @@ import {
   planLimitResponse,
 } from "@/lib/server/plan-limit-error";
 import { beginNumoTurn, executeNumoTurn } from "./turns";
+import type { NumoReminderIntent } from "./watch-prompt";
 
 export class NumoIntentStartError extends Error {
   constructor(
@@ -79,6 +80,8 @@ export interface StartNumoIntentInput {
   };
   /** Server-owned background wake (MIN-929): the batch that woke Numo. */
   wake?: { batchId: string };
+  /** Server-owned reminder (MIN-923) whose `act` turn this is. */
+  reminder?: NumoReminderIntent;
 }
 
 export interface StartedNumoIntent {
@@ -144,24 +147,30 @@ export async function startNumoIntent(
   const projectId = validated.context?.projectId ?? input.projectId ?? null;
 
   await ensureUsageBudget(input.userId, "assistant", "assistant_model");
-  const configuration = await resolveNumoTurnConfiguration({
-    userId: input.userId,
-  });
-  const service = getServiceClient();
-  let createdConversation = false;
   let conversation: { id: string } | null = null;
+  // An existing conversation keeps the provider and model the user pinned
+  // on it, as the chat route does.
+  let pinned: { provider?: unknown; model?: unknown; reasoningLevel?: unknown } = {};
   if (input.conversationId) {
     const { data, error } = await input.supabase
       .from("conversations")
-      .select("id")
+      .select("id, provider, model, reasoning_level")
       .eq("id", input.conversationId)
       .eq("user_id", input.conversationUserId ?? input.userId)
       .maybeSingle();
     if (error || !data) {
       throw new NumoIntentStartError("context_unavailable", 404);
     }
-    conversation = data as { id: string };
-  } else {
+    conversation = { id: data.id as string };
+    pinned = { provider: data.provider, model: data.model, reasoningLevel: data.reasoning_level };
+  }
+  const configuration = await resolveNumoTurnConfiguration({
+    userId: input.userId,
+    ...pinned,
+  });
+  const service = getServiceClient();
+  let createdConversation = false;
+  if (!conversation) {
     const conversationId = randomUUID();
     // A title is read as text: each typed mention as the name its user sees.
     const title = fallbackShortTitle(mentionPlainText(await markdownForReader(input.userId, prompt)));
@@ -213,6 +222,7 @@ export async function startNumoIntent(
             }
           : {}),
         ...(input.wake ? { wake: { batchId: input.wake.batchId } } : {}),
+        ...(input.reminder ? { reminder: input.reminder } : {}),
       },
       model: configuration.model,
       reasoningLevel: configuration.reasoningLevel,

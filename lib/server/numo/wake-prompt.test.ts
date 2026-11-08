@@ -32,7 +32,12 @@ describe("background Numo settings", () => {
     expect(resolveNumoBackgroundEnabled({ numo_background: true })).toBe(true);
     expect(resolveNumoBackgroundEnabled({ numo_background: "true" })).toBe(true);
     expect(resolveNumoBackgroundEnabled({ numo_background: true, numo_memory: false })).toBe(false);
-    expect(resolveNumoBackgroundEnabled({})).toBe(false);
+    // On by default: only an explicit "off" turns it off.
+    expect(resolveNumoBackgroundEnabled({})).toBe(true);
+    expect(resolveNumoBackgroundEnabled(null)).toBe(true);
+    expect(resolveNumoBackgroundEnabled({ numo_background: false })).toBe(false);
+    expect(resolveNumoBackgroundEnabled({ numo_background: "false" })).toBe(false);
+    expect(resolveNumoBackgroundEnabled({ numo_memory: false })).toBe(false);
   });
 
   it("falls back to 20 wakes a day on an unset or invalid admin value", () => {

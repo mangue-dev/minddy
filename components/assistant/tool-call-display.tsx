@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Activity01Icon, AiAutoRotateIcon, AiBrain01Icon, BotIcon, FileImportIcon, GiftIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
+import { Activity01Icon, AiAutoRotateIcon, AiBrain01Icon, BotIcon, CalendarClockIcon, FileImportIcon, GiftIcon, ArrowRight01Icon, Book01Icon, Book02Icon, BookOpen01Icon, Cancel01Icon, DashboardSpeedIcon, Delete02Icon, FileAddIcon as FilePlus2, FileEditIcon as FilePen, FileSearchIcon, FileStackIcon as FileStack, FilterIcon, GitMergeIcon, GitPullRequestIcon, GlobeIcon, Image01Icon, InboxIcon, LayoutGridIcon, Link02Icon, ListIcon, MailRemove01Icon, Message01Icon, MessageCircleQuestionMarkIcon as MessageCircleQuestion, MessageMultiple01Icon, Notebook01Icon, NotebookIcon, Plug01Icon, Search01Icon, Settings02Icon, SlidersHorizontalIcon, SparklesIcon, Tag01Icon, TagsIcon, Target01Icon, TaskDone01Icon, CheckIcon, Undo02Icon, UserAdd01Icon, UserGroupIcon, UserIcon, UserMinus01Icon, UserSettings01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -428,6 +428,29 @@ const TOOL_META: Record<string, ToolMeta> = {
     getLabel: (_args, _result, success, status, t) => {
       if (status === "running") return t("deletingMemory");
       return success ? t("memoryDeleted") : t("memoryFailed");
+    },
+  },
+  // Numo's reminders (MIN-923): set and cancelled at the user's request.
+  create_watch: {
+    icon: CalendarClockIcon,
+    getLabel: (args, _result, success, status, t) => {
+      if (status === "running") return t("settingWatch");
+      if (!success) return t("watchFailed");
+      return args.replaces ? t("watchUpdated") : t("watchSet");
+    },
+  },
+  list_watches: {
+    icon: CalendarClockIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("listingWatches");
+      return success ? t("watchesListed") : t("watchesListFailed");
+    },
+  },
+  cancel_watch: {
+    icon: CalendarClockIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("cancelingWatch");
+      return success ? t("watchCanceled") : t("watchCancelFailed");
     },
   },
   // Numo's journal (MIN-927): the entry itself reaches the user on the home

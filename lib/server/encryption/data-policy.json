@@ -4467,5 +4467,42 @@
         "created_at"
       ]
     }
+  },
+  "numo_watches": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "instruction"
+    ],
+    "clear": {
+      "routing_identity": [
+        "conversation_id",
+        "id",
+        "project_id",
+        "target_id",
+        "user_id"
+      ],
+      "bounded_metadata": [
+        "action",
+        "condition",
+        "outcome",
+        "status",
+        "target_type",
+        "timezone"
+      ],
+      "timestamp": [
+        "created_at",
+        "expires_at",
+        "fire_at",
+        "fired_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
   }
 }

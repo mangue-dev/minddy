@@ -256,6 +256,12 @@ const rules = [
     allowed: new Set(["lib/server/numo/journal-content.ts"]),
   },
   {
+    // Numo's reminders (MIN-923) hold the user's sealed instruction: only
+    // their repository reads or writes the table, the retention sweep included.
+    access: /\.\s*from\s*\(\s*["'`]numo_watches["'`]\s*\)/,
+    allowed: new Set(["lib/server/numo/watches.ts"]),
+  },
+  {
     access: /\.\s*from\s*\(\s*["'`]project_invitations["'`]\s*\)/,
     allowed: allowedInvitationAccess,
   },

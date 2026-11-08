@@ -5,7 +5,7 @@ import { resolveNumoMemoryEnabled } from "@/lib/numo-memory";
  * (the wake, the tool guard) and the settings screen.
  */
 
-/** `user_metadata` key of the "Numo in the background" switch (off by default). */
+/** `user_metadata` key of the "Numo in the background" switch (on by default). */
 export const NUMO_BACKGROUND_META_KEY = "numo_background";
 
 /**
@@ -16,7 +16,9 @@ export const NUMO_BACKGROUND_META_KEY = "numo_background";
 export function resolveNumoBackgroundEnabled(
   meta: Record<string, unknown> | null | undefined,
 ): boolean {
-  return String(meta?.[NUMO_BACKGROUND_META_KEY]) === "true" && resolveNumoMemoryEnabled(meta);
+  // On unless the user turned it off. `numo_event_recipients` (SQL) reads it
+  // the same way: anything but "false" is on.
+  return String(meta?.[NUMO_BACKGROUND_META_KEY]) !== "false" && resolveNumoMemoryEnabled(meta);
 }
 
 /** `app_config` key of the daily wake cap per user, set from the admin dashboard. */
