@@ -1,5 +1,6 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { listNumoMemories } from "@/lib/server/numo/memory-content";
+import { listAllJournalEntries } from "@/lib/server/numo/journal-content";
 import { materializePendingProjectPages } from "@/lib/server/pages";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
@@ -162,6 +163,12 @@ export interface AccountExport {
   numo_preferences?: Row[];
   /** Numo's memory (MIN-915), decrypted for its owner. */
   numo_memories?: Row[];
+  /**
+   * Numo's journal (MIN-927), decrypted for its owner. Export only: it is
+   * Numo's working state about the moment it was written, so an import into
+   * another account does not bring it back.
+   */
+  numo_journal_entries?: Row[];
   owned_projects: Row[];
   memberships: Row[];
   /** Projects hidden from my own navigation (MIN-692). Optional in older exports. */
@@ -508,6 +515,11 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     numo_memories: (await listNumoMemories(service, userId)).map((memory) => ({
       id: memory.id, project_id: memory.project_id, content: memory.content,
       created_at: memory.created_at, updated_at: memory.updated_at,
+    })),
+    numo_journal_entries: (await listAllJournalEntries(service, userId)).map((entry) => ({
+      id: entry.id, project_id: entry.project_id, content: entry.content,
+      source: entry.source, created_at: entry.created_at, seen_at: entry.seen_at,
+      closed_at: entry.closed_at, closed_reason: entry.closed_reason,
     })),
     owned_projects: exportedProjects,
     memberships: list("project_members", memberships),

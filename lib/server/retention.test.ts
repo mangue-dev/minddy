@@ -48,6 +48,9 @@ describe("RETENTION_DAYS", () => {
       7,
       "uploaded objects never attached: 7-day grace period (MIN-348)",
     ],
+    ["closedJournalEntries", 90, "Numo's journal: closed entries, 90 days after being seen"],
+    ["unseenClosedJournalEntries", 180, "Numo's journal: closed entries never seen, 180 days"],
+    ["staleOpenJournalEntries", 180, "Numo's journal: entries left open, 180 days"],
   ] as const)("%s has %i days of retention — %s", (key, days, _promise) => {
     expect(RETENTION_DAYS[key]).toBe(days);
   });

@@ -10873,5 +10873,84 @@
         "targetColumn": "id"
       }
     ]
+  },
+  "numo_journal_entries": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "closed_reason": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "source": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "source_conversation_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "seen_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "closed_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "users",
+        "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
   }
 }

@@ -1153,6 +1153,47 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
     type: "function",
     function: {
+      name: "journal_write",
+      description:
+        "Add one entry to your journal for the user you work for (in a routine, its owner): the material of what you tell them when they come back to the home page. Write one when something now waits for the user (\"PR #12 waits for your review\", \"the client has not answered yet\"; your journal list shows each entry's age), or when, in a routine or an @Numo mention, you did something that changed their content (\"I did the web research asked for in MIN-42\"). Not for what the user watches you do in this conversation, a plain read, a summary of your reply, or a lasting preference (use remember). One sentence in the user's language, citing records with typed mentions. Never add an entry that repeats an open one: close the old one instead when it changed. The journal is silent: nobody is notified. At most 50 open entries; when the result says the limit is reached, close the settled ones first.",
+      parameters: {
+        type: "object",
+        properties: {
+          content: {
+            type: "string",
+            description: "The entry: one sentence, 500 characters at most." + MENTIONS_IN_MARKDOWN,
+          },
+          project_id: {
+            type: ["string", "null"],
+            description: "The project the entry concerns (from list_projects), or null when it concerns no single project.",
+          },
+        },
+        required: ["content", "project_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "journal_close",
+      description:
+        "Close one open entry of your journal, by its id from your journal list, when it no longer applies: the PR was reviewed, the client answered, the user saw to it or told you to drop it. Give the reason in one short sentence. A closed entry the user has not seen yet is still shown to them once, as settled.",
+      parameters: {
+        type: "object",
+        properties: {
+          entry_id: { type: "string", description: "The id of the open entry, from your journal list." },
+          reason: {
+            type: "string",
+            description: "Why it no longer applies: one short sentence, 300 characters at most.",
+          },
+        },
+        required: ["entry_id", "reason"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "notify_me",
       description:
         "Leave a note in the inbox of the user you work for (in a routine, its owner), with a push to their devices. Only that user receives it: never other members, who have their own Numo. Send a note only when it changes what the user will do — something found, blocked, due or decided that they would otherwise miss while away. Never send a summary of your work, a confirmation or a copy of your reply: in a conversation the user is reading you already, so notify only when they asked to be told later. At most 5 notes per turn; the same note to the same target is sent once a day. Write in the user's language. The result says `delivered: false` when the user turned these notes off or the note is a duplicate; do not retry then.",
@@ -2856,6 +2897,9 @@ export const ACCOUNT_TOOLS = new Set([
   "set_scratchpad",
   "remember",
   "forget",
+  // Numo's journal (MIN-927) is the user's own; an entry names its project.
+  "journal_write",
+  "journal_close",
 ]);
 
 /** Tools that wait for the user (a question, a proposal to review), never

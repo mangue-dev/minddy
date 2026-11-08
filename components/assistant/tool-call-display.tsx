@@ -430,6 +430,22 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("memoryDeleted") : t("memoryFailed");
     },
   },
+  // Numo's journal (MIN-927): the entry itself reaches the user on the home
+  // page, so the thread only says that one was written or closed.
+  journal_write: {
+    icon: Activity01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("writingJournal");
+      return success ? t("journalWritten") : t("journalFailed");
+    },
+  },
+  journal_close: {
+    icon: TaskDone01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("closingJournal");
+      return success ? t("journalClosed") : t("journalFailed");
+    },
+  },
   notify_me: {
     icon: InboxIcon,
     getLabel: (_args, result, success, status, t) => {

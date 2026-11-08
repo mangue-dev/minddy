@@ -268,7 +268,7 @@ export const PUBLIC_ROUTES = [
       es: "/es/privacidad",
     },
     namespace: "Privacy",
-    lastModified: "2026-10-22",
+    lastModified: "2026-11-08",
     priority: 0.3,
   },
   {
