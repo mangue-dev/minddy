@@ -490,13 +490,6 @@
     "storage": false
   },
   {
-    "file": "app/api/home/brief/route.ts",
-    "operation": "from",
-    "resource": "conversations",
-    "line": 56,
-    "storage": false
-  },
-  {
     "file": "app/api/issue-pull-requests/route.ts",
     "operation": "from",
     "resource": "project_git_links",
