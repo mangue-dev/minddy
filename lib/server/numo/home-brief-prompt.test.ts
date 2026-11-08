@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildHomeBriefSystemPrompt,
   buildHomeBriefUserMessage,
+  dropBareHandles,
   homeBriefCoverage,
   homeBriefDigest,
   keepKnownMentions,
@@ -137,5 +138,12 @@ describe("homeBriefCoverage", () => {
       { id: "b", closed_at: old, seen_at: old }], now, ttl)).toBe("stale_news");
     const settledOnly = { journal_entry_ids: ["b"], journal_digest: homeBriefDigest([{ id: "b", state: "settled" }]) };
     expect(homeBriefCoverage(settledOnly, [{ id: "b", closed_at: old, seen_at: recent }], now, ttl)).toBe("empty");
+  });
+});
+
+describe("dropBareHandles", () => {
+  it("writes a bare @name as the name, and leaves mention links alone", () => {
+    expect(dropBareHandles("Lina is waiting (@Lina) for [@MIN-42](mention:issue/i1), mail a@b.c"))
+      .toBe("Lina is waiting (Lina) for [@MIN-42](mention:issue/i1), mail a@b.c");
   });
 });

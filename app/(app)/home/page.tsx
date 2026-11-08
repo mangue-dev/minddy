@@ -44,8 +44,8 @@ function useGreeting(name: string): string {
  * conversation started here continues in the panel.
  *
  * The new conversation opens with the greeting and Numo's summary of its
- * journal when Numo has written one; both stay on top of the conversation
- * started under them. No banner or notice sits in it: the page is a
+ * journal when Numo has written one. Once the user writes, the greeting
+ * leaves and the summary stays on top, as Numo's opening message. No banner or notice sits in it: the page is a
  * conversation. The suggestions above the composer are the ones Numo wrote
  * with its summary, or the fixed home set until it has written any. Without
  * an AI provider there is no conversation: Home keeps the greeting and the
@@ -122,6 +122,9 @@ export default function HomePage() {
               {brief ? <HomeNumoBrief brief={brief} /> : null}
             </div>
           }
+          // Once you write, the greeting leaves and Numo's word stays as the
+          // opening message of the conversation; without a word, nothing stays.
+          keptIntro={brief ? <HomeNumoBrief brief={brief} /> : null}
           starterItems={brief ? brief.suggestions : null}
           startersPending={briefLoading}
           unavailableFallback={

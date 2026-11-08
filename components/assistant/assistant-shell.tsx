@@ -148,6 +148,12 @@ export interface AssistantShellProps {
   startFresh?: boolean;
   /** What an empty conversation shows (Home: the greeting and Numo's word). */
   intro?: ReactNode;
+  /**
+   * What stays on top of a conversation started under the intro, as it was
+   * when the first message left (Home: Numo's word, as its first message).
+   * Nothing stays when absent.
+   */
+  keptIntro?: ReactNode;
   /** Rows written for the user in place of the page's fixed suggestions; null keeps them. */
   starterItems?: ReadonlyArray<{ label: string; prompt: string }> | null;
   /** The written rows are still loading: show no row yet. */
@@ -173,6 +179,7 @@ export const AssistantShell = forwardRef<
     hideHeader = false,
     startFresh = false,
     intro = null,
+    keptIntro = null,
     starterItems = null,
     startersPending = false,
     unavailableFallback = null,
@@ -369,10 +376,19 @@ export const AssistantShell = forwardRef<
         reset();
         resetContextSelection();
         setRefreshKey((k) => k + 1);
+        setKept(null);
       },
     }),
     [aiAvailability.available, aiAvailability.loading, sendMessage, reset, resetContextSelection]
   );
+
+  // What stays on top of the conversation sent from under the intro (see
+  // `keptIntro`); `null` once a new conversation starts.
+  const [kept, setKept] = useState<{ node: ReactNode; conversationId: string | null } | null>(null);
+  const keptIntroRef = useRef<ReactNode>(keptIntro);
+  keptIntroRef.current = keptIntro;
+  const blankRef = useRef(true);
+  blankRef.current = !state.conversationId && state.messages.length === 0;
 
   const handleSend = useCallback(
     (
@@ -384,6 +400,9 @@ export const AssistantShell = forwardRef<
       intent?: AssistantChatRequest["intent"],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
+      if (blankRef.current) {
+        setKept(keptIntroRef.current ? { node: keptIntroRef.current, conversationId: null } : null);
+      }
       const sentContext = effectiveContextRef.current;
       sendMessage(sentContext?.projectId ?? null, message, {
         pageContext: sentContext,
@@ -433,6 +452,7 @@ export const AssistantShell = forwardRef<
     reset();
     resetContextSelection();
     setRefreshKey((k) => k + 1);
+    setKept(null);
   }, [reset, resetContextSelection]);
 
   const isStreaming =
@@ -454,26 +474,20 @@ export const AssistantShell = forwardRef<
     current.reset({ silent: true });
     current.resetContextSelection();
     setRefreshKey((k) => k + 1);
+    setKept(null);
   }, []);
 
-  // The intro opens the conversation started under it: it stays at its top
-  // once the first message is sent, as long as that conversation is shown.
-  const [introConversationId, setIntroConversationId] = useState<string | null>(null);
-  const introPending = useRef(false);
+  // The kept intro tops the conversation sent from under the intro, from the
+  // moment the message leaves (its id comes later) and for as long as that
+  // conversation is shown. It is captured then: a later version of what the
+  // host passes does not rewrite the conversation's opening.
   useEffect(() => {
-    if (!intro) return;
-    if (!state.conversationId && state.messages.length === 0) {
-      introPending.current = true;
-      return;
+    if (kept && kept.conversationId === null && state.conversationId) {
+      setKept({ ...kept, conversationId: state.conversationId });
     }
-    if (introPending.current && state.conversationId) {
-      introPending.current = false;
-      // A send starts a turn; opening a stored conversation does not.
-      if (isBusy) setIntroConversationId(state.conversationId);
-    }
-  }, [intro, state.conversationId, state.messages.length, isBusy]);
-  const introOnTop = Boolean(intro) && introConversationId !== null &&
-    state.conversationId === introConversationId;
+  }, [kept, state.conversationId]);
+  const keptOnTop = kept !== null &&
+    (kept.conversationId === null || kept.conversationId === state.conversationId);
   // One announcement per reply, once it has ended (see the log below).
   const [replyStatus, setReplyStatus] = useState("");
   const wasBusy = useRef(isBusy);
@@ -973,7 +987,7 @@ export const AssistantShell = forwardRef<
                        : `mx-auto w-full ${convoMaxW} gap-6 p-4 app-desktop:p-6`
                    }
                  >
-                  {introOnTop ? intro : null}
+                  {keptOnTop ? kept?.node : null}
                   {blocks.map((block) => {
                     if (block.kind === "message")
                       return renderMessage(block.message);

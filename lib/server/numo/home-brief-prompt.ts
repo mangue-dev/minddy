@@ -113,7 +113,7 @@ Where it shows: right below the app's greeting (for example ${examples || "\"Goo
 - When an entry carries a result Numo produced for the user (a summary, research, figures), give its substance here: the key facts and numbers. Never say a result is ready or waits for the user, and never send them to a conversation, a page or anywhere else to read it: this text is what they read.
 - This is not an activity report. No list of every entry, no headings, no bullet points, no emoji, no Markdown other than mentions.
 - Write as Numo, in the first person, to the user.
-- Cite each record with the mention link the journal gives for it, copied exactly: \`[@Label](mention:<type>/<id>)\`. Never invent one: a record the journal does not link stays plain text.
+- Cite each record with the mention link the journal gives for it, copied exactly: \`[@Label](mention:<type>/<id>)\`. Never invent one: a record the journal does not link stays plain text, and a person the journal names without a link is written by name, never as @name.
 
 Suggestions: zero to ${NUMO_HOME_SUGGESTION_LIMIT} things the user is likely to ask Numo next, drawn from this journal only. Each has a label (a few words, shown on the button) and a prompt (the message the user sends to Numo: complete on its own, citing records with the same mention links). When Numo offers to do something on its own, one suggestion is the user's answer, such as "Yes, do it on your own from now on". No suggestion is better than a generic one.
 
@@ -281,6 +281,16 @@ export function keepKnownMentions(text: string, known: ReadonlySet<string>): str
   }).join("");
 }
 
+/**
+ * A bare `@name` outside a mention link: the chat renders it as a code-forge
+ * handle, never what the model meant. The name stays, without the `@`.
+ */
+export function dropBareHandles(text: string): string {
+  return splitMentionLinks(text).map((piece) => typeof piece === "string"
+    ? piece.replace(/(^|[\s(])@(?=[\p{L}\p{N}])/gu, "$1")
+    : mentionMarkdown(piece.type, piece.id, piece.label, piece.meta)).join("");
+}
+
 /** Every mention replaced by its label: text with no link left. */
 export function mentionsAsText(text: string): string {
   return splitMentionLinks(text).map((piece) => typeof piece === "string" ? piece : piece.label).join("");
@@ -306,7 +316,7 @@ export function sanitizeHomeBrief(raw: Record<string, unknown>, options: {
   if (typeof raw.text !== "string") return null;
   const flat = raw.text.replace(/\s+/g, " ").trim();
   const opened = stripHomeBriefOpening(flat, options.name);
-  const stored = withoutMentionLabels(keepKnownMentions(opened, options.knownMentions));
+  const stored = withoutMentionLabels(dropBareHandles(keepKnownMentions(opened, options.knownMentions)));
   const content = cutAtSentence(stored, NUMO_HOME_BRIEF_MAX_LENGTH);
   if (!content) return null;
   const suggestions: NumoHomeSuggestion[] = [];
