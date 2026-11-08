@@ -180,28 +180,6 @@ export function stalledIssues<T extends StatsIssue>(issues: T[], today: string):
     .sort((a, b) => a.updated_at.localeCompare(b.updated_at));
 }
 
-/**
- * Forgotten tickets (MIN-932): open work nobody has touched for a while.
- * Planned or ongoing work (todo, in progress, in review) after 30 idle days;
- * a backlog ticket, often parked on purpose, after 90. Triage has its own
- * queue. A project with few open tickets returns none: there, a lone ticket
- * is in plain sight, and may be alone on purpose. The longest idle first.
- */
-export const FORGOTTEN_DAYS = 30;
-export const FORGOTTEN_BACKLOG_DAYS = 90;
-export const FORGOTTEN_MIN_OPEN = 10;
-
-export function forgottenIssues<T extends StatsIssue>(issues: T[], today: string): T[] {
-  const open = issues.filter((issue) => !isClosedStatus(issue.status) && issue.status !== "triage");
-  if (open.length < FORGOTTEN_MIN_OPEN) return [];
-  return open
-    .filter((issue) => {
-      const idleSince = addDays(today, -(issue.status === "backlog" ? FORGOTTEN_BACKLOG_DAYS : FORGOTTEN_DAYS));
-      return dayOf(issue.updated_at) <= idleSince;
-    })
-    .sort((a, b) => a.updated_at.localeCompare(b.updated_at));
-}
-
 export function projectHealth(issues: StatsIssue[], today: string, now: number = Date.now()): ProjectHealth {
   const health: ProjectHealth = { open: 0, overdue: 0, unassigned: 0, stalled: 0 };
   for (const issue of issues) {

@@ -167,7 +167,7 @@ export interface AssistantPinnedContext {
  * it is he who travels in the request and persists on `metadata.command`
  * of the user message, where the server unfolds it into instructions for Numo.
  */
-export type AssistantCommandId = "create-issue" | "find-isolated";
+export type AssistantCommandId = "create-issue";
 
 /**
  * An "@" mention written IN the message (team member, project, ticket

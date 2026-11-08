@@ -1,5 +1,4 @@
 import { readProjectStats } from "@/lib/server/project-stats";
-import { findIsolatedItems } from "@/lib/server/isolated-items";
 import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
 import { materializePendingDescription } from "@/lib/server/description-collaboration";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
@@ -1513,11 +1512,6 @@ async function executeToolUnlisted(
           ownerId: access.project.owner_id,
           timeZone: ctx.timezone,
         });
-        return "error" in r ? toolError(r.error) : { result: r, success: true };
-      }
-      // ── Isolated items (MIN-932): forgotten issues, pages with no issue ──
-      case "find_isolated_items": {
-        const r = await findIsolatedItems(readCtx(ctx, projectId, access), { timeZone: ctx.timezone });
         return "error" in r ? toolError(r.error) : { result: r, success: true };
       }
       case "get_objective": {

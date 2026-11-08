@@ -5,7 +5,7 @@
 
 import { type CSSProperties, useMemo } from "react";
 import { AppIcon } from "@/components/icon";
-import { LayersIcon as Layers, PencilEdit01Icon as SquarePen, Search01Icon as Search } from "@hugeicons/core-free-icons";
+import { LayersIcon as Layers, PencilEdit01Icon as SquarePen } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { MENU_ROW_ACTIVE_CLASS, MENU_ROW_CLASS, MENU_SCROLL_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
@@ -58,14 +58,6 @@ export function useSlashCommands(): SlashCommandOption[] {
         description: t("slashCreateIssueDescription"),
         icon: SquarePen,
         keywords: ["create issue", "créer ticket"],
-      },
-      {
-        kind: "command" as const,
-        id: "find-isolated",
-        label: t("slashFindIsolatedLabel"),
-        description: t("slashFindIsolatedDescription"),
-        icon: Search,
-        keywords: ["find isolated", "forgotten", "orphan pages", "éléments isolés", "oubliés"],
       },
     ],
     [t],

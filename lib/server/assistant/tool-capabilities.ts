@@ -85,7 +85,6 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   get_issue: "read",
   list_members: "read",
   get_project_stats: "read",
-  find_isolated_items: "read",
   get_objective: "read",
   list_objectives: "read",
   list_categories: "read",

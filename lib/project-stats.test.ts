@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  forgottenIssues,
   median,
   momentum,
   medianLeadTimeSeconds,
@@ -214,28 +213,5 @@ describe("overdue timestamps", () => {
     const laterToday = issue({ due_date: new Date(NOW + 3_600_000).toISOString() });
     const today = issue({ due_date: new Date(`${TODAY}T00:00:00`).toISOString() });
     expect(overdueIssues([pastHour, laterToday, today], NOW)).toEqual([pastHour]);
-  });
-});
-
-describe("forgottenIssues (MIN-932)", () => {
-  const busy = (extra: StatsIssue[]) => [
-    ...Array.from({ length: 10 }, () => issue({ updated_at: at("2026-10-28") })),
-    ...extra,
-  ];
-
-  it("lists open work idle for 30 days, backlog after 90, the longest idle first", () => {
-    const todo = issue({ status: "todo", updated_at: at("2026-09-20") });
-    const review = issue({ status: "in_review", updated_at: at("2026-08-01") });
-    const recentBacklog = issue({ status: "backlog", updated_at: at("2026-09-01") });
-    const oldBacklog = issue({ status: "backlog", updated_at: at("2026-07-01") });
-    const triage = issue({ status: "triage", updated_at: at("2026-06-01") });
-    const closed = issue({ status: "done", updated_at: at("2026-06-01") });
-    expect(forgottenIssues(busy([todo, review, recentBacklog, oldBacklog, triage, closed]), TODAY)
-      .map((item) => item.id)).toEqual([oldBacklog.id, review.id, todo.id]);
-  });
-
-  it("lists nothing in a project with few open issues", () => {
-    const lone = issue({ status: "todo", updated_at: at("2026-06-01") });
-    expect(forgottenIssues([lone, ...Array.from({ length: 8 }, () => issue())], TODAY)).toEqual([]);
   });
 });
