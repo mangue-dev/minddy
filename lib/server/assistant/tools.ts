@@ -1227,13 +1227,13 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "journal_write",
       description:
-        "Add one entry to your journal for the user you work for (in a routine, its owner): the material of what you tell them when they come back to the home page. Write one when something now waits for the user (\"PR #12 waits for your review\", \"the client has not answered yet\"; your journal list shows each entry's age), or when, in a routine or an @Numo mention, you did something that changed their content (\"I did the web research asked for in MIN-42\"). Not for what the user watches you do in this conversation, a plain read, a summary of your reply, or a lasting preference (use remember). One sentence in the user's language, citing records with typed mentions. Never add an entry that repeats an open one: close the old one instead when it changed. The journal is silent: nobody is notified. At most 50 open entries; when the result says the limit is reached, close the settled ones first.",
+        "Add one entry to your journal for the user you work for (in a routine, its owner): the material of what you tell them when they come back to the home page. Write one when something now waits for the user (\"PR #12 waits for your review\", \"the client has not answered yet\"; your journal list shows each entry's age), or when, in a routine or an @Numo mention, you did something that changed their content (\"I added the web research to MIN-42: three vendors fit, Acme is the cheapest\"). An entry about a result you produced (a summary, research, figures) carries its key facts and numbers, never only that it is ready: the home page shows the entry, not the conversation. Not for what the user watches you do in this conversation, a plain read, or a lasting preference (use remember). One or two sentences in the user's language, citing records with typed mentions. Never add an entry that repeats an open one: close the old one instead when it changed. The journal is silent: nobody is notified. At most 50 open entries; when the result says the limit is reached, close the settled ones first.",
       parameters: {
         type: "object",
         properties: {
           content: {
             type: "string",
-            description: "The entry: one sentence, 500 characters at most." + MENTIONS_IN_MARKDOWN,
+            description: "The entry: one or two sentences, 500 characters at most." + MENTIONS_IN_MARKDOWN,
           },
           project_id: {
             type: ["string", "null"],

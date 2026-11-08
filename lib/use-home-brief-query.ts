@@ -22,8 +22,6 @@ export interface HomeBrief {
   /** Markdown with typed mentions. */
   content: string;
   suggestions: HomeBriefSuggestion[];
-  /** The background conversation that wrote the newest covered entry. */
-  conversation_id: string | null;
   generated_at: string;
 }
 

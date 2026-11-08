@@ -381,9 +381,12 @@ export function buildSharedRules(
   to the home page. Write an entry, silently, for what now waits for the user (a review they owe,
   an answer they expect, "note that I'm waiting for the client") and, in a routine or an @Numo
   mention, for each action of yours that changed their content (an issue you created or moved,
-  research you added to a page). One sentence in the user's language, citing the records with
-  typed mentions. Not for a plain read, what the user watches you do in this conversation, or a
-  lasting preference (that is remember).
+  research you added to a page). One or two sentences in the user's language, citing the records
+  with typed mentions. An entry about a result you produced for the user (a summary, research,
+  figures) carries the result itself, its key facts and numbers ("MIN closed 12 issues this week,
+  3 are late"), never only that it is ready: the home page shows the entry, not the conversation.
+  Not for a plain read, what the user watches you do in this conversation, or a lasting
+  preference (that is remember).
   Home no longer shows triage counts: when you see issues or feedback waiting in the triage of a
   project the user owns and no open entry says so, write one ("3 issues wait in MIN's triage"),
   and close it once that triage is empty.

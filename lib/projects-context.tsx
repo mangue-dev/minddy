@@ -168,3 +168,8 @@ export function useProjects(): ProjectsContextValue {
   if (!ctx) throw new Error("useProjects must be used within ProjectsProvider");
   return ctx;
 }
+
+/** The projects, or `null` outside a `ProjectsProvider` (public pages). */
+export function useOptionalProjects(): ProjectsContextValue | null {
+  return useContext(ProjectsContext);
+}

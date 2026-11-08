@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef } from "react";
 import { ChatMessage } from "@/components/assistant/chat-message";
-import { Button } from "@/components/ui/button";
 import type { AssistantMessage } from "@/lib/assistant-types";
 import { markHomeBriefSeen, type HomeBrief } from "@/lib/use-home-brief-query";
 
@@ -14,20 +12,14 @@ import { markHomeBriefSeen, type HomeBrief } from "@/lib/use-home-brief-query";
  * it offers to do on its own). Numo writes it in the background; the page
  * only reads it.
  *
- * It renders like any Numo answer, its mentions as live pills. The link under
- * it shows the conversation where Numo wrote its newest entry, in place of
- * the home conversation.
+ * It renders like any Numo answer, its mentions as live pills. It carries
+ * what the user needs to know: there is no link to another conversation.
  *
  * Showing a version marks the journal entries it covers as seen, once per
  * version: the next word leaves out what was settled and treats the rest as
  * known.
  */
-export function HomeNumoBrief({ brief, onOpenConversation }: {
-  brief: HomeBrief;
-  /** Show the conversation where Numo wrote its newest covered entry. */
-  onOpenConversation: (conversationId: string) => void;
-}) {
-  const t = useTranslations("Home");
+export function HomeNumoBrief({ brief }: { brief: HomeBrief }) {
   const seen = useRef<string | null>(null);
 
   useEffect(() => {
@@ -57,22 +49,9 @@ export function HomeNumoBrief({ brief, onOpenConversation }: {
     created_at: brief.generated_at,
   }), [brief.id, brief.content, brief.generated_at]);
 
-  const conversationId = brief.conversation_id;
-  const after: ReactNode = conversationId ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="-ml-2.5 h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground"
-      onClick={() => onOpenConversation(conversationId)}
-    >
-      {t("numoBriefOpenConversation")}
-    </Button>
-  ) : null;
-
   return (
     <div data-testid="home-numo-brief">
-      <ChatMessage message={message} afterContent={after} />
+      <ChatMessage message={message} />
     </div>
   );
 }

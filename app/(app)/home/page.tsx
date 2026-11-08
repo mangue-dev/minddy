@@ -71,7 +71,7 @@ export default function HomePage() {
   useSuppressAssistantFab(true);
   // The open panel shows the same conversation and owns the keyboard.
   const { isOpen: panelOpen } = useAssistantPanel();
-  const { loadConversation, state: chat, isBusy } = useAssistantChatContext();
+  const { state: chat, isBusy } = useAssistantChatContext();
   // Already on a blank conversation: starting another would change nothing.
   const blankConversation = !chat.conversationId && chat.messages.length === 0 && !isBusy;
   const aiAvailability = useAiSurfaceAvailability("assistant");
@@ -119,14 +119,7 @@ export default function HomePage() {
           intro={
             <div className="flex flex-col gap-6">
               {welcome}
-              {brief ? (
-                <HomeNumoBrief
-                  brief={brief}
-                  // The background conversation opens right here, in place of
-                  // the new one; New conversation brings the word back.
-                  onOpenConversation={(id) => void loadConversation(id, null)}
-                />
-              ) : null}
+              {brief ? <HomeNumoBrief brief={brief} /> : null}
             </div>
           }
           starterItems={brief ? brief.suggestions : null}

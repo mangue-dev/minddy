@@ -182,8 +182,8 @@ export async function rewriteHomeBrief(userId: string,
   const brief = args ? sanitizeHomeBrief(args, { name: name || null, knownMentions: known }) : null;
   if (!brief) return "no_answer";
 
-  // The conversation that wrote the newest covered entry: the home page
-  // opens it to show what Numo did.
+  // The conversation that wrote the newest covered entry, kept with the
+  // version for reference; the home page links to none.
   const newest = [...entries].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
     .find((entry) => entry.conversationId);
   await writeHomeBrief(service, userId, {

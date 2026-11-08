@@ -43,6 +43,10 @@ vi.mock("@/lib/server/numo/journal-content", () => ({
   isJournalUuid: (value: unknown) => typeof value === "string" &&
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value),
 }));
+vi.mock("@/lib/server/mention-access", () => ({
+  readResultForReader: async (_user: string, value: unknown) =>
+    JSON.parse(JSON.stringify(value).replaceAll("[@](mention:issue/i1)", "[@MIN-42](mention:issue/i1)")),
+}));
 vi.mock("@/lib/server/numo/home-brief", () => ({
   scheduleHomeBriefRewrite: mocks.scheduleHomeBriefRewrite,
 }));
@@ -76,17 +80,14 @@ describe("/api/home/brief", () => {
     };
   });
 
-  it("returns the latest version with its conversation", async () => {
+  it("returns the latest version, its suggestions labelled for the reader", async () => {
+    mocks.brief!.suggestions = [{ label: "Review", prompt: "Review [@](mention:issue/i1)" }];
     expect(await get()).toEqual({ brief: {
-      id: BRIEF, content: "MIN-42 waits for your review.", suggestions: [],
-      conversation_id: "conv-1", generated_at: OLD,
+      id: BRIEF, content: "MIN-42 waits for your review.",
+      suggestions: [{ label: "Review", prompt: "Review [@MIN-42](mention:issue/i1)" }],
+      generated_at: OLD,
     } });
     expect(mocks.scheduleHomeBriefRewrite).not.toHaveBeenCalled();
-  });
-
-  it("drops the link to a conversation that is gone", async () => {
-    mocks.conversationExists = false;
-    expect((await get()).brief.conversation_id).toBeNull();
   });
 
   it("shows nothing once every covered entry is settled and seen, or when Numo wrote nothing", async () => {

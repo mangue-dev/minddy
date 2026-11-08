@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveNumoBackgroundEnabled } from "@/lib/numo-background";
 import { getAuthedUser } from "@/lib/server/api-auth";
+import { readResultForReader } from "@/lib/server/mention-access";
 import { scheduleHomeBriefRewrite } from "@/lib/server/numo/home-brief";
 import { getHomeBriefEntryIds, getLatestHomeBrief } from "@/lib/server/numo/home-brief-content";
 import { homeBriefCoverage } from "@/lib/server/numo/home-brief-prompt";
@@ -50,19 +51,14 @@ export async function GET(request: NextRequest) {
     if (coverage !== "current" && coverage !== "empty" && settled) scheduleHomeBriefRewrite(userId);
     if (coverage === "outdated" || coverage === "empty") return NextResponse.json({ brief: null });
 
-    // The conversation may have left with its wake (retention): no link then.
-    let conversationId = brief.conversation_id;
-    if (conversationId) {
-      const { data } = await service.from("conversations").select("id")
-        .eq("id", conversationId).eq("user_id", userId).maybeSingle();
-      if (!data) conversationId = null;
-    }
     return NextResponse.json({
       brief: {
         id: brief.id,
         content: brief.content,
-        suggestions: brief.suggestions,
-        conversation_id: conversationId,
+        // A suggestion fills the composer: its mentions carry the name this
+        // reader may see, so they become pills there (stored without names).
+        suggestions: await readResultForReader(userId, brief.suggestions, service)
+          .catch(() => brief.suggestions),
         generated_at: brief.generated_at,
       },
     });

@@ -9,7 +9,10 @@ import {
   mentionMarkdown,
   mentionMetaFromAttr,
   mentionMetaToAttr,
+  splitMentionLinks,
 } from "@/lib/mention-link";
+import { useOptionalProjects } from "@/lib/projects-context";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { knownMentionLabel } from "@/lib/mention-resolution";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
@@ -244,6 +247,28 @@ export function composerText(root: HTMLElement): string {
 }
 
 /** The composer pill an option becomes (exported for tests). */
+/**
+ * The composer content for a prompt written with typed mentions: text, and a
+ * pill for each mention `optionFor` can name. A day stays its text; any other
+ * target reads as `@label`, or `@…` without a name.
+ */
+export function composerNodesFromMarkdown(
+  text: string,
+  optionFor: (link: { type: string; id: string; label: string }) => MentionOption | null,
+): Node[] {
+  return splitMentionLinks(text).map((piece) => {
+    if (typeof piece === "string") return document.createTextNode(piece);
+    const option = optionFor(piece);
+    if (option) return createMentionNode(option);
+    return document.createTextNode(piece.type === "date" ? piece.id : `@${piece.label || "…"}`);
+  });
+}
+
+/** Mention types a filled prompt turns into pills; any other stays text. */
+const FILLABLE_MENTION_TYPES: ReadonlySet<string> = new Set([
+  "member", "project", "issue", "objective", "page", "pull_request", "routine", "cycle",
+]);
+
 export function createMentionNode(option: MentionOption): HTMLSpanElement {
   const pill = document.createElement("span");
   pill.contentEditable = "false";
@@ -1563,13 +1588,35 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       publishDraft();
     }, [publishDraft]);
 
+    // The pill a filled mention becomes: the composer's own option when its
+    // list holds the target, else one built from the link and, for a
+    // project, from the user's project list (orb and icon).
+    const projectsContext = useOptionalProjects();
+    const fillOptionRef = useRef<(link: { type: string; id: string; label: string }) => MentionOption | null>(() => null);
+    fillOptionRef.current = (link) => {
+      const own = (mentionables ?? []).find((option) => option.type === link.type && option.id === link.id);
+      if (own) return own;
+      const label = link.label || knownMentionLabel(link.type as never, link.id, undefined) || "";
+      if (!label || !FILLABLE_MENTION_TYPES.has(link.type)) return null;
+      const project = link.type === "project"
+        ? projectsContext?.projects.find((candidate) => candidate.id === link.id)
+        : undefined;
+      return {
+        type: link.type as MentionOption["type"], id: link.id, label,
+        ...(project ? { avatarSeed: projectOrbSeed(project), iconUrl: project.icon_url ?? null } : {}),
+      };
+    };
+
     useImperativeHandle(
       ref,
       () => ({
         fill(text: string) {
           const el = editorRef.current;
           if (!el) return;
-          el.textContent = text;
+          // A prompt written with typed mentions (Numo's suggestions on Home,
+          // MIN-930) fills the composer with pills, as a paste of them does.
+          el.replaceChildren(...composerNodesFromMarkdown(text, (link) => fillOptionRef.current(link)));
+          syncMentionSlots();
           setIsEmpty(false);
           el.focus();
           const sel = window.getSelection();
@@ -1588,7 +1635,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         },
         append: appendDictated,
       }),
-      [publishDraft, appendDictated]
+      [publishDraft, appendDictated, syncMentionSlots]
     );
 
     useEffect(() => {

@@ -1689,7 +1689,6 @@
     "greeting": "Olá, {name}",
     "greetingNoName": "Olá",
     "welcome": "Boas-vindas, {name}",
-    "numoBriefOpenConversation": "Ver o que o Numo fez",
     "noProject": "Nenhum projeto ainda",
     "greetNightLate": "É tarde, {name}",
     "greetNightLateNoName": "É tarde",
