@@ -180,8 +180,6 @@ export async function createNumoWatch(service: SupabaseClient, userId: string, i
 }): Promise<NumoWatchItem> {
   const now = input.now ?? new Date();
   const valid = validateNumoWatchInput({ target: input.target, instruction: input.instruction, now });
-  // Not atomic with the insert: two calls in the same instant may pass 21.
-  // Numo sets reminders one at a time in a conversation, so this is accepted.
   if (await countActive(service, userId) >= NUMO_WATCH_LIMIT) {
     throw new NumoWatchError("limit_reached",
       `The user already keeps ${NUMO_WATCH_LIMIT} active reminders, the maximum.`);
@@ -208,6 +206,13 @@ export async function createNumoWatch(service: SupabaseClient, userId: string, i
   const { data, error } = await service.from("numo_watches").insert(row)
     .select(COLUMNS).single();
   if (error || !data) throw new NumoWatchError("database", "Unable to save the reminder");
+  // The count above and the insert are two statements: two calls in the
+  // same instant could both pass. Counted again, the one past the cap goes.
+  if (await countActive(service, userId) > NUMO_WATCH_LIMIT) {
+    await service.from("numo_watches").delete().eq("user_id", userId).eq("id", row.id as string);
+    throw new NumoWatchError("limit_reached",
+      `The user already keeps ${NUMO_WATCH_LIMIT} active reminders, the maximum.`);
+  }
   return decodeNumoWatchRow(data as Row, userId);
 }
 
