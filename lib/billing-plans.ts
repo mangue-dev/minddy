@@ -219,6 +219,8 @@ export const BILLABLE_FEATURES = [
   "issue_search",
   // Background Numo (MIN-928): the LLM fallback of the wake decision.
   "numo_wake",
+  // Numo's word on the home page (MIN-930).
+  "numo_home_brief",
 ] as const;
 
 export type BillableFeature = (typeof BILLABLE_FEATURES)[number];
@@ -258,7 +260,7 @@ export const USAGE_SEGMENTS: UsageSegment[] = [
   // look alone, not a few pennies drowned.)
   {
     id: "numo",
-    features: ["numo_chat", "numo_comment", "web_search", "numo_wake"],
+    features: ["numo_chat", "numo_comment", "web_search", "numo_wake", "numo_home_brief"],
     barClass: "bg-blue-500",
   },
   { id: "dictation", features: ["dictation", "transcription"], barClass: "bg-amber-500" },

@@ -61,6 +61,7 @@ export const FEATURE_LABEL_KEYS: Record<UsageHistoryFeature, MessageKey<"Billing
   issue_relation: "historyFeatureIssueRelation",
   issue_search: "historyFeatureIssueSearch",
   numo_wake: "historyFeatureNumoWake",
+  numo_home_brief: "historyFeatureNumoHomeBrief",
 };
 
 /**

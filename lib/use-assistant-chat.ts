@@ -812,6 +812,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         skills?: AssistantSkillSelection[];
         /** Voluntary entry provenance from the common Numo intent contract. */
         intent?: AssistantChatRequest["intent"];
+        /** Numo's Home summary this first message answers (MIN-933). */
+        homeBriefId?: string;
       },
     ) => {
       if (!message.trim()) return;
@@ -883,6 +885,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             ? { skills: options.skills }
             : {}),
           ...(options?.intent ? { intent: options.intent } : {}),
+          ...(options?.homeBriefId && !requestConversationId ? { homeBriefId: options.homeBriefId } : {}),
           // The browser's time zone travels with each message: Numo has it
           // need to set a routine at the time we tell him (MIN-185).
           ...(browserTimezone() ? { timezone: browserTimezone() } : {}),
@@ -1179,7 +1182,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     [state.conversationId]
   );
 
-  const reset = useCallback(() => {
+  /** `silent`: a surface opening on a new conversation (Home), not the user's gesture. */
+  const reset = useCallback((options: { silent?: boolean } = {}) => {
     if (!activeSendRef.current?.frozen) abortRef.current?.abort();
     activeSendRef.current = null;
     activeTurnRef.current = null;
@@ -1190,7 +1194,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     // Keep the chosen config — null means "follow the default", a picked id
     // carries over to the new conversation on purpose.
     confirmedConfigsRef.current.clear();
-    trackEvent("assistant_conversation_new", {});
+    if (!options.silent) trackEvent("assistant_conversation_new", {});
     dispatch({ type: "RESET" });
   }, [stopPolling]);
 

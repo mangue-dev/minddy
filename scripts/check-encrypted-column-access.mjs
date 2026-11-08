@@ -256,6 +256,12 @@ const rules = [
     allowed: new Set(["lib/server/numo/journal-content.ts"]),
   },
   {
+    // Numo's word on the home page (MIN-930) is sealed free text written
+    // from the journal: only its repository reads or writes the table.
+    access: /\.\s*from\s*\(\s*["'`]numo_home_briefs["'`]\s*\)/,
+    allowed: new Set(["lib/server/numo/home-brief-content.ts"]),
+  },
+  {
     // Numo's reminders (MIN-923) hold the user's sealed instruction: only
     // their repository reads or writes the table, the retention sweep included.
     access: /\.\s*from\s*\(\s*["'`]numo_watches["'`]\s*\)/,

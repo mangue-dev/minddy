@@ -1,6 +1,7 @@
 import { issueStore } from "@/lib/server/issue-store";
 import { listNumoMemories } from "@/lib/server/numo/memory-content";
 import { listAllJournalEntries } from "@/lib/server/numo/journal-content";
+import { listAllHomeBriefs } from "@/lib/server/numo/home-brief-content";
 import { listAllNumoWatches } from "@/lib/server/numo/watches";
 import { materializePendingProjectPages } from "@/lib/server/pages";
 import { categoryStore } from "@/lib/server/category-store";
@@ -175,6 +176,11 @@ export interface AccountExport {
    * the journal: a reminder belongs to the moment and the records it watched.
    */
   numo_watches?: Row[];
+  /**
+   * Numo's word on the home page (MIN-930), every kept version, decrypted for
+   * its owner. Export only, like the journal it sums up.
+   */
+  numo_home_briefs?: Row[];
   owned_projects: Row[];
   memberships: Row[];
   /** Projects hidden from my own navigation (MIN-692). Optional in older exports. */
@@ -528,6 +534,10 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       closed_at: entry.closed_at, closed_reason: entry.closed_reason,
     })),
     numo_watches: (await listAllNumoWatches(service, userId)).map(({ user_id: _owner, ...watch }) => watch),
+    numo_home_briefs: (await listAllHomeBriefs(service, userId)).map((brief) => ({
+      id: brief.id, content: brief.content, suggestions: brief.suggestions,
+      generated_at: brief.generated_at,
+    })),
     owned_projects: exportedProjects,
     memberships: list("project_members", memberships),
     hidden_projects: hiddenProjects,

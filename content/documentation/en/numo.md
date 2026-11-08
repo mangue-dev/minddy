@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 32,
-  "sourceRevision": 32,
+  "revision": 33,
+  "sourceRevision": 33,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-08",
   "compatibility": {
@@ -66,7 +66,7 @@
       "lib/server/assistant/markdown-pdf.ts",
       "components/assistant/generated-file-cards.tsx",
       "components/assistant/assistant-starter-list.tsx",
-      "components/home/home-numo-composer.tsx",
+      "app/(app)/home/page.tsx",
       "lib/keyboard/typeahead.ts",
       "lib/keyboard/keyboard-context.tsx",
       "components/assistant/assistant-shell.tsx",
@@ -85,13 +85,18 @@
       "components/settings/account-numo-background-section.tsx",
       "lib/server/numo/watches.ts",
       "lib/server/numo/watch-clock.ts",
-      "components/settings/account-numo-watches-section.tsx"
+      "components/settings/account-numo-watches-section.tsx",
+      "lib/server/numo/home-brief.ts",
+      "lib/server/numo/home-brief-prompt.ts",
+      "app/api/home/brief/route.ts",
+      "components/home/home-numo-brief.tsx",
+      "lib/server/numo/home-brief-opening.ts"
     ]
   },
   "review": {
-    "revision": 32,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-929 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-923 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 33,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-929 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-923 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-930 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-08"
   },
   "related": [
@@ -122,7 +127,7 @@
       "src": "/documentation/en/work-with-numo-workflow.png",
       "alt": "Numo demonstration conversation with page context, a priority-change request and its saved answer.",
       "caption": "Existing demonstration thread, localized for display. The saved answer names AUR-11 and AUR-7; this capture does not prove a new execution.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -139,7 +144,7 @@
       "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -200,7 +205,7 @@
       "src": "/documentation/en/numo-execution-model-flow.svg",
       "alt": "Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
       "caption": "Read the stages in order. Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -232,7 +237,7 @@
       "src": "/documentation/en/numo-mcp-connections-workflow.png",
       "alt": "Personal MCP settings, empty connection list and Add another MCP server control.",
       "caption": "Numo connections are personal; project routines use the project owner’s connections.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -249,7 +254,7 @@
       "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
       "alt": "Notion connection wizard showing the sign-in method known from the catalog.",
       "caption": "Sign-in step for a catalog service. No credentials were entered and no server was contacted.",
-      "revision": 32,
+      "revision": 33,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +287,7 @@ Open the issue or project you want to work on, then use the floating Numo button
 3. Send a bounded request, for example: “Read this issue and propose acceptance criteria. Do not change its status.”
 4. Read the answer and follow its issue or source links. For an action request, open the changed object and check the result. Issues, objectives, projects, pages and members that Numo found appear in its answer as mention pills: a pill opens its target, and one you cannot see shows as **Unavailable**. Numo also writes these mentions into what it writes, such as issue descriptions and plans, objective descriptions, comments, pages and the notebook, only for items it identified; a member mentioned there is notified as with any mention.
 
-In a new, empty conversation, four suggestion rows above the composer offer requests suited to the current page, for example **Summarize this issue** or **Write an implementation plan** when an issue is open in the side panel. Choosing a row fills the composer without sending it, so you can edit the request first. The rows disappear as soon as the composer contains text and return when you clear it. They appear in the desktop layout, not on a phone. The composer at the bottom of **Home** shows the same rows, with suggestions such as **Choose what to focus on today** or **Find what's overdue**; sending from there opens the panel in its expanded layout.
+In a new, empty conversation, four suggestion rows above the composer offer requests suited to the current page, for example **Summarize this issue** or **Write an implementation plan** when an issue is open in the side panel. Choosing a row fills the composer without sending it, so you can edit the request first. The rows disappear as soon as the composer contains text and return when you clear it. They appear in the desktop layout, not on a phone. The composer at the bottom of **Home** shows the same rows, with suggestions such as **Choose what to focus on today** or **Find what's overdue**. **Home** is itself a Numo conversation, the same as the panel without its header: each visit opens a new one, unless a reply is still running, and you can continue it in the panel; the one before stays in the history, and the **New conversation** button at the top right starts another. Once Numo has written its summary, the rows on **Home** are the suggestions written with it ([Numo's summary on Home](#home-word)).
 
 On **Home**, and in the Numo panel when it is expanded or has focus, you can start typing without clicking the composer: a quick burst of keys typed outside a text field goes into the composer, which takes focus. A single key on its own still runs its keyboard shortcut, for example C to create an issue, about 0.2 seconds later on those screens. G followed by one key stays a navigation sequence; a third key in the burst turns it into text.
 
@@ -336,21 +341,27 @@ A memory applies to all your projects or to one; Numo asks when it can't tell wh
 
 ### Numo's journal {#journal}
 
-Numo keeps a journal of what waits for you and of what it did for you while you weren't watching: "PR #12 has waited for your review for 3 days", "I did the web research asked for in MIN-42". It writes an entry when you ask it to keep track of something ("note that I'm waiting for the client"), and, in a routine or an `@Numo` comment, when it changes your content. It closes the entry once the matter is settled. The conversation then shows **Noted in the journal** or **Journal entry closed**. The journal is yours alone, sends no notification, and closed entries are deleted within 180 days. You can't browse the journal yet; in a conversation, ask Numo what it noted or tell it to close an entry.
+Numo keeps a journal of what waits for you and of what it did for you while you weren't watching: "PR #12 has waited for your review for 3 days", "I did the web research asked for in MIN-42". It writes an entry when you ask it to keep track of something ("note that I'm waiting for the client"), and, in a routine or an `@Numo` comment, when it changes your content. It closes the entry once the matter is settled. The conversation then shows **Noted in the journal** or **Journal entry closed**. The journal is yours alone, sends no notification, and closed entries are deleted within 180 days. **Home** sums it up ([Numo's summary on Home](#home-word)); to see every entry, ask Numo in a conversation, or tell it to close one.
+
+### Numo's summary on Home {#home-word}
+
+When **Home** opens its new conversation, Numo writes first, under the greeting: a few sentences that sum up its journal, with what waits for you first, then what it did that touches your content, then what it offers to do on its own. The records it names, such as an issue or a page, open in one click. When Numo produced something for you, such as a summary of your projects or research, the summary gives its key facts and figures rather than sending you to a conversation. Numo rewrites the summary in the background after each turn that writes or closes a journal entry, so it is up to date before you open **Home**, and opening the page doesn't call the AI. When an entry it covers is settled in the meantime, **Home** hides the summary until Numo has written the next one. Showing the summary marks the entries it covers as seen: a later summary leaves out what was settled and mentions again only what still waits for you. When nothing in the journal is open or unseen, there is no summary.
+
+Once you write, the greeting goes and the summary stays at the top of the conversation you start under it on **Home**, as Numo's opening message; without a summary, the conversation starts with your message. It is saved as Numo's first message of that conversation: Numo reads it when it answers, as the continuation of what it said, and the panel and the history show it too. Above the composer, up to four suggestions written with the summary replace the usual rows, or none when nothing specific fits. They also serve as quick answers, for example **Yes, do it on your own from now on**, and each one is a complete request. Choosing one fills the composer without sending it. With Numo in the background off, **Home** opens on the greeting and the usual rows, with no summary. On an instance without AI, there is no conversation: **Home** shows the greeting and your account notices, such as pending invitations or the desktop app.
 
 ### Numo in the background {#background}
 
-**Account settings → AI & Numo → Numo in the background** is on by default: Numo works for you while you're away. When something in your projects concerns you, such as an issue assigned to you, a mention or a failed routine, or matches what one of your memories asks it to watch for, Numo wakes up a few minutes later and acts with the same tools and model as in a conversation. With the memory "for every new issue in MIN that needs web research, do it and post the result as a comment", it researches each new issue, posts the comment and notes it in its journal, where it writes what it did and what waits for you. To see what it noted, ask Numo in a conversation. The switch needs Numo's memory: while memory is off, background Numo is off, and it comes back on with the memory.
+**Account settings → AI & Numo → Numo in the background** is on by default: Numo works for you while you're away. When something in your projects concerns you, such as an issue assigned to you, a mention or a failed routine, or matches what one of your memories asks it to watch for, Numo wakes up a few minutes later and acts with the same tools and model as in a conversation. With the memory "for every new issue in MIN that needs web research, do it and post the result as a comment", it researches each new issue, posts the comment and notes it in its journal, where it writes what it did and what waits for you. **Home** sums up what it noted. The switch needs Numo's memory: while memory is off, background Numo is off, and it comes back on with the memory.
 
 In a shared project, Numo changes only what is yours: issues assigned to you or that you created, objectives you lead, pages you created. Creating content there, or changing anything else, needs a memory that asks for it. In every project, including one where you work alone, it doesn't trash or restore anything, act on a pull request, call an external MCP tool, administer the project (settings, members, integrations), change your account settings or reply publicly to feedback unless one of your memories allows that action. The server checks that the memory exists, is yours and applies to the project the action touches. Numo sends an Inbox message only when a memory asks for it, or for something urgent, and then at most twice in 24 hours.
 
-When an action needs a permission it doesn't have, Numo asks in its journal and offers to do it on its own next time. To allow it, tell Numo in a conversation, for example "yes, always do that": it saves a memory and uses it at its next wake. To restrict Numo, give it a memory such as "in the Design project, only note things in the journal", edit or delete the memory that allowed an action, or turn the switch off: a wake that hasn't started yet is then cancelled, and one already running finishes. Screening your events and each wake count toward your AI usage, and an administrator sets how many wakes a member gets in 24 hours, 20 by default. Each wake runs in a conversation of its own, not listed with your conversations and deleted after 30 days.
+When an action needs a permission it doesn't have, Numo asks in its journal and offers to do it on its own next time. To allow it, tell Numo in a conversation, for example "yes, always do that": it saves a memory and uses it at its next wake. To restrict Numo, give it a memory such as "in the Design project, only note things in the journal", edit or delete the memory that allowed an action, or turn the switch off: a wake that hasn't started yet is then cancelled, and one already running finishes. Screening your events, each wake and Numo's summary on **Home** count toward your AI usage, and an administrator sets how many wakes a member gets in 24 hours, 20 by default. Each wake runs in a conversation of its own, not listed with your conversations and deleted after 30 days.
 
 ### Numo's reminders {#reminders}
 
 Ask Numo in a conversation to think of something for you later: "once MIN-42 is done, remind me to tell the client", "when the 0.40 objective is done, create the release issue", or "remind me on Friday at 9:00 to send the invoice". Numo sets a reminder on an issue (a status, or a comment from someone else), an objective (a status) or a date, and the conversation shows **Reminder set**. Until the condition is met, nothing runs and nothing counts toward your AI usage: minddy checks it every five minutes.
 
-Once the condition is met, the reminder fires once. For something you'll do yourself, you get an Inbox message from Numo with your instruction. For something you asked Numo to do, the message says Numo is on it, and Numo carries out the instruction in the conversation where you set the reminder (in a new one if that conversation was deleted or is busy), with the tools and rights you have at that moment; that turn counts toward your AI usage. Nobody watches that turn, so Numo doesn't ask questions, change its memory, or trash, merge or administer anything; it says in its reply what it left for you. If your usage limit is reached, or the turn fails, you get a message and Numo doesn't act. With **Messages from Numo** turned off, no message arrives.
+Once the condition is met, the reminder fires once. For something you'll do yourself, you get an Inbox message from Numo with your instruction. For something you asked Numo to do, the message says Numo is on it, and Numo carries out the instruction in the conversation where you set the reminder (in a new one if that conversation was deleted or is busy), with the tools and rights you have at that moment; that turn counts toward your AI usage. Nobody watches that turn, so Numo doesn't ask questions, change its memory, or trash, merge or administer anything; it says in its reply what it left for you. If your usage limit is reached, or the turn fails, you get a message and Numo doesn't act. With **Messages from Numo** turned off, no message arrives. When Numo changed something on a reminder, an issue, a page or a comment for example, it notes what it did in its journal, and [Numo's summary on Home](#home-word) tells you about it. A reminder that only sends you a message doesn't appear there.
 
 A reminder whose condition is never met expires after 90 days, and you can keep 20 at a time. While its issue or objective is in the trash, a reminder waits; it is cancelled when the record is deleted for good or when you lose access to its project.
 

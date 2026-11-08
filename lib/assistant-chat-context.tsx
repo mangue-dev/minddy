@@ -140,10 +140,10 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
     [loadConversationRaw],
   );
 
-  const reset = useCallback(() => {
+  const reset = useCallback((options?: { silent?: boolean }) => {
     userPickedRef.current = true;
     setPinned([]);
-    resetRaw();
+    resetRaw(options);
   }, [resetRaw]);
 
   // Sending also means choosing: the message opens a conversation, and the

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { resolveNumoBackgroundEnabled } from "@/lib/numo-background";
 import { runDecision } from "@/lib/server/decisions/runner";
 import type { DecisionEngine } from "@/lib/server/decisions/types";
 import { hasUsageBudget } from "@/lib/server/usage";
@@ -73,9 +74,7 @@ export async function triageNumoEventBatch(
   const { data: account, error } = await service.auth.admin.getUserById(batch.user_id);
   if (error) throw new Error("Unable to read the account for the wake decision");
   const metadata = (account?.user?.user_metadata ?? {}) as Record<string, unknown>;
-  if (String(metadata.numo_background) !== "true" || String(metadata.numo_memory) === "false") {
-    return "switched_off";
-  }
+  if (!resolveNumoBackgroundEnabled(metadata)) return "switched_off";
   // Past the daily cap no wake can follow: the decision is not even paid for.
   if (!(await hasNumoWakeLeft(batch.user_id))) {
     console.warn(`[numo-wake] batch=${batch.id} skipped: capped`);

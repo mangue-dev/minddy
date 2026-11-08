@@ -114,6 +114,8 @@ export interface AssistantShellHandle {
   fill: (text: string) => void;
   /** Put the caret in the composer without changing its draft. */
   focus: () => void;
+  /** Start a new conversation, as the header's new-conversation button does. */
+  newConversation: () => void;
 }
 
 export interface AssistantShellProps {
@@ -137,6 +139,33 @@ export interface AssistantShellProps {
   embeddedConversationId?: string | null;
   /** False while the panel closes or prepares another conversation. */
   visible?: boolean;
+  /**
+   * A page that holds the shell as its main view (Home, MIN-930) gives it
+   * its own controls: no history, expand, new-conversation or close header.
+   */
+  hideHeader?: boolean;
+  /** Open on a new conversation instead of restoring the last one. */
+  startFresh?: boolean;
+  /** What an empty conversation shows (Home: the greeting and Numo's word). */
+  intro?: ReactNode;
+  /**
+   * What stays on top of a conversation started under the intro, as it was
+   * when the first message left (Home: Numo's word, as its first message).
+   * Nothing stays when absent.
+   */
+  keptIntro?: ReactNode;
+  /**
+   * Numo's Home summary shown under the intro (MIN-933): the first message
+   * sent there carries it, and the server opens the conversation with it as
+   * Numo's first message.
+   */
+  openingBriefId?: string | null;
+  /** Rows written for the user in place of the page's fixed suggestions; null keeps them. */
+  starterItems?: ReadonlyArray<{ label: string; prompt: string }> | null;
+  /** The written rows are still loading: show no row yet. */
+  startersPending?: boolean;
+  /** Shown instead of the "no AI provider" screen (Home keeps its greeting). */
+  unavailableFallback?: ReactNode;
 }
 
 export const AssistantShell = forwardRef<
@@ -153,6 +182,14 @@ export const AssistantShell = forwardRef<
     pageContext = null,
     embeddedConversationId = null,
     visible = true,
+    hideHeader = false,
+    startFresh = false,
+    intro = null,
+    keptIntro = null,
+    openingBriefId = null,
+    starterItems = null,
+    startersPending = false,
+    unavailableFallback = null,
   },
   ref
 ) {
@@ -207,6 +244,8 @@ export const AssistantShell = forwardRef<
       }
       return;
     }
+    // Also for a fresh start: the new conversation is a choice, which the
+    // restore never replaces, and the restore marks the session restored.
     requestRestore();
   }, [embeddedConversationId, loadConversation, requestRestore, state.conversationId]);
   useEffect(() => {
@@ -340,9 +379,25 @@ export const AssistantShell = forwardRef<
             }),
       fill: (text) => chatInputRef.current?.fill(text),
       focus: () => chatInputRef.current?.focus(),
+      newConversation: () => {
+        reset();
+        resetContextSelection();
+        setRefreshKey((k) => k + 1);
+        setKept(null);
+      },
     }),
-    [aiAvailability.available, aiAvailability.loading, sendMessage]
+    [aiAvailability.available, aiAvailability.loading, sendMessage, reset, resetContextSelection]
   );
+
+  // What stays on top of the conversation sent from under the intro (see
+  // `keptIntro`); `null` once a new conversation starts.
+  const [kept, setKept] = useState<{ node: ReactNode; conversationId: string | null } | null>(null);
+  const keptIntroRef = useRef<ReactNode>(keptIntro);
+  keptIntroRef.current = keptIntro;
+  const openingBriefRef = useRef<string | null>(openingBriefId);
+  openingBriefRef.current = openingBriefId;
+  const blankRef = useRef(true);
+  blankRef.current = !state.conversationId && state.messages.length === 0;
 
   const handleSend = useCallback(
     (
@@ -354,6 +409,10 @@ export const AssistantShell = forwardRef<
       intent?: AssistantChatRequest["intent"],
     ) => {
       if (!aiAvailability.loading && !aiAvailability.available) return;
+      const opening = blankRef.current ? openingBriefRef.current : null;
+      if (blankRef.current) {
+        setKept(keptIntroRef.current ? { node: keptIntroRef.current, conversationId: null } : null);
+      }
       const sentContext = effectiveContextRef.current;
       sendMessage(sentContext?.projectId ?? null, message, {
         pageContext: sentContext,
@@ -362,6 +421,7 @@ export const AssistantShell = forwardRef<
         command,
         skills,
         intent,
+        ...(opening ? { homeBriefId: opening } : {}),
       });
       // A quoted selection is asked about once. Unlike the page context, which
       // keeps riding on follow-ups while the session stays on that page, and
@@ -403,12 +463,46 @@ export const AssistantShell = forwardRef<
     reset();
     resetContextSelection();
     setRefreshKey((k) => k + 1);
+    setKept(null);
   }, [reset, resetContextSelection]);
 
   const isStreaming =
     state.status === "streaming" || state.status === "executing_tool";
   const isGeneratingServer = state.status === "generating_server";
   const isBusy = isStreaming || isGeneratingServer;
+
+  // Home opens on a new conversation each time it is shown (MIN-930); the
+  // one before stays in the history. Tabs keep Home mounted and only re-run
+  // its effects when it is shown again, hence an effect with no dependency,
+  // reading the latest state. A conversation with a turn still running is
+  // left as it is: starting over would cut it off. The reset is silent: Home
+  // opening is not the user asking for a new conversation.
+  const freshStartRef = useRef({ startFresh, isBusy, reset, resetContextSelection });
+  freshStartRef.current = { startFresh, isBusy, reset, resetContextSelection };
+  useEffect(() => {
+    const current = freshStartRef.current;
+    if (!current.startFresh || current.isBusy) return;
+    current.reset({ silent: true });
+    current.resetContextSelection();
+    setRefreshKey((k) => k + 1);
+    setKept(null);
+  }, []);
+
+  // The kept intro tops the conversation sent from under the intro, from the
+  // moment the message leaves (its id comes later) and for as long as that
+  // conversation is shown. It is captured then: a later version of what the
+  // host passes does not rewrite the conversation's opening.
+  useEffect(() => {
+    if (kept && kept.conversationId === null && state.conversationId) {
+      setKept({ ...kept, conversationId: state.conversationId });
+    }
+  }, [kept, state.conversationId]);
+  // Once the stored messages load, the summary is among them (MIN-933): it
+  // is not shown a second time on top.
+  const storedOpening = state.messages.some((message) =>
+    message.role === "assistant" && typeof message.metadata?.home_brief === "string");
+  const keptOnTop = kept !== null && !storedOpening &&
+    (kept.conversationId === null || kept.conversationId === state.conversationId);
   // One announcement per reply, once it has ended (see the log below).
   const [replyStatus, setReplyStatus] = useState("");
   const wasBusy = useRef(isBusy);
@@ -423,7 +517,7 @@ export const AssistantShell = forwardRef<
   const pathname = usePathname();
   const starterPage = assistantStarterPage(pathname, pageContext);
   const [composerEmpty, setComposerEmpty] = useState(true);
-  const showStarters = !hasMessages && !mobile && composerEmpty && !embeddedConversationId;
+  const showStarters = !hasMessages && !mobile && composerEmpty && !embeddedConversationId && !startersPending;
 
   // Question ask_user ACTIVE: the last visible message is a message
   // assistant carrying a tool-call ask_user and Numo is at rest (he is waiting for the
@@ -646,7 +740,7 @@ export const AssistantShell = forwardRef<
 
   // Compact-mode header: no permanent sidebar; conversations live in a
   // ResponsivePopover. The new-conversation and close buttons are grouped on the right.
-  const compactHeader = compact && !embeddedConversationId ? (
+  const compactHeader = compact && !embeddedConversationId && !hideHeader ? (
     <div
       ref={historyAnchorRef}
       data-mobile-sheet-header
@@ -781,7 +875,9 @@ export const AssistantShell = forwardRef<
       state.conversationId !== embeddedConversationId &&
       !embeddedConversationFailed,
   );
-  const shell = unavailable ? (
+  const shell = unavailable && unavailableFallback ? (
+    <>{unavailableFallback}</>
+  ) : unavailable ? (
     <div className="relative flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
       {onClose ? (
         <Button
@@ -873,7 +969,7 @@ export const AssistantShell = forwardRef<
               {state.error}
             </div>
           </div>
-        ) : embeddedConversationLoading || (!hasMessages && restoring) ? (
+        ) : embeddedConversationLoading || (!hasMessages && restoring && !startFresh) ? (
           /* Restoring the last conversation — quiet loader, no greeting flash. */
           <div className="flex flex-1 items-center justify-center">
             <NumoIcon
@@ -906,6 +1002,7 @@ export const AssistantShell = forwardRef<
                        : `mx-auto w-full ${convoMaxW} gap-6 p-4 app-desktop:p-6`
                    }
                  >
+                  {keptOnTop ? kept?.node : null}
                   {blocks.map((block) => {
                     if (block.kind === "message")
                       return renderMessage(block.message);
@@ -1084,9 +1181,16 @@ export const AssistantShell = forwardRef<
                 <ConversationScrollButton />
               </Conversation>
             ) : (
-              /* Empty state — only the error, the suggestions sit above the composer. */
-              <div className="flex flex-1 items-center justify-center px-4">
-                <div className="flex w-full max-w-2xl flex-col gap-4">
+              /* Empty state — the host's intro and the error; the suggestions
+                 sit above the composer. */
+              <div className={cn("flex flex-1 justify-center", intro ? "overflow-y-auto" : "items-center px-4")}>
+                {/* An intro takes the composer's own box (same width, same
+                    gutter), so its text never runs wider than the input. */}
+                <div className={cn(
+                  "flex w-full min-w-0 flex-col gap-4",
+                  intro ? cn(`mx-auto ${convoMaxW} py-6`, compact ? "px-4" : "px-2 app-desktop:px-0") : "max-w-2xl",
+                )}>
+                  {intro}
                   {state.error ? (
                     <div
                       className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
@@ -1113,6 +1217,7 @@ export const AssistantShell = forwardRef<
               <AssistantStarterList
                 page={starterPage}
                 visible={showStarters}
+                items={starterItems}
                 onPick={(prompt) => chatInputRef.current?.fill(prompt)}
               />
               {/* Active question: the card takes the PLACE of the composer. THE

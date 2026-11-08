@@ -1,4 +1,4 @@
-// ── Commandes « / » du composer de Numo (MIN-159) ────────────────────
+// ── Slash commands of Numo's composer (MIN-159) ─────────────────────
 //
 // A command is chosen in the slash menu of the composer; its CANONICAL id
 // travel through the query (the label is localized — “/create issue” /

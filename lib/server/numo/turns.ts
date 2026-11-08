@@ -88,6 +88,7 @@ import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { loadNumoMemoryPrompt } from "./memory-prompt";
 import { touchNumoMemories } from "./memory-content";
+import { scheduleHomeBriefRewrite } from "./home-brief";
 import { loadNumoJournalPrompt } from "./journal-prompt";
 import { NUMO_WAKE_PROMPT_BLOCK } from "./wake-prompt";
 import { buildNumoReminderPromptBlock, type NumoReminderIntent } from "./watch-prompt";
@@ -1074,6 +1075,10 @@ async function executeClaimedNumoTurn(input: {
     return { status: turn.status, turn };
   }
 
+  // A journal entry written or closed in this turn rewrites Numo's word on
+  // the home page once the turn ends, whatever its outcome (MIN-930): the
+  // entry itself is already durable.
+  let journalChanged = false;
   try {
     const resolvedRuntime = input.aiRuntime ?? await resolveAiRuntime({
       userId: claimed.user_id,
@@ -1114,6 +1119,7 @@ async function executeClaimedNumoTurn(input: {
       memoryWritable: execution.memoryWritable,
       journalSource: execution.journalSource,
       journalScope: execution.journalScope,
+      onJournalChange: () => { journalChanged = true; },
       proactive: !!claimed.intent.wake,
       reminder: !!claimed.intent.reminder,
       model: runtime.model,
@@ -1233,6 +1239,10 @@ async function executeClaimedNumoTurn(input: {
         });
       },
     }), claimed.intent.routineProvenance?.causeRoutineIds ?? []));
+    if (journalChanged) {
+      journalChanged = false;
+      scheduleHomeBriefRewrite(claimed.user_id);
+    }
 
     if (input.isStopRequestedLocally() || await stopRequested(service, claimed.id, claimToken)) {
       const turn = await checkpointTurn({
@@ -1286,6 +1296,8 @@ async function executeClaimedNumoTurn(input: {
     emitter.close();
     return { status: turn.status, turn };
   } catch (caught) {
+    // processChat threw after a journal write: the word still follows it.
+    if (journalChanged) scheduleHomeBriefRewrite(claimed.user_id);
     const error = isPlanLimitError(caught) && caught.code === "usage_budget_exceeded"
       ? await providerCapExhausted(claimed)
       : caught;

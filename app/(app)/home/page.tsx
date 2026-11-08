@@ -1,26 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Add01Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { pickGreeting } from "@/lib/home-greeting";
+import { useAssistantPanel, useSuppressAssistantFab } from "@/lib/assistant-panel-context";
+import { useAssistantChatContext } from "@/lib/assistant-chat-context";
+import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
+import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
+import { AppContentHeader } from "@/components/app-content-header";
+import { AssistantShell, type AssistantShellHandle } from "@/components/assistant/assistant-shell";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { HomeNumoBrief } from "@/components/home/home-numo-brief";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
 import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warning";
-import { HomeProjectSignals } from "@/components/home/home-project-signals";
-import { HomeNumoComposer } from "@/components/home/home-numo-composer";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
 import { MobileInstallHint } from "@/components/home/mobile-install-hint";
 
 type AuthMeta = { display_name?: string; full_name?: string; name?: string };
-
-// The greeting and the banners read as one centered column.
-const HERO_COLUMN = "mx-auto w-full max-w-xl";
-
-// The composer and its suggestions take the expanded Numo panel's column, so
-// the home page and the panel opened from it start from the same layout.
-const COMPOSER_COLUMN = "mx-auto w-full max-w-3xl";
 
 // Resolve local time after hydration and keep the greeting stable for this visit.
 function useGreeting(name: string): string {
@@ -35,7 +36,23 @@ function useGreeting(name: string): string {
   return t(name ? variant.key : variant.keyNoName, { name });
 }
 
+/**
+ * Home is a Numo conversation (MIN-930): the same view as the Numo panel,
+ * sharing its conversation, without the panel's header. Each time Home is
+ * shown it opens a new conversation, unless a reply is still running (see
+ * `startFresh` in the shell); the one before stays in the history, and a
+ * conversation started here continues in the panel.
+ *
+ * The new conversation opens with the greeting and Numo's summary of its
+ * journal when Numo has written one. Once the user writes, the greeting
+ * leaves and the summary stays on top, as Numo's opening message. No banner or notice sits in it: the page is a
+ * conversation. The suggestions above the composer are the ones Numo wrote
+ * with its summary, or the fixed home set until it has written any. Without
+ * an AI provider there is no conversation: Home keeps the greeting and the
+ * account notices.
+ */
 export default function HomePage() {
+  const t = useTranslations("Assistant");
   const { user } = useAuth();
   const meta = user?.user_metadata as AuthMeta | undefined;
   // Empty fallback: without name or e-mail, we greet without first name rather than injecting
@@ -47,35 +64,84 @@ export default function HomePage() {
     },
     "",
   );
-
   const greeting = useGreeting(name);
+  const { brief, loading: briefLoading } = useHomeBriefQuery(!!user);
+  const shellRef = useRef<AssistantShellHandle>(null);
+  // The page IS the conversation: the floating button would open it twice.
+  useSuppressAssistantFab(true);
+  // The open panel shows the same conversation and owns the keyboard.
+  const { isOpen: panelOpen } = useAssistantPanel();
+  const { state: chat, isBusy } = useAssistantChatContext();
+  // Already on a blank conversation: starting another would change nothing.
+  const blankConversation = !chat.conversationId && chat.messages.length === 0 && !isBusy;
+  const aiAvailability = useAiSurfaceAvailability("assistant");
+  const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
+
+  // Left-aligned, like the composer and the messages below it. The page's
+  // heading is the greeting, kept for screen readers whatever is shown.
+  const welcome = (
+    <p aria-hidden className="w-full text-left font-display text-2xl font-semibold tracking-tight">
+      {greeting}
+    </p>
+  );
 
   return (
-    // The greeting and the banners sit centered in the space the composer
-    // leaves; the composer and its suggestions stay at the foot. When the
-    // banners need more room than that, the page grows and scrolls as one
-    // column: nothing is pinned over the banners.
-    <section className="flex min-h-full flex-col px-6">
-      <div className="flex-1" aria-hidden />
-
-      {/* `min-w-0`: a long model name in the composer must not widen the
-      column past a phone's screen. */}
-      <div className={cn(HERO_COLUMN, "flex min-w-0 flex-col gap-3 pt-10")}>
-        <h1 className="mb-2 w-full text-center font-display text-2xl font-semibold tracking-tight">
-          {greeting}
-        </h1>
-        <PendingInvitationsBanner />
-        <HomeSmartAssignWarning />
-        <HomeProjectSignals />
-        <DesktopInstallBanner />
-        <MobileInstallHint key={user?.id} />
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <h1 className="sr-only">{greeting}</h1>
+      <AppContentHeader contentClassName="justify-end gap-2">
+        {aiUnavailable || blankConversation ? null : (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("newConversation")}
+              onClick={() => shellRef.current?.newConversation()}
+            >
+              <HugeiconsIcon icon={Add01Icon} className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={6} align="end">
+            {t("newConversation")}
+          </TooltipContent>
+        </Tooltip>
+        )}
+      </AppContentHeader>
+      <div className="min-h-0 flex-1">
+        <AssistantShell
+          ref={shellRef}
+          projectId={null}
+          compact
+          hideHeader
+          startFresh
+          displayMode="expanded"
+          visible={!panelOpen}
+          intro={
+            <div className="flex flex-col gap-6">
+              {welcome}
+              {brief ? <HomeNumoBrief brief={brief} /> : null}
+            </div>
+          }
+          // Once you write, the greeting leaves and Numo's word stays as the
+          // opening message of the conversation; without a word, nothing stays.
+          keptIntro={brief ? <HomeNumoBrief brief={brief} /> : null}
+          // Numo receives it too: the conversation opens with it (MIN-933).
+          openingBriefId={brief?.id ?? null}
+          starterItems={brief ? brief.suggestions : null}
+          startersPending={briefLoading}
+          unavailableFallback={
+            <div className="flex h-full items-center justify-center overflow-y-auto px-4">
+              <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-3">
+                <div className="mb-2">{welcome}</div>
+                <PendingInvitationsBanner />
+                <HomeSmartAssignWarning />
+                <DesktopInstallBanner />
+                <MobileInstallHint key={user?.id} />
+              </div>
+            </div>
+          }
+        />
       </div>
-
-      <div className="flex-1" aria-hidden />
-
-      <div data-keyboard-dock className={cn(COMPOSER_COLUMN, "min-w-0 pb-4 pt-8")}>
-        <HomeNumoComposer />
-      </div>
-    </section>
+    </div>
   );
 }

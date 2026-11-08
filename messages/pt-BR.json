@@ -454,6 +454,7 @@
     "historyFeatureIssueRelation": "Smart Fill · relações",
     "historyFeatureIssueSearch": "Busca de tickets",
     "historyFeatureNumoWake": "Numo · análise de eventos",
+    "historyFeatureNumoHomeBrief": "Numo · resumo da página inicial",
     "agentsGateTitle": "O trabalho com o Numo não está disponível",
     "agentsGateDescription": "O trabalho com o Numo não está ativado nesta conta.",
     "agentsGateCta": "Ver planos",
@@ -1688,7 +1689,6 @@
     "greeting": "Olá, {name}",
     "greetingNoName": "Olá",
     "welcome": "Boas-vindas, {name}",
-    "numoPlaceholder": "Pergunte qualquer coisa ao Numo…",
     "noProject": "Nenhum projeto ainda",
     "greetNightLate": "É tarde, {name}",
     "greetNightLateNoName": "É tarde",
@@ -1725,9 +1725,6 @@
     "smartAssignWarningTitle": "O Smart Assign não está totalmente configurado",
     "smartAssignWarningDesc": "Um membro sem regra de atribuição nunca é escolhido: seus tickets voltam para você.",
     "smartAssignWarningMissing": "{count, plural, =0 {# membros de {total} sem regra} one {# membro de {total} sem regra} other {# membros de {total} sem regra}}",
-    "signalTriage": "<b>{name}</b> tem {count, plural, =0 {# tickets na triagem} one {# ticket na triagem} other {# tickets na triagem}}",
-    "signalFeedback": "<b>{name}</b> tem {count, plural, =0 {# itens de feedback para triagem} one {# item de feedback para triagem} other {# itens de feedback para triagem}}",
-    "signalMore": "{count, plural, =0 {# outros itens para triagem} one {# outro item para triagem} other {# outros itens para triagem}}",
     "desktopBannerText": "O minddy também está disponível como aplicativo de desktop",
     "desktopBannerCta": "Baixar",
     "desktopBannerDismiss": "Não mostrar novamente",
@@ -3054,7 +3051,7 @@
     "numoWatchNoteActFailed": "O Numo não conseguiu fazer isso. Seu lembrete: {instruction}",
     "numoWatchTurnMessage": "Lembrete: {condition}\nInstrução: {instruction}",
     "numoBackgroundTitle": "Numo em segundo plano",
-    "numoBackgroundHelp": "Quando algo nos seus projetos tem a ver com você, o Numo age enquanto você está fora e anota no diário dele o que fez e o que espera por você; peça ao Numo em uma conversa para ver. Em um projeto compartilhado, ele só altera o que é seu: os tickets atribuídos a você ou criados por você, os objetivos que você lidera, as páginas que você criou. Em todos os projetos, ele não exclui nada, não age em pull requests, não chama ferramentas MCP externas, não administra o projeto e só notifica você de algo urgente, a menos que uma das suas lembranças permita. A triagem dos seus eventos e cada vez que ele acorda contam no seu uso de IA.",
+    "numoBackgroundHelp": "Quando algo nos seus projetos tem a ver com você, o Numo age enquanto você está fora e anota no diário dele o que fez e o que espera por você; a página inicial resume isso em poucas linhas. Em um projeto compartilhado, ele só altera o que é seu: os tickets atribuídos a você ou criados por você, os objetivos que você lidera, as páginas que você criou. Em todos os projetos, ele não exclui nada, não age em pull requests, não chama ferramentas MCP externas, não administra o projeto e só notifica você de algo urgente, a menos que uma das suas lembranças permita. A triagem dos seus eventos, cada vez que ele acorda e o resumo da página inicial contam no seu uso de IA.",
     "numoBackgroundSwitch": "Deixar o Numo trabalhar em segundo plano",
     "numoBackgroundNeedsMemory": "Ative primeiro a memória do Numo: em segundo plano, o Numo segue as instruções e as permissões salvas nela.",
     "dictationSectionTitle": "Ditado por voz",
@@ -3090,6 +3087,8 @@
     "aiUsageKeyHint_web_search_model": "Buscas na web do Numo; exige o minddy Cloud ou uma chave da OpenRouter",
     "aiUsageKey_numo_wake_model": "Análise de eventos",
     "aiUsageKeyHint_numo_wake_model": "Decide se novos eventos precisam do Numo",
+    "aiUsageKey_home_brief_model": "Resumo da página inicial",
+    "aiUsageKeyHint_home_brief_model": "Escreve as poucas linhas do Numo na página inicial",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Atribui um ticket que sai da triagem sem responsável",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4725,6 +4724,10 @@
         "label": "Modelo de análise de eventos",
         "desc": "Decide se um lote de eventos do espaço de trabalho deve acordar o Numo quando o modelo de decisão está em dúvida. Ninguém espera pela resposta."
       },
+      "home_brief_model": {
+        "label": "Modelo do resumo da página inicial",
+        "desc": "Escreve as poucas frases e sugestões que o Numo mostra na página inicial, depois de uma mudança no diário dele. Ninguém espera pela resposta."
+      },
       "numo_wake_daily_limit": {
         "label": "Turnos em segundo plano por dia",
         "desc": "Turnos em segundo plano que um membro recebe em 24 horas. Depois disso, o Numo não acorda até a janela liberar. 0 desativa o Numo em segundo plano para todos. Vazio equivale a 20."
@@ -4869,6 +4872,7 @@
         "issue_relation": "Relações do Smart Fill",
         "issue_search": "Busca de tickets",
         "numo_wake": "Análise de eventos do Numo",
+        "numo_home_brief": "Resumo da página inicial do Numo",
         "faq_ask": "Caixa de perguntas da FAQ"
       },
       "loadingCalls": "Carregando chamadas…",

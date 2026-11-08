@@ -59,6 +59,7 @@ const SMART_ASSIGN_WARNINGS_KEY: QueryKey = ["me", "smart-assign-warnings"]; // 
 // What is waiting to be sorted by project: the number of project lines in the
 // sidebar, also read on all pages. lib/use-triage-counts-query.ts.
 const TRIAGE_COUNTS_KEY: QueryKey = ["me", "triage-counts"];
+const HOME_BRIEF_KEY: QueryKey = ["me", "home-brief"]; // lib/use-home-brief-query.ts
 const STATS_KEY: QueryKey = ["stats"]; // lib/use-stats-query.ts — ["stats", tz]
 const ALL_PULL_REQUESTS_KEY: QueryKey = ["pull-requests", "all"];
 const OPEN_PULL_REQUEST_COUNT_KEY: QueryKey = ["pull-requests", "open-count"];
@@ -225,6 +226,8 @@ export function keysForUserEvent(change: BroadcastChange): Invalidation[] {
       ];
     case "user_scratchpad": // agent (MCP) or another tab edited my notes
       return [active(["me", "scratchpad"])];
+    case "numo_home_briefs": // Numo wrote a new word for the home page (MIN-930)
+      return [active(HOME_BRIEF_KEY)];
     case "ai_usage": // an AI action has just been counted → header gauge (MIN-72)
       return [active(["billing", "usage"])];
     case "billing_accounts": // sync Stripe / override admin → plan effectif
@@ -605,6 +608,7 @@ export const USER_SCOPE_KEYS: QueryKey[] = [
   ["me", "cycle"],
   ["me", "scratchpad"],
   ["me", "triage-counts"],
+  HOME_BRIEF_KEY,
   ["billing"],
   ISSUE_PRS_KEY,
   ALL_PULL_REQUESTS_KEY,

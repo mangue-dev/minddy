@@ -376,6 +376,11 @@ export interface AssistantChatRequest {
   message: string;
   /** Voluntary entry provenance, persisted with the user message. */
   intent?: Pick<NumoIntent, "source" | "action">;
+  /**
+   * The version of Numo's Home summary this first message answers (MIN-933):
+   * the new conversation opens with it as Numo's first message.
+   */
+  homeBriefId?: string;
   /** Exact pending delegated-worker question answered by this card submission. */
   workerInput?: {
     parentTurnId: string;

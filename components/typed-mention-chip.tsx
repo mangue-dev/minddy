@@ -20,6 +20,8 @@ import {
 } from "@/lib/mention-resolution";
 import { OBJECTIVE_STATUS_MAP } from "@/lib/objective-constants";
 import { useEffect } from "react";
+import { useOptionalProjects } from "@/lib/projects-context";
+import { projectOrbSeed } from "@/lib/project-orb-colors";
 
 /** Marks a typed pill so a copy of rendered text keeps its reference. */
 export const MENTION_REF_ATTR = "data-mention-ref";
@@ -109,6 +111,12 @@ export function TypedMentionChip({
   const tPlan = useTranslations("Plan");
   const links = useMentionLinks();
   const scratchpad = useOptionalScratchpad();
+  // A project mention written as Markdown (a Numo answer, the Home summary)
+  // carries no figure: the user's own project list gives its orb and icon,
+  // like an editor node would.
+  const projects = useOptionalProjects()?.projects;
+  const known = type === "project" && !appearance ? projects?.find((project) => project.id === id) : undefined;
+  const figure = appearance ?? (known ? { seed: projectOrbSeed(known), icon: known.icon_url ?? null } : undefined);
   // An MCP pill shows its service's logo, and a page its emoji or the
   // database glyph: the server answers both, so it is asked even when the
   // surface's sources already named the target (MIN-879).
@@ -167,10 +175,10 @@ export function TypedMentionChip({
         // more than the label (MIN-879).
         hoverCard={label === undefined ? undefined : { meta, project: links?.projectId ?? null }}
         mcpService={label === undefined ? null : mcpService ?? null}
-        avatarSeed={label === undefined ? null : appearance?.seed ?? null}
-        color={label === undefined ? null : appearance?.color ?? null}
-        iconUrl={label !== undefined && type === "project" ? appearance?.icon ?? null : null}
-        icon={label !== undefined && type === "page" ? appearance?.icon || pageFigure?.icon || null : null}
+        avatarSeed={label === undefined ? null : figure?.seed ?? null}
+        color={label === undefined ? null : figure?.color ?? null}
+        iconUrl={label !== undefined && type === "project" ? figure?.icon ?? null : null}
+        icon={label !== undefined && type === "page" ? figure?.icon || pageFigure?.icon || null : null}
         database={type === "page" && !!pageFigure?.database}
         prState={label !== undefined && type === "pull_request" ? details?.prState ?? null : null}
       />

@@ -358,6 +358,11 @@ export interface ToolContext {
    */
   journalScope?: JournalScope | null;
   /**
+   * Called after a journal entry was written or closed in this turn: the
+   * turn then rewrites Numo's word on the home page once it ends (MIN-930).
+   */
+  onJournalChange?: () => void;
+  /**
    * A background turn (MIN-929): nobody is watching, so every call first
    * goes through `guardProactiveTool` (sensitive actions and scope).
    */
@@ -1014,6 +1019,7 @@ async function executeJournalTool(
       if (!entryId) return toolError("No open journal entry with this id. Take ids from your journal list.");
       const entry = await closeJournalEntry(ctx.service, ctx.userId, entryId, args.reason,
         { scope: ctx.journalScope ?? undefined });
+      ctx.onJournalChange?.();
       return { result: { closed: { id: entry.id, reason: entry.closed_reason } }, success: true };
     }
     let projectId: string | null = null;
@@ -1027,6 +1033,7 @@ async function executeJournalTool(
       content: args.content, projectId, source: ctx.journalSource,
       sourceConversationId: ctx.conversationId ?? null,
     });
+    ctx.onJournalChange?.();
     // Numo just wrote the sentence: the result carries only its id.
     return { result: { journaled: { id: entry.id, project_id: entry.project_id } }, success: true };
   } catch (error) {
