@@ -11,17 +11,20 @@ export function assertVersion(version) {
 }
 
 // Oldest official Supabase Docker release whose image set clears the Storage
-// advisories GHSA-67rp-h2mf-ph72 and GHSA-8rrf-w776-x75g and the Realtime
-// advisories GHSA-hg9h-6mhq-6c2v (CVE-2026-54238) and GHSA-9vjf-j9f7-j42c.
-// GHSA-2rcv-vpjw-5g6c (Realtime before 2.146.0) needs a second tenant, which
-// the single-tenant official distribution does not create.
-export const MINIMUM_OFFICIAL_SUPABASE_RELEASE = "self-hosted/v0.8.3";
+// advisories GHSA-67rp-h2mf-ph72, GHSA-8rrf-w776-x75g and GHSA-fgvp-cqg6-q8h2
+// (RLS bypass with a signed `role: "none"` token, fixed in 1.89.9) and the
+// Realtime advisories GHSA-hg9h-6mhq-6c2v (CVE-2026-54238) and
+// GHSA-9vjf-j9f7-j42c. GHSA-2rcv-vpjw-5g6c (Realtime before 2.146.0) needs a
+// second tenant, which the single-tenant official distribution does not create.
+// Rows published before a floor was raised stay unchanged; the next release
+// adds a row that reaches it.
+export const MINIMUM_OFFICIAL_SUPABASE_RELEASE = "self-hosted/v0.8.4";
 
 // First image versions past those advisories' affected ranges; the pinned
 // upstream Compose file must reach them.
 export const MINIMUM_OFFICIAL_SUPABASE_IMAGES = {
   "supabase/realtime": "2.137.15",
-  "supabase/storage-api": "1.80.2",
+  "supabase/storage-api": "1.89.9",
 };
 
 function numericVersion(value) {

@@ -226,6 +226,31 @@ which minddy does not use. On v0.20.1, add the same
 `S3_PROTOCOL_ENABLED: "false"` entry under `storage` in the release's
 `compose.full.yml` and run `compose up -d --wait storage`.
 
+### Storage role `none` advisory
+
+`self-hosted/v0.8.3` ships Storage 1.81.0, also affected by
+GHSA-fgvp-cqg6-q8h2: a validly signed token with `role: "none"` makes Storage
+run its queries as `supabase_storage_admin`, which owns the Storage tables and
+bypasses their row-level security. Storage 1.89.9 fixes it, and official
+`self-hosted/v0.8.4` ships Storage 1.89.12. Release preparation refuses a new
+row below `self-hosted/v0.8.4`, so the release after v0.30.1 moves to it with
+the sequence below; do not upgrade the Storage image alone.
+
+The reference profiles have no issuer for that role, so the advisory needs no
+interim setting. On v0.30.1 and earlier, confirm it on the instance: the
+`auth` service sets no `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_*` variable, and every
+user has the `authenticated` role.
+
+```bash
+compose exec auth env | grep GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN || echo "no access-token hook"
+compose exec db psql -U postgres -Atc \
+  "select coalesce(role, '<null>'), count(*) from auth.users group by 1"
+```
+
+If a hook is enabled, remove it or make it emit an existing database role, and
+treat tokens it already signed as valid until `JWT_EXPIRY` has passed. Storage
+logs still show `role: none` for such requests, so search them for it.
+
 Never check out the new commit in the existing upstream directory: it holds the
 live database and Storage bytes. Fetch the target checkout into a new directory
 with the target release tooling, then move the data directories into it after

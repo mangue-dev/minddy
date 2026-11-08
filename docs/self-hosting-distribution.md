@@ -94,7 +94,10 @@ release ships the fix yet, apply the advisory's workaround in
 pinned Storage image below `STORAGE_S3_PROTOCOL_PATCHED` unless the overlay
 sets `S3_PROTOCOL_ENABLED: "false"` on `storage`. Rows published
 before a floor existed stay unchanged; their operators move to the first
-release that clears it.
+release that clears it. The floor for GHSA-fgvp-cqg6-q8h2
+(`self-hosted/v0.8.4`, Storage 1.89.9) was raised after v0.30.1, so
+`pnpm validate:self-hosted-compose` fails on that row until release
+preparation adds the next one.
 
 The matrix is changed in the same pull request as a compatibility change. A
 later minddy release may add a new row, but it never silently widens the

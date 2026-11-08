@@ -14,12 +14,12 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 8,
-  "sourceRevision": 8,
+  "revision": 9,
+  "sourceRevision": 9,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-03",
+  "updatedAt": "2026-11-08",
   "compatibility": {
-    "version": "0.30.0 (MIN-794 release review)",
+    "version": "0.30.1 (MIN-936 Storage role none advisory)",
     "editions": [
       "self-hosted"
     ],
@@ -36,10 +36,10 @@
     ]
   },
   "review": {
-    "revision": 8,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-891: GHSA-2p28-q2vx-mw6w ranges read on the GitHub advisory, storage-api v1.81.0 read in the pinned self-hosted/v0.8.3 Compose file, S3_PROTOCOL_ENABLED merge checked with docker compose config against the overlay; no operator rehearsal; no screenshot in scope); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-891 changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 9,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; no screenshot in scope; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (MIN-891: GHSA-2p28-q2vx-mw6w ranges read on the GitHub advisory, storage-api v1.81.0 read in the pinned self-hosted/v0.8.3 Compose file, S3_PROTOCOL_ENABLED merge checked with docker compose config against the overlay; no operator rehearsal; no screenshot in scope); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-936: GHSA-fgvp-cqg6-q8h2 range and fix read on the GitHub advisory, storage-api v1.81.0 in self-hosted/v0.8.3 and v1.89.12 in self-hosted/v0.8.4 read in the upstream Compose files, token issuers checked in the installer, the overlays and the code that writes auth users; check commands not run on a self-hosted instance; no operator rehearsal; no screenshot in scope)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-891 changed passage; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-936 changed passage; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-08"
   },
   "related": [
     "backups-and-restoration"
@@ -55,7 +55,7 @@
       "src": "/documentation/it/update-an-instance-flow.svg",
       "alt": "Schema: Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
       "caption": "Segui le fasi in questo ordine. Fermare scritture e job. Sigillare backup completo precedente. Migrazioni destinazione, poi applicazione. Verificare recupero e riaprire.",
-      "revision": 8,
+      "revision": 9,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -182,6 +182,13 @@ services:
   storage:
     environment:
       S3_PROTOCOL_ENABLED: "false"
+```
+
+La versione di Storage di `self-hosted/v0.8.3` è interessata anche da GHSA-fgvp-cqg6-q8h2: una richiesta con un token firmato validamente con `role: "none"` aggira la sicurezza a livello di riga delle tabelle di Storage. Solo un emittente di token di cui l’istanza si fida può firmare un token simile, e i profili di riferimento non ne hanno: minddy firma solo le chiavi `anon` e `service_role`, e Auth firma il ruolo salvato per ogni utente, che minddy non modifica mai. La release successiva alla v0.30.1 porta il profilo full a `self-hosted/v0.8.4`, che include lo Storage corretto; non aggiornare l’immagine di Storage da sola. Fino ad allora, verifica che il servizio `auth` non imposti nessuna variabile `GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_*` e che ogni utente abbia il ruolo `authenticated`. Se un hook è attivo, rimuovilo o fagli emettere un ruolo di database esistente; i token già firmati restano validi finché non è trascorso `JWT_EXPIRY`. Se usi un tuo Supabase per il profilo managed, aggiorna Storage alla 1.89.9 o successiva. Un progetto Supabase Cloud riceve la correzione da Supabase.
+
+```bash
+compose exec auth env | grep GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN || echo "no access-token hook"
+compose exec db psql -U postgres -Atc "select coalesce(role, '<null>'), count(*) from auth.users group by 1"
 ```
 
 ## Distinguere managed e sorgenti {#managed-source}
