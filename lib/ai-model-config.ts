@@ -217,6 +217,10 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
   // fallback of the wake decision, when the decision model is unsure. One
   // call per due batch of events, nobody waits on it.
   { key: "numo_wake_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
+  // Numo's word on the home page (lib/server/numo/home-brief.ts, MIN-930): a
+  // few sentences and suggestions after a turn that changed the journal.
+  // Nobody waits on it, so the cheapest background model is enough.
+  { key: "home_brief_model", kind: "model", fallback: "deepseek/deepseek-v4-flash", group: "assistant", category: "assistant" },
   // Background Numo (lib/server/numo/wake.ts, MIN-929): background turns one
   // user gets in 24 hours. Past it, a due batch closes without waking Numo.
   // 0 turns background Numo off on the instance.

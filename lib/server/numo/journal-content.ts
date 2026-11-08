@@ -185,6 +185,36 @@ export async function listUnseenJournalEntries(service: SupabaseClient, userId: 
   return decodeRows((data ?? []) as Row[], userId);
 }
 
+/** The lifecycle of one entry, without its text. */
+export interface JournalEntryState {
+  id: string;
+  closed_at: string | null;
+  seen_at: string | null;
+}
+
+/**
+ * The current state of the user's entries among `ids`, without decoding
+ * anything: what Numo's word on Home (MIN-930) checks before it is shown.
+ * An id that is gone (deleted, another user's) is simply absent.
+ */
+export async function listJournalEntryStates(service: SupabaseClient, userId: string,
+  ids: readonly string[]): Promise<JournalEntryState[]> {
+  const valid = ids.filter((id) => UUID_PATTERN.test(id));
+  if (valid.length === 0) return [];
+  const { data, error } = await service.from("numo_journal_entries")
+    .select("id, closed_at, seen_at")
+    .eq("user_id", userId).in("id", valid);
+  if (error) throw new NumoJournalError("database", "Unable to read Numo's journal");
+  return ((data ?? []) as JournalEntryState[]).map((row) => ({
+    id: row.id, closed_at: row.closed_at ?? null, seen_at: row.seen_at ?? null,
+  }));
+}
+
+/** Whether `value` is a well-formed uuid, as the journal stores them. */
+export function isJournalUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
 /**
  * Every entry of the user, open or closed, newest first: the account export.
  * Retention keeps the table small (open entries are capped, closed ones leave

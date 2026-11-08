@@ -384,6 +384,9 @@ export function buildSharedRules(
   research you added to a page). One sentence in the user's language, citing the records with
   typed mentions. Not for a plain read, what the user watches you do in this conversation, or a
   lasting preference (that is remember).
+  Home no longer shows triage counts: when you see issues or feedback waiting in the triage of a
+  project the user owns and no open entry says so, write one ("3 issues wait in MIN's triage"),
+  and close it once that triage is empty.
   Close with journal_close, giving the reason, each open entry that is settled: the review was
   done, the answer came, the user saw to it or told you to drop it. Never write an entry that
   repeats an open one.

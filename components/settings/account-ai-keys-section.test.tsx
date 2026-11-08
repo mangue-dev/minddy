@@ -103,12 +103,12 @@ it("groups every precise usage under its category, Numo included, with no code-a
   for (const heading of ["Numo", "Automations", "Voice dictation", "Feedback"]) {
     expect([...host.querySelectorAll("h3")].map((h3) => h3.textContent)).toContain(heading);
   }
-  for (const usage of ["Conversations", "Conversation titles", "Web search", "Smart Fill", "Speech to text", "Feedback similarity"]) {
+  for (const usage of ["Conversations", "Conversation titles", "Web search", "Home summary", "Smart Fill", "Speech to text", "Feedback similarity"]) {
     expect(text).toContain(usage);
   }
   expect(text).not.toContain("Numo code work");
   // One provider choice per call type.
-  expect(providerSelects()).toHaveLength(15);
+  expect(providerSelects()).toHaveLength(16);
 });
 
 it("moves Numo conversations to another provider and restarts on that provider's default model", async () => {

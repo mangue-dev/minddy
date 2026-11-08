@@ -4432,6 +4432,34 @@
       ]
     }
   },
+  "numo_home_briefs": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [
+      "content",
+      "suggestions"
+    ],
+    "clear": {
+      "routing_identity": [
+        "conversation_id",
+        "id",
+        "journal_entry_ids",
+        "user_id"
+      ],
+      "bounded_metadata": [
+        "journal_digest"
+      ],
+      "timestamp": [
+        "generated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
+  },
   "numo_wakes": {
     "scope": {
       "kind": "user",

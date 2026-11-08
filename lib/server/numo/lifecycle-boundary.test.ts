@@ -57,7 +57,6 @@ describe("unified Numo lifecycle boundary", () => {
   it("keeps voluntary product actions on the shared composer contract", () => {
     for (const file of [
       "components/global-board.tsx",
-      "components/home/home-numo-composer.tsx",
       "components/pages/page-task-surface.tsx",
     ]) {
       expect(source(file), file).toContain("openIntent({");

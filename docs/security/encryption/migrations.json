@@ -321,5 +321,6 @@
   "20270109200109_numo_wake_conversations.sql": "c485b68417e33eff8d70dc118062bb33ce9872461aa865ad152f2a2be977d10e",
   "20270109200110_numo_watches.sql": "9d36ef23d24f9541a3e1f66c55e6458143c5b2de34673ba4f5431af387baf39d",
   "20270109200111_numo_watches_review.sql": "4da2b9e73d9296cae90579a18ffd2edfe90f1be6b5b640d0b90c6df92ba6f362",
-  "20270109200112_numo_background_default_on.sql": "5e82d16dedf80bfbd6d53774feb27c6b88d2e446454a814ea7f80cf4e9e03edd"
+  "20270109200112_numo_background_default_on.sql": "5e82d16dedf80bfbd6d53774feb27c6b88d2e446454a814ea7f80cf4e9e03edd",
+  "20270109200113_numo_home_briefs.sql": "549df49c3e00dd5ad77f9a41dca0f10f098ef204f9c051f89f83674f59ac484b"
 }

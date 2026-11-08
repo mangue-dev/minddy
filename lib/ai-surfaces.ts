@@ -57,6 +57,7 @@ export const BYOK_MODEL_KEYS = [
   "conversation_title_model",
   "web_search_model",
   "numo_wake_model",
+  "home_brief_model",
   "smart_assign_model",
   "smart_fill_model",
   "smart_fill_title_model",
@@ -84,7 +85,7 @@ export const AI_SURFACE_DEFINITIONS: readonly AiSurfaceDefinition[] = [
   { id: "agent", modelKeys: [] },
   {
     id: "assistant",
-    modelKeys: ["assistant_model", "conversation_title_model", "web_search_model", "numo_wake_model"],
+    modelKeys: ["assistant_model", "conversation_title_model", "web_search_model", "numo_wake_model", "home_brief_model"],
   },
   {
     id: "automations",

@@ -10,7 +10,6 @@ function source(relativePath: string): string {
 describe("common Numo intent entry", () => {
   it.each([
     "components/pages/page-task-surface.tsx",
-    "components/home/home-numo-composer.tsx",
   ])("routes the %s voluntary request through openIntent", (file) => {
     const contents = source(file);
     expect(contents).toContain("openIntent");

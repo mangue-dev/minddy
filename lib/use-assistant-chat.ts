@@ -1179,7 +1179,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     [state.conversationId]
   );
 
-  const reset = useCallback(() => {
+  /** `silent`: a surface opening on a new conversation (Home), not the user's gesture. */
+  const reset = useCallback((options: { silent?: boolean } = {}) => {
     if (!activeSendRef.current?.frozen) abortRef.current?.abort();
     activeSendRef.current = null;
     activeTurnRef.current = null;
@@ -1190,7 +1191,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     // Keep the chosen config — null means "follow the default", a picked id
     // carries over to the new conversation on purpose.
     confirmedConfigsRef.current.clear();
-    trackEvent("assistant_conversation_new", {});
+    if (!options.silent) trackEvent("assistant_conversation_new", {});
     dispatch({ type: "RESET" });
   }, [stopPolling]);
 

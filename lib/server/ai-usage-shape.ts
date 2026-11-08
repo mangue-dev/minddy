@@ -126,7 +126,12 @@ export type AiFeature =
    * call per due batch of events, billed to the batch's user. The
    * decision-model half rides `jev_decision`.
    */
-  | "numo_wake";
+  | "numo_wake"
+  /**
+   * Numo's word on the home page (MIN-930): one short call after a turn that
+   * changed the user's journal, billed to that user.
+   */
+  | "numo_home_brief";
 
 /** Form of the `usage` object returned by OpenRouter (chat / embeddings / audio). */
 export interface OpenRouterUsage {

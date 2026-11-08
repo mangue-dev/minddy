@@ -454,6 +454,7 @@
     "historyFeatureIssueRelation": "Smart Fill · relations",
     "historyFeatureIssueSearch": "Issue search",
     "historyFeatureNumoWake": "Numo · event screening",
+    "historyFeatureNumoHomeBrief": "Numo · home summary",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
     "agentsGateCta": "View plans",
@@ -1688,7 +1689,7 @@
     "greeting": "Hi, {name}",
     "greetingNoName": "Hi",
     "welcome": "Welcome, {name}",
-    "numoPlaceholder": "Ask Numo anything…",
+    "numoBriefOpenConversation": "See what Numo did",
     "noProject": "No project yet",
     "greetNightLate": "It's late, {name}",
     "greetNightLateNoName": "It's late",
@@ -1725,9 +1726,6 @@
     "smartAssignWarningTitle": "Smart Assign isn't fully set up",
     "smartAssignWarningDesc": "A member with no assignment rule is never picked: their issues come back to you.",
     "smartAssignWarningMissing": "{count, plural, one {# member of {total} without a rule} other {# members of {total} without a rule}}",
-    "signalTriage": "<b>{name}</b> has {count, plural, one {# issue in triage} other {# issues in triage}}",
-    "signalFeedback": "<b>{name}</b> has {count, plural, one {# feedback item to triage} other {# feedback items to triage}}",
-    "signalMore": "{count, plural, one {# other item to triage} other {# other items to triage}}",
     "desktopBannerText": "minddy is also available as a desktop app",
     "desktopBannerCta": "Download",
     "desktopBannerDismiss": "Don't show this again",
@@ -3054,7 +3052,7 @@
     "numoWatchNoteActFailed": "Numo could not carry it out. Your reminder: {instruction}",
     "numoWatchTurnMessage": "Reminder: {condition}\nInstruction: {instruction}",
     "numoBackgroundTitle": "Numo in the background",
-    "numoBackgroundHelp": "When something in your projects concerns you, Numo acts on it while you're away and notes in its journal what it did and what waits for you; ask Numo in a conversation to see it. In a shared project it only changes what is yours: issues assigned to you or that you created, objectives you lead, pages you created. In every project, it doesn't delete anything, act on pull requests, call external MCP tools, administer the project or notify you, except for something urgent, unless one of your memories allows it. Screening your events and each wake count toward your AI usage.",
+    "numoBackgroundHelp": "When something in your projects concerns you, Numo acts on it while you're away and notes in its journal what it did and what waits for you; the home page sums it up in a few lines. In a shared project it only changes what is yours: issues assigned to you or that you created, objectives you lead, pages you created. In every project, it doesn't delete anything, act on pull requests, call external MCP tools, administer the project or notify you, except for something urgent, unless one of your memories allows it. Screening your events, each wake and the home page summary count toward your AI usage.",
     "numoBackgroundSwitch": "Let Numo work in the background",
     "numoBackgroundNeedsMemory": "Turn on Numo's memory first: Numo in the background follows the instructions and permissions saved there.",
     "dictationSectionTitle": "Voice dictation",
@@ -3090,6 +3088,8 @@
     "aiUsageKeyHint_web_search_model": "Searches the web for Numo; needs minddy Cloud or an OpenRouter key",
     "aiUsageKey_numo_wake_model": "Event screening",
     "aiUsageKeyHint_numo_wake_model": "Decides whether new events need Numo",
+    "aiUsageKey_home_brief_model": "Home summary",
+    "aiUsageKeyHint_home_brief_model": "Writes Numo's few lines on the home page",
     "aiUsageKey_smart_assign_model": "Smart Assign",
     "aiUsageKeyHint_smart_assign_model": "Assigns an issue that leaves triage without an owner",
     "aiUsageKey_smart_fill_model": "Smart Fill",
@@ -4725,6 +4725,10 @@
         "label": "Event screening model",
         "desc": "Decides whether a batch of workspace events should wake Numo when the decision model is unsure. It never runs while anyone waits."
       },
+      "home_brief_model": {
+        "label": "Home summary model",
+        "desc": "Writes the few sentences and suggestions Numo shows on the home page, after its journal changes. Nobody waits on it."
+      },
       "numo_wake_daily_limit": {
         "label": "Background turns per day",
         "desc": "Background turns one member gets in 24 hours. Past it, Numo stays asleep until the window frees up. 0 turns Numo in the background off for everyone. Empty uses 20."
@@ -4869,6 +4873,7 @@
         "issue_relation": "Smart Fill relations",
         "issue_search": "Issue search",
         "numo_wake": "Numo event screening",
+        "numo_home_brief": "Numo home summary",
         "faq_ask": "FAQ question box"
       },
       "loadingCalls": "Loading calls…",

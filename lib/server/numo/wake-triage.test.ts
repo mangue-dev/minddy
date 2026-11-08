@@ -159,6 +159,12 @@ describe("triageNumoEventBatch", () => {
     expect(mocks.loadWakeInput).not.toHaveBeenCalled();
   });
 
+  it("screens a member who never touched the switch: it is on by default", async () => {
+    mocks.metadata = {};
+    await expect(triageNumoEventBatch(batch)).resolves.not.toBe("switched_off");
+    expect(mocks.loadWakeInput).toHaveBeenCalled();
+  });
+
   it("lets a read failure through, so the clock retries the batch", async () => {
     mocks.loadWakeInput.mockRejectedValue(new Error("Unable to read the batch's events for the wake decision"));
     await expect(triageNumoEventBatch(batch)).rejects.toThrow();

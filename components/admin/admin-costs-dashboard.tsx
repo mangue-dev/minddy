@@ -114,6 +114,8 @@ const FEATURES = [
   "issue_search",
   // Background Numo (MIN-928): the LLM fallback of the wake decision.
   "numo_wake",
+  // Numo's word on the home page (MIN-930): one short call per journal change.
+  "numo_home_brief",
   // FAQ question box (MIN-590): a visitor's question, paid by the instance.
   "faq_ask",
   // Landing Dictation Demo (MIN-150): the ONLY line that no one
