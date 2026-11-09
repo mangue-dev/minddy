@@ -1147,6 +1147,7 @@
     "myView": "Mis incidencias",
     "projectNotFoundTitle": "No se ha encontrado el proyecto",
     "projectNotFoundDescription": "Este proyecto no existe o no tienes acceso a él.",
+    "projectLoadError": "No se pudo cargar el proyecto.",
     "backToHome": "Volver al inicio",
     "emptyTitle": "Crea tus primeras incidencias",
     "emptyImport": "Importar incidencias",
@@ -2428,8 +2429,6 @@
     "successContinue": "Continuar en {name}"
   },
   "Objectives": {
-    "projectNotFound": "No se ha encontrado el proyecto",
-    "backToHome": "Volver al inicio",
     "title": "Objetivos",
     "emptyTitle": "Fija tus primeros objetivos",
     "emptyNumoPrompt": "Ayúdame a definir los objetivos del proyecto «{name}»: hazme preguntas y después propón líneas de trabajo en torno a las que agrupar las tareas.",
@@ -3382,8 +3381,6 @@
     "dangerZoneDesc": "Mueve este proyecto a la papelera o abandónalo.",
     "categoriesSectionDesc": "Organiza tus incidencias con categorías de colores.",
     "membersSectionDesc": "Invita o quita colaboradores.",
-    "projectNotFound": "No se ha encontrado el proyecto",
-    "backToHome": "Volver al inicio",
     "nameLabel": "Nombre",
     "keyLabel": "Clave",
     "nameRequired": "El nombre es obligatorio.",
@@ -4571,8 +4568,6 @@
     "mergeNoLongerAllowed": "Esta pull request ya no se puede fusionar tal como está."
   },
   "Triage": {
-    "projectNotFound": "No se ha encontrado el proyecto",
-    "backToHome": "Volver al inicio",
     "title": "Clasificación",
     "filterPlaceholder": "Filtrar {count, plural, =0 {incidencias} one {# incidencia} other {# incidencias}}…",
     "emptyTitle": "No hay nada por clasificar",

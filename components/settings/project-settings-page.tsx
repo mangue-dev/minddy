@@ -4,12 +4,11 @@ import { Suspense, useState } from "react";
 import { GitBranchIcon as GitBranch, ImportIcon, MessageMultiple01Icon as MessagesSquare, PlugIcon as Plug, RepeatIcon as Repeat, Settings02Icon as Settings2, TagsIcon as Tags, UserGroupIcon as Users } from "@hugeicons/core-free-icons";
 import { useAppRouter } from "@/lib/use-app-router";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
-import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import { ProjectTrashDialog } from "@/components/projects/project-trash-dialog";
 import { useAuth } from "@/lib/auth-context";
-import { useProjects } from "@/lib/projects-context";
+import { useProjectLookup } from "@/lib/use-project-lookup";
+import { ProjectUnavailable } from "@/components/project-unavailable";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { userIdsWithoutRule } from "@/lib/smart-assign-config";
 import { ProjectMembers } from "@/components/project-members";
@@ -47,8 +46,9 @@ function ProjectSettingsInner({ browse, projectId }: { browse?: SidebarBrowseTar
   const id = projectId ?? routeProjectId ?? "";
   const router = useAppRouter();
   const { user } = useAuth();
-  const { projects, loading: projectsLoading } = useProjects();
-  const project = projects.find((p) => p.id === id);
+  // "Project not found" only once a fresh list confirms it (MIN-937).
+  const projectLookup = useProjectLookup(id);
+  const { project } = projectLookup;
   useAssistantContext(
     !browse && project ? { projectId: project.id, settings: "project" } : null,
   );
@@ -68,22 +68,11 @@ function ProjectSettingsInner({ browse, projectId }: { browse?: SidebarBrowseTar
 
   // The SAME template as `loading.tsx`: it mounts a secondary sidebar, therefore the
   // Primary bar stays at the rail and nothing moves when the screen arrives.
-  if (projectsLoading && !project) {
+  if (!project && projectLookup.state === "loading") {
     return <SettingsPageSkeleton />;
   }
 
-  if (!project) {
-    return (
-      <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">
-          {t("projectNotFound")}
-        </h1>
-        <Button asChild variant="outline">
-          <Link href="/home">{t("backToHome")}</Link>
-        </Button>
-      </div>
-    );
-  }
+  if (!project) return <ProjectUnavailable lookup={projectLookup} />;
 
   const isOwner = project.owner_id === user?.id;
 

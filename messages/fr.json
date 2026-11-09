@@ -1147,6 +1147,7 @@
     "myView": "Mes tickets",
     "projectNotFoundTitle": "Projet introuvable",
     "projectNotFoundDescription": "Ce projet n'existe pas ou vous n'y avez pas accès.",
+    "projectLoadError": "Impossible de charger ce projet.",
     "backToHome": "Retour à l'accueil",
     "emptyTitle": "Créez vos premiers tickets",
     "emptyImport": "Importer des tickets",
@@ -2428,8 +2429,6 @@
     "successContinue": "Continuer vers {name}"
   },
   "Objectives": {
-    "projectNotFound": "Projet introuvable",
-    "backToHome": "Retour à l'accueil",
     "title": "Objectifs",
     "emptyTitle": "Posez vos premiers objectifs",
     "emptyNumoPrompt": "Aide-moi à poser les objectifs du projet « {name} » : commence par tes questions, puis propose-moi les chantiers autour desquels regrouper le travail.",
@@ -3382,8 +3381,6 @@
     "dangerZoneDesc": "Mettre ce projet à la corbeille ou le quitter.",
     "categoriesSectionDesc": "Organisez vos tickets avec des catégories colorées.",
     "membersSectionDesc": "Invitez ou retirez des collaborateurs.",
-    "projectNotFound": "Projet introuvable",
-    "backToHome": "Retour à l'accueil",
     "nameLabel": "Nom",
     "keyLabel": "Clé",
     "nameRequired": "Le nom est obligatoire.",
@@ -4571,8 +4568,6 @@
     "mergeNoLongerAllowed": "Cette pull request ne peut plus être fusionnée en l'état."
   },
   "Triage": {
-    "projectNotFound": "Projet introuvable",
-    "backToHome": "Retour à l'accueil",
     "title": "Triage",
     "filterPlaceholder": "Filtrer {count, plural, =0 {les tickets} one {le ticket} other {les # tickets}}…",
     "emptyTitle": "Rien en triage",

@@ -18,14 +18,14 @@ import dynamic from "next/dynamic";
 import { AppTabRouteBoundary, ProjectRouteReady, useAppTabActive, useAppTabRoute } from "@/lib/app-tab-route-context";
 import { ListDetailSkeleton } from "@/components/route-skeletons";
 import { useOptionalAppTabNavigation } from "@/lib/app-tab-navigation-context";
-import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Kbd } from "@/components/ui/kbd";
-import { useProjects } from "@/lib/projects-context";
+import { useProjectLookup } from "@/lib/use-project-lookup";
+import { ProjectUnavailable } from "@/components/project-unavailable";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import {
   useAssistantContext,
@@ -311,8 +311,9 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
   const newParam = listOnly ? null : searchParams.get("new");
   const openParam = listOnly ? null : expandParam(searchParams.get("open"));
 
-  const { projects, loading: projectsLoading } = useProjects();
-  const project = projects.find((p) => p.id === projectId);
+  // "Project not found" only once a fresh list confirms it (MIN-937).
+  const projectLookup = useProjectLookup(projectId);
+  const { project } = projectLookup;
   // Project readers (MIN-693) browse objectives without creating any.
   const { canWrite } = useProjectCapabilities(projectId);
 
@@ -686,22 +687,15 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
     objectiveSelection.clear();
   };
 
-  if (projectsLoading && !project) {
-    return (
-      <div className="px-6 py-10">
-        <Skeleton className="h-8 w-64" />
-      </div>
-    );
-  }
   if (!project) {
-    return (
-      <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">{t("projectNotFound")}</h1>
-        <Button asChild variant="outline">
-          <Link href="/home">{t("backToHome")}</Link>
-        </Button>
-      </div>
-    );
+    if (projectLookup.state === "loading") {
+      return (
+        <div className="px-6 py-10">
+          <Skeleton className="h-8 w-64" />
+        </div>
+      );
+    }
+    return <ProjectUnavailable lookup={projectLookup} />;
   }
 
   /* `projectId` is not just the button label: it is the prefix of
