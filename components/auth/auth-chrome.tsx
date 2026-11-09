@@ -454,7 +454,7 @@ export function PasswordRules({ password }: { password: string }) {
 /**
  * A gone email icon — the “look at your mailbox” screen.
  *
- * Placed on its isometric block (`IsoIcon`), like the empty states of the app and
+ * Drawn as an illustration (`IsoIcon`), like the empty states of the app and
  * the cards of the landing (MIN-254), and not a lucid face in a
  * round pellet: this pellet is the most neutral drawing possible, so
  * the one who doesn't say anything about minddy. This screen is the last of the route

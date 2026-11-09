@@ -9,7 +9,7 @@ import {
 } from "@/components/illustrations/iso-icon";
 
 /**
- * An empty state illustrated: the isometric block, a sentence, the gestures that make it
+ * An empty state illustrated: the icon in its field of dots, a sentence, the gestures that make it
  * fill (MIN-173). Writing it down once is the only way to be sure
  * all fall in the same place, at the same height, with the same gaps — the
  * having copied it was enough to make them diverge.
@@ -19,12 +19,10 @@ import {
  * entire surface is empty, the illustration has room to breathe.
  * - `compact` — a SECTION of settings: the void is only one line of the
  * form, and a full-size drawing would scream louder than the
- * section itself. Same block, half as wide, gaps narrowed.
+ * section itself. Same drawing, about half as wide, gaps narrowed.
  *
- * The widths have been DIVIDED BY HALF when going from the lying icon to the block:
- * the first spread out in a diamond twice as wide as it was high, the second
- * is almost square. At equal width the illustration would have doubled in height and
- * took up all the space that the empty state left for the text.
+ * The illustration is square (`IsoIcon`), so its width sets its height: keep
+ * the widths below rather than adding new ones, or the text gets pushed down.
  *
  * To be distinguished from `components/empty-state.tsx`, the small dotted box
  * which remains for internal lists (panels, subviews).
@@ -37,7 +35,7 @@ export function EmptyScene({
   children,
   className,
 }: {
-  /** The icon of the page or section — it is placed on the block. */
+  /** The icon of the page or section — it sits in the field of dots. */
   icon: SceneIcon;
   title: string;
   size?: "page" | "compact";

@@ -166,7 +166,7 @@ one; a variant with different behavior gets its own name.
 | Label or count | `Badge` |
 | Tooltip | `AppTooltip` (see below) |
 | Key cap | `Kbd`, `KbdSequence` |
-| Empty screen | `EmptyState`; illustrated: `EmptyScene` (`page` or `compact`) |
+| Empty screen | `EmptyState`; illustrated: `EmptyScene` (`page` or `compact`), whose `IsoIcon` draws any icon on a field of dots in the accent color (`destructive` for deletion) |
 | Loading screen | the matching skeleton in `components/route-skeletons.tsx` |
 | Notification | `toast` from `sonner` |
 

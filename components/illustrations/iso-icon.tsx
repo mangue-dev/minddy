@@ -7,80 +7,112 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
 
 /**
- * ANY lucid icon, placed on an isometric BLOCK — without having to
- * redraw by hand.
+ * ANY line icon, turned into an illustration — without drawing anything by
+ * hand (MIN-940).
  *
- * WHAT HAS CHANGED, AND WHY. Until now the icon was LAYERED in the plane of the
- * ground: `rotateX(60deg) rotateZ(-45deg)`, the exact projection of the ground
- * isometric, therefore geometrically correct. That's where the problem was—this
- * projection crushes the drawing in half AND rotates it 45°. The only icons
- * that survived there are those made of horizontal strips or squares
- * concentric (`Layers`, `LayoutList`, `Command`); everything whose meaning holds
- * the silhouette or orientation became unrecognizable — `Mic`, `BellRing`,
- * `Search`, `Upload`, and worst of all the FIGURES on the numbered cards. A
- * illustration that demands reading effort is no longer a visual anchor:
- * it costs one.
+ * The icon sits in the middle of a field of dots. The dots fade out towards the
+ * edge, and the ones closest to the icon take the tone's colour, so the drawing
+ * glows without being boxed in a shape. The isometric block this replaced read
+ * as a technical diagram next to the app's rounded, quiet surfaces.
  *
- * Isometry has therefore left the icon for the SOLID which carries it. The route is
- * rendered from the front, intact, on the front face of a block extruded towards the rear-
- * LEFT. We keep the anchor — an object, in the app plan — and we recover
- * full readability, including numbers.
+ * Every dot is WHOLE or absent. A dot that would touch the drawing (or come
+ * closer than `CLEARANCE`) is not drawn at all, so the area under the icon is
+ * clear without a mask: a mask cuts along the drawing's outline and leaves
+ * half-dots along it. The fade is an opacity per dot for the same reason — a
+ * gradient mask would shade one dot unevenly. And nothing is painted in the
+ * page colour, so the illustration works on every background it sits on (the
+ * content pane, a card, a settings section).
  *
- * WHAT MAKES A BLOCK AND NOT A RECTANGLE, two things, and they are not
- * decorative:
- *
- * - ONE SINGLE MATERIAL. Paint the face in `--card` and the extrusion in shade of
- * mark gives two materials, so a white rectangle with a blue shadow
- * behind. The three faces are of the SAME three-value shade: this is
- * the difference in value, not the contour, which makes a volume read. The front side
- * is the clearest, so that the outline stands out; the faces that move away
- * increase in density.
- * - SHARP EDGES. No rounding — a `rx` of a few units is enough to do
- * a pellet of what must be a stone. Junctions in `miter`, and
- * unscaled meshed edges (`non-scaling-stroke`): a
- * pixel at all sizes, sharp on a 44 px tile as on a
- *    illustration de 144.
- *
- * The dotted TERRAIN which carried the empty states disappeared with the update.
- * flat: it was used to give a plan to a lying icon. The block carries its
- * its own volume; a grid beneath it would say nothing.
+ * The name stays `IsoIcon` so the ~90 callers keep working unchanged.
  */
 
-/* ── Block geometry ──────────────────────────── ────────────────────────────
-   A cube in 2:1 isometry: the depth goes in (−D, −D/2), therefore a step towards
-   rear-left is worth a half step up. We see the front side, the
-   top and LEFT side.
+/* ── Geometry, in the 100 × 100 viewBox of the dot field ──────────────────── */
 
-   The face is a TRUE square with side F. Occupied width F + D = 100; height
-   F + D/2 = 91 — the silhouette of a cube seen in 2:1 is always wider than
-   high, and that's correct. The box follows the design, hence the viewBox 100×91:
-   an empty strip would make the block float in its box and each caller would
-   would catch up in his own way.
+/** The dot field spills past the element by this much on each side, so the
+ *  icon can fill most of the width the caller gives (as the old block did)
+ *  while the dots still have room to fade. The spill does not take layout
+ *  space; the outer dots are nearly transparent. */
+const FIELD_SPILL = "-20%";
 
-   D to 18 for a side of 82: beyond that the volume eats the icon and we no longer read
-   than a block; below that it becomes a flat card again. */
-const DEPTH = 18;
-const FACE = 100 - DEPTH;
-const VIEW_W = 100;
-const VIEW_H = FACE + DEPTH / 2;
+/** The icon's square, centred: 39 units of a field 1.4× the element, so the
+ *  icon spans about 55 % of the element's width. */
+const ICON_BOX = 39;
+const CENTER = 50;
 
-/** The six vertices which are used, named once so that the lines can be read. */
-const FACE_L = DEPTH;
-const FACE_T = DEPTH / 2;
-const FACE_B = FACE_T + FACE;
-const BACK_R = FACE;
-const BACK_B = FACE;
+/** Dot grid: one dot every 8 units, with one exactly on the centre. */
+const DOT_STEP = 8;
+const DOT_RADIUS = 0.75;
 
-/** The clearance between the line and the edge of the face. In PERCENTAGE: padding in
- * percent refers to the WIDTH of the parent block on all four sides, so
- * the inset remains regular and the plot box remains square. */
-const ICON_INSET = "15%";
+/** Empty space kept between a dot's edge and the drawing. */
+const CLEARANCE = 2.5;
+
+/** Grey dots: full strength up to 35 % of the field's radius, gone at its edge. */
+const FIELD_RADIUS = 50;
+const FIELD_SOLID = 0.35;
+/** Coloured dots: full strength up to half this radius, handing over to the grey. */
+const CORE_RADIUS = 42;
+const CORE_SOLID = 0.5;
+
+/** A Hugeicons drawing is 24 units wide with a 1.5 stroke: until measured,
+ *  assume that and place it accordingly. */
+const NATIVE = 24;
+const STROKE = 1.5;
+
+/** Linear fade from 1 (at `solid` × radius) to 0 (at the radius). */
+function fade(distance: number, radius: number, solid: number) {
+  const t = (distance / radius - solid) / (1 - solid);
+  return Math.min(1, Math.max(0, 1 - t));
+}
+
+type Dot = { key: string; x: number; y: number; grey: number; core: number };
+
+/** The grid, computed once: position and the two opacities of each dot. */
+const DOTS: Dot[] = (() => {
+  const dots: Dot[] = [];
+  const reach = Math.floor(FIELD_RADIUS / DOT_STEP);
+  for (let i = -reach; i <= reach; i++) {
+    for (let j = -reach; j <= reach; j++) {
+      const x = CENTER + i * DOT_STEP;
+      const y = CENTER + j * DOT_STEP;
+      const distance = Math.hypot(x - CENTER, y - CENTER);
+      const grey = fade(distance, FIELD_RADIUS, FIELD_SOLID);
+      if (grey <= 0.02) continue;
+      dots.push({ key: `${i}:${j}`, x, y, grey, core: fade(distance, CORE_RADIUS, CORE_SOLID) });
+    }
+  }
+  return dots;
+})();
+
+/** Before the drawing can be measured (server render, hidden element), keep
+ *  every dot out of the icon's square plus the clearance. */
+const UNMEASURED_HIDDEN = new Set(
+  DOTS.filter(
+    (dot) =>
+      Math.max(Math.abs(dot.x - CENTER), Math.abs(dot.y - CENTER)) <
+      ICON_BOX / 2 + DOT_RADIUS + CLEARANCE,
+  ).map((dot) => dot.key),
+);
+
+/** Points sampled across a dot's disc grown by the clearance: the centre and
+ *  three rings. Their spacing stays under the drawn stroke's width, so a
+ *  stroke cannot pass between them. */
+const SAMPLES: [number, number][] = (() => {
+  const points: [number, number][] = [[0, 0]];
+  const outer = DOT_RADIUS + CLEARANCE;
+  for (const radius of [outer / 3, (2 * outer) / 3, outer]) {
+    const count = Math.max(6, Math.ceil((2 * Math.PI * radius) / 1.2));
+    for (let k = 0; k < count; k++) {
+      const angle = (2 * Math.PI * k) / count;
+      points.push([radius * Math.cos(angle), radius * Math.sin(angle)]);
+    }
+  }
+  return points;
+})();
 
 /**
- * Any SVG icon that can be tinted, transformed and measured: icons
- * lucid, but also the face of Numo (`components/numo-face.tsx`), who does not
- * is not one. The contract is made up of four props — that's all the placement on
- * the block needs.
+ * Any SVG icon that can be tinted, transformed and measured: Hugeicons, but
+ * also the face of Numo (`components/numo-face.tsx`), which is not one. The
+ * contract is these four props — that is all the placement needs.
  */
 export type SceneIcon =
   | IconSvgElement
@@ -92,171 +124,159 @@ export type SceneIcon =
     }>;
 
 /**
- * The color of solid. The default brand; red for what DELETES —
- * the basket can be recognized by its color before being read, and paint it in
- * blue like the rest would make it one more section.
+ * The colour of the drawing. The ACCENT by default (`primary`, which the
+ * account's palette recolours — so the illustrations follow the user's choice
+ * rather than staying lavender); red for what DELETES — the trash is
+ * recognised by its colour before it is read, and that colour never changes
+ * with the palette.
  *
- * Classes are written in LITERALS: the Tailwind scanner does not read a
- * classe construite par interpolation.
+ * Classes are written as LITERALS: the Tailwind scanner does not read a class
+ * built by interpolation.
  */
 const TONE = {
-  brand: {
-    icon: "text-brand",
-    front: "fill-brand/10",
-    top: "fill-brand/20",
-    side: "fill-brand/30",
-    edge: "stroke-brand/40",
-  },
-  destructive: {
-    icon: "text-destructive",
-    front: "fill-destructive/10",
-    top: "fill-destructive/20",
-    side: "fill-destructive/30",
-    edge: "stroke-destructive/40",
-  },
+  brand: { icon: "text-primary", core: "fill-primary/75" },
+  destructive: { icon: "text-destructive", core: "fill-destructive/75" },
 } as const;
 
 export type SceneTone = keyof typeof TONE;
 
+function Glyph({ icon: Icon, className }: { icon: SceneIcon; className: string }) {
+  if (Array.isArray(Icon)) {
+    return <HugeiconsIcon icon={Icon} strokeWidth={STROKE} className={className} />;
+  }
+  const Component = Icon as Exclude<SceneIcon, IconSvgElement>;
+  return <Component strokeWidth={STROKE} className={className} />;
+}
+
 /**
- * An icon placed on its block.
- *
- * The container only takes up a WIDTH — the height follows the ratio of the solid.
- * Forcing it otherwise would distort or shift it in its square.
+ * The keys of the dots that touch the drawing, tested against its real
+ * geometry (`isPointInFill` covers the inside of each shape, `isPointInStroke`
+ * the line itself). Only the dots near the icon are tested.
+ */
+function dotsTouching(field: SVGSVGElement, group: SVGGElement): Set<string> | null {
+  const toScreen = field.getScreenCTM();
+  if (!toScreen) return null;
+  const shapes = [
+    ...group.querySelectorAll<SVGGeometryElement>(
+      "path, circle, rect, ellipse, line, polyline, polygon",
+    ),
+  ].flatMap((shape) => {
+    const toShape = shape.getScreenCTM();
+    return toShape ? [{ shape, matrix: toShape.inverse().multiply(toScreen) }] : [];
+  });
+  if (shapes.length === 0) return null;
+
+  const near = ICON_BOX * 0.75 + DOT_RADIUS + CLEARANCE;
+  const hidden = new Set<string>();
+  for (const dot of DOTS) {
+    if (Math.max(Math.abs(dot.x - CENTER), Math.abs(dot.y - CENTER)) > near) continue;
+    const touches = SAMPLES.some(([dx, dy]) => {
+      const point = new DOMPoint(dot.x + dx, dot.y + dy);
+      return shapes.some(({ shape, matrix }) => {
+        const local = point.matrixTransform(matrix);
+        return shape.isPointInFill(local) || shape.isPointInStroke(local);
+      });
+    });
+    if (touches) hidden.add(dot.key);
+  }
+  return hidden;
+}
+
+/**
+ * An icon in its field of dots. Square: the container takes a WIDTH and the
+ * height follows.
  */
 export function IsoIcon({
-  icon: Icon,
+  icon,
   tone = "brand",
   className,
   style,
 }: {
   icon: SceneIcon;
-  /** Solid color — `destructive` for what removes. */
+  /** Drawing colour — `destructive` for what removes. */
   tone?: SceneTone;
   className?: string;
   style?: CSSProperties;
 }) {
-  const SceneIconComponent = Icon as Exclude<SceneIcon, IconSvgElement>;
-  const ref = useRef<SVGSVGElement>(null);
+  const fieldRef = useRef<SVGSVGElement>(null);
+  const ref = useRef<SVGGElement>(null);
   /**
-   * The drawing of an icon does not occupy its entire viewBox, and not in the same way
-   * from one icon to another: `Filter` goes down to the edges, `Target` leaves
-   * a margin. We therefore MEASURE the drawing once rendered, and we refocus it and
-   * enlarges it so that it fills the face of the block — to the maximum, never beyond.
+   * The icon renders as its own nested `<svg>` at its native size, at the
+   * origin: CSS sizing (`size-full`) does not apply to an `<svg>` nested in
+   * another one, so it cannot be stretched into place that way. And a
+   * drawing does not fill its viewBox the same way from one icon to the next:
+   * `Filter` reaches the edges, `Target` leaves a margin.
+   *
+   * So we MEASURE the drawing in the field's own units (`getBBox` on the group
+   * that holds it covers the nested viewport) and move its centre onto the
+   * field's centre, scaled to fill the icon square — never beyond.
    */
-  const [fit, setFit] = useState({ scale: 1, dx: 0, dy: 0 });
+  const [fit, setFit] = useState(() => {
+    const scale = ICON_BOX / NATIVE;
+    return { scale, x: CENTER - scale * (NATIVE / 2), y: CENTER - scale * (NATIVE / 2) };
+  });
+  const [hidden, setHidden] = useState<Set<string>>(UNMEASURED_HIDDEN);
 
   useLayoutEffect(() => {
-    const svg = ref.current;
-    if (!svg) return;
+    const group = ref.current;
+    if (!group) return;
     try {
-      const box = svg.getBBox();
-      // The viewBox READS, it is not assumed: 24 for a lucid icon, but
-      // 48×39 for Numo’s face. Its longest side is what
-      // `preserveAspectRatio` fits in the square, therefore the unit of measurement.
-      const vb = svg.viewBox.baseVal;
-      const boxW = vb?.width || 24;
-      const boxH = vb?.height || 24;
-      const frame = Math.max(boxW, boxH);
-      // `getBBox` renders the geometry WITHOUT the thickness of the line: it overflows
-      // half a line on each side, otherwise the outline would touch the edge.
-      const span = Math.max(box.width, box.height) + 1.5;
-      if (!(span > 0)) return;
+      const box = group.getBBox();
+      if (!(box.width > 0 || box.height > 0)) return;
+      // `getBBox` measures geometry WITHOUT the stroke, which overflows by
+      // half a stroke on each side.
+      const scale = ICON_BOX / (Math.max(box.width, box.height) + STROKE);
       setFit({
-        scale: frame / span,
-        // As a percentage of the element: `translate` relates to it, so the
-        // recentering holds regardless of the rendered size.
-        dx: (((vb?.x ?? 0) + boxW / 2 - (box.x + box.width / 2)) / frame) * 100,
-        dy: (((vb?.y ?? 0) + boxH / 2 - (box.y + box.height / 2)) / frame) * 100,
+        scale,
+        x: CENTER - scale * (box.x + box.width / 2),
+        y: CENTER - scale * (box.y + box.height / 2),
       });
     } catch {
-      // Not yet rendered (display:none) — the default does the trick.
+      // Not rendered yet (display: none) — the default does the job.
     }
-  }, [Icon]);
+  }, [icon]);
+
+  // Once the drawing is in place (both effects run before the first paint).
+  useLayoutEffect(() => {
+    const field = fieldRef.current;
+    const group = ref.current;
+    if (!field || !group) return;
+    try {
+      const touching = dotsTouching(field, group);
+      if (touching) setHidden(touching);
+    } catch {
+      // A browser without the geometry API keeps the square cleared.
+    }
+  }, [icon, fit]);
 
   const paint = TONE[tone];
 
   return (
     <span
-      className={cn("relative block", className)}
-      /* Report in STYLE, not class: a Tailwind class built by
-         interpolation is never generated, and it is better that it follows the
-         constantes ci-dessus. */
-      style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}`, ...style }}
+      className={cn("relative block aspect-square", className)}
+      style={style}
       aria-hidden
     >
       <svg
-        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="absolute inset-0 size-full"
-        shapeRendering="geometricPrecision"
+        ref={fieldRef}
+        viewBox="0 0 100 100"
+        className="pointer-events-none absolute overflow-visible"
+        style={{ inset: FIELD_SPILL }}
       >
-        {/* The top. */}
-        <path
-          d={`M${FACE_L} ${FACE_T} L0 0 L${BACK_R} 0 L${VIEW_W} ${FACE_T} Z`}
-          className={paint.top}
-        />
-        {/* The left side — the side that is furthest away, therefore the densest. */}
-        <path
-          d={`M${FACE_L} ${FACE_T} L0 0 L0 ${BACK_B} L${FACE_L} ${FACE_B} Z`}
-          className={paint.side}
-        />
-        {/* The front side: the square which carries the outline, the lightest of the three. */}
-        <path
-          d={`M${FACE_L} ${FACE_T} L${VIEW_W} ${FACE_T} L${VIEW_W} ${FACE_B} L${FACE_L} ${FACE_B} Z`}
-          className={paint.front}
-        />
-        {/* The edges: the silhouette, then the three that can be seen inside
-            (top and left of the face, and the top/side junction). Without them
-            solid dissolves into the bottom. */}
-        <g
-          className={paint.edge}
-          fill="none"
-          strokeWidth={1}
-          strokeLinejoin="miter"
-          strokeLinecap="square"
-        >
-          <path
-            d={`M${FACE_L} ${FACE_B} L${VIEW_W} ${FACE_B} L${VIEW_W} ${FACE_T} L${BACK_R} 0 L0 0 L0 ${BACK_B} Z`}
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d={`M${VIEW_W} ${FACE_T} L${FACE_L} ${FACE_T} L${FACE_L} ${FACE_B}`}
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d={`M${FACE_L} ${FACE_T} L0 0`}
-            vectorEffect="non-scaling-stroke"
-          />
+        {DOTS.filter((dot) => !hidden.has(dot.key)).map((dot) => (
+          <g key={dot.key}>
+            <circle cx={dot.x} cy={dot.y} r={DOT_RADIUS} opacity={dot.grey} className="fill-foreground/15" />
+            {dot.core > 0.01 ? (
+              <circle cx={dot.x} cy={dot.y} r={DOT_RADIUS} opacity={dot.core} className={paint.core} />
+            ) : null}
+          </g>
+        ))}
+        <g transform={`translate(${fit.x} ${fit.y}) scale(${fit.scale})`}>
+          <g ref={ref}>
+            <Glyph icon={icon} className={paint.icon} />
+          </g>
         </g>
       </svg>
-      {/* The outline, from the front, inscribed in the front face of the block. */}
-      <span
-        className="absolute"
-        style={{
-          left: `${(FACE_L / VIEW_W) * 100}%`,
-          top: `${(FACE_T / VIEW_H) * 100}%`,
-          width: `${(FACE / VIEW_W) * 100}%`,
-          height: `${(FACE / VIEW_H) * 100}%`,
-          padding: ICON_INSET,
-        }}
-      >
-        {!Array.isArray(Icon) ? (
-          <SceneIconComponent
-            ref={ref}
-            strokeWidth={1.5}
-            className={cn("size-full", paint.icon)}
-            style={{ transform: `scale(${fit.scale}) translate(${fit.dx}%, ${fit.dy}%)` }}
-          />
-        ) : (
-          <HugeiconsIcon
-            ref={ref}
-            icon={Icon}
-            strokeWidth={1.5}
-            className={cn("size-full", paint.icon)}
-            style={{ transform: `scale(${fit.scale}) translate(${fit.dx}%, ${fit.dy}%)` }}
-          />
-        )}
-      </span>
     </span>
   );
 }
