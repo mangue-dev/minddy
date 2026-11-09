@@ -4,12 +4,12 @@ import { cn } from "@/lib/utils";
 import { IsoIcon, type SceneIcon } from "@/components/illustrations/iso-icon";
 
 /**
- * A wizard's choice card: an isometric block, a label, a
+ * A wizard's choice card: an illustrated icon (`IsoIcon`), a label, a
  * description when the option requires one.
  *
  * It is the drawing that makes the choice, the label confirms — hence the illustration
  * PLACED on the card instead only framed: no background, no net, the background of the
- * card runs from one end to the other and the block floats in it.
+ * card runs from one end to the other and the dots fade into it.
  *
  * The alignment of the text follows what is to be read. A single label is centered
  * under its design; as soon as a description accompanies it, everything goes to the left —
