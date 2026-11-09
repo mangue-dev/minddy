@@ -120,6 +120,12 @@ describe("cleanObjectiveName", () => {
     expect(long.startsWith(name)).toBe(true);
   });
 
+  it("keeps version names and technical identifiers intact", () => {
+    expect(cleanObjectiveName('"0.40 - AI update."')).toBe("0.40 - AI update");
+    expect(cleanObjectiveName("Name: Migration to v2.1")).toBe("Migration to v2.1");
+    expect(cleanObjectiveName("MIN-42 OAuth 2.1 support")).toBe("MIN-42 OAuth 2.1 support");
+  });
+
   it("names an objective from its description when no model answers", () => {
     expect(fallbackObjectiveName("## Refonte de l'onboarding\nLivraison fin janvier.")).toBe(
       "Refonte de l'onboarding",
@@ -138,6 +144,9 @@ describe("objectiveFillParameters", () => {
     const prompt = buildObjectiveFillPrompt("Minddy", objectiveFillClock("Europe/Paris", new Date(`${TODAY}T12:00:00Z`)));
     expect(prompt).toContain(`It is ${TODAY} 13:00 in the author's time zone (Europe/Paris)`);
     expect(prompt).toContain("#22c55e (green)");
+    // What identifies the objective survives in its name.
+    expect(prompt).toContain("version name");
+    expect(prompt).toContain("technical identifier");
   });
 });
 
