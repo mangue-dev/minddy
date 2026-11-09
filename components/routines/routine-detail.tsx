@@ -378,36 +378,36 @@ export function RoutineDetail({
             </div>
           ) : (
             <div>
-              {/* Nothing is framed when there is neither a future nor a past run. */}
+              {/* Nothing is shown when there is neither a future nor a past run. */}
               {nextRunAtIso || runs.length > 0 ? (
-                <div className="overflow-hidden rounded-xl border border-border">
+                <div className="flex flex-col gap-1">
                   {nextRunAtIso ? <NextRunRow at={nextRunAtIso} /> : null}
                   {runs.length > 0 ? (
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[36rem] table-fixed text-left">
+                      <table className="data-table data-table-interactive min-w-[36rem] table-fixed text-sm">
                         <colgroup>
                           <col className="w-[36%]" />
                           <col className="w-[18%]" />
                           <col className="w-[16%]" />
                           <col className="w-[30%]" />
                         </colgroup>
-                        <thead className="border-b border-border bg-muted/30 text-xs font-medium text-muted-foreground">
+                        <thead>
                           <tr>
-                            <th scope="col" className="px-4 py-2 font-medium">
+                            <th scope="col">
                               {t("runDate")}
                             </th>
-                            <th scope="col" className="px-3 py-2 font-medium">
+                            <th scope="col">
                               {t("runDuration")}
                             </th>
-                            <th scope="col" className="px-3 py-2 font-medium">
+                            <th scope="col">
                               {t("runUsage")}
                             </th>
-                            <th scope="col" className="px-3 py-2 font-medium">
+                            <th scope="col">
                               {t("runResult")}
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-border">
+                        <tbody>
                           {runs.map((run) => {
                             const date = format.dateTime(
                               new Date(run.created_at),
@@ -420,9 +420,9 @@ export function RoutineDetail({
                               <tr
                                 key={run.id}
                                 onClick={() => openRoutineRun(run)}
-                                className="group transition-colors hover:bg-muted/50 focus-within:bg-muted/50"
+                                className="group"
                               >
-                                <td className="px-4 py-2.5 text-sm">
+                                <td>
                                   <button
                                     type="button"
                                     onClick={(event) => {
@@ -445,21 +445,21 @@ export function RoutineDetail({
                                     {run.subject_id && run.subject_type ? <span className="block truncate text-[11px] text-muted-foreground">{t(`source_${run.subject_type}`)} · {run.subject_id}</span> : null}
                                   </button>
                                 </td>
-                                <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
+                                <td className="tabular-nums text-muted-foreground">
                                   {formatRoutineRunDuration(
                                     run.started_at,
                                     run.completed_at,
                                   )}
                                 </td>
-                                <td className="pointer-events-none relative px-3 py-2.5 text-xs tabular-nums text-muted-foreground">
+                                <td className="tabular-nums text-muted-foreground">
                                   {formatRunUsagePercent(
                                     run.usage_percent,
                                     format,
                                   )}
                                 </td>
-                                <td className="relative px-3 py-2.5">
+                                <td>
                                   <div className="flex min-w-0 items-center justify-between gap-2">
-                                    <span className="pointer-events-none relative min-w-0 truncate text-xs text-muted-foreground">
+                                    <span className="min-w-0 truncate text-muted-foreground">
                                       {run.awaiting_input
                                         ? t("runWaitingInput")
                                         : run.error_message
@@ -468,7 +468,7 @@ export function RoutineDetail({
                                             ? run.outcome
                                             : t(runStatusKey(run.status))}
                                     </span>
-                                    <HugeiconsIcon icon={ArrowRight01Icon} className="pointer-events-none relative size-4 shrink-0 text-muted-foreground" />
+                                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
                                   </div>
                                 </td>
                               </tr>
@@ -572,7 +572,7 @@ function NextRunRow({ at }: { at: string }) {
           : t("nextRunInDays", { days, time });
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted-foreground">
+    <div className="flex items-center gap-3 px-2 py-2.5 text-sm text-muted-foreground">
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="min-w-0 truncate">{label}</span>

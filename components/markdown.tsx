@@ -476,22 +476,15 @@ function MarkdownRenderer({
              around it. `min-w-max` lets the table keep its natural width inside
              that box instead of being squeezed into towering rows, while
              `w-full` still makes a small table fill the width; long cells stay
-             readable by wrapping at 20rem. */
+             readable by wrapping at 20rem. `.data-table` (app/globals.css)
+             gives them the look of a page database's table. */
           table: ({ node, ...props }) => (
-            <div className="my-3 max-w-full overflow-x-auto overscroll-x-contain rounded-lg border border-border">
-              <table
-                className="w-full min-w-max border-collapse text-left text-[0.9em]"
-                {...props}
-              />
+            <div className="my-3 max-w-full overflow-x-auto overscroll-x-contain">
+              <table className="data-table min-w-max" {...props} />
             </div>
           ),
-          thead: styled("thead", "bg-muted/60"),
-          tr: styled("tr", "border-b border-border/60 last:border-0"),
-          th: styled(
-            "th",
-            "max-w-80 px-2.5 py-1.5 font-medium text-foreground",
-          ),
-          td: styled("td", "max-w-80 px-2.5 py-1.5 align-top"),
+          th: styled("th", "max-w-80"),
+          td: styled("td", "max-w-80 align-top"),
           /* Six levels, and a ladder that IS SEEN — the three old ones fell
              all between 14 and 16 px, which made it read a plan or a summary of
              review as a flat block. The sizes are in `em` (and not in steps
