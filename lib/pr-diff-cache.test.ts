@@ -28,11 +28,11 @@ describe("pullRequestDiffCacheKey", () => {
     const refreshedPatch = patch("newer");
     const first = parsePatchFiles(
       firstPatch,
-      pullRequestDiffCacheKey(firstPatch),
+      { cacheKeyPrefix: pullRequestDiffCacheKey(firstPatch) },
     )[0].files[0];
     const refreshed = parsePatchFiles(
       refreshedPatch,
-      pullRequestDiffCacheKey(refreshedPatch),
+      { cacheKeyPrefix: pullRequestDiffCacheKey(refreshedPatch) },
     )[0].files[0];
 
     expect(first.name).toBe(refreshed.name);
@@ -50,8 +50,8 @@ describe("pullRequestDiffCacheKey", () => {
 `;
     const firstPatch = reviewHunk("first");
     const secondPatch = reviewHunk("second");
-    const first = parsePatchFiles(firstPatch, pullRequestDiffCacheKey(firstPatch))[0].files[0];
-    const second = parsePatchFiles(secondPatch, pullRequestDiffCacheKey(secondPatch))[0].files[0];
+    const first = parsePatchFiles(firstPatch, { cacheKeyPrefix: pullRequestDiffCacheKey(firstPatch) })[0].files[0];
+    const second = parsePatchFiles(secondPatch, { cacheKeyPrefix: pullRequestDiffCacheKey(secondPatch) })[0].files[0];
 
     expect(first.name).toBe(second.name);
     expect(first.cacheKey).not.toBe(second.cacheKey);

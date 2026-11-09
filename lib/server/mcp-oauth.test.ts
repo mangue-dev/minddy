@@ -469,6 +469,8 @@ describe("generic MCP OAuth", () => {
     ).searchParams.get("state")!;
     expect(isDesktopMcpOAuthState(desktop)).toBe(true);
     expect(isDesktopMcpOAuthState(`d${"z".repeat(64)}`)).toBe(false);
+    // A web state is random hex, so one in sixteen begins with "d".
+    expect(isDesktopMcpOAuthState(`d${"0".repeat(63)}`)).toBe(false);
     // The app that redeems the code must hold the session that started it.
     await expect(completeMcpOAuth("bob", desktop, "code")).rejects.toThrow();
     await completeMcpOAuth("alice", desktop, "code");

@@ -108,7 +108,7 @@ export function PrHunk({
     // Review excerpts share the global worker pool with the full Files tab.
     // A filename-only fallback key lets two different hunks for the same path
     // reuse incompatible highlighted line arrays.
-    const [parsed] = parsePatchFiles(patch, pullRequestDiffCacheKey(patch));
+    const [parsed] = parsePatchFiles(patch, { cacheKeyPrefix: pullRequestDiffCacheKey(patch) });
     return parsed?.files[0] ?? null;
   }, [path, diffHunk, line, startLine, side, maxLines]);
 
