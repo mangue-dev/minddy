@@ -122,6 +122,26 @@ export async function isAdminUser(
 }
 
 /**
+ * Whether the live Auth account is still an instance admin, with no session
+ * to check (MIN-944). Background Numo runs while the user is away, so it has
+ * no live session: it needs an admin account that still has two-factor
+ * authentication enabled and a verified factor, and is not banned. Never
+ * cached, and any failure denies. Never use it to authorize a request a
+ * person makes: those carry a session, and `isAdminUser` checks it.
+ */
+export async function isAdminAccountLive(userId: string): Promise<boolean> {
+  if (!SESSION_ID_PATTERN.test(userId)) return false;
+  try {
+    const { data, error } = await withBackendDeadline(getServiceClient().auth.admin.getUserById(userId));
+    if (error) throw new Error(error.message);
+    return isAdminAccount({ id: userId }, data?.user);
+  } catch (error) {
+    console.error("[admin] live account check failed:", (error as Error).message);
+    return false;
+  }
+}
+
+/**
  * Authenticate and authorize an admin API request with ONE authorization
  * lookup. `getAuthedUser` already makes the live session and MFA lookup
  * (`auth_authorization_state`, with the same parameters `isAdminUser` sends),

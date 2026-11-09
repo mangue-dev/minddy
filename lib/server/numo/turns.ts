@@ -7,8 +7,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AiProviderChoice } from "@/lib/ai-surfaces";
 import {
   ADMIN_ASSISTANT_TOOLS,
+  ADMIN_BACKGROUND_GRANT,
   ADMIN_PROMPT_BLOCK,
+  BACKGROUND_ADMIN_PROMPT_BLOCK,
+  ROUTINE_ADMIN_LIMIT_PROMPT_LINE,
   adminGrantIsLive,
+  type AdminGrant,
   type AdminSessionGrant,
 } from "@/lib/server/assistant/admin-tools";
 import { ChosenProviderUnavailableError, ProviderRequestError, captureBackgroundException } from "@/lib/server/ai-provider-errors";
@@ -466,7 +470,7 @@ async function buildExecutionInput(input: {
 }): Promise<{
   messages: ChatMessage[];
   tools: AssistantToolDef[];
-  adminGrant: AdminSessionGrant | null;
+  adminGrant: AdminGrant | null;
   memoryWritable: boolean;
   journalSource: NumoJournalSource | null;
   journalScope: JournalScope | null;
@@ -499,11 +503,20 @@ async function buildExecutionInput(input: {
   if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
   // Instance administration (MIN-829): re-verified on every execution, like
   // the project role above, so a retried turn uses the session's state NOW.
-  const adminGrant = !intent.documentation && !intent.routineId && intent.triggerSource !== "mention" &&
-    intent.adminSession && await adminGrantIsLive(turn.user_id, intent.adminSession)
-    ? intent.adminSession
-    : null;
-  if (adminGrant) systemPrompt += ADMIN_PROMPT_BLOCK;
+  // Background Numo (MIN-944) acts for the user alone: an admin account's
+  // wake gets a session-less grant, checked against the live account here
+  // and before every call, and the background guard limits what it does.
+  let adminGrant: AdminGrant | null = null;
+  if (intent.wake) {
+    if (!intent.documentation && !intent.routineId && intent.triggerSource !== "mention" &&
+      await adminGrantIsLive(turn.user_id, ADMIN_BACKGROUND_GRANT)) {
+      adminGrant = ADMIN_BACKGROUND_GRANT;
+    }
+  } else if (!intent.documentation && !intent.routineId && intent.triggerSource !== "mention" &&
+    intent.adminSession && await adminGrantIsLive(turn.user_id, intent.adminSession)) {
+    adminGrant = intent.adminSession;
+  }
+  if (adminGrant) systemPrompt += "background" in adminGrant ? BACKGROUND_ADMIN_PROMPT_BLOCK : ADMIN_PROMPT_BLOCK;
   // Numo's memory (MIN-915): read in every turn of a user with the memory on,
   // written only where the user talks to Numo directly. A routine runs
   // unattended and a comment mention sits on a shared surface, so neither can
@@ -558,6 +571,7 @@ async function buildExecutionInput(input: {
     systemPrompt += `\n## Routine occurrence
 - This is one occurrence of routine ${intent.routineId}, ${timing}. The owner is not assumed to be watching the first response.
 - Complete the routine instruction as a Numo conversation, using Minddy tools directly for triage, cycle, reporting, wiki, project, or other product work. You cannot change a repository; when the instruction asks for code work, say so in the occurrence result.
+- ${ROUTINE_ADMIN_LIMIT_PROMPT_LINE}
 - This occurrence runs unattended: nobody can answer a question, so never ask one. When a choice is yours to make, take the reasonable one and state it in your result. When it is not (anything a tool says needs the user's confirmation first, such as trashing or merging, or a fact you cannot find), do not act: leave it to the owner in a note.
 - Nobody is notified when this occurrence ends normally. Call notify_me only when the result asks the owner to act or changes one of their decisions: one or two sentences, linked to the record concerned. When there is nothing worth reading, notify nobody. A failure, a stop or an exhausted budget already notifies the owner, so never send a note for those.`;
   }

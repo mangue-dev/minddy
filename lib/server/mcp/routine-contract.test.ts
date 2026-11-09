@@ -20,6 +20,7 @@ describe("MCP routine contract", () => {
     expect(create).toContain("description: CREATE_ROUTINE_DESCRIPTION");
     expect(CREATE_ROUTINE_DESCRIPTION).toContain("private Numo conversation");
     expect(CREATE_ROUTINE_DESCRIPTION).toContain("does not need a linked repository");
+    expect(CREATE_ROUTINE_DESCRIPTION).toContain("never gets instance administration");
     expect(create).toContain("trigger: ROUTINE_TRIGGER_SCHEMA");
     expect(ROUTINE_TRIGGER_SCHEMA.safeParse({ type: "event", event: "issue.created" }).success).toBe(true);
     expect(create).not.toContain("base_branch");
