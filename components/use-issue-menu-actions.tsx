@@ -23,6 +23,7 @@ import type { HierarchyRelation, RelationMenuKind } from "@/lib/issue-hierarchy"
 import type { Issue } from "@/lib/types";
 import { DATE_ICON } from "@/components/feature-icons";
 import { promptSubmenu } from "@/components/agent/use-agent-menu-actions";
+import { usePromptActionLabel } from "@/components/prompt-action";
 import type { MultiIssueAction } from "@/lib/issue-prompt";
 
 /**
@@ -80,6 +81,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
   const tAction = useTranslations("CommandPaletteActions");
   const tPr = useTranslations("PullRequests");
   const tBulk = useTranslations("BulkActions");
+  const promptLabel = usePromptActionLabel();
   const appTabs = useOptionalAppTabSession();
   const queryClient = useQueryClient();
   const { isPending, requestUnlink } = usePrUnlinkConfirmation();
@@ -182,7 +184,7 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
       };
       const prompts = promptSubmenu({
         id: "copy-selection-prompt",
-        label: tBulk("copyPrompt"),
+        label: promptLabel(tBulk("copyPrompt")),
         labels: {
           plan: planned === 0
             ? tBulk("actionWritePlans")
@@ -312,5 +314,5 @@ export function useIssueMenuActionsWithNavigation(navigate: (href: string) => vo
       ...extraActions,
       ...trashAction(onDelete),
     ];
-  }, [t, tAgent, tRel, tCommon, tAction, tPr, tBulk, isPending, requestUnlink, openPullRequest, setAutoMerge]);
+  }, [t, tAgent, tRel, tCommon, tAction, tPr, tBulk, promptLabel, isPending, requestUnlink, openPullRequest, setAutoMerge]);
 }

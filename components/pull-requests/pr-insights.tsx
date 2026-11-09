@@ -161,6 +161,8 @@ interface PrInsightsProps {
       `null` = nothing is failing. */
   fix: {
     onCopy: () => void;
+    /** Names the gesture when it sends the prompt to an agent app instead. */
+    label?: string;
   } | null;
 }
 
@@ -359,7 +361,7 @@ function buildInsights(
       iconKind: "checks",
       actions: {
         top: {
-          label: t("cardFixCopyPrompt"),
+          label: props.fix.label ?? t("cardFixCopyPrompt"),
           onClick: props.fix.onCopy,
           testId: "pr-card-fix-copy",
           feedback: "copied",

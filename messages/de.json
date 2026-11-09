@@ -2932,6 +2932,10 @@
     "numoStatusDesc": "Triage fügt einen manuellen Prüfschritt hinzu; Backlog und Zu erledigen überspringen ihn.",
     "promptAutoStartDesc": "Gilt nur für Tickets und Notizbuch-Aufgaben, die noch nicht gestartet wurden.",
     "promptAutoStartLabel": "Ticket oder Aufgabe starten, wenn ich den Prompt kopiere",
+    "promptSendAgentLabel": "Agent, der die Prompts erhält",
+    "promptSendDesc": "Am Computer öffnet sich ein Prompt in der App des Agenten, statt auf das Einfügen zu warten. Er wird außerdem kopiert.",
+    "promptSendLabel": "Prompts in meinem Coding-Agenten öffnen",
+    "promptSendUnavailable": "Verbinde Claude Code, Codex oder Cursor mit dem minddy-MCP, um das zu aktivieren.",
     "apiKeyLastUsed": "Zuletzt verwendet {date}",
     "apiKeyNeverUsed": "Nie verwendet",
     "apiKeyRevoke": "Trennen",
@@ -3013,6 +3017,7 @@
     "aiKeyRemoveConfirmDescription": "Verbindung zu {provider} entfernen? Füge erneut einen Schlüssel hinzu, um diesen Anbieter zu nutzen.",
     "securityTab": "Sicherheit",
     "securityTabIndicator": "Zwei-Faktor-Authentifizierung ist deaktiviert",
+    "codingAgentSectionTitle": "Coding-Agent",
     "keyboardSectionTitle": "Tastatur",
     "keyboardSectionDesc": "Wie du eine Nachricht absendest, in Kommentaren und im Eingabefeld von Numo.",
     "desktopSectionTitle": "Desktop-App",
@@ -7160,5 +7165,10 @@
     "stepAccount": "Dein lokales Konto erstellen",
     "accountNote": "Du musst weder ein Konto noch ein Passwort einrichten: minddy erstellt deines auf diesem Computer und meldet dich selbst an.",
     "folderIsInstallation": "Dieser Ordner enthält bereits eine minddy-Installation. Öffne sie mit „Bestehende Installation verwenden“ oder wähle einen anderen Ordner."
+  },
+  "PromptDelivery": {
+    "sendTo": "An {agent} senden",
+    "sent": "Prompt in {agent} geöffnet. Er liegt auch in der Zwischenablage.",
+    "sentMoved": "Prompt in {agent} geöffnet. {count, plural, one {Das Ticket wurde} other {# Tickets wurden}} nach „In Bearbeitung“ verschoben."
   }
 }

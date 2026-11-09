@@ -22,6 +22,7 @@ import { SecondarySidebarProvider } from "@/lib/secondary-sidebar-context";
 import { SidebarVisibilityProvider } from "@/lib/sidebar-visibility-context";
 import { UndoProvider } from "@/lib/undo/undo-context";
 import { BulkActionsProvider } from "@/lib/bulk-actions-context";
+import { PromptDeliveryProvider } from "@/lib/prompt-delivery-context";
 import { CurrentViewProvider } from "@/lib/current-view-context";
 import { AppTabsProvider } from "@/lib/app-tabs-context";
 import { IssuePanelProvider } from "@/lib/issue-panel-context";
@@ -126,6 +127,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           <FirstContentWatch />
           <RealtimeProvider>
             <ProjectsProvider>
+              <PromptDeliveryProvider>
               <IssuePanelProvider>
               <PagePanelProvider>
               {/* Reopens the creation wizard when returning from a git redirect
@@ -198,6 +200,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               </CurrentViewProvider>
               </PagePanelProvider>
               </IssuePanelProvider>
+              </PromptDeliveryProvider>
             </ProjectsProvider>
           </RealtimeProvider>
           </MentionHoverProvider>

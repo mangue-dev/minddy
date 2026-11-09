@@ -37,6 +37,7 @@ import {
 } from "@/lib/desktop/linux-paths";
 import { microphoneRequestAllowed } from "@/lib/desktop/media-guard";
 import { navigationDecision } from "@/lib/desktop/nav-guard";
+import { isAgentAppLink } from "@/lib/desktop/agent-app-links";
 import {
   DesktopLocalNotificationRegistry,
   desktopLocalNotificationUrl,
@@ -1056,6 +1057,16 @@ function registerIpc(): void {
     // execution. Only what the guard agrees to let out comes out.
     if (navigationDecision(url, origin) === "block") return;
     void openDesktopExternal(url);
+  });
+
+  ipcMain.on("minddy:open-agent-app", (event, link: unknown) => {
+    // Sending a prompt to the user's coding agent (MIN-951). Only our own
+    // page may ask, and only for the exact "new conversation" link of a known
+    // agent app: the navigation guard keeps refusing every other scheme.
+    if (event.sender !== mainWindow?.webContents) return;
+    if (navigationDecision(event.sender.getURL(), origin) !== "allow") return;
+    if (!isAgentAppLink(link)) return;
+    void openDesktopExternal(link);
   });
 
   ipcMain.on("minddy:windows-store:open", () => {

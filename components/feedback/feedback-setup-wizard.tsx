@@ -5,6 +5,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Copy01Icon, GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -102,6 +104,9 @@ export function FeedbackSetupWizard({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("Settings");
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const promptLabel = usePromptActionLabel();
   const tBoard = useTranslations("FeedbackBoard");
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<Mode>("board");
@@ -184,6 +189,20 @@ export function FeedbackSetupWizard({
   const handleOpenChange = (next: boolean) => {
     if (!next) reset();
     onOpenChange(next);
+  };
+
+  // The button's gesture: opens the prompt in the account's agent app when
+  // it has one and the prompt fits, copies it otherwise. The automatic copy
+  // after generation stays a plain copy: no app opens without a click.
+  const sendPrompt = async (text: string) => {
+    try {
+      const outcome = await promptDelivery.deliver(text);
+      setCopied(true);
+      announcePrompt(outcome, t("feedbackWizardCopied"));
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Refused out of a click: this button IS a click, there is nothing to say.
+    }
   };
 
   const copyToClipboard = async (text: string) => {
@@ -548,14 +567,14 @@ export function FeedbackSetupWizard({
             type="button"
             variant="outline"
             className="w-full justify-center gap-2"
-            onClick={() => prompt && void copyToClipboard(prompt)}
+            onClick={() => prompt && void sendPrompt(prompt)}
           >
             {copied ? (
               <HugeiconsIcon icon={CheckIcon} className="size-4 text-success" />
             ) : (
-              <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+              <PromptActionIcon />
             )}
-            {t("feedbackWizardCopy")}
+            {promptLabel(t("feedbackWizardCopy"))}
           </Button>
 
         </div>

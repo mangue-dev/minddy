@@ -12,6 +12,8 @@ import {
   useCommentComposerFocus,
   useCommentSurface,
 } from "@/lib/comment-focus";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { usePromptActionLabel } from "@/components/prompt-action";
 import { useFormatter, useTranslations } from "next-intl";
 import { ExactTime } from "@/components/exact-time";
 import { Button } from "@/components/ui/button";
@@ -653,6 +655,9 @@ export function PrDetail({
   onMergeIntentConsumed?: () => void;
 }) {
   const t = useTranslations("PullRequests");
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const sendLabel = usePromptActionLabel();
   const tCommon = useTranslations("Common");
   const { open: openAssistant } = useAssistantPanelActions();
   const format = useFormatter();
@@ -1397,15 +1402,15 @@ export function PrDetail({
   const copyFeedbackThreadPrompt = useCallback(
     async (thread: (typeof unresolvedThreads)[number]) => {
       try {
-        await navigator.clipboard.writeText(
+        const outcome = await promptDelivery.deliver(
           buildPullRequestFeedbackPrompt(feedbackContext, [thread]),
         );
-        toast.success(t("unresolvedPromptCopied"));
+        announcePrompt(outcome, t("unresolvedPromptCopied"));
       } catch {
         toast.error(t("unresolvedPromptCopyFailed"));
       }
     },
-    [feedbackContext, t],
+    [feedbackContext, promptDelivery, announcePrompt, t],
   );
   const reviewThreadActions = useMemo(
     () => ({
@@ -1446,16 +1451,18 @@ export function PrDetail({
   const fixCard = useMemo(() => {
     if (!prFailing) return null;
     return {
+      // Only when prompts open in an agent app: the card keeps its own wording otherwise.
+      ...(promptDelivery.target ? { label: sendLabel("") } : {}),
       onCopy: async () => {
         try {
-          await navigator.clipboard.writeText(fixPrompt);
-          toast.success(t("unresolvedPromptCopied"));
+          const outcome = await promptDelivery.deliver(fixPrompt);
+          announcePrompt(outcome, t("unresolvedPromptCopied"));
         } catch {
           toast.error(t("unresolvedPromptCopyFailed"));
         }
       },
     };
-  }, [prFailing, fixPrompt, t]);
+  }, [prFailing, fixPrompt, promptDelivery, announcePrompt, sendLabel, t]);
 
   const mobileStatusActions = <>
     <DropdownMenuSeparator className="app-desktop:hidden" />

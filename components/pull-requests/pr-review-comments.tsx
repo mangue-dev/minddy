@@ -1,9 +1,10 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, Copy01Icon, SmilePlusIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, SmilePlusIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { ExactTime } from "@/components/exact-time";
 import { useTimeAgo } from "@/lib/use-live-now";
@@ -596,6 +597,7 @@ export function ReviewThreadCard({
   variant?: "card" | "plain";
 }) {
   const t = useTranslations("PullRequests");
+  const promptLabel = usePromptActionLabel();
   const replyingUser = usePrReplyingUser();
   const threadActions = usePrReviewThreadActions();
   const state = thread.resolution;
@@ -682,8 +684,8 @@ export function ReviewThreadCard({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onSelect={() => threadActions.copyPrompt(thread)}>
-                      <HugeiconsIcon icon={Copy01Icon} />
-                      {t("copyPromptShort")}
+                      <PromptActionIcon />
+                      {promptLabel(t("copyPromptShort"))}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

@@ -56,13 +56,8 @@ import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { useIssuePullRequestQuery } from "@/lib/use-agent-runs";
 import { useIssuePrReadiness } from "@/components/issue-pr-context";
 import { TRASH_RETENTION_DAYS } from "@/lib/trash-retention";
-import {
-  buildIssueCommentsPrompt,
-  buildIssueCustomPrompt,
-  buildIssuePlanPrompt,
-  buildIssuePrompt,
-  buildIssueVerifyPrompt,
-} from "@/lib/issue-prompt";
+import { issuePromptFor, type IssuePromptInput } from "@/lib/issue-prompt";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
 import {
   loadOneIssuePromptContext,
   prefetchIssuePromptContext,
@@ -181,6 +176,8 @@ export function IssueSidePanel({
   const open = requestedOpen && liveIssue != null;
   const { siteName } = useRuntimeConfig();
   const { user } = useAuth();
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
   const router = useAppRouter();
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
@@ -451,8 +448,26 @@ export function IssueSidePanel({
     if (promptIssueId) prefetchIssuePromptContext([promptIssueId]);
   }, [promptIssueId]);
 
+  // The fields every prompt of this ticket is built from. A short prompt only
+  // names the ticket, so it skips the forge read.
+  const promptInput = useCallback(
+    async (promptIssue: Issue): Promise<IssuePromptInput | null> => {
+      if (!promptContext) return null;
+      return {
+        issue: promptIssue,
+        projectId: promptIssue.project_id,
+        projectKey,
+        categories: promptContext.categories,
+        relations: promptContext.relations,
+        resourceCount: promptIssue.resource_count,
+        ...(promptDelivery.short ? {} : await loadOneIssuePromptContext(promptIssue.id)),
+      };
+    },
+    [promptContext, projectKey, promptDelivery.short],
+  );
+
   const copyPrompt = useCallback(async () => {
-    if (!issue || !promptContext) return;
+    if (!issue) return;
     // MIN-20: copy the prompt starts the ticket (option enabled by default,
     // can be deactivated in Account → Preferences). We only advance the statutes
     // pre-work, and the toast only signals the trip if it has taken place.
@@ -461,75 +476,43 @@ export function IssueSidePanel({
       shouldAutoStartOnPromptCopy(issue.status);
     // The copied XML must reflect the REAL state after movement: if we pass the
     // “In progress” ticket, the prompt already describes it `in_progress`, not the old one.
-    const promptIssue = autoStart
-      ? { ...issue, status: "in_progress" as const }
-      : issue;
-    const forge = await loadOneIssuePromptContext(issue.id);
-    await navigator.clipboard.writeText(
-      buildIssuePrompt({
-        issue: promptIssue,
-        projectId: issue.project_id,
-        projectKey,
-        categories: promptContext.categories,
-        relations: promptContext.relations,
-        resourceCount: issue.resource_count,
-        ...forge,
-      })
+    const input = await promptInput(
+      autoStart ? { ...issue, status: "in_progress" as const } : issue,
+    );
+    if (!input) return;
+    const outcome = await promptDelivery.deliver(
+      issuePromptFor(input, "implement", promptDelivery),
     );
     if (autoStart) {
       void onUpdate(issue.id, { status: "in_progress" }).catch((err) =>
         toast.error((err as Error).message)
       );
-      toast.success(t("promptCopiedMoved"));
-    } else {
-      toast.success(t("promptCopied"));
     }
-  }, [issue, promptContext, projectKey, user?.user_metadata, onUpdate, t]);
+    announcePrompt(outcome, t(autoStart ? "promptCopiedMoved" : "promptCopied"), autoStart ? 1 : 0);
+  }, [issue, promptInput, promptDelivery, user?.user_metadata, onUpdate, announcePrompt, t]);
 
   // “Copy prompt” from the Plan tab: the same ticket, but instructions
   // FRAMING (write the plan when it is missing, check it point by point
-  // when it exists — `buildIssuePlanPrompt` toggles alone) for an agent
+  // when it exists — the plan prompt toggles alone) for an agent
   // external, which will record it on the ticket via the MCP. No start
   // automatic here: planning is not starting the work.
   const copyPlanPrompt = useCallback(async () => {
-    if (!issue || !promptContext) return;
-    const forge = await loadOneIssuePromptContext(issue.id);
-    await navigator.clipboard.writeText(
-      buildIssuePlanPrompt({
-        issue,
-        projectId: issue.project_id,
-        projectKey,
-        categories: promptContext.categories,
-        relations: promptContext.relations,
-        resourceCount: issue.resource_count,
-        ...forge,
-      })
-    );
-    toast.success(
-      tPlan(issueHasPlan ? "reviewPromptCopied" : "planPromptCopied")
-    );
-  }, [issue, promptContext, projectKey, issueHasPlan, tPlan]);
+    const input = issue && await promptInput(issue);
+    if (!input) return;
+    const outcome = await promptDelivery.deliver(issuePromptFor(input, "plan", promptDelivery));
+    announcePrompt(outcome, tPlan(issueHasPlan ? "reviewPromptCopied" : "planPromptCopied"));
+  }, [issue, promptInput, promptDelivery, issueHasPlan, announcePrompt, tPlan]);
 
   // “Check the implementation” on the copied prompt side: the CONTROL instruction
   // (reread the work against the plan and the comments, correct the real ones
   // bugs) for an external agent. No automatic start: we reread some
   // work already done, we are not starting it.
   const copyVerifyPrompt = useCallback(async () => {
-    if (!issue || !promptContext) return;
-    const forge = await loadOneIssuePromptContext(issue.id);
-    await navigator.clipboard.writeText(
-      buildIssueVerifyPrompt({
-        issue,
-        projectId: issue.project_id,
-        projectKey,
-        categories: promptContext.categories,
-        relations: promptContext.relations,
-        resourceCount: issue.resource_count,
-        ...forge,
-      })
-    );
-    toast.success(t("verifyPromptCopied"));
-  }, [issue, promptContext, projectKey, t]);
+    const input = issue && await promptInput(issue);
+    if (!input) return;
+    const outcome = await promptDelivery.deliver(issuePromptFor(input, "verify", promptDelivery));
+    announcePrompt(outcome, t("verifyPromptCopied"));
+  }, [issue, promptInput, promptDelivery, announcePrompt, t]);
 
   // New comments since the ticket's MCP agent last commented (MIN-801):
   // replies count too, since they are written to it as well.
@@ -543,50 +526,28 @@ export function IssueSidePanel({
   // prompt only says how many and since when. No automatic start: the ticket
   // is already under way.
   const copyCommentsPrompt = useCallback(async () => {
-    if (!issue || !promptContext || !followUp) return;
-    const forge = await loadOneIssuePromptContext(issue.id);
-    await navigator.clipboard.writeText(
-      buildIssueCommentsPrompt(
-        {
-          issue,
-          projectId: issue.project_id,
-          projectKey,
-          categories: promptContext.categories,
-          relations: promptContext.relations,
-          resourceCount: issue.resource_count,
-          ...forge,
-        },
-        followUp
-      )
+    const input = issue && followUp && await promptInput(issue);
+    if (!input || !followUp) return;
+    const outcome = await promptDelivery.deliver(
+      issuePromptFor(input, "comments", { ...promptDelivery, followUp }),
     );
-    toast.success(t("commentsPromptCopied"));
-  }, [issue, promptContext, followUp, projectKey, t]);
+    announcePrompt(outcome, t("commentsPromptCopied"));
+  }, [issue, promptInput, promptDelivery, followUp, announcePrompt, t]);
 
   // “Custom”: the instruction entered in the dialog replaces the instruction
   // ready made — the context of the ticket remains provided by minddy (block
-  // <issue> of the copied prompt). No automatic start: we do not know if this
-  // instruction is work.
+  // <issue> of the copied prompt, or the MCP for a short one). No automatic
+  // start: we do not know if this instruction is work.
   const runCustomPrompt = useCallback(
     async (instructions: string) => {
-      if (!issue || !promptContext) return;
-      const forge = await loadOneIssuePromptContext(issue.id);
-      await navigator.clipboard.writeText(
-        buildIssueCustomPrompt(
-          {
-            issue,
-            projectId: issue.project_id,
-            projectKey,
-            categories: promptContext.categories,
-            relations: promptContext.relations,
-            resourceCount: issue.resource_count,
-            ...forge,
-          },
-          instructions
-        )
+      const input = issue && await promptInput(issue);
+      if (!input) return;
+      const outcome = await promptDelivery.deliver(
+        issuePromptFor(input, "custom", { ...promptDelivery, request: instructions }),
       );
-      toast.success(t("promptCopied"));
+      announcePrompt(outcome, t("promptCopied"));
     },
-    [issue, promptContext, projectKey, t]
+    [issue, promptInput, promptDelivery, announcePrompt, t]
   );
 
   // “Copy as prompt”: one submenu with the “plan” leaf (generate or verify,

@@ -175,6 +175,10 @@ const bridge: DesktopBridge = {
     ipcRenderer.send("minddy:open-external", url);
   },
 
+  openAgentApp(link: string) {
+    ipcRenderer.send("minddy:open-agent-app", link);
+  },
+
   openWindowsStoreUpdate() {
     ipcRenderer.send("minddy:windows-store:open");
   },

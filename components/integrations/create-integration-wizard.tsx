@@ -7,6 +7,8 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { ObjectiveValue, PropertyRow } from "@/components/issue-property-fields";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
 import { useRef, useState } from "react";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +89,9 @@ export function CreateIntegrationWizard({
   onCreated: () => void;
 }) {
   const t = useTranslations("Settings");
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const promptLabel = usePromptActionLabel();
   const tCommon = useTranslations("Common");
   const tField = useTranslations("Field");
   const { objectives } = useObjectivesQuery(projectId);
@@ -138,9 +143,9 @@ export function CreateIntegrationWizard({
   const copyPrompt = async () => {
     if (!prompt) return;
     try {
-      await navigator.clipboard.writeText(prompt);
+      const outcome = await promptDelivery.deliver(prompt);
       setCopied(true);
-      toast.success(t("feedbackWizardCopied"));
+      announcePrompt(outcome, t("feedbackWizardCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Refused out of a click: this button IS a click, there is nothing to say.
@@ -410,9 +415,9 @@ export function CreateIntegrationWizard({
                 {copied ? (
                   <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
                 ) : (
-                  <HugeiconsIcon icon={Copy01Icon} className="size-4" />
+                  <PromptActionIcon />
                 )}
-                {t("feedbackWizardCopy")}
+                {promptLabel(t("feedbackWizardCopy"))}
               </Button>
             </>
           )}

@@ -129,7 +129,18 @@ import {
   type Routine,
 } from "@/lib/server/routines";
 import { forgeFor } from "@/lib/server/agent/forge";
-import { findPullRequestForIssue, rowProvider } from "@/lib/server/agent/pull-requests";
+import {
+  findPullRequestForIssue,
+  listPullRequestsForIssues,
+  rowProvider,
+} from "@/lib/server/agent/pull-requests";
+import {
+  buildIssueBrief,
+  ISSUE_BRIEF_ACTIONS,
+  type IssueBriefAction,
+  type PromptPullRequest,
+} from "@/lib/issue-prompt";
+import type { Issue } from "@/lib/types";
 import { groupReviewThreads } from "@/lib/pr-review-threads";
 import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
 import {
@@ -616,6 +627,35 @@ async function prepareIssueUpdate(
 }
 
 /** The message of a `fail()` result, for tools that report failures per item. */
+/**
+ * The procedure returned with an issue read through a short prompt (MIN-951).
+ * The caller has already resolved its access to the issue. Pull requests that
+ * cannot be read are reported as unknown, never as absent.
+ */
+async function issueBriefFor(
+  issue: Issue,
+  project: { id: string; key: string },
+  action: IssueBriefAction,
+): Promise<string> {
+  let pullRequests: PromptPullRequest[] | null = null;
+  try {
+    const rows = (await listPullRequestsForIssues([issue.id])).get(issue.id) ?? [];
+    pullRequests = rows.map((pr) => ({
+      number: pr.number,
+      state: pr.state,
+      url: pr.url,
+      headBranch: pr.head_branch,
+      baseBranch: pr.base_branch,
+    }));
+  } catch {
+    pullRequests = null;
+  }
+  return buildIssueBrief(
+    { issue, projectId: project.id, projectKey: project.key, pullRequests },
+    action,
+  );
+}
+
 function toolErrorMessage(result: ToolResult): string {
   try {
     const parsed = JSON.parse(result.content[0]?.text ?? "") as {
@@ -1351,8 +1391,22 @@ export function registerMinddyTools(
         "status, vote_count, comment_count). That is the WHY behind the work, in " +
         "the users' own words: when an issue carries one, read it with " +
         "minddy_get_feedback before deciding what to build, especially if it has " +
-        "comments — people qualify their request there.",
-      inputSchema: z.object({ project_id: PROJECT_ID, issue: ISSUE_REF }),
+        "comments — people qualify their request there. Pass `brief` when a prompt " +
+        "asks for it ('plan', 'implement', 'verify', 'comments' or 'custom'): the " +
+        "result then starts with a `brief`, the procedure minddy wants followed " +
+        "for that task on this issue (plan status, branch guidance, conventions, " +
+        "what to save and report). Follow it; without the parameter, no brief is " +
+        "returned.",
+      inputSchema: z.object({
+        project_id: PROJECT_ID,
+        issue: ISSUE_REF,
+        brief: z
+          .enum(ISSUE_BRIEF_ACTIONS)
+          .optional()
+          .describe(
+            "The task a prompt sent you to do on this issue. Returns its procedure as `brief`, to follow.",
+          ),
+      }),
       annotations: READ_ONLY,
     },
     async (args, extra) => {
@@ -1370,7 +1424,16 @@ export function registerMinddyTools(
 
       const plan = r.issue.plan;
       const parsed = typeof plan === "string" && plan ? parsePlan(plan) : null;
+      const brief = args.brief
+        ? await issueBriefFor(
+            r.issue as unknown as Issue,
+            scope.access.project,
+            args.brief,
+          )
+        : null;
       return okWithImages({
+        // First, so an agent reads the procedure before the data it applies to.
+        ...(brief ? { brief } : {}),
         ...r,
         activity,
         ...(parsed

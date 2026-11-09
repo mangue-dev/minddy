@@ -23,6 +23,17 @@ import {DICTATION_CLEANUP_META_KEY, resolveDictationCleanup} from "@/lib/dictati
 import {DictationVocabularySection} from "@/components/settings/dictation-vocabulary-section";
 import {useAccountTheme} from "@/lib/use-account-theme";
 import {useDesktopWindowMaterial} from "@/lib/desktop/use-window-material";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { useOAuthGrantsQuery } from "@/lib/use-oauth-grants-query";
+import {
+  AGENT_TARGETS,
+  connectedAgentTargets,
+  PROMPT_SEND_AGENT_META_KEY,
+  PROMPT_SEND_META_KEY,
+  resolvePromptSend,
+  resolvePromptSendAgent,
+  type AgentTarget,
+} from "@/lib/prompt-delivery";
 import {ThemePresetPicker} from "@/components/settings/theme-preset-picker";
 import type {ThemeMode, ThemePresetId} from "@/lib/theme-presets";
 import {weekdayLabel} from "@/lib/routine-schedule";
@@ -86,6 +97,21 @@ export function AccountPreferencesSection() {
     DICTATION_CLEANUP_META_KEY,
     resolveDictationCleanup,
   );
+
+  // Opening prompts in an agent's app needs an agent connected to the MCP
+  // that has such an app (MIN-951).
+  const { grants, loading: grantsLoading } = useOAuthGrantsQuery();
+  const agentTargets = connectedAgentTargets(grants.map((grant) => grant.agent));
+  const [promptSend, setPromptSend] = useAccountPreference(PROMPT_SEND_META_KEY, resolvePromptSend);
+  const [promptSendAgent, setPromptSendAgent] = useAccountPreference<AgentTarget | null>(
+    PROMPT_SEND_AGENT_META_KEY,
+    resolvePromptSendAgent,
+  );
+  const canSendPrompts = agentTargets.length > 0;
+  // A revoked choice falls back to the first connected app, as delivery does.
+  const sendAgent = promptSendAgent && agentTargets.includes(promptSendAgent)
+    ? promptSendAgent
+    : agentTargets[0];
 
   const switchLocale = async (locale: Locale) => {
     if (locale === currentLocale || switchingLocale) return;
@@ -286,6 +312,52 @@ export function AccountPreferencesSection() {
             />
           }
         />
+      </SettingsGroup>
+
+      {/* Coding agent (MIN-951): how a prompt leaves minddy concerns every
+          surface that offers one, not issues alone. */}
+      <SettingsGroup title={ta("codingAgentSectionTitle")}>
+        <SettingsRow
+          htmlFor="account-prompt-send"
+          label={ta("promptSendLabel")}
+          hint={ta(canSendPrompts || grantsLoading ? "promptSendDesc" : "promptSendUnavailable")}
+          control={
+            <Switch
+              id="account-prompt-send"
+              checked={promptSend && canSendPrompts}
+              onCheckedChange={(v) => void setPromptSend(v)}
+              disabled={!ready || !canSendPrompts}
+            />
+          }
+        />
+
+        {promptSend && sendAgent && (
+          <SettingsRow
+            htmlFor="account-prompt-send-agent"
+            label={ta("promptSendAgentLabel")}
+            control={
+              <Select
+                value={sendAgent}
+                onValueChange={(v) => void setPromptSendAgent(v as AgentTarget)}
+                disabled={!ready}
+              >
+                <SelectTrigger id="account-prompt-send-agent" className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentTargets.map((target) => (
+                    <SelectItem key={target} value={target}>
+                      <span className="flex items-center gap-2">
+                        <McpAgentLogo agent={AGENT_TARGETS[target].logo} className="size-4" />
+                        {AGENT_TARGETS[target].label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
+        )}
       </SettingsGroup>
 
       {/* Voice dictation (MIN-773): the cleanup pass after transcription is a

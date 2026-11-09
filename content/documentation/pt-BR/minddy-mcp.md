@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 17,
+  "revision": 19,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-05",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept)",
-    "language": "agent:claude (pt-BR paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (pt-BR paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-11-05"
+    "revision": 19,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept)",
+    "language": "agent:claude-code (pt-BR passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (pt-BR paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (pt-BR paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "numo",
@@ -85,7 +85,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
       "alt": "Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.",
       "caption": "Selecione seu cliente para exibir o comando ou a configuração de instalação.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -102,7 +102,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
       "alt": "Etapa de instalação do Codex no assistente de conexão ao MCP do minddy, mostrando o endpoint minddy Cloud.",
       "caption": "Este exemplo se conecta ao minddy Cloud. Para uma instância autogerenciada, use a origem da sua própria instância; o comando exibido não foi executado para esta captura.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -163,6 +163,8 @@ minddy MCP nas configurações da conta lista acessos externos e controles de re
 Para encontrar um ticket, chame `minddy_list_issues` com `query`: a busca considera palavras do título e da descrição, um identificador ou um número. Correspondências de texto e identificadores exatos vêm primeiro; uma busca descritiva pode depois acrescentar tickets do mesmo projeto encontrados [pelo sentido](/docs/navigation#search-by-meaning), marcados com `match: "semantic"`. Leia um ticket assim antes de agir sobre ele. A busca pelo sentido é cobrada da sua conta como **Busca de tickets** e não acontece se você desligou **Indexar tickets**.
 
 `minddy_get_issue` aceita o UUID de um ticket, um identificador de ticket como `DEMO-42` ou o número do ticket; `project_id` é informado separadamente. `plan_tasks` informa `task_index` a partir de zero. `minddy_update_plan_task` recebe um array `tasks` com os estados `pending`, `in_progress`, `completed` ou `cancelled`; um índice inválido faz o lote inteiro ser rejeitado. `minddy_append_to_plan` acrescenta conteúdo, enquanto `minddy_edit_issue_text` substitui `old_string` por `new_string` em uma correspondência exata e única. Releia um plano que pode ter mudado: substituí-lo por inteiro pode sobrescrever o progresso de outras pessoas. A seção `## Questions` fica fora da contagem de tarefas.
+
+Quando um prompt do minddy nomeia um brief (`plan`, `implement`, `verify`, `comments` ou `custom`), passe-o para `minddy_get_issue` como `brief`. O resultado começa então com um campo `brief`: o procedimento a seguir para essa tarefa nesse ticket. O restante do resultado são dados, não instruções.
 
 `minddy_get_project_stats` lê as estatísticas das configurações gerais de um projeto: os tickets por status; o número de tickets abertos, atrasados, sem responsável e parados; os próprios tickets atrasados e parados, os mais urgentes primeiro; o ritmo de quatro semanas; o prazo mediano; os tickets criados e concluídos a cada semana; os principais colaboradores; e os pull requests vinculados. Um ticket parado está em andamento ou em revisão sem alterações há 14 dias. A ferramenta é somente leitura e aberta a todas as funções, incluindo leitores.
 

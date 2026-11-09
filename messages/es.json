@@ -2932,6 +2932,10 @@
     "numoStatusDesc": "Clasificación añade un paso de revisión manual; Backlog y Pendiente lo omiten.",
     "promptAutoStartDesc": "Solo se aplica a las incidencias y tareas del cuaderno que aún no han comenzado.",
     "promptAutoStartLabel": "Iniciar la incidencia o la tarea cuando copio su prompt",
+    "promptSendAgentLabel": "Agente que recibe los prompts",
+    "promptSendDesc": "En un ordenador, el prompt se abre en la aplicación del agente en lugar de esperar a que lo pegues. También se copia.",
+    "promptSendLabel": "Abrir los prompts en mi agente de programación",
+    "promptSendUnavailable": "Conecta Claude Code, Codex o Cursor al MCP de minddy para activar esta opción.",
     "apiKeyLastUsed": "Último uso {date}",
     "apiKeyNeverUsed": "Nunca utilizado",
     "apiKeyRevoke": "Desconectar",
@@ -3013,6 +3017,7 @@
     "aiKeyRemoveConfirmDescription": "¿Eliminar tu conexión con {provider}? Añade una clave de nuevo para usar este proveedor.",
     "securityTab": "Seguridad",
     "securityTabIndicator": "La autenticación de dos factores está desactivada",
+    "codingAgentSectionTitle": "Agente de programación",
     "keyboardSectionTitle": "Teclado",
     "keyboardSectionDesc": "Cómo se envía un mensaje, en los comentarios y en el editor de Numo.",
     "desktopSectionTitle": "Aplicación de escritorio",
@@ -7160,5 +7165,10 @@
     "stepAccount": "Crear tu cuenta local",
     "accountNote": "Sin cuenta ni contraseña que configurar: minddy crea la tuya en este equipo e inicia sesión por ti.",
     "folderIsInstallation": "Esta carpeta ya contiene una instalación de minddy. Ábrela con Usar una instalación existente o elige otra carpeta."
+  },
+  "PromptDelivery": {
+    "sendTo": "Enviar a {agent}",
+    "sent": "Prompt abierto en {agent}. También está en el portapapeles.",
+    "sentMoved": "Prompt abierto en {agent}. {count, plural, one {La incidencia pasó} other {# incidencias pasaron}} a «En curso»."
   }
 }

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -31,6 +31,8 @@
       "desktop"
     ],
     "evidence": [
+      "components/prompt-action.tsx",
+      "lib/prompt-delivery.ts",
       "components/agent/use-agent-menu-actions.tsx",
       "components/agent/custom-prompt-dialog.tsx",
       "components/settings/account-preferences-section.tsx",
@@ -60,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 25,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (it passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "issues",
@@ -86,7 +88,7 @@
       "src": "/documentation/it/review-pull-requests-workflow.png",
       "alt": "Scheda Modifiche della PR dimostrativa aperta, con il diff di greeting e l’avviso di autorizzazione GitHub non disponibile.",
       "caption": "PR dimostrativa che rimane aperta, non unita. Il diff rimuove gli spazi intorno al nome e usa World quando il valore è vuoto. Questa istanza non può richiedere l’autorizzazione dell’utente su GitHub: lo stato di disponibilità non concede il permesso di unione né dimostra che la CI del fornitore sia riuscita.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,6 +120,12 @@ Collega prima il tuo agente a minddy MCP, così potrà leggere il piano e aggior
 Quando il tuo agente ha commentato il ticket tramite MCP e dopo arrivano altri commenti, compresi quelli importati da una pull request collegata, sopra il campo del commento compare il pulsante **Copia il prompt per N nuovi commenti**. Il prompt chiede all’agente di leggere quei commenti tramite MCP e di gestirli uno per uno; non li copia. Una risposta sotto un commento dell’agente resta in attesa finché l’agente non risponde in quel thread, anche se nel frattempo commenta altrove nel ticket; il prompt indica quei thread e chiede all’agente di rispondere al loro interno. Su una board, la scheda del ticket mostra quanti commenti sono in attesa, un clic su quel numero copia lo stesso prompt e il menu del clic destro offre **Copia il prompt per i nuovi commenti**.
 
 Il contenuto del prompt, il nome di branch suggerito e le regole di lingua sono descritti in [Copiare un prompt per un altro agente di codice](/docs/issues#copy-issue-prompt).
+
+### Prompt brevi e invio all'app del tuo agente {#short-prompts-and-sending}
+
+Non appena un agente è collegato all'MCP di minddy nel tuo account, i prompt dei ticket diventano brevi: indicano il ticket e chiedono all'agente di leggerlo con `minddy_get_issue`, passando il brief dell'attività. Il risultato inizia con quel brief, cioè la procedura che altrimenti porta il prompt completo: lo stato del piano, il branch da proseguire, che cosa salvare e riferire. Senza un agente collegato, minddy copia il prompt completo. I prompt delle pull request, delle attività del taccuino e delle procedure guidate di configurazione restano completi.
+
+In **Impostazioni account → Preferenze → Agente di codice**, **Apri i prompt nel mio agente di codice** apre ogni prompt nell'app desktop dell'agente, invece di lasciartelo incollare. L'opzione è disponibile quando Claude Code, Codex o Cursor è collegato all'MCP di minddy; scegli quale in **Agente che riceve i prompt**. Le azioni dei prompt si chiamano allora **Invia a Claude Code**, con il nome del tuo agente. Il prompt si apre come bozza che controlli e invii tu. Viene anche copiato, nel caso l'app non si apra, e un prompt troppo lungo per l'app viene solo copiato. Nel layout mobile, minddy copia sempre. Nell'app desktop di minddy, l'invio richiede una versione che lo supporti; una precedente copia il prompt.
 
 ### Mantenere il lavoro collegato al ticket {#link-work}
 

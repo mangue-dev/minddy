@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 23,
+  "revision": 24,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -31,6 +31,8 @@
       "desktop"
     ],
     "evidence": [
+      "components/prompt-action.tsx",
+      "lib/prompt-delivery.ts",
       "components/agent/use-agent-menu-actions.tsx",
       "components/agent/custom-prompt-dialog.tsx",
       "components/settings/account-preferences-section.tsx",
@@ -60,10 +62,10 @@
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-preferences-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
+    "language": "agent:claude-code (en passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "issues",
@@ -86,7 +88,7 @@
       "src": "/documentation/en/review-pull-requests-workflow.png",
       "alt": "Changes tab of the open demonstration PR, with the greeting function diff and an unavailable GitHub authorization notice.",
       "caption": "Demonstration PR that remains open and unmerged. Its diff trims the name and uses World for an empty value. This instance cannot request user GitHub authorization; the readiness label does not grant merge permission or prove successful provider CI.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,6 +120,12 @@ Connect your agent to minddy MCP first so it can read the plan and update its ta
 When your agent has commented on the issue through MCP and people comment after it, comments brought in from a linked pull request included, a **Copy prompt for N new comments** button appears above the comment field. The prompt asks the agent to read those comments through MCP and address each one; it does not copy them. A reply under one of the agent's comments keeps waiting until the agent answers in that thread, even if it comments elsewhere on the issue in the meantime; the prompt names those threads and asks the agent to reply inside them. On a board, the issue's card shows how many comments are waiting, clicking that number copies the same prompt, and the card's right-click menu offers **Copy prompt for new comments**.
 
 The prompt contents, branch suggestion and language rules are described in [Copy a prompt for another coding agent](/docs/issues#copy-issue-prompt).
+
+### Short prompts and sending to your agent's app {#short-prompts-and-sending}
+
+Once an agent is connected to minddy MCP on your account, prompts for issues become short: they name the issue and tell the agent to read it with `minddy_get_issue`, passing the brief for the task. The result starts with that brief, the procedure the full prompt otherwise carries: the plan's status, the branch to continue and what to save and report. Without a connected agent, minddy copies the full prompt. Prompts for pull requests, notebook tasks and setup wizards stay complete.
+
+In **Account settings → Preferences → Coding agent**, **Open prompts in my coding agent** opens each prompt in the agent's desktop app instead of leaving you to paste it. The option is available when Claude Code, Codex or Cursor is connected to minddy MCP; choose which one under **Agent that receives prompts**. Prompt actions then read **Send to Claude Code**, with the name of your agent. The prompt opens as a draft that you check and send yourself. It is copied as well, in case the app does not open, and a prompt too long for the app is only copied. On the mobile layout, minddy always copies. In the minddy desktop app, sending needs an app version that supports it; an older one copies the prompt.
 
 ### Keep the work linked to the issue {#link-work}
 

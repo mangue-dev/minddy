@@ -2,8 +2,9 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, CodeSimpleIcon as Code2, Copy01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, CodeSimpleIcon as Code2, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,7 @@ export function IssuePlan({
   onCopyVerifyPrompt?: () => void;
 }) {
   const t = useTranslations("Plan");
+  const promptLabel = usePromptActionLabel();
   const tIssue = useTranslations("IssueUI");
   // The text on screen, so the progress follows typing before its Markdown
   // is written back to the issue.
@@ -106,8 +108,8 @@ export function IssuePlan({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="text-muted-foreground">
-                <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                {t("copyPlanPrompt")}
+                <PromptActionIcon />
+                {promptLabel(t("copyPlanPrompt"))}
                 <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 opacity-60" />
               </Button>
             </DropdownMenuTrigger>

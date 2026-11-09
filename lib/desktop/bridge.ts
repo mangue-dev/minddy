@@ -111,6 +111,12 @@ export interface DesktopBridge {
    * not `http(s)` — the renderer does not decide what we give to `open`.
    */
   openExternal(url: string): void;
+  /**
+   * Opens a prompt in the user's coding agent app (MIN-951). The main process
+   * accepts only the links `isAgentAppLink` names. Absent in older shells,
+   * where the page copies the prompt instead.
+   */
+  openAgentApp?(link: string): void;
   /** Open minddy's immutable Microsoft Store product page on Windows. */
   openWindowsStoreUpdate?(): void;
   /** Follow package update availability reported by Microsoft Store. */
