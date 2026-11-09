@@ -133,7 +133,8 @@ export interface BulkPullRequestOption {
 }
 
 export interface BulkPullRequestLinks {
-  /** Open pull requests of the selection's projects. */
+  /** Open pull requests of the selection's projects that at least one selected
+   *  ticket without a live pull request can join. */
   options: BulkPullRequestOption[];
   /** Pull requests already live on part of the selection, with the number of
    *  selected tickets of their project still unlinked. */

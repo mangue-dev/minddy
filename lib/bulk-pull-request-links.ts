@@ -61,10 +61,11 @@ export function bulkPullRequestLinks(
   const unlinkable = issues
     .map((issue) => ({ issueId: issue.id, prIds: linkedPullRequestIds(issue.id) }))
     .filter((link) => link.prIds.length > 0);
-  // Picking a pull request for the whole selection is only offered while no
-  // selected issue is linked to any pull request yet; `partial` covers the
-  // mixed case, and "unlink" clears the slate first.
-  const linkable = unlinkable.length === 0 ? options : [];
+  // Picking a pull request follows the single-issue rule: only a live pull
+  // request blocks a new link (MIN-939). A merged or closed link stays in the
+  // history without hiding the choice, and a pull request is offered only
+  // while one selected issue of its project can still take it.
+  const linkable = options.filter((pr) => targets(pr.prId).length > 0);
 
   const partial = [...live.values()]
     .map(({ projectId: _projectId, ...pr }) => ({ ...pr, missing: targets(pr.prId).length }))
