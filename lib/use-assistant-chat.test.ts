@@ -732,3 +732,114 @@ describe("completed response notifications", () => {
     expect(value.state.completedResponse).toEqual({ conversationId, messageId: answer.id });
   });
 });
+
+describe("connection loss on a suspended device (MIN-945)", () => {
+  type Server = { reachable: boolean; status: (url: string) => Response };
+
+  function serve(server: Server, chatBodies: Array<{ requestId: string; newConversationId?: string }>) {
+    h.webFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (!server.reachable) throw new TypeError("Impossible de se connecter au serveur.");
+      if (url === "/api/assistant/chat") {
+        chatBodies.push(JSON.parse(String(init?.body)));
+        return new Response('event: done\ndata: {"status":"completed"}\n\n', {
+          headers: { "X-Numo-Conversation-Id": conversationId },
+        });
+      }
+      if (url.includes("/status")) return server.status(url);
+      if (url.includes("/messages")) {
+        return Response.json([
+          message("question", "user", "2026-09-12T10:00:00.000Z", { content: "Redo this analysis" }),
+          message("answer", "assistant", "2026-09-12T10:00:05.000Z", { content: "Done" }),
+        ]);
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+  }
+
+  async function sendWhileOffline(server: Server) {
+    server.reachable = false;
+    await act(async () => root.render(createElement(Probe)));
+    await act(async () => value.sendMessage(null, "Redo this analysis"));
+  }
+
+  it("shows a localized connection loss instead of the browser's own error text", async () => {
+    const server: Server = { reachable: true, status: () => Response.json({}) };
+    serve(server, []);
+    await sendWhileOffline(server);
+
+    expect(value.state.status).toBe("error");
+    expect(value.state.error).toBe("numoConnectionLost");
+    expect(value.state.connectionIssue).toBe("lost");
+    // The message stays in the thread while its fate is unknown.
+    expect(value.state.messages.at(-1)?.content).toBe("Redo this analysis");
+  });
+
+  it("loads the answer of a request minddy admitted once the device is back online", async () => {
+    const chatBodies: Array<{ requestId: string }> = [];
+    const statusUrls: string[] = [];
+    const server: Server = {
+      reachable: true,
+      status: (url) => {
+        statusUrls.push(url);
+        return Response.json({ status: "completed", error_message: null, request_received: true, activity: [] });
+      },
+    };
+    serve(server, chatBodies);
+    await sendWhileOffline(server);
+
+    server.reachable = true;
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+
+    expect(statusUrls.at(-1)).toMatch(/\?requestId=[0-9a-f-]{36}$/);
+    expect(value.state.status).toBe("idle");
+    expect(value.state.error).toBeNull();
+    expect(value.state.connectionIssue).toBeNull();
+    // The conversation the lost request created, under its client-made id.
+    expect(statusUrls.at(-1)).toContain(`/conversations/${value.state.conversationId}/status`);
+    expect(value.state.messages.at(-1)?.id).toBe("answer");
+    expect(chatBodies).toHaveLength(0);
+  });
+
+  it.each([
+    ["the new conversation was never created", () => Response.json({ error: "Not found" }, { status: 404 })],
+    ["the request was never admitted", () => Response.json({ status: "idle", error_message: null, request_received: false, activity: [] })],
+  ])("offers to resend when %s, with the same request identity", async (_case, status) => {
+    const chatBodies: Array<{ requestId: string; newConversationId?: string }> = [];
+    const statusUrls: string[] = [];
+    const server: Server = { reachable: true, status: (url) => { statusUrls.push(url); return status(); } };
+    serve(server, chatBodies);
+    await sendWhileOffline(server);
+    const lostRequestId = JSON.parse(String((h.webFetch.mock.calls[0][1] as RequestInit).body)).requestId as string;
+
+    server.reachable = true;
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    await act(async () => { document.dispatchEvent(new Event("visibilitychange")); });
+
+    expect(statusUrls.at(-1)).toContain(`requestId=${lostRequestId}`);
+    expect(value.state.connectionIssue).toBe("undelivered");
+    expect(value.state.error).toBe("numoMessageNotDelivered");
+    expect(value.state.messages.some((m) => m.content === "Redo this analysis")).toBe(false);
+
+    // A later signal does not drop another message.
+    const messageCount = value.state.messages.length;
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+    expect(value.state.messages).toHaveLength(messageCount);
+
+    await act(async () => { value.resend(); });
+    expect(chatBodies).toHaveLength(1);
+    expect(chatBodies[0].requestId).toBe(lostRequestId);
+    expect(value.state.connectionIssue).toBeNull();
+    expect(value.state.messages.filter((m) => m.content === "Redo this analysis")).toHaveLength(1);
+  });
+
+  it("stays on the connection loss while the server is still unreachable", async () => {
+    const server: Server = { reachable: true, status: () => Response.json({}) };
+    serve(server, []);
+    await sendWhileOffline(server);
+
+    await act(async () => { window.dispatchEvent(new Event("online")); });
+
+    expect(value.state.connectionIssue).toBe("lost");
+    expect(value.state.messages.at(-1)?.content).toBe("Redo this analysis");
+  });
+});

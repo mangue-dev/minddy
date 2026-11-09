@@ -2,7 +2,7 @@
 
 import { createUuid } from "@/lib/create-uuid";
 
-import { useCallback, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { browserTimezone } from "./routine-schedule";
 import type {
@@ -32,6 +32,8 @@ const ACTIVE_NUMO_TURN_STATUSES = new Set([
 ]);
 
 // ── State ──────────────────────────────────────────────────────────────
+
+export type ConnectionIssue = "lost" | "undelivered";
 
 export type AssistantStatus =
   | "idle"
@@ -116,6 +118,14 @@ export interface AssistantChatState {
   /** Last validation or persistence failure for the conversation settings. */
   conversationConfigError: string | null;
   error: string | null;
+  /**
+   * Why the last request has no outcome yet (MIN-945). `lost`: the connection
+   * dropped before minddy answered, and the hook re-reads the conversation
+   * once the device is back online. `undelivered`: that read showed the
+   * message never reached minddy, so it left the thread and waits for
+   * `resend`.
+   */
+  connectionIssue: ConnectionIssue | null;
   turnStatus: NumoTurnStatus | null;
   /** Provenance for conversations created by a routine occurrence. */
   routineOccurrence: NonNullable<NumoConversationDetail["routine_occurrence"]> | null;
@@ -136,6 +146,7 @@ const initialState: AssistantChatState = {
   conversationReasoningLevel: null,
   conversationConfigError: null,
   error: null,
+  connectionIssue: null,
   turnStatus: null,
   routineOccurrence: null,
 };
@@ -187,7 +198,13 @@ type Action =
     }
   | { type: "DONE"; responseReady?: boolean }
   | { type: "GENERATING_SERVER" }
-  | { type: "ERROR"; message: string; turnStatus?: NumoTurnStatus }
+  | {
+      type: "ERROR";
+      message: string;
+      turnStatus?: NumoTurnStatus;
+      connectionIssue?: ConnectionIssue;
+    }
+  | { type: "DROP_UNSENT_MESSAGE" }
   | { type: "STOP_FAILED"; message: string }
   | {
       type: "LOAD_HISTORY";
@@ -214,6 +231,7 @@ function reducer(
         streamingReasoning: null,
         activeToolCalls: [],
         error: null,
+        connectionIssue: null,
         turnStatus: null,
       };
 
@@ -447,6 +465,7 @@ function reducer(
         streamingReasoning: null,
         activeToolCalls: [],
         error: null,
+        connectionIssue: null,
       };
 
     case "ERROR":
@@ -454,11 +473,20 @@ function reducer(
         ...state,
         status: "error",
         error: action.message,
+        connectionIssue: action.connectionIssue ?? null,
         turnStatus: action.turnStatus ?? state.turnStatus,
         streamingReasoning: state.streamingReasoning
           ? { ...state.streamingReasoning, active: false }
           : null,
       };
+
+    case "DROP_UNSENT_MESSAGE": {
+      // The optimistic message is the thread's last user message: nothing the
+      // server could have answered follows a message it never received.
+      const index = state.messages.findLastIndex((message) => message.role === "user");
+      if (index === -1) return state;
+      return { ...state, messages: state.messages.filter((_, i) => i !== index) };
+    }
 
     case "STOP_FAILED":
       return { ...state, status: "generating_server", error: action.message };
@@ -487,6 +515,7 @@ function reducer(
           : {}),
         conversationConfigError: null,
         error: null,
+        connectionIssue: null,
         turnStatus: null,
       };
 
@@ -539,6 +568,64 @@ async function fetchConversationMessages(
   if (!res.ok) return [];
   return res.json();
 }
+
+/**
+ * Whether minddy admitted one request (MIN-945). `missing` means the
+ * conversation does not exist: the first message of a new conversation never
+ * arrived. Throws while the server stays unreachable.
+ */
+async function fetchRequestStatus(
+  conversationId: string,
+  requestId: string,
+): Promise<
+  | { kind: "missing" }
+  | {
+      kind: "found";
+      received: boolean;
+      status: ConversationStatus | NumoTurnStatus;
+      error_message: string | null;
+      turn_id?: string | null;
+    }
+> {
+  const res = await fetch(
+    `/api/assistant/conversations/${conversationId}/status?requestId=${requestId}`
+  );
+  if (res.status === 404) return { kind: "missing" };
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const body = await res.json() as {
+    status: ConversationStatus | NumoTurnStatus;
+    error_message: string | null;
+    turn_id?: string | null;
+    request_received?: boolean;
+  };
+  return { kind: "found", received: body.request_received === true, ...body };
+}
+
+type SendOptions = {
+  pageContext?: AssistantPageContext | null;
+  attachments?: ResourceInput[];
+  /** The “@” written in the message (members, projects). */
+  mentions?: AssistantMention[];
+  /** The “/” command placed at the top of the message (slash menu). */
+  command?: AssistantCommandId;
+  /** Repository skills explicitly attached to this message. */
+  skills?: AssistantSkillSelection[];
+  /** Voluntary entry provenance from the common Numo intent contract. */
+  intent?: AssistantChatRequest["intent"];
+  /** Numo's Home summary this first message answers (MIN-933). */
+  homeBriefId?: string;
+};
+
+/** A send whose outcome the connection loss hid, kept to resync or resend it. */
+type LostSend = {
+  /** Set once the server confirmed the message never arrived: only `resend` remains. */
+  undelivered?: true;
+  projectId: string | null;
+  message: string;
+  options?: SendOptions;
+  requestId: string;
+  conversationId: string;
+};
 
 // ── Hook ───────────────────────────────────────────────────────────────
 
@@ -593,6 +680,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
   }>());
   const loadGenerationRef = useRef(0);
   const configRevisionRef = useRef(0);
+  const lostSendRef = useRef<LostSend | null>(null);
+  const resyncingRef = useRef(false);
 
   const stopPolling = useCallback(() => {
     // Clearing a timeout cannot cancel a status request already in flight.
@@ -801,22 +890,12 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     async (
       projectId: string | null,
       message: string,
-      options?: {
-        pageContext?: AssistantPageContext | null;
-        attachments?: ResourceInput[];
-        /** The “@” written in the message (members, projects). */
-        mentions?: AssistantMention[];
-        /** The “/” command placed at the top of the message (slash menu). */
-        command?: AssistantCommandId;
-        /** Repository skills explicitly attached to this message. */
-        skills?: AssistantSkillSelection[];
-        /** Voluntary entry provenance from the common Numo intent contract. */
-        intent?: AssistantChatRequest["intent"];
-        /** Numo's Home summary this first message answers (MIN-933). */
-        homeBriefId?: string;
-      },
+      options?: SendOptions,
+      /** A resend keeps the lost request's identity, so it can never be admitted twice. */
+      replay?: { requestId: string; conversationId: string },
     ) => {
       if (!message.trim()) return;
+      lostSendRef.current = null;
 
       // Analytics (MIN-78): the message is NOT sent — only its
       // slice length, and enough to measure the real use of Numo.
@@ -847,8 +926,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       abortRef.current = controller;
       const requestConversationId = liveConvRef.current.id ?? state.conversationId;
       const sending = {
-        requestId: createUuid(),
-        conversationId: requestConversationId ?? createUuid(),
+        requestId: replay?.requestId ?? createUuid(),
+        conversationId: requestConversationId ?? replay?.conversationId ?? createUuid(),
         newConversation: !requestConversationId,
         projectId,
         frozen: false,
@@ -983,7 +1062,11 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
             controller.signal, () => !sending.frozen && activeSendRef.current === sending,
           );
           if (!reconciled) {
-            dispatch({ type: "ERROR", message: "Connection failed" });
+            lostSendRef.current = {
+              projectId, message, options,
+              requestId: sending.requestId, conversationId: sending.conversationId,
+            };
+            dispatch({ type: "ERROR", message: tApi("numoConnectionLost"), connectionIssue: "lost" });
           }
           return;
         }
@@ -1020,10 +1103,13 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
         if (reconciled) return;
 
         trackEvent("assistant_response_failed", { reason: errorReason(err) });
-        dispatch({
-          type: "ERROR",
-          message: (err as Error).message || "Connection failed",
-        });
+        // The browser's own text (WebKit passes on the system's localized
+        // network error) is not a sentence the person can act on (MIN-945).
+        lostSendRef.current = {
+          projectId, message, options,
+          requestId: sending.requestId, conversationId: sending.conversationId,
+        };
+        dispatch({ type: "ERROR", message: tApi("numoConnectionLost"), connectionIssue: "lost" });
       }
     },
     [state.conversationId, startPolling, stopPolling, tApi]
@@ -1040,6 +1126,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       if (!activeSendRef.current?.frozen) abortRef.current?.abort();
       activeSendRef.current = null;
       activeTurnRef.current = null;
+      lostSendRef.current = null;
       liveConvRef.current = { id: conversationId, projectId };
       trackEvent("assistant_conversation_loaded", {});
       try {
@@ -1187,6 +1274,7 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     if (!activeSendRef.current?.frozen) abortRef.current?.abort();
     activeSendRef.current = null;
     activeTurnRef.current = null;
+    lostSendRef.current = null;
     stopPolling();
     loadGenerationRef.current += 1;
     liveConvRef.current = { id: null, projectId: null };
@@ -1241,6 +1329,95 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
       startPolling(conversationId, projectId);
     }
   }, [state.conversationId, state.conversationProjectId, startPolling, stopPolling]);
+
+  /**
+   * Re-reads a send whose connection dropped (MIN-945): a request minddy
+   * admitted resumes like any server-side turn, one it never received leaves
+   * the thread and waits for `resend`. Offline, it fails quietly and the next
+   * `online` or return to the app tries again.
+   */
+  const reconnect = useCallback(async () => {
+    const lost = lostSendRef.current;
+    if (!lost || lost.undelivered || resyncingRef.current) return;
+    resyncingRef.current = true;
+    const generation = loadGenerationRef.current;
+    const isCurrent = () => lostSendRef.current === lost && generation === loadGenerationRef.current;
+    try {
+      const result = await fetchRequestStatus(lost.conversationId, lost.requestId);
+      if (!isCurrent()) return;
+      if (result.kind === "missing" || !result.received) {
+        lostSendRef.current = { ...lost, undelivered: true };
+        dispatch({ type: "DROP_UNSENT_MESSAGE" });
+        dispatch({
+          type: "ERROR",
+          message: tApi("numoMessageNotDelivered"),
+          connectionIssue: "undelivered",
+        });
+        return;
+      }
+      lostSendRef.current = null;
+      liveConvRef.current = { id: lost.conversationId, projectId: lost.projectId };
+      dispatch({
+        type: "SET_CONVERSATION_ID",
+        conversationId: lost.conversationId,
+        projectId: lost.projectId,
+      });
+      const { status, error_message, turn_id } = result;
+      activeTurnRef.current = turn_id && ACTIVE_NUMO_TURN_STATUSES.has(status)
+        ? { conversationId: lost.conversationId, turnId: turn_id } : null;
+      if (status === "generating" || status === "queued" || status === "running" || status === "stopping" || status === "retryable") {
+        startPolling(lost.conversationId, lost.projectId);
+        return;
+      }
+      const messages = await fetchConversationMessages(lost.conversationId);
+      if (generation !== loadGenerationRef.current) return;
+      dispatch({
+        type: "LOAD_HISTORY",
+        messages,
+        conversationId: lost.conversationId,
+        projectId: lost.projectId,
+      });
+      if (status === "error" || status === "failed" || status === "reconciling") {
+        dispatch({
+          type: "ERROR",
+          message: error_message || "Generation failed",
+          ...(status === "error" ? {} : { turnStatus: status }),
+        });
+        return;
+      }
+      dispatch({ type: "DONE", responseReady: status !== "stopped" });
+    } catch {
+      // Still unreachable: the card stays and the next signal tries again.
+    } finally {
+      resyncingRef.current = false;
+    }
+  }, [startPolling, tApi]);
+
+  /** Sends again a message the server confirmed it never received. */
+  const resend = useCallback(() => {
+    const lost = lostSendRef.current;
+    if (!lost?.undelivered) return;
+    void sendMessage(lost.projectId, lost.message, lost.options, {
+      requestId: lost.requestId,
+      conversationId: lost.conversationId,
+    });
+  }, [sendMessage]);
+
+  // An iOS PWA loses its requests when it goes to the background or the
+  // network drops; coming back is the moment to find out what happened.
+  useEffect(() => {
+    if (state.connectionIssue !== "lost") return;
+    const onOnline = () => void reconnect();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void reconnect();
+    };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [state.connectionIssue, reconnect]);
 
   const abort = useCallback(() => {
     const sending = activeSendRef.current;
@@ -1304,6 +1481,8 @@ export function useAssistantChat(options?: UseAssistantChatOptions) {
     updateConversationConfig,
     reset,
     retry,
+    reconnect,
+    resend,
     abort,
   };
 }

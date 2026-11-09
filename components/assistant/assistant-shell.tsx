@@ -219,6 +219,8 @@ export const AssistantShell = forwardRef<
     loadConversation,
     reset,
     retry,
+    reconnect,
+    resend,
     abort,
     restoring,
     requestRestore,
@@ -226,6 +228,26 @@ export const AssistantShell = forwardRef<
     pinned,
     setPinned,
   } = useAssistantChatContext();
+  // The error card's one action: retry a failed turn, re-read a request the
+  // connection loss hid, or send again a message minddy never received.
+  const errorActionHandler = state.connectionIssue === "undelivered"
+    ? { label: t("resend"), run: resend }
+    : state.connectionIssue === "lost"
+      ? { label: t("retry"), run: () => void reconnect() }
+      : state.turnStatus === "retryable" || state.turnStatus === "failed"
+        ? { label: t("retry"), run: () => void retry() }
+        : null;
+  const errorAction = errorActionHandler ? (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="shrink-0"
+      onClick={errorActionHandler.run}
+    >
+      {errorActionHandler.label}
+    </Button>
+  ) : null;
   const chatInputRef = useRef<ChatInputHandle>(null);
   const shellRootRef = useRef<HTMLDivElement>(null);
   // A burst typed in the shell goes to its composer, a single key stays a
@@ -1185,17 +1207,7 @@ export const AssistantShell = forwardRef<
                       role="alert"
                     >
                       <span>{state.error}</span>
-                      {(state.turnStatus === "retryable" || state.turnStatus === "failed") && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="shrink-0"
-                          onClick={() => void retry()}
-                        >
-                          {t("retry")}
-                        </Button>
-                      )}
+                      {errorAction}
                     </div>
                   )}
                 </ConversationContent>
@@ -1214,10 +1226,11 @@ export const AssistantShell = forwardRef<
                   {intro}
                   {state.error ? (
                     <div
-                      className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive"
                       role="alert"
                     >
-                      {state.error}
+                      <span>{state.error}</span>
+                      {errorAction}
                     </div>
                   ) : null}
                 </div>

@@ -405,6 +405,8 @@ Deaktivierung stoppt neue Aufrufe, keine gesendeten. Grenzen: 30 Sekunden, 1 MiB
 
 Öffne das bestehende Gespräch und lies letzte Nachrichten und Karten. Unterscheide ausstehende Eingaben, Kontobudget, Routinenlimit und technische Fehler. Ein geschlossenes Panel beweist keinen Arbeitsabbruch.
 
+Bricht die Verbindung zu minddy ab, bevor Numo antwortet, etwa wenn die App auf dem Handy in den Hintergrund geht, zeigt das Gespräch eine Verbindungskarte. Sobald du wieder online oder in der App bist, prüft minddy, ob deine Nachricht angekommen ist. Wenn ja, arbeitet Numo weiter oder seine Antwort erscheint. Wenn nicht, verschwindet die Nachricht aus dem Gespräch und **Erneut senden** schickt sie noch einmal. **Erneut versuchen** prüft sofort.
+
 Beantworte auf einer aktiven Fragekarte alle erforderlichen Fragen und sende die Antworten gemeinsam. Frühere Karten sind Aufzeichnungen ohne neue Eingabefunktion. Überspringen ersetzt keine fehlenden Informationen und erlaubt keine davon abhängigen Änderungen.
 
 ### Budget und Fehler {#recovery}

@@ -405,6 +405,8 @@ Desactivar bloquea llamadas nuevas, no enviadas. Límites: 30 segundos, 1 MiB de
 
 Vuelve a la conversación existente y lee los últimos mensajes y tarjetas. Distingue preguntas pendientes, límite de cuenta, tope de rutina y fallo técnico. Cerrar el panel no demuestra que el trabajo se haya detenido.
 
+Si se pierde la conexión con minddy antes de que Numo responda, por ejemplo cuando la app del móvil pasa a segundo plano, la conversación muestra una tarjeta de conexión. Cuando recuperas la conexión o vuelves a la app, minddy comprueba si tu mensaje llegó. Si llegó, el trabajo de Numo continúa o aparece su respuesta. Si no, el mensaje sale de la conversación y **Reenviar** lo envía otra vez. **Reintentar** lo comprueba al momento.
+
 En una tarjeta activa, responde todas las preguntas requeridas y envía el conjunto. Las tarjetas anteriores son registros y no admiten una nueva respuesta. Omitir no aporta los datos ausentes ni autoriza cambios dependientes.
 
 ### Presupuesto y errores {#recovery}

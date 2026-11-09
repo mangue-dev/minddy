@@ -405,6 +405,8 @@ Disabling stops new calls, not requests already sent. Calls have a 30-second dea
 
 Return to the existing conversation and read its last messages and cards. Distinguish a question awaiting input, an account budget limit, a routine cap and a technical failure. Closing the panel is not proof that work stopped.
 
+When the connection to minddy drops before Numo replies, for example when the phone app goes to the background, the conversation shows a connection card. Once you're back online or return to the app, minddy checks whether your message arrived. If it did, Numo's work resumes or its answer appears. If it didn't, the message leaves the conversation and **Resend** sends it again. **Try again** checks right away.
+
 For a live question card, answer every required question and submit the set. Past cards are records and cannot submit a new answer. Skipping does not supply missing information or authorize dependent changes.
 
 ### Budget and failures {#recovery}

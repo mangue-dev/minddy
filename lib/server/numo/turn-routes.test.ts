@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   executeTurn: vi.fn(),
   decodeNumoEvent: vi.fn(async (...args: unknown[]) => args[0]),
   afterSeq: -1,
+  requestReadFails: false,
   latestTurns: [] as Array<Record<string, unknown>>,
   activity: [
     { id: "event-1", seq: 0, type: "content_delta", payload: { delta: "First" } },
@@ -17,9 +18,13 @@ const h = vi.hoisted(() => ({
 
 function queryFor(table: string) {
   let excludeReceipts = false;
+  let requestId: string | null = null;
   const query = {
     select: () => query,
-    eq: () => query,
+    eq: (column: string, value: string) => {
+      if (column === "request_id") requestId = value;
+      return query;
+    },
     or: () => { excludeReceipts = true; return query; },
     gt: (_column: string, value: number) => {
       h.afterSeq = value;
@@ -33,6 +38,10 @@ function queryFor(table: string) {
     maybeSingle: async () => {
       if (table === "numo_conversation_history") {
         return { data: { id: CONVERSATION_ID, source: "assistant" } };
+      }
+      if (table === "numo_assistant_turns" && requestId) {
+        if (h.requestReadFails) return { data: null, error: { message: "timeout" } };
+        return { data: h.latestTurns.find(turn => turn.request_id === requestId) ?? null, error: null };
       }
       if (table === "numo_assistant_turns") return {
         data: h.latestTurns.find(turn => !excludeReceipts || turn.status !== "stopped"
@@ -77,6 +86,7 @@ const { POST } = await import("@/app/api/assistant/conversations/[id]/turn/route
 beforeEach(() => {
   vi.clearAllMocks();
   h.afterSeq = -1;
+  h.requestReadFails = false;
   h.latestTurns = [{ id: TURN_ID, status: "running", error_message: null,
     last_event_seq: 1 }];
   h.getAuthedUser.mockResolvedValue({
@@ -114,6 +124,25 @@ describe("durable Numo turn routes", () => {
       { status: "completed" },
       { userId: "user-1", turnId: TURN_ID, eventId: "event-2" },
     );
+  });
+
+  it("tells a client that lost its connection whether minddy admitted its request (MIN-945)", async () => {
+    const admitted = "51600000-0000-4000-8000-000000000031";
+    const lost = "51600000-0000-4000-8000-000000000032";
+    h.latestTurns = [{ id: TURN_ID, status: "completed", request_id: admitted, last_event_seq: 1 }];
+    const read = (requestId: string) => GET(
+      new NextRequest(`http://localhost/api/assistant/conversations/${CONVERSATION_ID}/status?requestId=${requestId}`),
+      { params: Promise.resolve({ id: CONVERSATION_ID }) },
+    );
+
+    expect(await (await read(admitted)).json()).toMatchObject({ request_received: true, status: "completed" });
+    expect(await (await read(lost)).json()).toMatchObject({ request_received: false });
+    // An invalid id is ignored rather than reported as "never arrived".
+    expect(await (await read("not-a-uuid")).json()).not.toHaveProperty("request_received");
+
+    // An unreadable answer must not pass for "never arrived".
+    h.requestReadFails = true;
+    expect((await read(admitted)).status).toBe(503);
   });
 
   it("stops the parent through the atomic orchestration action", async () => {

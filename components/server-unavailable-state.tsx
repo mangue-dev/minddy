@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 
 type ServerUnavailableStateProps = {
   description: string;
+  /** A technical line under the text, kept selectable for a bug report. */
+  detail?: string;
+  /** Defaults to the server-off glyph. */
+  icon?: AppIcon;
   retryLabel: string;
   title: string;
 } & (
@@ -15,6 +19,8 @@ type ServerUnavailableStateProps = {
 /** Full-screen recovery state used when the application backend is unreachable. */
 export function ServerUnavailableState({
   description,
+  detail,
+  icon = ServerOff,
   onRetry,
   retryHref,
   retryLabel,
@@ -31,7 +37,7 @@ export function ServerUnavailableState({
     <main className="flex min-h-[100dvh] items-center justify-center bg-background px-6 py-16">
       <div role="alert" aria-live="assertive" className="mx-auto w-full max-w-lg text-center">
         <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl border border-border bg-muted text-muted-foreground">
-          <AppIcon icon={ServerOff} className="size-7" aria-hidden />
+          <AppIcon icon={icon} className="size-7" aria-hidden />
         </div>
         <h1 className="text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
           {title}
@@ -39,6 +45,11 @@ export function ServerUnavailableState({
         <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-pretty text-muted-foreground">
           {description}
         </p>
+        {detail ? (
+          <p className="mx-auto mt-4 max-w-md break-words font-mono text-xs text-muted-foreground select-text">
+            {detail}
+          </p>
+        ) : null}
         <div className="mt-8">
           {onRetry ? (
             <Button type="button" size="lg" onClick={onRetry}>

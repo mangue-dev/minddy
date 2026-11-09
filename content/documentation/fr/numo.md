@@ -405,6 +405,8 @@ La désactivation bloque les nouveaux appels, pas ceux envoyés. Les limites son
 
 Revenez à la conversation et lisez ses derniers messages et ses cartes. Distinguez une question en attente, une limite du compte, un plafond de routine et une erreur technique. Fermer le panneau ne prouve pas que le travail s’est arrêté.
 
+Si la connexion à minddy est coupée avant la réponse de Numo, par exemple quand l’application passe en arrière-plan sur votre téléphone, la conversation affiche une carte de connexion. Dès que vous êtes de retour en ligne ou dans l’application, minddy vérifie si votre message est arrivé. S’il est arrivé, le travail de Numo reprend ou sa réponse s’affiche. Sinon, le message quitte la conversation et **Renvoyer** l’envoie à nouveau. **Réessayer** lance la vérification tout de suite.
+
 Dans une carte de questions active, répondez à toutes les questions requises puis envoyez l’ensemble. Les anciennes cartes sont des traces, sans nouvel envoi possible. Passer une question ne fournit pas l’information manquante et n’autorise pas les modifications qui en dépendent.
 
 ### Budget et erreurs {#recovery}

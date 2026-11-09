@@ -34,6 +34,11 @@
     "description": "The server is temporarily unavailable. Try again in a moment.",
     "retry": "Try again"
   },
+  "AppCrash": {
+    "title": "minddy ran into an error",
+    "description": "Reload the page to continue. If it happens again, include the line below when you report it.",
+    "reload": "Reload"
+  },
   "Activity": {
     "created": "created the issue",
     "categoryAdded": "added the category “{name}”",
@@ -252,6 +257,8 @@
     "conversationLoadFailed": "Couldn't load the conversation.",
     "messageSaveFailed": "Couldn't save the message.",
     "statusFetchFailed": "Couldn't load the status.",
+    "numoConnectionLost": "The connection to minddy dropped before Numo replied. minddy checks again when you're back online.",
+    "numoMessageNotDelivered": "Your message didn't reach minddy.",
     "tabOrderSaveFailed": "Couldn't save the tab order.",
     "tooManyAttempts": "Too many attempts. Try again in {seconds}s.",
     "unexpected": "An unexpected error occurred. Try again in a moment.",
@@ -512,6 +519,7 @@
     "send": "Send",
     "stop": "Stop",
     "retry": "Try again",
+    "resend": "Resend",
     "newConversation": "New conversation",
     "unreadConversation": "Unread conversation",
     "unreadQuestion": "Waiting for your answer",

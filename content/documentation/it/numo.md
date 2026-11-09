@@ -406,6 +406,8 @@ Disabilitare blocca nuove chiamate, non quelle inviate. Limiti: 30 secondi, 1 Mi
 
 Torna alla conversazione esistente e leggi gli ultimi messaggi e le schede. Distingui richieste di informazioni, limite dell’account, tetto della routine ed errore tecnico. Chiudere il pannello non dimostra che il lavoro si sia fermato.
 
+Se la connessione a minddy si interrompe prima che Numo risponda, per esempio quando l’app sul telefono passa in background, la conversazione mostra una scheda di connessione. Appena torni online o nell’app, minddy controlla se il tuo messaggio è arrivato. Se è arrivato, il lavoro di Numo riprende o compare la sua risposta. Altrimenti il messaggio esce dalla conversazione e **Invia di nuovo** lo rimanda. **Riprova** controlla subito.
+
 In una scheda attiva, rispondi a tutte le domande richieste e invia il gruppo. Le schede precedenti sono registrazioni senza possibilità di inviare una nuova risposta. Saltare non fornisce le informazioni mancanti né autorizza modifiche dipendenti.
 
 ### Budget ed errori {#recovery}
