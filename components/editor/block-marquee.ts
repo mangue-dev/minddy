@@ -3,8 +3,8 @@
 // The selection rectangle of pages and the task notebook, as on the boards
 // (components/marquee-selection.tsx) and in Notion: press beside the text —
 // in the gutter, in the pane around the column, under the last block — and
-// drag. Every first-level block the rectangle overlaps becomes one block
-// selection (block-selection.ts), so the selection card, the block menu,
+// drag. Every block the rectangle overlaps — a first-level block, or a list
+// item, as in the gutter — becomes one block selection (block-selection.ts), so the selection card, the block menu,
 // copy and delete act on them as on any block selection.
 //
 // - Where it starts follows margin-caret.ts: on an element that contains
@@ -22,6 +22,7 @@
 
 import type { Editor } from "@tiptap/react";
 import { TextSelection, type Selection } from "@tiptap/pm/state";
+import type { Node as PMNode } from "@tiptap/pm/model";
 import { useEffect, type RefObject } from "react";
 import { BlockSelection } from "@/components/editor/block-selection";
 import { lineEdge } from "@/components/editor/margin-caret";
@@ -42,7 +43,7 @@ export const EDITOR_RESERVE_ATTR = "data-editor-reserve";
 const OWN_PRESS =
   'button, a, input, textarea, select, label, [role="button"], [contenteditable="true"], [data-floating-surface]';
 
-interface Box {
+export interface Box {
   left: number;
   top: number;
   right: number;
@@ -82,19 +83,70 @@ export function startsMarquee(
   return target.contains(root);
 }
 
-/** The first-level blocks a rectangle overlaps, as a block selection whose
-    anchor is the block nearest where the gesture started. */
+/** A list is no block of its own: the rectangle reaches its items, as the
+    gutter does (components/pages/block-gutter.tsx), which gives each item
+    its own handle. */
+const LIST_TYPES = new Set(["bulletList", "orderedList", "taskList"]);
+const LIST_ITEM_TYPES = new Set(["listItem", "taskItem"]);
+
+/**
+ * The starts of the blocks a rectangle overlaps, in document order: the
+ * first-level blocks, and inside a list each item — at any depth — rather
+ * than the whole list. An item is reached through its own content, not
+ * through the nested list it holds: a rectangle over a sub-item alone does
+ * not take its parent with it. `rectOf` measures the node starting at a
+ * position.
+ */
+export function blocksInBox(
+  doc: PMNode,
+  rectOf: (pos: number) => DOMRect | null,
+  box: Box
+): number[] {
+  const found: number[] = [];
+  const hit = (pos: number) => {
+    const rect = rectOf(pos);
+    return !!rect && overlaps(rect, box);
+  };
+  const visit = (node: PMNode, pos: number) => {
+    if (LIST_TYPES.has(node.type.name)) {
+      node.forEach((child, offset) => visit(child, pos + 1 + offset));
+      return;
+    }
+    if (LIST_ITEM_TYPES.has(node.type.name)) {
+      let own = false;
+      const nested: [PMNode, number][] = [];
+      node.forEach((child, offset) => {
+        const childPos = pos + 1 + offset;
+        if (LIST_TYPES.has(child.type.name)) nested.push([child, childPos]);
+        else if (!own && hit(childPos)) own = true;
+      });
+      if (own) found.push(pos);
+      for (const [child, childPos] of nested) visit(child, childPos);
+      return;
+    }
+    if (hit(pos)) found.push(pos);
+  };
+  doc.forEach((node, offset) => visit(node, offset));
+  return found;
+}
+
+/** The blocks a rectangle overlaps, as a block selection whose anchor is the
+    block nearest where the gesture started. Items of one list select only
+    those items; a range that also reaches past the list takes it whole, as
+    a selection holds sibling blocks (block-selection.ts). */
 function blocksIn(editor: Editor, box: Box, upward: boolean): BlockSelection | null {
   const { view } = editor;
-  let first: number | null = null;
-  let last: number | null = null;
-  view.state.doc.forEach((_node, offset) => {
-    const dom = view.nodeDOM(offset);
-    if (!(dom instanceof HTMLElement) || !overlaps(dom.getBoundingClientRect(), box)) return;
-    first ??= offset;
-    last = offset;
-  });
-  if (first === null || last === null) return null;
+  const found = blocksInBox(
+    view.state.doc,
+    (pos) => {
+      const dom = view.nodeDOM(pos);
+      return dom instanceof HTMLElement ? dom.getBoundingClientRect() : null;
+    },
+    box
+  );
+  const first = found[0];
+  const last = found[found.length - 1];
+  if (first === undefined || last === undefined) return null;
   return upward
     ? BlockSelection.create(view.state.doc, last, first)
     : BlockSelection.create(view.state.doc, first, last);

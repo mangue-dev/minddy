@@ -89,6 +89,7 @@ import { afterOrNow } from "@/lib/server/after-safe";
 import { loadNumoMemoryPrompt } from "./memory-prompt";
 import { touchNumoMemories } from "./memory-content";
 import { scheduleHomeBriefRewrite } from "./home-brief";
+import { HOME_BRIEF_MESSAGE_META } from "./home-brief-opening";
 import { loadNumoJournalPrompt } from "./journal-prompt";
 import { NUMO_WAKE_PROMPT_BLOCK } from "./wake-prompt";
 import { buildNumoReminderPromptBlock, type NumoReminderIntent } from "./watch-prompt";
@@ -579,6 +580,15 @@ async function buildExecutionInput(input: {
   // first complete message boundary instead of sending a malformed history.
   const firstCompleteMessage = recentHistory.findIndex((message) => message.role !== "tool");
   const history = firstCompleteMessage < 0 ? [] : recentHistory.slice(firstCompleteMessage);
+  // A conversation started on Home opens with the summary Numo wrote there
+  // (MIN-933), stored as its first message but written in no turn. Without
+  // being told, the model took it for stray journal text and answered a
+  // "how so?" as if nothing came before.
+  if (history.some((message) => message.role === "assistant"
+      && typeof (message.metadata as Record<string, unknown> | null)?.[HOME_BRIEF_MESSAGE_META] === "string")) {
+    systemPrompt += `\n## Opening of this conversation
+- Your first message above is the summary you wrote for the user's Home page: they started this conversation under it. It is your own message, said to them. When they react without naming what ("what do you mean?", "how so?", "do it"), they are answering that summary: explain or act on it, as the continuation of what you said.`;
+  }
 
   const supportsCache = runtime.provider === "openrouter"
     && await modelSupportsCaching(runtime.model, runtime.apiKey);
@@ -628,9 +638,12 @@ async function buildExecutionInput(input: {
     );
     if (recoveringPendingMessage) return null;
     // A typed mention (MIN-872) reaches the model named as the conversation's
-    // user may see it: the current label, or "unavailable".
+    // user may see it: the current label, or "unavailable". This covers the
+    // user's messages and Numo's own.
     const text = sanitizeAssistantMessageContent(message.content);
-    const sanitized = (message.role === "user" && text.includes("](mention:")
+    // Numo's own messages too: its Home summary stores mentions without
+    // their names, unreadable to the model as they are.
+    const sanitized = ((message.role === "user" || message.role === "assistant") && text.includes("](mention:")
       ? await markdownForReader(turn.user_id, text)
       : text)
       + (message.role === "user"

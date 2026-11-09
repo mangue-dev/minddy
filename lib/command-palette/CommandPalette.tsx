@@ -32,6 +32,7 @@ import {
 } from "./search/engine";
 import { usePaletteStore } from "./store";
 import { useQueryHistory } from "./hooks/useQueryHistory";
+import { listenToNewKeydowns } from "./hooks/new-keydowns";
 import styles from "./styles/CommandPalette.module.css";
 import { FormView } from "./views/FormView";
 import { SearchView } from "./views/SearchView";
@@ -294,8 +295,7 @@ export function CommandPalette({
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    return listenToNewKeydowns(document, handleKeyDown);
   }, [isOpen, view, isActionsPopoverOpen, handleClose]);
 
   // Tab in the search field enters the tab view with the current query

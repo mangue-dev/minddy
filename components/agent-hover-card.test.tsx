@@ -25,6 +25,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
+  document.documentElement.removeAttribute("data-input-modality");
 });
 
 async function render(inApp: boolean) {
@@ -44,6 +45,8 @@ async function render(inApp: boolean) {
 
 it("names the agent and the person whose key it used", async () => {
   await render(true);
+  // Tab moved focus to the name: keyboard focus opens the card.
+  document.documentElement.setAttribute("data-input-modality", "keyboard");
   vi.useFakeTimers();
   try {
     await act(async () => {

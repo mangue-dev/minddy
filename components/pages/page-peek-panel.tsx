@@ -3,15 +3,19 @@
 // The side panel a page is read in without leaving the current screen: a
 // database entry previewed from its table (components/pages/pages-shell.tsx)
 // and a page opened from a link anywhere in the app (MIN-777,
-// components/global-page-panel.tsx). Both offer the same two ways out: Expand
-// to the full page, or close back to what was underneath.
+// components/global-page-panel.tsx). Both offer the same ways out: Expand to
+// the full page, open it in a new tab from Expand's menu, or close back to
+// what was underneath.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, Cancel01Icon, ExpandIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, Cancel01Icon, ExpandIcon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { SidePanel, SidePanelContent, SidePanelTitle } from "@/components/ui/side-panel";
+import { SplitButton } from "@/components/ui/split-button";
+import { useOptionalAppTabSession } from "@/lib/app-tab-session-context";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 
 export function PagePeekPanel({
@@ -19,6 +23,8 @@ export function PagePeekPanel({
   title,
   expandLabel,
   onExpand,
+  newTabHref,
+  beforeNewTab,
   onClose,
   onBack,
   actionsSlot,
@@ -29,6 +35,11 @@ export function PagePeekPanel({
   title: string;
   expandLabel: string;
   onExpand: () => void;
+  /** The shown page's address (lib/app-urls.ts), opened in a new tab from
+      Expand's menu while the panel stays as it is. */
+  newTabHref: string;
+  /** Saves what was typed in the panel first; false keeps the tab unopened. */
+  beforeNewTab?: () => Promise<boolean>;
   onClose: () => void;
   /** Returns to the page the shown one was opened from, when there is one. */
   onBack?: () => void;
@@ -38,6 +49,15 @@ export function PagePeekPanel({
   children: ReactNode;
 }) {
   const tCommon = useTranslations("Common");
+  const tActions = useTranslations("CommandPaletteActions");
+  // A tab of the desktop shell when there is one, a browser tab otherwise,
+  // as the board's views open theirs (components/board-toolbar.tsx).
+  const appTabs = useOptionalAppTabSession();
+  const openInNewTab = async () => {
+    if (beforeNewTab && !(await beforeNewTab())) return;
+    if (appTabs) void appTabs.create(newTabHref);
+    else window.open(newTabHref, "_blank", "noopener,noreferrer");
+  };
   return (
     <SidePanel open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <SidePanelContent
@@ -48,7 +68,9 @@ export function PagePeekPanel({
             event.preventDefault();
         }}
       >
-        <div className="flex shrink-0 items-center gap-2 px-4 pt-3">
+        {/* As much room under the buttons as above them: the page scrolls
+            under this header, and without it the content ran into them. */}
+        <div className="flex shrink-0 items-center gap-2 px-4 py-3">
           <SidePanelTitle className="sr-only">{title}</SidePanelTitle>
           {onBack ? (
             <Button variant="ghost" size="icon-sm" aria-label={tCommon("back")} onClick={onBack}>
@@ -56,10 +78,21 @@ export function PagePeekPanel({
             </Button>
           ) : null}
           <div className="flex-1" />
-          <Button variant="ghost" size="sm" onClick={onExpand}>
+          <SplitButton
+            variant="outline"
+            size="sm"
+            onClick={onExpand}
+            menuLabel={tCommon("moreActions")}
+            menu={
+              <DropdownMenuItem onSelect={() => void openInNewTab()}>
+                <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />
+                {tActions("openInNewTab")}
+              </DropdownMenuItem>
+            }
+          >
             <HugeiconsIcon icon={ExpandIcon} className="size-3.5" />
             {expandLabel}
-          </Button>
+          </SplitButton>
           {actionsSlot ? <div ref={actionsSlot} className="flex items-center" /> : null}
           <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} shortcut={["Esc"]} onClick={onClose}>
             <HugeiconsIcon icon={Cancel01Icon} className="size-4" />

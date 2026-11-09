@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   SidebarPanelTransition,
+  panelTravel,
   usePanelDirection,
   type PanelDirection,
 } from "@/components/sidebar-panel-transition";
@@ -74,10 +75,16 @@ describe("level swap direction (MIN-877)", () => {
     ])).toEqual([0, 1, 1, -1, -1]);
   });
 
-  it("crossfades a lateral swap and keeps the direction while the panel stays", async () => {
+  it("marks a lateral swap and keeps the direction while the panel stays", async () => {
     // A re-render on the same panel (a badge update) replays nothing.
     expect(await sequence([
       [0, "home"], [1, "project-a"], [1, "project-a"], [1, "project-b"],
     ])).toEqual([0, 1, 1, 0]);
+  });
+});
+
+describe("panel travel", () => {
+  it("slides every swap, a lateral one forward like a descent", () => {
+    expect([panelTravel(1), panelTravel(0), panelTravel(-1)]).toEqual([1, 1, -1]);
   });
 });

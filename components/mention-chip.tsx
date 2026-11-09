@@ -193,17 +193,12 @@ function MentionChipBody({
   prState?: PullRequestState | null;
   className?: string;
 }) {
-  // Images use the narrower left gutter; glyphs use the wider one. Every
-  // measurement is relative to the label so the whole chip scales with its
-  // surrounding text, including when a mention appears in a heading.
-  const hasImage = type === "member" || type === "forge" || type === "project";
-
   // The figure stays inline with the label so the chip keeps a text baseline.
   // `self-center` centers it on the label's line box, which in Inter at this
   // line height is the middle of the capitals: no offset on top of it (a
   // former -0.1em one set every icon about 1.5 px above the text).
   const figure = (
-    <span className="mr-[0.3em] inline-flex size-[1.05em] shrink-0 items-center justify-center self-center">
+    <span className="mr-[0.3em] inline-flex size-(--mc-fig) shrink-0 items-center justify-center self-center">
       {type === "member" ? (
         <UserAvatar seed={avatarSeed ?? id} className="size-full" />
       ) : type === "forge" ? (
@@ -215,7 +210,7 @@ function MentionChipBody({
         <ProjectOrb
           seed={avatarSeed ?? id}
           iconUrl={iconUrl}
-          className="size-full rounded-[0.28em]"
+          className="size-full rounded-(--mc-orb-r)"
         />
       ) : type === "numo" ? (
         // The face of the assistant, exactly the one who signs his answers —
@@ -260,6 +255,25 @@ function MentionChipBody({
   // radius are also expressed in em so the background grows with the label
   // without turning into a capsule.
   //
+  // Geometry. Everything derives from three lengths in the chip's em, each
+  // rounded to a whole pixel so the insets stay equal once painted (a
+  // fractional edge is anti-aliased while the text snaps to the pixel grid,
+  // which read as a bigger gap at the bottom at some sizes):
+  // - `--mc-fig`, the figure's box, is also the label's line-height, so the
+  //   content box is exactly the figure and the label's capitals sit centered
+  //   in it (Inter's cap-to-ascent and descent are equal);
+  // - `--mc-pad` is the inset on the top, bottom and left of the figure,
+  //   identical on the three sides for every type and size; the text end
+  //   gets twice that, the room its capitals have above and below;
+  // - `--mc-orb-r` is a project orb's corner, and the pill's radius is that
+  //   corner plus the inset: truly concentric at any size.
+  //
+  // The vertical margin is a floor between pills on consecutive lines: in a
+  // relaxed paragraph it fits inside the line's own leading and moves
+  // nothing, and on a tight line (a heading) it opens the line just enough
+  // that two wrapped pills never touch. The pill itself never breaks across
+  // lines, so it has no fragment to clone.
+  //
   // `inline-flex items-baseline`, with the figure alone centered: the flex
   // box then takes its baseline from the label, the only item aligned on
   // it, and `align-baseline` puts that on the sentence's baseline. (A plain
@@ -274,15 +288,20 @@ function MentionChipBody({
   const shape = cn(
     // The default arrow, like every control (DESIGN.md, MIN-587): never the
     // text caret, even inside an editor, nor the pointer hand on a link.
-    "mx-[0.14em] inline-flex max-w-[calc(100%-0.28em)] items-baseline cursor-default whitespace-nowrap rounded-[0.35em] py-[0.07em] pr-[0.43em] align-baseline text-[0.95em] leading-[1.15] font-medium",
-    hasImage ? "pl-[0.29em]" : "pl-[0.43em]",
+    "mx-[0.14em] my-[0.1em] inline-flex max-w-[calc(100%-0.28em)] items-baseline cursor-default whitespace-nowrap align-baseline text-[0.95em] font-medium",
+    "[--mc-fig:round(1.05em,1px)] [--mc-pad:round(0.17em,1px)] [--mc-orb-r:round(0.28em,1px)]",
+    "py-(--mc-pad) pl-(--mc-pad) pr-[calc(var(--mc-pad)*2)] leading-(--mc-fig) rounded-[calc(var(--mc-orb-r)_+_var(--mc-pad))]",
     "bg-(--mention-chip) text-(--mention-chip-ink)",
   );
 
   const tone = toneStyle(type, avatarSeed ?? id, color, prState);
 
+  // The label clips for its ellipsis, and its line box (`--mc-fig`) is
+  // shorter than Inter's ascenders and descenders: the tails of g, y and p
+  // were cut. The padding widens the clip box over them, and the negative
+  // margin takes it back, so the pill keeps its height.
   const text = (
-    <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+    <span className="-my-[0.15em] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap py-[0.15em]">
       {label}
     </span>
   );

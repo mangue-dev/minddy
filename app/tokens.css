@@ -160,6 +160,10 @@
      without drawing a line across it. Its own name keeps menus apart should
      the two ever differ again. */
   --color-menu-separator: var(--border);
+  /* The scrim behind every modal layer (MIN-931): dialogs, wizards, alert
+     dialogs, sheets and side panels. Menus, popovers and the Numo shell
+     float without one. */
+  --color-scrim: var(--overlay-scrim);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
@@ -368,6 +372,10 @@
   --brand: #7059c4;
   --brand-foreground: #ffffff;
 
+  /* Modal scrim (MIN-931): dims the whole app behind a dialog so the layer
+     reads as separate from it. A cool near-black, the page's own hue. */
+  --overlay-scrim: oklch(0.2 0.02 266 / 32%);
+
   /* Ultrawide canvas — backdrop behind the centered app shell on ≥3xl screens */
   --canvas: oklch(0.945 0.025 266);
   --canvas-glow-1: oklch(0.80 0.10 290 / 0.55);
@@ -455,6 +463,10 @@
   /* Brand dark */
   --brand: #b6a5f0;
   --brand-foreground: #1b1530;
+
+  /* Modal scrim dark: the page is already near black, so the scrim needs
+     more weight to push it back behind the raised card surface. */
+  --overlay-scrim: oklch(0 0 0 / 56%);
 
   /* Ultrawide canvas dark */
   --canvas: oklch(0.060 0.003 250);

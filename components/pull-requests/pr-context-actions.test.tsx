@@ -89,15 +89,48 @@ describe("usePrContextActions", () => {
     expect(hook.itemContextActions(row())).toEqual([]);
   });
 
-  it("keeps writes disabled until the menu's own read is fresh", async () => {
-    let finish!: (value: unknown) => void;
-    state.detail = () => new Promise((resolve) => { finish = resolve; });
+  const settle = async () => {
+    for (let tick = 0; tick < 20; tick++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+  };
+
+  it("holds one loading entry until both reads answer, then builds the entries once", async () => {
+    let finishDetail!: (value: unknown) => void;
+    let finishReviews!: (value: unknown) => void;
+    state.detail = () => new Promise((resolve) => { finishDetail = resolve; });
+    state.reviews = () => new Promise((resolve) => { finishReviews = resolve; });
     await render();
     await act(async () => hook.onItemContextMenu(row()));
-    expect(ids(hook.itemContextActions(row()))).toEqual(["pr-state-draft:disabled", "pr-state-closed:disabled", "pr-fix-copy:disabled", "pr-fix-numo:disabled"]);
-    await act(async () => { finish(detail()); });
-    for (let tick = 0; tick < 20; tick++) await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(ids(hook.itemContextActions(row()))).toEqual(["pr-loading:disabled"]);
+    // The detail alone does not settle the menu: the fix entries depend on the threads.
+    await act(async () => { finishDetail(detail()); });
+    await settle();
+    expect(ids(hook.itemContextActions(row()))).toEqual(["pr-loading:disabled"]);
+    await act(async () => { finishReviews({ comments: [], threads: [], reactions: [] }); });
+    await settle();
     expect(ids(hook.itemContextActions(row()))).toEqual(["pr-merge", "pr-state-draft", "pr-state-closed"]);
+  });
+
+  it("keeps an open menu as it was when a background refetch answers differently", async () => {
+    await render();
+    expect(ids(await openMenu())).toEqual(["pr-merge", "pr-state-draft", "pr-state-closed"]);
+    let finish!: (value: unknown) => void;
+    state.detail = () => new Promise((resolve) => { finish = resolve; });
+    void client.refetchQueries({ queryKey: ["pull-request", "pr-1"] });
+    await settle();
+    // In flight: nothing re-disables.
+    expect(ids(hook.itemContextActions(row()))).toEqual(["pr-merge", "pr-state-draft", "pr-state-closed"]);
+    await act(async () => { finish(detail({ viewer: { capability: "read" } as AgentRunPrResponse["viewer"] })); });
+    await settle();
+    expect(ids(hook.itemContextActions(row()))).toEqual(["pr-merge", "pr-state-draft", "pr-state-closed"]);
+    // The next opening, even on the same row, reads again and reflects the new answer.
+    state.detail = () => Promise.resolve(detail({ viewer: { capability: "read" } as AgentRunPrResponse["viewer"] }));
+    expect(ids(await openMenu())).toEqual([]);
+  });
+
+  it("disables the writes instead of loading forever when the detail read fails", async () => {
+    state.detail = () => Promise.reject(new Error("boom"));
+    await render();
+    expect(ids(await openMenu())).toEqual(["pr-state-draft:disabled", "pr-state-closed:disabled", "pr-fix-copy:disabled", "pr-fix-numo:disabled"]);
   });
 
   it("hides forge writes from a viewer without write access", async () => {

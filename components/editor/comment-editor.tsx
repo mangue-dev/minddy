@@ -179,7 +179,9 @@ export function CommentEditor({
       autoFocus={autoFocus}
       readOnly={disabled}
       className={cn(
-        "max-h-48 w-full min-w-0 overflow-y-auto rounded-lg border border-input bg-transparent px-3 py-2 outline-none",
+        // `placeholder-grows` (app/globals.css): a placeholder that wraps on a
+        // narrow screen makes the field taller instead of being clipped.
+        "placeholder-grows max-h-48 w-full min-w-0 overflow-y-auto rounded-lg border border-input bg-transparent px-3 py-2 outline-none",
         "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
         disabled && "cursor-not-allowed opacity-60",
         className

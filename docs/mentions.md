@@ -169,8 +169,10 @@ date opens the date and time picker and writes the new day into the node
 Hovering a pill shows its target's hover card (MIN-879,
 `components/mention-hover-card.tsx`) in the signed-in app, which provides it
 through `MentionHover` (`components/mention-hover.tsx`): the marketing site and
-public pages render the pill alone and never load the card. It is read only
-when the card opens, from
+public pages render the pill alone and never load the card. Focus opens it
+only while the keyboard drives focus (`components/ui/hover-card.tsx`), so the
+first row a popover focuses on opening shows no card. It is read only when
+the card opens, from
 `GET /api/mentions/preview?type=&id=&project=` (`lib/server/mention-preview.ts`).
 The server first resolves the target with `resolveMentionTargets`, under the
 access rules below: a target without a label for the reader has no card

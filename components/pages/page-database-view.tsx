@@ -180,7 +180,7 @@ function SortablePropertyRow({ property, sortable, children }: {
           {...listeners}
           // A touch on the handle drags; the rest of the list still scrolls.
           style={{ touchAction: "none" }}
-          className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing disabled:cursor-default disabled:opacity-40"
+          className={cn("flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40", isDragging && "cursor-grabbing")}
         >
           <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
         </button>
@@ -1216,7 +1216,6 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                   singleTarget={!checked || selectedRows.length === 1}
                   menuOpen={menuEntry === entry.id}
                   dropLine={dropTarget?.id === entry.id ? (dropTarget.above ? "above" : "below") : null}
-                  manual={manual}
                   isDragging={isDragging}
                   mobile={mobile}
                   canWrite={canWrite}
@@ -1365,7 +1364,7 @@ function useRowActions(actions: RowActions): RowActions {
  * component renders on a 150-row database (MIN-875).
  */
 const DatabaseRow = memo(function DatabaseRow({
-  entry, projectId, database, visible, checked, singleTarget, menuOpen, dropLine, manual, isDragging, mobile, canWrite, actions,
+  entry, projectId, database, visible, checked, singleTarget, menuOpen, dropLine, isDragging, mobile, canWrite, actions,
 }: {
   entry: PageSummary;
   projectId: string;
@@ -1376,7 +1375,6 @@ const DatabaseRow = memo(function DatabaseRow({
   singleTarget: boolean;
   menuOpen: boolean;
   dropLine: "above" | "below" | null;
-  manual: boolean;
   isDragging: boolean;
   mobile: boolean;
   canWrite: boolean;
@@ -1402,7 +1400,8 @@ const DatabaseRow = memo(function DatabaseRow({
             <AppTooltip label={t("insertEntryHint")}>
               <button
                 type="button"
-                className={ROW_GUTTER_BUTTON}
+                // As tall as the handle beside it; the icon keeps its size.
+                className={cn(ROW_GUTTER_BUTTON, "size-7")}
                 aria-label={t("insertEntryHint")}
                 onClick={(event) => actions.insert(entry, event.altKey)}
               >
@@ -1418,8 +1417,9 @@ const DatabaseRow = memo(function DatabaseRow({
                   <button
                     type="button"
                     aria-label={t("entryActions")}
-                    // A handle: it shows the grab hand before the press.
-                    className={cn(ROW_GUTTER_BUTTON, "size-7", manual && "cursor-grab", isDragging && "cursor-grabbing")}
+                    // Like a page block's handle: the plain cursor on hover,
+                    // the grab cursor only once a drag is under way.
+                    className={cn(ROW_GUTTER_BUTTON, "size-7", isDragging && "cursor-grabbing")}
                     onPointerDownCapture={(event) => {
                       if (event.button === 0) event.stopPropagation();
                     }}

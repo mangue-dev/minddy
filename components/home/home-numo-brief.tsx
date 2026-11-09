@@ -51,6 +51,7 @@ export function HomeNumoBrief({ brief }: { brief: HomeBrief }) {
 
   return (
     <div data-testid="home-numo-brief">
+      {/* Copy and the time it was written, on hover, like Numo's answers. */}
       <ChatMessage message={message} />
     </div>
   );

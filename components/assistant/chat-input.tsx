@@ -87,7 +87,7 @@ import {
 import { useSemanticMentions } from "@/lib/use-semantic-mentions";
 import { stepSuggestion } from "@/lib/suggestion-menu";
 import { SemanticSearchingHint } from "@/components/semantic-searching-hint";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { revealCaretClearOfFade, useScrollFade } from "@/lib/use-scroll-fade";
 import { assistantDraftHtml } from "@/lib/assistant-composer-draft";
 import {
   findActiveComposerMenuQuery,
@@ -123,6 +123,8 @@ import { useWeekStart } from "@/lib/use-week-start";
 const ACCEPT =
   "image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json,.log";
 const ATTACHMENT_SHORTCUT_KEY = "a";
+/** Height of the fade at the text area's scrolled edges, which the caret stays clear of. */
+const COMPOSER_TEXT_FADE_PX = 20;
 
 /** The envelope of a mention in the editor: a NON-editable, empty node, in
  which React carries the real pill (MentionChip). Composing it does not redraw
@@ -515,7 +517,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const editorRef = useRef<HTMLDivElement>(null);
     // A long message scrolls inside the field: its hidden lines fade at the
     // edge they are behind, like every other scroller of the app.
-    const { ref: textScrollRef, scrollProps: textScrollProps } = useScrollFade<HTMLDivElement>("y", "1.25rem");
+    const { ref: textScrollRef, scrollProps: textScrollProps } = useScrollFade<HTMLDivElement>(
+      "y",
+      `${COMPOSER_TEXT_FADE_PX}px`,
+    );
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [addMenuOpen, setAddMenuOpen] = useState(false);
     const [addMenuQuery, setAddMenuQuery] = useState("");
@@ -874,20 +879,21 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
 
     const addContextOption = useCallback(
       (option: MentionOption) => {
-        // A forge account or Numo quotes a WRITER, not an entity to
-        // attach: they never land in the context of a conversation.
+        // Only these kinds can be pinned as the conversation's context. Every
+        // other one the menu lists (an MCP server, a skill, an attachment, a
+        // forge account…) goes into the message as a mention, as "@" would
+        // place it: picking it must never do nothing.
+        const kind = option.type;
         if (
-          option.type !== "member" &&
-          option.type !== "project" &&
-          option.type !== "issue" &&
-          option.type !== "objective" &&
-          option.type !== "page"
+          onAddContext &&
+          (kind === "member" ||
+            kind === "project" ||
+            kind === "issue" ||
+            kind === "objective" ||
+            kind === "page")
         ) {
-          return;
-        }
-        if (onAddContext) {
           onAddContext({
-            kind: option.type,
+            kind,
             id: option.id,
             label: option.label,
             ...(option.projectId ? { projectId: option.projectId } : {}),
@@ -1427,6 +1433,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       syncMentionSlots();
       syncSkillSlots();
       publishDraft();
+      // The new line must not land under the text area's bottom fade: once the
+      // layout and height settle for this frame, bring the caret clear of it.
+      requestAnimationFrame(() => {
+        const scroller = editorRef.current?.parentElement;
+        if (scroller) revealCaretClearOfFade(scroller, COMPOSER_TEXT_FADE_PX);
+      });
     }, [measureComposerLayout, publishDraft, refreshMention, refreshSlash, syncMentionSlots, syncSkillSlots]);
 
     /**
@@ -1657,9 +1669,13 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       syncSkillSlots();
       if (restoreCaretAtEnd) {
         requestAnimationFrame(() => {
-          if (editorRef.current === el && el.isConnected) {
-            focusContentEditableAtEnd(el);
-          }
+          if (editorRef.current !== el || !el.isConnected) return;
+          // Never take the caret from a field the user is typing in: a draft
+          // written by another composer would move the caret out of it, back
+          // to the start of that field.
+          const active = document.activeElement;
+          if (active && active !== document.body && !el.contains(active)) return;
+          focusContentEditableAtEnd(el);
         });
       }
     }, [draftHtml, restoreCaretAtEnd, syncMentionSlots, syncSkillSlots]);

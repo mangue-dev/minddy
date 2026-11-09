@@ -9,7 +9,7 @@ import type { DocumentEditorMentions } from "@/components/editor/document-editor
 import type { ResourceLike } from "@/components/resources";
 import { landedResources } from "@/lib/use-attachment-uploads";
 import { closeResourcePreview, useResourcePreview } from "@/lib/resource-preview";
-import { useResourceMentions } from "./use-resource-mentions";
+import { resourceLabelLinks, useResourceMentions } from "./use-resource-mentions";
 
 const push = vi.fn();
 // The real hook is memoized: one router for the component's lifetime.
@@ -120,4 +120,17 @@ it("lists a composer's landed entries under the id they will be saved with", () 
     { localId: "l2", status: "uploading", kind: "file", file_name: "b.png", storage_path: "", mime_type: "image/png", size_bytes: 1 },
   ]);
   expect(landed.map((entry) => entry.id)).toEqual(["l1"]);
+});
+
+it("names a card preview's own attachments and leaves the rest to the surface", () => {
+  const links = resourceLabelLinks(base.links ?? null, [file, page]);
+  expect(links.label?.("resource", "r1")).toBe("spec.pdf");
+  expect(links.label?.("resource", "r3")).toBe("Roadmap");
+  // Another issue's attachment stays unavailable.
+  expect(links.label?.("resource", "r2")).toBeNull();
+  expect(links.label?.("issue", "i1")).toBe("MIN-1");
+  // A preview names the attachment; it never opens it.
+  expect(links.href("resource", "r1")).toBeNull();
+  // Without a surface, every other type is left to the server.
+  expect(resourceLabelLinks(null, [file]).label?.("issue", "i1")).toBeNull();
 });

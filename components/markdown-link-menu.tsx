@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { MENU_ROW_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
 import { pageLinkTarget } from "@/lib/page-link";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 
@@ -43,11 +44,13 @@ function MenuItem({
       role="menuitem"
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
+      // A dropdown item's row and highlight (components/ui/menu-surface.ts).
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-none transition-colors",
+        MENU_ROW_CLASS,
+        "cursor-default outline-none select-none",
         destructive
           ? "text-destructive hover:bg-destructive-highlight focus-visible:bg-destructive-highlight"
-          : "text-foreground hover:bg-control focus-visible:bg-control",
+          : "text-foreground hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
       )}
     >
       {children}
@@ -243,7 +246,9 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
           role="menu"
           data-floating-surface
           aria-label={t("selectionLinkActions")}
-          className="pointer-events-auto z-[70] min-w-40 rounded-lg border border-border bg-popover p-1 shadow-md"
+          // The dropdown's surface (components/ui/menu-surface.ts): same
+          // radius, padding and edge as every other menu of the app.
+          className={cn("pointer-events-auto z-[70] min-w-40", MENU_SURFACE_CLASS)}
         >
           <MenuItem onClick={() => setEditOpen(true)}>
             <HugeiconsIcon icon={Edit04Icon} className="size-4 text-muted-foreground" aria-hidden />
@@ -257,7 +262,7 @@ export function MarkdownLinkMenu({ editor }: { editor: Editor | null }) {
             <HugeiconsIcon icon={Copy01Icon} className="size-4 text-muted-foreground" aria-hidden />
             {t("selectionCopyLink")}
           </MenuItem>
-          <div role="separator" className="-mx-1 my-1 h-px bg-border" />
+          <div role="separator" className="-mx-2 my-1 h-px bg-menu-separator" />
           <MenuItem onClick={removeLink} destructive>
             <HugeiconsIcon icon={Unlink04Icon} className="size-4" aria-hidden />
             {t("selectionRemoveLink")}

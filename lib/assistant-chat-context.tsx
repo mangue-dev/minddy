@@ -69,8 +69,20 @@ function purgeLegacyStorage(): void {
   }
 }
 
-/** Keep the conversation and pinned context alive across panel and route changes. */
-export function AssistantChatProvider({ children }: { children: ReactNode }) {
+/**
+ * Keep the conversation and pinned context alive across panel and route changes.
+ *
+ * `standalone` gives a surface its own conversation, apart from the Numo
+ * panel's (Home): it never restores the account's active conversation and
+ * never writes that pointer, so neither side takes over the other's thread.
+ */
+export function AssistantChatProvider({
+  children,
+  standalone = false,
+}: {
+  children: ReactNode;
+  standalone?: boolean;
+}) {
   const { pendingOptions, routeProjectId } = useAssistantPanel();
   const { refreshUser } = useAuth();
   const currentLocale = useLocale();
@@ -215,7 +227,9 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
   const [restoring, setRestoring] = useState(false);
   const [restored, setRestored] = useState(false);
   const [restoreRequested, setRestoreRequested] = useState(false);
-  const requestRestore = useCallback(() => setRestoreRequested(true), []);
+  const requestRestore = useCallback(() => {
+    if (!standalone) setRestoreRequested(true);
+  }, [standalone]);
   /**
   * What the server carries, as far as we know. `undefined` = we don't know
  * yet. It is HE who avoids the two parasitic writes of the recovery:
@@ -337,7 +351,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       retry,
       abort,
       scopeProjectId: scope,
-      restoring: restoring || !restored,
+      restoring: standalone ? false : restoring || !restored,
       requestRestore,
       isBusy,
       markResponseRead,
@@ -353,6 +367,7 @@ export function AssistantChatProvider({ children }: { children: ReactNode }) {
       retry,
       abort,
       scope,
+      standalone,
       restored,
       restoring,
       requestRestore,

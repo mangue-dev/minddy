@@ -176,9 +176,10 @@ export function AssistantPanel() {
           event.preventDefault();
           document.querySelector<HTMLElement>("[data-mobile-numo-launcher]")?.focus();
         } : undefined}
-        // Compact reads as a widget popover (no tint). Expanded reads as a
-        // modal, so it keeps the SheetOverlay base scrim. The transition
-        // fades the scrim in/out as the panel morphs between modes.
+        // Compact reads as a widget popover (no tint). Expanded keeps a faint
+        // tint of its own, lighter than the modal scrim dialogs share
+        // (MIN-931). The transition fades it in/out as the panel morphs
+        // between modes.
         overlayClassName={panelOverlayClassName(mobile ? "expanded" : displayMode)}
         // Don't close when the user interacts with a nested popover or
         // alert dialog (e.g. the conversation history popover). Radix portals

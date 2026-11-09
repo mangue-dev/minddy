@@ -19,6 +19,7 @@ import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import React, { useMemo, useCallback, useState, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { usePaletteConfig } from "../config";
+import { listenToNewKeydowns } from "../hooks/new-keydowns";
 import { ActionsPopover } from "../components/ActionsPopover";
 import { Footer } from "../components/Footer";
 import { ResultsList, type ItemGroup } from "../components/ResultsList";
@@ -447,8 +448,7 @@ export function SearchView({
       }
     };
 
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
+    return listenToNewKeydowns(document, handler);
   }, [shortcuts.actionsKey, isActionsPopoverOpen, orderedItems, activeIndex, hasActions, selectItem, openActionsForItem]);
 
   // Touch handlers for an item

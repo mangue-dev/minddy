@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act } from "react";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PaletteConfigProvider, buildCategoryOrder } from "../config";
@@ -214,5 +215,30 @@ describe("highlight across late rows", () => {
     await renderItems([{ id: "command-a", title: "Gamma", filterCategory: "commands" }, ...issues]);
     const ids = resultIds();
     expect(ids[usePaletteStore.getState().activeIndex]).toBe("issue-b");
+  });
+});
+
+describe("the key that opens the palette", () => {
+  it("is not handled by the palette it opened", async () => {
+    const onSelectItem = vi.fn();
+    const registry = createActionRegistry();
+    const palette = (
+      <PaletteConfigProvider value={{ t: translate, locale: "en", categories, categoryOrder: buildCategoryOrder(categories), registry, shortcuts: { actionsKey: ";" } }}>
+        <SearchView items={items} actionContext={context} onClose={vi.fn()} onSelectItem={onSelectItem} />
+      </PaletteConfigProvider>
+    );
+    await act(() => root.render(<button type="button">Sub-issue of</button>));
+    const menuRow = container.querySelector("button")!;
+    // A menu row whose Enter opens the palette (R's relation types). React
+    // handles a portaled menu's keys below the document, so the palette's
+    // document listeners are attached while that same Enter still bubbles up.
+    menuRow.addEventListener("keydown", () => flushSync(() => root.render(palette)));
+    const opening = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    // The key was pressed before the palette existed.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    act(() => { menuRow.dispatchEvent(opening); });
+    expect(onSelectItem).not.toHaveBeenCalled();
+    act(() => { document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })); });
+    expect(onSelectItem).toHaveBeenCalledTimes(1);
   });
 });

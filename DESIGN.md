@@ -284,6 +284,12 @@ Exceptions, which need no dialog:
 - **Overlays.** Escape closes the topmost layer only (`lib/overlay-layers.ts`);
   a dialog or side panel stays open while a nested popover is used
   (`keepOverlayOpenForPopper`).
+- **Scrim.** Every modal layer (dialogs, wizards, alert dialogs, sheets and
+  side panels) dims the whole app behind it with the one `--overlay-scrim`
+  token (`bg-scrim`), set in `app/tokens.css` for both themes. Menus,
+  popovers and the command palette float without it, and the Numo shell keeps
+  its own faint tint. Do not give a call site its own scrim color or a
+  backdrop blur.
 - **Motion.** Short and functional, with the shared springs in
   `lib/motion.ts`. `prefers-reduced-motion` stops animations globally; never
   rely on motion to convey state.

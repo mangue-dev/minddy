@@ -12,6 +12,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent,
@@ -24,7 +25,7 @@ import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
 import { useDisplayedPathname, useDisplayedSearchParam } from "@/lib/pending-navigation";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { animate, motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useLocale, useTranslations } from "next-intl";
 import { documentationPath } from "@/lib/documentation-core.mjs";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ import {
   panelRowVariants,
   usePanelDirection,
 } from "@/components/sidebar-panel-transition";
+import { useSidebarScrollEdges } from "@/lib/use-sidebar-scroll-edges";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
 import { SidebarOnboarding } from "@/components/sidebar-onboarding";
@@ -383,6 +385,8 @@ function SidebarNav({
   return (
     <nav
       aria-label={t("mainNavigation")}
+      // The edge fades follow this scroller (useSidebarScrollEdges).
+      data-sidebar-scroller=""
       className={cn(
         "scrollbar-quiet flex-1 overflow-x-hidden overflow-y-auto pt-[calc((var(--app-content-header-height)-2.25rem)/2)] pb-2",
         GUTTER,
@@ -1321,25 +1325,15 @@ export const AppSidebar = memo(function AppSidebar({
     panel === "project" ? modeKey : panel,
   );
 
-  // The level 2/3 top fade only shows once the page's list has scrolled: at
-  // rest it would dim the first option for nothing. Scroll does not bubble,
-  // so the slot listens in the capture phase to whichever list the page
-  // teleported in.
-  const [slotNode, setSlotNode] = useState<HTMLDivElement | null>(null);
-  const [listScrolled, setListScrolled] = useState(false);
+  // The edge fades follow the scroller of the panel on screen: the level 2/3
+  // top fade only shows once the page's list has scrolled (at rest it would
+  // dim the first option for nothing), and the bottom fade only while rows
+  // remain below — at the end of the list, or when it does not overflow, the
+  // last option is not dimmed either.
+  const { ref: panelsRef, edges: scrollEdges } = useSidebarScrollEdges<HTMLDivElement>();
   const slotRef = useCallback((node: HTMLDivElement | null) => {
-    setSlotNode(node);
     setSlot(node);
   }, [setSlot]);
-  useEffect(() => {
-    setListScrolled(false);
-    if (!slotNode) return;
-    const onScroll = (event: Event) => {
-      if (event.target instanceof HTMLElement) setListScrolled(event.target.scrollTop > 0);
-    };
-    slotNode.addEventListener("scroll", onScroll, { capture: true, passive: true });
-    return () => slotNode.removeEventListener("scroll", onScroll, { capture: true });
-  }, [slotNode, pathname]);
 
   // Menus open out of the bar (Radix portal); while one is up, the hidden
   // navigation overlay must stay pinned (see SidebarNavOverlay).
@@ -1351,6 +1345,33 @@ export const AppSidebar = memo(function AppSidebar({
   );
 
   const shellTransition = reduce ? { duration: 0 } : transitions.panel;
+
+  // Moving between the pages of level 2/3 (pull requests → routines, a
+  // project's triage → its feedback, another project on the same tab) is not
+  // a level change: the panel and its teleport slot stay mounted. The new
+  // page's list still arrives with the same slide and fade as a level swap,
+  // forward like any lateral move. Opening another item of the same page
+  // keeps the back target, so the list does not move under the pointer.
+  const level2Ref = useRef<HTMLDivElement>(null);
+  const level2Key = back ? `${back.href}|${back.label}` : null;
+  const previousLevel2 = useRef({ key: level2Key, shown: showSecondary });
+  useLayoutEffect(() => {
+    const previous = previousLevel2.current;
+    previousLevel2.current = { key: level2Key, shown: showSecondary };
+    const element = level2Ref.current;
+    if (reduce || !element || !showSecondary || !previous.shown || previous.key === level2Key) return;
+    // At its first frame before the next paint: the new page's rows must
+    // not flash at rest before the slide starts.
+    element.style.opacity = "0";
+    const controls = animate(
+      element,
+      { opacity: [0, 1], x: [PANEL_OFFSET, 0] },
+      transitions.panel,
+    );
+    // Interrupted (another page, or the level leaves), it lands at rest
+    // rather than staying half-faded.
+    return () => controls.complete();
+  }, [level2Key, showSecondary, reduce]);
 
   const level1 = (
     <SidebarNav
@@ -1383,10 +1404,11 @@ export const AppSidebar = memo(function AppSidebar({
    * The panel stays mounted across sibling routes (pull requests →
    * routines), and so does the back row: only its label changes, because
    * moving between pages of the same level is not a level change and must
-   * not replay the level animation.
+   * not remount the slot. The whole panel slides in place instead (see
+   * `level2Key` above).
    */
   const level2 = (
-    <>
+    <div ref={level2Ref} className="flex min-h-0 flex-1 flex-col">
       <div className="relative h-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] shrink-0">
       <AnimatePresence mode="sync" initial={false}>
         {back && (
@@ -1410,7 +1432,7 @@ export const AppSidebar = memo(function AppSidebar({
       {/* Same horizontal gutter as the level-1 rows: whatever the level or
           the page, the options start and end at the same width. */}
       <div ref={slotRef} className={cn("flex min-h-0 flex-1 flex-col", GUTTER)} />
-    </>
+    </div>
   );
 
   const railId = useId();
@@ -1431,7 +1453,7 @@ export const AppSidebar = memo(function AppSidebar({
 
       {/* All levels live in the same flex-1 area, stacked absolutely so a
           swap animates over a stable layout instead of resizing anything. */}
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div ref={panelsRef} className="relative flex min-h-0 flex-1 flex-col">
         {/* Keep the portal destination mounted: changing navigation levels
             must not reparent or remount a page's list during the animation. */}
         <motion.div
@@ -1483,15 +1505,19 @@ export const AppSidebar = memo(function AppSidebar({
             aria-hidden
             className={cn(
               "pointer-events-none absolute inset-x-0 top-[calc((var(--app-content-header-height)-2.25rem)/2+2.25rem+0.5rem)] h-4 bg-gradient-to-b from-sidebar to-transparent transition-opacity duration-150",
-              listScrolled ? "opacity-100" : "opacity-0",
+              scrollEdges.start ? "opacity-100" : "opacity-0",
             )}
           />
         ) : null}
         {/* Bottom fade, on every level: options dissolve just above the
-            account line. */}
+            account line while more of them remain below, and the fade
+            leaves once the list reaches its end. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-sidebar to-transparent"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-sidebar to-transparent transition-opacity duration-150",
+            scrollEdges.end ? "opacity-100" : "opacity-0",
+          )}
         />
       </div>
 

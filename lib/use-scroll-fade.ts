@@ -107,7 +107,10 @@ export function useScrollFade<T extends HTMLElement>(
     const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
     ro?.observe(el);
     const mo = new MutationObserver(update);
-    mo.observe(el, { childList: true, subtree: true });
+    // `characterData` too: typing into an editable scroller changes text nodes
+    // only, and a line that wraps past the cap neither adds a node nor resizes
+    // the (capped) scroller, so its trailing fade stayed over the new line.
+    mo.observe(el, { childList: true, subtree: true, characterData: true });
     return () => {
       ro?.disconnect();
       mo.disconnect();
@@ -128,4 +131,44 @@ export function useScrollFade<T extends HTMLElement>(
   // fade — this is also the condition for a back button at the bottom (the agent thread).
   // Measuring it twice on the same node would not teach anything more.
   return { ref, scrollProps, edges };
+}
+
+/**
+ * Keeps the caret of an editable scroller clear of its edge fades.
+ *
+ * The browser scrolls the caret just into view while typing, which leaves the
+ * caret line under the trailing fade (a scroller with bottom padding is never
+ * "at the end" then). Typing at the end of the text scrolls to the very bottom,
+ * which also lifts the fade; elsewhere the caret line is moved out of the fade
+ * zone of `fadePx` at either edge. Call it after an input event.
+ */
+export function revealCaretClearOfFade(scroller: HTMLElement, fadePx: number) {
+  const selection = typeof window === "undefined" ? null : window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const caret = selection.getRangeAt(0);
+  if (!scroller.contains(caret.endContainer)) return;
+  if (scroller.scrollHeight <= scroller.clientHeight) return;
+  const rest = document.createRange();
+  rest.selectNodeContents(scroller);
+  rest.setStart(caret.endContainer, caret.endOffset);
+  if (rest.toString().trim() === "") {
+    scroller.scrollTop = scroller.scrollHeight;
+    return;
+  }
+  // A caret on an empty line has no box of its own: use its line's element.
+  let rect = caret.getBoundingClientRect();
+  if (rect.height === 0) {
+    const node = caret.endContainer;
+    const host = node.nodeType === Node.ELEMENT_NODE
+      ? ((node as Element).childNodes[caret.endOffset] ?? node)
+      : node.parentElement;
+    if (host instanceof Element) rect = host.getBoundingClientRect();
+  }
+  if (rect.height === 0) return;
+  const box = scroller.getBoundingClientRect();
+  if (rect.bottom > box.bottom - fadePx) {
+    scroller.scrollTop += rect.bottom - (box.bottom - fadePx);
+  } else if (rect.top < box.top + fadePx && scroller.scrollTop > 0) {
+    scroller.scrollTop -= box.top + fadePx - rect.top;
+  }
 }

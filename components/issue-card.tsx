@@ -788,7 +788,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   // their JSX icons — even for CLOSED menus.
   const memberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
-  const rich = useIssueCardRichSlots(issue);
+  const rich = useIssueCardRichSlots(issue, { resolveResources: true });
 
   const setStatus = onUpdate
     ? (status: IssueStatus) => onUpdate({ status })

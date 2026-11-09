@@ -708,6 +708,24 @@
           "prompt": "Continue escrevendo esta página de onde ela para."
         }
       },
+      "database": {
+        "s1": {
+          "title": "Resumir este banco de dados",
+          "prompt": "Resuma as entradas deste banco de dados: o que elas acompanham e em que pé estão."
+        },
+        "s2": {
+          "title": "Criar uma visualização",
+          "prompt": "Crie uma visualização salva deste banco de dados, filtrada e ordenada para o que estou fazendo."
+        },
+        "s3": {
+          "title": "Adicionar entradas",
+          "prompt": "Me ajude a adicionar entradas a este banco de dados."
+        },
+        "s4": {
+          "title": "Sugerir colunas",
+          "prompt": "Sugira as colunas que faltam neste banco de dados e depois adicione as que eu escolher."
+        }
+      },
       "feedback": {
         "s1": {
           "title": "Resumir o feedback",
@@ -4139,6 +4157,10 @@
     "sectionMyReview": "Precisam da minha revisão",
     "sectionTeamReview": "Precisam da revisão da minha equipe",
     "sectionCompleted": "Concluídos recentemente",
+    "emptySectionCreated": "Nenhum pull request aberto por você",
+    "emptySectionReview": "Nenhum pull request aguardando sua revisão",
+    "emptySectionTeam": "Nenhum pull request aguardando a revisão da sua equipe",
+    "emptySectionCompleted": "Nenhum pull request concluído recentemente",
     "filterSections": "Filtrar seções",
     "emptySections": "Nenhum pull request nestas seções",
     "readFailed": "Não foi possível atualizar este pull request. Tente novamente.",

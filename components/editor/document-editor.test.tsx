@@ -227,3 +227,15 @@ it("keeps a read-only surface out of the text box role", async () => {
   expect(dom.hasAttribute("role")).toBe(false);
   expect(dom.hasAttribute("aria-label")).toBe(false);
 });
+
+it("focuses the editor within the press on the box around it, and keeps the browser from moving the focus away", async () => {
+  const api = await mount({ value: "Intro", className: "min-h-24" });
+  const box = host.firstElementChild as HTMLElement;
+  const press = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+  act(() => {
+    box.dispatchEvent(press);
+  });
+  // Synchronous: iOS raises its keyboard only for a focus given during the tap.
+  expect(document.activeElement).toBe(api().editor()!.view.dom);
+  expect(press.defaultPrevented).toBe(true);
+});

@@ -19,10 +19,13 @@ function Popover({
   const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
   return (
     <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
+      {/* Radix follows the tracked state even when the caller leaves it
+          uncontrolled: the content's own outside-click listener closes the
+          popover through `tracked.onOpenChange`, which otherwise would only
+          flip the mirror and freeze a popover Radix still shows. */}
       <PopoverPrimitive.Root
         data-slot="popover"
-        open={open}
-        defaultOpen={defaultOpen}
+        open={tracked.open}
         onOpenChange={tracked.onOpenChange}
         {...props}
       />

@@ -59,15 +59,19 @@ import { cn } from "@/lib/utils";
  * surfaces.
  */
 
-// Hover: a faint tint and a firmer edge. The tint also stays while one of the
-// card's menus or pickers is open (`data-menu-open`, or a pill whose picker is
-// open), pointer on it or not: the card reads as the one the open surface acts on.
+// Hover: a faint tint and a slightly firmer edge, kept light so a hovered card
+// still reads as a card and not as a grey block: 2.5% of the foreground over
+// the card and a border at 15%, one step above the 10% at rest. One value for
+// both themes, so a selected card's own hover tint keeps winning in dark too.
+// The tint also stays while one of the card's menus or pickers is open
+// (`data-menu-open`, or a pill whose picker is open), pointer on it or not:
+// the card reads as the one the open surface acts on.
 const CARD_HOVER =
-  "pointer-fine:hover:border-foreground/20 pointer-fine:hover:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:pointer-fine:hover:border-foreground/25 " +
-  "data-menu-open:border-foreground/20 data-menu-open:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:data-menu-open:border-foreground/25 " +
-  "has-[[aria-expanded=true]]:border-foreground/20 has-[[aria-expanded=true]]:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] dark:has-[[aria-expanded=true]]:border-foreground/25";
+  "pointer-fine:hover:border-foreground/15 pointer-fine:hover:bg-[color-mix(in_oklab,var(--card)_97.5%,var(--foreground))] " +
+  "data-menu-open:border-foreground/15 data-menu-open:bg-[color-mix(in_oklab,var(--card)_97.5%,var(--foreground))] " +
+  "has-[[aria-expanded=true]]:border-foreground/15 has-[[aria-expanded=true]]:bg-[color-mix(in_oklab,var(--card)_97.5%,var(--foreground))]";
 const CARD_HELD =
-  "data-held:cursor-grabbing data-held:border-foreground/20 data-held:bg-[color-mix(in_oklab,var(--card)_96%,var(--foreground))] data-held:shadow-md dark:data-held:border-foreground/25";
+  "data-held:cursor-grabbing data-held:border-foreground/15 data-held:bg-[color-mix(in_oklab,var(--card)_97.5%,var(--foreground))] data-held:shadow-md";
 
 /* Read-only, the glyph is the value's only trace: an image named by it
    (WCAG 1.1.1). The pickers name their trigger the same way. */
@@ -410,8 +414,8 @@ export function IssueCardFace({
         "flex flex-col gap-2 rounded-2xl border border-foreground/10 px-[18px] py-3 text-left transition-colors duration-150",
         // Bulk selection (MIN-75): blue-tinted background instead of an outline.
         selected ? "bg-primary/10" : "bg-card",
-        // Hovered, and held while it is dragged, the card firms up its edge
-        // and takes a faint tint: the drag overlay keeps the hovered look.
+        // Hovered, and held while it is dragged, the card firms up its edge a
+        // little and takes a faint tint: the drag overlay keeps the hovered look.
         CARD_HOVER,
         CARD_HELD,
         selected && "pointer-fine:hover:bg-primary/15 data-menu-open:bg-primary/15 has-[[aria-expanded=true]]:bg-primary/15 data-held:bg-primary/15",

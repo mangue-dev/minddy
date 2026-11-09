@@ -10,7 +10,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
@@ -46,6 +46,8 @@ import { TypedMentionChip } from "@/components/typed-mention-chip";
 import { keepMentionUrls, SANITIZE_SCHEMA } from "@/components/markdown";
 import { parseMentionHref } from "@/lib/mention-link";
 import { AppTooltip } from "@/components/ui/app-tooltip";
+import { messageTimeLabel } from "@/lib/message-time";
+import { cn } from "@/lib/utils";
 import {
   NumoUsageExhaustedCard,
   parseNumoUsageExhausted,
@@ -80,13 +82,16 @@ interface ChatMessageProps {
    *  accordion is intermediate narration, not an answer to take away. The host
    *  decides via `copyableMessageIds` (lib/assistant-turns). */
   showCopyButton?: boolean;
+  /** Keeps the Copy button visible without hovering: the host sets it on
+   *  Numo's latest answer, the one most often copied. */
+  pinCopyButton?: boolean;
   /** Content placed between an assistant answer and its Copy button. */
   afterContent?: ReactNode;
 }
 
-// ── Copy button ───────────────────────────────────────────────────────
+// ── Copy button and sent time ─────────────────────────────────────
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, pinned }: { text: string; pinned: boolean }) {
   const tc = useTranslations("Common");
   const [copied, setCopied] = useState(false);
 
@@ -105,23 +110,65 @@ function CopyButton({ text }: { text: string }) {
         variant="ghost"
         size="sm"
         aria-label={tc("copy")}
-        className="size-5 rounded-md bg-transparent p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 touch:opacity-100"
+        className={cn(
+          "size-7 rounded-md bg-transparent p-1.5 text-muted-foreground transition-[opacity,color] hover:bg-accent hover:text-foreground",
+          pinned ? "opacity-100" : "opacity-0 group-hover:opacity-100 touch:opacity-100",
+        )}
       >
         {copied ? (
-          <HugeiconsIcon icon={CheckIcon} className="size-3 text-brand" />
+          <HugeiconsIcon icon={CheckIcon} className="size-4 text-brand" />
         ) : (
-          <HugeiconsIcon icon={Copy01Icon} className="size-3" />
+          <HugeiconsIcon icon={Copy01Icon} className="size-4" />
         )}
       </IconButton>
     </AppTooltip>
   );
 }
 
+/** When the message was sent, shown on hover only, in the Copy button's
+ *  color. The shortest label that stays unambiguous (lib/message-time). */
+function SentTime({ sentAt }: { sentAt: string }) {
+  const locale = useLocale();
+  const label = messageTimeLabel(sentAt, locale);
+  if (!label) return null;
+  return (
+    <time
+      dateTime={sentAt}
+      className="text-xs tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 touch:opacity-100"
+    >
+      {label}
+    </time>
+  );
+}
+
+/** The row under a bubble: Copy, with the time on the side away from the
+ *  bubble's edge (after it for Numo, before it for the user). */
+function MessageActions({
+  text,
+  sentAt,
+  side,
+  pinned = false,
+}: {
+  text: string;
+  sentAt: string;
+  side: "start" | "end";
+  pinned?: boolean;
+}) {
+  return (
+    // Under Numo's answer the row starts at the text's edge: the button's own
+    // padding is pulled back so its icon lines up with the first letter. The
+    // user's bubble is right-aligned and keeps it.
+    <div className={cn("flex items-center gap-1.5", side === "end" ? "flex-row-reverse" : "-ml-1.5")}>
+      <CopyButton text={text} pinned={pinned} />
+      <SentTime sentAt={sentAt} />
+    </div>
+  );
+}
+
 // ── Contexte d'un message ─────────────────────────────────────────────
 
-/** What Numo had in mind for THIS message. The project is left
- side: it applies to the entire conversation, repeating it at each bubble
- would not teach anything. */
+/** What Numo had in mind for THIS message, its project included: Numo
+ receives it with the message, so the row says so too. */
 function MessageContextRow({
   context,
   resources,
@@ -136,7 +183,7 @@ function MessageContextRow({
       ? contextChips(context, {
           t,
           project: (id) => projects.find((p) => p.id === id),
-        }).filter((chip) => chip.kind !== "project")
+        })
       : [],
     [context, t, projects],
   );
@@ -447,6 +494,7 @@ export const ChatMessage = memo(function ChatMessage({
   seedLive = false,
   onSeedCreated,
   showCopyButton = true,
+  pinCopyButton = false,
   afterContent,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
@@ -461,7 +509,10 @@ export const ChatMessage = memo(function ChatMessage({
     >
       <div className="flex w-full flex-col">
         {isUser ? (
-          <div className="ml-auto flex max-w-[85%] flex-col items-end gap-1">
+          // The full 85% column, not the bubble's width: the context row
+          // measures this room, and a short follow-up's bubble left it only
+          // enough for its "+N".
+          <div className="ml-auto flex w-full max-w-[85%] flex-col items-end gap-1">
             <MessageContextRow
               context={message.context}
               resources={
@@ -491,7 +542,7 @@ export const ChatMessage = memo(function ChatMessage({
                   />
                 </div>
                 <div className="-mt-0.5">
-                  <CopyButton text={message.content} />
+                  <MessageActions text={message.content} sentAt={message.created_at} side="end" />
                 </div>
               </>
             )}
@@ -509,7 +560,12 @@ export const ChatMessage = memo(function ChatMessage({
                 {afterContent ? <div className="w-full">{afterContent}</div> : null}
                 {showCopyButton && (
                   <div className="-mt-1">
-                    <CopyButton text={message.content} />
+                    <MessageActions
+                      text={message.content}
+                      sentAt={message.created_at}
+                      side="start"
+                      pinned={pinCopyButton}
+                    />
                   </div>
                 )}
               </>

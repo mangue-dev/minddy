@@ -8,7 +8,8 @@ import { useAuth } from "@/lib/auth-context";
 import { displayName } from "@/lib/display-name";
 import { pickGreeting } from "@/lib/home-greeting";
 import { useAssistantPanel, useSuppressAssistantFab } from "@/lib/assistant-panel-context";
-import { useAssistantChatContext } from "@/lib/assistant-chat-context";
+import { AssistantChatProvider, useAssistantChatContext } from "@/lib/assistant-chat-context";
+import { AssistantComposerProvider } from "@/lib/assistant-composer-context";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
 import { AppContentHeader } from "@/components/app-content-header";
@@ -38,20 +39,36 @@ function useGreeting(name: string): string {
 
 /**
  * Home is a Numo conversation (MIN-930): the same view as the Numo panel,
- * sharing its conversation, without the panel's header. Each time Home is
- * shown it opens a new conversation, unless a reply is still running (see
- * `startFresh` in the shell); the one before stays in the history, and a
- * conversation started here continues in the panel.
+ * without the panel's header, but with a conversation of its own. It never
+ * picks up the panel's thread, and the panel never picks up Home's: each
+ * one keeps its own state (`AssistantChatProvider standalone`) and its own
+ * draft (`AssistantComposerProvider`). Each time
+ * Home is shown it opens a new conversation, unless a reply is still
+ * running (see `startFresh` in the shell); the one before stays in the
+ * history.
  *
  * The new conversation opens with the greeting and Numo's summary of its
- * journal when Numo has written one. Once the user writes, the greeting
- * leaves and the summary stays on top, as Numo's opening message. No banner or notice sits in it: the page is a
+ * journal when Numo has written one. Once the user writes, the summary
+ * stays on top as Numo's opening message, under the greeting; without a
+ * summary, the greeting leaves. No banner or notice sits in it: the page is a
  * conversation. The suggestions above the composer are the ones Numo wrote
  * with its summary, or the fixed home set until it has written any. Without
  * an AI provider there is no conversation: Home keeps the greeting and the
  * account notices.
  */
 export default function HomePage() {
+  return (
+    // Its own conversation AND its own unsent draft: what is typed in the
+    // panel's composer never shows up in Home's, nor the reverse.
+    <AssistantChatProvider standalone>
+      <AssistantComposerProvider>
+        <HomeConversation />
+      </AssistantComposerProvider>
+    </AssistantChatProvider>
+  );
+}
+
+function HomeConversation() {
   const t = useTranslations("Assistant");
   const { user } = useAuth();
   const meta = user?.user_metadata as AuthMeta | undefined;
@@ -69,7 +86,7 @@ export default function HomePage() {
   const shellRef = useRef<AssistantShellHandle>(null);
   // The page IS the conversation: the floating button would open it twice.
   useSuppressAssistantFab(true);
-  // The open panel shows the same conversation and owns the keyboard.
+  // The open panel owns the keyboard while it covers Home.
   const { isOpen: panelOpen } = useAssistantPanel();
   const { state: chat, isBusy } = useAssistantChatContext();
   // Already on a blank conversation: starting another would change nothing.
@@ -122,8 +139,10 @@ export default function HomePage() {
               {brief ? <HomeNumoBrief brief={brief} /> : null}
             </div>
           }
-          // Once you write, the greeting leaves and Numo's word stays as the
-          // opening message of the conversation; without a word, nothing stays.
+          // Once you write, Numo's word stays as the opening message of the
+          // conversation, with the greeting above it; without a word, the
+          // greeting leaves too and the conversation starts with your message.
+          keptHeader={brief ? welcome : null}
           keptIntro={brief ? <HomeNumoBrief brief={brief} /> : null}
           // Numo receives it too: the conversation opens with it (MIN-933).
           openingBriefId={brief?.id ?? null}

@@ -51,6 +51,17 @@ describe("listenOutsideClick", () => {
     expect(onOutside).toHaveBeenCalledTimes(1);
   });
 
+  it("ignores a press begun in the popover that a nested list ends on the page", () => {
+    // A select opened inside covers its trigger: the click lands on `body`.
+    document.getElementById("inside")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document.getElementById("in-above")!.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(onOutside).not.toHaveBeenCalled();
+    press(outside);
+    expect(onOutside).toHaveBeenCalledTimes(1);
+  });
+
   it("ignores the click that ends the press which opened it", () => {
     outside.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(onOutside).not.toHaveBeenCalled();

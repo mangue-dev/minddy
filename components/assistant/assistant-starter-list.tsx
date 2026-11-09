@@ -65,7 +65,10 @@ export function AssistantStarterList({
           key={items ? `${page}-custom` : page}
           role="list"
           aria-label={t("startersLabel")}
-          className={cn("mb-2 hidden flex-col divide-y divide-border/70 app-desktop:flex", className)}
+          // In line with the composer's + button: the list sits in by its
+          // 10px gutter (`pl-2.5` of the controls row) and each row's 8px
+          // padding puts its 16px icon where the + icon is, centered in 32px.
+          className={cn("mx-2.5 mb-2 hidden flex-col divide-y divide-border/70 app-desktop:flex", className)}
           initial={reducedMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(6px)", y: 6 }}
           animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
           exit={reducedMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(6px)", y: 6 }}
@@ -75,7 +78,7 @@ export function AssistantStarterList({
             return (
               <div key={key} role="listitem" className="py-0.5">
                 <Button
-                  className="h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left font-normal whitespace-normal text-muted-foreground hover:text-foreground"
+                  className="h-auto w-full justify-start gap-3 rounded-lg px-2 py-2 text-left font-normal whitespace-normal text-muted-foreground hover:text-foreground"
                   onClick={() => onPick(prompt)}
                   type="button"
                   variant="ghost"

@@ -198,7 +198,9 @@ export function SecondarySidebar({
         if (onBlankClick && isBlankSidebarClick(event.target)) onBlankClick();
       }}
     >
-      <div className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* Teleported into the primary sidebar: its edge fades follow this
+          scroller (useSidebarScrollEdges). */}
+      <div data-sidebar-scroller="" className="scrollbar-quiet flex min-h-0 flex-1 flex-col overflow-y-auto">
         {children}
       </div>
     </aside>

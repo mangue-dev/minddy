@@ -30,6 +30,7 @@ import { RELATION_TYPES } from "@/lib/relation-constants";
 import type { HierarchyRelation, RelationMenuKind } from "@/lib/issue-hierarchy";
 import { useChordPrefixForEvents } from "@/lib/keyboard/keyboard-context";
 import { keyboardAnchorIn, useHoverKeys } from "@/lib/keyboard/hover-keys";
+import { keyboardAimsLast } from "@/lib/keyboard-modality";
 import { selectionKeysActive } from "@/lib/keyboard/selection-keys";
 import { CommandAnchor } from "@/components/command-anchor";
 import { useMountedWhileClosing } from "@/components/ui/overlay-freeze";
@@ -167,12 +168,18 @@ export function useIssueFieldShortcuts(
     )
       return;
     const key = eventKey(e);
-    // Space presses a focused button inside the region; on the region's own
-    // focus stop (a card's drag wrapper) it stays the region's action.
+    // Space presses a control the keyboard focused inside this region (Tab to
+    // a card's status button, then Space). Everywhere else it is the region's
+    // action: a mouse user aims with the pointer, and focus left on a button
+    // by an earlier click (a picker trigger Radix refocuses on close, a
+    // toolbar button, another card) must neither swallow Space on the hovered
+    // card nor be pressed in its place. The region's own focus stop (a card's
+    // drag wrapper) sits outside the region, so it keeps the region's action.
     if (
       key === " " &&
       el &&
-      el !== regionRef.current?.parentElement &&
+      keyboardAimsLast() &&
+      regionRef.current?.contains(el) &&
       el.closest("button, a[href], [role=button], [role=combobox], [role=checkbox], [role=switch]")
     )
       return;

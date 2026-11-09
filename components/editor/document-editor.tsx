@@ -317,7 +317,15 @@ export function DocumentEditor({
         // Clicking the empty space below the content still focuses the editor;
         // a click in the margin beside a line already placed the caret there.
         if (event.defaultPrevented) return;
-        if (event.target === event.currentTarget && editor && !editor.isDestroyed) editor.commands.focus("end");
+        if (event.target !== event.currentTarget || !editor || editor.isDestroyed) return;
+        // The browser's own default for a press on this non-focusable box
+        // moves the focus off the editor right after this handler. tiptap's
+        // `focus` then took it back on the next frame, outside the tap: iOS
+        // gave the editor the focus (its toolbar showed) but raised no
+        // keyboard. Cancel that default and focus now, within the gesture.
+        event.preventDefault();
+        editor.view.focus();
+        editor.commands.focus("end");
       }}
     >
       <RichEditor

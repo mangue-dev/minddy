@@ -110,6 +110,13 @@ const SECTION_LABELS: Record<PullRequestSection, MessageKey<"PullRequests">> = {
   team: "sectionTeamReview",
   completed: "sectionCompleted",
 };
+/** The line an empty section shows under its header, one per section. */
+const SECTION_EMPTY_LABELS: Record<PullRequestSection, MessageKey<"PullRequests">> = {
+  created: "emptySectionCreated",
+  review: "emptySectionReview",
+  team: "emptySectionTeam",
+  completed: "emptySectionCompleted",
+};
 const SECTION_ICONS = {
   review: GitPullRequestIcon,
   team: UserGroupIcon,
@@ -300,6 +307,7 @@ function PrGroupRows({
   open,
   showAll,
   collapsible,
+  searching,
   selectedId,
   fmtDay,
   onToggle,
@@ -318,6 +326,8 @@ function PrGroupRows({
   open: boolean;
   showAll: boolean;
   collapsible: boolean;
+  /** A text search is narrowing the list. */
+  searching: boolean;
   selectedId: string | null;
   fmtDay: (at: string) => string;
   onToggle: () => void;
@@ -332,9 +342,12 @@ function PrGroupRows({
   const tCommon = useTranslations("Common");
   const t = useTranslations("PullRequests");
   const prs = group.items;
-  // A checked section with nothing in it is a bare header, folded; it opens
-  // by itself when a PR arrives, unless the reader folded it (MIN-817).
+  // A checked section with nothing in it says so in a muted line under its
+  // header, as an empty routine group does. During a search, every section
+  // shows: an empty one stays a bare header rather than repeating "nothing
+  // matches" under each.
   const empty = prs.length === 0 && !(group.key === "completed" && loadingInitialPage);
+  const bare = empty && searching;
 
   // The OPEN PR remains visible: if it is beyond the first five, the
   // cut goes down to it rather than hiding it.
@@ -348,13 +361,21 @@ function PrGroupRows({
       project={null}
       fallbackLabel={t(SECTION_LABELS[group.key])}
       headerIcon={<PrSectionIcon section={group.key} />}
-      open={open && !empty}
-      collapsible={collapsible && !empty}
+      open={open && !bare}
+      collapsible={collapsible && !bare}
       onToggle={onToggle}
       hiddenCount={prs.length - shown.length}
       onShowAll={onShowAll}
       showMoreLabel={tCommon("showMore")}
     >
+      {empty ? (
+        <p
+          className={cn("py-1.5 pr-2 text-xs text-muted-foreground", PROJECT_GROUP_INDENT)}
+          data-testid="pr-section-empty"
+        >
+          {t(SECTION_EMPTY_LABELS[group.key])}
+        </p>
+      ) : null}
       {shown.map((pr) => (
         <PrRow
           key={pr.prId}
@@ -943,6 +964,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                 open={filtering || !collapsedGroups.has(g.key)}
                 showAll={filtering || expandedGroups.has(g.key)}
                 collapsible={!filtering}
+                searching={filtering}
                 selectedId={selectedId}
                 fmtDay={fmtDay}
                 hasNextPage={completed.hasNextPage}

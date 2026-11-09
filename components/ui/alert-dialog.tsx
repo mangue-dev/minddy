@@ -66,8 +66,9 @@ function AlertDialogOverlay({
       // Tap the scrim above the sheet to dismiss (sheet mode only).
       onClick={sheet ? () => onOpenChange?.(false) : undefined}
       className={cn(
-        // No `backdrop-filter` — see the note on SidePanelOverlay.
-        "fixed inset-0 z-50 bg-black/10 duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 max-[479px]:bg-black/40",
+        // The one modal scrim (`--overlay-scrim`, MIN-931), dialog and sheet
+        // alike. No `backdrop-filter` — see the note on SidePanelOverlay.
+        "fixed inset-0 z-50 bg-scrim duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}

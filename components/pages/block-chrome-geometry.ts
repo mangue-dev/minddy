@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { scrollPane } from "@/lib/scroll-pane";
 import { styledBox } from "@/components/pages/block-actions";
 
-/** Side of the handle, the taller gutter button, in pixels: its 24 px icon
+/** Side of the gutter's handle and `+`, in pixels: the handle's 24 px icon
     (the 24 px body line height) and a 2 px padding. It is used to centre the
     buttons on the block's first line, which has no CSS equivalent. */
 export const BUTTON_SIZE = 28;

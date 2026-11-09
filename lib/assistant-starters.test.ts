@@ -40,6 +40,12 @@ describe("assistantStarterPage", () => {
   it("prefers an issue open in the side panel over its board", () => {
     expect(assistantStarterPage("/projects/p1", { issueId: "i1" })).toBe("issue");
   });
+
+  it("gives an open database its own set, not the document one", () => {
+    const route = "/projects/p1/pages/min-3f2a9c81";
+    expect(assistantStarterPage(route, { pageId: "d1", pageDatabase: true })).toBe("database");
+    expect(assistantStarterPage(route, { pageId: "d1" })).toBe("page");
+  });
 });
 
 describe("assistant starter catalog", () => {

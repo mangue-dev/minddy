@@ -11,9 +11,11 @@ import {
   Clock01Icon,
   Copy01Icon,
   CreditCardIcon,
+  DatabaseIcon,
   DashboardSpeed01Icon,
   Delete02Icon,
   File01Icon,
+  FilterIcon,
   GitBranchIcon,
   GitMergeIcon,
   GitPullRequestIcon,
@@ -51,6 +53,7 @@ export type AssistantStarterPage =
   | "objectives"
   | "pages"
   | "page"
+  | "database"
   | "feedback"
   | "projectSettings"
   | "issue"
@@ -84,6 +87,7 @@ const STARTER_ICONS: Record<AssistantStarterPage, StarterIcons> = {
   objectives: [ChartLineData01Icon, Target02Icon, AlertCircleIcon, Layers01Icon],
   pages: [Search01Icon, PencilEdit02Icon, File01Icon, Layers01Icon],
   page: [File01Icon, PencilEdit02Icon, CheckListIcon, AiMagicIcon],
+  database: [Analytics01Icon, FilterIcon, Add01Icon, DatabaseIcon],
   feedback: [MessageMultiple01Icon, ThumbsUpIcon, MailReply01Icon, Add01Icon],
   projectSettings: [Settings02Icon, Tag01Icon, GitBranchIcon, UserAdd01Icon],
   issue: [File01Icon, CheckListIcon, SplitIcon, PencilEdit02Icon],
@@ -142,6 +146,7 @@ export function assistantStarterPage(
   pageContext?: AssistantPageContext | null,
 ): AssistantStarterPage {
   if (pageContext?.issueId) return "issue";
+  if (pageContext?.pageDatabase) return "database";
   const segments = (pathname ?? "").split("/").filter(Boolean);
   if (segments[0] === "projects" && segments[1]) {
     const section = segments[2];
