@@ -187,6 +187,11 @@ const adminGate = vi.hoisted(() => ({ live: vi.fn() }));
 vi.mock("@/lib/server/assistant/admin-tools", () => ({
   ADMIN_ASSISTANT_TOOLS: [{ function: { name: "admin_get_instance_models" } }],
   ADMIN_PROMPT_BLOCK: "\n## Instance administration",
+  ROUTINE_ADMIN_LIMIT_PROMPT_LINE: "Instance administration is never available in a routine.",
+  BACKGROUND_ADMIN_PROMPT_BLOCK: "\n## Instance administration (background)",
+  ADMIN_BACKGROUND_GRANT: { background: true },
+  ADMIN_TOOL_NAMES: new Set(["admin_get_instance_models"]),
+  ADMIN_BACKGROUND_FREE_TOOLS: new Set(["admin_get_instance_models"]),
   ADMIN_READ_TOOLS: new Set(),
   adminGrantIsLive: adminGate.live,
 }));
@@ -327,6 +332,40 @@ describe("durable Numo execution", () => {
     expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).toContain("admin_get_instance_models");
     expect(messages[0].content).toContain("Instance administration");
     expect(context).toMatchObject({ adminGrant: adminSession });
+
+    h.processChat.mockClear();
+    adminGate.live.mockResolvedValue(false);
+    h.turn = { ...h.turn!, status: "queued" };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
+    const [lostMessages, lostTools, , lostContext] = h.processChat.mock.calls[0];
+    expect(lostTools.map((tool: { function: { name: string } }) => tool.function.name)).not.toContain("admin_get_instance_models");
+    expect(lostMessages[0].content).not.toContain("Instance administration");
+    expect(lostContext).toMatchObject({ adminGrant: null });
+  });
+
+  it("tells a routine that instance administration is out of reach, even with an admin session (MIN-944)", async () => {
+    const adminSession = { sessionId: "51600000-0000-4000-8000-000000000009", aal: "aal2", amr: [] };
+    h.turn = { ...h.turn!, intent: { ...(h.turn!.intent as object), routineId: "routine-1", adminSession } };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
+    const [messages, tools, , context] = h.processChat.mock.calls[0];
+    expect(adminGate.live).not.toHaveBeenCalled();
+    expect(tools.map((tool: { function: { name: string } }) => tool.function.name)).not.toContain("admin_get_instance_models");
+    expect(messages[0].content).toContain("## Routine occurrence");
+    expect(messages[0].content).toContain("Instance administration is never available in a routine.");
+    expect(messages[0].content).not.toContain("## Instance administration");
+    expect(context).toMatchObject({ adminGrant: null });
+  });
+
+  it("gives an admin account's background turn the admin tools without a session (MIN-944)", async () => {
+    h.turn = { ...h.turn!, intent: { ...(h.turn!.intent as object), wake: { batchId: "batch-1" } } };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });
+    const [messages, tools, , context] = h.processChat.mock.calls[0];
+    expect(adminGate.live).toHaveBeenCalledWith(h.turn.user_id, { background: true });
+    const names = tools.map((tool: { function: { name: string } }) => tool.function.name);
+    expect(names).toContain("admin_get_instance_models");
+    expect(names).not.toContain("ask_user");
+    expect(messages[0].content).toContain("## Instance administration (background)");
+    expect(context).toMatchObject({ adminGrant: { background: true }, proactive: true });
 
     h.processChat.mockClear();
     adminGate.live.mockResolvedValue(false);

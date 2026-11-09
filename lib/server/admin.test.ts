@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase-service", () => ({
   }),
 }));
 
-const { isAdminUser } = await import("./admin");
+const { isAdminAccountLive, isAdminUser } = await import("./admin");
 
 function account(overrides: Record<string, unknown> = {}) {
   return {
@@ -196,5 +196,33 @@ describe("isAdminUser", () => {
 
   it("rejects a missing user", async () => {
     await expect(isAdminUser(null, claims())).resolves.toBe(false);
+  });
+});
+
+describe("isAdminAccountLive (MIN-944)", () => {
+  it("accepts an admin account with two-factor authentication, without any session lookup", async () => {
+    await expect(isAdminAccountLive(ADMIN)).resolves.toBe(true);
+    expect(getUserById).toHaveBeenCalledWith(ADMIN);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects an account that lost its role, its factor or its MFA, or is banned", async () => {
+    for (const overrides of [
+      { email: "someone@example.test" },
+      { factors: [] },
+      { app_metadata: {} },
+      { banned_until: "2999-01-01T00:00:00.000Z" },
+    ]) {
+      getUserById.mockResolvedValue(account(overrides));
+      await expect(isAdminAccountLive(ADMIN)).resolves.toBe(false);
+    }
+  });
+
+  it("denies when the account cannot be read or the id is not one", async () => {
+    getUserById.mockRejectedValue(new Error("auth down"));
+    await expect(isAdminAccountLive(ADMIN)).resolves.toBe(false);
+    getUserById.mockReset();
+    await expect(isAdminAccountLive("not-an-id")).resolves.toBe(false);
+    expect(getUserById).not.toHaveBeenCalled();
   });
 });
