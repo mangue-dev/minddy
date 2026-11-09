@@ -412,15 +412,13 @@ describe("Pull Requests sections follow the filter (MIN-817)", () => {
   }
   const activeHeaders = [en.PullRequests.sectionCreatedByMe, en.PullRequests.sectionMyReview, en.PullRequests.sectionTeamReview];
 
-  it("shows every checked section, empty ones as folded headers", async () => {
+  it("shows every checked section, empty ones with a line naming what is missing", async () => {
     search = "";
     await render();
     await flush();
     await until(() => expect(headers()).toEqual(activeHeaders));
-    const empty = [...container.querySelectorAll("aside span.flex-1.font-medium")]
-      .find((node) => node.textContent === en.PullRequests.sectionTeamReview)!;
-    // A bare header: no toggle button, nothing listed under it.
-    expect(empty.closest("button")).toBeNull();
+    const lines = [...container.querySelectorAll('[data-testid="pr-section-empty"]')].map((node) => node.textContent);
+    expect(lines).toContain(en.PullRequests.emptySectionTeam);
     expect(container.querySelector('[data-navigation-href="/pull-requests?pr=pr"]')).not.toBeNull();
   });
 

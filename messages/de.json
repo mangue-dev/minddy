@@ -708,6 +708,24 @@
           "prompt": "Schreibe diese Seite dort weiter, wo sie aufhört."
         }
       },
+      "database": {
+        "s1": {
+          "title": "Diese Datenbank zusammenfassen",
+          "prompt": "Fasse die Einträge dieser Datenbank zusammen: was sie erfassen und wo sie stehen."
+        },
+        "s2": {
+          "title": "Eine Ansicht einrichten",
+          "prompt": "Erstelle eine gespeicherte Ansicht dieser Datenbank, gefiltert und sortiert nach dem, woran ich arbeite."
+        },
+        "s3": {
+          "title": "Einträge hinzufügen",
+          "prompt": "Hilf mir, Einträge zu dieser Datenbank hinzuzufügen."
+        },
+        "s4": {
+          "title": "Spalten vorschlagen",
+          "prompt": "Schlage Spalten vor, die dieser Datenbank fehlen, und füge dann die hinzu, die ich auswähle."
+        }
+      },
       "feedback": {
         "s1": {
           "title": "Das Feedback zusammenfassen",
@@ -4139,6 +4157,10 @@
     "sectionMyReview": "Warten auf mein Review",
     "sectionTeamReview": "Warten auf das Review meines Teams",
     "sectionCompleted": "Kürzlich abgeschlossen",
+    "emptySectionCreated": "Kein Pull Request von dir",
+    "emptySectionReview": "Kein Pull Request wartet auf dein Review",
+    "emptySectionTeam": "Kein Pull Request wartet auf das Review deines Teams",
+    "emptySectionCompleted": "Kein kürzlich abgeschlossener Pull Request",
     "filterSections": "Abschnitte filtern",
     "emptySections": "Keine Pull Requests in diesen Abschnitten",
     "readFailed": "Dieser Pull Request konnte nicht aktualisiert werden. Versuche es erneut.",

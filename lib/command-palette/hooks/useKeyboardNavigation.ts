@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { usePaletteConfig } from "../config";
 import { usePaletteStore } from "../store";
+import { listenToNewKeydowns } from "./new-keydowns";
 import type { ActionExecutionContext } from "../registry/types";
 import type { PaletteItem } from "../types";
 
@@ -190,12 +191,8 @@ export function useKeyboardNavigation({
   useEffect(() => {
     if (!enabled) return;
 
-    const handler = (e: KeyboardEvent) => handleKeyDown(e);
-    document.addEventListener("keydown", handler);
-
-    return () => {
-      document.removeEventListener("keydown", handler);
-    };
+    // Not the key that opened the palette (./new-keydowns.ts).
+    return listenToNewKeydowns(document, (e) => handleKeyDown(e));
   }, [enabled, handleKeyDown]);
 
   // Clamp active index when the list shrinks

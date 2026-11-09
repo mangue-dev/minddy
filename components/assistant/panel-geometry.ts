@@ -55,11 +55,17 @@ export function panelSheetClassName(displayMode: PanelDisplayMode): string {
   );
 }
 
-/** Overlay classes: transparent in compact (widget), scrim in extended (modal). */
+/**
+ * Overlay classes: transparent in compact (widget), a light tint in extended.
+ * The Numo shell stays out of the modal scrim the dialogs share (MIN-931): it
+ * sits beside the work rather than in front of it, so it keeps its own faint
+ * tint instead of `bg-scrim`.
+ */
 export function panelOverlayClassName(displayMode: PanelDisplayMode): string {
   return cn(
     "transition-[background-color,backdrop-filter] !duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-    displayMode === "compact" &&
-      "!bg-transparent supports-backdrop-filter:!backdrop-blur-none",
+    displayMode === "compact"
+      ? "!bg-transparent supports-backdrop-filter:!backdrop-blur-none"
+      : "!bg-black/10",
   );
 }

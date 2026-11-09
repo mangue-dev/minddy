@@ -4,6 +4,7 @@ import * as React from "react"
 import { HoverCard as HoverCardPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { INPUT_MODALITY_ATTRIBUTE } from "@/lib/keyboard-modality"
 import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding"
 
 /**
@@ -33,10 +34,29 @@ function HoverCard({
   )
 }
 
-function HoverCardTrigger(
-  props: React.ComponentProps<typeof HoverCardPrimitive.Trigger>,
-) {
-  return <HoverCardPrimitive.Trigger data-slot="hover-card-trigger" {...props} />
+/**
+ * Focus opens the card only while the keyboard drives focus (Tab, as
+ * lib/keyboard-modality.ts tracks it). A popover or menu focuses its first row
+ * when it opens: after a click, that focus is nobody's aim, and the first
+ * row's card must not open under a pointer resting elsewhere.
+ */
+function HoverCardTrigger({
+  onFocus,
+  ...props
+}: React.ComponentProps<typeof HoverCardPrimitive.Trigger>) {
+  return (
+    <HoverCardPrimitive.Trigger
+      data-slot="hover-card-trigger"
+      onFocus={(event) => {
+        onFocus?.(event)
+        // Radix skips its own opening on a prevented event.
+        if (!event.currentTarget.ownerDocument.documentElement.hasAttribute(INPUT_MODALITY_ATTRIBUTE)) {
+          event.preventDefault()
+        }
+      }}
+      {...props}
+    />
+  )
 }
 
 function HoverCardContent({
@@ -55,9 +75,10 @@ function HoverCardContent({
         sideOffset={sideOffset}
         collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
-          // Above popovers, menus and dialogs (z-50), whose rows it often
-          // explains — a relation in a card's popover —, below tooltips (z-60).
-          "z-[55] w-80 max-w-[calc(100vw-2rem)] origin-(--radix-hover-card-content-transform-origin) rounded-xl bg-popover p-3 text-sm text-popover-foreground shadow-md ring-1 ring-border outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // The stacking order lives with the floating surfaces' in
+          // app/globals.css: above popovers and menus, whose rows it often
+          // explains, below tooltips.
+          "w-80 max-w-[calc(100vw-2rem)] origin-(--radix-hover-card-content-transform-origin) rounded-xl bg-popover p-3 text-sm text-popover-foreground shadow-md ring-1 ring-border outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className,
         )}
         {...props}

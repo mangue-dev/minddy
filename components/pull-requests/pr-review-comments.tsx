@@ -514,7 +514,7 @@ function PlainComposer({
           onEscape={onCancel}
           autoFocus={autoFocus}
           placeholder={placeholder}
-          className="max-h-40 min-w-0 max-w-full overflow-y-auto"
+          className="placeholder-grows max-h-40 min-w-0 max-w-full overflow-y-auto"
           contentClassName="px-3 py-2 [&_p]:my-0"
         />
       </div>

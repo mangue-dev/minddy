@@ -296,6 +296,28 @@ describe("durable Numo execution", () => {
     const user = messages.find((message: { role: string }) => message.role === "user");
     expect(user.content).toBe(`Review [@issue seen by ${h.turn!.user_id}](mention:issue/i1) today`);
   });
+  it("reads its Home summary as its own opening message, mentions named (MIN-933)", async () => {
+    // The fixture returns rows newest first, as the query orders them: the
+    // summary, written before the user's message, goes after it here.
+    h.messages.push({
+      id: "home-brief-message",
+      turn_id: null,
+      role: "assistant",
+      content: "[@](mention:project/p1) is still empty",
+      tool_calls: null,
+      tool_call_id: null,
+      tool_name: null,
+      metadata: { home_brief: "51600000-0000-4000-8000-0000000000b1" },
+      context: null,
+    });
+    await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
+    const [messages] = h.processChat.mock.calls[0];
+    expect(messages[0].content).toContain("## Opening of this conversation");
+    const opening = messages.find((message: { role: string }) => message.role === "assistant");
+    expect(opening.content).toBe(`[@project seen by ${h.turn!.user_id}](mention:project/p1) is still empty`);
+    expect(messages.findIndex((message: { role: string }) => message.role === "assistant"))
+      .toBeLessThan(messages.findIndex((message: { role: string }) => message.role === "user"));
+  });
   it("offers the admin tools only while the recorded admin session is live (MIN-829)", async () => {
     const adminSession = { sessionId: "51600000-0000-4000-8000-000000000009", aal: "aal2", amr: [] };
     h.turn = { ...h.turn!, intent: { ...(h.turn!.intent as object), adminSession } };

@@ -708,6 +708,24 @@
           "prompt": "Continue d’écrire cette page là où elle s’arrête."
         }
       },
+      "database": {
+        "s1": {
+          "title": "Résumer cette base de données",
+          "prompt": "Résume les entrées de cette base de données : ce qu’elles suivent et où elles en sont."
+        },
+        "s2": {
+          "title": "Créer une vue",
+          "prompt": "Crée une vue enregistrée de cette base de données, filtrée et triée pour ce sur quoi je travaille."
+        },
+        "s3": {
+          "title": "Ajouter des entrées",
+          "prompt": "Aide-moi à ajouter des entrées à cette base de données."
+        },
+        "s4": {
+          "title": "Proposer des colonnes",
+          "prompt": "Propose les colonnes qui manquent à cette base de données, puis ajoute celles que je choisis."
+        }
+      },
       "feedback": {
         "s1": {
           "title": "Résumer les retours",
@@ -4139,6 +4157,10 @@
     "sectionMyReview": "En attente de ma review",
     "sectionTeamReview": "En attente de la review de mon équipe",
     "sectionCompleted": "Récemment terminées",
+    "emptySectionCreated": "Aucune pull request ouverte par vous",
+    "emptySectionReview": "Aucune pull request en attente de votre review",
+    "emptySectionTeam": "Aucune pull request en attente de la review de votre équipe",
+    "emptySectionCompleted": "Aucune pull request terminée récemment",
     "filterSections": "Filtrer les sections",
     "emptySections": "Aucune pull request dans ces sections",
     "readFailed": "Impossible d’actualiser cette pull request. Réessayez.",

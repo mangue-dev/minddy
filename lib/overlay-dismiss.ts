@@ -107,26 +107,36 @@ function controls(element: Element, id: string): boolean {
  * mouseup — the deferred dismissal is lost, and the popover stayed open over
  * the panel. A pointerdown stopped inside the popover (pickers stop it so a
  * card under them does not start a drag) also left Radix believing the next
- * outside press came from inside. This listener sees every click first, in
+ * outside press came from inside. This listener sees every press first, in
  * the capture phase, and asks `onOutside` to close the popover unless the
- * click lands in it, on its own trigger, or in a layer stacked above it.
+ * press starts or ends in it, on its own trigger, or in a layer stacked above
+ * it.
+ *
+ * Where the press starts matters on its own: a click is dispatched on the
+ * nearest common ancestor of its pointerdown and pointerup targets. A select
+ * opened inside the popover covers its trigger before the button is released,
+ * so that click lands on `body` and read as outside, although the whole press
+ * stayed in the popover and the list it opened.
  */
 export function listenOutsideClick(content: HTMLElement, onOutside: (event: MouseEvent) => void): () => void {
-  // Only a press that STARTED while the popover was open: the click ending
-  // the press that opened it (a surface opening on pointerdown) is not one.
-  let pressed = false;
-  const onPointerDown = () => {
-    pressed = true;
-  };
-  const onClick = (event: MouseEvent) => {
-    if (!pressed) return;
-    pressed = false;
-    const target = event.target;
-    if (!(target instanceof Element) || !target.isConnected || content.contains(target)) return;
-    if (content.id && controls(target, content.id)) return;
+  const within = (target: EventTarget | null): boolean => {
+    if (!(target instanceof Element) || !target.isConnected || content.contains(target)) return true;
+    if (content.id && controls(target, content.id)) return true;
     const layer = target.closest(LAYER);
     // A dialog holding the popover precedes it: a click elsewhere in it closes it.
-    if (layer && isAbove(layer, content)) return;
+    return !!layer && isAbove(layer, content);
+  };
+  // Only a press that STARTED outside while the popover was open: the click
+  // ending the press that opened it (a surface opening on pointerdown) is not
+  // one, nor a press begun in the popover or in a layer above it.
+  let pressedOutside = false;
+  const onPointerDown = (event: Event) => {
+    pressedOutside = !within(event.target);
+  };
+  const onClick = (event: MouseEvent) => {
+    if (!pressedOutside) return;
+    pressedOutside = false;
+    if (within(event.target)) return;
     onOutside(event);
   };
   window.addEventListener("pointerdown", onPointerDown, true);

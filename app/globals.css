@@ -244,6 +244,13 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   z-index: 1001 !important;
 }
 
+/* A hover card explains a row of the surface it opens from (a relation in a
+   card's popover, a sub-issue in a menu): above the floating surfaces lifted
+   to 1000 and a confirmation over them (1001), below tooltips (MIN-909). */
+[data-slot="hover-card-content"] {
+  z-index: 1050 !important;
+}
+
 /* Tooltips float above every elevated surface, not only the page content:
    inside the inbox popover the icon-button tooltips (settings, delete, mark as
    read) open over the popover's own surface, which the rule above lifts to
@@ -2390,6 +2397,23 @@ html.marquee-drawing * {
   position: relative;
 }
 
+/* A one-line field (the comment composers) grows to hold a placeholder that
+   wraps — on a phone, its 16px text often does — instead of clipping its
+   second line under the field's edge. The placeholder becomes a float whose
+   negative margin cancels its width: the caret's line still starts at the
+   left over its first line, and the `flow-root` paragraph includes the
+   float's height. Paragraphs only, since `flow-root` on a list item would
+   drop its marker. */
+.placeholder-grows .page-editor p.is-empty {
+  display: flow-root;
+}
+.placeholder-grows .page-editor p.is-empty::before {
+  position: static;
+  float: left;
+  width: 100%;
+  margin-right: -100%;
+}
+
 /* ─── The blink of a block (MIN-270) ───────────────────────────────────
    Two surfaces use it, and for the same reason: after scrolling,
    nothing distinguishes the block we REQUESTED from its neighbors arriving on the screen
@@ -3330,10 +3354,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      own wider `::after` (components/ui/checkbox.tsx). */
   [data-property-row] :is(button, a[role="button"]):not([role="checkbox"]) { min-height: 44px; min-width: 44px; justify-content: flex-end; }
   [data-bulk-issue-actions] button { min-height: 44px; min-width: 44px; }
-  :is([data-slot="sheet-overlay"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
-  }
+  /* No mobile-only blur on the scrims: every modal layer shares the one
+     `--overlay-scrim` tint, on a phone as on a desktop (MIN-931). */
   .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
   .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
   .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: 8px; right: 60px; min-height: 44px; }

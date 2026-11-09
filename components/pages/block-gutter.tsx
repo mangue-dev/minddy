@@ -93,8 +93,9 @@ const NESTED: NonNullable<Exclude<ComponentProps<typeof DragHandle>["nested"], b
   ],
 };
 
-/** The handle and the smaller `+` beside it, side by side, in pixels. */
-const BUTTONS_WIDTH = 24 + BUTTON_SIZE;
+/** The `+` and the handle side by side, in pixels: two buttons of the same
+    size, whose icons keep their own sizes. */
+const BUTTONS_WIDTH = 2 * BUTTON_SIZE;
 
 
 
@@ -460,7 +461,9 @@ export function BlockGutter({
               <button
                 type="button"
                 aria-label={t("insertBlock")}
-                className={cn(BUTTON, "size-6")}
+                // The handle's size, so both buttons line up; the icon stays
+                // smaller than the handle's.
+                className={cn(BUTTON, "size-7")}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={(event) => {
                   const { pos } = hovered.current;

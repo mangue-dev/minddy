@@ -111,10 +111,10 @@ function ModalDialogOverlay({
           : undefined
       }
       className={cn(
-        // No `backdrop-filter` — see the note on SidePanelOverlay: a viewport-wide
-        // blur repaints every frame, and under 10 % black it is invisible.
-        "fixed inset-0 isolate z-50 bg-black/10 duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-        drawer && "bg-black/40",
+        // The one modal scrim, centered dialog and bottom sheet alike
+        // (`--overlay-scrim`, MIN-931). No `backdrop-filter`: see the note on
+        // SidePanelOverlay.
+        "fixed inset-0 isolate z-50 bg-scrim duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}

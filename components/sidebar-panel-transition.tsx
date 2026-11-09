@@ -6,12 +6,23 @@ import { motion, useIsPresent, type Transition, type Variants } from "framer-mot
 /**
  * Which way a level swap travels: 1 descends (the incoming panel enters from
  * the right, the outgoing one leaves to the left), -1 climbs back (mirrored),
- * 0 swaps two panels of the same level (a fade, no travel).
+ * 0 swaps two panels of the same level (a project switch). A lateral swap
+ * still travels, forward like a descent: every panel change reads as the
+ * same horizontal slide, only its side changes.
  */
 export type PanelDirection = -1 | 0 | 1;
 
-/** How far a panel travels while it fades in or out. */
-export const PANEL_OFFSET = 24;
+/**
+ * How far a panel travels while it fades in or out. The horizontal slide is
+ * the swap's only motion (the rows do not move on their own), so it carries
+ * a little more distance than a fade alone would need, and stays short.
+ */
+export const PANEL_OFFSET = 32;
+
+/** The side a swap travels to: a lateral swap moves forward. */
+export function panelTravel(direction: PanelDirection): -1 | 1 {
+  return direction === -1 ? -1 : 1;
+}
 
 /**
  * The direction of the latest level swap, derived from the depth of the
@@ -39,22 +50,22 @@ export function panelDirection(fromDepth: number, toDepth: number): PanelDirecti
  * brought it.
  */
 const panelVariants: Variants = {
-  enter: (direction: PanelDirection) => ({ opacity: 0, x: direction * PANEL_OFFSET }),
+  enter: (direction: PanelDirection) => ({ opacity: 0, x: panelTravel(direction) * PANEL_OFFSET }),
   center: { opacity: 1, x: 0 },
-  exit: (direction: PanelDirection) => ({ opacity: 0, x: -direction * PANEL_OFFSET }),
+  exit: (direction: PanelDirection) => ({ opacity: 0, x: -panelTravel(direction) * PANEL_OFFSET }),
 };
 
 /**
  * The rows of an incoming panel arrive one after the other rather than as a
- * block: a short fade with a slight rise, its delay capped so a long list
- * does not keep the eye waiting. Rows rendered outside a panel transition (no
- * parent variants) simply render.
+ * block: a short fade in place, its delay capped so a long list does not keep
+ * the eye waiting. The rows never move on their own: the panel's horizontal
+ * slide is the swap's only travel. Rows rendered outside a panel transition
+ * (no parent variants) simply render.
  */
 export const panelRowVariants: Variants = {
-  enter: { opacity: 0, y: 4 },
+  enter: { opacity: 0 },
   center: (index: number) => ({
     opacity: 1,
-    y: 0,
     transition: index < 0
       ? { duration: 0 }
       : { duration: 0.22, ease: "easeOut", delay: 0.06 + Math.min(index, 10) * 0.018 },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -28,6 +28,7 @@ import { NumoIcon } from "@/components/numo-icon";
 import {
   actOnPullRequestApi,
   prEndpoint,
+  type AgentRunPrResponse,
   type PullRequestListItem,
 } from "@/lib/agent-api";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
@@ -44,6 +45,19 @@ import { prMenuCanMerge, prMenuNeedsFix, prMenuStateTargets } from "@/lib/pr-con
 
 type PrState = PullRequestListItem["pr_state"];
 
+type ReviewComments = NonNullable<Awaited<ReturnType<ReturnType<typeof prReviewCommentsQueryOptions>["queryFn"]>>>;
+
+/** What one opening of the menu read, once both reads had answered. */
+type SettledMenuRead = {
+  prId: string;
+  openedAt: number;
+  detail: AgentRunPrResponse | undefined;
+  /** The detail read of this opening succeeded. */
+  fresh: boolean;
+  /** Undefined when the review threads could not be read. */
+  reviews: ReviewComments | undefined;
+};
+
 const icon = (data: Parameters<typeof HugeiconsIcon>[0]["icon"]) => (
   <HugeiconsIcon icon={data} className="size-4" />
 );
@@ -53,9 +67,14 @@ const icon = (data: Parameters<typeof HugeiconsIcon>[0]["icon"]) => (
  *
  * Built for the row under the pointer, independently of the selected detail:
  * opening the menu performs that pull request's own authoritative read (the
- * same query the detail uses, so a warm cache is shared), and every forge
- * write stays hidden until the viewer is known to hold write access, then
- * disabled until that read is fresh. State changes run here, with their own
+ * same query the detail uses, so a warm cache is shared). Until that read and
+ * the review threads have answered, the menu holds a single "Loading…" entry;
+ * once they have, the entries are built from that answer and kept for as long
+ * as the menu stays open. Background refetches (the detail polls) never
+ * reshape or re-disable an open menu: building from live query state made the
+ * entries appear, vanish and toggle while the reads settled. Forge writes are
+ * hidden from a viewer known to lack write access, and disabled when the read
+ * failed. State changes run here, with their own
  * confirmation and the page's optimistic reconciliation; merge hands over to
  * the detail's merge dialog (commit message, method, Numo merge), which the
  * server gates once more on confirmation.
@@ -81,8 +100,10 @@ export function usePrContextActions({
   const t = useTranslations("PullRequests");
   const tCommon = useTranslations("Common");
   const { openIntent } = useAssistantPanelActions();
-  const [menuPrId, setMenuPrId] = useState<string | null>(null);
-  const openedAt = useRef(0);
+  // The row whose menu is open, and when it opened: only reads answered
+  // after that moment count as this opening's own.
+  const [menu, setMenu] = useState<{ prId: string; openedAt: number } | null>(null);
+  const menuPrId = menu?.prId ?? null;
   const [confirm, setConfirm] = useState<{ pr: PullRequestListItem; draft: boolean; state: EditablePrState } | null>(null);
   const [acting, setActing] = useState<string | null>(null);
 
@@ -97,10 +118,46 @@ export function usePrContextActions({
     enabled: !!menuPrId,
   });
 
+  // Every opening reads again, including a second right-click on the same
+  // row, whose unchanged query key would not start a read by itself. A read
+  // already in flight is joined rather than restarted.
+  const openedAt = menu?.openedAt;
+  const refetchDetail = detail.refetch;
+  const refetchReviews = reviews.refetch;
+  useEffect(() => {
+    if (openedAt === undefined) return;
+    void refetchDetail({ cancelRefetch: false });
+    void refetchReviews({ cancelRefetch: false });
+  }, [openedAt, refetchDetail, refetchReviews]);
+
+  // The answer this opening's entries are built from, latched once both reads
+  // settle: later refetches leave an open menu as it is.
+  const [settled, setSettled] = useState<SettledMenuRead | null>(null);
+  const detailSettled = !!menu && detail.fetchStatus === "idle" && (
+    (detail.isSuccess && detail.dataUpdatedAt >= menu.openedAt) ||
+    (detail.isError && detail.errorUpdatedAt >= menu.openedAt)
+  );
+  const reviewsSettled = !!menu && reviews.fetchStatus === "idle" && (
+    (reviews.isSuccess && reviews.dataUpdatedAt >= menu.openedAt) ||
+    (reviews.isError && reviews.errorUpdatedAt >= menu.openedAt)
+  );
+  if (menu && detailSettled && reviewsSettled &&
+      (settled?.prId !== menu.prId || settled.openedAt !== menu.openedAt)) {
+    // Adjusting state while rendering: React re-renders right away, before
+    // the menu paints with the previous value.
+    setSettled({
+      prId: menu.prId,
+      openedAt: menu.openedAt,
+      detail: detail.data,
+      fresh: detail.isSuccess,
+      reviews: reviews.isSuccess ? reviews.data : undefined,
+    });
+  }
+
   const onItemContextMenu = useCallback((target: Element | null) => {
     const id = target?.closest<HTMLElement>("[data-pr-id]")?.dataset.prId ?? null;
-    if (id) openedAt.current = Date.now();
-    setMenuPrId(id);
+    setMenu(id ? { prId: id, openedAt: Date.now() } : null);
+    setSettled(null);
   }, []);
 
   const runStateChange = useCallback(
@@ -139,12 +196,16 @@ export function usePrContextActions({
     (target: Element): ContextMenuAction[] => {
       const id = target.closest<HTMLElement>("[data-pr-id]")?.dataset.prId;
       const pr = id ? pullRequests.find((item) => item.prId === id) : undefined;
-      if (!pr || pr.prId !== menuPrId) return [];
-      const data = detail.data;
-      // Fresh = answered after this menu opened, with no pending refetch.
-      const fresh =
-        !!data && detail.isSuccess && detail.fetchStatus === "idle" &&
-        detail.dataUpdatedAt >= openedAt.current;
+      if (!pr || !menu || pr.prId !== menu.prId) return [];
+      // A merged pull request has nothing to offer, whatever the reads say.
+      if (pr.pr_state === "merged") return [];
+      const read = settled && settled.prId === menu.prId && settled.openedAt === menu.openedAt ? settled : null;
+      // One stable entry while the reads settle, rather than entries that
+      // show, hide and toggle as each answer lands.
+      if (!read) return [{ id: "pr-loading", label: tCommon("loading"), disabled: true }];
+      const data = read.detail;
+      // Fresh = this opening's read succeeded.
+      const fresh = read.fresh && !!data;
       const capability = data?.viewer?.capability;
       // A loaded read that denies write access hides the forge writes.
       const writable = capability === undefined || capability === "write";
@@ -185,10 +246,10 @@ export function usePrContextActions({
 
       // Fixing concerns only a pull request that is still alive.
       if (state === "open" || state === "draft") {
-        const threads = reviews.data
-          ? unresolvedReviewThreads(reviews.data.comments, reviews.data.threads)
+        const threads = read.reviews
+          ? unresolvedReviewThreads(read.reviews.comments, read.reviews.threads)
           : [];
-        const ready = fresh && reviews.isSuccess;
+        const ready = fresh && !!read.reviews;
         if (!ready || prMenuNeedsFix(data, threads.length)) {
           const context = {
             number: pr.pr_number,
@@ -250,7 +311,7 @@ export function usePrContextActions({
       }
       return actions;
     },
-    [acting, detail.data, detail.dataUpdatedAt, detail.fetchStatus, detail.isSuccess, menuPrId, onMerge, openIntent, pullRequests, reviews.data, reviews.isSuccess, t],
+    [acting, menu, onMerge, openIntent, pullRequests, settled, t, tCommon],
   );
 
   const dialog = useMemo(() => {

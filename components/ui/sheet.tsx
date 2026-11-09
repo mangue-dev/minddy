@@ -50,8 +50,9 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        // No `backdrop-filter` — see the note on SidePanelOverlay.
-        "fixed inset-0 z-50 bg-black/10 duration-200 data-closed:duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        // The one modal scrim (`--overlay-scrim`, MIN-931). No
+        // `backdrop-filter` — see the note on SidePanelOverlay.
+        "fixed inset-0 z-50 bg-scrim duration-200 data-closed:duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}

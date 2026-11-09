@@ -21,6 +21,7 @@ import { createPortal } from "react-dom";
 import { Kbd } from "@/components/ui/kbd";
 import { AppIcon } from "@/components/icon";
 import { usePaletteConfig } from "../config";
+import { listenToNewKeydowns } from "../hooks/new-keydowns";
 import { SearchIcon } from "../icons";
 import { usePaletteStore } from "../store";
 import styles from "../styles/ActionsPopover.module.css";
@@ -312,9 +313,9 @@ export function ActionsPopover({
       }
     };
 
-    // Bubbling phase so the search input receives its events first
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    // Bubbling phase so the search input receives its events first; not the
+    // key that opened the popover (../hooks/new-keydowns.ts).
+    return listenToNewKeydowns(document, handleKeyDown);
   }, [isOpen, flattenedActions, actionActiveIndex, moveActionActiveIndex, executeAction, onClose, actionsPopoverQuery]);
 
   // Need either item or directActions to show the popover

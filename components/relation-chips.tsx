@@ -92,6 +92,12 @@ export function RelationChips({
               className="w-80 max-w-[calc(100vw-2rem)] p-2"
               onClick={stop}
               onPointerDown={stop}
+              // The list takes focus, not its first row: focusing a row opens
+              // its hover card, which waits for Tab or the pointer to reach it.
+              onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                (event.currentTarget as HTMLElement | null)?.focus({ preventScroll: true });
+              }}
             >
               <RelationGroupHeader type={type} count={items.length} />
               <div className="max-h-64 overflow-y-auto">

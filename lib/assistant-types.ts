@@ -281,6 +281,12 @@ export interface AssistantPageContext {
   pageTitle?: string;
   pageIcon?: string | null;
   /**
+   * Client-only hint that the open page is a database, so the empty composer
+   * offers database suggestions. The chat route never forwards it: the server
+   * derives `pageIsDatabase` on its own.
+   */
+  pageDatabase?: true;
+  /**
    * Set by the server, never read from the request: the open page is a
    * database, so "a view" means one of its saved views, not a board view.
    */

@@ -49,6 +49,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   vi.unstubAllGlobals();
   document.body.innerHTML = "";
+  document.documentElement.removeAttribute("data-input-modality");
 });
 
 async function render(preview: MentionPreview) {
@@ -219,7 +220,8 @@ describe("MentionHoverCard", () => {
       }));
     });
     const trigger = host.querySelector("button")!;
-    // Focus opens it too, after the hover delay.
+    // Keyboard focus opens it too, after the hover delay.
+    document.documentElement.setAttribute("data-input-modality", "keyboard");
     vi.useFakeTimers();
     try {
       await act(async () => {
@@ -251,6 +253,7 @@ describe("MentionHoverCard", () => {
         }),
       }));
     });
+    document.documentElement.setAttribute("data-input-modality", "keyboard");
     vi.useFakeTimers();
     try {
       await act(async () => {
@@ -328,6 +331,34 @@ describe("MentionHoverCard", () => {
         trigger.focus();
         // The pointer leaves while the trigger keeps focus.
         trigger.dispatchEvent(new MouseEvent("pointerout", { bubbles: true, relatedTarget: document.body }));
+        vi.advanceTimersByTime(600);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(document.querySelector("[data-slot=hover-card-content]")).toBeNull();
+  });
+
+  it("stays closed when a popover focuses its trigger on opening, not the keyboard", async () => {
+    const { MentionHoverCard } = await import("./mention-hover-card");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ preview: null }))));
+    await act(async () => {
+      root.render(createElement(QueryClientProvider, {
+        client: new QueryClient(),
+        children: createElement(NextIntlClientProvider, {
+          locale: "en", messages, timeZone: "UTC",
+          children: createElement(MentionHoverCard, {
+            type: "issue", id: "i1",
+            children: createElement("button", { type: "button" }, "MIN-1"),
+          }),
+        }),
+      }));
+    });
+    vi.useFakeTimers();
+    try {
+      // The first row of a popover opened with a click: focused by script.
+      await act(async () => {
+        host.querySelector("button")!.focus();
         vi.advanceTimersByTime(600);
       });
     } finally {

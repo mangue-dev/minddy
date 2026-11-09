@@ -207,7 +207,7 @@ export function MarketingNav() {
             return;
           }
         }}
-        overlayClassName="bg-black/25 motion-reduce:animate-none"
+        overlayClassName="motion-reduce:animate-none"
         className="flex min-h-0 flex-col gap-0 bg-background p-0 data-[side=right]:h-dvh data-[side=right]:w-full data-[side=right]:sm:max-w-[26rem] motion-reduce:animate-none motion-reduce:transition-none"
       >
         <SheetTitle className="sr-only">{t("mobileMenuTitle")}</SheetTitle>

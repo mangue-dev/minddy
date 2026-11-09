@@ -975,10 +975,14 @@ function PageSurface({
   // The title goes with the id: the pill says it without rereading the page, and the prompt
   // can name it before the first tool call. This is the DISPLAYED title, so
   // the one we may have just typed.
+  // A database also says so, for the composer's suggestions only.
+  const pageDatabase = (page ?? summary)?.database_schema != null;
   useAssistantContext(
     useMemo(
-      () => active ? ({ projectId, pageId, pageTitle: title, pageIcon: icon }) : null,
-      [active, projectId, pageId, title, icon]
+      () => active
+        ? ({ projectId, pageId, pageTitle: title, pageIcon: icon, ...(pageDatabase ? { pageDatabase: true as const } : {}) })
+        : null,
+      [active, projectId, pageId, title, icon, pageDatabase]
     )
   );
 

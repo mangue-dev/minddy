@@ -155,6 +155,12 @@ export interface AssistantShellProps {
    */
   keptIntro?: ReactNode;
   /**
+   * What stays above that conversation for as long as it is shown, even once
+   * its stored opening replaces `keptIntro` (Home: the greeting, kept with
+   * Numo's word). Nothing stays when absent.
+   */
+  keptHeader?: ReactNode;
+  /**
    * Numo's Home summary shown under the intro (MIN-933): the first message
    * sent there carries it, and the server opens the conversation with it as
    * Numo's first message.
@@ -186,6 +192,7 @@ export const AssistantShell = forwardRef<
     startFresh = false,
     intro = null,
     keptIntro = null,
+    keptHeader = null,
     openingBriefId = null,
     starterItems = null,
     startersPending = false,
@@ -391,9 +398,15 @@ export const AssistantShell = forwardRef<
 
   // What stays on top of the conversation sent from under the intro (see
   // `keptIntro`); `null` once a new conversation starts.
-  const [kept, setKept] = useState<{ node: ReactNode; conversationId: string | null } | null>(null);
+  const [kept, setKept] = useState<{
+    node: ReactNode;
+    header: ReactNode;
+    conversationId: string | null;
+  } | null>(null);
   const keptIntroRef = useRef<ReactNode>(keptIntro);
   keptIntroRef.current = keptIntro;
+  const keptHeaderRef = useRef<ReactNode>(keptHeader);
+  keptHeaderRef.current = keptHeader;
   const openingBriefRef = useRef<string | null>(openingBriefId);
   openingBriefRef.current = openingBriefId;
   const blankRef = useRef(true);
@@ -411,7 +424,9 @@ export const AssistantShell = forwardRef<
       if (!aiAvailability.loading && !aiAvailability.available) return;
       const opening = blankRef.current ? openingBriefRef.current : null;
       if (blankRef.current) {
-        setKept(keptIntroRef.current ? { node: keptIntroRef.current, conversationId: null } : null);
+        setKept(keptIntroRef.current || keptHeaderRef.current
+          ? { node: keptIntroRef.current, header: keptHeaderRef.current, conversationId: null }
+          : null);
       }
       const sentContext = effectiveContextRef.current;
       sendMessage(sentContext?.projectId ?? null, message, {
@@ -501,8 +516,9 @@ export const AssistantShell = forwardRef<
   // is not shown a second time on top.
   const storedOpening = state.messages.some((message) =>
     message.role === "assistant" && typeof message.metadata?.home_brief === "string");
-  const keptOnTop = kept !== null && !storedOpening &&
+  const keptShown = kept !== null &&
     (kept.conversationId === null || kept.conversationId === state.conversationId);
+  const keptOnTop = keptShown && !storedOpening;
   // One announcement per reply, once it has ended (see the log below).
   const [replyStatus, setReplyStatus] = useState("");
   const wasBusy = useRef(isBusy);
@@ -646,6 +662,9 @@ export const AssistantShell = forwardRef<
   // alone under the accordion folded into “Worked for X”. What is folded
   // in is middle work, not a takeaway answer.
   const copyButtonIds = useMemo(() => copyableMessageIds(blocks), [blocks]);
+  // Numo's latest answer keeps its Copy button visible without hovering. The
+  // set is built in reading order, so its last id is that answer.
+  const latestCopyId = useMemo(() => [...copyButtonIds].at(-1), [copyButtonIds]);
 
   // Is the active lap already showing work? Its timed header then reads
   // the signal “Numo is working” and the reflection indicator would be duplicated.
@@ -680,6 +699,7 @@ export const AssistantShell = forwardRef<
         seedLive={msg.id === activeSeedMessageId}
         onSeedCreated={handleSeedCreated}
         showCopyButton={copyButtonIds.has(msg.id)}
+        pinCopyButton={msg.id === latestCopyId}
         afterContent={afterContent}
       />
     );
@@ -1002,6 +1022,7 @@ export const AssistantShell = forwardRef<
                        : `mx-auto w-full ${convoMaxW} gap-6 p-4 app-desktop:p-6`
                    }
                  >
+                  {keptShown ? kept?.header : null}
                   {keptOnTop ? kept?.node : null}
                   {blocks.map((block) => {
                     if (block.kind === "message")

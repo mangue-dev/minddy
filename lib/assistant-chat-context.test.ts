@@ -128,6 +128,21 @@ describe("persistent conversation context", () => {
     expect(h.load).toHaveBeenCalledWith("conversation", "a");
   });
 
+  it("keeps a standalone surface (Home) off the panel's active conversation", async () => {
+    h.panel.isOpen = false;
+    await act(async () => root.render(createElement(AssistantChatProvider, {
+      standalone: true,
+      children: createElement(Probe),
+    })));
+
+    await act(async () => value.requestRestore());
+
+    expect(value.restoring).toBe(false);
+    expect(h.active).not.toHaveBeenCalled();
+    expect(h.load).not.toHaveBeenCalled();
+    expect(h.pointer).not.toHaveBeenCalled();
+  });
+
   it("keeps history and removable pins across navigation, panel unmounts and an active response", async () => {
     await render();
     await act(async () => value.setPinned([{ kind: "project", id: "a", label: "A" }]));

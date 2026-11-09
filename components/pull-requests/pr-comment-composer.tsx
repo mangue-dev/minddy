@@ -301,7 +301,9 @@ export function ForgeMarkdownField({
       mentions={mentions}
       autoFocus={autoFocus}
       placeholder={placeholder}
-      className={className}
+      // A placeholder that wraps on a narrow screen grows the field instead
+      // of being clipped (`placeholder-grows`, app/globals.css).
+      className={cn("placeholder-grows", className)}
       contentClassName={contentClassName}
     />
   );

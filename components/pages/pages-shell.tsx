@@ -421,6 +421,8 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
       title={shownPreview?.title || tDatabase("newEntry")}
       expandLabel={tDatabase("extend")}
       onExpand={() => void leavePreview(true)}
+      newTabHref={shownPreview ? pageHref(projectId, shownPreview.id) : pagesHref(projectId)}
+      beforeNewTab={() => previewFlush.current()}
       onClose={() => void leavePreview()}
       actionsSlot={setPreviewMenuSlot}
     >

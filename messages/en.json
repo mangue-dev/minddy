@@ -708,6 +708,24 @@
           "prompt": "Continue writing this page from where it stops."
         }
       },
+      "database": {
+        "s1": {
+          "title": "Summarize this database",
+          "prompt": "Summarize the entries of this database: what they track and where they stand."
+        },
+        "s2": {
+          "title": "Set up a view",
+          "prompt": "Create a saved view of this database, filtered and sorted for what I am working on."
+        },
+        "s3": {
+          "title": "Add entries",
+          "prompt": "Help me add entries to this database."
+        },
+        "s4": {
+          "title": "Suggest columns",
+          "prompt": "Suggest columns this database is missing, then add the ones I choose."
+        }
+      },
       "feedback": {
         "s1": {
           "title": "Summarize the feedback",
@@ -4139,6 +4157,10 @@
     "sectionMyReview": "Needs my review",
     "sectionTeamReview": "Needs my team’s review",
     "sectionCompleted": "Recently completed",
+    "emptySectionCreated": "No pull request opened by you",
+    "emptySectionReview": "No pull request awaiting your review",
+    "emptySectionTeam": "No pull request awaiting your team’s review",
+    "emptySectionCompleted": "No recently completed pull request",
     "filterSections": "Filter sections",
     "emptySections": "No pull requests in these sections",
     "readFailed": "Could not refresh this pull request. Try again.",

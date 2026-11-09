@@ -67,6 +67,37 @@ export function resourceMentionOptions(resources: readonly MentionableResource[]
 }
 
 /**
+ * A surface's mention links with only its resources' labels added: for a
+ * read-only preview that names an attachment mention but never opens it,
+ * such as a board card's description. Every other type is left to `inner`.
+ */
+export function resourceLabelLinks(
+  inner: MentionLinks | null,
+  resources: readonly ResourceLike[],
+): MentionLinks {
+  const byId = new Map(
+    resources.filter((resource): resource is MentionableResource => !!resource.id)
+      .map((resource) => [resource.id, resource]),
+  );
+  return {
+    href: (type, id) => (type === "resource" ? null : inner?.href(type, id) ?? null),
+    issueStatus: (id) => inner?.issueStatus(id) ?? null,
+    issueTitle: (id) => inner?.issueTitle?.(id) ?? null,
+    objectiveStatus: (id) => inner?.objectiveStatus?.(id) ?? null,
+    label: (type, id, meta) => {
+      if (type !== "resource") return inner?.label?.(type, id, meta) ?? null;
+      const resource = byId.get(id);
+      return resource ? resourceMentionLabel(resource) : null;
+    },
+    detail: inner?.detail,
+    navigate: (type, id, meta) => {
+      if (type !== "resource") inner?.navigate(type, id, meta);
+    },
+    projectId: inner?.projectId,
+  };
+}
+
+/**
  * The surface's mention model, with its own resources added: offered in the
  * menu after the people, labeled and opened from this list alone.
  */

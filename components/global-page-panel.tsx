@@ -95,6 +95,8 @@ export function GlobalPagePanel({
       title={page?.title.trim() || t("untitled")}
       expandLabel={t("expand")}
       onExpand={() => void leave(() => openFullPage(projectId, openId))}
+      newTabHref={pageHref(projectId, openId)}
+      beforeNewTab={() => flush.current()}
       onClose={() => void leave()}
       onBack={trail.length > 1 ? () => void go((current) => current.slice(0, -1)) : undefined}
       actionsSlot={showsDocument ? setMenuSlot : undefined}
