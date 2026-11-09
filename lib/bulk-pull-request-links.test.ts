@@ -22,16 +22,49 @@ describe("bulkPullRequestLinks", () => {
     expect(options.map((pr) => pr.prNumber)).toEqual([1, 3]);
   });
 
-  it("does not offer a pull request for the selection once a selected ticket has any link", () => {
+  it("offers a pull request for a selection whose links are only merged or closed", () => {
+    const history: Record<string, IssuePr> = {
+      done: { prId: "pr-merged", prNumber: 40, state: "merged" },
+      dropped: { prId: "pr-closed", prNumber: 41, state: "closed" },
+    };
     const links = bulkPullRequestLinks(
-      [{ id: "a", project_id: "p1" }, { id: "done", project_id: "p1" }],
-      prOf,
+      [{ id: "a", project_id: "p1" }, { id: "done", project_id: "p1" }, { id: "dropped", project_id: "p1" }],
+      (id) => history[id] ?? null,
       [openPr("pr-1", 1, "p1")],
-      // "done" only has a merged pull request: still linked, so no global pick.
-      (id) => (id === "done" ? ["pr-merged"] : []),
+      (id) => (history[id] ? [history[id].prId] : []),
+    );
+    expect(links.options.map((pr) => pr.prNumber)).toEqual([1]);
+    expect(links.targets("pr-1")).toEqual(["a", "done", "dropped"]);
+    // The past links can still be removed.
+    expect(links.unlinkable.map((link) => link.issueId)).toEqual(["done", "dropped"]);
+  });
+
+  it("links only the tickets without a live pull request in a mixed selection", () => {
+    const links = bulkPullRequestLinks(
+      [{ id: "linked", project_id: "p1" }, { id: "free", project_id: "p1" }],
+      prOf,
+      [openPr("pr-447", 447, "p1"), openPr("pr-1", 1, "p1")],
+    );
+    expect(links.options.map((pr) => pr.prNumber)).toEqual([447, 1]);
+    expect(links.targets("pr-1")).toEqual(["free"]);
+  });
+
+  it("offers no pull request once every selected ticket holds a live one", () => {
+    const links = bulkPullRequestLinks(
+      [{ id: "linked", project_id: "p1" }],
+      prOf,
+      [openPr("pr-447", 447, "p1"), openPr("pr-1", 1, "p1")],
     );
     expect(links.options).toEqual([]);
-    expect(links.unlinkable).toEqual([{ issueId: "done", prIds: ["pr-merged"] }]);
+  });
+
+  it("leaves out a pull request whose project has no ticket free to take it", () => {
+    const links = bulkPullRequestLinks(
+      [{ id: "linked", project_id: "p1" }, { id: "free", project_id: "p2" }],
+      prOf,
+      [openPr("pr-1", 1, "p1"), openPr("pr-2", 2, "p2")],
+    );
+    expect(links.options.map((pr) => pr.prNumber)).toEqual([2]);
   });
 
   it("lists every link of every selected ticket for unlinking", () => {
