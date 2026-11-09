@@ -3904,9 +3904,6 @@ packages:
   prosemirror-transform@1.12.5:
     resolution: {integrity: sha512-3EBXZBM4h3MKuWvs9sQ7IA0/v6jCqCZ4wC08PIvzY1VSQWDL90KEyfg5C0Ex52UJesf/QVogxvuBsZdKmLc3NQ==}
 
-  prosemirror-view@1.42.8:
-    resolution: {integrity: sha512-ftDZjCs9AjAekXmCfJRn2U3IdlRCl0Yc4tZT1/jJWCsz4DiSifEBXtWmpJpw/4f1Rg328uAUQ+u2lCJ0+AVZkw==}
-
   prosemirror-view@1.42.9:
     resolution: {integrity: sha512-bKbfzeKZOu2H2JQU2TaJmYu6EBcor3VnGIR4jR31cbEt1ztUnfUB6bKGV1+fJzOJdrVWR+tRU0208zM3oQx4wA==}
 
@@ -8033,7 +8030,7 @@ snapshots:
     dependencies:
       prosemirror-model: 1.25.12
       prosemirror-state: 1.4.4
-      prosemirror-view: 1.42.8
+      prosemirror-view: 1.42.9
 
   prosemirror-state@1.4.4:
     dependencies:
@@ -8052,12 +8049,6 @@ snapshots:
   prosemirror-transform@1.12.5:
     dependencies:
       prosemirror-model: 1.25.12
-
-  prosemirror-view@1.42.8:
-    dependencies:
-      prosemirror-model: 1.25.12
-      prosemirror-state: 1.4.4
-      prosemirror-transform: 1.12.5
 
   prosemirror-view@1.42.9:
     dependencies:

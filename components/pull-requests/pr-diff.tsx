@@ -1045,7 +1045,7 @@ export function PrDiff({
   const parsedByPath = useMemo(() => {
     const map = new Map<string, FileDiffMetadata>();
     if (!diffText) return map;
-    for (const patch of parsePatchFiles(diffText, pullRequestDiffCacheKey(diffText))) {
+    for (const patch of parsePatchFiles(diffText, { cacheKeyPrefix: pullRequestDiffCacheKey(diffText) })) {
       for (const parsed of patch.files) map.set(parsed.name, parsed);
     }
     return map;
