@@ -236,7 +236,7 @@ export function RelationIcon({
 }
 
 /* ── Effort ──────────────────────────────────────────────────────────────
-   A triangle plus the size letter (XS / S / M / L / XL). */
+   A triangle plus the size letter (XS / S / M / L / XL / XXL). */
 
 export function EffortIndicator({
   effort,

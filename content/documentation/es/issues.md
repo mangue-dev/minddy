@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 48,
-  "sourceRevision": 48,
+  "revision": 49,
+  "sourceRevision": 49,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-09",
   "compatibility": {
@@ -45,6 +45,8 @@
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
+      "lib/server/smart-fill.ts",
+      "lib/issue-constants.ts",
       "lib/smart-fill-fields.ts",
       "lib/server/smart-fill-reevaluation.ts",
       "lib/server/smart-fill-ownership.ts",
@@ -133,9 +135,9 @@
     ]
   },
   "review": {
-    "revision": 48,
-    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
-    "language": "agent:claude-code (es translation of the changed passages with catalog UI labels, reviewed against en revision 48; agent review, not human acceptance)",
+    "revision": 49,
+    "fact": "agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (es translation of the changed passage, reviewed against en revision 49; agent review, not human acceptance)",
     "date": "2026-11-09"
   },
   "related": [
@@ -181,7 +183,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -198,7 +200,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -215,7 +217,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -232,7 +234,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -249,7 +251,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -266,7 +268,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Sección de subincidencias de una incidencia principal de demostración, con el botón Crear una subincidencia y su flecha de opciones.",
       "caption": "Crear una subincidencia abre la creación con esta incidencia como principal; cada hija conserva su estado y conversación.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -283,7 +285,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -300,7 +302,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -317,7 +319,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -334,7 +336,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -369,7 +371,7 @@ Debes ser el propietario o un Miembro del proyecto de destino; los lectores pued
 
 Para crear la incidencia manualmente, desactiva Smart Fill si el botón aparece y está activado. Esto muestra los controles de prioridad, esfuerzo, categorías, objetivo y relaciones para que los establezcas. Para fijar solo algunas de estas propiedades, deja Smart Fill activado y abre la flecha junto a su botón: elige una propiedad y luego su valor. Allí, **Relaciones** enumera los tipos de relación; elegir uno abre la paleta de comandos con sus destinos posibles. El mismo menú también fija el **Estado** y el **Responsable**, y **Fecha límite** abre el calendario; estas tres propiedades siguen en la fila del formulario, esté Smart Fill activado o no. Fuera del título y la descripción, la tecla de la propiedad abre directamente su selector: P para la prioridad, E para el esfuerzo, L para las categorías u O para el objetivo. En un ordenador, mientras Smart Fill está activado para la incidencia, Command/Ctrl+Mayús+F abre ese menú de la flecha incluso mientras escribes el título o la descripción; al elegir un valor o cerrar el menú, el cursor vuelve exactamente donde escribías, como con Command/Ctrl+Mayús+P para **Crear en**. El valor que elijas sigue visible en el formulario. Smart Fill solo deduce las propiedades que dejaste vacías. La elección se aplica a esta incidencia; al volver a abrir el formulario de creación se restablece la preferencia de la cuenta. Es independiente de Smart Assign y las rutinas. Mientras Smart Fill está activado, también [vincula la incidencia con incidencias relacionadas](#smart-fill-relations) una vez guardada, por lo que el selector de relaciones queda oculto; R lo abre de todos modos. Las relaciones que ya elegiste siguen visibles como píldoras en la fila de propiedades, entre el responsable y la fecha límite, y se crean con la incidencia.
 
-Configura las propiedades útiles antes de confirmar: estado, prioridad, esfuerzo, responsable, objetivo, categorías, fecha límite y recurrencia. La persona responsable es el propietario del proyecto o un Miembro, nunca un lector; un objetivo agrupa incidencias alrededor de un resultado del proyecto. Puedes dejar las propiedades opcionales sin valor en lugar de adivinar. La prioridad queda **Sin definir** o va de baja a urgente, pasando por media y alta; el esfuerzo queda **Sin definir** o utiliza XS, S, M, L y XL.
+Configura las propiedades útiles antes de confirmar: estado, prioridad, esfuerzo, responsable, objetivo, categorías, fecha límite y recurrencia. La persona responsable es el propietario del proyecto o un Miembro, nunca un lector; un objetivo agrupa incidencias alrededor de un resultado del proyecto. Puedes dejar las propiedades opcionales sin valor en lugar de adivinar. La prioridad queda **Sin definir** o va de baja a urgente, pasando por media y alta; el esfuerzo queda **Sin definir** o utiliza XS, S, M, L, XL y XXL. El esfuerzo mide el tamaño del trabajo, no su impacto: un trabajo de unas horas sigue siendo como máximo un L, por importante que sea, y su importancia se refleja en la prioridad. Reserva XXL para trabajos de varios días, como un rediseño completo o un subsistema nuevo.
 
 Cuando Smart Assign está activado en el proyecto, el selector de responsable muestra **Smart Assign** en lugar de **Sin asignar**. Las tarjetas de incidencia y la paleta de comandos siguen la misma regla, y una tarjeta sin responsable muestra el icono de Smart Assign. Deja esa opción y Smart Assign elegirá al responsable en cuanto el ticket salga de la clasificación. En el panel del ticket, elegir **Smart Assign** quita al responsable actual y deja que Smart Assign vuelva a elegir. Los tickets **Cancelada** y **Duplicada** conservan **Sin asignar**.
 

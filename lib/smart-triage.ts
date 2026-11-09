@@ -85,7 +85,7 @@ export interface TriageContext {
 }
 
 /** How much effort a quick win buys back (in PRIORITY_ORDER tiers): xs beats
-    s beats m; l and xl cost priority — the point of the mode is to surface the
+    s beats m; xl and xxl cost priority — the point of the mode is to surface the
     cheap-and-important first. No effort declared = no discount, no penalty. */
 const EFFORT_QUICK_WIN: Record<IssueEffort, number> = {
   xs: 1.5,
@@ -93,6 +93,7 @@ const EFFORT_QUICK_WIN: Record<IssueEffort, number> = {
   m: 0.5,
   l: 0,
   xl: -0.5,
+  xxl: -1,
 };
 
 /** The quick-win rank of one ticket: PRIORITY_ORDER units, lower = sooner. */

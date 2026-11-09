@@ -13,7 +13,7 @@ export type IssueStatus =
   | "canceled"
   | "duplicate";
 export type IssuePriority = "none" | "urgent" | "high" | "medium" | "low";
-export type IssueEffort = "xs" | "s" | "m" | "l" | "xl";
+export type IssueEffort = "xs" | "s" | "m" | "l" | "xl" | "xxl";
 
 // Labels are i18n'd — resolve via useTranslations("Status")(value).
 export interface StatusMeta {
@@ -78,7 +78,7 @@ export interface PriorityMeta {
 
 // ASCENDING order — first option = lowest, last = highest.
 // This is the convention for ALL selectors in the app (tickets, objectives,
-// returns): `EFFORTS` goes from xs to xl, the statuses go up from arrival to
+// returns): `EFFORTS` goes from xs to xxl, the statuses go up from arrival to
 // terminal, the priority increases from “none” to “urgent”. The selector is a
 // scale that is read from top to bottom, and a scale that goes down from one axis to
 // the other forces the order to be reread in each field.
@@ -105,6 +105,7 @@ export const EFFORTS: EffortMeta[] = [
   { value: "m", label: "M" },
   { value: "l", label: "L" },
   { value: "xl", label: "XL" },
+  { value: "xxl", label: "XXL" },
 ];
 
 export const EFFORT_MAP: Record<IssueEffort, EffortMeta> = Object.fromEntries(

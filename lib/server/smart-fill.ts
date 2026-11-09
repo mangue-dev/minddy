@@ -276,7 +276,7 @@ Someone just wrote a new issue. Read its title and description and call fill_iss
 Rules:
 - You MUST call fill_issue. Never refuse, never reply in plain text. Answer EVERY argument.
 - priority: how urgent the work reads. Default to "medium" when the text gives no signal; keep "urgent" for outages, data loss and blockers.
-- effort: t-shirt size of the work described, from the writer's point of view. "xs" is a one-line change, "xl" a multi-week project. Answer "none" only when the text describes nothing estimable (a question, a note).
+- effort: t-shirt size of the work described, from the writer's point of view. It measures how much there is to do, never how much it matters: impact and urgency go to priority. "xs" is a one-line change, "s" a small contained change, "m" a fix or feature touching a few files, "l" a few hours of work across several parts, "xl" a large feature of a day or two, "xxl" a multi-day overhaul or a new subsystem. A few hours of work stays "l" at most, however important it is; keep "xxl" for work that is truly that big. Answer "none" only when the text describes nothing estimable (a question, a note).
 - category_ids: pick ONLY from the list below, at most ${MAX_CATEGORIES_PER_ISSUE}, and only those the issue clearly belongs to. Empty is a fine answer. Never invent an id, never propose a new category.
 - objective_id: pick an EXISTING objective from the list below only if the issue plainly belongs to it. Otherwise answer "none". Never invent one. A wrong objective is worse than none.
 - Judge the issue on what it says, not on what it might become.

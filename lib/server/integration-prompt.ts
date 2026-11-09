@@ -363,7 +363,7 @@ ${placement || "Depuis la source la plus naturelle : remontée d'erreur non gér
      "title": "<titre court>",
      "description": "<description en markdown, optionnelle>",
      "priority": "none | low | medium | high | urgent (optionnel)",
-     "effort": "xs | s | m | l | xl (optionnel)",
+     "effort": "xs | s | m | l | xl | xxl (optionnel)",
      "categories": ["<id de catégorie, optionnel>"]
    }
    \`\`\`
@@ -405,7 +405,7 @@ ${placement || "From wherever it fits best: an unhandled error, a support escala
      "title": "<short title>",
      "description": "<markdown description, optional>",
      "priority": "none | low | medium | high | urgent (optional)",
-     "effort": "xs | s | m | l | xl (optional)",
+     "effort": "xs | s | m | l | xl | xxl (optional)",
      "categories": ["<category id, optional>"]
    }
    \`\`\`

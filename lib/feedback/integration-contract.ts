@@ -340,7 +340,7 @@ function issuesUsage(base: string): IntegrationUsage {
           title: "Required, non-empty.",
           description: "Optional markdown.",
           priority: "Optional: none | low | medium | high | urgent.",
-          effort: "Optional t-shirt size: xs | s | m | l | xl.",
+          effort: "Optional t-shirt size: xs | s | m | l | xl | xxl.",
           categories: "Optional array of category ids, from GET /api/v1/issues/options.",
         },
         response: "201 { id, number, identifier, status } — identifier reads 'KEY-42'.",

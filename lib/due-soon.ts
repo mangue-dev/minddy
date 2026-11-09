@@ -1,10 +1,10 @@
 // “Near due date” window on the dashboard (MIN-96).
 //
 // The window is not the same for all tickets: it is worth the WEIGHT of the
-// ticket, in days — xs 1, s 2, m 3, l 5, xl 8. It is the Fibonacci sequence that
+// ticket, in days — xs 1, s 2, m 3, l 5, xl 8, xxl 13. It is the Fibonacci sequence that
 // lib/cycle.ts already uses it as effort points, so we REUSE it instead
-// to redeclare it: an XS only deserves attention the day before, an XL must be
-// seen eight days before, and an unvalued ticket counts as an M.
+// to redeclare it: an XS only deserves attention the day before, an XXL must be
+// seen thirteen days before, and an unvalued ticket counts as an M.
 //
 // Everything is counted in CALENDAR DAYS of the user's time zone, never in
 // milliseconds: “1 day left” means “it’s tomorrow on the
@@ -12,7 +12,7 @@
 // for deadlines (`(due_date at time zone p_tz)::date`, cf.
 // supabase/migrations/20260804090000_cycle_stats.sql).
 
-import { EFFORT_POINTS, effortToPoints } from "./cycle";
+import { MAX_EFFORT_POINTS, effortToPoints } from "./cycle";
 import { DATE_ONLY } from "./due-date";
 import {
   isClosedStatus,
@@ -22,8 +22,8 @@ import {
 
 const DAY_MS = 86_400_000;
 
-/** The largest window (XL) — this is what limits the SQL prefilter. */
-export const DUE_SOON_MAX_DAYS = EFFORT_POINTS.xl;
+/** The largest window (XXL, 13 days) — this is what limits the SQL prefilter. */
+export const DUE_SOON_MAX_DAYS = MAX_EFFORT_POINTS;
 
 /** The calendar day of an instant, in a given time zone ("YYYY-MM-DD").
  `en-CA` is the ISO shortcut for Intl — same recipe as `todayInTz`. */

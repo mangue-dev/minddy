@@ -12,7 +12,7 @@ describe("sanitizeViewConfig — effort filter (MIN-790)", () => {
     const { filters, invalid } = sanitizeViewConfig({ filters: { effort: ["huge", "m"] } });
     expect(filters.effort).toEqual(["m"]);
     expect(invalid).toEqual([
-      'filters.effort: dropped invalid value(s) "huge" (allowed: xs, s, m, l, xl, null)',
+      'filters.effort: dropped invalid value(s) "huge" (allowed: xs, s, m, l, xl, xxl, null)',
     ]);
   });
 });

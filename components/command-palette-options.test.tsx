@@ -22,7 +22,7 @@ const html = (node: ReactNode) => renderToStaticMarkup(<>{node}</>);
 describe("palette field options (MIN-820)", () => {
   it("opens the effort scale on a dimmed Not set, every rung with the triangle", () => {
     const options = effortOptions("Not set", { current: "m" });
-    expect(options.map((o) => o.value)).toEqual([PALETTE_NONE, "xs", "s", "m", "l", "xl"]);
+    expect(options.map((o) => o.value)).toEqual([PALETTE_NONE, "xs", "s", "m", "l", "xl", "xxl"]);
     expect(options[0].label).toBe("Not set");
     expect(options.every((o) => html(o.icon).includes("<svg"))).toBe(true);
     expect(html(options[0].icon)).toContain("opacity-60");

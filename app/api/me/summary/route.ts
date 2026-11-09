@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
             .eq("cycle_id", currentCycleId)
         : Promise.resolve({ data: [], error: null }),
       // Close deadlines (MIN-96): SQL prefilter on the largest window
-      // (XL, 8 days) with no lower bound — an overdue ticket remains overdue —
+      // (XXL, 13 days) with no lower bound — an overdue ticket remains overdue —
       // then isDueSoon tightens the window clean to everyone's effort. Sorting
       // is already that of the section: the oldest deadline first.
       issueStore(auth.supabase).select(SUMMARY_ISSUE_COLUMNS)

@@ -131,7 +131,7 @@ export function useObjectivesQuery(projectId: string | null) {
  * Auto progress from linked issues. `done`/`total` stay raw issue counts
  * (closed issues over all linked) for the label, but `percent` — the fill
  * of the progress bar — is the sum of finished EFFORT over total effort, in
- * hidden Fibonacci points (effortToPoints, xs1 s2 m3 l5 xl8, unsized = m), the
+ * hidden Fibonacci points (effortToPoints, xs1 s2 m3 l5 xl8 xxl13, unsized = m), the
  * same weighting the cycle's progression ring uses (cycleCompletionPercent):
  * an XL done + an XS left reads 89 %, not 50 %. Work in flight earns partial
  * credit (statusCompletionCredit) instead of counting for nothing until "done".

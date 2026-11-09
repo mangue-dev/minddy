@@ -16,7 +16,7 @@ export const ISSUE_STATUSES = [
 // the import (components/settings/import-mapping-editor.tsx) and the response from
 // /api/v1/issues/options unfold them as is.
 export const ISSUE_PRIORITIES = ["none", "low", "medium", "high", "urgent"] as const;
-export const ISSUE_EFFORTS = ["xs", "s", "m", "l", "xl"] as const;
+export const ISSUE_EFFORTS = ["xs", "s", "m", "l", "xl", "xxl"] as const;
 
 export type IssueStatusValue = (typeof ISSUE_STATUSES)[number];
 export type IssuePriorityValue = (typeof ISSUE_PRIORITIES)[number];

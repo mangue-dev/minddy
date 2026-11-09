@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
 import { PROSE } from "@/components/editor/prose";
 import { displayName } from "@/lib/display-name";
+import type { IssueEffort } from "@/lib/issue-constants";
 import { MCP_AGENTS, type McpAgentId } from "@/lib/mcp-agents";
 import { CARD_FADE, CARD_FADE_BOTTOM, CARD_FADE_LEFT, CARD_FADE_RIGHT, CARD_FADE_SIDES } from "../card-fade";
 import {
@@ -573,7 +574,7 @@ export function SmartFillProperties() {
       {tPriority(value)}
     </PropertyPill>
   );
-  const effort = (value: "xs" | "s" | "m" | "l" | "xl") => (
+  const effort = (value: IssueEffort) => (
     <PropertyPill>
       <EffortIndicator effort={value} />
     </PropertyPill>

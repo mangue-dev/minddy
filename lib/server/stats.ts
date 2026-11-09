@@ -65,7 +65,7 @@ interface RawCycleStats {
   }>;
 }
 
-/** Effort display order (xs→xl) — indexes the sorting of raw by_effort. */
+/** Effort display order (xs→xxl) — indexes the sorting of raw by_effort. */
 const EFFORT_ORDER = new Map(EFFORTS.map((e, i) => [e.value, i] as const));
 
 /** Finite number or null (RPC returns Postgres numerics = string|number). */

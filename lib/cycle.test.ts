@@ -132,6 +132,7 @@ describe("points", () => {
   it("maps t-shirt sizes to Fibonacci, unsized to medium", () => {
     expect(effortToPoints("xs")).toBe(1);
     expect(effortToPoints("xl")).toBe(8);
+    expect(effortToPoints("xxl")).toBe(13);
     expect(effortToPoints(null)).toBe(3);
   });
 
@@ -280,6 +281,15 @@ describe("recoScore / recoComparator", () => {
     const urgent = issue({ id: "u", priority: "urgent", effort: "xl" });
     const small = issue({ id: "s", priority: "none", effort: "xs" });
     expect(recoScore(urgent, false)).toBeGreaterThan(recoScore(small, false));
+  });
+
+  it("keeps the small-first bonus at zero or above for the largest size", () => {
+    // The bonus is measured from the heaviest size: an XXL earns none, and it
+    // never drags a blocked, unprioritized issue below zero.
+    const xxl = issue({ id: "xxl", priority: "none", effort: "xxl" });
+    const xl = issue({ id: "xl", priority: "none", effort: "xl" });
+    expect(recoScore(xxl, true)).toBe(0);
+    expect(recoScore(xl, true)).toBe(5);
   });
 
   it("orders a column: unblocked small urgent work first", () => {

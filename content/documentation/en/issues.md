@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 48,
-  "sourceRevision": 48,
+  "revision": 49,
+  "sourceRevision": 49,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-09",
   "compatibility": {
@@ -45,6 +45,8 @@
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
+      "lib/server/smart-fill.ts",
+      "lib/issue-constants.ts",
       "lib/smart-fill-fields.ts",
       "lib/server/smart-fill-reevaluation.ts",
       "lib/server/smart-fill-ownership.ts",
@@ -133,9 +135,9 @@
     ]
   },
   "review": {
-    "revision": 48,
-    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
-    "language": "agent:claude-code (en changed passages; self-reviewed; agent review, not human acceptance)",
+    "revision": 49,
+    "fact": "agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passage; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-09"
   },
   "related": [
@@ -181,7 +183,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -214,7 +216,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -231,7 +233,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -248,7 +250,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -265,7 +267,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issues section of a demonstration parent issue, with the Create a sub-issue button and its options chevron.",
       "caption": "Create a sub-issue opens the creation dialog with this issue as parent; a child keeps its own status and discussion.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +284,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -299,7 +301,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -316,7 +318,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -333,7 +335,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -368,7 +370,7 @@ You need to be the owner or a Member of the destination project; readers can ope
 
 For manual creation, switch Smart Fill off if its button is shown and enabled. This reveals the priority, effort, category, objective and relations controls for you to set. To set only some of these properties, keep Smart Fill on and open the arrow next to its button: choose a property, then its value. **Relations** there lists the relation types; choosing one opens the command palette on its possible targets. The same menu also sets the **Status** and the **Assignee**, and **Due date** opens the calendar; these three stay in the form row whether Smart Fill is on or off. Outside the title and description, the property's key opens its picker directly: P for priority, E for effort, L for categories or O for objective. On a computer, while Smart Fill is on for the issue, Command/Ctrl+Shift+F opens that arrow menu, even while you type the title or description; once you choose a value or close the menu, the cursor returns exactly where you were typing, as with Command/Ctrl+Shift+P for **Create in**. The value you choose stays visible in the form. Smart Fill only infers the properties you left empty. The switch applies to this issue; reopening the creation form restores its account preference. It is independent of Smart Assign and routines. While Smart Fill is on, it also [links the issue to related issues](#smart-fill-relations) once it is saved, so the relations picker is hidden; R still opens it. Relations you already chose stay visible as pills in the property row, between the assignee and the due date, and are created with the issue.
 
-Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is the project owner or a Member, never a reader; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority is **Not set** or ranges from low through medium and high to urgent; effort is **Not set** or uses XS, S, M, L and XL.
+Set the useful properties before confirming: status, priority, effort, assignee, objective, categories, due date and recurrence. An assignee is the project owner or a Member, never a reader; an objective groups issues around a project outcome. You can leave optional properties unset instead of guessing. Priority is **Not set** or ranges from low through medium and high to urgent; effort is **Not set** or uses XS, S, M, L, XL and XXL. Effort is the size of the work, not its impact: a few hours of work stays an L at most, however much it matters, and its importance goes into the priority. Keep XXL for work that takes several days, such as an overhaul or a new subsystem.
 
 When the project's Smart Assign is on, the assignee picker shows **Smart Assign** instead of **Unassigned**. Issue cards and the command palette follow the same rule, and an unassigned card shows the Smart Assign icon. Leave it selected and Smart Assign chooses the assignee once the issue is past triage. In the issue panel, choosing **Smart Assign** removes the current assignee and lets Smart Assign choose again. **Canceled** and **Duplicate** issues keep **Unassigned**.
 

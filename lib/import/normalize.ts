@@ -2,10 +2,11 @@
 // (linear.ts / jira.ts / generic.ts). Kept separate from parse.ts so the
 // mappers don't import the entry point back (no module cycle).
 
-import type {
-  IssueEffortValue,
-  IssuePriorityValue,
-  IssueStatusValue,
+import {
+  ISSUE_EFFORTS,
+  type IssueEffortValue,
+  type IssuePriorityValue,
+  type IssueStatusValue,
 } from "@/lib/issue-validation";
 import type { ImportWarning, ImportWarningKey } from "@/lib/import/types";
 
@@ -249,7 +250,7 @@ const PRIORITY_ALIASES: Record<string, IssuePriorityValue> = {
 export const mapPriorityToken = (token: string): IssuePriorityValue | null =>
   PRIORITY_ALIASES[token] ?? null;
 
-const EFFORT_VALUES = new Set(["xs", "s", "m", "l", "xl"]);
+const EFFORT_VALUES = new Set<string>(ISSUE_EFFORTS);
 
 /** Size written out in full — Notion, Asana, and custom tables. */
 const EFFORT_ALIASES: Record<string, IssueEffortValue> = {
@@ -267,10 +268,16 @@ const EFFORT_ALIASES: Record<string, IssueEffortValue> = {
   grand: "l",
   grande: "l",
   "very large": "xl",
-  huge: "xl",
   "tres grand": "xl",
   "tres grande": "xl",
-  epic: "xl",
+  "extra extra large": "xxl",
+  "2xl": "xxl",
+  huge: "xxl",
+  enormous: "xxl",
+  gigantic: "xxl",
+  enorme: "xxl",
+  gigantesque: "xxl",
+  epic: "xxl",
 };
 
 /** Story points → t-shirt (Linear/Jira exponential-ish scale). */
@@ -281,7 +288,8 @@ export function effortFromPoints(raw: string): IssueEffortValue | null {
   if (points <= 2) return "s";
   if (points <= 3) return "m";
   if (points <= 5) return "l";
-  return "xl";
+  if (points <= 8) return "xl";
+  return "xxl";
 }
 
 /** Direct t-shirt token or size written out in full. NUMERIC values stay out of

@@ -104,7 +104,7 @@ const VOCABULARY_BLOCK = `## Vocabulary (fixed — never invent values)
   The kanban board shows backlog → canceled only. 'triage' is the arrival zone where
   incoming issues wait for human validation. 'duplicate' requires duplicate_of_id.
 - Priorities: none, low, medium, high, urgent.
-- Efforts (t-shirt sizes): xs, s, m, l, xl — or null.
+- Efforts (t-shirt sizes): xs, s, m, l, xl, xxl — or null.
 - due_date: ISO 8601 timestamp.
 - Recurrence: an issue can repeat — field \`recurrence\`, cadences daily, weekly, monthly, yearly,
   or null. It rides ON the due date and is read with it ("every Monday", "every 4th of the month"),

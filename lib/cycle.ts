@@ -14,7 +14,7 @@ import { endpointType } from "./relation-validation";
 //   - Calendar dates are plain "YYYY-MM-DD" strings; the math runs on
 //     Date.UTC so it is immune to DST and the host timezone.
 //   - A cycle window is [start_date, end_date) — end EXCLUSIVE.
-//   - Capacity is in hidden Fibonacci points (xs1 s2 m3 l5 xl8) — the UI only
+//   - Capacity is in hidden Fibonacci points (xs1 s2 m3 l5 xl8 xxl13) — the UI only
 //     ever shows a percentage of the target, never raw counts.
 
 // ── Dates ────────────────────────────────────────────────────────────────────
@@ -133,7 +133,12 @@ export const EFFORT_POINTS: Record<IssueEffort, number> = {
   m: 3,
   l: 5,
   xl: 8,
+  xxl: 13,
 };
+
+/** The heaviest size on the scale: the ceiling of the "small first" bonus and
+ *  of the due-soon window (lib/due-soon.ts). */
+export const MAX_EFFORT_POINTS = Math.max(...Object.values(EFFORT_POINTS));
 
 /** An unsized issue counts as a medium — the neutral middle of the scale. */
 export const DEFAULT_EFFORT_POINTS = EFFORT_POINTS.m;
@@ -402,7 +407,7 @@ export function recoScore(
   let score =
     PRIORITY_RANK[issue.priority] * 10 * w.priority +
     (blocked ? 0 : 5 * w.unblocked) +
-    (EFFORT_POINTS.xl - effortToPoints(issue.effort)) * w.small;
+    (MAX_EFFORT_POINTS - effortToPoints(issue.effort)) * w.small;
   score += w.projectBoost?.[issue.project_id] ?? 0;
   if (w.categoryBoost) {
     for (const id of issue.category_ids) score += w.categoryBoost[id] ?? 0;

@@ -432,7 +432,7 @@ export interface StatsWeek {
 
 /** Median completion time for an effort level (MIN-58). */
 export interface StatsCycleEffort {
-  effort: "xs" | "s" | "m" | "l" | "xl";
+  effort: IssueEffort;
   /** Median of the “cycle time” (first in_progress → done), in seconds: one
    * ticket left open three weeks shifts it by one rank, not three
    * weeks — which the average cannot do on a long tail. */
@@ -452,7 +452,7 @@ export interface StatsCycles {
   avgIssuesPerCycle: number | null;
   /** Number of started cycles taken into account. */
   cycleCount: number;
-  /** Median completion time per effort (xs→xl), efforts without sample
+  /** Median completion time per effort (xs→xxl), efforts without sample
    * omitted. */
   byEffort: StatsCycleEffort[];
 }
