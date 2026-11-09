@@ -2,7 +2,7 @@
 
 import { useContext } from "react";
 import { ProjectsContext } from "@/lib/projects-context-store";
-import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
+import { objectiveSmartAssignEligible, smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
 
 /**
  * {@link smartAssignFillsEmptyAssignee} for an issue of a project the viewer
@@ -17,4 +17,18 @@ export function useSmartAssignFillsEmpty(
   const enabled = useContext(ProjectsContext)?.projects.find((project) => project.id === projectId)
     ?.smart_assign_enabled;
   return smartAssignFillsEmptyAssignee(enabled, status);
+}
+
+/**
+ * The objective twin (MIN-919): whether an objective's empty lead reads
+ * "Smart Assign" rather than "No lead", because the project's Smart Assign
+ * chooses one for it.
+ */
+export function useObjectiveSmartAssignFillsEmpty(
+  projectId: string | null | undefined,
+  status: string | null | undefined,
+): boolean {
+  const enabled = useContext(ProjectsContext)?.projects.find((project) => project.id === projectId)
+    ?.smart_assign_enabled;
+  return objectiveSmartAssignEligible(enabled, status);
 }

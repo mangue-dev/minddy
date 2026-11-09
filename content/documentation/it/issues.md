@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 47,
-  "sourceRevision": 47,
+  "revision": 48,
+  "sourceRevision": 48,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -128,14 +128,15 @@
       "components/sub-issues-section.tsx",
       "lib/create-context.tsx",
       "components/mention-hover-card.tsx",
-      "components/resources.tsx"
+      "components/resources.tsx",
+      "lib/server/smart-fill-objective.ts"
     ]
   },
   "review": {
-    "revision": 47,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 9 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 48,
+    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
+    "language": "agent:claude-code (it translation of the changed passages with catalog UI labels, reviewed against en revision 48; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "feedback",
@@ -180,7 +181,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-21.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -197,7 +198,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo AUR-19 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -214,7 +215,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -248,7 +249,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "La palette dei comandi mostra i ticket che possono bloccare questo, con la domanda della relazione nel campo di ricerca.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -265,7 +266,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Sezione dei sottoticket di un ticket principale dimostrativo, con il pulsante Crea un sottoticket e la sua freccia delle opzioni.",
       "caption": "Crea un sottoticket apre la creazione con questo ticket come principale; ogni figlio conserva stato e discussione propri.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +283,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -299,7 +300,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -316,7 +317,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -333,7 +334,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -391,8 +392,9 @@ Se la creazione o il salvataggio falliscono, conserva il testo, leggi l’errore
 
 Le preferenze di Smart Fill appartengono al tuo account. Apri **Impostazioni account** → **Smart Fill**. Ogni opzione ha il proprio riquadro:
 
-- Nel riquadro **Smart Fill**, **Attiva Smart Fill** attiva o disattiva Smart Fill per il tuo account. Completa priorità, impegno, categorie e obiettivo mancanti; stato, assegnatario e scadenza restano una tua scelta. Gli interruttori dei due riquadri successivi dipendono da questo.
+- Nel riquadro **Smart Fill**, **Attiva Smart Fill** attiva o disattiva Smart Fill per il tuo account. Completa priorità, impegno, categorie e obiettivo mancanti; stato, assegnatario e scadenza restano una tua scelta. Per un nuovo obiettivo, completa nome, colore e data limite ([guida agli obiettivi](/docs/objectives#objective-smart-fill)). Gli interruttori dei tre riquadri successivi dipendono da questo.
 - In **Ticket da compilare**, **Completa i ticket creati** e **Completa i ticket in triage** scelgono quali nuovi ticket completa: quelli che crei e i ticket in triage di cui sei responsabile. **Rivaluta i ticket modificati**, attivo per impostazione predefinita, permette a Smart Fill di [rileggere un ticket](#smart-fill-reevaluation) dopo una modifica del titolo o della descrizione. **Scrivi i titoli mancanti**, attivo per impostazione predefinita, permette a Smart Fill di [scrivere il titolo](#smart-fill-title) di un ticket che ti limiti a descrivere.
+- In **Obiettivi da compilare**, **Compila gli obiettivi creati**, attivo per impostazione predefinita, permette a Smart Fill di [completare gli obiettivi che crei](/docs/objectives#objective-smart-fill): il colore, la data limite e l'ora quando il testo le indica, e un nome vuoto se **Scrivi i nomi mancanti** è attivo. **Scrivi i nomi mancanti**, nello stesso riquadro e attivo per impostazione predefinita, è indipendente da **Scrivi i titoli mancanti**.
 - In **Ticket correlati**, **Collega i ticket correlati**, attivo per impostazione predefinita, permette a Smart Fill di [aggiungere relazioni](#smart-fill-relations) dopo il salvataggio di un ticket.
 - In **Indicizzazione dei ticket**, **Indicizza i ticket**, attivo per impostazione predefinita e indipendente da Smart Fill, indicizza in privato il titolo e la descrizione dei ticket che crei o modifichi, per trovare i ticket correlati e [cercare i ticket per significato](/docs/navigation#search-by-meaning). L’indicizzazione in background dei ticket esistenti di un progetto rispetta sia l’interruttore del proprietario del progetto sia quello dell’autore: un ticket il cui autore l’ha disattivato non viene mai indicizzato. I vettori sono cifrati con il progetto, come il ticket; quelli salvati prima che il progetto iniziasse a cifrare vengono convertiti dal job in background. Con l’interruttore disattivato non viene creato alcun vettore per i tuoi ticket, anche quando qualcun altro li modifica, e la ricerca dei ticket correlati confronta solo le parole. Anche le tue ricerche usano allora solo il testo, senza ricerca per significato. I vettori già creati restano finché il testo non cambia; vengono eliminati appena il testo cambia, o insieme al ticket.
 

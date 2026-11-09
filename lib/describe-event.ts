@@ -55,6 +55,10 @@ const SMART_FILL_LABELS: Record<string, string> = {
   effort: "smartFillEffort",
   category_ids: "smartFillCategories",
   objective_id: "smartFillObjective",
+  // An objective's fields (MIN-919).
+  name: "smartFillName",
+  color: "smartFillColor",
+  target_date: "smartFillTargetDate",
 };
 
 function smartFilledFields(value: string | null, t: ActivityT): string {
@@ -316,6 +320,11 @@ export function describeObjectiveEvent(
           to: e.to_value ? objStatus(e.to_value) : emptyDash,
         });
       case "lead_user_id":
+        // Smart Assign's lead (MIN-919): the actor line already names it.
+        if (e.via_smart_assign)
+          return e.smart_assign_ai
+            ? t("objectiveSmartLeadByWork", { to: memberName(ctx, tr, e.to_value) })
+            : t("objectiveSmartLead", { to: memberName(ctx, tr, e.to_value) });
         return t("objectiveLeadChanged", {
           from: memberName(ctx, tr, e.from_value),
           to: memberName(ctx, tr, e.to_value),
@@ -327,6 +336,8 @@ export function describeObjectiveEvent(
         });
       case "color":
         return t("objectiveColorChanged");
+      case "smart_fill":
+        return t("smartFilled", { fields: smartFilledFields(e.to_value, t) });
       default:
         return t("objectiveUpdated");
     }

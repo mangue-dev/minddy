@@ -113,3 +113,31 @@ export function resolveSmartFillTitle(
 ): boolean {
   return resolveSmartFill(meta) && meta?.[SMART_FILL_TITLE_META_KEY] !== false;
 }
+
+/**
+ * SMART FILL FOR OBJECTIVES (MIN-919) — whether Smart Fill completes the
+ * objectives the account creates: color, target date and, with
+ * `smart_fill_objective_name`, an empty name. It lives under the master switch and is
+ * enabled by default like the others; it is independent of the issue scopes.
+ */
+export const SMART_FILL_OBJECTIVES_META_KEY = "smart_fill_objectives";
+
+export function resolveSmartFillObjectives(
+  meta: Record<string, unknown> | null | undefined,
+): boolean {
+  return resolveSmartFill(meta) && meta?.[SMART_FILL_OBJECTIVES_META_KEY] !== false;
+}
+
+/**
+ * Whether Smart Fill writes the name of an objective whose author left it
+ * empty (MIN-919), the objective twin of `smart_fill_title`. It lives under
+ * the master switch, is enabled by default, and is independent of the issue
+ * title switch: naming an objective and titling an issue are two habits.
+ */
+export const SMART_FILL_OBJECTIVE_NAME_META_KEY = "smart_fill_objective_name";
+
+export function resolveSmartFillObjectiveName(
+  meta: Record<string, unknown> | null | undefined,
+): boolean {
+  return resolveSmartFill(meta) && meta?.[SMART_FILL_OBJECTIVE_NAME_META_KEY] !== false;
+}

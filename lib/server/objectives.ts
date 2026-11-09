@@ -24,6 +24,16 @@ import {
   parseResourcesInput,
 } from "@/lib/server/attachments";
 import {
+  fallbackObjectiveName,
+  resolveObjectiveSmartFillPayer,
+  runObjectiveSmartFill,
+  type ObjectiveSmartFillField,
+  type ObjectiveSmartFillPatch,
+} from "@/lib/server/smart-fill-objective";
+import { objectiveLeadEvent, suggestObjectiveLead } from "@/lib/server/smart-assign-objective";
+import { afterOrNow } from "@/lib/server/after-safe";
+import { objectiveSmartAssignEligible } from "@/lib/smart-assign-config";
+import {
   buildObjectiveFieldChangeEvents,
   insertEvents,
   stampMcpKey,
@@ -135,7 +145,13 @@ export async function createObjective({
   mcpKeyId?: string | null;
 }): Promise<ObjectiveResult> {
   const name = typeof input.name === "string" ? input.name.trim() : "";
-  if (!name) {
+  const descriptionText =
+    typeof input.description === "string" ? input.description.trim() : "";
+  // An objective without a name may still be born when Smart Fill writes it
+  // from the description (MIN-919); a description holding no text could not
+  // be named even then, so it is refused right away.
+  const fallbackName = name ? null : fallbackObjectiveName(descriptionText);
+  if (!name && !fallbackName) {
     return { ok: false, status: 400, errorKey: "nameRequired" };
   }
 
@@ -191,6 +207,61 @@ export async function createObjective({
   if (!access.canWrite) {
     return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
+
+  /**
+   * SMART FILL AND SMART ASSIGN (MIN-919), before the insert: the objective is
+   * born filled, as an issue is. Smart Fill only completes what the author
+   * left empty (name, color, target date) and is paid by the creator; Smart
+   * Assign gives an objective without a lead one, on projects that turned it
+   * on. Both run side by side and neither can fail the creation.
+   */
+  const smartFillEmpty: ObjectiveSmartFillField[] = [];
+  if (!name) smartFillEmpty.push("name");
+  if (row.color == null) smartFillEmpty.push("color");
+  if (row.target_date == null) smartFillEmpty.push("target_date");
+  const smartFillPayer = smartFillEmpty.length > 0
+    ? await resolveObjectiveSmartFillPayer({ actorId, explicit: input.smart_fill })
+    : null;
+  // No name and nobody to write it: the creator turned titles off, or Smart
+  // Fill is off for this objective.
+  if (!name && !smartFillPayer?.name) {
+    return { ok: false, status: 400, errorKey: "nameRequired" };
+  }
+  const leadEligible =
+    row.lead_user_id == null && objectiveSmartAssignEligible(true, row.status ?? "planned");
+  const workingName = name || (fallbackName as string);
+  const [smartFill, leadChoice] = await Promise.all([
+    smartFillPayer
+      ? runObjectiveSmartFill({
+          projectId,
+          projectName: (access.project.name as string | undefined) ?? "this project",
+          billToUserId: smartFillPayer.userId,
+          name,
+          description: descriptionText || null,
+          empty: smartFillEmpty.filter((field) => field !== "name" || smartFillPayer.name),
+          // The author's clock reads "November 30 at 7:30 pm" (MIN-919).
+          timeZone: typeof input.time_zone === "string" ? input.time_zone : null,
+        })
+      : ({} as ObjectiveSmartFillPatch),
+    leadEligible
+      ? suggestObjectiveLead({ projectId, name: workingName, description: descriptionText || null })
+      : null,
+  ]);
+  // The fields Smart Fill actually wrote, for the activity.
+  const smartFilled: ObjectiveSmartFillField[] = [];
+  if (!name) {
+    row.name = (smartFill.name ?? (fallbackName as string)).slice(0, MAX_NAME_LENGTH);
+    if (smartFill.name) smartFilled.push("name");
+  }
+  if (smartFill.color && row.color == null) {
+    row.color = smartFill.color;
+    smartFilled.push("color");
+  }
+  if (smartFill.target_date && row.target_date == null) {
+    row.target_date = smartFill.target_date;
+    smartFilled.push("target_date");
+  }
+  if (leadChoice) row.lead_user_id = leadChoice.leadId;
 
   const service = getServiceClient();
 
@@ -274,9 +345,26 @@ export async function createObjective({
       type: "created",
     },
   ];
+  // Smart Fill's gesture, after the birth and under the author's account, as
+  // for issues; the line names only the fields it actually wrote.
+  if (smartFilled.length > 0) {
+    created.push({
+      objective_id: createdObjective.id as string,
+      actor_id: actorId,
+      type: "updated",
+      field: "smart_fill",
+      to_value: smartFilled.join(","),
+      via_smart_fill: true,
+    });
+  }
+  // Smart Assign's lead, when the row was born with it.
+  const leadEvents: EventRow[] =
+    leadChoice && createdObjective.lead_user_id === leadChoice.leadId
+      ? [objectiveLeadEvent(createdObjective.id as string, leadChoice)]
+      : [];
   await insertEvents(
     service,
-    stampMcpKey(stampViaAssistant(created, viaAssistant), mcpKeyId)
+    [...stampMcpKey(stampViaAssistant(created, viaAssistant), mcpKeyId), ...leadEvents]
   );
 
   // The people mentioned in the description of the objective that has just been born.
@@ -502,6 +590,23 @@ export async function updateObjective({
     });
   }
 
+  // Someone cleared the lead on a Smart Assign project (MIN-919): as for an
+  // issue's assignee, Smart Assign chooses one again after the response.
+  if (
+    "lead_user_id" in updates &&
+    updates.lead_user_id === null &&
+    previous.lead_user_id != null &&
+    objectiveSmartAssignEligible(access.project.smart_assign_enabled, updatedObjective.status)
+  ) {
+    scheduleObjectiveLeadRefill({
+      objectiveId,
+      projectId: updatedObjective.project_id as string,
+      name: (updatedObjective.name as string) ?? "",
+      description: (updatedObjective.description as string | null) ?? null,
+      status: updatedObjective.status,
+    });
+  }
+
   const events = buildObjectiveFieldChangeEvents(
     objectiveId,
     actorId,
@@ -538,4 +643,43 @@ export async function updateObjective({
   }
 
   return { ok: true, objective: updatedObjective };
+}
+
+/**
+ * Someone cleared the lead of an objective on a Smart Assign project
+ * (MIN-919): choose one again, after the response. A compare-and-set on the
+ * empty lead keeps a lead someone set meanwhile, and a done or canceled
+ * objective is left alone. Exported for its test.
+ */
+export function scheduleObjectiveLeadRefill(input: {
+  objectiveId: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  status: unknown;
+}): void {
+  if (!objectiveSmartAssignEligible(true, input.status)) return;
+  afterOrNow(async () => {
+    const choice = await suggestObjectiveLead({
+      projectId: input.projectId,
+      name: input.name,
+      description: input.description,
+    });
+    if (!choice) return;
+    const service = getServiceClient();
+    // Only the lead changes: the content columns, and so their encryption,
+    // are untouched.
+    const { data: claimed, error } = await service
+      .from("objectives")
+      .update({ lead_user_id: choice.leadId })
+      .eq("id", input.objectiveId)
+      .eq("project_id", input.projectId)
+      .is("deleted_at", null)
+      .is("lead_user_id", null)
+      .in("status", ["planned", "in_progress"])
+      .select("id")
+      .maybeSingle();
+    if (error || !claimed) return;
+    await insertEvents(service, [objectiveLeadEvent(input.objectiveId, choice)]);
+  });
 }

@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 47,
-  "sourceRevision": 47,
+  "revision": 48,
+  "sourceRevision": 48,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -128,14 +128,15 @@
       "components/sub-issues-section.tsx",
       "lib/create-context.tsx",
       "components/mention-hover-card.tsx",
-      "components/resources.tsx"
+      "components/resources.tsx",
+      "lib/server/smart-fill-objective.ts"
     ]
   },
   "review": {
-    "revision": 47,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 9 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 48,
+    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
+    "language": "agent:claude-code (en changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "feedback",
@@ -180,7 +181,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -196,7 +197,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -213,7 +214,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -230,7 +231,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -247,7 +248,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -264,7 +265,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issues section of a demonstration parent issue, with the Create a sub-issue button and its options chevron.",
       "caption": "Create a sub-issue opens the creation dialog with this issue as parent; a child keeps its own status and discussion.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -281,7 +282,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -298,7 +299,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -315,7 +316,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -332,7 +333,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -390,8 +391,9 @@ If creation or saving fails, retain your text, read the error and check that mem
 
 Smart Fill preferences belong to your account. Open **Account settings** → **Smart Fill**. Each option has its own card:
 
-- In the **Smart Fill** card, **Enable Smart Fill** turns Smart Fill on or off for your account. It fills missing priority, effort, categories and objective; status, assignee and due date stay yours. The switches of the next two cards depend on it.
+- In the **Smart Fill** card, **Enable Smart Fill** turns Smart Fill on or off for your account. It fills missing priority, effort, categories and objective; status, assignee and due date stay yours. For a new objective, it fills the name, color and target date ([Objectives guide](/docs/objectives#objective-smart-fill)). The switches of the next three cards depend on it.
 - In **Issues to fill**, **Fill created issues** and **Fill triage issues** choose which new issues it fills: the issues you create, and the triage issues you own. **Re-evaluate edited issues**, on by default, lets Smart Fill [read an issue again](#smart-fill-reevaluation) after its title or description changes. **Write missing titles**, on by default, lets Smart Fill [write the title](#smart-fill-title) of an issue you only describe.
+- In **Objectives to fill**, **Fill created objectives**, on by default, lets Smart Fill [complete the objectives you create](/docs/objectives#objective-smart-fill): their color, their target date and its time when the text gives them, and an empty name when **Write missing names** is on. **Write missing names**, in the same card and on by default, is independent of **Write missing titles**.
 - In **Related issues**, **Link related issues**, on by default, lets Smart Fill [add relations](#smart-fill-relations) after an issue is saved.
 - In **Issue indexing**, **Index issues**, on by default and independent of Smart Fill, indexes the titles and descriptions of the issues you create or edit privately, to find related issues and to [search issues by meaning](/docs/navigation#search-by-meaning). Background indexing of a project's existing issues follows both the project owner's switch and the author's: an issue whose author turned it off is never indexed. Vectors are encrypted with the project, like the issue; vectors stored before the project started encrypting are converted by the background job. When the switch is off, no vector is created for your issues, even when someone else edits them, and the related-issue search compares words only. Your own searches then use text only, without search by meaning. Vectors already created stay while the text is unchanged; they are deleted as soon as the text changes, or with the issue.
 

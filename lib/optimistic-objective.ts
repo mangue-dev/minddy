@@ -43,7 +43,23 @@ export function createObjectiveOptimistic(
   queryClient: QueryClient,
   projectId: string,
   input: CreateObjectiveInput,
-): { objective: Objective; persisted: Promise<Objective> } {
+): { objective: Objective | null; persisted: Promise<Objective> } {
+  // Smart Fill (MIN-919): the server fills the objective BEFORE inserting it,
+  // so there is no optimistic row; it would show an empty name and color
+  // for the length of the pass. The server row lands when it is ready.
+  if (input.smart_fill) {
+    const persisted = createObjectiveApi(projectId, input).then(
+      (created) => {
+        insertObjectiveEverywhere(queryClient, projectId, created);
+        return created;
+      },
+      (error: unknown) => {
+        toast.error(error instanceof Error ? error.message : String(error));
+        throw error;
+      },
+    );
+    return { objective: null, persisted };
+  }
   const objective = buildOptimisticObjective(input, projectId);
   const handle = objectiveWrites.begin({ kind: "insert", row: objective });
   insertObjectiveEverywhere(queryClient, projectId, objective);

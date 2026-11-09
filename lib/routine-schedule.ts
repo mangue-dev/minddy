@@ -193,7 +193,7 @@ const DAY_MS = 86_400_000;
  * - repeated time (autumn replays 2:00 → 3:00): the FIRST occurrence, the one
  *   the clock displays first, so a routine never runs twice that night.
  */
-function zonedTimeToUtc(
+export function zonedTimeToUtc(
   timeZone: string,
   year: number,
   month: number,
@@ -220,6 +220,20 @@ function zonedTimeToUtc(
   // The time falls in the gap: reading it with the offset in force BEFORE the
   // jump lands exactly “gap length” later on the clock.
   return new Date(wanted - offsetBefore);
+}
+
+/**
+ * What the `timeZone` clock reads at `at`, as `YYYY-MM-DD` and `HH:MM`. Smart
+ * Fill reads "today" and "now" this way to resolve a date the user wrote
+ * (MIN-919).
+ */
+export function zonedDateTime(at: Date, timeZone: string): { date: string; time: string } {
+  const p = zonedParts(at, timeZone);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    date: `${p.year}-${pad(p.month)}-${pad(p.day)}`,
+    time: `${pad(p.hour)}:${pad(p.minute)}`,
+  };
 }
 
 /** Number of days of the month (1-indexed) — to return a 31 to a short month. */

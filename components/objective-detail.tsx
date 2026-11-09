@@ -58,6 +58,7 @@ import { ObjectiveFeedbackSection } from "@/components/objective-feedback-sectio
 import { ObjectiveResourcesSection } from "@/components/objective-resources-section";
 import { ObjectiveRelationsSection } from "@/components/objective-relations-section";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { useObjectiveSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
 import { IssueActivity, CommentComposer } from "@/components/issue-timeline";
 import { commentTarget, useCommentSurface } from "@/lib/comment-focus";
 import {
@@ -462,6 +463,8 @@ export function ObjectiveDetail({
   );
 
   const setStatus = useStableCallback((status: ObjectiveUpdateInput["status"]) => void patch({ status }));
+  // With Smart Assign on, an empty lead is chosen for you (MIN-919).
+  const leadSmartAssign = useObjectiveSmartAssignFillsEmpty(projectId, objective.status);
   const setLead = useStableCallback((lead_user_id: ObjectiveUpdateInput["lead_user_id"]) => void patch({ lead_user_id }));
   const setTargetDate = useStableCallback((target_date: ObjectiveUpdateInput["target_date"]) => void patch({ target_date }));
   const setColor = useStableCallback((color: ObjectiveUpdateInput["color"]) => void patch({ color }));
@@ -680,6 +683,7 @@ export function ObjectiveDetail({
                 value={objective.lead_user_id}
                 members={members}
                 onChange={setLead}
+                smartAssign={leadSmartAssign}
                 {...pickerControl("lead")}
               />
             </PropertyRow>

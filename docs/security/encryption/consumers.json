@@ -9243,21 +9243,28 @@
     "file": "lib/server/objectives.ts",
     "operation": "rpc",
     "resource": "create_objective_guarded",
-    "line": 223,
+    "line": 294,
     "storage": false
   },
   {
     "file": "lib/server/objectives.ts",
     "operation": "from",
     "resource": "objectives",
-    "line": 379,
+    "line": 467,
     "storage": false
   },
   {
     "file": "lib/server/objectives.ts",
     "operation": "rpc",
     "resource": "update_objective_guarded",
-    "line": 450,
+    "line": 538,
+    "storage": false
+  },
+  {
+    "file": "lib/server/objectives.ts",
+    "operation": "from",
+    "resource": "objectives",
+    "line": 672,
     "storage": false
   },
   {
@@ -10997,6 +11004,20 @@
     "storage": false
   },
   {
+    "file": "lib/server/smart-assign-objective.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 93,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-assign-objective.ts",
+    "operation": "from",
+    "resource": "project_members",
+    "line": 99,
+    "storage": false
+  },
+  {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "projects",
@@ -11385,7 +11406,7 @@
     "file": "lib/server/usage-analytics.ts",
     "operation": "rpc",
     "resource": "get_user_usage_daily",
-    "line": 27,
+    "line": 28,
     "storage": false
   },
   {

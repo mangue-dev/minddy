@@ -28,7 +28,15 @@ import {
 } from "@/components/editor/document-editor-lazy";
 import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
-import { AssigneeCompact } from "@/components/issue-compact-fields";
+import { AssigneeCompact, SmartFillCompact } from "@/components/issue-compact-fields";
+import type { ContextMenuAction } from "@/components/issue-context-menu";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Heading01Icon, PaintBoardIcon } from "@hugeicons/core-free-icons";
+import { DATE_ICON } from "@/components/feature-icons";
+import { CATEGORY_COLORS, CATEGORY_COLOR_NAMES } from "@/lib/category-colors";
+import { resolveSmartFill, resolveSmartFillObjectiveName, resolveSmartFillObjectives } from "@/lib/smart-fill";
+import { objectiveSmartAssignEligible } from "@/lib/smart-assign-config";
+import { currentTimeZone } from "@/lib/time-zone-cookie";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect, type PickerOption } from "@/components/search-select";
@@ -295,6 +303,25 @@ export function ObjectiveDialog({
   // and each only makes sense while composing — editing an objective happens in
   // the side panel, whose own attach button and mic write straight to it.
   const composerEnabled = !objective && !!activeProjectId;
+
+  /**
+   * SMART FILL (MIN-919), as in the issue dialog: on by the account's
+   * preference, switched per objective, reset each time the dialog opens.
+   * While on, the color and target date leave the row (Smart Fill fills
+   * them) unless a picker is open or holds a value set by hand; the name may
+   * stay empty when the account lets Smart Fill write it from the
+   * description.
+   */
+  const smartFillAvailable = composerEnabled && resolveSmartFill(user?.user_metadata);
+  const smartFillDefault = smartFillAvailable && resolveSmartFillObjectives(user?.user_metadata);
+  const smartFillTouchedRef = useRef(false);
+  const [smartFill, setSmartFill] = useState(smartFillDefault);
+  useEffect(() => {
+    if (!open || smartFillTouchedRef.current) return;
+    setSmartFill(smartFillDefault);
+  }, [open, smartFillDefault]);
+  const [nameRequested, setNameRequested] = useState(false);
+  const writesName = smartFill && resolveSmartFillObjectiveName(user?.user_metadata);
   useObjectiveFieldShortcuts({
     enabled: open,
     // Relations are only picked while composing (see `composerEnabled`).
@@ -370,6 +397,9 @@ export function ObjectiveDialog({
     setDraftDocument(null);
     setSelectedProjectId(projectId);
     setForm(EMPTY);
+    smartFillTouchedRef.current = false;
+    setSmartFill(smartFillDefault);
+    setNameRequested(false);
     setRelations([]);
     editorNonEmptyRef.current = false;
     setActiveDraftId(null);
@@ -476,10 +506,19 @@ export function ObjectiveDialog({
     recoverDraft(initialDraftId);
   }, [open, initialDraftId, drafts.find]);
 
+  const showsName = !writesName || nameRequested || form.name !== "";
+  const hasDescription = form.description.trim() !== "" || editorNonEmptyRef.current;
+  const canSubmitText = form.name.trim() !== "" || (writesName && hasDescription);
+  const showsSmartFillField = (field: "targetDate" | "color") =>
+    !smartFill ||
+    openPicker === field ||
+    (field === "color" ? form.color !== null : form.target_date !== null);
+
   const tPages = useTranslations("Pages");
   const submit = async () => {
     const name = form.name.trim();
-    if (!name || submitting) return;
+    if (submitting) return;
+    if (!name && !(writesName && form.description.trim())) return;
     // An image still uploading has no address yet (MIN-728).
     if (imagesUploading) {
       toast.info(tPages("waitForUploads"));
@@ -497,6 +536,10 @@ export function ObjectiveDialog({
       target_date: form.target_date,
       color: form.color,
     };
+    // Sent only from the creation form: an edit is never filled.
+    const smartFillInput = smartFillAvailable
+      ? { smart_fill: smartFill, ...(smartFill ? { time_zone: currentTimeZone() } : {}) }
+      : {};
     try {
       if (objective) {
         await onUpdate(objective.id, payload);
@@ -508,13 +551,17 @@ export function ObjectiveDialog({
         // the previous prefix, so the server COPIES them into the target.
         await onCreateInProject(activeProjectId, {
           ...payload,
+          ...smartFillInput,
           relations,
           copy_resources: uploads.inputs,
         });
-        toast.success(t("createdInProjectToast", { project: activeProject?.name ?? "" }));
+        toast.success(smartFill && smartFillAvailable
+          ? t("smartFillPendingToast")
+          : t("createdInProjectToast", { project: activeProject?.name ?? "" }));
       } else {
-        await onCreate({ ...payload, resources: uploads.inputs, relations });
-        toast.success(t("createdToast"));
+        await onCreate({ ...payload, ...smartFillInput, resources: uploads.inputs, relations });
+        // The objective appears once filled: the toast says it is coming.
+        toast.success(smartFill && smartFillAvailable ? t("smartFillPendingToast") : t("createdToast"));
       }
       // The draft became a real objective — drop it from the local store.
       if (activeDraftId) drafts.remove(activeDraftId);
@@ -580,9 +627,49 @@ export function ObjectiveDialog({
   );
 
   const submitLabel = objective ? tCommon("save") : t("createObjective");
-  const submitDisabled = submitting || numoBusy || !form.name.trim() || uploads.uploading;
+  const submitDisabled = submitting || numoBusy || !canSubmitText || uploads.uploading;
   // A draft keeps finished uploads only, so it waits for those in flight.
   const saveDraftDisabled = submitting || numoBusy || uploads.uploading || !draftHasContent();
+
+  const tColors = useTranslations("Categories.colors");
+  const smartFillActions: ContextMenuAction[] = [
+    // The name Smart Fill would write (MIN-813).
+    ...(writesName && !showsName
+      ? [{
+          id: "smart-fill-name",
+          label: tField("title"),
+          icon: <HugeiconsIcon icon={Heading01Icon} className="size-4 text-muted-foreground" />,
+          transfersFocus: true,
+          onSelect: () => {
+            setNameRequested(true);
+            requestAnimationFrame(() => titleBody.titleRef.current?.focus());
+          },
+        }]
+      : []),
+    {
+      id: "smart-fill-target-date",
+      label: t("targetDatePlaceholder"),
+      icon: <HugeiconsIcon icon={DATE_ICON} className="size-4 text-muted-foreground" />,
+      // The calendar opens once the menu has closed.
+      transfersFocus: true,
+      onSelect: () => setOpenPicker("targetDate"),
+    },
+    {
+      id: "smart-fill-color",
+      label: t("colorFieldLabel"),
+      icon: <HugeiconsIcon icon={PaintBoardIcon} className="size-4 text-muted-foreground" />,
+      children: CATEGORY_COLORS.map((hex) => {
+        const name = tColors(CATEGORY_COLOR_NAMES[hex]);
+        return {
+          id: `smart-fill-color-${hex}`,
+          label: name.charAt(0).toLocaleUpperCase() + name.slice(1),
+          icon: <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: hex }} />,
+          checked: form.color === hex,
+          onSelect: () => setForm((f) => ({ ...f, color: hex })),
+        };
+      }),
+    },
+  ];
 
   const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
     context="objective_form" onTranscription={(text) => { track("objective_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
@@ -637,6 +724,7 @@ export function ObjectiveDialog({
                   className="mb-3"
                 />
               )}
+              {showsName && (<>
               <label htmlFor={titleId} className="creation-field-label">{tField("title")}</label>
               <AutoTextarea
                 // Remounted by a reset that lands as the dialog reopens, so
@@ -644,10 +732,18 @@ export function ObjectiveDialog({
                 key={resets}
                 id={titleId}
                 enterKeyHint={mobile ? "next" : undefined}
-                autoFocus={!mobile && !focusDescription}
-                required
+                autoFocus={!mobile && !focusDescription && !writesName}
+                required={!writesName}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                // Smart Fill writes an empty name: the field leaves again
+                // when it loses focus while empty (MIN-813).
+                onBlur={(e) => {
+                  if (writesName && e.currentTarget.value.trim() === "") {
+                    setForm((f) => ({ ...f, name: "" }));
+                    setNameRequested(false);
+                  }
+                }}
                 ref={titleBody.titleRef}
                 onKeyDown={(e) => {
                   titleBody.onTitleKeyDown(e, { submit: () => void submit(), mobile });
@@ -655,10 +751,11 @@ export function ObjectiveDialog({
                 placeholder={t("namePlaceholder")}
                 className="creation-title w-full title-field bg-transparent text-lg leading-snug font-semibold outline-none placeholder:text-muted-foreground/50"
               />
+              </>)}
               <div className="creation-field-label">{tField("description")}</div>
               {/* The title's gap: the description is this wrapper's first child,
                   where its own margin does not apply. */}
-              <div ref={titleBody.bodyRef} className="app-desktop:mt-3">
+              <div ref={titleBody.bodyRef} className={showsName ? "app-desktop:mt-3" : undefined}>
               {objective && storedDocument === undefined ? (
                 <DocumentEditorFallback
                   value={form.description}
@@ -669,7 +766,7 @@ export function ObjectiveDialog({
                 key={editorKey}
                 mentions={mentions}
                 onLeaveTop={titleBody.leaveBody}
-                autoFocus={focusDescription}
+                autoFocus={focusDescription || (!mobile && writesName && !showsName)}
                 value={form.description}
                 uploadScope={activeProjectId ? `projects/${activeProjectId}` : null}
                 onUploadingChange={setImagesUploading}
@@ -709,6 +806,8 @@ export function ObjectiveDialog({
                     onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
                     members={scopedMembers}
                     noneLabel={t("noLead")}
+                    // With Smart Assign on, an empty lead is chosen (MIN-919).
+                    smartAssign={objectiveSmartAssignEligible(activeProject?.smart_assign_enabled, form.status)}
                     {...pickerControl("lead")}
                   />
                 </CreationProperty>
@@ -738,6 +837,7 @@ export function ObjectiveDialog({
                     </div>
                   </CreationProperty>
                 )}
+                {showsSmartFillField("targetDate") && (
                 <CreationProperty mobile={mobile} label={t("targetDatePlaceholder")}>
                   <DateTimePicker
                     variant="ghost"
@@ -749,6 +849,8 @@ export function ObjectiveDialog({
                     {...pickerControl("targetDate")}
                   />
                 </CreationProperty>
+                )}
+                {showsSmartFillField("color") && (
                 <CreationProperty mobile={mobile} label={t("colorFieldLabel")}>
                   <ColorCompact
                     value={form.color}
@@ -756,6 +858,27 @@ export function ObjectiveDialog({
                     {...pickerControl("color")}
                   />
                 </CreationProperty>
+                )}
+                {smartFillAvailable && (
+                  <SmartFillCompact
+                    fullWidth={mobile}
+                    shortcut
+                    value={smartFill}
+                    onChange={(value) => {
+                      smartFillTouchedRef.current = true;
+                      setSmartFill(value);
+                    }}
+                    hints={{
+                      on: resolveSmartFillObjectiveName(user?.user_metadata)
+                        ? t("smartFillOnNameHint")
+                        : t("smartFillOnHint"),
+                      off: t("smartFillOffHint"),
+                    }}
+                    // Sets one property by hand without turning Smart Fill
+                    // off: the value wins and its field returns (MIN-809).
+                    actions={smartFillActions}
+                  />
+                )}
               </div>
 
             </MobileSheetScrollArea>

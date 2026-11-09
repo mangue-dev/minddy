@@ -13,7 +13,7 @@ import type { Issue, Objective, PendingRelationInput, Project } from "./types";
 const fixture = vi.hoisted(() => ({
   issues: [] as Issue[], objectives: [] as Objective[],
   drafts: [] as (IssueDraft | ObjectiveDraft)[], save: vi.fn(), remove: vi.fn(),
-  mobile: false, smartFill: true, smartFillCreated: true, smartFillRelations: true, smartFillTitle: true, queryProjects: [] as (string | null)[],
+  mobile: false, smartFill: true, smartFillCreated: true, smartFillObjectives: true, smartFillRelations: true, smartFillTitle: true, smartFillObjectiveName: true, queryProjects: [] as (string | null)[],
   editorDocuments: [] as unknown[], editorAutoFocus: [] as boolean[],
 }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => fixture.mobile }));
@@ -127,7 +127,7 @@ vi.mock("@/components/creation-project-select", () => ({ CreationProjectSelect: 
 // render without a QueryClient, so the hook keeps the fixture order.
 vi.mock("@/lib/use-ordered-objectives", () => ({ useOrderedObjectives: <T,>(objectives: T[]) => objectives }));
 vi.mock("@/lib/use-objectives-query", () => ({ useObjectivesQuery: (project: string | null) => ({ objectives: project ? fixture.objectives : [], loading: false }) }));
-vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_relations: fixture.smartFillRelations, smart_fill_title: fixture.smartFillTitle } } }) }));
+vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "user", user_metadata: { smart_fill: fixture.smartFill, smart_fill_created: fixture.smartFillCreated, smart_fill_objectives: fixture.smartFillObjectives, smart_fill_relations: fixture.smartFillRelations, smart_fill_title: fixture.smartFillTitle, smart_fill_objective_name: fixture.smartFillObjectiveName } } }) }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: vi.fn() }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@/lib/use-mention-sources", () => ({ useDescriptionMentions: () => [] }));
@@ -208,7 +208,7 @@ beforeEach(() => {
   fixture.issues = [issue, { ...issue, id: "closed", title: "Closed issue", status: "done" }, { ...issue, id: "foreign", project_id: "other", title: "Foreign issue" }];
   fixture.objectives = [objective, { ...objective, id: "closed-goal", name: "Closed objective", status: "done" }, { ...objective, id: "foreign-goal", name: "Foreign objective", project_id: "other" }];
   fixture.mobile = false;
-  fixture.drafts = []; fixture.editorDocuments = []; fixture.editorAutoFocus = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillRelations = true; fixture.smartFillTitle = false; fixture.queryProjects = [];
+  fixture.drafts = []; fixture.editorDocuments = []; fixture.editorAutoFocus = []; fixture.smartFill = true; fixture.smartFillCreated = true; fixture.smartFillObjectives = true; fixture.smartFillRelations = true; fixture.smartFillTitle = false; fixture.smartFillObjectiveName = false; fixture.queryProjects = [];
   fixture.save.mockImplementation(async (draft) => { fixture.drafts = [draft]; });
   fixture.remove.mockImplementation(async (id) => { fixture.drafts = fixture.drafts.filter((draft) => draft.id !== id); return true; });
   host = document.createElement("div"); document.body.append(host); root = createRoot(host);
@@ -388,6 +388,37 @@ describe("creation relation controls", () => {
     }));
   });
 
+  it("sends the objective's Smart Fill choice and hides what it fills (MIN-919)", async () => {
+    const dialog = await mountDialog("objective");
+    // Smart Fill fills the target date and the color: they leave the row.
+    expect(host.querySelector("[data-field=date]")).toBeNull();
+    await typeTitle("Onboarding redesign");
+    await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(dialog.create).toHaveBeenLastCalledWith(expect.objectContaining({ name: "Onboarding redesign", smart_fill: true }));
+  });
+
+  it("leaves the objective's name to Smart Fill by its own switch, not the issue title's (MIN-919)", async () => {
+    fixture.smartFillTitle = true;
+    fixture.smartFillObjectiveName = false;
+    await mountDialog("objective");
+    expect(host.querySelector(".creation-title")).not.toBeNull();
+    root.unmount();
+    root = createRoot(host);
+    fixture.smartFillTitle = false;
+    fixture.smartFillObjectiveName = true;
+    await mountDialog("objective");
+    expect(host.querySelector(".creation-title")).toBeNull();
+  });
+
+  it("brings the objective's fields back when Smart Fill is off for it (MIN-919)", async () => {
+    const dialog = await mountDialog("objective");
+    await click("Smart Fill");
+    expect(host.querySelector("[data-field=date]")).not.toBeNull();
+    await typeTitle("Onboarding redesign");
+    await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+    expect(dialog.create).toHaveBeenLastCalledWith(expect.objectContaining({ smart_fill: false }));
+  });
+
   it("keeps the hierarchy entries out of the new-objective form", async () => {
     await mountDialog("objective");
     await click(en.Relations.addRelationAria);
@@ -408,8 +439,10 @@ describe("creation relation controls", () => {
   });
 
   it.each(["issue", "objective"] as const)("submits removable %s pills with the keyboard shortcut", async (kind) => {
-    // Smart Fill owns relations while it is on (MIN-717): pick them by hand.
-    if (kind === "issue") fixture.smartFillCreated = false;
+    // Smart Fill owns an issue's relations (MIN-717) and an objective's target
+    // date (MIN-919) while it is on: the row this test reads needs it off.
+    fixture.smartFillCreated = false;
+    fixture.smartFillObjectives = false;
     const dialog = await mountDialog(kind);
     await addRelation("blocked_by", "objective");
     const pill = host.querySelector(`[aria-label="${en.Relations.blocked_by}: Target objective"]`)!;

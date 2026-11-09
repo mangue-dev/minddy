@@ -11,9 +11,13 @@ import {
   resolveSmartFill,
   resolveSmartFillReevaluation,
   resolveSmartFillRelations,
+  resolveSmartFillObjectiveName,
+  resolveSmartFillObjectives,
   resolveSmartFillScope,
   resolveSmartFillTitle,
   SMART_FILL_CREATED_META_KEY,
+  SMART_FILL_OBJECTIVE_NAME_META_KEY,
+  SMART_FILL_OBJECTIVES_META_KEY,
   SMART_FILL_META_KEY,
   SMART_FILL_REEVALUATE_META_KEY,
   SMART_FILL_RELATIONS_META_KEY,
@@ -47,6 +51,14 @@ export function AccountSmartFillSection() {
   const [triage, setTriage] = useAccountPreference(
     SMART_FILL_TRIAGE_META_KEY,
     resolveTriage,
+  );
+  const [objectives, setObjectives] = useAccountPreference(
+    SMART_FILL_OBJECTIVES_META_KEY,
+    resolveSmartFillObjectives,
+  );
+  const [objectiveName, setObjectiveName] = useAccountPreference(
+    SMART_FILL_OBJECTIVE_NAME_META_KEY,
+    resolveSmartFillObjectiveName,
   );
   const [writeTitle, setWriteTitle] = useAccountPreference(
     SMART_FILL_TITLE_META_KEY,
@@ -138,6 +150,39 @@ export function AccountSmartFillSection() {
               id="account-smart-fill-reevaluate"
               checked={reevaluate}
               onCheckedChange={(v) => void setReevaluate(v)}
+              disabled={!ready || !smartFill}
+            />
+          }
+        />
+      </SettingsGroup>
+
+      {/* Objectives (MIN-919): their own switch, independent of the issue scopes. */}
+      <SettingsGroup
+        anchor={SETTINGS_SECTIONS.accountSmartFillObjectives}
+        title={ta("smartFillObjectivesTitle")}
+      >
+        <SettingsRow
+          htmlFor="account-smart-fill-objectives"
+          label={ta("smartFillObjectivesLabel")}
+          hint={ta("smartFillObjectivesDesc")}
+          control={
+            <Switch
+              id="account-smart-fill-objectives"
+              checked={objectives}
+              onCheckedChange={(v) => void setObjectives(v)}
+              disabled={!ready || !smartFill}
+            />
+          }
+        />
+        <SettingsRow
+          htmlFor="account-smart-fill-objective-name"
+          label={ta("smartFillObjectiveNameLabel")}
+          hint={ta("smartFillObjectiveNameDesc")}
+          control={
+            <Switch
+              id="account-smart-fill-objective-name"
+              checked={objectiveName}
+              onCheckedChange={(v) => void setObjectiveName(v)}
               disabled={!ready || !smartFill}
             />
           }

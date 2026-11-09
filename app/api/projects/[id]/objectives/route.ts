@@ -5,6 +5,7 @@ import { getAuthedUser, getAuthedUserWithRlsReads } from "@/lib/server/api-auth"
 import { MAX_OBJECTIVE_DESCRIPTION_LENGTH, createObjective } from "@/lib/server/objectives";
 import { takeRichDocumentInput } from "@/lib/server/rich-documents";
 import { seedDescriptionDocument } from "@/lib/server/description-collaboration";
+import { parseTimeZoneCookie, TIME_ZONE_COOKIE } from "@/lib/time-zone-cookie";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -41,6 +42,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   });
   if (!document.ok) {
     return NextResponse.json({ error: t(document.errorKey) }, { status: 400 });
+  }
+  // Smart Fill reads a written deadline in the author's time zone (MIN-919):
+  // the form sends it, and the browser's cookie stands in when it does not.
+  if (typeof input.time_zone !== "string") {
+    const zone = parseTimeZoneCookie(request.cookies.get(TIME_ZONE_COOKIE)?.value);
+    if (zone) input.time_zone = zone;
   }
   const result = await createObjective({
     projectId: id,

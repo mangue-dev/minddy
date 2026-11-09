@@ -44,6 +44,8 @@ import {
 import { EmptyScene } from "@/components/empty-scene";
 import { ObjectiveStatusIndicator } from "@/components/issue-indicators";
 import { NumoIcon } from "@/components/numo-icon";
+import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
+import { objectiveSmartAssignEligible } from "@/lib/smart-assign-config";
 import { ObjectiveProgressStat } from "@/components/objective-progress";
 import { FilterMenu } from "@/components/filter-menu";
 import { CollectionSidebar, type SidebarBrowseTarget } from "@/components/secondary-sidebar";
@@ -293,6 +295,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
   board?: { objectiveId: string; onOpen: (objectiveId: string) => void };
 } = {}) {
   const t = useTranslations("Objectives");
+  const tField = useTranslations("Field");
   const tCommon = useTranslations("Common");
   const tSeed = useTranslations("Seed");
   const { projectId: routeProjectId, pathname: livePathname, searchParams } = useAppTabRoute();
@@ -349,6 +352,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
     };
     if (!canWrite) return [viewIssues];
     const lead = objective.lead_user_id ? memberMap.get(objective.lead_user_id) ?? null : null;
+    const leadSmartAssign = objectiveSmartAssignEligible(project?.smart_assign_enabled, objective.status);
     const update = (updates: Parameters<typeof updateObjective>[1]) =>
       void updateObjective(objective.id, updates).catch((err: Error) => toast.error(err.message));
     return [
@@ -370,12 +374,16 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
         // The current lead's face, as in the row; the person icon when none.
         icon: lead
           ? <UserAvatar seed={lead.avatar_seed} title={displayName(lead)} className="size-4" />
-          : <HugeiconsIcon icon={UserCircleIcon} className="size-4" />,
+          : <HugeiconsIcon icon={leadSmartAssign ? SMART_ASSIGN_ICON : UserCircleIcon} className="size-4" />,
         // Only the owner or a Member can lead (MIN-693).
         children: [
           {
             id: "objective-lead-none",
-            label: t("noLead"),
+            // With Smart Assign on, an empty lead is chosen for you (MIN-919).
+            label: leadSmartAssign ? tField("smartAssign") : t("noLead"),
+            icon: leadSmartAssign
+              ? <HugeiconsIcon icon={SMART_ASSIGN_ICON} strokeWidth={1.75} className="size-4" />
+              : undefined,
             checked: objective.lead_user_id === null,
             onSelect: () => update({ lead_user_id: null }),
           },
@@ -651,7 +659,10 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
             // Only the owner or a Member can lead (MIN-693), as in the row menu.
             options: assigneeOptions(
               members.filter((member) => member.role !== "reader"),
-              { label: t("noLead") },
+              selectedObjectives.every((objective) =>
+                objectiveSmartAssignEligible(project?.smart_assign_enabled, objective.status))
+                ? { label: tField("smartAssign"), smartAssign: true }
+                : { label: t("noLead") },
               sharedCurrent(selectedObjectives, (objective) => objective.lead_user_id),
             ),
             onPick: (value) =>

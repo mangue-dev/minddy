@@ -72,7 +72,10 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const result = await createObjective({
       projectId: id,
       actorId: auth.user.id,
-      input: { name: objective.name, description: objective.summary || null },
+      // The brief already named and described each objective: Smart Fill
+      // would pay one call per objective for a color. Smart Assign still
+      // gives each one a lead.
+      input: { name: objective.name, description: objective.summary || null, smart_fill: false },
     });
     if (result.ok) {
       objectiveIdByKey.set(objective.key, result.objective.id as string);
