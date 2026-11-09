@@ -2,10 +2,11 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { CodeSimpleIcon as Code2, Comment01Icon, Copy01Icon, Edit01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
+import { CodeSimpleIcon as Code2, Comment01Icon, Edit01Icon, Search01Icon, TaskDone01Icon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 
 /**
  * The “Copy as prompt” entry in the ⋯ / right-click menu of a ticket, shared
@@ -48,11 +49,13 @@ export function useAgentMenuActions({
   onCopyCommentsPrompt?: () => void;
 }): ContextMenuAction[] {
   const t = useTranslations("IssueUI");
+  const promptLabel = usePromptActionLabel();
+  const promptTitle = promptLabel(t("copyAsPrompt"));
 
   return useMemo(() => {
     const copyPrompt = promptSubmenu({
       id: "copy-prompt",
-      label: t("copyAsPrompt"),
+      label: promptTitle,
       labels: {
         plan: hasPlan ? t("actionReviewPlan") : t("actionWritePlan"),
         implement: t("actionImplement"),
@@ -73,7 +76,7 @@ export function useAgentMenuActions({
       onSelect: onCopyCommentsPrompt,
     };
     return [copyCommentsPrompt, copyPrompt];
-  }, [hasPlan, onCopyPrompt, onCopyPlanPrompt, onCopyVerifyPrompt, onCopyCustomPrompt, onCopyCommentsPrompt, t]);
+  }, [hasPlan, onCopyPrompt, onCopyPlanPrompt, onCopyVerifyPrompt, onCopyCustomPrompt, onCopyCommentsPrompt, promptTitle, t]);
 }
 
 // The two plan labels remain searchable together: whatever the state of the
@@ -130,7 +133,8 @@ export function promptSubmenu({
     id,
     label,
     keywords: ["copy", "prompt", "agent", "copier", ...PLAN_KEYWORDS],
-    icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+    // The agent's logo when prompts open in its app, the copy glyph otherwise.
+    icon: <PromptActionIcon />,
     children: [
       {
         id: `${id}-plan`,

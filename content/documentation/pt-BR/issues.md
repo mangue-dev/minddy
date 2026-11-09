@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 49,
-  "sourceRevision": 49,
+  "revision": 50,
+  "sourceRevision": 50,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-09",
   "compatibility": {
@@ -41,6 +41,7 @@
       "desktop"
     ],
     "evidence": [
+      "lib/prompt-delivery.ts",
       "content/knowledge/core-tracker.md",
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
@@ -135,9 +136,9 @@
     ]
   },
   "review": {
-    "revision": 49,
-    "fact": "agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
-    "language": "agent:claude-code (pt-BR translation of the changed passage, reviewed against en revision 49; agent review, not human acceptance)",
+    "revision": 50,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (pt-BR passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the changed passage, reviewed against en revision 49; agent review, not human acceptance)",
     "date": "2026-11-09"
   },
   "related": [
@@ -184,7 +185,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-21.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -201,7 +202,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -218,7 +219,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -235,7 +236,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -252,7 +253,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "A paleta de comandos lista os tickets que podem bloquear este, com a pergunta da relação no campo de busca.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -269,7 +270,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Seção de subtickets de um ticket pai de demonstração, com o botão Criar um subticket e sua seta de opções.",
       "caption": "Criar um subticket abre a criação com este ticket como pai; cada filho mantém seu próprio status e discussão.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -286,7 +287,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -303,7 +304,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -320,7 +321,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -337,7 +338,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -553,6 +554,8 @@ Para implementar o plano, copie o prompt do ticket para seu próprio agente de c
 ### Copiar um prompt para outro agente de código {#copy-issue-prompt}
 
 Para entregar um ticket a um agente de código fora do minddy, como Claude Code, Codex ou Cursor, abra o menu de ações do ticket, escolha **Copiar como prompt** e depois **Gerar um plano** (ou **Revisar o plano** quando já existir um), **Implementar o ticket**, **Verificar a implementação** ou **Personalizado…**. Com vários tickets selecionados, **Copiar o prompt combinado** reúne todos em um único prompt. Copiar não executa nenhum modelo de IA nem consome sua cota de IA: o minddy reúne o que já tem armazenado e o agente explora o repositório por conta própria. Se **Iniciar o ticket ou tarefa quando eu copiar seu prompt** estiver ativado nas preferências da conta, copiar também inicia um ticket que ainda não foi iniciado. Consulte [Trabalho de código e pull requests](/docs/code-work) para o fluxo completo e a revisão de pull requests.
+
+Quando um agente está conectado ao MCP do minddy na sua conta, o prompt apenas nomeia o ticket e o agente lê o restante pelo MCP; veja [Prompts curtos e envio para o aplicativo do seu agente](/docs/code-work#short-prompts-and-sending). O restante desta seção descreve o prompt completo, copiado quando nenhum agente está conectado.
 
 O prompt traz os campos do ticket, suas categorias, suas relações, o número de recursos anexados e o progresso do plano, mas não o texto do plano, que o agente lê pelo servidor MCP do minddy ou pede a você. Ele também indica o repositório vinculado ao projeto e cada pull request vinculado ao ticket, com seu estado e suas branches quando conhecidos. O agente continua um pull request aberto na branch dele e trata os mesclados ou fechados como histórico. Sem um pull request aberto, o prompt sugere um nome de branch formado pelo identificador do ticket e um título curto, por exemplo `min-42-keyboard-navigation`. É apenas uma sugestão: o agente verifica primeiro as branches existentes e segue a convenção de nomes do repositório. Manter o identificador no nome da branch, no título do pull request ou em uma linha `Fixes MIN-42` permite que o minddy vincule o pull request ao ticket quando o repositório está vinculado.
 

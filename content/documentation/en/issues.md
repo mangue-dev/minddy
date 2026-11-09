@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 49,
-  "sourceRevision": 49,
+  "revision": 50,
+  "sourceRevision": 50,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-09",
   "compatibility": {
@@ -41,6 +41,7 @@
       "desktop"
     ],
     "evidence": [
+      "lib/prompt-delivery.ts",
       "content/knowledge/core-tracker.md",
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
@@ -135,9 +136,9 @@
     ]
   },
   "review": {
-    "revision": 49,
-    "fact": "agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
-    "language": "agent:claude-code (en changed passage; self-reviewed; agent review, not human acceptance)",
+    "revision": 50,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (en changed passage; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-09"
   },
   "related": [
@@ -183,7 +184,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -199,7 +200,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -216,7 +217,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -233,7 +234,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -250,7 +251,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -267,7 +268,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issues section of a demonstration parent issue, with the Create a sub-issue button and its options chevron.",
       "caption": "Create a sub-issue opens the creation dialog with this issue as parent; a child keeps its own status and discussion.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -284,7 +285,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -301,7 +302,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -318,7 +319,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -335,7 +336,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 49,
+      "revision": 50,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -554,6 +555,8 @@ To have the plan implemented, copy the issue's prompt for your own coding agent,
 ### Copy a prompt for another coding agent {#copy-issue-prompt}
 
 To hand an issue to a coding agent outside minddy, such as Claude Code, Codex or Cursor, open the issue's actions menu, choose **Copy as prompt**, then **Generate a plan** (or **Review the plan** when one exists), **Implement the issue**, **Verify the implementation** or **Custom…**. With several issues selected, **Copy the combined prompt** puts them in one prompt. Copying runs no AI model and uses no AI allowance: minddy assembles what it already stores, and the agent explores the repository itself. If **Start the issue or task when I copy its prompt** is enabled in account preferences, copying also starts an issue that has not started yet. See [Code work and pull requests](/docs/code-work) for the complete workflow and pull request review.
+
+When an agent is connected to minddy MCP on your account, the prompt only names the issue and the agent reads the rest through MCP; see [Short prompts and sending to your agent's app](/docs/code-work#short-prompts-and-sending). The rest of this section describes the full prompt, copied when no agent is connected.
 
 The prompt carries the issue's fields, categories, relations, the number of attached resources and the plan's progress, but not the plan text, which the agent reads through the minddy MCP server or asks you for. It also lists the project's linked repository and every pull request linked to the issue, with its state and branches when known. The agent continues an open pull request on its branch and treats merged or closed ones as history. Without an open pull request, the prompt suggests a branch name made of the issue identifier and a short title, such as `min-42-keyboard-navigation`. This is only a suggestion: the agent checks existing branches and follows the repository's naming convention first. Keeping the identifier in the branch name, the pull request title or a `Fixes MIN-42` line lets minddy attach the pull request to the issue when the repository is linked.
 

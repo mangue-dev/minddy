@@ -28,10 +28,11 @@ import {
   selectionKeysActive,
 } from "@/lib/keyboard/selection-keys";
 import {
-  buildMultiIssuePrompt,
+  multiIssuePromptFor,
   type IssuePromptInput,
   type MultiIssueAction,
 } from "@/lib/issue-prompt";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
 import { sortedIdentifierList } from "@/lib/issue-constants";
 import {
   loadIssuePromptContext,
@@ -79,6 +80,12 @@ export function useBulkSelectionActions({
   tBulkRef.current = tBulk;
   const tPrRef = useRef(tPr);
   tPrRef.current = tPr;
+  const promptDelivery = usePromptDelivery();
+  const promptDeliveryRef = useRef(promptDelivery);
+  promptDeliveryRef.current = promptDelivery;
+  const announcePrompt = usePromptAnnouncement();
+  const announcePromptRef = useRef(announcePrompt);
+  announcePromptRef.current = announcePrompt;
 
   // A selection owns ⇧P for as long as it exists: the gate the per-card
   // handlers stand down on. Acquire/release on the boolean only, so editing
@@ -118,33 +125,34 @@ export function useBulkSelectionActions({
     // Pull requests and repository per issue (MIN-719), warmed with the
     // selection and waited for only briefly (MIN-723); an issue it could not
     // load in time says so in its block.
-    const forge = await loadIssuePromptContext(issues.map((issue) => issue.id));
-    const prompt = buildMultiIssuePrompt(
+    // A short prompt only names the tickets, so it skips that read.
+    const delivery = promptDeliveryRef.current;
+    const forge = delivery.short
+      ? null
+      : await loadIssuePromptContext(issues.map((issue) => issue.id));
+    const prompt = multiIssuePromptFor(
       issues.map((issue) => ({
         ...buildInputRef.current(
           moved.has(issue.id) ? { ...issue, status: "in_progress" } : issue,
         ),
-        ...(forge.get(issue.id) ?? UNAVAILABLE_FORGE_CONTEXT),
+        ...(forge ? (forge.get(issue.id) ?? UNAVAILABLE_FORGE_CONTEXT) : {}),
       })),
       action,
-      request,
+      { short: delivery.short, request },
     );
-    await navigator.clipboard.writeText(prompt);
+    const outcome = await delivery.deliver(prompt);
     const count = issues.length;
-    if (moved.size > 0) {
-      for (const issue of issues) {
-        if (moved.has(issue.id)) {
-          onUpdateIssueRef.current?.(issue, { status: "in_progress" });
-        }
+    for (const issue of issues) {
+      if (moved.has(issue.id)) {
+        onUpdateIssueRef.current?.(issue, { status: "in_progress" });
       }
-      toast.success(tBulkRef.current("promptCopiedMoved", { count }));
-    } else if (action === "plan") {
-      toast.success(tBulkRef.current("planPromptCopied", { count }));
-    } else if (action === "verify") {
-      toast.success(tBulkRef.current("verifyPromptCopied", { count }));
-    } else {
-      toast.success(tBulkRef.current("promptCopied", { count }));
     }
+    const copied = moved.size > 0
+      ? "promptCopiedMoved"
+      : action === "plan"
+        ? "planPromptCopied"
+        : action === "verify" ? "verifyPromptCopied" : "promptCopied";
+    announcePromptRef.current(outcome, tBulkRef.current(copied, { count }), moved.size);
   }, []);
 
   /** The selection's identifiers, comma-separated and smallest first (MIN-833). */

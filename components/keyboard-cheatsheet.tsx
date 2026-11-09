@@ -6,6 +6,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Search01Icon } from "@hugeicons/core-free-icons";
+import { usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -16,11 +17,15 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { filterCheatsheet } from "@/lib/keyboard/filter-cheatsheet";
 import { CHEATSHEET, resolveKeyToken } from "@/lib/keyboard/shortcuts";
 
+/** The shortcuts that hand a prompt to the coding agent. */
+const PROMPT_SHORTCUTS = new Set(["card.copyPrompt", "selection.copyPrompt"]);
+
 export function KeyboardCheatsheet() {
   const { open, setOpen } = useCheatsheet();
   const tk = useTranslations("Keyboard");
   const tSection = useTranslations("Keyboard.sections");
   const tShortcut = useTranslations("Keyboard.shortcuts");
+  const promptLabel = usePromptActionLabel();
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const filteredCheatsheet = filterCheatsheet(CHEATSHEET, query, {
@@ -66,7 +71,10 @@ export function KeyboardCheatsheet() {
                     key={sc.id}
                     className="flex items-center justify-between gap-4 py-1.5"
                   >
-                    <span className="text-sm">{tShortcut(sc.labelKey)}</span>
+                    <span className="text-sm">
+                      {/* ⇧P sends instead of copying when prompts open in an agent's app. */}
+                      {PROMPT_SHORTCUTS.has(sc.id) ? promptLabel(tShortcut(sc.labelKey)) : tShortcut(sc.labelKey)}
+                    </span>
                     <span className="flex items-center gap-1.5">
                       <KbdSequence
                         keys={sc.keys.map((step) => step.map(resolveKeyToken))}

@@ -84,7 +84,9 @@ import {
   statusOptions,
   toggleCategory,
 } from "@/components/command-palette-options";
-import { buildIssuePrompt } from "@/lib/issue-prompt";
+import { issuePromptFor } from "@/lib/issue-prompt";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { loadOneIssuePromptContext } from "@/lib/issue-prompt-context";
 import {
   issueWrites,
@@ -287,6 +289,9 @@ export function CommandPalette({
   const appTabs = useOptionalAppTabSession();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const promptLabel = usePromptActionLabel();
   const { projects } = useProjects();
   const assistant = useAssistantPanelActions();
   const { openCreateIssue, openCreateObjective } = useCreate();
@@ -807,7 +812,7 @@ export function CommandPalette({
         // — Copy the prompt (the ⇧P of the board: XML agent + auto-start MIN-20) —
         actions.push({
           id: "issue.copy-prompt",
-          label: tIssueUI("copyAsPrompt"),
+          label: promptLabel(tIssueUI("copyAsPrompt")),
           icon: Copy01Icon,
           category: "secondary",
           priority: 5,
@@ -834,16 +839,20 @@ export function CommandPalette({
             const promptCategories = full.category_ids
               .map((cid) => categoryNameById.get(cid))
               .filter((name): name is string => !!name);
-            const prompt = buildIssuePrompt({
-              issue: promptIssue,
-              projectId: full.project_id,
-              projectKey: project?.key ?? "",
-              categories: promptCategories,
-              // Unresolved relationships here (board data) — block omitted from prompt
-              resourceCount: full.resource_count,
-              ...(await forgeContext),
-            });
-            await navigator.clipboard.writeText(prompt);
+            const prompt = issuePromptFor(
+              {
+                issue: promptIssue,
+                projectId: full.project_id,
+                projectKey: project?.key ?? "",
+                categories: promptCategories,
+                // Unresolved relationships here (board data) — block omitted from prompt
+                resourceCount: full.resource_count,
+                ...(await forgeContext),
+              },
+              "implement",
+              promptDelivery,
+            );
+            const outcome = await promptDelivery.deliver(prompt);
             if (autoStart) {
               const handle = issueWrites.begin({
                 kind: "patch",
@@ -864,9 +873,9 @@ export function CommandPalette({
               patchSearchIndexIssue(queryClient, full.id, { status: "in_progress" });
               mergeServerIssue(queryClient, full.project_id, started);
               issueWrites.settle(handle, started);
-              toast.success(tIssueUI("promptCopiedMoved"));
+              announcePrompt(outcome, tIssueUI("promptCopiedMoved"), 1);
             } else {
-              toast.success(tIssueUI("promptCopied"));
+              announcePrompt(outcome, tIssueUI("promptCopied"));
             }
             return { success: true, closeMenu: false };
           },
@@ -891,7 +900,7 @@ export function CommandPalette({
         return actions;
       },
     };
-  }, [queryClient, membersForProject, categoriesForProject, projects, user, categoryNameById, searchIndex, tIssueUI, tStatus, tPriority, tField, tAction]);
+  }, [queryClient, membersForProject, categoriesForProject, projects, user, categoryNameById, searchIndex, promptDelivery, announcePrompt, promptLabel, tIssueUI, tStatus, tPriority, tField, tAction]);
 
   const entityProvider = useMemo(
     () =>
@@ -1045,9 +1054,9 @@ export function CommandPalette({
         ? [
             {
               id: "bulk-copy-prompt",
-              title: tBulk("copyPrompt"),
-              icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
-              keywords: ["prompt", "copy", "copier", "agent", "code"],
+              title: promptLabel(tBulk("copyPrompt")),
+              icon: <PromptActionIcon />,
+              keywords: ["prompt", "copy", "copier", "send", "envoyer", "agent", "code"],
               shortcut: ["⇧", "P"],
               filterCategory: "bulk",
               execute: () => {
@@ -1188,7 +1197,7 @@ export function CommandPalette({
     }
 
     return list;
-  }, [bulkRequest, tBulk, tCycles, tIssueUI, tPr]);
+  }, [bulkRequest, promptLabel, tBulk, tCycles, tIssueUI, tPr]);
 
   // A single group, titled with the number of tickets selected.
   const bulkCategories = useMemo<CategoryDefinition[]>(

@@ -3,12 +3,7 @@ import { resolve } from "node:path";
 import ts from "typescript-api";
 import { describe, expect, it, vi } from "vitest";
 import { issueIdentifier } from "./issue-constants";
-import {
-  buildIssueCustomPrompt,
-  buildIssuePlanPrompt,
-  buildIssuePrompt,
-  buildIssueVerifyPrompt,
-} from "./issue-prompt";
+import { buildIssuePlanPrompt, issuePromptFor } from "./issue-prompt";
 import { resolveDisplayRelationsByIssue } from "./relation-constants";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { Issue, IssueRelation, Objective } from "./types";
@@ -73,22 +68,27 @@ describe.each(["kanban-board.tsx", "global-kanban-board.tsx"])("%s copied prompt
     const rows = boardRelations(file);
     expect(rows).toHaveLength(4);
     expect(rows.filter((row) => row.otherType === "objective")).toHaveLength(3);
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    const handler = evaluateInitializer<(...args: unknown[]) => Promise<void>>("issue-card.tsx", handlerName, {
+    // An account without an MCP agent: the complete prompt, copied.
+    const deliver = vi.fn().mockResolvedValue({ sent: null });
+    const promptDelivery = { short: false, target: null, deliver };
+    const base = {
       issue, projectId: "project", projectKey: "MIN", issueHasPlan: false,
-      promptContext: promptContext(rows), buildIssuePrompt, buildIssuePlanPrompt,
-      buildIssueVerifyPrompt, buildIssueCustomPrompt,
+      promptContext: promptContext(rows), promptDelivery,
       loadOneIssuePromptContext: async (id: string) => {
         expect(id).toBe(issue.id);
         return { pullRequests: [{ number: 12, state: "open", headBranch: "feature/keys" }], repository: null };
       },
+    };
+    const handler = evaluateInitializer<(...args: unknown[]) => Promise<void>>("issue-card.tsx", handlerName, {
+      ...base, issuePromptFor,
+      promptInput: evaluateInitializer("issue-card.tsx", "promptInput", base),
       resolvePromptCopyAutoStart: () => false,
       shouldAutoStartOnPromptCopy: () => false, user: null,
-      navigator: { clipboard: { writeText } }, toast: { success: vi.fn() },
+      announcePrompt: vi.fn(), onUpdateIssue: vi.fn(),
       t: (key: string) => key, tPlan: (key: string) => key,
     });
     await handler("Check keyboard navigation", "copy");
-    const prompt = writeText.mock.calls[0][0] as string;
+    const prompt = deliver.mock.calls[0][0] as string;
     for (const type of ["blocks", "blocked_by", "related"]) {
       expect(prompt).toContain(`<relation type="${type}" target="objective">\n      <identifier></identifier>\n      <title>Accessible workspace</title>`);
     }

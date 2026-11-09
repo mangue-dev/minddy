@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Cancel01Icon,
-  Copy01Icon,
   Edit04Icon,
   GitMergeIcon,
   RepeatIcon,
@@ -22,6 +21,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { NumoIcon } from "@/components/numo-icon";
@@ -98,6 +99,9 @@ export function usePrContextActions({
   dialog: ReactNode;
 } {
   const t = useTranslations("PullRequests");
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const promptLabel = usePromptActionLabel();
   const tCommon = useTranslations("Common");
   const { openIntent } = useAssistantPanelActions();
   // The row whose menu is open, and when it opened: only reads answered
@@ -272,13 +276,13 @@ export function usePrContextActions({
             : "";
           actions.push({
             id: "pr-fix-copy",
-            label: t("copyFixPrompt"),
-            icon: icon(Copy01Icon),
+            label: promptLabel(t("copyFixPrompt")),
+            icon: <PromptActionIcon />,
             separatorBefore: actions.length > 0,
             disabled: !ready,
             onSelect: () => {
-              void navigator.clipboard.writeText(prompt).then(
-                () => toast.success(t("unresolvedPromptCopied")),
+              void promptDelivery.deliver(prompt).then(
+                (outcome) => announcePrompt(outcome, t("unresolvedPromptCopied")),
                 () => toast.error(t("unresolvedPromptCopyFailed")),
               );
             },
@@ -311,7 +315,7 @@ export function usePrContextActions({
       }
       return actions;
     },
-    [acting, menu, onMerge, openIntent, pullRequests, settled, t, tCommon],
+    [acting, menu, onMerge, openIntent, pullRequests, settled, promptDelivery, announcePrompt, promptLabel, t, tCommon],
   );
 
   const dialog = useMemo(() => {

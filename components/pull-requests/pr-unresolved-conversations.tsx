@@ -3,11 +3,12 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ArrowDown01Icon,
-  Copy01Icon,
   FilterIcon,
   CheckIcon,
 } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +61,9 @@ export function PrUnresolvedConversations({
   showBar?: boolean;
 }) {
   const t = useTranslations("PullRequests");
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const promptLabel = usePromptActionLabel();
   const tCommon = useTranslations("Common");
   const [confirmOutdated, setConfirmOutdated] = useState(false);
   const [confirmResolveAll, setConfirmResolveAll] = useState(false);
@@ -84,15 +88,15 @@ export function PrUnresolvedConversations({
   const copyPrompt = useCallback(
     async (selected: PullRequestFeedbackThread[]) => {
       try {
-        await navigator.clipboard.writeText(
+        const outcome = await promptDelivery.deliver(
           buildPullRequestFeedbackPrompt(context, selected),
         );
-        toast.success(t("unresolvedPromptCopied"));
+        announcePrompt(outcome, t("unresolvedPromptCopied"));
       } catch {
         toast.error(t("unresolvedPromptCopyFailed"));
       }
     },
-    [context, t],
+    [context, promptDelivery, announcePrompt, t],
   );
 
   /** Resolves `threads` as one bulk run; the count resolved, or `null` when
@@ -207,8 +211,8 @@ export function PrUnresolvedConversations({
                     <DropdownMenuItem
                       onSelect={() => void copyPrompt(unresolved)}
                     >
-                      <HugeiconsIcon icon={Copy01Icon} />
-                      {t("copyUnresolvedPrompt")}
+                      <PromptActionIcon />
+                      {promptLabel(t("copyUnresolvedPrompt"))}
                     </DropdownMenuItem>
                     {canResolve ? (
                       <DropdownMenuItem

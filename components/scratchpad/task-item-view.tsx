@@ -23,7 +23,7 @@
 // as it already does for the mention pill.
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CancelCircleIcon as CircleSlash, CircleIcon, Copy01Icon, MoreHorizontalIcon, PlayIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { CancelCircleIcon as CircleSlash, CircleIcon, MoreHorizontalIcon, PlayIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useEditorEditable } from "@/components/editor/use-editor-editable";
 import { useRef, useState, type MouseEvent } from "react";
@@ -34,10 +34,11 @@ import {
   type NodeViewProps,
 } from "@tiptap/react";
 import type { NodeViewRenderer } from "@tiptap/core";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import {
   IssueActionsMenu,
   IssueContextMenu,
@@ -112,6 +113,9 @@ export function TaskItemView({
   getPos,
 }: NodeViewProps) {
   const t = useTranslations("Plan");
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const promptLabel = usePromptActionLabel();
   // `useAuthOptional` and not `useAuth`: this editor is also mounted OUTSIDE
   // the application, on a published page (MIN-283), where there is no session —
   // and `useAuth` lifted there, taking the page for an account preference of which
@@ -176,10 +180,13 @@ export function TaskItemView({
     if (!surface) return;
     const md = taskMarkdown(copyStarts);
     if (!md) return;
-    void navigator.clipboard.writeText(surface.copyPrompt(md));
+    const sending = promptDelivery.deliver(surface.copyPrompt(md));
     const moved = copyStarts ? startSubtree() : 0;
     // The toast only signals the move if it has taken place.
-    toast.success(t(moved > 0 ? "copiedLineMovedToast" : "copiedLineToast"));
+    void sending.then(
+      (outcome) => announcePrompt(outcome, t(moved > 0 ? "copiedLineMovedToast" : "copiedLineToast")),
+      () => {},
+    );
   };
 
   // “Promote to ticket”: the note goes as is to Numo, who converts it
@@ -233,9 +240,9 @@ export function TaskItemView({
     },
     {
       id: "copy",
-      label: t("copyLine"),
-      keywords: ["copy", "copier", "prompt", "agent"],
-      icon: <HugeiconsIcon icon={Copy01Icon} />,
+      label: promptLabel(t("copyLine")),
+      keywords: ["copy", "copier", "send", "envoyer", "prompt", "agent"],
+      icon: <PromptActionIcon />,
       shortcut: "⇧P",
       onSelect: copyLine,
     },

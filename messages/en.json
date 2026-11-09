@@ -2932,6 +2932,10 @@
     "numoStatusDesc": "Triage adds a manual review step; Backlog and Todo skip it.",
     "promptAutoStartDesc": "Only applies to issues and notebook tasks that haven't started yet.",
     "promptAutoStartLabel": "Start the issue or task when I copy its prompt",
+    "promptSendAgentLabel": "Agent that receives prompts",
+    "promptSendDesc": "On a computer, a prompt opens in the agent's app instead of waiting to be pasted. It is copied as well.",
+    "promptSendLabel": "Open prompts in my coding agent",
+    "promptSendUnavailable": "Connect Claude Code, Codex or Cursor to the minddy MCP to turn this on.",
     "apiKeyLastUsed": "Last used {date}",
     "apiKeyNeverUsed": "Never used",
     "apiKeyRevoke": "Disconnect",
@@ -3013,6 +3017,7 @@
     "aiKeyRemoveConfirmDescription": "Remove your {provider} connection? Add a key again to use this provider.",
     "securityTab": "Security",
     "securityTabIndicator": "Two-factor authentication is off",
+    "codingAgentSectionTitle": "Coding agent",
     "keyboardSectionTitle": "Keyboard",
     "keyboardSectionDesc": "How you send a message, in comments and in Numo's composer.",
     "desktopSectionTitle": "Desktop app",
@@ -7160,5 +7165,10 @@
     "stepAccount": "Create your local account",
     "accountNote": "No account or password to set up: minddy creates yours on this computer and signs you in by itself.",
     "folderIsInstallation": "This folder already holds a minddy installation. Open it with Use an existing installation, or choose another folder."
+  },
+  "PromptDelivery": {
+    "sendTo": "Send to {agent}",
+    "sent": "Prompt opened in {agent}. It is also in your clipboard.",
+    "sentMoved": "Prompt opened in {agent}. {count, plural, one {The issue} other {# issues}} moved to “In progress”."
   }
 }

@@ -3,9 +3,11 @@
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon, AlertCircleIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Delete02Icon, MoreHorizontalIcon, CheckIcon, AlertCircleIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSONContent } from "@tiptap/core";
+import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
+import { PromptActionIcon, usePromptActionLabel } from "@/components/prompt-action";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -154,6 +156,9 @@ function ScratchpadBody() {
   // — on the line (cf. task-item-view.tsx), the section, and here the entire
   // notebook: everything that remained to be done moves to "in progress".
   const startOnCopy = resolvePromptCopyAutoStart(user?.user_metadata);
+  const promptDelivery = usePromptDelivery();
+  const announcePrompt = usePromptAnnouncement();
+  const promptLabel = usePromptActionLabel();
   const liveMarkdown = () => (markdownRef.current?.() ?? content).trim();
 
   const copyAll = async () => {
@@ -163,19 +168,21 @@ function ScratchpadBody() {
     }
     const moved = startOnCopy ? (startAllRef.current?.() ?? 0) : 0;
     // Reread AFTER the move: the note comes out with its post-gesture markers.
-    await navigator.clipboard.writeText(buildScratchpadPrompt(liveMarkdown()));
-    toast.success(
-      moved > 0 ? t("copiedMovedToast", { count: moved }) : t("copiedToast")
+    const outcome = await promptDelivery.deliver(buildScratchpadPrompt(liveMarkdown()));
+    announcePrompt(
+      outcome,
+      moved > 0 ? t("copiedMovedToast", { count: moved }) : t("copiedToast"),
     );
   };
   const copySection = async (markdown: string, moved: number) => {
-    await navigator.clipboard.writeText(
+    const outcome = await promptDelivery.deliver(
       buildScratchpadPrompt(markdown, { section: true })
     );
-    toast.success(
+    announcePrompt(
+      outcome,
       moved > 0
         ? t("copiedSectionMovedToast", { count: moved })
-        : t("copiedSectionToast")
+        : t("copiedSectionToast"),
     );
   };
 
@@ -241,8 +248,8 @@ function ScratchpadBody() {
             </Tooltip>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => void copyAll()}>
-                <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                {t("copyAll")}
+                <PromptActionIcon />
+                {promptLabel(t("copyAll"))}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onSelect={requestRemoveSettled}>
@@ -289,7 +296,7 @@ function ScratchpadBody() {
               onCopySection={copySection}
               startOnCopy={startOnCopy}
               placeholder={t("placeholder")}
-              copySectionLabel={t("copySection")}
+              copySectionLabel={promptLabel(t("copySection"))}
               markdownRef={markdownRef}
               applyExternalRef={applyRef}
               removeSettledRef={removeSettledRef}

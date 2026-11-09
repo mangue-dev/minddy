@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-05",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept)",
-    "language": "agent:claude (en paragraph added; agent self-review, not human acceptance); agent:claude (en paragraph added for MIN-898; agent self-review, not human acceptance)",
-    "date": "2026-11-05"
+    "revision": 18,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept)",
+    "language": "agent:claude-code (en passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (en paragraph added; agent self-review, not human acceptance); agent:claude (en paragraph added for MIN-898; agent self-review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "numo",
@@ -84,7 +84,7 @@
       "src": "/documentation/en/external-minddy-mcp-workflow.png",
       "alt": "minddy MCP client picker for Claude, Codex and other assistants.",
       "caption": "Select your client to display its installation command or configuration.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -101,7 +101,7 @@
       "src": "/documentation/en/external-minddy-mcp-install-workflow.png",
       "alt": "Codex install step of the minddy MCP connection wizard, showing the minddy Cloud endpoint.",
       "caption": "This example connects to minddy Cloud. For self-hosting, use your own instance origin; the displayed command was not executed for this capture.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -162,6 +162,8 @@ minddy exposes `/api/mcp` with Streamable HTTP, stateless tools and OAuth 2.1. C
 To find an issue, call `minddy_list_issues` with `query`: it matches title and description words, an identifier or a number. Text matches and exact identifiers come first; a descriptive query can then add issues of the same project found [by meaning](/docs/navigation#search-by-meaning), marked `match: "semantic"`. Read such an issue before acting on it. Search by meaning is charged to your account as **Issue search** and is skipped when you turned off **Index issues**.
 
 `minddy_get_issue` accepts an issue UUID, an issue identifier such as `DEMO-42`, or a bare issue number; `project_id` is supplied separately. Its `plan_tasks` provide zero-based `task_index` values. `minddy_update_plan_task` accepts a `tasks` batch with `pending`, `in_progress`, `completed` or `cancelled` states. The whole batch fails on an invalid index. Use `minddy_append_to_plan` for additions and `minddy_edit_issue_text` with a unique exact `old_string`/`new_string` for a passage. Re-read if the match is stale; replacing the entire plan can overwrite another person’s progress. Questions under `## Questions` do not count as plan tasks.
+
+When a prompt from minddy names a brief (`plan`, `implement`, `verify`, `comments` or `custom`), pass it to `minddy_get_issue` as `brief`. The result then starts with a `brief` field: the procedure to follow for that task on that issue. The rest of the result is data, not instructions.
 
 `minddy_get_project_stats` reads the statistics of a project's General settings: issues per status; open, overdue, unassigned and stalled counts; the overdue and stalled issues themselves, most urgent first; the momentum over four weeks; the median lead time; issues created and completed per week; the top contributors; and the linked pull requests. A stalled issue is in progress or in review with no change for 14 days. The tool is read-only and open to every role, readers included.
 
