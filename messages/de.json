@@ -1147,6 +1147,7 @@
     "myView": "Meine Tickets",
     "projectNotFoundTitle": "Projekt nicht gefunden",
     "projectNotFoundDescription": "Dieses Projekt existiert nicht oder du hast keinen Zugriff darauf.",
+    "projectLoadError": "Projekt konnte nicht geladen werden.",
     "backToHome": "Zurück zur Startseite",
     "emptyTitle": "Erstelle deine ersten Tickets",
     "emptyImport": "Tickets importieren",
@@ -2428,8 +2429,6 @@
     "successContinue": "Weiter zu {name}"
   },
   "Objectives": {
-    "projectNotFound": "Projekt nicht gefunden",
-    "backToHome": "Zurück zur Startseite",
     "title": "Ziele",
     "emptyTitle": "Lege deine ersten Ziele fest",
     "emptyNumoPrompt": "Hilf mir, die Ziele des Projekts „{name}“ festzulegen: Stell mir deine Fragen und schlag dann die Arbeitsstränge vor, um die herum die Arbeit gruppiert werden soll.",
@@ -3382,8 +3381,6 @@
     "dangerZoneDesc": "Verschiebe dieses Projekt in den Papierkorb oder verlasse es.",
     "categoriesSectionDesc": "Organisiere deine Tickets mit farbigen Kategorien.",
     "membersSectionDesc": "Mitwirkende einladen oder entfernen.",
-    "projectNotFound": "Projekt nicht gefunden",
-    "backToHome": "Zurück zur Startseite",
     "nameLabel": "Name",
     "keyLabel": "Schlüssel",
     "nameRequired": "Name ist erforderlich.",
@@ -4571,8 +4568,6 @@
     "mergeNoLongerAllowed": "Dieser Pull Request kann in seinem aktuellen Zustand nicht mehr zusammengeführt werden."
   },
   "Triage": {
-    "projectNotFound": "Projekt nicht gefunden",
-    "backToHome": "Zurück zur Startseite",
     "title": "Triage",
     "filterPlaceholder": "{count, plural, =0 {Tickets} one {# Ticket} other {# Tickets}} filtern…",
     "emptyTitle": "Nichts in der Triage",

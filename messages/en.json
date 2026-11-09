@@ -1147,6 +1147,7 @@
     "myView": "My issues",
     "projectNotFoundTitle": "Project not found",
     "projectNotFoundDescription": "This project doesn't exist or you don't have access to it.",
+    "projectLoadError": "Could not load this project.",
     "backToHome": "Back to home",
     "emptyTitle": "Create your first issues",
     "emptyImport": "Import issues",
@@ -2428,8 +2429,6 @@
     "successContinue": "Continue to {name}"
   },
   "Objectives": {
-    "projectNotFound": "Project not found",
-    "backToHome": "Back to home",
     "title": "Objectives",
     "emptyTitle": "Set your first objectives",
     "emptyNumoPrompt": "Help me set the objectives of the project “{name}”: ask me your questions, then propose the workstreams to group the work around.",
@@ -3382,8 +3381,6 @@
     "dangerZoneDesc": "Move this project to the trash or leave it.",
     "categoriesSectionDesc": "Organize your issues with colored categories.",
     "membersSectionDesc": "Invite or remove collaborators.",
-    "projectNotFound": "Project not found",
-    "backToHome": "Back to home",
     "nameLabel": "Name",
     "keyLabel": "Key",
     "nameRequired": "Name is required.",
@@ -4571,8 +4568,6 @@
     "mergeNoLongerAllowed": "This pull request can no longer be merged as it stands."
   },
   "Triage": {
-    "projectNotFound": "Project not found",
-    "backToHome": "Back to home",
     "title": "Triage",
     "filterPlaceholder": "Filter {count, plural, =0 {issues} one {# issue} other {# issues}}…",
     "emptyTitle": "Nothing in triage",

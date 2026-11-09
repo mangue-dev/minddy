@@ -44,7 +44,7 @@ vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("@/components/ui/confirm-delete-dialog", () => ({ ConfirmDeleteDialog: () => null }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
-vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({ projects: state.projects, loading: false }) }));
+vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({ projects: state.projects, loading: false, fetching: false, hasData: true, error: null, refetch: async () => {} }) }));
 vi.mock("@/lib/use-objectives-query", async (original) => ({ ...await original<typeof import("@/lib/use-objectives-query")>(), useObjectivesQuery: (id: string) => ({ objectives: state.rows[id] ?? [], loading: false, createObjective: vi.fn(), updateObjective: vi.fn(), deleteObjective: vi.fn() }) }));
 vi.mock("@/lib/use-issues-query", () => ({ useIssuesQuery: () => ({ issues: [] }) }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));
@@ -108,7 +108,7 @@ it("uses an explicit browse project without adopting another retained route's pr
 it("keeps unavailable project handling instead of borrowing another project's cached objectives", async () => {
   await render({ project: "missing", search: "" });
   expect(host.querySelector("[data-objective]")).toBeNull();
-  expect(host.textContent).toContain("projectNotFound");
+  expect(host.textContent).toContain("projectNotFoundTitle");
 });
 
 it("warms an objective's detail reads on row intent and its session snapshot on pointer down", async () => {

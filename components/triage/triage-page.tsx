@@ -17,7 +17,6 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
-import Link from "@/components/app-link";
 import { useTranslations, useFormatter } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -74,7 +73,8 @@ import { IssuePalettePicker } from "@/components/issue-palette-picker";
 import { useIssuePropertyMenuActions } from "@/components/issue-property-menu-actions";
 import { addCommentApi } from "@/lib/comments-api";
 import { useAuth } from "@/lib/auth-context";
-import { useProjects } from "@/lib/projects-context";
+import { useProjectLookup } from "@/lib/use-project-lookup";
+import { ProjectUnavailable } from "@/components/project-unavailable";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useMembersQuery } from "@/lib/use-members-query";
@@ -122,8 +122,9 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   const rawIssueParam = searchParams.get("issue");
   const { user } = useAuth();
 
-  const { projects, loading: projectsLoading } = useProjects();
-  const project = projects.find((p) => p.id === projectId);
+  // "Project not found" only once a fresh list confirms it (MIN-937).
+  const projectLookup = useProjectLookup(projectId);
+  const { project } = projectLookup;
   // Project readers (MIN-693) read the triage queue without deciding on it.
   const { canWrite, canComment } = useProjectCapabilities(projectId);
   const readOnly = !canWrite;
@@ -398,22 +399,15 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
   // The issue a row's right-click menu moves to the trash, once confirmed.
   const [trashTarget, setTrashTarget] = useState<Issue | null>(null);
 
-  if (projectsLoading && !project) {
-    return (
-      <div className="px-6 py-10">
-        <Skeleton className="h-8 w-64" />
-      </div>
-    );
-  }
   if (!project) {
-    return (
-      <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">{t("projectNotFound")}</h1>
-        <Button asChild variant="outline">
-          <Link href="/home">{t("backToHome")}</Link>
-        </Button>
-      </div>
-    );
+    if (projectLookup.state === "loading") {
+      return (
+        <div className="px-6 py-10">
+          <Skeleton className="h-8 w-64" />
+        </div>
+      );
+    }
+    return <ProjectUnavailable lookup={projectLookup} />;
   }
 
   const patch = async (issue: Issue, updates: IssueUpdateInput) => {

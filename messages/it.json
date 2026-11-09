@@ -1147,6 +1147,7 @@
     "myView": "I miei ticket",
     "projectNotFoundTitle": "Progetto non trovato",
     "projectNotFoundDescription": "Questo progetto non esiste o non hai i permessi per accedervi.",
+    "projectLoadError": "Impossibile caricare il progetto.",
     "backToHome": "Torna alla home",
     "emptyTitle": "Crea i tuoi primi ticket",
     "emptyImport": "Importa ticket",
@@ -2428,8 +2429,6 @@
     "successContinue": "Continua su {name}"
   },
   "Objectives": {
-    "projectNotFound": "Progetto non trovato",
-    "backToHome": "Torna alla home",
     "title": "Obiettivi",
     "emptyTitle": "Imposta i tuoi primi obiettivi",
     "emptyNumoPrompt": "Aiutami a definire gli obiettivi del progetto «{name}»: fammi delle domande, poi proponi i filoni attorno a cui organizzare il lavoro.",
@@ -3382,8 +3381,6 @@
     "dangerZoneDesc": "Sposta questo progetto nel Cestino oppure esci dal progetto.",
     "categoriesSectionDesc": "Organizza i tuoi ticket con categorie colorate.",
     "membersSectionDesc": "Invita o rimuovi collaboratori.",
-    "projectNotFound": "Progetto non trovato",
-    "backToHome": "Torna alla home",
     "nameLabel": "Nome",
     "keyLabel": "Chiave",
     "nameRequired": "Il nome è obbligatorio.",
@@ -4571,8 +4568,6 @@
     "mergeNoLongerAllowed": "Questa pull request non può più essere unita così com'è."
   },
   "Triage": {
-    "projectNotFound": "Progetto non trovato",
-    "backToHome": "Torna alla home",
     "title": "Triage",
     "filterPlaceholder": "Filtra {count, plural, =0 {ticket} one {# ticket} other {# ticket}}…",
     "emptyTitle": "Niente in triage",

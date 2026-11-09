@@ -32,7 +32,8 @@ vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/lib/app-tabs-context", () => ({ useOptionalAppTabSession: () => state.session }));
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => ({ user: { id: "owner" } }) }));
 vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({
-  projects: state.projects, loading: false, deleteProject: state.deleteProject, refetch: state.refetch,
+  projects: state.projects, loading: false, fetching: false, hasData: true, error: null,
+  deleteProject: state.deleteProject, refetch: state.refetch,
 }) }));
 vi.mock("@/lib/members-api", () => ({ removeMemberApi: state.removeMember }));
 vi.mock("@/lib/use-members-query", () => ({ useMembersQuery: () => ({ members: [] }) }));

@@ -21,12 +21,20 @@ export interface UseProjectsResult {
    * its cached list instead of swapping it for the unavailable screen.
    */
   hasData: boolean;
+  /**
+   * The list is not known yet: the first read is in flight, or the session it
+   * depends on is still being restored. An empty list while this holds means
+   * "not read yet", never "no projects" (MIN-937).
+   */
   loading: boolean;
+  /** A read of the list is in flight, the first one or a refresh. */
+  fetching: boolean;
   error: Error | null;
   createProject: (input: CreateProjectInput) => Promise<Project>;
   updateProject: (id: string, updates: ProjectUpdateInput) => Promise<Project>;
   deleteProject: (id: string) => Promise<void>;
-  refetch: () => void;
+  /** Reads the list again; resolves once that read has settled. */
+  refetch: () => Promise<void>;
 }
 
 /**
@@ -36,11 +44,11 @@ export interface UseProjectsResult {
  */
 export function useProjectsQuery(): UseProjectsResult {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
 
   const enabled = !!userId;
-  const { data, isPending, error } = useQuery({
+  const { data, isPending, isFetching, error } = useQuery({
     queryKey: PROJECTS_KEY,
     queryFn: fetchProjectsApi,
     enabled,
@@ -72,9 +80,10 @@ export function useProjectsQuery(): UseProjectsResult {
     [queryClient]
   );
 
-  const refetch = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: PROJECTS_KEY });
-  }, [queryClient]);
+  const refetch = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: PROJECTS_KEY }),
+    [queryClient]
+  );
 
   // Memoized (MIN-315): this result is spread across the value of
   // `ProjectsContext`, a new literal each time it was rendered made it new too,
@@ -85,7 +94,11 @@ export function useProjectsQuery(): UseProjectsResult {
     () => ({
       projects: data ?? EMPTY,
       hasData: data !== undefined,
-      loading: enabled && isPending,
+      // The query stays disabled until the session is known: counting only
+      // `enabled` left a window where the list read as empty and every
+      // project screen said "Project not found" (MIN-937).
+      loading: isPending && (enabled || authLoading),
+      fetching: isFetching,
       error: error as Error | null,
       createProject,
       updateProject,
@@ -95,7 +108,9 @@ export function useProjectsQuery(): UseProjectsResult {
     [
       data,
       enabled,
+      authLoading,
       isPending,
+      isFetching,
       error,
       createProject,
       updateProject,

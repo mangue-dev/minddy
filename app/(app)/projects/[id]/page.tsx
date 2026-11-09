@@ -20,7 +20,6 @@ import {
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppNavigation, useAppRouter } from "@/lib/use-app-router";
-import Link from "@/components/app-link";
 import { Button } from "@/components/ui/button";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +29,8 @@ import { Kbd } from "@/components/ui/kbd";
 import { useTranslations } from "next-intl";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
+import { useProjectLookup } from "@/lib/use-project-lookup";
+import { ProjectUnavailable } from "@/components/project-unavailable";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { useIssuesQuery } from "@/lib/use-issues-query";
 import { useIssueRelationsQuery } from "@/lib/use-issue-relations-query";
@@ -136,8 +137,10 @@ function ProjectBoard() {
   const setupParam = searchParams.get("setup");
   const boardScrollPosition = useRef(0);
 
-  const { projects, loading: projectsLoading } = useProjects();
-  const project = projects.find((p) => p.id === projectId);
+  const { projects } = useProjects();
+  // "Project not found" only once a fresh list confirms it (MIN-937).
+  const projectLookup = useProjectLookup(projectId);
+  const { project } = projectLookup;
 
   const {
     issues,
@@ -672,25 +675,15 @@ function ProjectBoard() {
   // `C` (new issue) is an app-wide shortcut now (see CreateProvider). The column
   // "+" still opens this local dialog with its status/objective/assignee presets.
 
-  if (projectsLoading && !project) {
-    return (
-      <div className="px-6 py-10">
-        <Skeleton className="h-8 w-64" />
-      </div>
-    );
-  }
   if (!project) {
-    return (
-      <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-        <h1 className="font-display text-xl font-semibold">{t("projectNotFoundTitle")}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t("projectNotFoundDescription")}
-        </p>
-        <Button asChild variant="outline">
-          <Link href="/home">{t("backToHome")}</Link>
-        </Button>
-      </div>
-    );
+    if (projectLookup.state === "loading") {
+      return (
+        <div className="px-6 py-10">
+          <Skeleton className="h-8 w-64" />
+        </div>
+      );
+    }
+    return <ProjectUnavailable lookup={projectLookup} />;
   }
 
   return (
