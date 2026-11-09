@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { responseLanguageInstruction } from "@/lib/locale-language";
+import type { UsageForecast } from "@/lib/usage-forecast";
 import {
   mentionMarkdown,
   mentionTargetKey,
@@ -52,6 +53,37 @@ export interface HomeBriefMemory {
   text: string;
 }
 
+/**
+ * The AI budget, when it is on track to run out before it resets (MIN-946):
+ * the one thing about usage the word speaks of. Dates are UTC days.
+ */
+export interface HomeBriefUsage {
+  usedPercent: number;
+  runsOutOn: string;
+  resetsOn: string;
+  daysShort: number;
+}
+
+/** The usage warning the word carries, or `null` when the budget lasts. */
+export function homeBriefUsage(forecast: UsageForecast | null): HomeBriefUsage | null {
+  if (forecast?.status !== "short" || !forecast.runsOutAt) return null;
+  return {
+    usedPercent: Math.round(forecast.usedPercent),
+    runsOutOn: forecast.runsOutAt.slice(0, 10),
+    resetsOn: forecast.resetsAt.slice(0, 10),
+    daysShort: forecast.daysShort,
+  };
+}
+
+/**
+ * The part of the digest that stands for the usage warning: the day the
+ * budget runs out. A forecast that moves to another day, appears or clears
+ * makes the stored word outdated.
+ */
+export function homeBriefUsageKey(usage: HomeBriefUsage | null): string | null {
+  return usage ? `short:${usage.runsOutOn}` : null;
+}
+
 export interface HomeBriefInput {
   locale: string;
   /** The greetings the app may show above the word, with the user's name. */
@@ -60,24 +92,30 @@ export interface HomeBriefInput {
   name: string | null;
   entries: HomeBriefEntry[];
   memories: HomeBriefMemory[];
+  usage?: HomeBriefUsage | null;
 }
 
 /**
- * What the word covers, as a hash: the entries and whether each is open. A
- * turn that changed nothing of it (a new entry written then closed elsewhere
- * cancels out only when the set is the same) does not pay for a new call.
+ * What the word covers, as a hash: the entries and whether each is open, and
+ * the usage warning when there is one. A turn that changed nothing of it (a
+ * new entry written then closed elsewhere cancels out only when the set is
+ * the same) does not pay for a new call. Without a warning, the hash is the
+ * one words written before MIN-946 carry.
  */
-export function homeBriefDigest(entries: ReadonlyArray<Pick<HomeBriefEntry, "id" | "state">>): string {
+export function homeBriefDigest(entries: ReadonlyArray<Pick<HomeBriefEntry, "id" | "state">>,
+  usageKey: string | null = null): string {
   const parts = entries.map((entry) => `${entry.id}:${entry.state}`).sort();
+  if (usageKey) parts.push(`usage:${usageKey}`);
   return createHash("sha256").update(parts.join("\n")).digest("hex");
 }
 
 /**
  * Whether a stored word still tells the truth about the entries it covers,
  * from their current state alone (no text): `outdated` when one of them
- * changed state or left since it was written, `empty` when none of them is
- * open or unseen any more, `stale_news` when news it gave about a settled
- * entry was seen more than `ttl` ago, `current` otherwise.
+ * changed state or left since it was written, or the usage warning changed
+ * (`usageKey`, the current one), `empty` when none of them is open or unseen
+ * any more and there is no warning, `stale_news` when news it gave about a
+ * settled entry was seen more than `ttl` ago, `current` otherwise.
  */
 export type HomeBriefCoverage = "current" | "outdated" | "empty" | "stale_news";
 
@@ -86,6 +124,7 @@ export function homeBriefCoverage(
   states: ReadonlyArray<{ id: string; closed_at: string | null; seen_at: string | null }>,
   now: number,
   ttl: number,
+  usageKey: string | null = null,
 ): HomeBriefCoverage {
   const byId = new Map(states.map((state) => [state.id, state]));
   const current = brief.journal_entry_ids.flatMap((id) => {
@@ -93,8 +132,8 @@ export function homeBriefCoverage(
     return state ? [{ id, state: state.closed_at ? "settled" as const : "open" as const }] : [];
   });
   if (current.length !== brief.journal_entry_ids.length ||
-      homeBriefDigest(current) !== brief.journal_digest) return "outdated";
-  if (!states.some((state) => !state.closed_at || !state.seen_at)) return "empty";
+      homeBriefDigest(current, usageKey) !== brief.journal_digest) return "outdated";
+  if (!usageKey && !states.some((state) => !state.closed_at || !state.seen_at)) return "empty";
   if (states.some((state) => state.closed_at && state.seen_at &&
       now - Date.parse(state.seen_at) > ttl)) return "stale_news";
   return "current";
@@ -106,6 +145,7 @@ export function buildHomeBriefSystemPrompt(input: Pick<HomeBriefInput, "locale" 
 
 Where it shows: right below the app's greeting (for example ${examples || "\"Good morning\""}) and above the field where the user writes to Numo. Your text continues that greeting.
 - Never open with a greeting, the user's name, or a lead-in ("Here is…", "Quick update…", "While you were away…"). Start with the subject itself.
+- When the message carries an AI budget warning, it comes first, in one sentence: at this pace the budget runs out around that day, before it resets. Give the share used in percent, never an amount of money, and cite both days with the date links the message gives. Then the journal, if it holds anything.
 - What waits for the user comes first, then what Numo did that touches their content, then what Numo offers to do.
 - One to three short sentences, ${HOME_BRIEF_TARGET_LENGTH} characters at most: read at a glance, acted on at once. When there is more, keep what matters most; the rest stays readable in Numo's conversation.
 - Never tell the user what they already know. An entry marked "seen" is known: mention it again only if it still waits for them, in a few words.
@@ -140,7 +180,7 @@ export function selectHomeBriefEntries<T extends HomeBriefEntry>(entries: readon
   return withinBudget([...open, ...settled], budget);
 }
 
-export function buildHomeBriefUserMessage(input: Pick<HomeBriefInput, "name" | "entries" | "memories">): string {
+export function buildHomeBriefUserMessage(input: Pick<HomeBriefInput, "name" | "entries" | "memories" | "usage">): string {
   const line = (entry: HomeBriefEntry) => {
     const facts = [entry.age, entry.state === "open" ? "still open" : "settled",
       entry.seen ? "seen" : "not seen yet", entry.project ? `project ${entry.project}` : null]
@@ -149,9 +189,14 @@ export function buildHomeBriefUserMessage(input: Pick<HomeBriefInput, "name" | "
     return `- (${facts}) ${entry.text}${reason}`;
   };
   const memories = withinBudget(input.memories, HOME_BRIEF_MEMORY_BUDGET);
+  const usage = input.usage;
+  const budget = usage ? `
+## AI budget warning
+${usage.usedPercent}% of the AI budget of this period is used. At the current pace it runs out around ${mentionMarkdown("date", usage.runsOutOn)}, ${usage.daysShort === 0 ? "shortly" : usage.daysShort === 1 ? "1 day" : `${usage.daysShort} days`} before it resets on ${mentionMarkdown("date", usage.resetsOn)}.
+` : "";
   return `## The user
 ${input.name ? `Name: ${input.name} (the greeting already says it).` : "No name on the account."}
-
+${budget}
 ## Numo's journal
 <journal>
 ${input.entries.length ? input.entries.map(line).join("\n") : "(empty)"}

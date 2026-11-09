@@ -6,6 +6,7 @@ import { getUsagePeriod } from "@/lib/server/usage";
 import { isManagedAiEnabled } from "@/lib/managed-services";
 import { buildUsageDays, type DailyUsageRow } from "@/lib/usage-analytics";
 import type { UsageAnalyticsResponse } from "@/lib/billing-types";
+import { forecastUsage, type UsageForecast } from "@/lib/usage-forecast";
 
 export async function getUsageAnalytics(
   userId: string,
@@ -37,4 +38,21 @@ export async function getUsageAnalytics(
     observedAt,
   );
   return response;
+}
+
+/**
+ * Where the user's AI budget is heading by the reset (MIN-946), from the same
+ * daily usage the billing chart draws. `null` without managed AI or budget.
+ */
+export async function getUsageForecast(
+  userId: string,
+): Promise<UsageForecast | null> {
+  const analytics = await getUsageAnalytics(userId);
+  return forecastUsage({
+    days: analytics.days,
+    includedUsd: analytics.includedUsd,
+    periodStart: analytics.periodStart,
+    periodEnd: analytics.periodEnd,
+    observedAt: analytics.observedAt,
+  });
 }

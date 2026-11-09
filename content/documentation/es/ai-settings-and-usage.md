@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
@@ -63,9 +63,9 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 26,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-04"
   },
   "related": [
@@ -87,7 +87,7 @@
       "src": "/documentation/es/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Los proveedores conectados, un proveedor por uso, y el proveedor y modelo de Numo son ajustes separados.",
       "caption": "Cada uso funciona con minddy Cloud o un proveedor conectado. El valor predeterminado de Numo se guarda por proveedor; una conversación puede elegir su propio proveedor y modelo.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -164,7 +164,7 @@ Estos valores predeterminados corresponden a minddy 0.20.0. Comprueba la página
 | Go | Ilimitado | Ilimitado | Ilimitado | 20 GiB | 5 |
 | Pro | Ilimitado | Ilimitado | Ilimitado | 100 GiB | 15 |
 
-La facturación muestra el presupuesto de IA restante y su próximo restablecimiento, **Evolución del presupuesto** y **¿Qué consume tu presupuesto?**, que reparte el consumo entre **Rutinas**, **Numo**, **Dictado por voz**, **Sugerencias** y **Automatizaciones** como porcentaje del presupuesto incluido. **Historial de uso** enumera las acciones del periodo actual y su parte del presupuesto.
+La facturación muestra el presupuesto de IA restante y su próximo restablecimiento. **Evolución del presupuesto** dibuja lo que has consumido con una línea continua y, en discontinua, adónde lleva el ritmo actual hasta la renovación; la frase bajo el título dice si vas bien o qué día se agotará el presupuesto. **¿Qué consume tu presupuesto?**, que reparte el consumo entre **Rutinas**, **Numo**, **Dictado por voz**, **Sugerencias** y **Automatizaciones** como porcentaje del presupuesto incluido. **Uso por día** muestra lo que consumió cada día, por tipo de uso; pasa el cursor sobre un gráfico para leer los valores de un día. **Historial de uso** enumera las acciones del periodo actual y su parte del presupuesto. Numo lee las mismas cifras y la misma previsión cuando le preguntas por tu presupuesto, y te avisa en **Inicio** cuando el presupuesto va camino de agotarse antes de renovarse.
 
 ## Dictar texto y cambios {#voice-dictation}
 

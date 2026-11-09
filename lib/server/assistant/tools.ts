@@ -2209,7 +2209,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_plan_usage",
       description:
-        "Read the current user's plan consumption, read-only: the AI budget spent in the current billing window (included vs used USD) and the spend per segment (routines, Numo, dictation, feedback, automations). Use it when the user asks what their plan was used for or what their budget looks like; list_routine_runs tells what a routine recently did. Read-only: it cannot change the plan, the budget or any setting.",
+        "Read the current user's plan consumption, read-only: the AI budget spent in the current billing window (used and remaining percent, with the underlying USD), the spend per segment (routines, Numo, dictation, feedback, automations), and the forecast at the current pace: on track, tight, short (the budget runs out before the reset, with the date) or exhausted. Use it when the user asks what their plan was used for, what their budget looks like or whether it will last until the reset; when the forecast is short, say so and when. Speak of the budget in percent, never in dollars. list_routine_runs tells what a routine recently did. Read-only: it cannot change the plan, the budget or any setting.",
       parameters: { type: "object", properties: {} },
     },
   },

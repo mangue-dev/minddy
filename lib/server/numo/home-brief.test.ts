@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   answer: null as Record<string, unknown> | null,
   forcedToolCall: vi.fn(),
   writeHomeBrief: vi.fn(),
+  forecast: null as Record<string, unknown> | null,
 }));
 
 vi.mock("@/lib/supabase-service", () => ({
@@ -33,6 +34,7 @@ vi.mock("./home-brief-content", async (importOriginal) => ({
   writeHomeBrief: mocks.writeHomeBrief,
 }));
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget: async () => mocks.budget }));
+vi.mock("@/lib/server/usage-analytics", () => ({ getUsageForecast: async () => mocks.forecast }));
 vi.mock("@/lib/server/project-access", () => ({ accessibleProjectIds: async () => new Set<string>() }));
 vi.mock("@/lib/server/mention-access", () => ({
   // The label the reader may see, as the real relabeling gives it.
@@ -73,6 +75,7 @@ describe("rewriteHomeBrief", () => {
     mocks.latestDigest = null;
     mocks.budget = true;
     mocks.answer = null;
+    mocks.forecast = null;
     mocks.forcedToolCall.mockClear();
     mocks.writeHomeBrief.mockReset();
   });
@@ -117,6 +120,25 @@ describe("rewriteHomeBrief", () => {
     expect(await rewriteHomeBrief("user-1", undefined, NOW)).toBe("empty");
     expect(mocks.forcedToolCall).not.toHaveBeenCalled();
     expect(mocks.writeHomeBrief).not.toHaveBeenCalled();
+  });
+
+  it("warns about a budget running out even with an empty journal (MIN-946)", async () => {
+    mocks.forecast = {
+      status: "short", usedPercent: 70, projectedPercent: 130,
+      runsOutAt: "2026-11-20T12:00:00.000Z", resetsAt: "2026-12-01T00:00:00.000Z",
+      daysShort: 10, points: [],
+    };
+    mocks.answer = { text: "À ce rythme, votre budget IA sera épuisé vers le [@](mention:date/2026-11-20).", suggestions: [] };
+
+    expect(await rewriteHomeBrief("user-1", undefined, NOW)).toBe("written");
+
+    const [, , message] = mocks.forcedToolCall.mock.calls[0];
+    expect(message).toContain("runs out around [@](mention:date/2026-11-20)");
+    expect(mocks.writeHomeBrief).toHaveBeenCalledWith(expect.anything(), "user-1", expect.objectContaining({
+      content: "À ce rythme, votre budget IA sera épuisé vers le [@](mention:date/2026-11-20).",
+      journalEntryIds: [],
+      journalDigest: homeBriefDigest([], "short:2026-11-20"),
+    }));
   });
 
   it("does not pay again for the entries the latest word already covers", async () => {

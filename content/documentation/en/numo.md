@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 33,
-  "sourceRevision": 33,
+  "revision": 34,
+  "sourceRevision": 34,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-08",
   "compatibility": {
@@ -94,9 +94,9 @@
     ]
   },
   "review": {
-    "revision": 33,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-929 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-923 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-930 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 34,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-929 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-923 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-930 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-946 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-08"
   },
   "related": [
@@ -127,7 +127,7 @@
       "src": "/documentation/en/work-with-numo-workflow.png",
       "alt": "Numo demonstration conversation with page context, a priority-change request and its saved answer.",
       "caption": "Existing demonstration thread, localized for display. The saved answer names AUR-11 and AUR-7; this capture does not prove a new execution.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -144,7 +144,7 @@
       "src": "/documentation/en/numo-permissions-and-approvals-workflow.svg",
       "alt": "Permission matrix for Numo project actions, personal connections and routines.",
       "caption": "Project access and explicit instructions limit Numo actions; external content cannot grant permission.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -205,7 +205,7 @@
       "src": "/documentation/en/numo-execution-model-flow.svg",
       "alt": "Diagram: Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
       "caption": "Read the stages in order. Persist the intent, message and request UUID. Claim turn, checkpoint tools and their outcomes. Wait for your answer when input is needed. Replay durable events; reconcile uncertain writes.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -237,7 +237,7 @@
       "src": "/documentation/en/numo-mcp-connections-workflow.png",
       "alt": "Personal MCP settings, empty connection list and Add another MCP server control.",
       "caption": "Numo connections are personal; project routines use the project owner’s connections.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -254,7 +254,7 @@
       "src": "/documentation/en/numo-mcp-connections-config-workflow.png",
       "alt": "Notion connection wizard showing the sign-in method known from the catalog.",
       "caption": "Sign-in step for a catalog service. No credentials were entered and no server was contacted.",
-      "revision": 33,
+      "revision": 34,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -345,7 +345,7 @@ Numo keeps a journal of what waits for you and of what it did for you while you 
 
 ### Numo's summary on Home {#home-word}
 
-When **Home** opens its new conversation, Numo writes first, under the greeting: a few sentences that sum up its journal, with what waits for you first, then what it did that touches your content, then what it offers to do on its own. The records it names, such as an issue or a page, open in one click. When Numo produced something for you, such as a summary of your projects or research, the summary gives its key facts and figures rather than sending you to a conversation. Numo rewrites the summary in the background after each turn that writes or closes a journal entry, so it is up to date before you open **Home**, and opening the page doesn't call the AI. When an entry it covers is settled in the meantime, **Home** hides the summary until Numo has written the next one. Showing the summary marks the entries it covers as seen: a later summary leaves out what was settled and mentions again only what still waits for you. When nothing in the journal is open or unseen, there is no summary.
+When **Home** opens its new conversation, Numo writes first, under the greeting: a few sentences that sum up its journal, with what waits for you first, then what it did that touches your content, then what it offers to do on its own. The records it names, such as an issue or a page, open in one click. When Numo produced something for you, such as a summary of your projects or research, the summary gives its key facts and figures rather than sending you to a conversation. Numo rewrites the summary in the background after each turn that writes or closes a journal entry, so it is up to date before you open **Home**, and opening the page doesn't call the AI. When an entry it covers is settled in the meantime, **Home** hides the summary until Numo has written the next one. Showing the summary marks the entries it covers as seen: a later summary leaves out what was settled and mentions again only what still waits for you. When your AI budget is on track to run out before it resets, the summary opens with it: the day it runs out at the current pace and the share already used, in percent. When nothing in the journal is open or unseen and the budget will last, there is no summary.
 
 Once you write, the greeting and the summary stay at the top of the conversation you start under them on **Home**, the summary as Numo's opening message; without a summary, the conversation starts with your message. It is saved as Numo's first message of that conversation: Numo reads it when it answers, as the continuation of what it said, and the panel and the history show it too. Above the composer, up to four suggestions written with the summary replace the usual rows, or none when nothing specific fits. They also serve as quick answers, for example **Yes, do it on your own from now on**, and each one is a complete request. Choosing one fills the composer without sending it. With Numo in the background off, **Home** opens on the greeting and the usual rows, with no summary. On an instance without AI, there is no conversation: **Home** shows the greeting and your account notices, such as pending invitations or the desktop app.
 

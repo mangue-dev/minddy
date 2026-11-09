@@ -14,6 +14,7 @@ import { markdownForReader, UNAVAILABLE_MENTION_LABEL } from "@/lib/server/menti
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { accessibleProjectIds } from "@/lib/server/project-access";
 import { hasUsageBudget } from "@/lib/server/usage";
+import { getUsageForecast } from "@/lib/server/usage-analytics";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getLatestHomeBriefDigest, writeHomeBrief } from "./home-brief-content";
 import {
@@ -22,6 +23,8 @@ import {
   HOME_BRIEF_TOOL,
   homeBriefDigest,
   homeBriefParameters,
+  homeBriefUsage,
+  homeBriefUsageKey,
   sanitizeHomeBrief,
   selectHomeBriefEntries,
   type HomeBriefEntry,
@@ -36,8 +39,9 @@ import { listNumoMemories } from "./memory-content";
 
 /**
  * Numo's word on the home page (MIN-930): rewritten in the background after a
- * Numo turn that wrote or closed a journal entry, so the home page is current
- * before the user opens it. One short call (`home_brief_model`) reads the
+ * Numo turn that wrote or closed a journal entry, or when the AI budget's
+ * forecast changes (MIN-946), so the home page is current before the user
+ * opens it. One short call (`home_brief_model`) reads the
  * journal's open entries, the closed ones the user has not seen, and their
  * memories, and returns the text and up to four suggestions. Each rewrite is
  * a new version (`home-brief-content.ts`); opening the home page reads the
@@ -45,8 +49,8 @@ import { listNumoMemories } from "./memory-content";
  *
  * Nothing is written, and nothing is paid for, when:
  * - background Numo (or its memory) is switched off;
- * - the journal holds nothing open or unseen: the home page then shows no
- *   word at all;
+ * - the journal holds nothing open or unseen and the budget is not on track
+ *   to run out before it resets: the home page then shows no word at all;
  * - the entries the word would cover are the ones the latest version already
  *   covers, in the same state;
  * - the user has no budget left, or no AI provider answers (an instance
@@ -110,6 +114,8 @@ export async function rewriteHomeBrief(userId: string,
     listOpenJournalEntries(service, userId),
     listUnseenJournalEntries(service, userId),
   ]);
+  // The budget warning is best effort: a failed read leaves it out.
+  const usage = homeBriefUsage(await getUsageForecast(userId).catch(() => null));
   const merged = mergeEntries(open, unseen);
   const projectIds = [...new Set(merged.flatMap((entry) => entry.project_id ? [entry.project_id] : []))];
   const visible = projectIds.length ? await accessibleProjectIds(userId, projectIds) : new Set<string>();
@@ -126,9 +132,9 @@ export async function rewriteHomeBrief(userId: string,
       conversationId: entry.source_conversation_id,
       createdAt: entry.created_at,
     })));
-  if (entries.length === 0) return "empty";
+  if (entries.length === 0 && !usage) return "empty";
 
-  const digest = homeBriefDigest(entries);
+  const digest = homeBriefDigest(entries, homeBriefUsageKey(usage));
   if (await getLatestHomeBriefDigest(service, userId) === digest) return "unchanged";
   if (!(await hasUsageBudget(userId, "assistant", "home_brief_model"))) {
     console.warn("[numo-home-brief] skipped: budget_exhausted");
@@ -149,7 +155,7 @@ export async function rewriteHomeBrief(userId: string,
     }));
   const name = greetedName(metadata, account?.user?.email ?? null);
   const locale = localeOf(metadata);
-  const rawMessage = buildHomeBriefUserMessage({ name: name || null, entries, memories });
+  const rawMessage = buildHomeBriefUserMessage({ name: name || null, entries, memories, usage });
   // Stored mentions carry no label: give them the one the user may see, so
   // the model knows what each record is and copies a complete link.
   // A record the user may not see (labelled "unavailable") is never one the

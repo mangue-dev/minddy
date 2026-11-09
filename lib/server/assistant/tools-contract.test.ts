@@ -191,6 +191,9 @@ describe("Numo tool contracts", () => {
     const usage = tool("get_plan_usage");
     expect(usage?.function.description).toMatch(/budget/i);
     expect(usage?.function.description).toMatch(/routine/i);
+    // MIN-946: Numo can tell whether the budget lasts until the reset, in percent.
+    expect(usage?.function.description).toMatch(/forecast/i);
+    expect(usage?.function.description).toMatch(/never in dollars/i);
   });
 
   it("offers no code-agent tool or setting (MIN-721)", () => {

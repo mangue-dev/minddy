@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
@@ -63,9 +63,9 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 26,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-04"
   },
   "related": [
@@ -88,7 +88,7 @@
       "src": "/documentation/pt-BR/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Provedores conectados, um provedor por uso e o provedor e modelo do Numo são ajustes separados.",
       "caption": "Cada uso passa pelo minddy Cloud ou por um provedor conectado. O padrão do Numo é salvo por provedor; uma conversa pode escolher o próprio provedor e modelo.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -165,7 +165,7 @@ Estes padrões descrevem o minddy 0.20.0. Confira a página de preços e a conta
 | Go | Ilimitados | Ilimitadas | Ilimitados | 20 GiB | 5 |
 | Pro | Ilimitados | Ilimitadas | Ilimitados | 100 GiB | 15 |
 
-A Cobrança mostra o orçamento de IA restante e sua próxima redefinição, **Evolução do orçamento** e **O que consome seu orçamento?**, que divide o consumo entre **Rotinas**, **Numo**, **Ditado por voz**, **Feedback** e **Automações** como percentual do orçamento incluído. **Histórico de uso** lista as ações do período atual e sua parcela do orçamento.
+A Cobrança mostra o orçamento de IA restante e sua próxima redefinição. **Evolução do orçamento** traça o que você já consumiu em linha contínua e, tracejado, aonde o ritmo atual leva até a renovação; a frase abaixo do título diz se você está no caminho certo ou em que dia o orçamento vai acabar. **O que consome seu orçamento?**, que divide o consumo entre **Rotinas**, **Numo**, **Ditado por voz**, **Feedback** e **Automações** como percentual do orçamento incluído. **Uso por dia** mostra o que cada dia consumiu, por tipo de uso; passe o cursor sobre um gráfico para ler os valores de um dia. **Histórico de uso** lista as ações do período atual e sua parcela do orçamento. O Numo lê os mesmos números e a mesma previsão quando você pergunta sobre seu orçamento, e avisa você na **Página inicial** quando o orçamento está a caminho de acabar antes da renovação.
 
 ## Ditar texto e alterações {#voice-dictation}
 

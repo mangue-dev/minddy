@@ -5,6 +5,8 @@ import {
   dropBareHandles,
   homeBriefCoverage,
   homeBriefDigest,
+  homeBriefUsage,
+  homeBriefUsageKey,
   keepKnownMentions,
   sanitizeHomeBrief,
   selectHomeBriefEntries,
@@ -145,5 +147,55 @@ describe("dropBareHandles", () => {
   it("writes a bare @name as the name, and leaves mention links alone", () => {
     expect(dropBareHandles("Lina is waiting (@Lina) for [@MIN-42](mention:issue/i1), mail a@b.c"))
       .toBe("Lina is waiting (Lina) for [@MIN-42](mention:issue/i1), mail a@b.c");
+  });
+});
+
+describe("the AI budget warning (MIN-946)", () => {
+  const forecast = {
+    status: "short" as const,
+    usedPercent: 61.6,
+    projectedPercent: 140,
+    runsOutAt: "2026-11-22T06:00:00.000Z",
+    resetsAt: "2026-12-01T00:00:00.000Z",
+    daysShort: 8,
+    points: [],
+  };
+
+  it("warns only when the budget runs out before it resets", () => {
+    expect(homeBriefUsage(forecast)).toEqual({
+      usedPercent: 62, runsOutOn: "2026-11-22", resetsOn: "2026-12-01", daysShort: 8,
+    });
+    for (const status of ["too_early", "on_track", "tight", "exhausted"] as const) {
+      expect(homeBriefUsage({ ...forecast, status, runsOutAt: null }), status).toBeNull();
+    }
+    expect(homeBriefUsage(null)).toBeNull();
+  });
+
+  it("gives the model the warning with date links, and asks for percent only", () => {
+    const message = buildHomeBriefUserMessage({ name: null, entries: [], memories: [],
+      usage: homeBriefUsage(forecast) });
+    expect(message).toContain("62% of the AI budget");
+    expect(message).toContain("[@](mention:date/2026-11-22), 8 days before it resets on [@](mention:date/2026-12-01)");
+    expect(buildHomeBriefUserMessage({ name: null, entries: [], memories: [] })).not.toContain("AI budget");
+    expect(buildHomeBriefSystemPrompt({ locale: "en", greetings: [] })).toMatch(/never an amount of money/);
+  });
+
+  it("keeps old digests and makes a changed warning outdated", () => {
+    const entries = [{ id: "a", state: "open" as const }];
+    expect(homeBriefDigest(entries, null)).toBe(homeBriefDigest(entries));
+    const key = homeBriefUsageKey(homeBriefUsage(forecast));
+    const brief = { journal_entry_ids: ["a"], journal_digest: homeBriefDigest(entries, key) };
+    const now = Date.parse("2026-11-08T12:00:00.000Z");
+    const states = [{ id: "a", closed_at: null, seen_at: null }];
+    expect(homeBriefCoverage(brief, states, now, 600_000, key)).toBe("current");
+    expect(homeBriefCoverage(brief, states, now, 600_000, null)).toBe("outdated");
+    expect(homeBriefCoverage(brief, states, now, 600_000, "short:2026-11-24")).toBe("outdated");
+  });
+
+  it("keeps a word that carries only the warning", () => {
+    const key = "short:2026-11-22";
+    const brief = { journal_entry_ids: [], journal_digest: homeBriefDigest([], key) };
+    expect(homeBriefCoverage(brief, [], Date.now(), 600_000, key)).toBe("current");
+    expect(homeBriefCoverage(brief, [], Date.now(), 600_000, null)).toBe("outdated");
   });
 });
