@@ -1284,8 +1284,14 @@ div:has(> [data-streamdown="table"]) {
   cursor: default;
   transition: background-color 120ms ease-out;
 
-  &:hover,
   &:focus-within {
+    background: color-mix(in oklab, var(--muted) 20%, transparent);
+  }
+}
+
+/* The hover tint needs a fine pointer: after a tap it would stay stuck. */
+@media (hover: hover) and (pointer: fine) {
+  .data-table-interactive > tbody > tr:hover {
     background: color-mix(in oklab, var(--muted) 20%, transparent);
   }
 }
