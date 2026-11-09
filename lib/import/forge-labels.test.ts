@@ -44,14 +44,18 @@ describe("readForgeLabel — le label nomme son champ", () => {
     expect(readForgeLabel("size/XL")).toEqual({ field: "effort", value: "xl" });
     expect(readForgeLabel("effort: small")).toEqual({ field: "effort", value: "s" });
     expect(readForgeLabel("taille : moyenne")).toEqual({ field: "effort", value: "m" });
-    expect(readForgeLabel("complexity: huge")).toEqual({ field: "effort", value: "xl" });
+    expect(readForgeLabel("size: XXL")).toEqual({ field: "effort", value: "xxl" });
+    expect(readForgeLabel("size: very large")).toEqual({ field: "effort", value: "xl" });
+    expect(readForgeLabel("complexity: huge")).toEqual({ field: "effort", value: "xxl" });
+    expect(readForgeLabel("size: epic")).toEqual({ field: "effort", value: "xxl" });
   });
 
   it("convertit une estimation chiffrée en taille", () => {
     expect(readForgeLabel("sp: 1")).toEqual({ field: "effort", value: "xs" });
     expect(readForgeLabel("3 story points")).toEqual({ field: "effort", value: "m" });
     expect(readForgeLabel("points: 5")).toEqual({ field: "effort", value: "l" });
-    expect(readForgeLabel("estimate: 13")).toEqual({ field: "effort", value: "xl" });
+    expect(readForgeLabel("estimate: 8")).toEqual({ field: "effort", value: "xl" });
+    expect(readForgeLabel("estimate: 13")).toEqual({ field: "effort", value: "xxl" });
   });
 });
 

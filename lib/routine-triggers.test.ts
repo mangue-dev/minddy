@@ -26,6 +26,11 @@ describe("routine trigger and condition contract", () => {
   it("rejects executable expressions and invalid typed comparisons", () => {
     for (const conditions of [{ field: "status", operator: "gt", value: "done" }, { field: "priority", operator: "eq", value: 7 }, { field: "category", operator: "eq", value: id }, { field: "assignee", operator: "eq", value: "foreign-id" }, { expression: "eval('true')" }, { field: "priority", operator: "eq", value: "high", code: "true" }]) expect(() => parseRoutineTrigger({ type: "event", event: "issue.created", conditions })).toThrow();
   });
+  it("accepts every effort size in a condition and refuses an unknown one", () => {
+    const withEffort = (value: string) => ({ type: "event", event: "issue.created", conditions: { field: "effort", operator: "eq", value } });
+    for (const size of ["xs", "s", "m", "l", "xl", "xxl"]) expect(() => parseRoutineTrigger(withEffort(size))).not.toThrow();
+    expect(() => parseRoutineTrigger(withEffort("xxxl"))).toThrow();
+  });
   it("validates property types, stable option IDs, and removed schema references", () => {
     const trigger = parseRoutineTrigger({ type: "database", databaseId: id, conditions: { field: "property", propertyId: other, operator: "gte", value: 2 } });
     expect(() => assertPropertyConditions(trigger, [{ id: other, name: "Score", type: "number" }])).not.toThrow();

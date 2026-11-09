@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 48,
-  "sourceRevision": 48,
+  "revision": 49,
+  "sourceRevision": 49,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-09",
   "compatibility": {
@@ -45,6 +45,8 @@
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
+      "lib/server/smart-fill.ts",
+      "lib/issue-constants.ts",
       "lib/smart-fill-fields.ts",
       "lib/server/smart-fill-reevaluation.ts",
       "lib/server/smart-fill-ownership.ts",
@@ -133,9 +135,9 @@
     ]
   },
   "review": {
-    "revision": 48,
-    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
-    "language": "agent:claude-code (de translation of the changed passages with catalog UI labels, reviewed against en revision 48; agent review, not human acceptance)",
+    "revision": 49,
+    "fact": "agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (de translation of the changed passage, reviewed against en revision 49; agent review, not human acceptance)",
     "date": "2026-11-09"
   },
   "related": [
@@ -181,7 +183,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -198,7 +200,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -215,7 +217,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -232,7 +234,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -249,7 +251,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -266,7 +268,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Unterticket-Bereich eines Demo-Elterntickets mit der Schaltfläche „Unterticket erstellen“ und ihrem Optionspfeil.",
       "caption": "„Unterticket erstellen“ öffnet die Erstellung mit diesem Ticket als Elternticket; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -283,7 +285,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -300,7 +302,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -317,7 +319,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -334,7 +336,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -369,7 +371,7 @@ Du musst Eigentümer oder Mitglied des Zielprojekts sein; Leser können Tickets 
 
 Schalte für eine manuelle Erstellung Smart Fill aus, wenn die Schaltfläche angezeigt wird und aktiviert ist. Dadurch kannst du Priorität, Aufwand, Kategorien, Ziel und Beziehungen selbst festlegen. Um nur einige dieser Eigenschaften festzulegen, lass Smart Fill eingeschaltet und öffne den Pfeil neben seiner Schaltfläche: Wähle eine Eigenschaft und dann ihren Wert. **Beziehungen** listet dort die Beziehungsarten auf; wählst du eine, öffnet sich die Befehlspalette mit ihren möglichen Zielen. Dasselbe Menü legt auch **Status** und **Zuständig** fest, und **Fälligkeitsdatum** öffnet den Kalender; diese drei Eigenschaften bleiben in der Zeile des Formulars, ob Smart Fill an ist oder nicht. Außerhalb von Titel und Beschreibung öffnet die Taste der Eigenschaft ihre Auswahl direkt: P für Priorität, E für Aufwand, L für Kategorien oder O für Ziel. Am Computer öffnet Command/Strg+Umschalt+F dieses Pfeilmenü, solange Smart Fill für das Ticket eingeschaltet ist, auch während du Titel oder Beschreibung eingibst; sobald du einen Wert wählst oder das Menü schließt, steht der Cursor wieder genau dort, wo du geschrieben hast, wie bei Command/Strg+Umschalt+P für **Erstellen in**. Der gewählte Wert bleibt im Formular sichtbar. Smart Fill ergänzt nur die Eigenschaften, die du leer gelassen hast. Die Auswahl gilt für dieses Ticket; beim erneuten Öffnen des Erstellungsformulars wird die Kontoeinstellung wiederhergestellt. Sie ist von Smart Assign und Routinen unabhängig. Solange Smart Fill eingeschaltet ist, [verknüpft es das Ticket nach dem Speichern auch mit verwandten Tickets](#smart-fill-relations), deshalb ist die Beziehungsauswahl ausgeblendet; R öffnet sie trotzdem. Bereits gewählte Beziehungen bleiben als Chips in der Eigenschaftszeile sichtbar, zwischen der zuständigen Person und dem Fälligkeitsdatum, und werden mit dem Ticket angelegt.
 
-Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Aufwand, zuständige Person, Ziel, Kategorien, Fälligkeitsdatum und Wiederholung. Zuständig ist der Projekteigentümer oder ein Mitglied, nie ein Leser; ein Ziel bündelt Tickets zu einem Projektergebnis. Optionale Eigenschaften kannst du offenlassen, statt Werte zu erraten. Die Priorität ist **Nicht festgelegt** oder reicht von niedrig über mittel und hoch bis dringend; der Aufwand ist **Nicht festgelegt** oder verwendet XS, S, M, L und XL.
+Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Aufwand, zuständige Person, Ziel, Kategorien, Fälligkeitsdatum und Wiederholung. Zuständig ist der Projekteigentümer oder ein Mitglied, nie ein Leser; ein Ziel bündelt Tickets zu einem Projektergebnis. Optionale Eigenschaften kannst du offenlassen, statt Werte zu erraten. Die Priorität ist **Nicht festgelegt** oder reicht von niedrig über mittel und hoch bis dringend; der Aufwand ist **Nicht festgelegt** oder verwendet XS, S, M, L, XL und XXL. Der Aufwand misst den Umfang der Arbeit, nicht ihre Wirkung: Eine Arbeit von wenigen Stunden bleibt höchstens ein L, egal wie wichtig sie ist; ihre Bedeutung drückst du über die Priorität aus. Verwende XXL nur für Arbeiten, die mehrere Tage dauern, etwa eine grundlegende Überarbeitung oder ein neues Teilsystem.
 
 Ist Smart Assign im Projekt aktiviert, zeigt die Auswahl der zuständigen Person **Smart Assign** statt **Nicht zugewiesen**. Ticketkarten und die Befehlspalette folgen derselben Regel, und eine Karte ohne zuständige Person zeigt das Smart-Assign-Symbol. Lass diese Wahl stehen, und Smart Assign bestimmt die zuständige Person, sobald das Ticket die Triage verlassen hat. Im Ticketbereich entfernt **Smart Assign** die aktuelle zuständige Person und lässt Smart Assign neu wählen. Tickets mit dem Status **Abgebrochen** oder **Duplikat** behalten **Nicht zugewiesen**.
 

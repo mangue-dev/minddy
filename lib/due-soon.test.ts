@@ -118,6 +118,7 @@ describe("isDueSoon", () => {
     ["m", 3],
     ["l", 5],
     ["xl", 8],
+    ["xxl", 13],
     [null, 3], // sans effort → M
   ];
 
@@ -169,9 +170,9 @@ describe("isDueSoon", () => {
 describe("dueSoonUpperBound", () => {
   it("dépasse le dernier jour retenu, avec la marge des fuseaux", () => {
     const bound = dueSoonUpperBound(TODAY);
-    expect(bound).toBe("2026-08-06T00:00:00.000Z");
-    // The last day possibly retained (XL) remains below the limit, whatever
-    // or the time zone: midnight in Kiritimati (UTC+14) on day D+8.
+    expect(bound).toBe("2026-08-11T00:00:00.000Z");
+    // The last day possibly retained (XXL) remains below the limit, whatever
+    // or the time zone: midnight in Kiritimati (UTC+14) on day D+13.
     const lastDay = addDays(TODAY, DUE_SOON_MAX_DAYS);
     expect(`${lastDay}T23:59:59.999Z` < bound).toBe(true);
   });

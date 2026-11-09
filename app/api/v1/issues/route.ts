@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     return publicApiError(
       422,
       "invalid_effort",
-      "effort must be one of: xs, s, m, l, xl."
+      "effort must be one of: xs, s, m, l, xl, xxl."
     );
   }
 

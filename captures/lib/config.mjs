@@ -337,10 +337,10 @@ export const ALLOWED_RPC = new Set(["next_issue_number"]);
 /** Actual schema enums. Any value outside the list breaks a CHECK on the base side. */
 export const ISSUE_STATUS = ["triage", "backlog", "todo", "in_progress", "in_review", "done", "canceled"];
 export const ISSUE_PRIORITY = ["none", "urgent", "high", "medium", "low"];
-export const ISSUE_EFFORT = ["xs", "s", "m", "l", "xl"];
+export const ISSUE_EFFORT = ["xs", "s", "m", "l", "xl", "xxl"];
 
 /** Points per effort — mirror of EFFORT_POINTS in lib/cycle.ts. */
-export const EFFORT_POINTS = { xs: 1, s: 2, m: 3, l: 5, xl: 8 };
+export const EFFORT_POINTS = { xs: 1, s: 2, m: 3, l: 5, xl: 8, xxl: 13 };
 
 /** Statuses of a feedback post, and review statuses. */
 export const FEEDBACK_STATUS = ["open", "planned", "in_progress", "shipped", "declined"];

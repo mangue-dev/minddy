@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 48,
-  "sourceRevision": 48,
+  "revision": 49,
+  "sourceRevision": 49,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-09",
   "compatibility": {
@@ -45,6 +45,8 @@
       "components/create-issue-dialog.tsx",
       "components/issue-compact-fields.tsx",
       "lib/smart-fill.ts",
+      "lib/server/smart-fill.ts",
+      "lib/issue-constants.ts",
       "lib/smart-fill-fields.ts",
       "lib/server/smart-fill-reevaluation.ts",
       "lib/server/smart-fill-ownership.ts",
@@ -133,9 +135,9 @@
     ]
   },
   "review": {
-    "revision": 48,
-    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
-    "language": "agent:claude-code (fr translation of the changed passages with catalog UI labels, reviewed against en revision 48; agent review, not human acceptance)",
+    "revision": 49,
+    "fact": "agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (fr translation of the changed passage, reviewed against en revision 49; agent review, not human acceptance)",
     "date": "2026-11-09"
   },
   "related": [
@@ -181,7 +183,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -197,7 +199,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -214,7 +216,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -231,7 +233,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -248,7 +250,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -265,7 +267,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Section des sous-tickets d’un ticket parent de démonstration, avec le bouton Créer un sous-ticket et son chevron d’options.",
       "caption": "Créer un sous-ticket ouvre la création avec ce ticket comme parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +284,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -299,7 +301,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -316,7 +318,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -333,7 +335,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 48,
+      "revision": 49,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -368,7 +370,7 @@ Vous devez être propriétaire ou Membre du projet destinataire ; les lecteurs p
 
 Pour une création manuelle, désactivez Smart Fill si son bouton est affiché et activé. Les contrôles de priorité, d’effort, de catégories, d’objectif et de relations deviennent alors disponibles. Pour ne fixer que certaines de ces propriétés, laissez Smart Fill activé et ouvrez la flèche à côté de son bouton : choisissez une propriété, puis sa valeur. **Relations** y liste les types de relation ; en choisir un ouvre la palette de commandes sur ses cibles possibles. Le même menu fixe aussi le **Statut** et l’**Assigné**, et **Échéance** ouvre le calendrier ; ces trois propriétés restent dans la ligne du formulaire, que Smart Fill soit activé ou non. Hors du titre et de la description, la touche de la propriété ouvre directement son sélecteur : P pour la priorité, E pour l’effort, L pour les catégories ou O pour l’objectif. Sur ordinateur, tant que Smart Fill est activé pour le ticket, Commande/Ctrl+Maj+F ouvre ce menu de la flèche, même pendant la saisie du titre ou de la description ; une fois la valeur choisie ou le menu fermé, le curseur revient exactement où vous écriviez, comme avec Commande/Ctrl+Maj+P pour **Créer dans**. La valeur choisie reste affichée dans le formulaire. Smart Fill ne déduit que les propriétés laissées vides. Ce choix concerne ce ticket ; la réouverture du formulaire rétablit la préférence du compte. Il reste indépendant de Smart Assign et des routines. Tant que Smart Fill est activé, il [relie aussi le ticket aux tickets liés](#smart-fill-relations) une fois celui-ci enregistré : le sélecteur de relations est donc masqué ; R l’ouvre quand même. Les relations déjà choisies restent visibles sous forme de pastilles dans la ligne des propriétés, entre l’assigné et l’échéance, et sont créées avec le ticket.
 
-Définissez les propriétés utiles avant de confirmer : état, priorité, effort, responsable, objectif, catégories, échéance et récurrence. Le responsable est le propriétaire du projet ou un Membre, jamais un lecteur ; l’objectif regroupe des tickets autour d’un résultat du projet. Laissez une propriété optionnelle vide plutôt que de la deviner. La priorité est **Non définie** ou va de basse à urgente, en passant par moyenne et haute ; l’effort est **Non défini** ou utilise XS, S, M, L et XL.
+Définissez les propriétés utiles avant de confirmer : état, priorité, effort, responsable, objectif, catégories, échéance et récurrence. Le responsable est le propriétaire du projet ou un Membre, jamais un lecteur ; l’objectif regroupe des tickets autour d’un résultat du projet. Laissez une propriété optionnelle vide plutôt que de la deviner. La priorité est **Non définie** ou va de basse à urgente, en passant par moyenne et haute ; l’effort est **Non défini** ou utilise XS, S, M, L, XL et XXL. L’effort mesure la taille du travail, pas son impact : un travail de quelques heures reste au plus un L, quelle que soit son importance, et celle-ci se traduit par la priorité. Réservez XXL aux travaux de plusieurs jours, comme une refonte ou un nouveau sous-système.
 
 Lorsque Smart Assign est activé dans le projet, le sélecteur de responsable affiche **Smart Assign** au lieu de **Non assigné**. Les cartes de ticket et la palette de commandes suivent la même règle, et une carte sans responsable affiche l’icône de Smart Assign. Conservez ce choix : Smart Assign désigne le responsable dès que le ticket a quitté le triage. Dans le panneau du ticket, choisir **Smart Assign** retire le responsable actuel et laisse Smart Assign choisir à nouveau. Les tickets **Annulé** et **Doublon** conservent **Non assigné**.
 

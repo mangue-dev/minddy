@@ -282,7 +282,7 @@ function feedbackRequest(origin: string): string {
 
 function issuesRequest(origin: string): string {
   return `\`\`\`http\nPOST ${origin}/api/v1/issues\nAuthorization: Bearer $${INTEGRATION_ENV_VAR.issues}\nContent-Type: application/json\n\n{\n  "title": "<short title>",\n  "description": "<optional markdown description>",\n  "priority": "none | low | medium | high | urgent",
-  "effort": "xs | s | m | l | xl",
+  "effort": "xs | s | m | l | xl | xxl",
   "categories": ["<optional category id>"]\n}\n\`\`\``;
 }
 

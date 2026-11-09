@@ -91,7 +91,7 @@ export const EXPORT_COLUMNS: ExportColumn[] = [
   },
   {
     header: "Effort",
-    meaning: "T-shirt size: xs, s, m, l, xl — empty when the issue carries none.",
+    meaning: "T-shirt size: xs, s, m, l, xl, xxl — empty when the issue carries none.",
     value: (r) => r.effort ?? "",
   },
   {

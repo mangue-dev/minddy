@@ -49,7 +49,7 @@ export const MCP_FULL_USAGE_GUIDE =
       "Issue identifiers read '<PROJECT KEY>-<number>' (e.g. MIND-42): " +
       "tools accept them wherever an 'issue' parameter appears. Statuses: triage, " +
       "backlog, todo, in_progress, in_review, done, canceled, duplicate. Priorities: " +
-      "none, low, medium, high, urgent. Efforts (t-shirt): xs, s, m, l, xl. " +
+      "none, low, medium, high, urgent. Efforts (t-shirt): xs, s, m, l, xl, xxl. " +
       "FILL WHAT YOU CREATE. A ticket or an objective carrying only a title is " +
       "one a human has to finish by hand. On every issue you create: a " +
       "description (what and why), an estimated priority AND effort, the " +

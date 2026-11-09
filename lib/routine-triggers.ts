@@ -1,3 +1,4 @@
+import { ISSUE_EFFORTS } from "@/lib/issue-validation";
 import type { DatabaseProperty, DatabaseValue } from "@/lib/page-databases";
 
 export const ROUTINE_EVENTS = ["issue.created", "issue.status_changed", "issue.assigned", "issue.comment_added", "feedback.received"] as const;
@@ -81,7 +82,7 @@ export function parseRoutineTrigger(value: unknown): RoutineTrigger {
         if (!["eq", "neq", "in", "contains"].includes(node.operator as string)) refuse();
         if (node.field === "category" ? !["contains", "present", "absent"].includes(node.operator as string) : node.operator === "contains") refuse();
         const values = Array.isArray(node.value) ? node.value : [node.value];
-        const allowed = node.field === "status" ? STATUSES : node.field === "priority" ? ["none", "low", "medium", "high", "urgent"] : node.field === "effort" ? ["xs", "s", "m", "l", "xl"] : null;
+        const allowed: readonly string[] | null = node.field === "status" ? STATUSES : node.field === "priority" ? ["none", "low", "medium", "high", "urgent"] : node.field === "effort" ? ISSUE_EFFORTS : null;
         if (!values.every(v => typeof v === "string" && (allowed ? allowed.includes(v) : UUID.test(v)))) refuse();
       }
     }

@@ -148,6 +148,16 @@ describe("triageIssueComparator — quick wins", () => {
     expect(order(issues)).toEqual(["urgent-xl", "low-xs"]);
   });
 
+  it("ranks an XXL after an XL of the same priority, and still ahead of a low quick win", () => {
+    const issues = [
+      ticket({ id: "low-xs", priority: "low", effort: "xs" }),
+      ticket({ id: "urgent-xxl", priority: "urgent", effort: "xxl" }),
+      ticket({ id: "urgent-xl", priority: "urgent", effort: "xl" }),
+    ];
+    // urgent+xl = 0.5; urgent+xxl = 0 − (−1) = 1; low+xs = 3 − 1.5 = 1.5.
+    expect(order(issues)).toEqual(["urgent-xl", "urgent-xxl", "low-xs"]);
+  });
+
   it("lifts an imminent due date like the smart view sort does", () => {
     const issues = [
       ticket({ id: "dated", priority: "medium", due_date: "2026-09-16" }),

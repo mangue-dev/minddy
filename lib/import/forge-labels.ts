@@ -91,6 +91,7 @@ const EFFORT_RANK: Record<IssueEffortValue, number> = {
   m: 3,
   l: 4,
   xl: 5,
+  xxl: 6,
 };
 
 /** “P” scale: 0 is the most urgent, and beyond 3 everything is low. */
