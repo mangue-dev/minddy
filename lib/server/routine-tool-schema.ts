@@ -36,6 +36,10 @@ export const CREATE_ROUTINE_DESCRIPTION =
   "instruction Numo receives, so WRITE it from the user's request rather than " +
   "copying their sentence. Numo uses Minddy tools directly; a project does not " +
   "need a linked repository to create or run a routine. " +
+  "An occurrence never gets instance administration (the AI model configuration, " +
+  "AI costs or accounts): a routine whose instruction needs it reports that an " +
+  "instance administrator must do that step in a Numo conversation or through " +
+  "background Numo, so tell the user. " +
   "If a real decision is missing, the occurrence can pause for owner input in its " +
   "conversation. OWNER ONLY: only the project's " +
   "owner can create a routine, because it is their usage budget that leaves every " +

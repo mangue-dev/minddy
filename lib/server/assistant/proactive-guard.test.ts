@@ -165,6 +165,26 @@ describe("guardProactiveTool: sensitive actions", () => {
   });
 });
 
+describe("guardProactiveTool: instance administration (MIN-944)", () => {
+  it("lets background Numo read the model configuration and the costs on its own", async () => {
+    expect(await guardProactiveTool("admin_get_instance_models", {}, ctx)).toEqual({ ok: true, args: {} });
+    expect(await ok("admin_get_costs", { period: "month" })).toBe(true);
+  });
+
+  it("asks a memory, of any scope, before changing the instance or reading an account", async () => {
+    for (const tool of ["admin_update_instance_models", "admin_import_instance_models", "admin_find_account",
+      "admin_get_account", "admin_set_account_plan"]) {
+      const refused = await guardProactiveTool(tool, { models: {} }, ctx);
+      expect(refused.ok).toBe(false);
+      if (!refused.ok) expect(refused.error).toMatch(/administration[\s\S]*journal entry/);
+    }
+    expect(await guardProactiveTool("admin_update_instance_models", { models: {}, authorized_by: SOLO_MEMORY }, ctx))
+      .toEqual({ ok: true, args: { models: {} } });
+    expect(await ok("admin_update_instance_models", { authorized_by: "99999999-9999-4999-8999-999999999999" }))
+      .toBe(false);
+  });
+});
+
 describe("guardProactiveTool: scope", () => {
   it("lets reads and the user's own planning through", async () => {
     expect(await ok("get_issue", { project_id: SHARED, issue: THEIR_ISSUE })).toBe(true);
@@ -269,6 +289,13 @@ describe("proactiveToolSet", () => {
     expect(byName.get("move_to_trash")).toContain("authorized_by");
     expect(byName.get("add_comment")).toContain("authorized_by");
     expect(byName.get("notify_me")).toEqual(expect.arrayContaining(["authorized_by", "urgent", "urgency_reason"]));
+  });
+
+  it("offers authorized_by on the admin tools that need a memory, not on the free reads", () => {
+    const tools = proactiveToolSet(["admin_get_instance_models", "admin_update_instance_models"].map(tool));
+    const byName = new Map(tools.map((t) => [t.function.name, Object.keys(t.function.parameters.properties)]));
+    expect(byName.get("admin_get_instance_models")).toEqual(["project_id"]);
+    expect(byName.get("admin_update_instance_models")).toContain("authorized_by");
   });
 
   it("maps only real tools, so a renamed tool fails closed rather than being skipped silently", () => {

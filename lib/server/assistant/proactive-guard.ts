@@ -8,6 +8,7 @@ import { countPendingInvitations } from "@/lib/server/members";
 import { resolveIssueRef } from "@/lib/server/issue-reads";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { getNumoMemoryScope } from "@/lib/server/numo/memory-content";
+import { ADMIN_BACKGROUND_FREE_TOOLS, ADMIN_TOOL_NAMES } from "./admin-tools";
 import { resolveAssistantProjectTarget } from "./project-scope";
 import { numoToolCapability } from "./tool-capabilities";
 import type { AssistantToolDef } from "./tools";
@@ -39,6 +40,11 @@ import type { AssistantToolDef } from "./tools";
  * project: a new tool fails closed until it is classified here. Moving the
  * user's own issue under a teammate's objective or parent issue is accepted:
  * the change is on the user's issue.
+ *
+ * Instance administration (MIN-944), offered only to an admin account: the
+ * model configuration and the costs are read freely, so the user can ask
+ * Numo to watch them; every other admin tool needs a memory, of any scope,
+ * since it acts on the instance rather than on a project.
  *
  * An urgent note (`urgent: true` with its reason) needs no memory, but the
  * user gets at most `NUMO_URGENT_NOTES_PER_DAY` of them in 24 hours, counted
@@ -190,6 +196,7 @@ function isProjectWrite(toolName: string): boolean {
 
 /** Whether a background turn offers `authorized_by` on this tool. */
 export function mayNeedAuthorization(toolName: string): boolean {
+  if (ADMIN_TOOL_NAMES.has(toolName)) return !ADMIN_BACKGROUND_FREE_TOOLS.has(toolName);
   return toolName in SENSITIVE_TOOLS || toolName === "notify_me" || toolName === "add_issues_to_cycle"
     || toolName === "create_view" || toolName === "update_view" || isProjectWrite(toolName);
 }
@@ -403,6 +410,12 @@ export async function guardProactiveTool(toolName: string, rawArgs: Record<strin
     }
     return { ok: true, args };
   };
+
+  // Instance administration acts on no project: checked before the project
+  // rules, which would look for one.
+  if (ADMIN_TOOL_NAMES.has(toolName)) {
+    return ADMIN_BACKGROUND_FREE_TOOLS.has(toolName) ? { ok: true, args } : needsMemory("administration", "any");
+  }
 
   const capability = numoToolCapability(toolName);
   const fixed = SENSITIVE_TOOLS[toolName];

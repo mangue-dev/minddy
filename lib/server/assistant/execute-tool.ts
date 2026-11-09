@@ -12,7 +12,7 @@ import "server-only";
 import {
   ADMIN_TOOL_NAMES,
   executeAdminTool,
-  type AdminSessionGrant,
+  type AdminGrant,
 } from "./admin-tools";
 import { decodeView } from "@/lib/server/view-content";
 import { decodePageProjection } from "@/lib/server/page-content";
@@ -335,11 +335,11 @@ export interface ToolContext {
   routineId?: string | null;
   /** Automation chain that owns this parent Numo operation, if any. */
   /**
-   * The administrator session this turn was admitted from (MIN-829). Present
-   * only on a chat turn whose session passed `isAdminUser`; every admin tool
-   * re-verifies it before running.
+   * The administrator session this turn was admitted from (MIN-829), or the
+   * background grant of an admin account's background turn (MIN-944). Every
+   * admin tool re-verifies it before running.
    */
-  adminGrant?: AdminSessionGrant | null;
+  adminGrant?: AdminGrant | null;
   /**
    * Numo may write the user's memory in this turn (MIN-915): only in a
    * conversation the user holds with Numo, with the memory switched on. A
