@@ -17,6 +17,10 @@ vi.mock("@/lib/server/usage", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/server/usage-analytics", () => ({
+  getUsageForecast: vi.fn(),
+}));
+
 vi.mock("@/lib/managed-services", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("@/lib/managed-services")>();
@@ -27,6 +31,7 @@ vi.mock("@/lib/managed-services", async (importOriginal) => {
 });
 
 import { getUserUsage } from "@/lib/server/usage";
+import { getUsageForecast } from "@/lib/server/usage-analytics";
 import { managedServices } from "@/lib/managed-services";
 
 const statsFixture: UserStats = {
@@ -224,6 +229,7 @@ describe("readPlanUsageTool", () => {
       aiKeyMode: "per_user",
     });
     vi.mocked(getUserUsage).mockResolvedValue(usage({ numo_chat: 1, routine_code: 0.5 }));
+    vi.mocked(getUsageForecast).mockResolvedValue(null);
 
     const result = await readPlanUsageTool({ userId: "user-1" });
 
@@ -234,6 +240,8 @@ describe("readPlanUsageTool", () => {
       includedUsd: 5,
       usedUsd: 1.5,
       remainingUsd: 3.5,
+      usedPercent: 30,
+      remainingPercent: 70,
       periodStart: "2026-09-01T00:00:00.000Z",
       nextResetAt: "2026-10-01T00:00:00.000Z",
     });
@@ -261,10 +269,59 @@ describe("readPlanUsageTool", () => {
       includedUsd: 0,
       usedUsd: 0,
       remainingUsd: 0,
+      usedPercent: 0,
+      remainingPercent: 0,
       periodStart: "2026-09-01T00:00:00.000Z",
       nextResetAt: "2026-10-01T00:00:00.000Z",
     });
     expect(result.usage.segments).toEqual([]);
+    expect(result.usage.forecast).toBeNull();
+    expect(getUsageForecast).not.toHaveBeenCalled();
+  });
+
+  it("says when the budget runs out before the reset (MIN-946)", async () => {
+    vi.mocked(managedServices).mockReturnValue({
+      billing: true,
+      ai: true,
+      forge: true,
+      aiKeyMode: "per_user",
+    });
+    vi.mocked(getUserUsage).mockResolvedValue(usage({ numo_chat: 1.5 }));
+    vi.mocked(getUsageForecast).mockResolvedValue({
+      status: "short",
+      usedPercent: 30,
+      projectedPercent: 141.234,
+      runsOutAt: "2026-09-22T00:00:00.000Z",
+      resetsAt: "2026-10-01T00:00:00.000Z",
+      daysShort: 9,
+      points: [],
+    });
+
+    const result = await readPlanUsageTool({ userId: "user-1" });
+
+    expect(result.ok && result.usage.forecast).toEqual({
+      status: "short",
+      projectedPercent: 141.2,
+      runsOutAt: "2026-09-22T00:00:00.000Z",
+      daysShort: 9,
+    });
+  });
+
+  it("keeps the plan numbers when the forecast read fails", async () => {
+    vi.mocked(managedServices).mockReturnValue({
+      billing: true,
+      ai: true,
+      forge: true,
+      aiKeyMode: "per_user",
+    });
+    vi.mocked(getUserUsage).mockResolvedValue(usage({ numo_chat: 1.5 }));
+    vi.mocked(getUsageForecast).mockRejectedValue(new Error("rpc down"));
+
+    const result = await readPlanUsageTool({ userId: "user-1" });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.usage.forecast).toBeNull();
+    expect(result.ok && result.usage.plan.usedPercent).toBe(30);
   });
 
   it("fails when the usage read fails", async () => {

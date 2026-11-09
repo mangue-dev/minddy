@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
@@ -63,9 +63,9 @@
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 26,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-04"
   },
   "related": [
@@ -87,7 +87,7 @@
       "src": "/documentation/de/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Verbundene Anbieter, ein Anbieter je Nutzung sowie Anbieter und Modell von Numo sind getrennte Einstellungen.",
       "caption": "Jede Nutzung läuft über minddy Cloud oder einen verbundenen Anbieter. Numos Standard wird je Anbieter gespeichert; ein Gespräch kann eigenen Anbieter und eigenes Modell wählen.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -164,7 +164,7 @@ Diese Standardwerte beschreiben minddy 0.20.0. Prüfe vor einem Kauf die tatsäc
 | Go | Unbegrenzt | Unbegrenzt | Unbegrenzt | 20 GiB | 5 |
 | Pro | Unbegrenzt | Unbegrenzt | Unbegrenzt | 100 GiB | 15 |
 
-Die Abrechnung zeigt das verbleibende KI-Budget und die nächste Zurücksetzung, **Budget im Zeitverlauf** und **Was verbraucht dein Budget?**, das den Verbrauch als Anteil am enthaltenen Budget auf **Routinen**, **Numo**, **Sprachdiktat**, **Feedback** und **Automatisierungen** aufteilt. **Nutzungsverlauf** listet die Aktionen des laufenden Zeitraums und ihren Anteil am Budget.
+Die Abrechnung zeigt das verbleibende KI-Budget und die nächste Zurücksetzung. **Budget im Zeitverlauf** zeichnet deinen bisherigen Verbrauch als durchgezogene Linie und gestrichelt, wohin das aktuelle Tempo bis zur Erneuerung führt; der Satz unter dem Titel sagt, ob du gut im Plan liegst oder an welchem Tag das Budget aufgebraucht ist. **Was verbraucht dein Budget?**, das den Verbrauch als Anteil am enthaltenen Budget auf **Routinen**, **Numo**, **Sprachdiktat**, **Feedback** und **Automatisierungen** aufteilt. **Nutzung pro Tag** zeigt, was jeder Tag verbraucht hat, nach Nutzungsart; fahre mit der Maus über ein Diagramm, um die Werte eines Tages zu lesen. **Nutzungsverlauf** listet die Aktionen des laufenden Zeitraums und ihren Anteil am Budget. Numo liest dieselben Zahlen und dieselbe Prognose, wenn du nach deinem Budget fragst, und warnt dich auf der **Startseite**, wenn das Budget voraussichtlich vor der Erneuerung aufgebraucht ist.
 
 ## Text und Änderungen diktieren {#voice-dictation}
 

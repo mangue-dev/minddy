@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   brief: null as Record<string, unknown> | null,
   conversationExists: true,
   entryIds: null as string[] | null,
+  forecast: null as Record<string, unknown> | null,
   markJournalEntriesSeen: vi.fn(async (_service: unknown, _user: string, ids: string[]) => ids.length),
 }));
 
@@ -50,6 +51,7 @@ vi.mock("@/lib/server/mention-access", () => ({
 vi.mock("@/lib/server/numo/home-brief", () => ({
   scheduleHomeBriefRewrite: mocks.scheduleHomeBriefRewrite,
 }));
+vi.mock("@/lib/server/usage-analytics", () => ({ getUsageForecast: async () => mocks.forecast }));
 vi.mock("@/lib/server/numo/home-brief-content", () => ({
   getLatestHomeBrief: async () => mocks.brief,
   getHomeBriefEntryIds: async () => mocks.entryIds,
@@ -73,6 +75,7 @@ describe("/api/home/brief", () => {
     mocks.conversationExists = true;
     mocks.entryIds = null;
     mocks.markJournalEntriesSeen.mockClear();
+    mocks.forecast = null;
     mocks.brief = {
       id: BRIEF, content: "MIN-42 waits for your review.", suggestions: [],
       journal_entry_ids: ["e1"], journal_digest: homeBriefDigest([{ id: "e1", state: "open" }]),
@@ -120,6 +123,24 @@ describe("/api/home/brief", () => {
     mocks.states = [{ id: "e1", closed_at: null, seen_at: OLD }, { id: "e2", closed_at: OLD, seen_at: OLD }];
     expect((await get()).brief.id).toBe(BRIEF);
     expect(mocks.scheduleHomeBriefRewrite).toHaveBeenCalledWith("user-1");
+  });
+
+  it("rewrites the word when the budget starts running short (MIN-946)", async () => {
+    mocks.forecast = {
+      status: "short", usedPercent: 70, projectedPercent: 130,
+      runsOutAt: "2026-11-20T12:00:00.000Z", resetsAt: "2026-12-01T00:00:00.000Z",
+      daysShort: 10, points: [],
+    };
+    expect(await get()).toEqual({ brief: null });
+    expect(mocks.scheduleHomeBriefRewrite).toHaveBeenCalledTimes(1);
+    // A word that already says so stays.
+    mocks.brief!.journal_digest = homeBriefDigest([{ id: "e1", state: "open" }], "short:2026-11-20");
+    expect((await get()).brief.id).toBe(BRIEF);
+    expect(mocks.scheduleHomeBriefRewrite).toHaveBeenCalledTimes(1);
+    // No word yet: the warning still gets one.
+    mocks.brief = null;
+    expect(await get()).toEqual({ brief: null });
+    expect(mocks.scheduleHomeBriefRewrite).toHaveBeenCalledTimes(2);
   });
 
   it("shows nothing while background Numo is switched off", async () => {

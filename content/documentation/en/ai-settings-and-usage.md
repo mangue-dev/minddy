@@ -16,8 +16,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 24,
+  "revision": 25,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-04",
   "compatibility": {
@@ -63,9 +63,9 @@
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 25,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-946 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-04"
   },
   "related": [
@@ -87,7 +87,7 @@
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Connected providers, a provider for each usage, and Numo's provider and model are separate settings.",
       "caption": "Each usage runs on minddy Cloud or a connected provider. Numo's default is saved per provider; a conversation can choose its own provider and model.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -164,7 +164,7 @@ These defaults describe minddy 0.20.0. Verify the live pricing page and account 
 | Go | Unlimited | Unlimited | Unlimited | 20 GiB | 5 |
 | Pro | Unlimited | Unlimited | Unlimited | 100 GiB | 15 |
 
-Billing shows the remaining AI budget and its next reset, **Budget over time**, and **What uses your budget?**, which splits consumption into **Routines**, **Numo**, **Voice dictation**, **Feedback** and **Automations** as a percentage of the included budget. **Usage history** lists the actions of the current period and their share of the budget.
+Billing shows the remaining AI budget and its next reset. **Budget over time** draws what you have used so far as a solid line and, dashed, where the current pace leads by the reset; the sentence under its title says whether you are on track or on which day the budget runs out. **What uses your budget?**, which splits consumption into **Routines**, **Numo**, **Voice dictation**, **Feedback** and **Automations** as a percentage of the included budget. **Daily usage** shows what each day used, by usage type; hover a chart to read the values of a day. **Usage history** lists the actions of the current period and their share of the budget. Numo reads the same figures and forecast when you ask about your budget, and warns you on **Home** when the budget is on track to run out before it resets.
 
 ## Dictate text and edits {#voice-dictation}
 

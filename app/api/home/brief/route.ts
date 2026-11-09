@@ -4,7 +4,12 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { readResultForReader } from "@/lib/server/mention-access";
 import { scheduleHomeBriefRewrite } from "@/lib/server/numo/home-brief";
 import { getHomeBriefEntryIds, getLatestHomeBrief } from "@/lib/server/numo/home-brief-content";
-import { homeBriefCoverage } from "@/lib/server/numo/home-brief-prompt";
+import {
+  homeBriefCoverage,
+  homeBriefUsage,
+  homeBriefUsageKey,
+} from "@/lib/server/numo/home-brief-prompt";
+import { getUsageForecast } from "@/lib/server/usage-analytics";
 import {
   isJournalUuid,
   listJournalEntryStates,
@@ -23,7 +28,11 @@ import { getServiceClient } from "@/lib/supabase-service";
  *   outdated, Home shows none and a rewrite is scheduled;
  * - none of its entries is open or unseen any more: there is nothing to say;
  * - news it gave about a settled entry was seen a while ago: it is still
- *   shown, and a rewrite that leaves that news out is scheduled.
+ *   shown, and a rewrite that leaves that news out is scheduled;
+ * - the AI budget's forecast changed (MIN-946): the budget is now on track to
+ *   run out before it resets, on another day, or no longer is. The word is
+ *   outdated, and a rewrite that says so is scheduled, even when Numo has
+ *   written no word yet.
  *
  * `brief: null` also when background Numo is switched off or Numo has
  * written nothing yet (no AI configured, or no journal entry so far).
@@ -43,10 +52,17 @@ export async function GET(request: NextRequest) {
   const userId = auth.user.id;
   const service = getServiceClient();
   try {
-    const brief = await getLatestHomeBrief(service, userId);
-    if (!brief) return NextResponse.json({ brief: null });
+    const [brief, forecast] = await Promise.all([
+      getLatestHomeBrief(service, userId),
+      getUsageForecast(userId).catch(() => null),
+    ]);
+    const usageKey = homeBriefUsageKey(homeBriefUsage(forecast));
+    if (!brief) {
+      if (usageKey) scheduleHomeBriefRewrite(userId);
+      return NextResponse.json({ brief: null });
+    }
     const states = await listJournalEntryStates(service, userId, brief.journal_entry_ids);
-    const coverage = homeBriefCoverage(brief, states, Date.now(), SETTLED_NEWS_TTL_MS);
+    const coverage = homeBriefCoverage(brief, states, Date.now(), SETTLED_NEWS_TTL_MS, usageKey);
     const settled = Date.now() - Date.parse(brief.generated_at) > REWRITE_GRACE_MS;
     if (coverage !== "current" && coverage !== "empty" && settled) scheduleHomeBriefRewrite(userId);
     if (coverage === "outdated" || coverage === "empty") return NextResponse.json({ brief: null });

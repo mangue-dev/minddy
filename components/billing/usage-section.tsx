@@ -12,7 +12,10 @@ import {
   UsageBudgetSummary,
   UsageSegmentBreakdown,
 } from "@/components/billing/usage-budget";
-import { UsageTrendChart } from "@/components/billing/usage-trend-chart";
+import {
+  BudgetTrendChart,
+  DailyUsageChart,
+} from "@/components/billing/usage-trend-chart";
 import { useBillingSummary } from "@/lib/use-billing-query";
 
 export function UsageSection() {
@@ -26,7 +29,7 @@ export function UsageSection() {
       </Card>
       {!(usageError && !usage) && (
         <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <UsageTrendChart />
+          <BudgetTrendChart />
           <Card size="sm" className="min-w-0">
             <CardHeader>
               <h2 className="text-sm font-semibold">{t("segmentTitle")}</h2>
@@ -38,6 +41,9 @@ export function UsageSection() {
               <UsageSegmentBreakdown />
             </CardContent>
           </Card>
+          <div className="min-w-0 lg:col-span-2">
+            <DailyUsageChart />
+          </div>
         </div>
       )}
     </div>
