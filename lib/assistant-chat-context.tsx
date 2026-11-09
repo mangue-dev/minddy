@@ -126,6 +126,8 @@ export function AssistantChatProvider({
     updateConversationConfig,
     reset: resetRaw,
     retry,
+    reconnect,
+    resend,
     abort,
   } = useAssistantChat({ onToolResult: handleToolResult });
 
@@ -349,6 +351,8 @@ export function AssistantChatProvider({
       updateConversationConfig,
       reset,
       retry,
+      reconnect,
+      resend,
       abort,
       scopeProjectId: scope,
       restoring: standalone ? false : restoring || !restored,
@@ -365,6 +369,8 @@ export function AssistantChatProvider({
       updateConversationConfig,
       reset,
       retry,
+      reconnect,
+      resend,
       abort,
       scope,
       standalone,

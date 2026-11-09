@@ -34,6 +34,11 @@
     "description": "El servidor no está disponible temporalmente. Inténtalo de nuevo en un momento.",
     "retry": "Intentar de nuevo"
   },
+  "AppCrash": {
+    "title": "minddy ha encontrado un error",
+    "description": "Recarga la página para continuar. Si vuelve a pasar, incluye la línea de abajo al informar del error.",
+    "reload": "Recargar"
+  },
   "Activity": {
     "created": "ha creado la incidencia",
     "categoryAdded": "ha añadido la categoría «{name}»",
@@ -252,6 +257,8 @@
     "conversationLoadFailed": "No se ha podido cargar la conversación.",
     "messageSaveFailed": "No se ha podido guardar el mensaje.",
     "statusFetchFailed": "No se ha podido cargar el estado.",
+    "numoConnectionLost": "Se perdió la conexión con minddy antes de que Numo respondiera. minddy vuelve a comprobarlo cuando recuperes la conexión.",
+    "numoMessageNotDelivered": "Tu mensaje no llegó a minddy.",
     "tabOrderSaveFailed": "No se ha podido guardar el orden de las pestañas.",
     "tooManyAttempts": "Demasiados intentos. Inténtalo de nuevo dentro de {seconds} s.",
     "unexpected": "Ha ocurrido un error inesperado. Inténtalo de nuevo en un momento.",
@@ -512,6 +519,7 @@
     "send": "Enviar",
     "stop": "Detener",
     "retry": "Reintentar",
+    "resend": "Reenviar",
     "newConversation": "Nueva conversación",
     "unreadConversation": "Conversación sin leer",
     "unreadQuestion": "Espera tu respuesta",

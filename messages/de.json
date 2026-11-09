@@ -34,6 +34,11 @@
     "description": "Der Server ist vorübergehend nicht verfügbar. Versuche es gleich noch einmal.",
     "retry": "Erneut versuchen"
   },
+  "AppCrash": {
+    "title": "minddy ist auf einen Fehler gestoßen",
+    "description": "Lade die Seite neu, um weiterzumachen. Wenn der Fehler wieder auftritt, füge deiner Meldung die Zeile unten bei.",
+    "reload": "Neu laden"
+  },
   "Activity": {
     "created": "hat das Ticket erstellt",
     "categoryAdded": "hat die Kategorie „{name}“ hinzugefügt",
@@ -252,6 +257,8 @@
     "conversationLoadFailed": "Die Unterhaltung konnte nicht geladen werden.",
     "messageSaveFailed": "Die Nachricht konnte nicht gespeichert werden.",
     "statusFetchFailed": "Der Status konnte nicht geladen werden.",
+    "numoConnectionLost": "Die Verbindung zu minddy ist abgebrochen, bevor Numo geantwortet hat. minddy prüft erneut, sobald du wieder online bist.",
+    "numoMessageNotDelivered": "Deine Nachricht ist nicht bei minddy angekommen.",
     "tabOrderSaveFailed": "Tab-Reihenfolge konnte nicht gespeichert werden.",
     "tooManyAttempts": "Zu viele Versuche. Versuche es in {seconds}s erneut.",
     "unexpected": "Es ist ein unerwarteter Fehler aufgetreten. Versuche es gleich noch einmal.",
@@ -512,6 +519,7 @@
     "send": "Senden",
     "stop": "Stopp",
     "retry": "Erneut versuchen",
+    "resend": "Erneut senden",
     "newConversation": "Neue Unterhaltung",
     "unreadConversation": "Ungelesene Unterhaltung",
     "unreadQuestion": "Wartet auf deine Antwort",

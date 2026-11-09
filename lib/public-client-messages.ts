@@ -50,8 +50,9 @@ export const PUBLIC_CLIENT_NAMESPACES = [
   // Plan and quota titles, shared with the app's billing plan settings
   // (`components/marketing/pricing-plans.tsx`).
   "Billing",
-  // The root error boundary must remain translated even when a child layout fails.
-  "ServerUnavailable",
+  // The root error boundary must remain translated even when a child layout
+  // fails. It shows a render crash (MIN-945), not an unreachable server.
+  "AppCrash",
   // Shared labels of the UI primitives, such as the localized "Close" of the
   // dialog, sheet and side-panel crosses (`components/ui/close-button.tsx`).
   // About 1 KB raw.

@@ -17,9 +17,15 @@ export async function GET(
     return Response.json({ error: "Invalid conversation ID" }, { status: 400 });
   }
 
-  // Both RLS reads start together; the turn is discarded when the
+  // A client that lost its connection mid-send asks whether that request was
+  // admitted (MIN-945): admission is keyed by request id, so the answer tells
+  // "resume the turn" from "the message never arrived" exactly.
+  const requestIdParam = new URL(request.url).searchParams.get("requestId");
+  const requestId = requestIdParam && NUMO_UUID.test(requestIdParam) ? requestIdParam : null;
+
+  // The RLS reads start together; the turn is discarded when the
   // conversation is not visible.
-  const [{ data: conversation }, { data: turn }] = await Promise.all([
+  const [{ data: conversation }, { data: turn }, requestTurn] = await Promise.all([
     supabase
       .from("numo_conversation_history")
       .select("status, error_message, source, legacy_id")
@@ -35,10 +41,23 @@ export async function GET(
       .order("id", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    requestId
+      ? supabase
+          .from("numo_assistant_turns")
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .eq("request_id", requestId)
+          .maybeSingle()
+      : null,
   ]);
 
   if (!conversation) {
     return Response.json({ error: "Not found" }, { status: 404 });
+  }
+  // An unreadable answer must not pass for "never arrived": the client would
+  // then offer to send again a message minddy may already be answering.
+  if (requestTurn?.error) {
+    return Response.json({ error: "Unable to read request" }, { status: 503 });
   }
   const afterValue = Number(new URL(request.url).searchParams.get("after") ?? -1);
   const after = Number.isSafeInteger(afterValue) && afterValue >= -1 ? afterValue : -1;
@@ -77,5 +96,6 @@ export async function GET(
     turn_id: turn?.id ?? null,
     last_event_seq: turn?.last_event_seq ?? -1,
     activity: readableActivity,
+    ...(requestId ? { request_received: Boolean(requestTurn?.data) } : {}),
   });
 }

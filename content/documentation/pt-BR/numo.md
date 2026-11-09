@@ -406,6 +406,8 @@ Desativar bloqueia chamadas novas, não enviadas. Limites: 30 segundos, 1 MiB de
 
 Volte à conversa existente e leia as últimas mensagens e os cartões. Diferencie perguntas aguardando resposta, limite da conta, teto da rotina e falha técnica. Fechar o painel não comprova que o trabalho parou.
 
+Se a conexão com o minddy cair antes de o Numo responder, por exemplo quando o app do celular vai para segundo plano, a conversa mostra um cartão de conexão. Quando você volta a ficar online ou volta ao app, o minddy verifica se sua mensagem chegou. Se chegou, o trabalho do Numo continua ou a resposta aparece. Se não, a mensagem sai da conversa e **Reenviar** a envia de novo. **Tentar novamente** verifica na hora.
+
 Em um cartão ativo, responda todas as perguntas obrigatórias e envie o conjunto. Cartões anteriores são registros e não aceitam outra resposta. Pular não fornece os dados ausentes nem autoriza alterações dependentes.
 
 ### Orçamento e falhas {#recovery}
