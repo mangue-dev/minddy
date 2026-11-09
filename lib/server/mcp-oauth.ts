@@ -65,10 +65,13 @@ const GOOGLE_AUTHORIZATION_HOST = "accounts.google.com";
  */
 const DESKTOP_STATE_PREFIX = "d";
 const STATE_PATTERN = /^d?[a-f0-9]{64}$/;
+// A web state is 64 hex characters and starts with "d" one time in sixteen,
+// so only the full 65-character form marks a desktop flow.
+const DESKTOP_STATE_PATTERN = /^d[a-f0-9]{64}$/;
 
 /** Whether this OAuth state belongs to a flow started in the desktop app. */
 export function isDesktopMcpOAuthState(state: string): boolean {
-  return STATE_PATTERN.test(state) && state.startsWith(DESKTOP_STATE_PREFIX);
+  return DESKTOP_STATE_PATTERN.test(state);
 }
 
 export const mcpOAuthCallback = () =>
