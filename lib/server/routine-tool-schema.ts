@@ -142,12 +142,69 @@ export const ROUTINE_TRIGGER_SCHEMA = z.union([
   z.object({ type: z.literal("event"), event: z.enum(["issue.created", "issue.status_changed", "issue.assigned", "issue.comment_added", "feedback.received"]), status: z.string().optional(), assigneeId: z.string().uuid().optional(), issueId: z.string().uuid().optional(), delayMinutes: z.number().int().min(0).max(120).optional(), conditions: ROUTINE_CONDITION_SCHEMA.optional() }).strict(),
   z.object({ type: z.literal("database"), databaseId: z.string().uuid(), delayMinutes: z.number().int().min(0).max(120).optional(), conditions: ROUTINE_CONDITION_SCHEMA.optional() }).strict(),
 ]).describe("One trigger. Omit for a schedule; cadence fields are schedule-only. A status event requires its target status; a comment requires a followed issueId; a database requires databaseId. Conditions are nested and/or groups with children or typed leaves (field, operator, optional value/propertyId). An unmatched item stays armed until an edit satisfies the conditions; status exit cancels it. Resolve all IDs in this project. Max depth 6, 64 nodes, 16 KiB. No code or arbitrary expressions.");
-const { $defs: TRIGGER_DEFINITIONS, $schema: _draft, ...TRIGGER_PROPERTY } = z.toJSONSchema(ROUTINE_TRIGGER_SCHEMA, { target: "draft-2020-12" });
+/**
+ * Nested AND/OR groups advertised to Numo's models. Two levels express
+ * "A and (B or C)"; the server still accepts the full depth that
+ * `lib/routine-triggers.ts` validates. Each level repeats the leaf schema in
+ * both trigger branches of both tools, so this number is paid on every request.
+ */
+export const ROUTINE_CONDITION_GROUP_LEVELS = 2;
+
+function referencesDefinition(node: unknown, ref: string): boolean {
+  if (Array.isArray(node)) return node.some((child) => referencesDefinition(child, ref));
+  if (!node || typeof node !== "object") return false;
+  return Object.entries(node).some(([key, value]) =>
+    (key === "$ref" && value === ref) || referencesDefinition(value, ref));
+}
+
+function inlineDefinition(node: unknown, ref: string, definition: unknown, levels: number): unknown {
+  if (Array.isArray(node)) return node.map((child) => inlineDefinition(child, ref, definition, levels));
+  if (!node || typeof node !== "object") return node;
+  if ((node as { $ref?: unknown }).$ref === ref) return expandDefinition(ref, definition, levels);
+  return Object.fromEntries(Object.entries(node).map(([key, value]) =>
+    [key, inlineDefinition(value, ref, definition, levels)]));
+}
+
+/**
+ * One level of a self-referencing `anyOf`: its recursive options point to the
+ * next level, and the last level keeps only the options that do not recurse.
+ */
+function expandDefinition(ref: string, definition: unknown, levels: number): unknown {
+  if (levels > 0) return inlineDefinition(definition, ref, definition, levels - 1);
+  const options = (definition as { anyOf?: unknown[] }).anyOf;
+  if (!Array.isArray(options)) throw new Error(`Cannot bound the recursive schema ${ref}`);
+  const leaves = options.filter((option) => !referencesDefinition(option, ref));
+  if (leaves.length === 0) throw new Error(`The recursive schema ${ref} has no terminal option`);
+  return leaves.length === 1 ? leaves[0] : { ...(definition as object), anyOf: leaves };
+}
+
+/**
+ * The trigger as plain JSON Schema, without `$defs` or `$ref` (MIN-950). Some
+ * upstreams reject a recursive tool schema outright (Meta's Muse models answer
+ * 400 "Recursive JSON schemas are not currently supported"), and Numo sends
+ * every tool on every round, so one recursive schema broke the whole chat.
+ * MCP keeps the recursive Zod schema: its clients resolve references.
+ */
+function boundedTriggerProperty(): Record<string, unknown> {
+  const { $defs: definitions, $schema: _draft, ...trigger } = z.toJSONSchema(
+    ROUTINE_TRIGGER_SCHEMA,
+    { target: "draft-2020-12" },
+  ) as Record<string, unknown> & { $defs?: Record<string, unknown> };
+  let property: unknown = trigger;
+  for (const [name, definition] of Object.entries(definitions ?? {})) {
+    property = inlineDefinition(property, `#/$defs/${name}`, definition, ROUTINE_CONDITION_GROUP_LEVELS);
+  }
+  if (JSON.stringify(property).includes("\"$ref\"")) {
+    throw new Error("The routine trigger schema still references a definition");
+  }
+  return property as Record<string, unknown>;
+}
+
+const TRIGGER_PROPERTY = boundedTriggerProperty();
 
 /** Complete `create_routine` parameters. */
 export const CREATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
-  $defs: TRIGGER_DEFINITIONS,
   properties: {
     prompt: {
       type: "string",
@@ -172,7 +229,6 @@ export const CREATE_ROUTINE_PARAMETERS = {
 /** `update_routine` parameters — everything is optional except the target. */
 export const UPDATE_ROUTINE_PARAMETERS = {
   type: "object" as const,
-  $defs: TRIGGER_DEFINITIONS,
   properties: {
     routine_id: { type: "string", description: "Routine id, from list_routines." },
     prompt: {

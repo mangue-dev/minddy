@@ -1,6 +1,7 @@
 import { CONVERSATION_ASSISTANT_TOOLS, ROUTINE_UNATTENDED_EXCLUDED_TOOLS } from "./tools";
 import { describe, expect, it } from "vitest";
 import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS } from "@/lib/theme-presets";
+import { ROUTINE_CONDITION_GROUP_LEVELS } from "@/lib/server/routine-tool-schema";
 
 import {
   ASSISTANT_TOOLS,
@@ -136,6 +137,36 @@ describe("Numo tool contracts", () => {
     expect(tool("propose_backlog")?.function.description).toMatch(
       /OWNER ONLY/i,
     );
+  });
+
+  it("sends no schema reference, which some upstreams reject (MIN-950)", () => {
+    // Meta's Muse models answer 400 "Recursive JSON schemas are not currently
+    // supported", and every tool rides on every round, so one reference
+    // breaks the whole conversation.
+    const withReferences = ASSISTANT_TOOLS
+      .filter((candidate) => /"\$(?:ref|defs)"/.test(JSON.stringify(candidate.function.parameters)))
+      .map((candidate) => candidate.function.name);
+    expect(withReferences).toEqual([]);
+  });
+
+  it("still advertises nested AND/OR routine conditions, bounded (MIN-950)", () => {
+    const eventTrigger = (name: string) => {
+      const trigger = tool(name)?.function.parameters.properties.trigger as {
+        anyOf: { properties: Record<string, unknown> }[];
+      };
+      return trigger.anyOf.find((branch) => "event" in branch.properties)!;
+    };
+    type Condition = { anyOf?: Condition[]; properties?: Record<string, { items?: Condition }> };
+    const groupLevels = (condition: Condition): number => {
+      const group = condition.anyOf?.find((option) => option.properties?.children);
+      return group ? 1 + groupLevels(group.properties!.children!.items!) : 0;
+    };
+
+    for (const name of ["create_routine", "update_routine"]) {
+      const conditions = eventTrigger(name).properties.conditions as Condition;
+      expect(groupLevels(conditions)).toBe(ROUTINE_CONDITION_GROUP_LEVELS);
+      expect(JSON.stringify(conditions)).toContain("\"field\"");
+    }
   });
 
   it("loads routine instructions only when a routine is targeted", () => {
