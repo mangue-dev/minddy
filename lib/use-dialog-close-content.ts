@@ -57,17 +57,22 @@ export function useResetAfterClose(open: boolean, reset: () => void) {
     flushing.current = false;
     resetPending.current = false;
   }, [resets]);
+  // A reset scheduled while the dialog is already closed (it closed before a
+  // creation finished, say) has no `open` change to wait for: `scheduled`
+  // arms the timer for it.
+  const [scheduled, setScheduled] = useState(0);
   useEffect(() => {
     if (open || !resetPending.current) return;
     const timer = window.setTimeout(flush, DIALOG_EXIT_MS);
     return () => window.clearTimeout(timer);
-  }, [open, flush]);
+  }, [open, flush, scheduled]);
   // Reopened before the timer: the form starts blank, not on the old content.
   useLayoutEffect(() => {
     if (open) flush();
   }, [open, flush]);
   const scheduleReset = useCallback(() => {
     resetPending.current = true;
+    setScheduled((count) => count + 1);
   }, []);
   return { scheduleReset, resetPending, resets };
 }

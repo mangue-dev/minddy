@@ -526,6 +526,47 @@ describe("creation relation controls", () => {
     }
   });
 
+  // MIN-942: a dialog closed before its creation finished held the created
+  // content, saved it as a draft two minutes later and reopened on it.
+  it.each(["issue", "objective"] as const)("saves no draft of a %s form closed while it was being created", async (kind) => {
+    vi.useFakeTimers();
+    try {
+      if (kind === "issue") fixture.smartFillCreated = false;
+      const dialog = await mountDialog(kind);
+      let finish!: () => void;
+      dialog.create.mockImplementation(() => new Promise<{ id: string }>((resolve) => { finish = () => resolve({ id: "created" }); }));
+      await typeTitle("Created meanwhile");
+      await act(() => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+      expect(dialog.create).toHaveBeenCalled();
+      await click("Close creation");
+      await act(async () => { finish(); });
+      await act(async () => { vi.advanceTimersByTime(HELD_DRAFT_DELAY_MS); });
+      expect(fixture.save).not.toHaveBeenCalled();
+      await dialog.reopen();
+      expect(host.querySelector("textarea")!.value).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(["issue", "objective"] as const)("saves no draft of a %s form its caller closes on creation", async (kind) => {
+    vi.useFakeTimers();
+    try {
+      if (kind === "issue") fixture.smartFillCreated = false;
+      const dialog = await mountDialog(kind);
+      // The feedback promotion closes the dialog from its own `onCreate`.
+      dialog.create.mockImplementation(async () => { dialog.close(); return { id: "created" }; });
+      await typeTitle("Promoted");
+      await act(async () => { host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })); });
+      await act(async () => { vi.advanceTimersByTime(HELD_DRAFT_DELAY_MS); });
+      expect(fixture.save).not.toHaveBeenCalled();
+      await dialog.reopen();
+      expect(host.querySelector("textarea")!.value).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each(["issue", "objective"] as const)("resumes a %s form with the caret in its description", async (kind) => {
     const dialog = await mountDialog(kind);
     // A fresh form starts in the title.
