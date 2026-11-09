@@ -1224,6 +1224,72 @@ html[data-input-modality="keyboard"] :is(.sidebar-nav-panel, [role="tablist"]) :
   padding: 0;
 }
 
+/* ─── Read-only data tables (MIN-947) ────────────────────────────────────
+   The run history, Markdown tables in comments and pull request bodies, and
+   the tables in Numo's answers look like a page database's table view
+   (components/pages/page-database-view.tsx): no frame, a quiet header with a
+   hairline under it, 40px rows split by faint lines, body columns split by
+   fainter ones. `.data-table` carries the look for the tables we render;
+   Streamdown owns the markup of Numo's tables, so they are matched by their
+   `data-streamdown` attributes, including the fullscreen view it portals out
+   of the message. Overriding Streamdown's `table` component instead would
+   drop its copy, download and fullscreen controls. */
+div:has(> [data-streamdown="table"]) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+:is(.data-table, [data-streamdown="table"]) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 0;
+  text-align: left;
+
+  /* Streamdown separates its sections and rows with `divide-y` borders. */
+  & > :is(thead, tbody),
+  & > :is(thead, tbody) > tr {
+    border: 0;
+    background: transparent;
+  }
+
+  & th,
+  & td {
+    padding: 0.625rem 0.5rem;
+    font-size: inherit;
+    line-height: 1.25rem;
+  }
+
+  & th {
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+    color: var(--muted-foreground);
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  & td {
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
+  }
+
+  & td + td {
+    border-left: 1px solid color-mix(in oklab, var(--border) 30%, transparent);
+  }
+}
+
+/* Rows that open something take the database row's hover tint. They keep the
+   app's default arrow (MIN-587) over the whole row, text included, so the
+   cursor never alternates between cells and the button in the first one. */
+.data-table-interactive > tbody > tr {
+  cursor: default;
+  transition: background-color 120ms ease-out;
+
+  &:hover,
+  &:focus-within {
+    background: color-mix(in oklab, var(--muted) 20%, transparent);
+  }
+}
+
 /* The fixed mobile bar owns its geometry. Keep the shell's reserve aligned
    with its 48px buttons and safe-area anchor, plus a small content gutter. */
 :root {

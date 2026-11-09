@@ -13,6 +13,13 @@ describe("routine run table interactions", () => {
     expect(tableBody).not.toContain("absolute inset-0");
   });
 
+  it("lets a click anywhere in a run row reach the row handler", () => {
+    // A cell without pointer events hands its clicks to the table body, which
+    // sits above the row: the row's click handler would never see them.
+    expect(tableBody).not.toContain("pointer-events-none");
+    expect(tableBody).toMatch(/<tr[^>]*onClick=\{\(\) => openRoutineRun\(run\)\}/);
+  });
+
   it("keeps pull request clicks out of the run row handler", () => {
     expect(tableBody).toContain("event.stopPropagation();");
   });
