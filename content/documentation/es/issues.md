@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 47,
-  "sourceRevision": 47,
+  "revision": 48,
+  "sourceRevision": 48,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -128,14 +128,15 @@
       "components/sub-issues-section.tsx",
       "lib/create-context.tsx",
       "components/mention-hover-card.tsx",
-      "components/resources.tsx"
+      "components/resources.tsx",
+      "lib/server/smart-fill-objective.ts"
     ]
   },
   "review": {
-    "revision": 47,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 9 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 48,
+    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
+    "language": "agent:claude-code (es translation of the changed passages with catalog UI labels, reviewed against en revision 48; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "feedback",
@@ -180,7 +181,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -197,7 +198,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -214,7 +215,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -248,7 +249,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -265,7 +266,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Sección de subincidencias de una incidencia principal de demostración, con el botón Crear una subincidencia y su flecha de opciones.",
       "caption": "Crear una subincidencia abre la creación con esta incidencia como principal; cada hija conserva su estado y conversación.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +283,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -299,7 +300,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -316,7 +317,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -333,7 +334,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -391,8 +392,9 @@ Si falla la creación o el guardado, conserva el texto, lee el error y comprueba
 
 Las preferencias de Smart Fill pertenecen a tu cuenta. Abre **Ajustes de la cuenta** → **Smart Fill**. Cada opción tiene su propia tarjeta:
 
-- En la tarjeta **Smart Fill**, **Activar Smart Fill** activa o desactiva Smart Fill para tu cuenta. Completa la prioridad, el esfuerzo, las categorías y el objetivo que falten; el estado, el responsable y la fecha límite siguen siendo cosa tuya. Los interruptores de las dos tarjetas siguientes dependen de él.
+- En la tarjeta **Smart Fill**, **Activar Smart Fill** activa o desactiva Smart Fill para tu cuenta. Completa la prioridad, el esfuerzo, las categorías y el objetivo que falten; el estado, el responsable y la fecha límite siguen siendo cosa tuya. En un nuevo objetivo, completa el nombre, el color y la fecha objetivo ([guía de objetivos](/docs/objectives#objective-smart-fill)). Los interruptores de las tres tarjetas siguientes dependen de él.
 - En **Incidencias que rellenar**, **Completar incidencias creadas** y **Completar incidencias en Clasificación** eligen qué incidencias nuevas completa: las que creas y las incidencias de triaje de las que eres responsable. **Reevaluar incidencias editadas**, activado por defecto, permite a Smart Fill [volver a leer una incidencia](#smart-fill-reevaluation) después de un cambio en su título o su descripción. **Escribir los títulos que falten**, activado por defecto, permite a Smart Fill [escribir el título](#smart-fill-title) de una incidencia que solo describes.
+- En **Objetivos que completar**, **Completar los objetivos creados**, activado por defecto, permite a Smart Fill [completar los objetivos que creas](/docs/objectives#objective-smart-fill): su color, su fecha objetivo y su hora cuando el texto las indica, y un nombre vacío si **Escribir los nombres que falten** está activado. **Escribir los nombres que falten**, en la misma tarjeta y activado por defecto, es independiente de **Escribir los títulos que falten**.
 - En **Incidencias relacionadas**, **Vincular incidencias relacionadas**, activado por defecto, permite a Smart Fill [añadir relaciones](#smart-fill-relations) después de guardar una incidencia.
 - En **Indexación de incidencias**, **Indexar incidencias**, activado por defecto e independiente de Smart Fill, indexa en privado el título y la descripción de las incidencias que creas o editas, para encontrar incidencias relacionadas y [buscar incidencias por el sentido](/docs/navigation#search-by-meaning). La indexación en segundo plano de las incidencias existentes de un proyecto respeta a la vez el interruptor del propietario del proyecto y el del autor: una incidencia cuyo autor lo desactivó nunca se indexa. Los vectores se cifran con el proyecto, igual que la incidencia; los guardados antes de que el proyecto empezara a cifrar los convierte la tarea en segundo plano. Con el interruptor desactivado no se crea ningún vector para tus incidencias, aunque otra persona las edite, y la búsqueda de incidencias relacionadas solo compara palabras. Tus propias búsquedas usan entonces solo el texto, sin búsqueda por el sentido. Los vectores ya creados se mantienen mientras el texto no cambie; se eliminan en cuanto el texto cambia, o con la incidencia.
 

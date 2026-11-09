@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 23,
+  "revision": 25,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -61,14 +61,20 @@
       "components/app-sidebar.tsx",
       "lib/objective-forecast.ts",
       "lib/server/objective-forecast.ts",
-      "app/api/objectives/[id]/forecast/route.ts"
+      "app/api/objectives/[id]/forecast/route.ts",
+      "lib/server/smart-fill-objective.ts",
+      "lib/server/smart-assign-objective.ts",
+      "lib/server/objectives.ts",
+      "lib/smart-assign-config.ts",
+      "components/settings/account-smart-fill-section.tsx",
+      "lib/smart-fill.ts"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es translation of the changed passage, reviewed against en revision 23; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 25,
+    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
+    "language": "agent:claude-code (es translation of the changed passages with catalog UI labels, reviewed against en revision 24; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "issues",
@@ -89,7 +95,7 @@
       "src": "/documentation/es/reader-objectives.png",
       "alt": "Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.",
       "caption": "Nombra el resultado antes de elegir responsable, fecha objetivo y estado. Este diálogo no ha creado un segundo objetivo.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -120,6 +126,12 @@ Abre cada incidencia relevante y elige el objetivo en sus propiedades, o utiliza
 ![Diálogo de creación de objetivo sin enviar en el proyecto Aurora con un nombre de resultado de ejemplo y el botón Crear objetivo.](/documentation/es/reader-objectives.png)
 
 En la página de objetivos, mantén pulsada Mayús y haz clic en objetivos para seleccionar varios; un clic en el espacio vacío de la lista borra la selección. **Acciones** en la barra flotante, o Command+K en macOS o Ctrl+K en otros sistemas, ofrece **Cambiar estado**, **Cambiar responsable**, **Cambiar color** y **Mover a la papelera**, que primero pide confirmación. **Pregúntale a Numo** abre Numo con todos los objetivos seleccionados en su contexto.
+
+### Dejar que Smart Fill y Smart Assign completen un objetivo {#objective-smart-fill}
+
+Con Smart Fill activado en tu cuenta, el formulario **Nuevo objetivo** muestra el botón **Smart Fill**, como el de una nueva incidencia; **Completar los objetivos creados**, en **Ajustes de la cuenta** → **Smart Fill**, decide si empieza activado. Mientras está activado, describe el objetivo: Smart Fill elige su color según el significado de los colores, define la fecha objetivo cuando el nombre o la descripción indican una, como «entrega a finales de enero», con su hora cuando el texto indica una, como «30 de noviembre a las 19:30», y, con **Escribir los nombres que falten** activado, escribe un nombre corto si dejas el nombre vacío. El color y la fecha objetivo salen de la fila del formulario. Para definir uno tú, abre la flecha junto al botón y elígelo; **Título**, en el mismo menú, recupera el campo del nombre. En un ordenador, Comando/Ctrl+Mayús+F abre ese menú. Smart Fill solo completa lo que dejaste vacío, nunca pone una fecha que el texto no indique y te deja el estado. El objetivo aparece cuando está completo, y su actividad nombra a Smart Fill. La pasada cuenta en tu cuota **Automatizaciones**. Si tu presupuesto se agota o el proveedor falla, el objetivo se crea tal como lo escribiste, con la primera línea de su descripción como nombre si lo dejaste vacío. Desactivar Smart Fill para el objetivo recupera todos los campos. Los objetivos creados desde un brief no se completan.
+
+Cuando el Smart Assign del proyecto está activado, los selectores de responsable muestran **Smart Assign** en lugar de un responsable vacío: en el formulario de creación, el panel del objetivo, el menú del objetivo en la lista y **Cambiar responsable**. Un objetivo creado sin responsable recibe uno: el miembro cuyas incidencias asignadas se acercan más a su nombre y descripción, o el propietario del proyecto si no hay ninguna. Elegir **Smart Assign** en un objetivo existente quita su responsable y deja que Smart Assign elija de nuevo. Los objetivos **Hecho** y **Cancelado** conservan **Sin responsable**. La actividad nombra a Smart Assign. Buscar las incidencias más cercanas cuenta en la cuota **Automatizaciones** del propietario del proyecto y usa el índice de incidencias cuando el propietario lo permite; si no, compara palabras, sin coste.
 
 ### Leer el progreso antes de cerrar {#objective-progress}
 

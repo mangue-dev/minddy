@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 23,
+  "revision": 24,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-31",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -61,14 +61,20 @@
       "components/app-sidebar.tsx",
       "lib/objective-forecast.ts",
       "lib/server/objective-forecast.ts",
-      "app/api/objectives/[id]/forecast/route.ts"
+      "app/api/objectives/[id]/forecast/route.ts",
+      "lib/server/smart-fill-objective.ts",
+      "lib/server/smart-assign-objective.ts",
+      "lib/server/objectives.ts",
+      "lib/smart-assign-config.ts",
+      "components/settings/account-smart-fill-section.tsx",
+      "lib/smart-fill.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (estimated finish date now computed on the server from contributors' activity hours, cross-project throughput and allocation to the objective, with the objective's own pace as fallback, MIN-876; checked against lib/objective-forecast.ts, lib/server/objective-forecast.ts, app/api/objectives/[id]/forecast/route.ts and components/objective-momentum.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the momentum estimate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en changed passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 24,
+    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
+    "language": "agent:claude-code (en changed passages; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "issues",
@@ -89,7 +95,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -120,6 +126,12 @@ Open each relevant issue and choose the objective in its properties, or use the 
 ![Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.](/documentation/en/reader-objectives.png)
 
 On the objectives page, hold Shift and click objectives to select several; a click on the list's empty space clears the selection. **Actions** in the floating bar, or Command+K on macOS or Ctrl+K on Windows/Linux, offers **Change status**, **Change lead**, **Change color** and **Move to trash**, which asks for a confirmation first. **Ask Numo** opens Numo with every selected objective in its context.
+
+### Let Smart Fill and Smart Assign complete an objective {#objective-smart-fill}
+
+With Smart Fill on for your account, the **New objective** form shows the **Smart Fill** button, as the new-issue form does; **Fill created objectives**, in **Account settings** → **Smart Fill**, decides whether it starts on. While it is on, describe the objective: Smart Fill picks its color by what the colors mean, sets the target date when the name or description gives one, such as "ship by the end of January", with its time when the text gives one, such as "November 30 at 7:30 pm", and, with **Write missing names** on, writes a short name when you leave the name empty. The color and target date leave the form row. To set one yourself, open the arrow next to the button and choose it; **Title** in the same menu brings the name field back. On a computer, Command/Ctrl+Shift+F opens that menu. Smart Fill only fills what you left empty, never sets a date the text does not give, and leaves the status to you. The objective appears once it is filled, and its activity names Smart Fill. The pass counts toward your **Automations** share. When your budget is exhausted or the provider fails, the objective is created as you wrote it, named after the first line of its description if you left the name empty. Switching Smart Fill off for the objective brings every field back. Objectives created from a brief are not filled.
+
+When the project's Smart Assign is on, the lead pickers show **Smart Assign** in place of an empty lead: in the creation form, the objective panel, the objective's menu in the list, and **Change lead**. An objective created without a lead receives one: the member whose assigned issues are closest to its name and description, or the project owner when no such issue exists. Choosing **Smart Assign** for an existing objective removes its lead and lets Smart Assign choose again. **Done** and **Canceled** objectives keep **No lead**. The activity names Smart Assign. Finding the closest issues counts toward the project owner's **Automations** share and uses the issue index when the owner allows it; otherwise it compares words, at no cost.
 
 ### Read progress before closing {#objective-progress}
 

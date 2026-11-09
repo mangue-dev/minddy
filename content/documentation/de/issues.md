@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 47,
-  "sourceRevision": 47,
+  "revision": 48,
+  "sourceRevision": 48,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -128,14 +128,15 @@
       "components/sub-issues-section.tsx",
       "lib/create-context.tsx",
       "components/mention-hover-card.tsx",
-      "components/resources.tsx"
+      "components/resources.tsx",
+      "lib/server/smart-fill-objective.ts"
     ]
   },
   "review": {
-    "revision": 47,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; figures it shows with a changed label recaptured on the local candidate); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 9 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 48,
+    "fact": "agent:claude-code (Smart Fill preference bullet now says it also fills a new objective's name, color and target date, MIN-919; checked against lib/server/smart-fill-objective.ts and lib/server/objectives.ts; rest of the article unchanged since the previous review; no figure recaptured; Follow-up: new Objectives to fill card with Fill created objectives; checked against components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; Write missing names switch in the Objectives to fill card)",
+    "language": "agent:claude-code (de translation of the changed passages with catalog UI labels, reviewed against en revision 48; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "feedback",
@@ -180,7 +181,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -197,7 +198,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -214,7 +215,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -231,7 +232,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -248,7 +249,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -265,7 +266,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Unterticket-Bereich eines Demo-Elterntickets mit der Schaltfläche „Unterticket erstellen“ und ihrem Optionspfeil.",
       "caption": "„Unterticket erstellen“ öffnet die Erstellung mit diesem Ticket als Elternticket; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -282,7 +283,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -299,7 +300,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -316,7 +317,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -333,7 +334,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 47,
+      "revision": 48,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -391,8 +392,9 @@ Schlägt Erstellen oder Speichern fehl, bewahre deinen Text auf, lies den Fehler
 
 Die Einstellungen von Smart Fill gehören zu deinem Konto. Öffne **Kontoeinstellungen** → **Smart Fill**. Jede Option hat ihre eigene Karte:
 
-- In der Karte **Smart Fill** schaltet **Smart Fill aktivieren** Smart Fill für dein Konto ein oder aus. Es ergänzt fehlende Priorität, fehlenden Aufwand, fehlende Kategorien und ein fehlendes Ziel; Status, zuständige Person und Fälligkeitsdatum bleiben deine Sache. Die Schalter der beiden folgenden Karten hängen davon ab.
+- In der Karte **Smart Fill** schaltet **Smart Fill aktivieren** Smart Fill für dein Konto ein oder aus. Es ergänzt fehlende Priorität, fehlenden Aufwand, fehlende Kategorien und ein fehlendes Ziel; Status, zuständige Person und Fälligkeitsdatum bleiben deine Sache. Bei einem neuen Ziel ergänzt es Name, Farbe und Zieldatum ([Leitfaden zu Zielen](/docs/objectives#objective-smart-fill)). Die Schalter der drei folgenden Karten hängen davon ab.
 - In **Zu füllende Tickets** legen **Erstellte Tickets ausfüllen** und **Triage-Tickets ausfüllen** fest, welche neuen Tickets es ergänzt: die Tickets, die du erstellst, und die Triage-Tickets, für die du zuständig bist. **Bearbeitete Tickets neu bewerten** ist standardmäßig eingeschaltet und lässt Smart Fill ein Ticket [erneut lesen](#smart-fill-reevaluation), nachdem sich sein Titel oder seine Beschreibung geändert hat. **Fehlende Titel schreiben** ist standardmäßig eingeschaltet und lässt Smart Fill den [Titel eines Tickets schreiben](#smart-fill-title), das du nur beschreibst.
+- In **Zu füllende Ziele** lässt **Erstellte Ziele ausfüllen**, standardmäßig eingeschaltet, Smart Fill [die Ziele vervollständigen, die du erstellst](/docs/objectives#objective-smart-fill): ihre Farbe, ihr Zieldatum samt Uhrzeit, wenn der Text sie nennt, und einen leeren Namen, wenn **Fehlende Namen schreiben** eingeschaltet ist. **Fehlende Namen schreiben** in derselben Karte ist standardmäßig eingeschaltet und unabhängig von **Fehlende Titel schreiben**.
 - In **Verwandte Tickets** ist **Verwandte Tickets verknüpfen** standardmäßig eingeschaltet und erlaubt Smart Fill, nach dem Speichern eines Tickets [Beziehungen hinzuzufügen](#smart-fill-relations).
 - In **Ticketindexierung** ist **Tickets indexieren** standardmäßig eingeschaltet und von Smart Fill unabhängig. Es indexiert Titel und Beschreibung der Tickets, die du erstellst oder bearbeitest, privat, um verwandte Tickets zu finden und Tickets [inhaltlich zu suchen](/docs/navigation#search-by-meaning) werden. Die Indexierung der bestehenden Tickets eines Projekts im Hintergrund folgt sowohl dem Schalter des Projekteigentümers als auch dem des Autors: Ein Ticket, dessen Autor ihn ausgeschaltet hat, wird nie indexiert. Die Vektoren werden wie das Ticket mit dem Projekt verschlüsselt; Vektoren, die gespeichert wurden, bevor das Projekt verschlüsselt wurde, wandelt der Hintergrundjob um. Ist der Schalter aus, entsteht für deine Tickets kein Vektor, auch wenn jemand anderes sie bearbeitet, und die Suche nach verwandten Tickets vergleicht nur Wörter. Deine eigenen Suchen nutzen dann nur den Text, ohne inhaltliche Suche. Bereits erstellte Vektoren bleiben, solange sich der Text nicht ändert; sie werden gelöscht, sobald sich der Text ändert, oder mit dem Ticket.
 

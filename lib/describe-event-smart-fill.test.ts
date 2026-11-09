@@ -127,3 +127,36 @@ describe("describeObjectiveEvent — Smart Fill re-evaluation (MIN-750)", () => 
       .toBe("a ajouté MIN-42 à cet objectif");
   });
 });
+
+describe("describeObjectiveEvent — Smart Fill and Smart Assign (MIN-919)", () => {
+  const objectiveEvent = (fields: Partial<IssueEvent>): IssueEvent =>
+    ({ ...smartFillEvent(null), issue_id: null, objective_id: "o1", ...fields }) as unknown as IssueEvent;
+
+  it("names the objective fields Smart Fill wrote", () => {
+    expect(
+      describeObjectiveEvent(objectiveEvent({ to_value: "name,color,target_date" }), ctx, translators("en")),
+    ).toBe("filled in the name, the color, the target date");
+    expect(
+      describeObjectiveEvent(objectiveEvent({ to_value: "color,target_date" }), ctx, translators("fr")),
+    ).toBe("a rempli la couleur, la date cible");
+  });
+
+  it("says Smart Assign chose the lead, and whether the work decided", () => {
+    const lead = (ai: boolean) =>
+      objectiveEvent({
+        field: "lead_user_id",
+        to_value: "ana",
+        via_smart_fill: false,
+        via_smart_assign: true,
+        smart_assign_ai: ai,
+      } as Partial<IssueEvent>);
+    const withMember: EventContext = {
+      ...ctx,
+      members: [{ user_id: "ana", email: "ana@example.com" }] as unknown as EventContext["members"],
+    };
+    expect(describeObjectiveEvent(lead(true), withMember, translators("en"))).toBe(
+      "made ana the lead, from the issues assigned to them",
+    );
+    expect(describeObjectiveEvent(lead(false), withMember, translators("en"))).toBe("made ana the lead");
+  });
+});

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 23,
+  "revision": 26,
+  "sourceRevision": 24,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -61,14 +61,20 @@
       "components/app-sidebar.tsx",
       "lib/objective-forecast.ts",
       "lib/server/objective-forecast.ts",
-      "app/api/objectives/[id]/forecast/route.ts"
+      "app/api/objectives/[id]/forecast/route.ts",
+      "lib/server/smart-fill-objective.ts",
+      "lib/server/smart-assign-objective.ts",
+      "lib/server/objectives.ts",
+      "lib/smart-assign-config.ts",
+      "components/settings/account-smart-fill-section.tsx",
+      "lib/smart-fill.ts"
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 26,
+    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
+    "language": "agent:claude-code (de translation of the changed passages with catalog UI labels, reviewed against en revision 24; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "issues",
@@ -89,7 +95,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 25,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -120,6 +126,12 @@ Die Zielbeschreibung und ihre Kommentare verwenden denselben Editor wie Projekts
 ![Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.](/documentation/de/reader-objectives.png)
 
 Halte auf der Zielseite die Umschalttaste gedrückt und klicke auf Ziele, um mehrere auszuwählen; ein Klick auf eine leere Stelle der Liste hebt die Auswahl auf. **Aktionen** in der schwebenden Leiste oder Command+K unter macOS bzw. Strg+K auf anderen Systemen bietet **Status ändern**, **Lead ändern**, **Farbe ändern** und **In den Papierkorb verschieben**, das vorher eine Bestätigung verlangt. **Numo fragen** öffnet Numo mit allen ausgewählten Zielen im Kontext.
+
+### Smart Fill und Smart Assign ein Ziel vervollständigen lassen {#objective-smart-fill}
+
+Wenn Smart Fill für dein Konto eingeschaltet ist, zeigt das Formular **Neues Ziel** wie das Formular für ein neues Ticket die Schaltfläche **Smart Fill**; **Erstellte Ziele ausfüllen** unter **Kontoeinstellungen** → **Smart Fill** bestimmt, ob sie eingeschaltet startet. Solange sie eingeschaltet ist, beschreibst du das Ziel: Smart Fill wählt seine Farbe nach der Bedeutung der Farben, legt das Zieldatum fest, wenn Name oder Beschreibung eines nennen, etwa „Auslieferung Ende Januar“, mit Uhrzeit, wenn der Text eine nennt, etwa „30. November um 19:30 Uhr“, und schreibt mit eingeschaltetem **Fehlende Namen schreiben** einen kurzen Namen, wenn du den Namen leer lässt. Farbe und Zieldatum verschwinden aus der Formularzeile. Um einen Wert selbst festzulegen, öffne den Pfeil neben der Schaltfläche und wähle ihn aus; **Titel** im selben Menü holt das Namensfeld zurück. Am Computer öffnet Befehl/Strg+Umschalt+F dieses Menü. Smart Fill füllt nur aus, was du leer gelassen hast, setzt nie ein Datum, das der Text nicht nennt, und überlässt dir den Status. Das Ziel erscheint, sobald es ausgefüllt ist, und seine Aktivität nennt Smart Fill. Der Durchlauf zählt zu deinem Anteil **Automatisierungen**. Ist dein Budget aufgebraucht oder fällt der Anbieter aus, wird das Ziel so erstellt, wie du es geschrieben hast, und nach der ersten Zeile seiner Beschreibung benannt, wenn du den Namen leer gelassen hast. Schaltest du Smart Fill für das Ziel aus, kehren alle Felder zurück. Aus einem Briefing erstellte Ziele werden nicht ausgefüllt.
+
+Wenn Smart Assign im Projekt eingeschaltet ist, zeigen die Lead-Auswahlen **Smart Assign** anstelle eines leeren Leads: im Erstellungsformular, im Zielbereich, im Menü des Ziels in der Liste und unter **Lead ändern**. Ein ohne Lead erstelltes Ziel erhält einen: das Mitglied, dessen zugewiesene Tickets Name und Beschreibung des Ziels am nächsten sind, oder den Projektinhaber, wenn kein solches Ticket existiert. Wählst du **Smart Assign** für ein bestehendes Ziel, wird sein Lead entfernt und Smart Assign wählt erneut. Ziele mit **Erledigt** und **Abgebrochen** behalten **Kein Lead**. Die Aktivität nennt Smart Assign. Die Suche nach den nächsten Tickets zählt zum Anteil **Automatisierungen** des Projektinhabers und nutzt den Ticketindex, wenn der Inhaber das erlaubt; sonst vergleicht sie Wörter, ohne Kosten.
 
 ### Den Fortschritt vor dem Abschluss prüfen {#objective-progress}
 

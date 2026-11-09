@@ -666,6 +666,8 @@ export function SmartFillCompact({
   fullWidth = false,
   writesTitle = false,
   manual,
+  actions: customActions,
+  hints,
   shortcut = false,
 }: {
   value: boolean;
@@ -678,15 +680,22 @@ export function SmartFillCompact({
   writesTitle?: boolean;
   /** Values the chevron menu sets by hand; without it, the badge is a toggle alone. */
   manual?: SmartFillManualFields;
+  /** The chevron menu of another entity (an objective, MIN-919), in place of
+   *  the issue's `manual` fields. */
+  actions?: ContextMenuAction[];
+  /** The tooltips of another entity, in place of the issue's. */
+  hints?: { on: string; off: string };
 }) {
   const t = useTranslations("IssueUI");
   const id = useId();
-  const actions = useSmartFillManualActions(manual);
+  const manualActions = useSmartFillManualActions(manual);
+  const actions = customActions ?? manualActions;
+  const hasMenu = !!manual || !!customActions;
   const mod = useModKey();
   const [menuOpen, setMenuOpen] = useState(false);
   // Set only when the shortcut opened the menu, as for the project picker.
   const writingSpot = useRef<WritingSpot | null>(null);
-  const shortcutActive = shortcut && value && !!manual && !fullWidth;
+  const shortcutActive = shortcut && value && hasMenu && !fullWidth;
   useEffect(() => {
     if (!shortcutActive) return;
     const onKey = (event: KeyboardEvent) => {
@@ -725,7 +734,7 @@ export function SmartFillCompact({
     <label htmlFor={id} className="flex min-w-0 flex-1 items-center gap-2 text-sm">
       <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />{t("smartFillChip")}
     </label>
-    {manual && menu(
+    {hasMenu && menu(
       <button type="button" aria-label={t("smartFillManualAria")} className={BARE}>
         <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 text-muted-foreground" />
       </button>,
@@ -743,20 +752,22 @@ export function SmartFillCompact({
           type="button"
           aria-pressed={value}
           onClick={() => onChange(!value)}
-          className={cn(SMART_FILL_PILL, tint, manual && "rounded-r-none pr-2")}
+          className={cn(SMART_FILL_PILL, tint, hasMenu && "rounded-r-none pr-2")}
         >
           <HugeiconsIcon icon={SMART_FILL_ICON} className="size-4 shrink-0" />
           <span>{t("smartFillChip")}</span>
         </button>
       </TooltipTrigger>
       <TooltipContent>
-        {value
-          ? writesTitle ? t("smartFillOnTitleHint") : t("smartFillOnHint")
-          : t("smartFillOffHint")}
+        {hints
+          ? value ? hints.on : hints.off
+          : value
+            ? writesTitle ? t("smartFillOnTitleHint") : t("smartFillOnHint")
+            : t("smartFillOffHint")}
       </TooltipContent>
     </Tooltip>
   );
-  if (!manual) return toggle;
+  if (!hasMenu) return toggle;
   return (
     <div data-slot="smart-fill-split" className="inline-flex gap-px">
       {toggle}

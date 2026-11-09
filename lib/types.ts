@@ -530,6 +530,11 @@ export interface CreateObjectiveInput {
   lead_user_id?: string | null;
   target_date?: string | null;
   color?: string | null;
+  /** Smart Fill for this objective (MIN-919): `false` keeps it off, `true`
+      re-arms it when the account turned automatic creation filling off. */
+  smart_fill?: boolean;
+  /** The author's IANA time zone: Smart Fill reads a written deadline in it. */
+  time_zone?: string;
   resources?: ResourceInput[];
   relations?: PendingRelationInput[];
   /** Cross-project creation: files the browser uploaded under the SOURCE

@@ -38,3 +38,15 @@ export function smartAssignFillsEmptyAssignee(
 ): boolean {
   return enabled === true && status !== "canceled" && status !== "duplicate";
 }
+
+/**
+ * Whether an empty objective lead means "Smart Assign will choose" (MIN-919):
+ * the project has Smart Assign on and the objective is still open. A done or
+ * canceled objective keeps "No lead", as a canceled issue keeps "Unassigned".
+ */
+export function objectiveSmartAssignEligible(
+  enabled: boolean | null | undefined,
+  status: unknown
+): boolean {
+  return enabled === true && status !== "done" && status !== "canceled";
+}
