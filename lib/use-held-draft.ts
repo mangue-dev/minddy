@@ -63,6 +63,9 @@ export function useHeldDraft(options: HeldDraftOptions) {
     if (!hasContent()) return;
     let closed = true;
     const timer = window.setTimeout(() => {
+      // The form may have been emptied since the close: a creation that
+      // finished after it hands the content to an issue, not to a draft.
+      if (!latest.current.hasContent()) return;
       // A failed save keeps the form held: it is still there on reopening.
       latest.current.save().then(() => {
         if (closed) latest.current.clear();
