@@ -611,6 +611,13 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("memberRemoved") : t("removeMemberFailed");
     },
   },
+  update_member_role: {
+    icon: UserSettings01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingMemberRole");
+      return success ? t("memberRoleUpdated") : t("updateMemberRoleFailed");
+    },
+  },
   cancel_invitation: {
     icon: MailRemove01Icon,
     getLabel: (_args, _result, success, status, t) => {

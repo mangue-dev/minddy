@@ -21,6 +21,9 @@ export interface ProjectCapabilities {
   canAdmin: boolean;
 }
 
+/** The roles an owner can grant, in the order the members screen lists them. */
+export const MEMBER_ROLES = ["member", "reader"] as const satisfies readonly MemberRole[];
+
 export function isMemberRole(value: unknown): value is MemberRole {
   return value === "member" || value === "reader";
 }

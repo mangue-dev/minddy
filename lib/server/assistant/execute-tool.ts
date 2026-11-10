@@ -137,6 +137,8 @@ import {
   inviteMember,
   listPendingInvitations,
   removeMember,
+  updateInvitationRole,
+  updateMemberRole,
 } from "@/lib/server/members";
 import {
   createIntegration,
@@ -568,6 +570,10 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   memberLimitReached:
     "This project has reached the number of guests the owner's plan allows (members plus pending invitations). Relay this meaning in the user's language.",
   cannotRemoveOwner: "The project owner cannot be removed.",
+  cannotChangeOwner: "The project owner's role cannot change.",
+  invalidRole: "The role must be 'member' or 'reader'.",
+  memberNotFound: "That person is not a member of this project.",
+  invitationNotFound: "That invitation is not pending in this project.",
   invalidColor: "That color is invalid (use a hex color like #7c5cff).",
   categoryNotFound: "Category not found in this project.",
   integrationNameRequired: "An integration name is required.",
@@ -1450,7 +1456,7 @@ async function executeToolUnlisted(
 
     // ── Account tools (the requesting user's own account — no project) ──
     if (toolName === "get_account_settings") {
-      const r = await getAccountSettings({ userId: ctx.userId });
+      const r = await getAccountSettings({ userId: ctx.userId, supabase: ctx.supabase });
       return r.ok
         ? { result: { settings: r.settings }, success: true }
         : toolError(r.error);
@@ -1459,6 +1465,7 @@ async function executeToolUnlisted(
       const r = await updateAccountSettings({
         userId: ctx.userId,
         input: args,
+        supabase: ctx.supabase,
       });
       return r.ok
         ? { result: { settings: r.settings }, success: true }
@@ -3237,6 +3244,10 @@ async function executeToolUnlisted(
               feedback_review_enabled: result.project.feedback_review_enabled,
               feedback_review_skip_over_budget:
                 result.project.feedback_review_skip_over_budget,
+              feedback_translate_enabled: result.project.feedback_translate_enabled,
+              feedback_team_language: result.project.feedback_team_language,
+              feedback_no_translate_languages:
+                result.project.feedback_no_translate_languages,
             },
           },
           success: true,
@@ -3248,6 +3259,9 @@ async function executeToolUnlisted(
           projectId,
           actorId: ctx.userId,
           email: args.email,
+          role: args.role ?? "member",
+          // A member always comments: the option only exists for a reader.
+          canComment: args.role === "reader" && args.can_comment === true,
           locale: resolveApplicationLocale(ctx.locale),
         });
         if (!result.ok) return settingsError(result.errorKey);
@@ -3256,6 +3270,8 @@ async function executeToolUnlisted(
             invitation: {
               id: result.invitation.id,
               email: result.invitation.invited_email,
+              role: result.invitation.role,
+              can_comment: result.invitation.can_comment,
             },
           },
           success: true,
@@ -3272,6 +3288,46 @@ async function executeToolUnlisted(
         });
         if (!result.ok) return settingsError(result.errorKey);
         return { result: { removed: userId }, success: true };
+      }
+
+      case "update_member_role": {
+        const userId = typeof args.user_id === "string" ? args.user_id.trim() : "";
+        const invitationId =
+          typeof args.invitation_id === "string" ? args.invitation_id.trim() : "";
+        if (!userId === !invitationId) {
+          return toolError("Pass exactly one of user_id (a member) or invitation_id (a pending invitation).");
+        }
+        if (userId) {
+          const result = await updateMemberRole({
+            projectId,
+            actorId: ctx.userId,
+            userId,
+            role: args.role,
+            canComment: args.role === "reader" ? args.can_comment : false,
+          });
+          if (!result.ok) return settingsError(result.errorKey);
+          return {
+            result: {
+              member: { user_id: userId, role: result.role, can_comment: result.canComment },
+              unassigned_issues: result.unassigned,
+            },
+            success: true,
+          };
+        }
+        const result = await updateInvitationRole({
+          projectId,
+          actorId: ctx.userId,
+          invitationId,
+          role: args.role,
+          canComment: args.role === "reader" && args.can_comment === true,
+        });
+        if (!result.ok) return settingsError(result.errorKey);
+        return {
+          result: {
+            invitation: { id: invitationId, role: result.role, can_comment: result.canComment },
+          },
+          success: true,
+        };
       }
 
       case "cancel_invitation": {

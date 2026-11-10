@@ -27,7 +27,14 @@ vi.mock("./assistant-api", () => ({
   updateConversation: h.read,
 }));
 vi.mock("./use-agent-runs", () => ({ allAgentSessionsQueryKey: ["agent-sessions", "all"] as const }));
-vi.mock("@tanstack/react-query", () => ({ useQueryClient: () => ({ invalidateQueries: vi.fn() }) }));
+vi.mock("@tanstack/react-query", async () => {
+  const { createContext } = await import("react");
+  return {
+    useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+    // The chat context reads it to refresh hidden projects (MIN-955); empty here.
+    QueryClientContext: createContext(undefined),
+  };
+});
 vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
 vi.mock("./projects-context", () => ({ useProjects: () => ({ projects: h.projects }) }));
 vi.mock("next-intl", () => ({ useLocale: () => "en", useTranslations: () => (key: string) => key }));
