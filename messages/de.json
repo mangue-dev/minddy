@@ -1838,7 +1838,7 @@
     "feedbackLabel": "Feedback",
     "feedbackDesc": "Neues Feedback landet auf dem Board eines Projekts, zu dem du gehörst.",
     "pageLabel": "Seiten",
-    "pageDesc": "Jemand erwähnt dich auf einer Seite oder Numo aktualisiert eine Seite für dich.",
+    "pageDesc": "Jemand erwähnt dich auf einer Seite oder kommentiert deine Seite oder einen Thread, an dem du teilnimmst.",
     "numoLabel": "Nachrichten von Numo",
     "numoDesc": "Numo schreibt dir, wenn etwas deine Aufmerksamkeit braucht, aus einer Unterhaltung oder einer Routine."
   },

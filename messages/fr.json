@@ -1838,7 +1838,7 @@
     "feedbackLabel": "Retours",
     "feedbackDesc": "Un retour arrive sur le tableau d'un de vos projets.",
     "pageLabel": "Pages",
-    "pageDesc": "Quelqu’un vous mentionne dans une page ou Numo en met une à jour pour vous.",
+    "pageDesc": "Quelqu’un vous mentionne dans une page, ou commente votre page ou un fil auquel vous participez.",
     "numoLabel": "Messages de Numo",
     "numoDesc": "Numo vous écrit quand un point demande votre attention, depuis une conversation ou une routine."
   },

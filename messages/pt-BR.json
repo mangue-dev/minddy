@@ -1838,7 +1838,7 @@
     "feedbackLabel": "Feedback",
     "feedbackDesc": "Um novo feedback chega ao quadro de um projeto do qual você participa.",
     "pageLabel": "Páginas",
-    "pageDesc": "Alguém menciona você em uma página ou o Numo atualiza uma para você.",
+    "pageDesc": "Alguém menciona você em uma página ou comenta na sua página ou em uma conversa da qual você participa.",
     "numoLabel": "Mensagens do Numo",
     "numoDesc": "O Numo escreve para você quando algo precisa da sua atenção, em uma conversa ou rotina."
   },

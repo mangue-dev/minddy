@@ -243,7 +243,6 @@ vi.mock("@/lib/supabase-service", async () => {
  */
 vi.mock("@/lib/server/page-activity", () => ({
   recordPageEvent: async () => {},
-  notifyAgentPageWrite: async () => {},
 }));
 vi.mock("@/lib/server/page-mentions", () => ({
   notifyPageMentions: async () => {},

@@ -20,11 +20,7 @@ import {
 } from "@/lib/pages";
 import { readPageContent } from "./page-content-input";
 import { afterOrNow } from "@/lib/server/after-safe";
-import {
-  notifyAgentPageWrite,
-  recordPageEvent,
-  type PageEventType,
-} from "@/lib/server/page-activity";
+import { recordPageEvent, type PageEventType } from "@/lib/server/page-activity";
 import { notifyPageMentions } from "@/lib/server/page-mentions";
 import { copyPageDatabaseViews } from "./page-database-views";
 import { queuePageBodyLinks } from "@/lib/server/page-links";
@@ -220,60 +216,6 @@ export async function pageWriteRefusal(
     return { ok: false, status: 403, errorKey: "readOnlyProject" };
   }
   return null;
-}
-
-/* ─── Watching (MIN-278 follow-up) ─────────────────────────────────────────── */
-
-/**
- * Proves that the caller still has this page open on screen.
- *
- * One row per (page, viewer), upserted every `PAGE_WATCH_PING_MS` by
- * lib/page-watch.ts while the editor holds the document. It is what lets
- * `notifyAgentPageWrite` tell "away" from "reading": a fresh row is a reader,
- * and a reader needs no inbox line for an agent's write — it arrives live.
- * The route checks access itself; the table only ever carries rows for pages
- * the pinger can read.
- */
-export async function touchPageWatcher(
-  pageId: string,
-  actorId: string
-): Promise<boolean> {
-  const service = getServiceClient();
-  // The project id alone: a ping runs every twenty seconds and must not drag
-  // the body through PostgREST each time.
-  const { data } = await service
-    .from("pages")
-    .select("project_id")
-    .eq("id", pageId)
-    .is("deleted_at", null)
-    .maybeSingle();
-  if (!data?.project_id || !(await access(actorId, data.project_id))) {
-    return false;
-  }
-  const { error } = await service
-    .from("page_viewers")
-    .upsert({ page_id: pageId, user_id: actorId }, { onConflict: "page_id,user_id" });
-  if (error) {
-    console.error("[pages] watch ping failed:", error.message);
-    return false;
-  }
-  return true;
-}
-
-/**
- * Leaves the page: removes the watcher row. Best-effort both ways — an error
- * costs nothing (the row goes stale on its own after `PAGE_WATCH_FRESH_MS`),
- * and so does a missing row.
- */
-export async function clearPageWatcher(
-  pageId: string,
-  actorId: string
-): Promise<void> {
-  await getServiceClient()
-    .from("page_viewers")
-    .delete()
-    .eq("page_id", pageId)
-    .eq("user_id", actorId);
 }
 
 /**
@@ -545,7 +487,7 @@ function announcePageWrite({
  copying a page would recopy all the names it bears. */
   scanMentions?: boolean;
   /** False for a live typing batch that continues the same author's write
-   (MIN-688): its activity line and agent notice already exist, but a name
+   (MIN-688): its activity line already exists, but a name
    typed in this batch must still be announced, so mentions stay on. */
   activity?: boolean;
 }): void {
@@ -574,17 +516,6 @@ function announcePageWrite({
         // wrote.
         viaAssistant: kind === "agent",
         mcpKeyId,
-      });
-    }
-
-    // “only when the actor is the agent”: it’s the SURFACE that knows this
-    // (the six tools in lib/server/page-tools.ts sign `kind: "agent"`), and
-    // `actorId` is the account that enabled it — therefore the launcher of the run.
-    if (activity && kind === "agent") {
-      await notifyAgentPageWrite(service, {
-        projectId: page.project_id,
-        pageId: page.id,
-        actorId,
       });
     }
   });

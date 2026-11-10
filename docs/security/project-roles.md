@@ -71,7 +71,6 @@ the feedback SSO secret.
 - `runCycleBlockerPull` assigns a blocker to the cycle owner; `runCycleCapture`
   places another user's issue in that user's cycle.
 - `GET /api/projects/[id]/views` seeds baseline views (system bookkeeping).
-- `touchPageWatcher` upserts the caller's own `page_viewers` row (presence).
 
 ### Routines, Numo and indirect execution
 

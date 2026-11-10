@@ -383,12 +383,9 @@ const announce = vi.hoisted(() => ({
       }
     ) => Promise<void>
   >(async () => {}),
-  notifyAgentPageWrite: vi.fn<
-    (
-      service: unknown,
-      params: { projectId: string; pageId: string; actorId: string }
-    ) => Promise<void>
-  >(async () => {}),
+  insertNotifications: vi.fn<(service: unknown, rows: unknown[]) => Promise<void>>(
+    async () => {}
+  ),
   notifyPageMentions: vi.fn<
     (
       service: unknown,
@@ -407,7 +404,10 @@ const announce = vi.hoisted(() => ({
 
 vi.mock("@/lib/server/page-activity", () => ({
   recordPageEvent: announce.recordPageEvent,
-  notifyAgentPageWrite: announce.notifyAgentPageWrite,
+}));
+vi.mock("@/lib/server/notifications", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/server/notifications")>()),
+  insertNotifications: announce.insertNotifications,
 }));
 vi.mock("@/lib/server/page-mentions", () => ({
   notifyPageMentions: announce.notifyPageMentions,
@@ -540,7 +540,7 @@ beforeEach(() => {
   h.access = new Set([PROJECT]);
   h.readOnly = new Set();
   announce.recordPageEvent.mockClear();
-  announce.notifyAgentPageWrite.mockClear();
+  announce.insertNotifications.mockClear();
   announce.notifyPageMentions.mockClear();
 });
 
@@ -1903,26 +1903,31 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     expect(announce.recordPageEvent).not.toHaveBeenCalled();
   });
 
-  it("prévient le lanceur du run — et LUI SEUL — quand l'agent écrit", async () => {
+  it("sends no notification when an agent edits a page (MIN-958)", async () => {
     const id = await create("Guide");
     await settled();
-    announce.notifyAgentPageWrite.mockClear();
+    announce.insertNotifications.mockClear();
+    announce.recordPageEvent.mockClear();
+    announce.notifyPageMentions.mockClear();
 
     await updatePage({
       pageId: id,
       actorId: ACTOR,
       kind: "agent",
-      input: { content: doc("réécrit par l'agent") },
+      input: { content: doc("rewritten by the agent") },
     });
 
-    await vi.waitFor(() => expect(announce.notifyAgentPageWrite).toHaveBeenCalledTimes(1));
-    // `actorId` IS the recipient: the six writing tools run under
-    // the id of the account that allowed them.
-    expect(announce.notifyAgentPageWrite.mock.calls[0][1]).toEqual({
-      projectId: PROJECT,
-      pageId: id,
-      actorId: ACTOR,
-    });
+    // The edit still reaches the page's activity log...
+    await vi.waitFor(() =>
+      expect(announce.recordPageEvent).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ type: "page_updated", kind: "agent" })
+      )
+    );
+    // The mention scan is the callback's last step: once it ran, nothing else will.
+    await vi.waitFor(() => expect(announce.notifyPageMentions).toHaveBeenCalled());
+    // ...but nobody's inbox: agents write pages often, and each write used to ring.
+    expect(announce.insertNotifications).not.toHaveBeenCalled();
   });
 
   it("porte l'identité de l'AGENT jusqu'aux citations et à l'activité", async () => {
@@ -1951,11 +1956,14 @@ describe("ce qu'une écriture fait savoir (MIN-278)", () => {
     expect(events()[0]).toMatchObject({ type: "page_updated", mcpKeyId: "key-1" });
   });
 
-  it("ne prévient personne quand l'écriture est humaine", async () => {
+  it("sends no notification when a person edits a page", async () => {
     const id = await create("Guide");
-    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("à moi") } });
     await settled();
-    expect(announce.notifyAgentPageWrite).not.toHaveBeenCalled();
+    announce.insertNotifications.mockClear();
+    announce.notifyPageMentions.mockClear();
+    await updatePage({ pageId: id, actorId: ACTOR, input: { content: doc("mine") } });
+    await vi.waitFor(() => expect(announce.notifyPageMentions).toHaveBeenCalled());
+    expect(announce.insertNotifications).not.toHaveBeenCalled();
   });
 
   it("passe le document d'AVANT au scan de mentions — le diff est à ce prix", async () => {
