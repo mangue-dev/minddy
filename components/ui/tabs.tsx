@@ -142,7 +142,7 @@ function TabsList({
           tabsIndicatorVariants({ variant }),
           rect ? "opacity-100" : "opacity-0",
           animated
-            ? "transition-[transform,width,height,opacity] duration-200 ease-out"
+            ? "transition-[transform,width,height,opacity] duration-200 ease-in-out"
             : "transition-[opacity] duration-150 ease-out"
         )}
         style={{

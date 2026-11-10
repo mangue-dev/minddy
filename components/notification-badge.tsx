@@ -35,7 +35,7 @@ export function NotificationBadge({
         aria-hidden
         initial={reduce ? false : { scale: 0.4, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 520, damping: 22 }}
+        transition={{ type: "spring", stiffness: 520, damping: 46 }}
         className={cn(
           "inline-flex items-center justify-center rounded-full bg-red-500 font-semibold tabular-nums text-white",
           size === "sm"

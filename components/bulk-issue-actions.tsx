@@ -300,7 +300,7 @@ export function SelectionPill({
       initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
-      transition={{ type: "spring", duration: 0.28, bounce: 0.15 }}
+      transition={{ type: "spring", duration: 0.28, bounce: 0 }}
     >
       <span className="min-w-0 px-3 text-sm font-medium whitespace-nowrap app-mobile:truncate app-mobile:px-1">
         {label}

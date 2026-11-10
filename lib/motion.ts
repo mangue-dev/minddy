@@ -2,9 +2,12 @@ import type { Transition } from "framer-motion";
 
 /** Shared motion tuning, mirrored from AutoKap (lib/motion.ts). */
 export const transitions = {
-  spring: { type: "spring", stiffness: 400, damping: 30 } as Transition,
-  gentle: { type: "spring", stiffness: 300, damping: 25 } as Transition,
-  snappy: { type: "spring", stiffness: 500, damping: 35 } as Transition,
+  // The three springs are critically damped (damping ≈ 2·√stiffness): they
+  // settle on their target without overshooting it. Everyday interface motion
+  // does not bounce.
+  spring: { type: "spring", stiffness: 400, damping: 40 } as Transition,
+  gentle: { type: "spring", stiffness: 300, damping: 35 } as Transition,
+  snappy: { type: "spring", stiffness: 500, damping: 45 } as Transition,
   fade: { duration: 0.15, ease: "easeOut" } as Transition,
   /**
    * The sliding of a PANEL INSIDE the sidebar: a level swap, the recalled

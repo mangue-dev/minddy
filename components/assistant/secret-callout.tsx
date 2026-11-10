@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, Key02Icon, CheckIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Key02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   integrationKeyEnvLine,
   isIntegrationKind,
 } from "@/lib/feedback/integration-contract";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /**
  * THE LIVING IDENTIFIER NO LONGER GOES THROUGH THE PHRASE OF NUMO (MIN-343).
@@ -107,11 +108,7 @@ export function SecretCallout({ envLine }: { envLine: string }) {
             setTimeout(() => setCopied(false), 1500);
           }}
         >
-          {copied ? (
-            <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" />
-          ) : (
-            <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-          )}
+          <CopyStateIcon copied={copied} checkClassName="text-emerald-500" />
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">{t("secretStoreServerSide")}</p>

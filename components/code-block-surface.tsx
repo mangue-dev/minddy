@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowDown01Icon, ArrowUp01Icon, Copy01Icon, TextWrapIcon as WrapText, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowUp01Icon, TextWrapIcon as WrapText } from "@hugeicons/core-free-icons";
 import {
   useEffect,
   useLayoutEffect,
@@ -20,6 +20,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 const COPY_RESET_MS = 2000;
 const COLLAPSED_CODE_HEIGHT_PX = 460;
@@ -152,7 +153,7 @@ export function CodeBlockSurface({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => void copy()}
               >
-                {copied ? <HugeiconsIcon icon={CheckIcon} className="size-4" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
+                <CopyStateIcon copied={copied} />
               </IconButton>
             </TooltipTrigger>
             <TooltipContent>{copied ? t("copied") : t("copy")}</TooltipContent>
