@@ -189,6 +189,7 @@ vi.mock("@/lib/server/assistant/admin-tools", () => ({
   ADMIN_PROMPT_BLOCK: "\n## Instance administration",
   ROUTINE_ADMIN_LIMIT_PROMPT_LINE: "Instance administration is never available in a routine.",
   BACKGROUND_ADMIN_PROMPT_BLOCK: "\n## Instance administration (background)",
+  REMINDER_ADMIN_PROMPT_BLOCK: "\n## Instance administration (reminder)",
   ADMIN_BACKGROUND_GRANT: { background: true },
   ADMIN_TOOL_NAMES: new Set(["admin_get_instance_models"]),
   ADMIN_BACKGROUND_FREE_TOOLS: new Set(["admin_get_instance_models"]),
@@ -536,6 +537,60 @@ describe("durable Numo execution", () => {
     expect(h.processChat.mock.calls[0][3]).toMatchObject({ reminder: true, memoryWritable: false, proactive: false });
     expect(String((h.processChat.mock.calls[0][0] as Array<{ content: unknown }>)[0].content))
       .toContain("## Reminder turn");
+  });
+
+  it("runs an occurrence of a recurring reminder under the background guard, with its grants (MIN-953)", async () => {
+    const occurrence = (grants: string[]) => ({
+      ...h.turn,
+      status: "queued",
+      intent: {
+        ...(h.turn?.intent as Record<string, unknown>),
+        reminder: {
+          watchId: "watch-1", projectId: "project-1", targetType: "date", targetId: null,
+          recurring: { firedAt: "2026-11-09T18:00:00.000Z", grants },
+        },
+      },
+    });
+    const run = async () => {
+      h.processChat.mockClear();
+      await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service, aiRuntime: runtime });
+      const [messages, tools, , context] = h.processChat.mock.calls[0];
+      return {
+        prompt: String((messages as Array<{ content: unknown }>)[0].content),
+        names: (tools as { function: { name: string } }[]).map((tool) => tool.function.name),
+        context,
+      };
+    };
+
+    // Without the administration grant, the account is not even asked.
+    h.turn = occurrence(["notification"]);
+    const plain = await run();
+    expect(adminGate.live).not.toHaveBeenCalled();
+    expect(plain.names).toEqual(expect.arrayContaining(["get_issue", "list_watches"]));
+    for (const hidden of ["admin_get_instance_models", "ask_user", "create_watch", "remember"]) {
+      expect(plain.names).not.toContain(hidden);
+    }
+    expect(plain.prompt).toContain("## Recurring reminder turn");
+    expect(plain.prompt).not.toContain("Instance administration");
+    expect(plain.context).toMatchObject({
+      reminder: true, proactive: true, reminderGrants: ["notification"], memoryWritable: false, adminGrant: null,
+    });
+
+    // With it, an account that is an admin NOW gets the admin tools.
+    h.turn = occurrence(["administration"]);
+    const admin = await run();
+    expect(adminGate.live).toHaveBeenCalledWith(h.turn.user_id, { background: true });
+    expect(admin.names).toContain("admin_get_instance_models");
+    expect(admin.prompt).toContain("## Instance administration (reminder)");
+    expect(admin.context).toMatchObject({ adminGrant: { background: true }, reminderGrants: ["administration"] });
+
+    // The same reminder, once the account is no longer an admin: nothing.
+    adminGate.live.mockResolvedValue(false);
+    h.turn = occurrence(["administration"]);
+    const lost = await run();
+    expect(lost.names).not.toContain("admin_get_instance_models");
+    expect(lost.prompt).not.toContain("Instance administration");
+    expect(lost.context).toMatchObject({ adminGrant: null, reminderGrants: ["administration"] });
   });
 
   it("finishes with unified account exhaustion details before another generation", async () => {

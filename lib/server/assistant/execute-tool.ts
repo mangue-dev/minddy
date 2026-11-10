@@ -9,6 +9,8 @@ import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
+
+import { randomUUID } from "node:crypto";
 import {
   ADMIN_TOOL_NAMES,
   executeAdminTool,
@@ -34,7 +36,7 @@ import {
   type ProjectAccess,
 } from "@/lib/server/project-access";
 import { resolveProjectRole } from "@/lib/project-roles";
-import { SENSITIVE_TOOLS, guardProactiveTool } from "./proactive-guard";
+import { SENSITIVE_TOOLS, guardProactiveTool, type SensitiveCategory } from "./proactive-guard";
 import {
   COMMENT_NOT_ALLOWED_MESSAGE,
   READ_ONLY_PROJECT_MESSAGE,
@@ -266,17 +268,26 @@ import {
   NumoWatchError,
   cancelNumoWatch,
   createNumoWatch,
-  listActiveNumoWatches,
+  listOpenNumoWatches,
+  pauseNumoWatch,
   restoreNumoWatch,
+  resumeNumoWatch,
+  updateNumoWatch,
   validateNumoWatchInput,
 } from "@/lib/server/numo/watches";
 import {
+  NUMO_RECURRING_WATCH_LIMIT,
+  NUMO_WATCH_CADENCES,
   NUMO_WATCH_LIMIT,
   NUMO_WATCH_WHEN,
   isNumoWatchIssueStatus,
   isNumoWatchObjectiveStatus,
+  isValidTimeZone,
   parseNumoWatchDate,
+  parseNumoWatchGrants,
+  parseNumoWatchRecurrence,
   type NumoWatchItem,
+  type NumoWatchRecurrence,
   type NumoWatchTarget,
 } from "@/lib/numo-watches";
 import {
@@ -372,9 +383,15 @@ export interface ToolContext {
    * what waits for an answer, the reminder tools and the sensitive actions.
    */
   reminder?: boolean;
+  /**
+   * An occurrence of a recurring reminder (MIN-953): the categories the user
+   * granted it. The turn is `proactive` too, and the background guard reads
+   * these grants in place of the user's memories.
+   */
+  reminderGrants?: readonly SensitiveCategory[] | null;
 }
 
-const WATCH_WRITE_TOOLS = new Set(["create_watch", "cancel_watch"]);
+const WATCH_WRITE_TOOLS = new Set(["create_watch", "update_watch", "cancel_watch"]);
 const WATCH_TOOLS = new Set([...WATCH_WRITE_TOOLS, "list_watches"]);
 
 /**
@@ -920,7 +937,9 @@ export async function executeTool(
   // it may do on its own, before any tool runs (MIN-929).
   const watchRefusal = watchToolRefusal(toolName, ctx);
   if (watchRefusal) return toolError(watchRefusal);
-  if (ctx.reminder) {
+  // An occurrence of a recurring reminder is checked by the guard below,
+  // against its grants.
+  if (ctx.reminder && !ctx.reminderGrants) {
     const refusal = reminderRefusal(toolName);
     if (refusal) return toolError(refusal);
   }
@@ -1049,6 +1068,16 @@ async function executeJournalTool(
   }
 }
 
+/** How a cadence reads in Numo's tool results: the arguments `create_watch` takes. */
+function recurrenceForModel(recurrence: NumoWatchRecurrence) {
+  return {
+    repeat: recurrence.kind,
+    time: recurrence.time,
+    ...(recurrence.kind === "weekly" ? { weekday: recurrence.weekday } : {}),
+    ...(recurrence.kind === "monthly" ? { day_of_month: recurrence.day } : {}),
+  };
+}
+
 /** How a reminder reads in Numo's tool results. */
 function watchForModel(watch: NumoWatchItem) {
   return {
@@ -1060,34 +1089,113 @@ function watchForModel(watch: NumoWatchItem) {
     ...(watch.target_type === "issue" ? { issue_id: watch.target_id } : {}),
     ...(watch.target_type === "objective" ? { objective_id: watch.target_id } : {}),
     ...(watch.condition.kind === "status" ? { status: watch.condition.status } : {}),
-    ...(watch.fire_at ? { at: watch.fire_at } : {}),
     action: watch.action,
     instruction: watch.instruction,
-    expires_at: watch.expires_at,
+    ...(watch.recurrence
+      ? {
+          ...recurrenceForModel(watch.recurrence),
+          time_zone: watch.timezone,
+          grants: watch.grants,
+          paused: watch.status === "paused",
+          ...(watch.status === "active" && watch.fire_at ? { next_at: watch.fire_at } : {}),
+          ...(watch.fired_at ? { last_run: { at: watch.fired_at, outcome: watch.outcome ?? "running" } } : {}),
+        }
+      : {
+          ...(watch.fire_at ? { at: watch.fire_at } : {}),
+          expires_at: watch.expires_at,
+        }),
   };
 }
 
-/** list_watches and cancel_watch: the user's own reminders, in every project. */
+const WATCH_LIMIT_REFUSAL =
+  `The user already keeps ${NUMO_WATCH_LIMIT} active reminders, the maximum. Ask them which one to cancel or replace; do not drop one on your own.`;
+const RECURRING_WATCH_LIMIT_REFUSAL =
+  `The user already keeps ${NUMO_RECURRING_WATCH_LIMIT} active recurring reminders, the maximum. Ask them which one to cancel, pause or replace; do not drop one on your own.`;
+
+/**
+ * The cadence in a tool call: `repeat` with `time` and its day. `null` when
+ * the call asks for none; an error when it asks for one that is not valid.
+ */
+function recurrenceFromArgs(args: Record<string, unknown>): NumoWatchRecurrence | null | { error: string } {
+  const repeat = args.repeat === undefined || args.repeat === "" ? null : args.repeat;
+  if (repeat === null) return null;
+  if (!(NUMO_WATCH_CADENCES as readonly unknown[]).includes(repeat)) {
+    return { error: "repeat must be daily, weekdays, weekly, monthly or null." };
+  }
+  const recurrence = parseNumoWatchRecurrence({
+    kind: repeat, time: args.time, weekday: args.weekday, day: args.day_of_month,
+  });
+  return recurrence ?? {
+    error: "With repeat, time is HH:MM in 24 hours (19:00); weekly also takes weekday (1 Monday to 7 Sunday) and monthly day_of_month (1 to 31).",
+  };
+}
+
+/** list_watches, cancel_watch and update_watch: the user's own reminders, in every project. */
 async function executeWatchListTool(
-  toolName: "list_watches" | "cancel_watch",
+  toolName: "list_watches" | "cancel_watch" | "update_watch",
   args: Record<string, unknown>,
   ctx: ToolContext,
 ): Promise<ToolExecution> {
+  const id = typeof args.id === "string" && UUID_PATTERN.test(args.id.trim())
+    ? args.id.trim().toLowerCase()
+    : null;
   try {
     if (toolName === "cancel_watch") {
-      const id = typeof args.id === "string" && UUID_PATTERN.test(args.id.trim())
-        ? args.id.trim().toLowerCase()
-        : null;
       if (!id || !(await cancelNumoWatch(ctx.service, ctx.userId, id))) {
-        return toolError("No active reminder with this id. Take ids from list_watches.");
+        return toolError("No reminder with this id. Take ids from list_watches.");
       }
       return { result: { canceled: id }, success: true };
     }
-    const watches = await listActiveNumoWatches(ctx.service, ctx.userId);
-    return { result: { watches: watches.map(watchForModel), limit: NUMO_WATCH_LIMIT }, success: true };
+    if (toolName === "update_watch") {
+      const current = id
+        ? (await listOpenNumoWatches(ctx.service, ctx.userId)).find((watch) => watch.id === id)
+        : null;
+      if (!current) return toolError("No reminder with this id. Take ids from list_watches.");
+      if (!current.recurrence) {
+        return toolError("Only a recurring reminder is changed here. For a one-off reminder, call create_watch with its id in replaces.");
+      }
+      const recurrence = recurrenceFromArgs(args);
+      if (recurrence && "error" in recurrence) return toolError(recurrence.error);
+      const instruction = typeof args.instruction === "string" && args.instruction.trim() ? args.instruction : null;
+      const paused = typeof args.paused === "boolean" ? args.paused : null;
+      if (!recurrence && !instruction && paused === null) {
+        return toolError("Nothing to change: pass paused, instruction or repeat.");
+      }
+      if ((recurrence || instruction) && current.grants.length > 0) {
+        // The user confirmed these permissions for the reminder as it is.
+        return toolError("This reminder holds permissions the user confirmed for it as it is. To change its instruction or cadence, call create_watch with its id in replaces and the same grants: the user confirms again on a card.");
+      }
+      let watch: NumoWatchItem | null = current;
+      if (recurrence || instruction) {
+        watch = await updateNumoWatch(ctx.service, ctx.userId, current.id, {
+          ...(instruction ? { instruction } : {}),
+          ...(recurrence ? { recurrence } : {}),
+        });
+      }
+      if (watch && paused === true && watch.status === "active") {
+        await pauseNumoWatch(ctx.service, ctx.userId, watch.id);
+      } else if (watch && paused === false && watch.status === "paused") {
+        await resumeNumoWatch(ctx.service, ctx.userId, watch.id);
+      }
+      const saved = (await listOpenNumoWatches(ctx.service, ctx.userId)).find((item) => item.id === current.id);
+      if (!saved) return toolError("No reminder with this id. Take ids from list_watches.");
+      return { result: { watch: watchForModel(saved) }, success: true };
+    }
+    const watches = await listOpenNumoWatches(ctx.service, ctx.userId);
+    return {
+      result: {
+        watches: watches.map(watchForModel),
+        limit: NUMO_WATCH_LIMIT,
+        recurring_limit: NUMO_RECURRING_WATCH_LIMIT,
+      },
+      success: true,
+    };
   } catch (error) {
-    if (error instanceof NumoWatchError) return toolError("Reminders are unavailable right now.");
-    throw error;
+    if (!(error instanceof NumoWatchError)) throw error;
+    if (error.code === "limit_reached") return toolError(WATCH_LIMIT_REFUSAL);
+    if (error.code === "recurring_limit_reached") return toolError(RECURRING_WATCH_LIMIT_REFUSAL);
+    if (error.code === "invalid_instruction" || error.code === "invalid_recurrence") return toolError(error.message);
+    return toolError("Reminders are unavailable right now.");
   }
 }
 
@@ -1103,6 +1211,17 @@ async function executeCreateWatch(
     : null;
   if (!when) return toolError("when must be issue_status, issue_comment, objective_status or date.");
   if (args.action !== "notify" && args.action !== "act") return toolError("action must be notify or act.");
+  const recurrence = recurrenceFromArgs(args);
+  if (recurrence && "error" in recurrence) return toolError(recurrence.error);
+  const grants = parseNumoWatchGrants(args.grants);
+  if (!grants) return toolError("grants names a permission that does not exist.");
+  if (recurrence && (when !== "date" || args.action !== "act")) {
+    return toolError("A recurring reminder takes when 'date' and action 'act'. For a note that comes back, make the issue itself recurring.");
+  }
+  if (grants.length > 0 && !recurrence) return toolError("Only a recurring reminder can carry grants.");
+  if (recurrence && !isValidTimeZone(ctx.timezone)) {
+    return toolError("The user's time zone is unknown here, so a recurring reminder cannot be set. Tell them to try again from the app.");
+  }
   const status = args.status === null || args.status === undefined || args.status === "" ? "done" : args.status;
   let target: NumoWatchTarget;
   if (when === "issue_status" || when === "issue_comment") {
@@ -1126,6 +1245,9 @@ async function executeCreateWatch(
       return toolError(`This objective is already ${status}: there is nothing to wait for. Tell the user, and do it now if they want.`);
     }
     target = { type: "objective", id: resolved.objective.id, condition: { kind: "status", status } };
+  } else if (recurrence) {
+    // The first occurrence comes from the cadence, not from `at`.
+    target = { type: "date", id: null, condition: { kind: "date" }, fireAt: "" };
   } else {
     const at = parseNumoWatchDate(args.at);
     if (!at) {
@@ -1138,15 +1260,43 @@ async function executeCreateWatch(
     : typeof args.replaces === "string" && UUID_PATTERN.test(args.replaces.trim())
       ? args.replaces.trim().toLowerCase()
       : "invalid";
-  if (replaces === "invalid") return toolError("replaces must be the id of an active reminder, or null.");
+  if (replaces === "invalid") return toolError("replaces must be the id of a reminder the user keeps, or null.");
   let canceled: string | null = null;
   try {
     // Checked before the replaced reminder is cancelled, so a refused
     // replacement keeps it.
-    validateNumoWatchInput({ target, instruction: args.instruction });
+    const valid = validateNumoWatchInput({
+      target, action: args.action, instruction: args.instruction,
+      recurrence, grants, timezone: ctx.timezone || null,
+    });
+    if (valid.grants.length > 0 && valid.recurrence) {
+      // Permissions are the user's to give: nothing is written here. The
+      // conversation shows this proposal as a card, and the user's own
+      // confirmation writes the reminder (`confirmNumoWatchProposal`).
+      if (replaces && !(await listOpenNumoWatches(ctx.service, ctx.userId)).some((watch) => watch.id === replaces)) {
+        return toolError("No reminder with the id in replaces. Take ids from list_watches.");
+      }
+      return {
+        result: {
+          confirmation_required: true,
+          proposal: {
+            id: randomUUID(),
+            project_id: projectId,
+            instruction: valid.instruction,
+            recurrence: valid.recurrence,
+            grants: valid.grants,
+            timezone: ctx.timezone,
+            next_at: valid.fireAt,
+            replaces,
+          },
+          note: "Nothing is saved yet. The user sees a card that lists these permissions and confirms there. Tell them so in one line. Do not call create_watch again for this reminder.",
+        },
+        success: true,
+      };
+    }
     if (replaces) {
       if (!(await cancelNumoWatch(ctx.service, ctx.userId, replaces))) {
-        return toolError("No active reminder with the id in replaces. Take ids from list_watches.");
+        return toolError("No reminder with the id in replaces. Take ids from list_watches.");
       }
       canceled = replaces;
     }
@@ -1155,19 +1305,23 @@ async function executeCreateWatch(
       target,
       action: args.action as "notify" | "act",
       instruction: args.instruction,
+      recurrence,
       // Only a conversation the user holds with Numo reaches this point
-      // (watchToolRefusal): the reminder's turn runs there later.
-      conversationId: ctx.conversationId ?? null,
+      // (watchToolRefusal): a one-off reminder's turn runs there later. Each
+      // occurrence of a recurring one opens a conversation of its own.
+      conversationId: recurrence ? null : ctx.conversationId ?? null,
       timezone: ctx.timezone || null,
     });
     return { result: { watch: watchForModel(watch) }, success: true };
   } catch (error) {
     if (canceled) await restoreNumoWatch(ctx.service, ctx.userId, canceled);
     if (!(error instanceof NumoWatchError)) throw error;
-    if (error.code === "limit_reached") {
-      return toolError(`The user already keeps ${NUMO_WATCH_LIMIT} active reminders, the maximum. Ask them which one to cancel or replace; do not drop one on your own.`);
+    if (error.code === "limit_reached") return toolError(WATCH_LIMIT_REFUSAL);
+    if (error.code === "recurring_limit_reached") return toolError(RECURRING_WATCH_LIMIT_REFUSAL);
+    if (error.code === "invalid_instruction" || error.code === "invalid_date" ||
+        error.code === "invalid_recurrence" || error.code === "invalid_grants") {
+      return toolError(error.message);
     }
-    if (error.code === "invalid_instruction" || error.code === "invalid_date") return toolError(error.message);
     return toolError("Reminders are unavailable right now.");
   }
 }
@@ -1399,7 +1553,7 @@ async function executeToolUnlisted(
     }
 
     // ── Numo's reminders (MIN-923 — the user's own, across projects) ────
-    if (toolName === "list_watches" || toolName === "cancel_watch") {
+    if (toolName === "list_watches" || toolName === "cancel_watch" || toolName === "update_watch") {
       return executeWatchListTool(toolName, args, ctx);
     }
 

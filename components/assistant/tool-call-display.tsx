@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { matchAskUserAnswers, parseAskUserQuestions } from "@/lib/ask-user";
 import { AppIcon } from "@/components/icon";
 import { SeedProposalCard } from "./seed-proposal-card";
+import { WatchProposalCard, watchProposalOf } from "./watch-proposal-card";
 import { liveSecretOf, SecretCallout } from "./secret-callout";
 import { useGroupedActions } from "./grouped-actions-context";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -433,10 +434,19 @@ const TOOL_META: Record<string, ToolMeta> = {
   // Numo's reminders (MIN-923): set and cancelled at the user's request.
   create_watch: {
     icon: CalendarClockIcon,
-    getLabel: (args, _result, success, status, t) => {
+    getLabel: (args, result, success, status, t) => {
       if (status === "running") return t("settingWatch");
       if (!success) return t("watchFailed");
+      // With permissions, nothing is saved until the user confirms the card.
+      if (result?.confirmation_required === true) return t("watchNeedsConfirmation");
       return args.replaces ? t("watchUpdated") : t("watchSet");
+    },
+  },
+  update_watch: {
+    icon: CalendarClockIcon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("updatingWatch");
+      return success ? t("watchUpdated") : t("watchUpdateFailed");
     },
   },
   list_watches: {
@@ -1524,6 +1534,14 @@ export function ToolCallList({
         return secret ? (
           <SecretCallout key={`secret-${item.id}`} envLine={secret.envLine} />
         ) : null;
+      })}
+      {items.map((item) => {
+        // A recurring reminder with permissions waits for the user here.
+        const proposal =
+          item.name === "create_watch" && item.status === "complete" && item.success !== false
+            ? watchProposalOf(item.result)
+            : null;
+        return proposal ? <WatchProposalCard key={`watch-${item.id}`} proposal={proposal} /> : null;
       })}
       {seedCallouts.map((item) => {
         const seed = seedProposalOf(item.result)!;

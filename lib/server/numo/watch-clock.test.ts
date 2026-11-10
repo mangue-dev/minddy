@@ -19,6 +19,7 @@ const world = vi.hoisted(() => ({
   comments: [] as Row[],
   watches: [] as Row[],
   conversations: [] as Row[],
+  turns: [] as Row[],
   access: true,
   locale: "en",
   noteResult: { ok: true, delivered: true } as Record<string, unknown>,
@@ -66,7 +67,9 @@ vi.mock("./conversation-title-content", () => ({
 
 const service = {
   from: (table: string) => query(() =>
-    table === "projects" ? [{ id: PROJECT, key: "MIN" }] : table === "conversations" ? world.conversations : []),
+    table === "projects" ? [{ id: PROJECT, key: "MIN" }]
+      : table === "conversations" ? world.conversations
+      : table === "numo_assistant_turns" ? world.turns : []),
   auth: { admin: { getUserById: async () => ({ data: { user: { user_metadata: { locale: world.locale } } }, error: null }) } },
 };
 vi.mock("@/lib/supabase-service", () => ({ getServiceClient: () => service }));
@@ -86,14 +89,40 @@ vi.mock("./watches", () => ({
     row.status = "fired";
     return { ...row };
   },
+  // A recurring watch moves to its next occurrence in the claim itself.
+  advanceRecurringNumoWatch: async (_service: unknown, watch: { id: string; fire_at: string },
+    options: { fire: boolean; now: Date }) => {
+    await Promise.resolve();
+    const row = world.watches.find((candidate) => candidate.id === watch.id &&
+      candidate.status === "active" && candidate.fire_at === watch.fire_at);
+    if (!row) return null;
+    row.fire_at = new Date(Date.parse(watch.fire_at) + 24 * 60 * 60 * 1000).toISOString();
+    if (options.fire) Object.assign(row, { fired_at: options.now.toISOString(), outcome: null, conversation_id: null });
+    return { ...row };
+  },
+  recordNumoWatchOccurrence: async (_service: unknown, occurrence: { id: string; firedAt: string },
+    result: { outcome?: string; conversationId?: string; failed?: boolean; finished?: boolean }) => {
+    const row = world.watches.find((candidate) => candidate.id === occurrence.id && candidate.fired_at === occurrence.firedAt);
+    if (!row) return { paused: false };
+    if (result.outcome) row.outcome = result.outcome;
+    if (result.conversationId) row.conversation_id = result.conversationId;
+    if (result.finished) row.consecutive_failures = 0;
+    if (!result.failed) return { paused: false };
+    row.consecutive_failures = ((row.consecutive_failures as number | undefined) ?? 0) + 1;
+    if ((row.consecutive_failures as number) < 3 || row.status !== "active") return { paused: false };
+    row.status = "paused";
+    return { paused: true };
+  },
+  numoWatchOccurrenceRequestId: (id: string, firedAt: string) => `${id}@${firedAt}`,
   claimStrandedNumoWatches: async () => {
-    const stranded = world.watches.filter((watch) => watch.status === "fired" && watch.outcome === null && watch.stranded);
+    const stranded = world.watches.filter((watch) => (watch.status === "fired" || watch.status === "active") &&
+      watch.outcome === null && watch.stranded);
     for (const row of stranded) row.outcome = "failed";
     return stranded.map((row) => ({ ...row }));
   },
   getNumoWatch: async (_service: unknown, _user: string, id: string) =>
     world.watches.find((watch) => watch.id === id) ?? null,
-  recentActedNumoWatchIds: async () => [],
+  recentActedNumoWatchRequestIds: async () => [],
   recordNumoWatchOutcome: async (_service: unknown, id: string, outcome: string) => {
     const row = world.watches.find((candidate) => candidate.id === id);
     if (row) row.outcome = outcome;
@@ -105,6 +134,7 @@ vi.mock("./watches", () => ({
 
 const notes = vi.hoisted(() => [] as Array<{ title: string; body: string; link: unknown; dedupe?: boolean }>);
 vi.mock("@/lib/server/numo-notes", () => ({
+  NUMO_NOTE_BODY_MAX: 600,
   sendNumoNote: async (input: { title: string; body: string; link: unknown; dedupe?: boolean }) => {
     notes.push({ title: input.title, body: input.body, link: input.link, dedupe: input.dedupe });
     return world.noteResult;
@@ -133,14 +163,16 @@ function clockWatch(overrides: Partial<ClockWatch> = {}): ClockWatch {
   return {
     id: "w1", user_id: ALICE, project_id: PROJECT, target_type: "issue", target_id: ISSUE,
     condition: { kind: "status", status: "done" }, fire_at: null,
-    expires_at: "2027-02-06T12:00:00.000Z", created_at: "2026-11-08T10:00:00.000Z", ...overrides,
+    expires_at: "2027-02-06T12:00:00.000Z", recurrence: null, timezone: "Europe/Paris",
+    created_at: "2026-11-08T10:00:00.000Z", ...overrides,
   };
 }
 
 function watchItem(overrides: Partial<NumoWatchItem> = {}): NumoWatchItem {
   return {
     ...clockWatch(), action: "notify", instruction: "Tell the client", conversation_id: CONVERSATION,
-    timezone: "Europe/Paris", status: "fired", fired_at: NOW.toISOString(), outcome: null, ...overrides,
+    timezone: "Europe/Paris", status: "fired", fired_at: NOW.toISOString(), outcome: null,
+    grants: [], consecutive_failures: 0, ...overrides,
   } as NumoWatchItem;
 }
 
@@ -154,6 +186,7 @@ beforeEach(() => {
   world.comments = [];
   world.watches = [];
   world.conversations = [];
+  world.turns = [];
   world.access = true;
   world.locale = "en";
   world.noteResult = { ok: true, delivered: true };
@@ -371,5 +404,144 @@ describe("notifyReminderOfNumoTurn", () => {
     notifyReminderOfNumoTurn(turn("completed"));
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(notes).toEqual([]);
+  });
+});
+
+describe("recurring reminders (MIN-953)", () => {
+  const DUE = "2026-11-08T11:55:00.000Z";
+  const NEXT = "2026-11-09T11:55:00.000Z";
+  /** Every day at 12:55 in Paris, with two grants; its occurrence is five minutes late. */
+  const seed = (overrides: Row = {}) => {
+    world.watches = [{
+      ...watchItem({
+        target_type: "date", target_id: null, condition: { kind: "date" }, action: "act",
+        instruction: "Check the model costs", recurrence: { kind: "daily", time: "12:55" },
+        grants: ["notification", "administration"], conversation_id: null,
+      }),
+      status: "active", fire_at: DUE, fired_at: null, ...overrides,
+    }];
+  };
+
+  it("claims the occurrence and moves the reminder on before the turn is admitted", async () => {
+    seed();
+    let duringAdmission: Row | null = null;
+    startNumoIntent.mockImplementation(async () => {
+      duringAdmission = { ...world.watches[0] };
+      return { conversationId: "c", turnId: "t1" };
+    });
+    expect(await runNumoWatchClock({ now: NOW })).toMatchObject({ fired: 1, skipped: 0 });
+    // A clock that dies in the turn's admission has already scheduled tomorrow.
+    expect(duringAdmission).toMatchObject({ status: "active", fire_at: NEXT, fired_at: NOW.toISOString() });
+    const input = startNumoIntent.mock.calls[0][0];
+    expect(input).toMatchObject({
+      userId: ALICE, projectId: PROJECT, source: "reminder", executeInBackground: false,
+      requestId: `w1@${NOW.toISOString()}`,
+      reminder: {
+        watchId: "w1", targetType: "date",
+        recurring: { firedAt: NOW.toISOString(), grants: ["notification", "administration"] },
+      },
+    });
+    expect(input.prompt).toBe("Recurring reminder\nInstruction: Check the model costs");
+    // A conversation of its own, titled with the reminder and the day.
+    expect(world.conversations).toEqual([expect.objectContaining({
+      id: input.conversationId, user_id: ALICE, title: "Check the model costs · Nov 8, 2026",
+    })]);
+    expect(world.watches[0]).toMatchObject({
+      status: "active", outcome: "acted", conversation_id: input.conversationId, consecutive_failures: 0,
+    });
+    // No "on it" note for something that comes back every day.
+    expect(notes).toEqual([]);
+    // The same tick again finds nothing due.
+    expect(await runNumoWatchClock({ now: NOW })).toMatchObject({ fired: 0 });
+    expect(startNumoIntent).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires an occurrence once under double processing", async () => {
+    seed();
+    const dispatch = vi.fn(async () => "acted" as const);
+    const [first, second] = await Promise.all([
+      runNumoWatchClock({ now: NOW, dispatch }),
+      runNumoWatchClock({ now: NOW, dispatch }),
+    ]);
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(first.fired + second.fired).toBe(1);
+  });
+
+  it("skips an occurrence missed by more than the grace period instead of running it late", async () => {
+    seed({ fire_at: "2026-11-08T04:00:00.000Z" });
+    const dispatch = vi.fn();
+    expect(await runNumoWatchClock({ now: NOW, dispatch })).toMatchObject({ fired: 0, skipped: 1 });
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(world.watches[0]).toMatchObject({ status: "active", fire_at: "2026-11-09T04:00:00.000Z", fired_at: null });
+  });
+
+  it("cancels it once the user lost access to its project", async () => {
+    seed();
+    world.access = false;
+    expect(await runNumoWatchClock({ now: NOW, dispatch: vi.fn() })).toMatchObject({ canceled: 1, fired: 0 });
+    expect(world.watches[0].status).toBe("canceled");
+  });
+
+  it("tells the user why an occurrence did not start, then pauses the reminder at the third in a row", async () => {
+    seed();
+    startNumoIntent.mockRejectedValue(Object.assign(new Error("Plan limit"), { code: "usage_budget_exceeded" }));
+    for (const day of [8, 9, 10]) {
+      await runNumoWatchClock({ now: new Date(`2026-11-${String(day).padStart(2, "0")}T12:00:00.000Z`) });
+    }
+    expect(startNumoIntent).toHaveBeenCalledTimes(3);
+    expect(notes.map((note) => note.body)).toEqual([
+      expect.stringContaining("usage limit"),
+      expect.stringContaining("usage limit"),
+      "Paused: 3 runs in a row did not finish. Resume it in your settings. Your reminder: Check the model costs",
+    ]);
+    expect(world.watches[0]).toMatchObject({ status: "paused", outcome: "budget_fallback", consecutive_failures: 3 });
+    // The conversations opened for turns that never started are removed.
+    expect(world.conversations).toEqual([]);
+  });
+
+  it("does not start a second turn for an occurrence a dead clock had already admitted", async () => {
+    seed({ fire_at: NEXT, fired_at: "2026-11-08T11:40:00.000Z", outcome: null, stranded: true });
+    world.turns = [{ request_id: "w1@2026-11-08T11:40:00.000Z", user_id: ALICE, conversation_id: "c-admitted" }];
+    expect(await runNumoWatchClock({ now: NOW })).toMatchObject({ retried: 1, fired: 0 });
+    expect(startNumoIntent).not.toHaveBeenCalled();
+    expect(world.watches[0]).toMatchObject({ outcome: "acted", conversation_id: "c-admitted" });
+  });
+
+  describe("when its turn ends", () => {
+    const FIRED = NOW.toISOString();
+    const turn = (status: string, firedAt = FIRED) => ({
+      id: "t1", user_id: ALICE, status,
+      intent: { reminder: {
+        watchId: "w1", projectId: PROJECT, targetType: "date", targetId: null,
+        recurring: { firedAt, grants: [] },
+      } },
+    }) as unknown as NumoTurn;
+
+    it("a turn that finished clears the failures and says nothing", async () => {
+      seed({ fire_at: NEXT, fired_at: FIRED, outcome: "acted", consecutive_failures: 2 });
+      notifyReminderOfNumoTurn(turn("completed"));
+      await vi.waitFor(() => expect(world.watches[0].consecutive_failures).toBe(0));
+      expect(world.watches[0].outcome).toBe("acted");
+      expect(notes).toEqual([]);
+    });
+
+    it("a turn that failed is counted and told, and the third pauses the reminder", async () => {
+      seed({ fire_at: NEXT, fired_at: FIRED, outcome: "acted", consecutive_failures: 1 });
+      notifyReminderOfNumoTurn(turn("failed"));
+      await vi.waitFor(() => expect(notes).toHaveLength(1));
+      expect(notes[0].body).toContain("could not carry it out");
+      expect(world.watches[0]).toMatchObject({ status: "active", outcome: "failed", consecutive_failures: 2 });
+      notifyReminderOfNumoTurn(turn("stopped"));
+      await vi.waitFor(() => expect(notes).toHaveLength(2));
+      expect(notes[1].body).toContain("Paused: 3 runs in a row");
+      expect(world.watches[0].status).toBe("paused");
+    });
+
+    it("leaves a later occurrence alone when an older turn ends", async () => {
+      seed({ fire_at: NEXT, fired_at: FIRED, outcome: "acted", consecutive_failures: 0 });
+      notifyReminderOfNumoTurn(turn("failed", "2026-11-07T12:00:00.000Z"));
+      await vi.waitFor(() => expect(notes).toHaveLength(1));
+      expect(world.watches[0]).toMatchObject({ outcome: "acted", consecutive_failures: 0 });
+    });
   });
 });
