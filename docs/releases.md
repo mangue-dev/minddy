@@ -218,9 +218,11 @@ A failure inside `Public core release` is found after the candidate was merged,
 promoted and approved, and its fix costs another pull request, another
 promotion and another approval. Two checks run earlier.
 
-The **`Release preflight` workflow** builds the release artifacts, builds the
-container image on both architectures without publishing it, and applies the
-release's vulnerability threshold. It runs on every pull request that changes
+The **`Release preflight` workflow** builds the container image on both
+architectures without publishing it and applies the release's vulnerability
+threshold. When the manifests declare a version that has no tag yet, it also
+builds the release artifacts; a published version's compatibility row is frozen
+and is not checked again. It runs on every pull request that changes
 the `Dockerfile`, a version manifest, the compatibility matrix, or the release
 scripts and workflows, so the pull request that prepares a version always runs
 it. It reads no secret. The pinned base image ages without any commit: start

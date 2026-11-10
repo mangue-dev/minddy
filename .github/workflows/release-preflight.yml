@@ -45,13 +45,30 @@ jobs:
           fetch-tags: true
           persist-credentials: false
 
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          check-latest: true
+
       - name: Require one version across the manifests
+        id: version
         run: |
           VERSION=$(node -p "require('./package.json').version")
           test "$(node -p "require('./desktop/package.json').version")" = "$VERSION"
           node -e "import('./scripts/release-lib.mjs').then(({ assertVersion }) => assertVersion(process.argv[1]))" "$VERSION"
+          # Between two releases the manifests still declare the published
+          # version. Its compatibility row is frozen and may predate a floor
+          # raised since, so the artifacts are built only for a version that
+          # is being prepared.
+          if [ -n "$(git tag --list "v$VERSION")" ]; then
+            echo "::notice::v$VERSION is already published: no version is being prepared, so the release artifacts are not built."
+            echo "prepared=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prepared=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Build and verify the release artifacts
+        if: steps.version.outputs.prepared == 'true'
         run: |
           node scripts/build-release-artifacts.mjs "$RUNNER_TEMP/release"
           cd "$RUNNER_TEMP/release"
