@@ -1,7 +1,5 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -10,6 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /** The short SHA, clickable to copy it — a gesture ON the row, so it must not
     trigger the gesture of the row it sits in. */
@@ -31,11 +30,7 @@ export function ShaButton({ sha }: { sha: string }) {
           }}
         >
           {sha.slice(0, 7)}
-          {copied ? (
-            <HugeiconsIcon icon={CheckIcon} className="size-3.5 text-emerald-500" />
-          ) : (
-            <HugeiconsIcon icon={Copy01Icon} className="size-3.5 opacity-60" />
-          )}
+          <CopyStateIcon copied={copied} className="size-3.5" copyClassName="opacity-60" checkClassName="text-emerald-500" />
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">{copied ? t("shaCopied") : t("copySha")}</TooltipContent>

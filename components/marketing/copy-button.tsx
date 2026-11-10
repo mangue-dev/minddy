@@ -1,9 +1,8 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /**
  * “Copy” button of a public site configuration block (MIN-93).
@@ -99,11 +98,7 @@ export function CopyButton({
         className,
       )}
     >
-      {copied ? (
-        <HugeiconsIcon icon={CheckIcon} className="h-3.5 w-3.5 text-primary" aria-hidden />
-      ) : (
-        <HugeiconsIcon icon={Copy01Icon} className="h-3.5 w-3.5" aria-hidden />
-      )}
+      <CopyStateIcon copied={copied} className="size-3.5" checkClassName="text-primary" />
       {!iconOnly && (copied ? copiedLabel : label)}
     </button>
   );

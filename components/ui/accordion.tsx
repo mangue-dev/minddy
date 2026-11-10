@@ -75,7 +75,7 @@ function AccordionContent({
       className={cn(
         "text-sm",
         animated &&
-          "overflow-hidden data-[state=open]:animate-[accordion-down_0.25s_ease-out] data-[state=closed]:animate-[accordion-up_0.25s_ease-out]"
+          "overflow-hidden data-[state=open]:animate-[accordion-down_0.25s_ease-out] data-[state=closed]:animate-[accordion-up_0.2s_ease-out]"
       )}
       {...props}
     >

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckIcon, ComputerIcon, Copy01Icon, Download01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
+import { ComputerIcon, Download01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import {useState} from "react";
 import {useFormatter, useTranslations} from "next-intl";
 import {useQueryClient} from "@tanstack/react-query";
@@ -22,6 +22,7 @@ import {authSessionsQueryKey, revokeAuthSessionApi, useAuthSessionsQuery} from "
 import type {AuthSessionSummary} from "@/lib/types";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { TextLinesSkeleton, RowsSkeleton } from "@/components/loading-skeletons";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /**
  * Account settings → “Second factor” (MIN-132).
@@ -340,7 +341,7 @@ export function AccountSecuritySection() {
 
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => void copyCodes()}>
-                {copied ? <HugeiconsIcon icon={CheckIcon} className="size-4" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
+                <CopyStateIcon copied={copied} />
                 {tc("copy")}
               </Button>
               <Button variant="outline" size="sm" onClick={downloadCodes}>

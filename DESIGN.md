@@ -292,7 +292,21 @@ Exceptions, which need no dialog:
   backdrop blur.
 - **Motion.** Short and functional, with the shared springs in
   `lib/motion.ts`. `prefers-reduced-motion` stops animations globally; never
-  rely on motion to convey state.
+  rely on motion to convey state. The primitives hold these rules, so a call
+  site does not restate them:
+  - A surface enters with `ease-out` and leaves about 20% faster than it
+    entered. Menus, popovers, selects, hover cards and tooltips take 150ms in
+    and 120ms out; dialogs 200ms and 150ms.
+  - A floating surface grows from 0.95, never from 0, and from the control
+    that opened it (the Radix transform origin), and it leaves toward it.
+  - Something that travels across the screen (the tabs indicator) uses
+    `ease-in-out`. Something that follows the pointer is not eased while held.
+  - Springs are critically damped: everyday interface motion does not
+    overshoot.
+  - A button sinks to 0.97 while pressed under a coarse pointer only; a fine
+    pointer already has hover.
+  - A copy button uses `CopyStateIcon`, which cross-fades the two icons with
+    a scale and a fade.
 - **Selection.** Interface text is not selectable by default; content is
   (`select-text`, inputs and code).
 

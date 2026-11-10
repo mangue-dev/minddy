@@ -2,7 +2,7 @@
 
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { GlobeIcon, Key02Icon, Mail01Icon, Plug01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { useEffect, useRef, useState } from "react";
 import { usePromptAnnouncement, usePromptDelivery } from "@/lib/prompt-delivery-context";
@@ -45,6 +45,7 @@ import {
 } from "@/lib/use-integrations-query";
 import { ssoEnvLine } from "@/lib/feedback/env-lines";
 import { integrationKeyEnvLine } from "@/lib/feedback/integration-contract";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /**
  * The returns configuration wizard — THE entry point to the tab
@@ -546,11 +547,7 @@ export function FeedbackSetupWizard({
                     setTimeout(() => setEnvCopied(false), 2000);
                   }}
                 >
-                  {envCopied ? (
-                    <HugeiconsIcon icon={CheckIcon} className="size-4 text-success" />
-                  ) : (
-                    <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                  )}
+                  <CopyStateIcon copied={envCopied} checkClassName="text-success" />
                 </Button>
               </div>
               {keyCreated && (

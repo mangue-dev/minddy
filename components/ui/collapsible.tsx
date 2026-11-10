@@ -32,7 +32,7 @@ function CollapsibleContent({
       // template hole, Tailwind's scanner never extracted the open-state class,
       // so the opening animation silently never played for consumers.
       className={cn(
-        "overflow-hidden data-[state=closed]:animate-[collapsible-up_220ms_ease-out] data-[state=open]:animate-[collapsible-down_220ms_ease-out]",
+        "overflow-hidden data-[state=closed]:animate-[collapsible-up_180ms_ease-out] data-[state=open]:animate-[collapsible-down_220ms_ease-out]",
         className
       )}
       {...props}

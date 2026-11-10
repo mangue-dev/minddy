@@ -24,7 +24,7 @@ import {
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, CircleIcon, Copy01Icon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, CheckIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Alert01Icon, ArrowRight01Icon, ArrowUp01Icon, Cancel01Icon, CancelCircleIcon as Ban, Clock01Icon, CircleIcon, Delete02Icon, GitMergeIcon, GlobeIcon, LanguageCircleIcon, Link02Icon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, SentIcon, Shield01Icon, SparklesIcon, Tag01Icon, Target01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import { useFeedbackCategories } from "@/lib/use-feedback-categories";
 import { feedbackFiltersForRequestedPost, feedbackQueryOptions } from "@/lib/feedback-query";
 import { DEFAULT_FEEDBACK_SORT, DEFAULT_FEEDBACK_STATE, type FeedbackSelectionHint } from "@/lib/feedback-selection-hint";
@@ -159,6 +159,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /**
  * Returns team tab (MIN-37) — two triage-style panels: list
@@ -488,11 +489,7 @@ function AuthorValue({
           aria-label={copied ? tCommon("copied") : t("copyEmail")}
           className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-background/70 outline-none transition-colors hover:bg-background/15 hover:text-background focus-visible:bg-background/15 focus-visible:text-background focus-visible:ring-1 focus-visible:ring-background/60"
         >
-          {copied ? (
-            <HugeiconsIcon icon={CheckIcon} aria-hidden="true" className="size-3.5" />
-          ) : (
-            <HugeiconsIcon icon={Copy01Icon} aria-hidden="true" className="size-3.5" />
-          )}
+          <CopyStateIcon copied={copied} className="size-3.5" />
         </button>
       </TooltipContent>
     </Tooltip>

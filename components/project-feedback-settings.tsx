@@ -2,7 +2,7 @@
 
 import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, Cancel01Icon, Copy01Icon, LinkSquare01Icon, MessageMultiple01Icon, MoreHorizontalIcon, Refresh01Icon, CheckIcon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Cancel01Icon, LinkSquare01Icon, MessageMultiple01Icon, MoreHorizontalIcon, Refresh01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
@@ -34,6 +34,7 @@ import { FeedbackSetupWizard } from "@/components/feedback/feedback-setup-wizard
 import { EmptyScene } from "@/components/empty-scene";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /**
  * Feedback tab of settings (MIN-37). Two cumulative public channels — the
@@ -469,7 +470,7 @@ function CopyButton({ value }: { value: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
     >
-      {copied ? <HugeiconsIcon icon={CheckIcon} className="size-4 text-emerald-500" /> : <HugeiconsIcon icon={Copy01Icon} className="size-4" />}
+      <CopyStateIcon copied={copied} checkClassName="text-emerald-500" />
     </Button>
   );
 }

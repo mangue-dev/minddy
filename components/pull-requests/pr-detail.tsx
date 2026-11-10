@@ -4,7 +4,7 @@ import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Copy01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowUp01Icon, Cancel01Icon, Edit04Icon, HistoryIcon, Link02Icon, LinkSquare01Icon, Message01Icon, MessageSquareQuoteIcon, MoreHorizontalIcon, CheckIcon, ViewIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   commentTarget,
@@ -145,6 +145,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 /**
  * PR detail panel (MIN-66 + MIN-138 + MIN-143): header (ticket +
@@ -193,7 +194,7 @@ function CopyBranchButton({ value }: { value: string }) {
           aria-label={t("copyBranch")}
           onClick={() => void copy()}
         >
-          {copied ? <HugeiconsIcon icon={CheckIcon} className="size-3.5" /> : <HugeiconsIcon icon={Copy01Icon} className="size-3.5" />}
+          <CopyStateIcon copied={copied} className="size-3.5" />
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">{t("copyBranch")}</TooltipContent>

@@ -1,7 +1,5 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import {
   memo,
   useCallback,
@@ -53,6 +51,7 @@ import {
   parseNumoUsageExhausted,
 } from "@/components/assistant/usage-exhausted-card";
 import { SkillChip } from "@/components/assistant/skill-chip";
+import { CopyStateIcon } from "@/components/ui/copy-state-icon";
 
 interface ChatMessageProps {
   message: AssistantMessage;
@@ -118,11 +117,7 @@ function CopyButton({ text, pinned }: { text: string; pinned: boolean }) {
           pinned ? "opacity-100" : "opacity-0 group-hover:opacity-100 touch:opacity-100",
         )}
       >
-        {copied ? (
-          <HugeiconsIcon icon={CheckIcon} className="size-4 text-brand" />
-        ) : (
-          <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-        )}
+        <CopyStateIcon copied={copied} checkClassName="text-brand" />
       </IconButton>
     </AppTooltip>
   );
