@@ -6,6 +6,7 @@ import { HoverCard as HoverCardPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { INPUT_MODALITY_ATTRIBUTE } from "@/lib/keyboard-modality"
 import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding"
+import { useTooltipPortalContainer } from "@/components/ui/tooltip"
 
 /**
  * A card that opens while its trigger is hovered (MIN-879): more about what
@@ -67,8 +68,11 @@ function HoverCardContent({
   ...props
 }: React.ComponentProps<typeof HoverCardPrimitive.Content>) {
   const defaultCollisionPadding = useOverlayCollisionPadding()
+  // Inside the full-screen reader, a card portaled to the body would open
+  // behind the top layer: it mounts in the reader, as tooltips do.
+  const container = useTooltipPortalContainer()
   return (
-    <HoverCardPrimitive.Portal>
+    <HoverCardPrimitive.Portal container={container ?? undefined}>
       <HoverCardPrimitive.Content
         data-slot="hover-card-content"
         align={align}

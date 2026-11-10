@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -66,16 +66,18 @@
       "components/ui/confirm-delete-dialog.tsx",
       "components/stats/project-statistics.tsx",
       "components/stats/issue-graph.tsx",
+      "components/stats/issue-graph-canvas.tsx",
+      "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
       "app/api/projects/[id]/pull-request-stats/route.ts"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 20,
+    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (fr changed passage translated from en revision 20 with catalog UI labels and the glossary register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "issues",
@@ -99,7 +101,7 @@
       "src": "/documentation/fr/project-general.png",
       "alt": "En-tête du projet avec l’icône et son badge de modification, le nom, la clé et les chiffres Tickets, Membres, Objectifs, Catégories et Créé en.",
       "caption": "Sélectionnez l’icône, le nom ou la clé pour les changer sur place ; la mise à la corbeille reste une action distincte, plus bas.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/fr/project-members.png",
       "alt": "Carte « Inviter des personnes » au-dessus de la carte Membres, qui liste trois membres de démonstration avec le propriétaire identifié.",
       "caption": "Invitez par l’adresse du compte et identifiez le propriétaire avant de retirer l’accès d’un membre.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -133,7 +135,7 @@
       "src": "/documentation/fr/project-statistics.png",
       "alt": "Sections Élan, Où en sont les tickets et Contributeurs d’un projet d’environ mille tickets : barres hebdomadaires des tickets créés et terminés, barre des statuts, compteurs de santé et une barre de statuts par personne.",
       "caption": "L’élan compare les quatre dernières semaines aux quatre précédentes ; les tickets en retard et au point mort signalent le travail à regarder.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -148,11 +150,11 @@
       "id": "project-issue-graph",
       "kind": "screenshot",
       "src": "/documentation/fr/project-issue-graph.png",
-      "alt": "Graphe des tickets ouverts regroupés dans des bulles colorées par objectif autour de carrés d’ancrage, avec des flèches grises du parent vers le sous-ticket, des flèches rouges de blocage, des liens « Lié à » en pointillés, des traits gris entre objectifs, la légende et l’interrupteur Inclure les tickets et objectifs fermés.",
+      "alt": "Graphe des tickets ouverts regroupés dans des bulles colorées par objectif autour de carrés d’ancrage, avec des flèches grises du parent vers le sous-ticket, des flèches rouges de blocage, des liens « Lié à » en pointillés, des traits gris entre objectifs, la légende, l’interrupteur Inclure les tickets et objectifs fermés et le bouton Agrandir le graphe en haut à droite.",
       "caption": "Survolez un point pour lire son ticket et mettre ses liens en évidence ; sélectionnez-le pour ouvrir le ticket dans le panneau latéral.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
-      "capturedAt": "2026-11-04",
+      "capturedAt": "2026-11-10",
       "viewport": [
         816,
         764
@@ -179,11 +181,11 @@ Ouvrez le projet, puis ses réglages. Le propriétaire contrôle les paramètres
 
 L’onglet **Général** s’ouvre sur l’identité du projet : son icône, son nom et sa clé, puis cinq chiffres : **Tickets**, **Membres**, **Objectifs**, **Catégories** et **Créé en**. En tant que propriétaire, vous modifiez l’icône, le nom et la clé là où ils s’affichent ; il n’y a plus de bouton Enregistrer. Sélectionnez l’icône et choisissez **Nouvelle orbe** (proposée seulement tant qu’aucune image ne couvre l’orbe), **Importer une image**, **Importer depuis un site…**, qui demande l’adresse du site et importe son icône quand vous choisissez **Importer**, ou, si une image est définie, **Retirer l’image**, qui demande d’abord une confirmation, car l’image est supprimée. Sélectionnez le nom ou la clé pour les modifier : sur ordinateur, ils deviennent un champ où Entrée ou la sortie du champ enregistre et Échap annule ; sur téléphone, une feuille s’ouvre avec **Enregistrer**. Le nom ne peut pas être vide. La clé est normalisée en majuscules et doit compter 2 à 5 lettres (A–Z) ; sinon une erreur s’affiche et la clé n’est pas enregistrée. Vérifiez les identifiants obtenus après sa modification. L’icône sert seulement à distinguer le projet dans la navigation ; elle ne modifie pas ses membres. Les membres et les lecteurs voient le même en-tête, sans ces commandes.
 
-Sous l’en-tête viennent les statistiques du projet, calculées à partir de ses propres données et visibles par toutes les personnes du projet. **Élan** compare les tickets terminés ces quatre dernières semaines avec les quatre semaines précédentes, indique si le backlog a grossi ou diminué sur cette période et donne le délai médian entre la création et **Terminé** sur les 90 derniers jours ; son graphique montre les tickets créés et terminés chaque semaine sur douze semaines. **Où en sont les tickets** répartit tous les tickets par statut et compte les tickets ouverts en retard, non assignés ou au point mort, c’est-à-dire en cours ou en revue sans aucun changement depuis 14 jours. Quand des pull requests sont liées aux tickets du projet, **Pull requests** indique combien ont été fusionnées, le délai médian de fusion, la part des tickets terminés livrés via une pull request fusionnée et les fusions par semaine. **Contributeurs** liste les personnes qui ont terminé le plus de tickets ces 90 derniers jours et répartit les tickets de chacune par statut : les ouverts tels qu’ils sont, les fermés sur ces 90 jours. **Graphe des tickets** dessine les tickets ouverts liés par une relation ou un parent, colorés selon leur statut, avec des flèches du parent vers le sous-ticket et du ticket bloquant vers le ticket bloqué. Les tickets se regroupent dans une bulle colorée par objectif, autour d’un carré qui représente l’objectif et porte ses propres relations ; un trait gris entre deux objectifs résume les liens entre leurs tickets, qui apparaissent au survol de l’un d’eux. S’il y a beaucoup de tickets, les plus connectés de chaque objectif sont gardés et la bulle indique combien sont masqués. Sélectionnez un ticket pour l’ouvrir dans le panneau latéral, ou le carré d’un objectif pour ouvrir l’objectif ; **Inclure les tickets et objectifs fermés** ajoute le travail terminé. Survolez un ticket pour voir sa carte complète et les identifiants des tickets qui lui sont liés, ou le carré d’un objectif pour voir la carte de l’objectif. Les tickets annulés et les doublons ne comptent jamais comme terminés. Survolez une barre ou placez-y le focus pour lire ses chiffres exacts. Numo et les clients minddy MCP lisent les mêmes chiffres, avec les tickets en retard et au point mort eux-mêmes.
+Sous l’en-tête viennent les statistiques du projet, calculées à partir de ses propres données et visibles par toutes les personnes du projet. **Élan** compare les tickets terminés ces quatre dernières semaines avec les quatre semaines précédentes, indique si le backlog a grossi ou diminué sur cette période et donne le délai médian entre la création et **Terminé** sur les 90 derniers jours ; son graphique montre les tickets créés et terminés chaque semaine sur douze semaines. **Où en sont les tickets** répartit tous les tickets par statut et compte les tickets ouverts en retard, non assignés ou au point mort, c’est-à-dire en cours ou en revue sans aucun changement depuis 14 jours. Quand des pull requests sont liées aux tickets du projet, **Pull requests** indique combien ont été fusionnées, le délai médian de fusion, la part des tickets terminés livrés via une pull request fusionnée et les fusions par semaine. **Contributeurs** liste les personnes qui ont terminé le plus de tickets ces 90 derniers jours et répartit les tickets de chacune par statut : les ouverts tels qu’ils sont, les fermés sur ces 90 jours. **Graphe des tickets** dessine les tickets ouverts liés par une relation ou un parent, colorés selon leur statut, avec des flèches du parent vers le sous-ticket et du ticket bloquant vers le ticket bloqué. Les tickets se regroupent dans une bulle colorée par objectif, autour d’un carré qui représente l’objectif et porte ses propres relations ; un trait gris entre deux objectifs résume les liens entre leurs tickets, qui apparaissent au survol de l’un d’eux. S’il y a beaucoup de tickets, les plus connectés de chaque objectif sont gardés et la bulle indique combien sont masqués. Sélectionnez un ticket pour l’ouvrir dans le panneau latéral, ou le carré d’un objectif pour ouvrir l’objectif ; **Inclure les tickets et objectifs fermés** ajoute le travail terminé. **Agrandir le graphe**, en haut à droite du graphe, l’ouvre en plein écran et y dessine davantage de tickets lorsque la carte en masque : zoomez avec la molette, un pincement ou les boutons, et faites glisser pour vous déplacer. Survolez un ticket pour voir sa carte complète et les identifiants des tickets qui lui sont liés, ou le carré d’un objectif pour voir la carte de l’objectif. Les tickets annulés et les doublons ne comptent jamais comme terminés. Survolez une barre ou placez-y le focus pour lire ses chiffres exacts. Numo et les clients minddy MCP lisent les mêmes chiffres, avec les tickets en retard et au point mort eux-mêmes.
 
 ![Sections Élan, Où en sont les tickets et Contributeurs d’un projet d’environ mille tickets : barres hebdomadaires des tickets créés et terminés, barre des statuts, compteurs de santé et une barre de statuts par personne.](/documentation/fr/project-statistics.png)
 
-![Graphe des tickets ouverts regroupés dans des bulles colorées par objectif autour de carrés d’ancrage, avec des flèches grises du parent vers le sous-ticket, des flèches rouges de blocage, des liens « Lié à » en pointillés, des traits gris entre objectifs, la légende et l’interrupteur Inclure les tickets et objectifs fermés.](/documentation/fr/project-issue-graph.png)
+![Graphe des tickets ouverts regroupés dans des bulles colorées par objectif autour de carrés d’ancrage, avec des flèches grises du parent vers le sous-ticket, des flèches rouges de blocage, des liens « Lié à » en pointillés, des traits gris entre objectifs, la légende, l’interrupteur Inclure les tickets et objectifs fermés et le bouton Agrandir le graphe en haut à droite.](/documentation/fr/project-issue-graph.png)
 
 Les autres onglets sont **Catégories**, **Membres**, **Récurrences**, **Smart Assign**, **Retours**, **Git**, **Import** et **Intégrations**. Consultez le guide correspondant avant d’activer un fournisseur ou du travail automatique. Les préférences du compte, comme la langue de votre interface, restent distinctes de la configuration du projet.
 

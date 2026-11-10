@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -66,16 +66,18 @@
       "components/ui/confirm-delete-dialog.tsx",
       "components/stats/project-statistics.tsx",
       "components/stats/issue-graph.tsx",
+      "components/stats/issue-graph-canvas.tsx",
+      "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
       "app/api/projects/[id]/pull-request-stats/route.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 21,
+    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (pt-BR changed passage translated from en revision 20 with catalog UI labels and the glossary register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "issues",
@@ -99,7 +101,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
       "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Cartão “Convidar pessoas” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -133,7 +135,7 @@
       "src": "/documentation/pt-BR/project-statistics.png",
       "alt": "Seções Ritmo, Situação atual e Colaboradores de um projeto com cerca de mil tickets: barras semanais de tickets criados e concluídos, uma barra de status, indicadores de saúde e uma barra de status por pessoa.",
       "caption": "O ritmo compara as últimas quatro semanas com as quatro anteriores; os tickets atrasados e parados apontam o trabalho a observar.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -148,11 +150,11 @@
       "id": "project-issue-graph",
       "kind": "screenshot",
       "src": "/documentation/pt-BR/project-issue-graph.png",
-      "alt": "Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda e o interruptor Incluir tickets e objetivos fechados.",
+      "alt": "Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda, o interruptor Incluir tickets e objetivos fechados e o botão Ampliar o grafo no canto superior direito.",
       "caption": "Passe o cursor sobre um ponto para ler o ticket e destacar suas ligações; selecione-o para abrir o ticket no painel lateral.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
-      "capturedAt": "2026-11-04",
+      "capturedAt": "2026-11-10",
       "viewport": [
         816,
         764
@@ -179,11 +181,11 @@ Abra o projeto e depois suas configurações. A propriedade do projeto determina
 
 A aba **Geral** abre com a identidade do projeto: o ícone, o nome e a chave, e depois cinco números: **Tickets**, **Membros**, **Objetivos**, **Categorias** e **Criado em**. Como proprietário, você altera o ícone, o nome e a chave onde eles aparecem; não há mais botão Salvar. Selecione o ícone e escolha **Novo orbe** (oferecido só enquanto nenhuma imagem cobre o orbe), **Enviar uma imagem**, **Importar de um site…**, que pede o endereço do site e importa o ícone dele quando você escolhe **Importar**, ou, se houver uma imagem, **Remover a imagem**, que pede confirmação antes porque a imagem é excluída. Selecione o nome ou a chave para editá-los: no computador eles viram um campo em que Enter ou sair do campo salva e Esc cancela; no celular abre um painel com **Salvar**. O nome não pode ficar vazio. A chave é normalizada para maiúsculas e precisa ter de 2 a 5 letras (A–Z); caso contrário, aparece um erro e a chave não é salva. Revise os identificadores resultantes depois de alterá-la. O ícone só distingue o projeto na navegação; ele não muda a participação no projeto. Membros e leitores veem o mesmo cabeçalho sem esses controles.
 
-Abaixo do cabeçalho vêm as estatísticas do projeto, calculadas a partir dos próprios dados e visíveis para todas as pessoas do projeto. **Ritmo** compara os tickets concluídos nas últimas quatro semanas com as quatro semanas anteriores, mostra se o backlog cresceu ou diminuiu nesse período e informa o prazo mediano entre a criação e **Concluído** nos últimos 90 dias; o gráfico mostra os tickets criados e concluídos a cada semana ao longo de doze semanas. **Situação atual** divide todos os tickets por status e conta os tickets abertos atrasados, sem responsável ou parados, ou seja, em andamento ou em revisão sem alterações há 14 dias. Quando há pull requests vinculados aos tickets do projeto, **Pull requests** mostra quantos foram mesclados, o tempo mediano até mesclar, a proporção de tickets concluídos entregues por um pull request mesclado e as mesclagens por semana. **Colaboradores** lista quem concluiu mais tickets nos últimos 90 dias e divide os tickets de cada pessoa por status: os abertos como estão agora, os fechados nesses 90 dias. **Grafo de tickets** desenha os tickets abertos ligados por uma relação ou por um ticket pai, coloridos pelo status, com setas do ticket pai para o subticket e do ticket que bloqueia para o bloqueado. Os tickets se agrupam em uma bolha colorida por objetivo, em torno de um quadrado que representa o objetivo e carrega suas próprias relações; uma linha cinza entre dois objetivos resume as ligações entre os tickets deles, que aparecem ao passar o cursor sobre um deles. Quando há muitos tickets, ficam os mais conectados de cada objetivo, e a bolha indica quantos foram ocultados. Selecione um ticket para abri-lo no painel lateral, ou o quadrado de um objetivo para abrir o objetivo; **Incluir tickets e objetivos fechados** adiciona o trabalho concluído. Passe o ponteiro sobre um ticket para ver seu cartão completo e os identificadores dos tickets ligados a ele, ou sobre o quadrado de um objetivo para ver o cartão do objetivo. Tickets cancelados e duplicados nunca contam como concluídos. Passe o cursor sobre uma barra ou coloque o foco nela para ler os valores exatos. O Numo e os clientes do minddy MCP leem os mesmos números, com os próprios tickets atrasados e parados.
+Abaixo do cabeçalho vêm as estatísticas do projeto, calculadas a partir dos próprios dados e visíveis para todas as pessoas do projeto. **Ritmo** compara os tickets concluídos nas últimas quatro semanas com as quatro semanas anteriores, mostra se o backlog cresceu ou diminuiu nesse período e informa o prazo mediano entre a criação e **Concluído** nos últimos 90 dias; o gráfico mostra os tickets criados e concluídos a cada semana ao longo de doze semanas. **Situação atual** divide todos os tickets por status e conta os tickets abertos atrasados, sem responsável ou parados, ou seja, em andamento ou em revisão sem alterações há 14 dias. Quando há pull requests vinculados aos tickets do projeto, **Pull requests** mostra quantos foram mesclados, o tempo mediano até mesclar, a proporção de tickets concluídos entregues por um pull request mesclado e as mesclagens por semana. **Colaboradores** lista quem concluiu mais tickets nos últimos 90 dias e divide os tickets de cada pessoa por status: os abertos como estão agora, os fechados nesses 90 dias. **Grafo de tickets** desenha os tickets abertos ligados por uma relação ou por um ticket pai, coloridos pelo status, com setas do ticket pai para o subticket e do ticket que bloqueia para o bloqueado. Os tickets se agrupam em uma bolha colorida por objetivo, em torno de um quadrado que representa o objetivo e carrega suas próprias relações; uma linha cinza entre dois objetivos resume as ligações entre os tickets deles, que aparecem ao passar o cursor sobre um deles. Quando há muitos tickets, ficam os mais conectados de cada objetivo, e a bolha indica quantos foram ocultados. Selecione um ticket para abri-lo no painel lateral, ou o quadrado de um objetivo para abrir o objetivo; **Incluir tickets e objetivos fechados** adiciona o trabalho concluído. **Ampliar o grafo**, no canto superior direito do grafo, abre-o em tela cheia e desenha mais tickets quando o cartão oculta alguns: use a roda do mouse, um gesto de pinça ou os botões para dar zoom, e arraste para se mover. Passe o ponteiro sobre um ticket para ver seu cartão completo e os identificadores dos tickets ligados a ele, ou sobre o quadrado de um objetivo para ver o cartão do objetivo. Tickets cancelados e duplicados nunca contam como concluídos. Passe o cursor sobre uma barra ou coloque o foco nela para ler os valores exatos. O Numo e os clientes do minddy MCP leem os mesmos números, com os próprios tickets atrasados e parados.
 
 ![Seções Ritmo, Situação atual e Colaboradores de um projeto com cerca de mil tickets: barras semanais de tickets criados e concluídos, uma barra de status, indicadores de saúde e uma barra de status por pessoa.](/documentation/pt-BR/project-statistics.png)
 
-![Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda e o interruptor Incluir tickets e objetivos fechados.](/documentation/pt-BR/project-issue-graph.png)
+![Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda, o interruptor Incluir tickets e objetivos fechados e o botão Ampliar o grafo no canto superior direito.](/documentation/pt-BR/project-issue-graph.png)
 
 As outras abas são **Categorias**, **Membros**, **Recorrências**, **Smart Assign**, **Feedback**, **Git**, **Importar** e **Integrações**. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
 

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 19,
+  "revision": 23,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -66,16 +66,18 @@
       "components/ui/confirm-delete-dialog.tsx",
       "components/stats/project-statistics.tsx",
       "components/stats/issue-graph.tsx",
+      "components/stats/issue-graph-canvas.tsx",
+      "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
       "app/api/projects/[id]/pull-request-stats/route.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (es changed passage translated from en revision 20 with catalog UI labels and the glossary register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "issues",
@@ -99,7 +101,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Cabecera del proyecto con el icono y su distintivo de edición, el nombre, la clave y las cifras Incidencias, Miembros, Objetivos, Categorías y Creado.",
       "caption": "Selecciona el icono, el nombre o la clave para cambiarlos ahí mismo; mover el proyecto a la papelera sigue siendo una acción aparte, más abajo.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Tarjeta «Invitar a personas» sobre la tarjeta Miembros, que lista tres miembros de demostración con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -133,7 +135,7 @@
       "src": "/documentation/es/project-statistics.png",
       "alt": "Secciones Ritmo, Estado actual y Colaboradores de un proyecto con unas mil incidencias: barras semanales de incidencias creadas y hechas, una barra de estados, indicadores de salud y una barra de estados por persona.",
       "caption": "El ritmo compara las últimas cuatro semanas con las cuatro anteriores; las incidencias vencidas y estancadas señalan el trabajo que conviene revisar.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -148,11 +150,11 @@
       "id": "project-issue-graph",
       "kind": "screenshot",
       "src": "/documentation/es/project-issue-graph.png",
-      "alt": "Grafo de las incidencias abiertas agrupadas en burbujas de color por objetivo alrededor de anclas cuadradas, con flechas grises de la incidencia principal a la subincidencia, flechas rojas de bloqueo, vínculos Relacionada en discontinuo, líneas grises entre objetivos, la leyenda y el interruptor Incluir incidencias y objetivos cerrados.",
+      "alt": "Grafo de las incidencias abiertas agrupadas en burbujas de color por objetivo alrededor de anclas cuadradas, con flechas grises de la incidencia principal a la subincidencia, flechas rojas de bloqueo, vínculos Relacionada en discontinuo, líneas grises entre objetivos, la leyenda, el interruptor Incluir incidencias y objetivos cerrados y el botón Ampliar el grafo arriba a la derecha.",
       "caption": "Pasa el cursor sobre un punto para leer su incidencia y resaltar sus vínculos; selecciónalo para abrir la incidencia en el panel lateral.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
-      "capturedAt": "2026-11-04",
+      "capturedAt": "2026-11-10",
       "viewport": [
         816,
         764
@@ -179,11 +181,11 @@ Abre el proyecto y después sus ajustes. La propiedad del proyecto determina el 
 
 La pestaña **General** empieza con la identidad del proyecto: su icono, su nombre y su clave, y después cinco cifras: **Incidencias**, **Miembros**, **Objetivos**, **Categorías** y **Creado**. Como propietario, cambias el icono, el nombre y la clave donde se muestran; ya no hay botón Guardar. Selecciona el icono y elige **Nueva esfera** (solo aparece mientras ninguna imagen cubra la esfera), **Subir una imagen**, **Importar desde un sitio web…**, que pide la dirección del sitio e importa su icono al elegir **Importar**, o, si hay una imagen, **Quitar la imagen**, que pide confirmación antes porque la imagen se elimina. Selecciona el nombre o la clave para editarlos: en un ordenador se convierten en un campo donde Intro o salir del campo guarda y Escape cancela; en un teléfono se abre una hoja con **Guardar**. El nombre no puede quedar vacío. La clave se normaliza a mayúsculas y debe tener de 2 a 5 letras (A–Z); si no, aparece un error y la clave no se guarda. Revisa los identificadores resultantes después de cambiarla. El icono solo distingue el proyecto en la navegación; no modifica la pertenencia al proyecto. Los miembros y los lectores ven el mismo encabezado sin estos controles.
 
-Debajo de la cabecera aparecen las estadísticas del proyecto, calculadas con sus propios datos y visibles para todas las personas del proyecto. **Ritmo** compara las incidencias hechas en las últimas cuatro semanas con las cuatro semanas anteriores, indica si el backlog creció o se redujo en ese periodo y da el plazo mediano entre la creación y **Hecha** en los últimos 90 días; su gráfico muestra las incidencias creadas y hechas cada semana durante doce semanas. **Estado actual** reparte todas las incidencias por estado y cuenta las incidencias abiertas vencidas, sin asignar o estancadas, es decir, en curso o en revisión sin cambios desde hace 14 días. Cuando hay pull requests vinculadas a las incidencias del proyecto, **Pull requests** muestra cuántas se fusionaron, el tiempo mediano hasta fusionar, la proporción de incidencias hechas entregadas con una pull request fusionada y las fusiones por semana. **Colaboradores** lista quién hizo más incidencias en los últimos 90 días y reparte las incidencias de cada persona por estado: las abiertas tal como están, las cerradas en esos 90 días. **Grafo de incidencias** dibuja las incidencias abiertas vinculadas por una relación o una incidencia principal, coloreadas según su estado, con flechas de la incidencia principal a la subincidencia y de la que bloquea a la bloqueada. Las incidencias se agrupan en una burbuja de color por objetivo, alrededor de un cuadrado que representa el objetivo y lleva sus propias relaciones; una línea gris entre dos objetivos resume los vínculos entre sus incidencias, que aparecen al pasar el cursor sobre una de ellas. Si hay muchas incidencias, se conservan las más conectadas de cada objetivo y la burbuja indica cuántas quedan ocultas. Selecciona una incidencia para abrirla en el panel lateral, o el cuadrado de un objetivo para abrir el objetivo; **Incluir incidencias y objetivos cerrados** añade el trabajo terminado. Pasa el puntero sobre una incidencia para ver su tarjeta completa y los identificadores de las incidencias vinculadas, o sobre el cuadrado de un objetivo para ver la tarjeta del objetivo. Las incidencias canceladas y duplicadas nunca cuentan como hechas. Pasa el cursor sobre una barra o ponle el foco para leer sus cifras exactas. Numo y los clientes de minddy MCP leen las mismas cifras, con las propias incidencias vencidas y estancadas.
+Debajo de la cabecera aparecen las estadísticas del proyecto, calculadas con sus propios datos y visibles para todas las personas del proyecto. **Ritmo** compara las incidencias hechas en las últimas cuatro semanas con las cuatro semanas anteriores, indica si el backlog creció o se redujo en ese periodo y da el plazo mediano entre la creación y **Hecha** en los últimos 90 días; su gráfico muestra las incidencias creadas y hechas cada semana durante doce semanas. **Estado actual** reparte todas las incidencias por estado y cuenta las incidencias abiertas vencidas, sin asignar o estancadas, es decir, en curso o en revisión sin cambios desde hace 14 días. Cuando hay pull requests vinculadas a las incidencias del proyecto, **Pull requests** muestra cuántas se fusionaron, el tiempo mediano hasta fusionar, la proporción de incidencias hechas entregadas con una pull request fusionada y las fusiones por semana. **Colaboradores** lista quién hizo más incidencias en los últimos 90 días y reparte las incidencias de cada persona por estado: las abiertas tal como están, las cerradas en esos 90 días. **Grafo de incidencias** dibuja las incidencias abiertas vinculadas por una relación o una incidencia principal, coloreadas según su estado, con flechas de la incidencia principal a la subincidencia y de la que bloquea a la bloqueada. Las incidencias se agrupan en una burbuja de color por objetivo, alrededor de un cuadrado que representa el objetivo y lleva sus propias relaciones; una línea gris entre dos objetivos resume los vínculos entre sus incidencias, que aparecen al pasar el cursor sobre una de ellas. Si hay muchas incidencias, se conservan las más conectadas de cada objetivo y la burbuja indica cuántas quedan ocultas. Selecciona una incidencia para abrirla en el panel lateral, o el cuadrado de un objetivo para abrir el objetivo; **Incluir incidencias y objetivos cerrados** añade el trabajo terminado. **Ampliar el grafo**, arriba a la derecha del grafo, lo abre a pantalla completa y dibuja más incidencias cuando la tarjeta oculta algunas: haz zoom con la rueda, un pellizco o los botones, y arrastra para desplazarte. Pasa el puntero sobre una incidencia para ver su tarjeta completa y los identificadores de las incidencias vinculadas, o sobre el cuadrado de un objetivo para ver la tarjeta del objetivo. Las incidencias canceladas y duplicadas nunca cuentan como hechas. Pasa el cursor sobre una barra o ponle el foco para leer sus cifras exactas. Numo y los clientes de minddy MCP leen las mismas cifras, con las propias incidencias vencidas y estancadas.
 
 ![Secciones Ritmo, Estado actual y Colaboradores de un proyecto con unas mil incidencias: barras semanales de incidencias creadas y hechas, una barra de estados, indicadores de salud y una barra de estados por persona.](/documentation/es/project-statistics.png)
 
-![Grafo de las incidencias abiertas agrupadas en burbujas de color por objetivo alrededor de anclas cuadradas, con flechas grises de la incidencia principal a la subincidencia, flechas rojas de bloqueo, vínculos Relacionada en discontinuo, líneas grises entre objetivos, la leyenda y el interruptor Incluir incidencias y objetivos cerrados.](/documentation/es/project-issue-graph.png)
+![Grafo de las incidencias abiertas agrupadas en burbujas de color por objetivo alrededor de anclas cuadradas, con flechas grises de la incidencia principal a la subincidencia, flechas rojas de bloqueo, vínculos Relacionada en discontinuo, líneas grises entre objetivos, la leyenda, el interruptor Incluir incidencias y objetivos cerrados y el botón Ampliar el grafo arriba a la derecha.](/documentation/es/project-issue-graph.png)
 
 Las demás pestañas son **Categorías**, **Miembros**, **Recurrencias**, **Smart Assign**, **Sugerencias**, **Git**, **Importar** e **Integraciones**. Sigue la guía correspondiente antes de activar un proveedor o trabajo automático. Las preferencias de la cuenta, como el idioma de la interfaz, son independientes de los ajustes del proyecto.
 

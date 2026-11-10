@@ -160,9 +160,15 @@ export function TooltipTrigger({
  * Where tooltips portal to, when not the body. A native modal `<dialog>`
  * (the image and file reader) sits in the browser's top layer, above every
  * z-index: a tooltip portaled to the body rendered BEHIND it. Such a surface
- * provides itself here, so its tooltips mount inside it.
+ * provides itself here, so its tooltips mount inside it. Hover cards follow
+ * the same container (components/ui/hover-card.tsx).
  */
 const TooltipPortalContainerContext = React.createContext<HTMLElement | null>(null);
+
+/** The surface floating hints mount in, or `null` for the body. */
+export function useTooltipPortalContainer(): HTMLElement | null {
+  return React.useContext(TooltipPortalContainerContext);
+}
 
 export function TooltipPortalContainer({
   container,
@@ -189,7 +195,7 @@ export function TooltipContent({
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   const defaultCollisionPadding = useOverlayCollisionPadding();
-  const container = React.useContext(TooltipPortalContainerContext);
+  const container = useTooltipPortalContainer();
   return (
     <TooltipPrimitive.Portal container={container ?? undefined}>
       <TooltipPrimitive.Content

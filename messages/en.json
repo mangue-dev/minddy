@@ -2192,7 +2192,11 @@
     "graphGroupLinks": "Links between objectives' issues",
     "graphGroupLinksCount": "{count, plural, one {# link between their issues} other {# links between their issues}}",
     "graphHidden": "{count, plural, one {# linked issue left out} other {# linked issues left out}} to keep the graph readable",
-    "graphShowClosed": "Include closed issues and objectives"
+    "graphShowClosed": "Include closed issues and objectives",
+    "graphEnlarge": "Enlarge the graph",
+    "graphZoomIn": "Zoom in",
+    "graphZoomOut": "Zoom out",
+    "graphZoomReset": "Reset zoom"
   },
   "Trash": {
     "title": "Trash",

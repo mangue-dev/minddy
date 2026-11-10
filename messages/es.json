@@ -2192,7 +2192,11 @@
     "graphGroupLinks": "Vínculos entre incidencias de objetivos",
     "graphGroupLinksCount": "{count, plural, one {# vínculo entre sus incidencias} other {# vínculos entre sus incidencias}}",
     "graphHidden": "{count, plural, one {# incidencia vinculada oculta} other {# incidencias vinculadas ocultas}} para que el grafo siga legible",
-    "graphShowClosed": "Incluir incidencias y objetivos cerrados"
+    "graphShowClosed": "Incluir incidencias y objetivos cerrados",
+    "graphEnlarge": "Ampliar el grafo",
+    "graphZoomIn": "Acercar",
+    "graphZoomOut": "Alejar",
+    "graphZoomReset": "Restablecer el zoom"
   },
   "Trash": {
     "title": "Papelera",
