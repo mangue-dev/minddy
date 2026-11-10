@@ -214,7 +214,7 @@ async function authenticationResult(
       );
     } else {
       nextSteps.push(
-        "Automatic OAuth discovery did not complete. Open Account settings → MCP for Numo and press Sign in on this connection to retry; if the provider requires a pre-registered OAuth app, register one with the callback URL below, then update this connection with its client id and secret.",
+        "Automatic OAuth discovery did not complete. Open Account settings → MCP → MCP for Numo and press Sign in on this connection to retry; if the provider requires a pre-registered OAuth app, register one with the callback URL below, then update this connection with its client id and secret.",
       );
     }
     if (preset && preset.setup !== "standard")
@@ -222,8 +222,8 @@ async function authenticationResult(
   } else if (summary.needs_auth) {
     nextSteps.push(
       row.auth_mode === "bearer"
-        ? "The connection is saved without a bearer token. Have the user provide the provider's API token to save on this connection, or enter it in Account settings → MCP for Numo (edit the connection → Bearer token). Until then, calls to this connection fail authentication."
-        : "The connection is saved but not authenticated yet. Finish its credentials in Account settings → MCP for Numo.",
+        ? "The connection is saved without a bearer token. Have the user provide the provider's API token to save on this connection, or enter it in Account settings → MCP → MCP for Numo (edit the connection → Bearer token). Until then, calls to this connection fail authentication."
+        : "The connection is saved but not authenticated yet. Finish its credentials in Account settings → MCP → MCP for Numo.",
     );
   } else {
     nextSteps.push(
@@ -440,7 +440,7 @@ export async function executeMcpSetupTool(
     return await configureMcpConnection(userId, args);
   } catch {
     return failure(
-      "The connection could not be configured. Check the endpoint and credentials in Account settings → MCP for Numo.",
+      "The connection could not be configured. Check the endpoint and credentials in Account settings → MCP → MCP for Numo.",
     );
   }
 }

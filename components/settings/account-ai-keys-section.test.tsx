@@ -15,7 +15,7 @@ const h = vi.hoisted(() => ({
   keys: [] as AiKey[],
   saveNumo: vi.fn(),
   setRoute: vi.fn(),
-  numo: null as null | { provider: string; default_model: string | null; application_model: string | null; providers: unknown[] },
+  numo: null as null | { provider: string; default_model: string | null; application_model: string | null; model_locked?: boolean; providers: unknown[] },
   numoError: null as Error | null,
   routes: {} as Record<string, string>,
   options: [] as unknown[],
@@ -96,19 +96,15 @@ const anthropicKey = (featureModels: Record<string, string> = {}): AiKey => ({
   enabled_surfaces: [], feature_models: featureModels, supported_capabilities: ["text"], assigned_capabilities: [],
 });
 
-it("groups every precise usage under its category, Numo included, with no code-agent settings (MIN-721, MIN-826)", async () => {
+it("offers one provider per model role, never one per feature (MIN-954)", async () => {
   await render();
   const text = host.textContent ?? "";
   expect(text).toContain("General API credentials");
-  for (const heading of ["Numo", "Automations", "Voice dictation", "Feedback"]) {
-    expect([...host.querySelectorAll("h3")].map((h3) => h3.textContent)).toContain(heading);
+  for (const role of [messages.Account.aiRole_llm, messages.Account.aiRole_embedding, messages.Account.aiRole_transcription]) {
+    expect(text).toContain(role);
   }
-  for (const usage of ["Conversations", "Conversation titles", "Web search", "Home summary", "Smart Fill", "Speech to text", "Feedback similarity"]) {
-    expect(text).toContain(usage);
-  }
-  expect(text).not.toContain("Numo code work");
-  // One provider choice per call type.
-  expect(providerSelects()).toHaveLength(16);
+  for (const usage of ["Conversation titles", "Smart Fill", "Numo code work"]) expect(text).not.toContain(usage);
+  expect(providerSelects()).toHaveLength(3);
 });
 
 it("moves Numo conversations to another provider and restarts on that provider's default model", async () => {
@@ -128,17 +124,24 @@ it("saves Numo's default model for its current provider", async () => {
   expect(h.saveNumo).toHaveBeenCalledWith({ provider: "anthropic", default_model: "provider/model" });
 });
 
-it("routes one precise usage alone", async () => {
+it("offers no Numo model on minddy Cloud, where the instance sets it (MIN-954)", async () => {
+  h.numo = { ...h.numo!, model_locked: true };
   await render();
-  // Conversation titles, right after Numo conversations.
+  expect(host.querySelector('select[aria-label="Fixture model assistant"]')).toBeNull();
+  // The provider stays a choice: a personal key brings the model back.
+  expect(providerSelects()).toHaveLength(3);
+});
+
+it("routes the embedding role alone", async () => {
+  await render();
   await change(providerSelects()[1]!, "anthropic");
-  expect(h.setRoute).toHaveBeenCalledWith({ usage: "conversation_title_model", provider: "anthropic" });
+  expect(h.setRoute).toHaveBeenCalledWith({ usage: "issue_embedding_model", provider: "anthropic" });
   expect(h.saveNumo).not.toHaveBeenCalled();
 });
 
 it("shows a key's model under its provider, and none for minddy Cloud", async () => {
-  h.keys = [anthropicKey({ smart_fill_model: "provider/model" })];
-  h.routes = { smart_fill_model: "anthropic" };
+  h.keys = [anthropicKey({ transcription_model: "provider/model" })];
+  h.routes = { transcription_model: "anthropic" };
   await render();
   const byok = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label="Fixture model byok"]')];
   expect(byok).toHaveLength(1);

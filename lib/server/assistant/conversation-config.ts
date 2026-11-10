@@ -8,8 +8,6 @@ import {
   type ReasoningLevel,
 } from "@/lib/agent-reasoning";
 import { getAssistantModelsForUser, getOpenRouterConversationModels, type AgentModelEntry } from "@/lib/server/agent/models-catalog";
-import type { ResolvedBilling } from "@/lib/server/billing-accounts";
-import { ensureModelInPlan } from "@/lib/server/agent/model-plan";
 import { ChosenProviderUnavailableError } from "@/lib/server/ai-provider-errors";
 import {
   resolveAiRuntime,
@@ -21,7 +19,7 @@ import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
 import { conversationReasoningLevels } from "@/lib/conversation-settings";
 
-import { getNumoDefaultModel, getNumoPreferences } from "./model-preferences";
+import { getNumoDefaultModel, getNumoProvider, numoModelIsInstanceDefined } from "./model-preferences";
 
 const MAX_MODEL_LENGTH = 300;
 
@@ -32,7 +30,8 @@ export type NumoConversationConfigErrorCode =
   | "model_catalog_unavailable"
   | "provider_unavailable"
   | "invalid_provider"
-  | "reasoning_unsupported";
+  | "reasoning_unsupported"
+  | "model_locked";
 
 /** A user-facing validation failure for a conversation choice. */
 export class NumoConversationConfigError extends Error {
@@ -53,6 +52,11 @@ export interface ResolvedNumoTurnConfiguration {
   reasoningLevel: ReasoningLevel;
   /** The provider and credential selected for this request. */
   runtime: ResolvedAiRuntime;
+  /**
+   * True when the instance sets Numo's model and reasoning (MIN-954): a model
+   * or level stored on the conversation is ignored, and a new one is refused.
+   */
+  modelLocked: boolean;
   /** Values persisted on the conversation; null means follow the default. */
   persistedProvider: AiProviderChoice | null;
   persistedModel: string | null;
@@ -100,8 +104,9 @@ function findModel(models: AgentModelEntry[], model: string): AgentModelEntry | 
 
 /**
  * Resolve and validate one Numo configuration before `begin_numo_turn`.
- * Explicit choices are never replaced with a default: they either pass the
- * active provider catalog and plan ceiling or return a validation error.
+ * On a personal key, explicit choices are never replaced with a default: they
+ * either pass the provider catalog or return a validation error. On the
+ * instance's provider, the instance's model and reasoning level always run.
  */
 export async function resolveNumoTurnConfiguration(input: {
   userId: string;
@@ -109,45 +114,57 @@ export async function resolveNumoTurnConfiguration(input: {
   provider?: unknown;
   model?: unknown;
   reasoningLevel?: unknown;
-  admittedBilling?: ResolvedBilling;
   managedOnly?: boolean;
   /** Validation only: the returned runtime must not pay for a call (MIN-761). */
   catalogOnly?: boolean;
 }): Promise<ResolvedNumoTurnConfiguration> {
   const persistedProvider = input.managedOnly ? null : normalizeProvider(input.provider);
-  const persistedModel = normalizeModel(input.model);
-  const persistedReasoningLevel = normalizeReasoning(input.reasoningLevel);
-  let hasExplicitModel = persistedModel !== null;
-  const hasExplicitReasoning = persistedReasoningLevel !== null;
+  const requestedModel = normalizeModel(input.model);
+  const requestedReasoning = normalizeReasoning(input.reasoningLevel);
+  // On the instance's provider, the administrator's model and reasoning
+  // apply (MIN-954). A choice stored before is ignored rather than migrated,
+  // so the previous release still reads the same rows.
+  const effectiveProvider = input.managedOnly
+    ? MINDDY_CLOUD_PROVIDER
+    : persistedProvider ?? await getNumoProvider(input.userId);
+  let modelLocked = numoModelIsInstanceDefined(effectiveProvider);
+  let persistedModel = modelLocked ? null : requestedModel;
+  let persistedReasoningLevel = modelLocked ? null : requestedReasoning;
 
-  // Without a model, the provider's saved default applies: the account's
-  // Numo default for its own provider, or the default saved for the
-  // conversation's provider.
-  let defaultModel: string | null = null;
-  if (!hasExplicitModel && !input.managedOnly) {
-    defaultModel = persistedProvider
-      ? await getNumoDefaultModel(input.userId, persistedProvider)
-      : (await getNumoPreferences(input.userId)).default_model;
-  }
-  hasExplicitModel ||= defaultModel != null;
+  // Without a model, the provider's saved default applies.
+  let defaultModel = !modelLocked && persistedModel === null
+    ? await getNumoDefaultModel(input.userId, effectiveProvider)
+    : null;
+  const resolveRuntime = (modelOverride: string | null) => resolveAiRuntime({
+    userId: input.userId,
+    modelKey: "assistant_model",
+    surface: "assistant",
+    provider: persistedProvider,
+    modelOverride,
+    applicationModelDefault: true,
+    ...(input.managedOnly ? { managedOnly: true } : {}),
+    ...(input.catalogOnly ? { catalogOnly: true } : {}),
+  });
   let runtime: ResolvedAiRuntime;
   try {
-    runtime = await resolveAiRuntime({
-      userId: input.userId,
-      modelKey: "assistant_model",
-      surface: "assistant",
-      provider: persistedProvider,
-      modelOverride: persistedModel ?? defaultModel,
-      applicationModelDefault: true,
-      ...(input.managedOnly ? { managedOnly: true } : {}),
-      ...(input.catalogOnly ? { catalogOnly: true } : {}),
-    });
+    runtime = await resolveRuntime(persistedModel ?? defaultModel);
+    // A personal route whose key no longer serves falls back to the
+    // instance: its model then comes from the instance too.
+    if (!modelLocked && runtime.mode === "platform") {
+      modelLocked = true;
+      persistedModel = null;
+      persistedReasoningLevel = null;
+      if (requestedModel !== null || defaultModel !== null) runtime = await resolveRuntime(null);
+      defaultModel = null;
+    }
   } catch (error) {
     if (error instanceof ChosenProviderUnavailableError) {
       throw new NumoConversationConfigError("provider_unavailable", error.message);
     }
     throw error;
   }
+  const hasExplicitModel = persistedModel !== null || defaultModel !== null;
+  const hasExplicitReasoning = persistedReasoningLevel !== null;
 
   // Inherited settings must use the same model capabilities as the picker.
   // Otherwise a generic default such as medium can be sent while the UI
@@ -178,30 +195,23 @@ export async function resolveNumoTurnConfiguration(input: {
         `The model “${runtime.model}” is unavailable for the active provider. Choose another model.`,
       );
     }
-    if (hasExplicitModel && runtime.mode === "platform") {
-      await ensureModelInPlan({
-        userId: input.userId,
-        model: runtime.model,
-        mode: runtime.mode,
-        ...(input.admittedBilling ? { admittedBilling: input.admittedBilling } : {}),
-      });
-    }
   }
 
   const modelReasoning = catalogModelReasoning(runtime.provider, runtime.model, modelEntry);
   const allowedReasoning = conversationReasoningLevels(reasoningLevelsFor(modelReasoning));
-  if (hasExplicitReasoning && !allowedReasoning.includes(persistedReasoningLevel)) {
+  if (persistedReasoningLevel !== null && !allowedReasoning.includes(persistedReasoningLevel)) {
     throw new NumoConversationConfigError(
       "reasoning_unsupported",
       `The reasoning level “${persistedReasoningLevel}” is not supported by “${runtime.model}”. Choose another level.`,
     );
   }
 
-  const chosenReasoning = hasExplicitReasoning
+  const chosenReasoning = persistedReasoningLevel !== null
     ? persistedReasoningLevel
     : nearestReasoningLevel(configuredReasoning ?? DEFAULT_REASONING_LEVEL, allowedReasoning);
   return {
     persistedProvider,
+    modelLocked,
     model: runtime.model,
     // The slider always starts at "Off", but a model that must reason cannot
     // honor it: its lowest level is what really runs (MIN-826).
@@ -212,6 +222,23 @@ export async function resolveNumoTurnConfiguration(input: {
     persistedModel,
     persistedReasoningLevel,
   };
+}
+
+/**
+ * Refuses a model or reasoning level sent for a conversation whose model the
+ * instance sets (MIN-954). Clearing them (`null`) stays allowed.
+ */
+export function assertNumoChoiceAllowed(
+  configuration: Pick<ResolvedNumoTurnConfiguration, "modelLocked">,
+  choice: { model?: unknown; reasoningLevel?: unknown },
+): void {
+  const sent = (value: unknown) => value !== undefined && value !== null && value !== "";
+  if (configuration.modelLocked && (sent(choice.model) || sent(choice.reasoningLevel))) {
+    throw new NumoConversationConfigError(
+      "model_locked",
+      "Numo's model is set by this workspace's administrator. Use a personal key to choose another.",
+    );
+  }
 }
 
 export function isNumoConversationConfigError(

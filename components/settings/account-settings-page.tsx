@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SlidersHorizontalIcon as SlidersHorizontal, TicketIcon as Ticket, UserIcon as User, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { AiAutoRotateIcon as CycleIcon, BotIcon as Bot, GitBranchIcon as GitBranch, InboxIcon as Inbox, LockIcon, PlugIcon as Plug, ShieldCheckIcon as ShieldCheck, SparklesIcon as Sparkles, SlidersHorizontalIcon as SlidersHorizontal, TicketIcon as Ticket, UserIcon as User, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { SMART_FILL_ICON } from "@/components/feature-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useMfaStatusQuery } from "@/lib/use-mfa-status";
@@ -24,11 +24,11 @@ import { AccountGitConnectionsSection } from "@/components/settings/account-git-
 import { AccountAiKeysSection } from "@/components/settings/account-ai-keys-section";
 import { AccountAnalyticsSection } from "@/components/settings/account-analytics-section";
 import { AccountDataSection } from "@/components/settings/account-data-section";
-import { AccountIssuesSection, AccountNumoIssuesSection } from "@/components/settings/account-issues-section";
+import { AccountIssuesSection } from "@/components/settings/account-issues-section";
 import { AccountSmartFillSection } from "@/components/settings/account-smart-fill-section";
 import { AccountNumoMemorySection } from "@/components/settings/account-numo-memory-section";
 import { AccountNumoWatchesSection } from "@/components/settings/account-numo-watches-section";
-import { AccountNumoBackgroundSection } from "@/components/settings/account-numo-background-section";
+import { AccountNumoSection } from "@/components/settings/account-numo-section";
 import {
   ACCOUNT_SETTINGS_DEFAULT_TAB,
   ACCOUNT_SETTINGS_TAB_ALIASES,
@@ -120,25 +120,31 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
         </>
       ),
     },
-    // Everything Numo and the AI features use: the provider key, what Numo
-    // remembers, the reminders it waits on, where the issues it creates land, and last the MCP servers
-    // Numo connects to, the longest card.
+    // Numo (MIN-954): how it works for me, what it remembers and the
+    // reminders it waits on. Its model and provider live with the other AI
+    // usages, its MCP servers with the other MCP connections.
     {
-      value: "agent",
-      label: t("agentTab"),
+      value: "numo",
+      label: t("numoTab"),
       icon: Bot,
       content: (
         <>
-          <AccountAiKeysSection />
+          <AccountNumoSection />
           <AccountNumoMemorySection />
-          <AccountNumoBackgroundSection />
           <AccountNumoWatchesSection />
-          <AccountNumoIssuesSection />
-          <AccountMcpClientsSection />
         </>
       ),
     },
-    // The other direction: assistants and apps that connect TO minddy.
+    // The AI providers, and the provider of every usage: Numo, automations,
+    // voice and feedback.
+    {
+      value: "ai",
+      label: t("aiTab"),
+      icon: Sparkles,
+      content: <AccountAiKeysSection />,
+    },
+    // Both MCP directions: assistants and apps that connect TO minddy, then
+    // the services Numo connects to.
     {
       value: "mcp",
       label: t("mcpTab"),
@@ -147,6 +153,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
         <>
           <AccountMcpSection />
           <AccountConnectedAppsSection />
+          <AccountMcpClientsSection />
         </>
       ),
     },

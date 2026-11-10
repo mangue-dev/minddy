@@ -100,7 +100,7 @@ export function NumoUsageExhaustedCard({
             ) : null}
             {!details.byok ? (
               <Button asChild size="sm" variant="ghost">
-                <Link href="/settings?tab=agent">{t("usageUseOwnKey")}</Link>
+                <Link href="/settings?tab=ai">{t("usageUseOwnKey")}</Link>
               </Button>
             ) : null}
           </>

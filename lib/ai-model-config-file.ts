@@ -5,48 +5,39 @@
  * Shared by the admin screen (preview of an import) and the server (which
  * re-parses and validates before writing): no server-only import here.
  *
- * The file is versioned JSON rather than CSV: the recommended models are a
- * list and the categories carry their overrides, neither of which survives a
- * flat table. `version` says which shape the file has. An OLDER file goes
- * through `UPGRADES` up to the current shape; a NEWER one is refused, since
- * this release cannot know what its extra fields mean.
+ * The file is versioned JSON. `version` says which shape the file has. An
+ * OLDER file goes through `UPGRADES` up to the current shape; a NEWER one is
+ * refused, since this release cannot know what its extra fields mean.
  *
  * An import REPLACES the configuration: a setting the file does not carry
  * returns to its default. Applying a file therefore gives the instance
  * exactly what the exporting one had, never a mix of both.
  */
 import {
-  AI_MODEL_CATEGORY_IDS,
   AI_MODEL_CONFIG_FIELDS,
   ASSISTANT_REASONING_CONFIG_KEY,
-  categoryModelKey,
-  isModelSuffix,
-  isSuffixableField,
-  modelSuffixKey,
-  type AiModelCategoryId,
 } from "@/lib/ai-model-config";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
 
 export const MODEL_CONFIG_FILE_FORMAT = "minddy.instance-models";
-export const MODEL_CONFIG_FILE_VERSION = 1;
+/**
+ * 2 (MIN-954): one model per role, with no categories, per-task models,
+ * routing shortcuts or recommended models.
+ */
+export const MODEL_CONFIG_FILE_VERSION = 2;
 
-/** A model choice: the id, the OpenRouter routing shortcut, or both. */
+/** A model choice. */
 export interface ModelChoice {
-  model?: string;
-  suffix?: string;
+  model: string;
 }
 
 export interface ModelConfigFile {
   format: typeof MODEL_CONFIG_FILE_FORMAT;
   version: number;
   exportedAt: string;
-  /** Category defaults that are set. */
-  categories: Partial<Record<AiModelCategoryId, ModelChoice>>;
-  /** Task overrides and standalone tasks that are set, by `app_config` key. */
+  /** The role models that are set, by `app_config` key. */
   tasks: Record<string, ModelChoice>;
   reasoningLevel: string | null;
-  /** `null` follows the product's built-in list. */
-  recommendedModels: string[] | null;
   /** Per-provider defaults for personal keys, by `app_config` key. */
   providerDefaults: Record<string, string>;
 }
@@ -54,64 +45,38 @@ export interface ModelConfigFile {
 /** Stored values, as `GET /api/admin/app-config` returns them. */
 export type ModelConfigValues = Record<string, string | null | undefined>;
 
-const RECOMMENDED_KEY = "recommended_models";
-
 /**
- * Every key an import may write: the registry and its suffixes. Counts are
- * instance limits, not model choices: the file neither carries nor resets them.
+ * Every key an import may write: the registry. Counts are instance limits,
+ * not model choices: the file neither carries nor resets them.
  */
-export const MODEL_CONFIG_FILE_KEYS: string[] = [
-  ...AI_MODEL_CONFIG_FIELDS.filter((field) => field.kind !== "count").map((field) => field.key),
-  ...AI_MODEL_CONFIG_FIELDS.filter(isSuffixableField).map((field) => modelSuffixKey(field.key)),
-];
+export const MODEL_CONFIG_FILE_KEYS: string[] = AI_MODEL_CONFIG_FIELDS
+  .filter((field) => field.kind !== "count")
+  .map((field) => field.key);
 
-const TASK_FIELDS = AI_MODEL_CONFIG_FIELDS.filter(
-  (field) => field.kind === "model" && !field.categoryDefault,
-);
+const TASK_FIELDS = AI_MODEL_CONFIG_FIELDS.filter((field) => field.kind === "model");
 const PROVIDER_FIELDS = AI_MODEL_CONFIG_FIELDS.filter((field) => field.kind === "modelId");
-
-function choiceOf(values: ModelConfigValues, key: string): ModelChoice | null {
-  const model = values[key]?.trim();
-  const suffix = values[modelSuffixKey(key)]?.trim();
-  if (!model && !suffix) return null;
-  return { ...(model ? { model } : {}), ...(suffix ? { suffix } : {}) };
-}
 
 /** The file for the stored values. Only what is set is written. */
 export function buildModelConfigFile(
   values: ModelConfigValues,
   now: Date = new Date(),
 ): ModelConfigFile {
-  const categories: ModelConfigFile["categories"] = {};
-  for (const id of AI_MODEL_CATEGORY_IDS) {
-    const choice = choiceOf(values, categoryModelKey(id));
-    if (choice) categories[id] = choice;
-  }
   const tasks: ModelConfigFile["tasks"] = {};
   for (const field of TASK_FIELDS) {
-    const choice = choiceOf(values, field.key);
-    if (choice) tasks[field.key] = choice;
+    const model = values[field.key]?.trim();
+    if (model) tasks[field.key] = { model };
   }
   const providerDefaults: ModelConfigFile["providerDefaults"] = {};
   for (const field of PROVIDER_FIELDS) {
     const model = values[field.key]?.trim();
     if (model) providerDefaults[field.key] = model;
   }
-  let recommendedModels: string[] | null = null;
-  try {
-    const parsed: unknown = JSON.parse(values[RECOMMENDED_KEY] ?? "null");
-    if (Array.isArray(parsed)) recommendedModels = parsed.filter((id): id is string => typeof id === "string");
-  } catch {
-    // A hand-written row the runtime ignores is not exported either.
-  }
   return {
     format: MODEL_CONFIG_FILE_FORMAT,
     version: MODEL_CONFIG_FILE_VERSION,
     exportedAt: now.toISOString(),
-    categories,
     tasks,
     reasoningLevel: values[ASSISTANT_REASONING_CONFIG_KEY]?.trim() || null,
-    recommendedModels,
     providerDefaults,
   };
 }
@@ -135,38 +100,37 @@ export type ParsedModelConfigFile =
     }
   | { ok: false; error: ModelConfigFileError; detail?: string };
 
-/**
- * Steps from one file version to the next, keyed by the version they read.
- * Version 1 is the first: the list starts empty and grows when a release
- * renames or regroups a setting, so an old export keeps importing.
- */
-const UPGRADES: Record<number, (file: Record<string, unknown>) => Record<string, unknown>> = {};
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function readChoice(
-  raw: unknown,
-  key: string,
-  suffixable: boolean,
-  out: Record<string, string>,
-): string | null {
-  if (!isRecord(raw)) return `${key} must be an object`;
-  const model = raw.model;
-  const suffix = raw.suffix;
-  if (model !== undefined && (typeof model !== "string" || model.length > 300)) {
-    return `${key}.model must be a model id`;
-  }
-  if (suffix !== undefined) {
-    if (!suffixable || typeof suffix !== "string" || !isModelSuffix(suffix.trim())) {
-      return `${key}.suffix is not a routing shortcut`;
+/** Version 1's category defaults, and the role key each one fills. */
+const V1_CATEGORY_ROLES: Record<string, string> = {
+  assistant: "assistant_model",
+  embeddings: "issue_embedding_model",
+};
+
+/**
+ * Steps from one file version to the next, keyed by the version they read,
+ * so an old export keeps importing.
+ *
+ * 1 → 2 (MIN-954): a role takes its own task entry, or else its category's
+ * default. Every other task and category, the routing shortcuts and the
+ * recommended models are left in place, so the import lists them as ignored.
+ */
+const UPGRADES: Record<number, (file: Record<string, unknown>) => Record<string, unknown>> = {
+  1: (file) => {
+    const tasks = isRecord(file.tasks) ? { ...file.tasks } : {};
+    const categories = isRecord(file.categories) ? { ...file.categories } : {};
+    for (const [category, roleKey] of Object.entries(V1_CATEGORY_ROLES)) {
+      if (tasks[roleKey] === undefined && categories[category] !== undefined) {
+        tasks[roleKey] = categories[category];
+        delete categories[category];
+      }
     }
-    out[modelSuffixKey(key)] = suffix.trim();
-  }
-  if (typeof model === "string") out[key] = model.trim();
-  return null;
-}
+    return { ...file, tasks, categories };
+  },
+};
 
 /** Reads a file (its text, or its already-parsed JSON). */
 export function parseModelConfigFile(input: string | unknown): ParsedModelConfigFile {
@@ -200,27 +164,24 @@ export function parseModelConfigFile(input: string | unknown): ParsedModelConfig
   const ignored: string[] = [];
   const fail = (detail: string): ParsedModelConfigFile => ({ ok: false, error: "invalid_value", detail });
 
-  const categories = file.categories ?? {};
-  if (!isRecord(categories)) return fail("categories must be an object");
-  for (const [id, choice] of Object.entries(categories)) {
-    if (!(AI_MODEL_CATEGORY_IDS as string[]).includes(id)) {
-      ignored.push(`categories.${id}`);
-      continue;
-    }
-    const error = readChoice(choice, categoryModelKey(id as AiModelCategoryId), true, values);
-    if (error) return fail(error);
+  // Categories are gone (MIN-954): an upgraded file may still carry some.
+  if (isRecord(file.categories)) {
+    for (const id of Object.keys(file.categories)) ignored.push(`categories.${id}`);
   }
 
   const tasks = file.tasks ?? {};
   if (!isRecord(tasks)) return fail("tasks must be an object");
   for (const [key, choice] of Object.entries(tasks)) {
-    const field = TASK_FIELDS.find((candidate) => candidate.key === key);
-    if (!field) {
+    if (!TASK_FIELDS.some((field) => field.key === key)) {
       ignored.push(`tasks.${key}`);
       continue;
     }
-    const error = readChoice(choice, key, isSuffixableField(field), values);
-    if (error) return fail(error);
+    if (!isRecord(choice)) return fail(`${key} must be an object`);
+    if (choice.model !== undefined && (typeof choice.model !== "string" || choice.model.length > 300)) {
+      return fail(`${key}.model must be a model id`);
+    }
+    if (typeof choice.model === "string") values[key] = choice.model.trim();
+    if (choice.suffix !== undefined) ignored.push(`tasks.${key}.suffix`);
   }
 
   const providers = file.providerDefaults ?? {};
@@ -240,17 +201,8 @@ export function parseModelConfigFile(input: string | unknown): ParsedModelConfig
     values[ASSISTANT_REASONING_CONFIG_KEY] = reasoning;
   }
 
-  const recommended = file.recommendedModels ?? null;
-  if (recommended !== null) {
-    if (
-      !Array.isArray(recommended) ||
-      recommended.length === 0 ||
-      recommended.some((id) => typeof id !== "string" || !id.trim() || id.length > 300)
-    ) {
-      return fail("recommendedModels must be a non-empty list of model ids");
-    }
-    values[RECOMMENDED_KEY] = JSON.stringify([...new Set(recommended.map((id: string) => id.trim()))]);
-  }
+  // The admin no longer sets the picker's shortlist (MIN-954).
+  if (file.recommendedModels !== undefined && file.recommendedModels !== null) ignored.push("recommendedModels");
 
   return { ok: true, values, version, upgraded: version < MODEL_CONFIG_FILE_VERSION, ignored };
 }

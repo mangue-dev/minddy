@@ -84,8 +84,8 @@ const INDEX: OpenRouterModelInfo[] = [
 
 async function freshCatalog(
   index: OpenRouterModelInfo[] = INDEX,
-  /** Value of line `app_config.recommended_models`; `null` = not set. */
-  recommendedConfig: string | null = null,
+  /** The product's recommended list, replaced for the test; `null` keeps the real one. */
+  recommended: string[] | null = null,
   endpoint: {
     provider: AgentProviderId;
     baseUrl: string;
@@ -127,9 +127,11 @@ async function freshCatalog(
     // The baseline of the cost scale: the price of Minddy's default.
     getBaselinePricing: vi.fn(async () => ({ inputUsdPerMTok: 1, outputUsdPerMTok: 1 })),
   }));
-  vi.doMock("@/lib/server/app-config", () => ({
-    getAppConfigValue: vi.fn(async () => recommendedConfig),
-  }));
+  if (recommended) {
+    vi.doMock("@/lib/recommended-models", () => ({ DEFAULT_RECOMMENDED_MODELS: recommended }));
+  } else {
+    vi.doUnmock("@/lib/recommended-models");
+  }
   vi.doMock("@/lib/server/safe-fetch", () => ({
     safeFetch: vi.fn(async () => ({
       status: 200,
@@ -238,7 +240,7 @@ describe("getAgentModelsForUser", () => {
   it("uses pinned fetching without contacting OpenRouter for a native BYOK catalog", async () => {
     const { getAgentModelsForUser } = await freshCatalog(
       INDEX,
-      JSON.stringify(["claude-sonnet-5"]),
+      ["claude-sonnet-5"],
       {
         provider: "anthropic",
         baseUrl: "https://api.anthropic.com/v1",
@@ -342,13 +344,13 @@ describe("getActiveByokModelCatalog", () => {
 });
 
 describe("recommended models", () => {
-  it("sorts from cheapest to most expensive instead of configuration order", async () => {
-    // The admin setting is a set: the order is calculated, otherwise a rank
-    // handwritten would survive the prices that justified it. Here the config
-    // name the dear one first — it should come out second.
+  it("sorts from cheapest to most expensive instead of list order", async () => {
+    // The list is a set: the order is calculated, otherwise a handwritten
+    // rank would survive the prices that justified it. Here the list names
+    // the dear one first — it should come out second.
     const { getAgentModelsForUser } = await freshCatalog(
       INDEX,
-      JSON.stringify(["anthropic/claude-opus-5", "deepseek/deepseek-v4-flash"]),
+      ["anthropic/claude-opus-5", "deepseek/deepseek-v4-flash"],
     );
     const catalog = await getAgentModelsForUser("user-1");
     expect(catalog.recommended).toEqual([
@@ -363,7 +365,7 @@ describe("recommended models", () => {
     const index = [...INDEX, entry({ id: "aaa/no-price", pricing: null })];
     const { getAgentModelsForUser } = await freshCatalog(
       index,
-      JSON.stringify(["aaa/no-price", "anthropic/claude-opus-5", "deepseek/deepseek-v4-flash"]),
+      ["aaa/no-price", "anthropic/claude-opus-5", "deepseek/deepseek-v4-flash"],
     );
     const catalog = await getAgentModelsForUser("user-1");
     expect(catalog.recommended).toEqual([
@@ -378,13 +380,13 @@ describe("recommended models", () => {
     // this is the common case in BYOK, whose ids are native.
     const { getAgentModelsForUser } = await freshCatalog(
       INDEX,
-      JSON.stringify(["anthropic/claude-opus-5", "openai/gpt-audio", "nobody/nothing"]),
+      ["anthropic/claude-opus-5", "openai/gpt-audio", "nobody/nothing"],
     );
     const catalog = await getAgentModelsForUser("user-1");
     expect(catalog.recommended).toEqual(["anthropic/claude-opus-5"]);
   });
 
-  it("falls back to the product defaults when nothing is configured", async () => {
+  it("opens on the product's list, a row saved by an admin before MIN-954 being ignored", async () => {
     // The fallback is the list written in code: from this false index, it only crosses
     // Minddy's flaw — and it's this one that must stand out.
     const { getAgentModelsForUser } = await freshCatalog();
@@ -392,21 +394,11 @@ describe("recommended models", () => {
     expect(catalog.recommended).toEqual(["deepseek/deepseek-v4-flash"]);
   });
 
-  it("survives an unreadable app_config row", async () => {
-    // A broken setting should not empty the picker: we fall back on the fallback
-    // product, exactly as if the line did not exist, never on one
-    // exception that would drop the entire catalog.
-    const { getAgentModelsForUser } = await freshCatalog(INDEX, "{ not json");
-    await expect(getAgentModelsForUser("user-1")).resolves.toMatchObject({
-      recommended: ["deepseek/deepseek-v4-flash"],
-    });
-  });
-
   it("opens with an empty list when no recommendation is runnable", async () => {
     // The case of a BYOK provider, whose ids are native (`claude-sonnet-5`):
     // no advice is right, and the picker must reopen on the catalog
     // integer rather than a selection of zero models.
-    const { getAgentModelsForUser } = await freshCatalog(INDEX, JSON.stringify(["nobody/nothing"]));
+    const { getAgentModelsForUser } = await freshCatalog(INDEX, ["nobody/nothing"]);
     const catalog = await getAgentModelsForUser("user-1");
     expect(catalog.recommended).toEqual([]);
   });
@@ -416,7 +408,7 @@ describe("recommended models", () => {
     // a list of advice would hide what we came to look for.
     const { getAdminModelCatalog } = await freshCatalog(
       INDEX,
-      JSON.stringify(["anthropic/claude-opus-5"]),
+      ["anthropic/claude-opus-5"],
     );
     const catalog = await getAdminModelCatalog();
     expect(catalog.recommended).toBeUndefined();

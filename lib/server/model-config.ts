@@ -5,43 +5,28 @@ import { isPlanLimitError } from "@/lib/server/plan-limit-error";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import {
   aiModelFallback,
-  applyModelSuffix,
   categoryKeyOf,
-  modelSuffixKey,
+  roleModelKey,
   stripModelSuffix,
 } from "@/lib/ai-model-config";
 
 /**
- * Resolving a template setting: the id chosen on the admin side, plus its
- * OpenRouter routing shortcut if it carries one (MIN-263).
- *
- * Only one place reads BOTH lines `app_config` — the template and its suffix —
- * and glue them back together. Callers therefore never have to know the existence of the
- * suffix: they request a model by its key, and receive the id to send.
- *
- * What the suffix changes: nothing to the model, everything to the ORDER of the providers which
- * serve it (`nitro` = the most fast, `floor` = the cheapest, `exacto` = the
- * more reliable in tool-calling). Hence the fallback of `withModelSuffixFallback`:
- * when no provider satisfies the requested order, OpenRouter refuses the entire
- * call — better the bare model than a disabled functionality.
+ * Resolving a model setting: the id the administrator chose for the key's
+ * role (MIN-954), or the registry default. The dashboard no longer sets
+ * OpenRouter routing shortcuts; a stored shortcut row is ignored. An id typed
+ * with one (`…:nitro`) is still sent as is, and replayed bare when refused
+ * (`withModelSuffixFallback`).
  */
 
 export interface ResolvedModel {
-  /** The id to SEND: the base plus its suffix, when there is one. */
+  /** The id to send. */
   model: string;
-  /** The bare id, without suffix — for display or catalog searching. */
-  base: string;
-  /** The selected shortcut, or `null` when the admin has not set any. */
-  suffix: string | null;
 }
 
 /**
- * The template for a setting, including the suffix. An absent or empty line falls
- * to the `fallback` of the register (`lib/ai-model-config.ts`) — which follows the
- * changes in the fault produced, unlike a value fixed in base.
- *
- * A single request for the two keys, and the 60 s cache d'`app-config` by
- * above: reading the suffix does not cost an extra round trip.
+ * The model of a setting. An absent or empty row falls to the `fallback` of
+ * the registry (`lib/ai-model-config.ts`), which follows later product
+ * changes, unlike a value fixed in the database.
  */
 export async function resolveConfiguredModel(key: string): Promise<ResolvedModel> {
   const cfg = await getAppConfigValues(modelConfigKeys(key)).catch(() => ({}) as Record<
@@ -52,48 +37,30 @@ export async function resolveConfiguredModel(key: string): Promise<ResolvedModel
 }
 
 /**
- * The same resolution, on values ​​ALREADY read — for callers who
- * load several keys at once (a flag and its model, for example) and
- * do not have to go through the base again. Remember to include `modelSuffixKey(key)` in
- * the requested batch, otherwise the suffix will appear absent.
+ * The same resolution, on values ALREADY read with `modelConfigKeys(key)` —
+ * for callers who load several keys at once (a flag and its model, for
+ * example) and do not have to go through the database again.
  */
 export function resolveFromValues(
   key: string,
   values: Record<string, string | null | undefined>,
 ): ResolvedModel {
-  // A task inherits its category's default until it is overridden (MIN-829).
-  // The suffix travels with the row that supplied the model: an inherited
-  // model is served the way the category asks, an override its own way.
-  const own = values[key]?.trim();
-  const categoryKey = own ? null : categoryKeyOf(key);
-  const inherited = categoryKey ? values[categoryKey]?.trim() : "";
-  const source = inherited ? categoryKey! : key;
-  const base = own || inherited || aiModelFallback(key);
-  const suffix = values[modelSuffixKey(source)]?.trim() || null;
-  return { model: applyModelSuffix(base, suffix), base, suffix };
-}
-
-/**
- * A CASCADE of settings: the first one to pose wins, with HIS suffix — that of
- * `assistant_model` when it's him who responds, that of `fallback_model`
- * when it's the other. No line installed: the default code of the first key.
- */
-export function resolveCascadeFromValues(
-  keys: string[],
-  values: Record<string, string | null | undefined>,
-): ResolvedModel {
-  for (const key of keys) {
-    if (values[key]?.trim()) return resolveFromValues(key, values);
-  }
-  return resolveFromValues(keys[0], values);
+  // Every key runs its role's model (MIN-954): a task's own historical row is
+  // no longer read. A role row left empty still reads the retired category
+  // default of MIN-829, so an instance keeps the model it ran.
+  const roleKey = roleModelKey(key);
+  const categoryKey = categoryKeyOf(roleKey);
+  const model = values[roleKey]?.trim()
+    || (categoryKey ? values[categoryKey]?.trim() : "")
+    || aiModelFallback(roleKey);
+  return { model };
 }
 
 /** The keys to request from `getAppConfigValues` to resolve `key` in full. */
 export function modelConfigKeys(key: string): string[] {
-  const categoryKey = categoryKeyOf(key);
-  return categoryKey
-    ? [key, modelSuffixKey(key), categoryKey, modelSuffixKey(categoryKey)]
-    : [key, modelSuffixKey(key)];
+  const roleKey = roleModelKey(key);
+  const categoryKey = categoryKeyOf(roleKey);
+  return categoryKey ? [roleKey, categoryKey] : [roleKey];
 }
 
 /**

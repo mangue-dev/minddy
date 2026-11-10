@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -54,14 +54,15 @@
       "lib/server/instance-variables.ts",
       "app/api/admin/instance-variables/route.ts",
       "components/admin/admin-instance-dashboard.tsx",
-      "components/agent/model-combobox.tsx"
+      "components/agent/model-combobox.tsx",
+      "lib/server/assistant/conversation-config.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-929 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-08"
+    "revision": 18,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts); agent:claude-code (MIN-954: sentence on Numo's model on minddy Cloud in #models, source audit against lib/server/assistant/conversation-config.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954 model roles: #models, #models-file, #decision-model and #smart-fill-relations rewritten for one model per role, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot still shows the former category cards and needs a recapture); agent:claude-code (MIN-954: recommended models and routing shortcuts removed from #models and #models-file, checked against components/admin/admin-models-dashboard.tsx and lib/ai-model-config-file.ts)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-929 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +80,7 @@
       "src": "/documentation/en/instance-administration-overview.png",
       "alt": "Accounts tab with the number of accounts and the exact-email account lookup.",
       "caption": "Accounts shows the number of accounts and the support lookup; this capture comes from a demonstration instance.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +97,7 @@
       "src": "/documentation/en/instance-administration-models.png",
       "alt": "Models tab with one default model per category and folded per-task models.",
       "caption": "Models shows one default per category; per-task models stay folded. No model or provider setting was changed for this capture.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/en/instance-administration-instance.png",
       "alt": "Instance tab with each variable's source, a masked OpenRouter key set here and the administrator addresses from the file.",
       "caption": "Instance shows where each value comes from; secrets keep only their last characters. This capture comes from a disposable local self-hosted instance.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -152,13 +153,15 @@ The console has three tabs: **Accounts**, **Costs**, **Models** and, where it is
 
 **Costs** shows what the AI providers cost the instance, in dollars as they bill it, and refreshes itself while it stays open. Choose the period in the menu at the top right of the pane, and narrow everything with the **Filters** button beside it, by feature or model. Calls made with members’ personal keys are never recorded, so they do not appear here. Four figures follow, each with its trend and its change against the previous period: total spend, requests, tokens and cost per million tokens. Below come the most expensive features and models, then the spend per day by model and by feature family, the requests per day by model, and the recent runs, which open on their calls. Revenue, subscriptions and margins are not shown: Stripe billing is managed in Stripe. Per-account OpenRouter keys that no account uses any more are deleted every night.
 
-## Choose models by category {#models}
+## Choose the models {#models}
 
-Each card of **Models** has one **Default model** for its category: **Assistant** (Numo, conversation titles, web search, event screening, home summary), **Automations** (Smart Fill and its titles, Smart Assign, relation decisions, CSV import mapping, brief breakdown, merge commit messages), **Embeddings** (issue and feedback embeddings) and **Feedback and public site** (feedback analysis, FAQ question box). A task follows its category’s default until you give it its own model under **Per-task models**; to make it follow the category again, choose the category's model in its picker, listed under its own name and checked while the task follows it. **Default model** remains as an option only when that model is not in the catalog. While a category’s default is unset, each task keeps its own built-in default. **Reasoning level**, **Decision model** and the two **Voice** settings have rows of their own. In the **Assistant** card, **Background turns per day** caps the turns [Numo in the background](/docs/numo#background) runs for one member in 24 hours: 20 when empty, 0 to switch background Numo off for everyone. The models file neither carries nor resets it. Setting a category default releases the task rows that still hold their built-in default, such as the ones a new instance is seeded with; a task set to another model keeps it. **Recommended models** sets the short list every model picker opens on. **Personal keys** is folded at the bottom: it only concerns members who use their own provider key.
+**Models** has one card per kind of model, and each kind runs one model for the whole instance. **Language model** sets the model that Numo and every text task run: conversation titles, web search, event screening, the home summary, Smart Fill and its titles, Smart Assign, relation decisions, CSV import mapping, brief breakdown, merge commit messages, dictation cleanup, the feedback review and the FAQ question box. The same card holds Numo's **Reasoning level** and **Background turns per day**, which caps the turns [Numo in the background](/docs/numo#background) runs for one member in 24 hours: 20 when empty, 0 to switch background Numo off for everyone; the models file neither carries nor resets it. **Embeddings** sets the one embedding model for issues and feedback, **Voice** the speech-to-text model, and **Decisions** the [decision model](#decision-model). No task has a model of its own. An instance that had set a category default in an earlier version keeps running it: the card shows it, and saving the card replaces it. **Personal keys** is folded at the bottom: for each provider, it holds the model a member's own key runs for each kind when the member never picked one.
+
+On minddy Cloud, every member's Numo runs the **Language model** card's model and **Reasoning level**, and members cannot change them. Only a member's personal key gives them a choice of language model, which then serves Numo and every text task of that member.
 
 ## Export and import the model configuration {#models-file}
 
-At the top right of the **Models** pane, **Export** downloads the model configuration as a versioned JSON file (format `minddy.instance-models`): category defaults, task models, routing shortcuts, reasoning level, recommended models and personal-key provider defaults. It contains no API key and no account. **Import** reads such a file and lists every change before anything is written; **Apply** writes them all, or none when one value is refused, for example a model that is not a decision model. An import replaces the configuration: settings the file leaves out return to their default. A file from an earlier minddy version is updated to the current format; a file from a newer version is refused until the instance is updated. Entries this version does not know are listed and skipped.
+At the top right of the **Models** pane, **Export** downloads the model configuration as a versioned JSON file (format `minddy.instance-models`): the model of each kind, the reasoning level and personal-key provider defaults. It contains no API key and no account. **Import** reads such a file and lists every change before anything is written; **Apply** writes them all, or none when one value is refused, for example a model that is not a decision model. An import replaces the configuration: settings the file leaves out return to their default. A file from an earlier minddy version is updated to the current format: its assistant and embeddings category defaults fill the language and embedding models, and its per-task models, routing shortcuts and recommended models are listed and skipped. A file from a newer version is refused until the instance is updated.
 
 ## Administer the instance with Numo {#numo}
 
@@ -176,18 +179,13 @@ Saving a secret or the administrator addresses asks for your two-factor code if 
 
 ## Choose the AI decision model {#decision-model}
 
-Under **Models**, **Automations**, **Decision model** sets the one decision model that answers every AI decision of the instance: Smart Fill, Smart Assign and the feedback review. There is no per-project, per-user or per-feature choice. The picker lists only OpenRouter models that publish the decision capability; chat, embedding and transcription models never appear. Saving test-calls the candidate with a representative decision. A model that is not a decision model, refuses the request, returns an invalid answer or takes longer than 5 seconds is refused, and the current model stays in use. When the catalog cannot be loaded, every change is refused. Self-hosted instances without managed AI have no platform catalog and keep the default, Jev.
+Under **Models**, **Decisions**, **Decision model** sets the one decision model that answers every AI decision of the instance: Smart Fill, Smart Assign, relation decisions, event screening and the feedback review. There is no per-project, per-user or per-feature choice. The picker lists only OpenRouter models that publish the decision capability; chat, embedding and transcription models never appear. Saving test-calls the candidate with a representative decision. A model that is not a decision model, refuses the request, returns an invalid answer or takes longer than 5 seconds is refused, and the current model stays in use. When the catalog cannot be loaded, every change is refused. Self-hosted instances without managed AI have no platform catalog and keep the default, Jev.
 
-New decisions use the saved model within about a minute on every server process. When the model fails or answers below the confidence threshold, the decision falls back to the feature’s own LLM model, as before. The threshold was calibrated on Jev and other decision models spread their confidence differently, so review agreement per model in the `ai_decision_evaluations_weekly` database view after a change. Usage rows record the model that answered.
-
-**Smart Fill titles**, under **Models**, **Automations**, **Per-task models**, chooses the model that writes the title of an issue created without one, and rewrites it on a re-evaluation. It is a writing task, not a decision: the decision model never answers it. The default is `deepseek/deepseek-v4-flash`; someone is waiting for the issue, so pick a fast model.
+New decisions use the saved model within about a minute on every server process. When the model fails or answers below the confidence threshold, the decision falls back to the language model. The threshold was calibrated on Jev and other decision models spread their confidence differently, so review agreement per model in the `ai_decision_evaluations_weekly` database view after a change. Usage rows record the model that answered.
 
 ## Configure Smart Fill relations {#smart-fill-relations}
 
-After an issue is saved, Smart Fill can index it and link it to related issues. Two fields under **Models** govern this work:
-
-- **Issue embeddings**, under **Embeddings**, **Per-task models**, chooses the model that turns issue titles and descriptions into vectors. The default is `openai/text-embedding-3-small`. Changing it starts a new index version: old and new vectors are never compared. The hourly `/api/cron/issue-index` job then indexes existing issues, 100 per run, and bills each project's owner; it never creates relations. The same model turns each query of search by meaning into a vector, using the searching member's AI provider settings, and queries are compared only with vectors of the current index version. Until an issue is indexed again, related-issue search and search by meaning reach it by its words only. The same job converts vectors stored in clear into encrypted ones once their project encrypts.
-- **Relation decision model**, under **Automations**, **Per-task models**, is the LLM fallback that answers relation decisions when the [decision model](#decision-model) fails or is unsure, like each feature's own LLM model. The default is `deepseek/deepseek-v4-flash`.
+After an issue is saved, Smart Fill can index it and link it to related issues. **Embedding model**, under **Models**, **Embeddings**, turns issue titles and descriptions, and feedback, into vectors. The default is `openai/text-embedding-3-small`. Changing it starts a new index version: old and new vectors are never compared. The hourly `/api/cron/issue-index` job then indexes existing issues, 100 per run, and bills each project's owner; it never creates relations. The same model turns each query of search by meaning into a vector, using the searching member's AI provider settings, and queries are compared only with vectors of the current index version. Until an issue is indexed again, related-issue search and search by meaning reach it by its words only. The same job converts vectors stored in clear into encrypted ones once their project encrypts. Relation decisions use the [decision model](#decision-model) and fall back to the language model when it fails or is unsure.
 
 Embedding and transcription fields refuse a model of the wrong family on save, for example a chat model in an embeddings field, and the current model stays in use. This check needs the platform catalog: when it cannot be loaded, as on a self-hosted instance without managed AI, the choice cannot be verified and is accepted. For members who run automations on their own key, the per-provider defaults include `issue_embedding_model`: `text-embedding-3-small` for OpenAI and `gemini-embedding-001` for Google.
 

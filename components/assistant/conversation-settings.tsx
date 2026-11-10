@@ -22,7 +22,8 @@ import {
   useReasoningLevelsFor,
 } from "@/lib/use-agent-models-query";
 import { formatModelName } from "@/lib/model-display";
-import type { AiProviderChoice } from "@/lib/ai-surfaces";
+import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice } from "@/lib/ai-surfaces";
+import { MinddyLogo } from "@/components/minddy-logo";
 import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import {
   conversationReasoningIndex,
@@ -57,6 +58,10 @@ export function ConversationSettings() {
   const chosenCatalog = useAgentModelsQuery("assistant", "text", providerChoice);
   const catalog = providerChoice ? chosenCatalog : defaults;
   const currentProvider = providerChoice ?? defaults.defaultProvider;
+  // On the instance's provider, Numo runs the administrator's model and
+  // reasoning (MIN-954): only a personal key offers a choice.
+  const locked = currentProvider === MINDDY_CLOUD_PROVIDER || catalog.modelLocked;
+  const hasPersonalProvider = defaults.providers.some((option) => option.id !== MINDDY_CLOUD_PROVIDER);
   const [open, setOpen] = useState(false);
   const defaultModel = catalog.defaultModel;
   const model = state.conversationModel;
@@ -82,6 +87,7 @@ export function ConversationSettings() {
   // "repair" would overwrite the stored choice and move the conversation to
   // the top of the history just because it was opened.
   const persistedReasoningNeedsRepair =
+    !locked &&
     !catalog.loading &&
     catalog.models.some((entry) => entry.id === resolvedModel) &&
     state.conversationReasoningLevel !== null &&
@@ -133,19 +139,64 @@ export function ConversationSettings() {
   // model is saved with it; the reasoning choice stays and is placed on that
   // model's levels once its catalog loads.
   const selectProviderModel = (next: AiProviderChoice, nextModel: string) => {
-    if (next === currentProvider) {
+    if (next === currentProvider && !locked) {
       handleModelChange(nextModel);
       return;
     }
+    // The instance's provider takes no model or level, and a level kept
+    // from it means nothing on a personal key.
+    const leavesOrEntersLock = locked || next === MINDDY_CLOUD_PROVIDER;
     void updateConversationConfig({
       provider: next === defaults.defaultProvider ? null : next,
       model: nextModel || null,
+      ...(leavesOrEntersLock ? { reasoningLevel: null } : {}),
     });
   };
   const selectReasoningIndex = (index: number) => {
     const level = reasoningLevels[index];
     if (level) void updateConversationConfig({ reasoningLevel: level });
   };
+  const configError = state.conversationConfigError ? (
+    <span role="alert" className="max-w-56 truncate text-xs text-destructive">
+      {state.conversationConfigError}
+    </span>
+  ) : null;
+
+  if (locked) {
+    // Nothing to choose without a personal key; with one, the picker only
+    // switches provider.
+    if (!hasPersonalProvider) return configError;
+    return (
+      <div className="flex min-w-0 items-center">
+        <ModelCombobox
+          value=""
+          onChange={() => {}}
+          defaultLabel={t("modelDefault")}
+          placeholder={t("modelSearchPlaceholder")}
+          emptyLabel={t("modelSearchEmpty")}
+          loadingLabel={t("modelSearchLoading")}
+          variant="compact"
+          ariaLabel={t("sectionTitle")}
+          triggerClassName="h-8 shrink-0 gap-1 px-2"
+          triggerContent={(
+            <>
+              <MinddyLogo className="size-4 shrink-0" />
+              <HugeiconsIcon icon={ArrowDown01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
+            </>
+          )}
+          scope="assistant"
+          providerChoice={providerChoice}
+          providerStep={{
+            providers: defaults.providers,
+            current: currentProvider,
+            onSelect: selectProviderModel,
+            lockedProviders: [MINDDY_CLOUD_PROVIDER],
+          }}
+        />
+        {configError}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-w-0 items-center">
@@ -254,11 +305,7 @@ export function ConversationSettings() {
           </div>
         </ResponsivePopoverContent>
       </ResponsivePopover>
-      {state.conversationConfigError ? (
-        <span role="alert" className="max-w-56 truncate text-xs text-destructive">
-          {state.conversationConfigError}
-        </span>
-      ) : null}
+      {configError}
     </div>
   );
 }

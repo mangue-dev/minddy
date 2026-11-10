@@ -16,6 +16,7 @@ import { decodeUserAiKeyRow, type UserAiKeyRow } from
   "@/lib/server/user-ai-key-content";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 import {
+  roleUsageKey,
   usageKeyFor,
   type AiSurface,
   type ByokFeatureModels,
@@ -136,7 +137,9 @@ async function resolveUserByok(
   let aiKeyId: string | null = null;
   if (!target.provider) {
     // The retired code agent and surface-less reads follow the Numo route.
-    const usageKey = target.usageKey ?? usageKeyFor(surface, target.capability);
+    // A call type follows its role's route (MIN-954): one provider for the
+    // LLM, one for embeddings, one for speech to text.
+    const usageKey = roleUsageKey(target.usageKey ?? usageKeyFor(surface, target.capability));
     const { data: route } = await supabase
       .from("user_ai_usage_routes")
       .select("ai_key_id")

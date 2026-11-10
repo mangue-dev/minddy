@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-01",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -70,14 +70,15 @@
       "lib/keyboard/shortcuts.ts",
       "desktop/src/local-installer.ts",
       "desktop/src/local-account.ts",
-      "lib/week-start.ts"
+      "lib/week-start.ts",
+      "components/settings/account-numo-section.tsx"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 20,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected es catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
+    "language": "agent:/root/min747 (es translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (es MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (es label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (es manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "choose-an-instance",
@@ -109,7 +110,7 @@
       "src": "/documentation/es/account-security-workflow.png",
       "alt": "Tarjeta de autenticación de dos factores con botón de activación.",
       "caption": "Empieza aquí, verifica después el autenticador y guarda los códigos de recuperación de forma privada.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -126,7 +127,7 @@
       "src": "/documentation/es/profile-and-preferences-workflow.png",
       "alt": "Cabecera del perfil con el avatar y su distintivo de edición, el nombre y el correo de solo lectura.",
       "caption": "Selecciona el avatar para generar o subir uno, o el nombre para cambiarlo; el correo sigue siendo de solo lectura.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -143,7 +144,7 @@
       "src": "/documentation/es/profile-and-preferences-preferences-workflow.png",
       "alt": "Selector de idioma, controles de tema claro, oscuro y del sistema, selectores de paleta de los modos claro y oscuro e interruptor de transparencia.",
       "caption": "El idioma de la cuenta se configura por separado del idioma del sitio público.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -160,7 +161,7 @@
       "src": "/documentation/es/privacy-and-account-deletion-workflow.png",
       "alt": "Vista previa de eliminación con proyectos propios, tickets y miembros que perderán acceso.",
       "caption": "Lee la vista previa y exporta los datos que quieras conservar antes de abrir la confirmación.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -198,7 +199,7 @@ Abre el menú de la cuenta, elige cerrar sesión y confirma. En la aplicación d
 
 Una sesión permanece iniciada mientras uses minddy, hasta un año, y termina tras 30 días sin uso. Cuando termina, o se cierra desde otro dispositivo, minddy vuelve a la pantalla de inicio de sesión con un mensaje que indica que tu sesión ha caducado. Vuelve a iniciar sesión para continuar donde estabas.
 
-El grupo **Sesiones** de la pestaña **Seguridad** de los ajustes de la cuenta muestra los navegadores y apps de escritorio conectados a tu cuenta, marca el dispositivo que usas e indica cuándo estuvo activo por última vez cada uno de los demás. Para cerrar todas las demás sesiones, por ejemplo en un portátil perdido o un ordenador compartido, elige **Cerrar todas las sesiones** en la fila **Cerrar sesión en otros dispositivos** y confirma: todos los demás navegadores y apps de escritorio conectados a tu cuenta vuelven a la pantalla de inicio de sesión. Para cerrar una sola sesión, elige **Cerrar sesión** en su fila y confirma; solo ese dispositivo vuelve a la pantalla de inicio de sesión. En ambos casos, el dispositivo que usas sigue conectado. Las aplicaciones que autorizaste en **MCP de minddy** → **Aplicaciones conectadas** conservan su acceso hasta que lo revoques allí.
+El grupo **Sesiones** de la pestaña **Seguridad** de los ajustes de la cuenta muestra los navegadores y apps de escritorio conectados a tu cuenta, marca el dispositivo que usas e indica cuándo estuvo activo por última vez cada uno de los demás. Para cerrar todas las demás sesiones, por ejemplo en un portátil perdido o un ordenador compartido, elige **Cerrar todas las sesiones** en la fila **Cerrar sesión en otros dispositivos** y confirma: todos los demás navegadores y apps de escritorio conectados a tu cuenta vuelven a la pantalla de inicio de sesión. Para cerrar una sola sesión, elige **Cerrar sesión** en su fila y confirma; solo ese dispositivo vuelve a la pantalla de inicio de sesión. En ambos casos, el dispositivo que usas sigue conectado. Las aplicaciones que autorizaste en **MCP** → **Aplicaciones conectadas** conservan su acceso hasta que lo revoques allí.
 
 Si el correo no llega, comprueba la dirección, la carpeta de spam y la identidad de la instancia. El operador de una instancia autoalojada debe haber configurado un envío de correo de Auth que funcione; el correo opcional de notificaciones de la aplicación y la confirmación de Auth son funciones distintas. Una página de confirmación caducada permite volver al inicio de sesión para solicitar un enlace nuevo. No reenvíes enlaces de confirmación o recuperación como prueba para diagnosticar un problema: autorizan el acceso a la cuenta.
 
@@ -251,7 +252,7 @@ El tema elige el modo claro, oscuro o del sistema. **Paleta del modo claro** y *
 
 **Primer día de la semana** fija el día en que empiezan tus semanas. El calendario del selector de fecha, los días de una rutina y su orden en Rutinas, las filas de la cuadrícula de actividad de tus estadísticas y una mención de fecha como `@jueves en 2 semanas` lo siguen. **Según el idioma** mantiene la costumbre del idioma de la interfaz: domingo en inglés y portugués de Brasil, lunes en los demás idiomas. Elige lunes, domingo o sábado para fijarlo tú. La elección se guarda en la cuenta. Los [ciclos personales](/docs/personal-cycle) conservan su propio día de inicio.
 
-Elige el atajo de envío en los ajustes de teclado. Se aplica a comentarios, a Numo y a Intro en el título de un formulario de creación; una descripción mantiene Command/Ctrl+Intro, y Mayús+Intro en un título siempre pasa a la descripción. Usa el botón de enviar si la plataforma intercepta el atajo; las teclas modificadoras varían según el sistema. Los proyectos que ocultaste aparecen en su propia pestaña **Proyectos ocultos**, donde puedes volver a mostrarlos. **Preferencias** también contiene la tarjeta **Aplicación de escritorio**: en la web enlaza a la descarga de la aplicación de escritorio y, en la aplicación de escritorio, muestra el servidor conectado y la versión de la aplicación. Las preferencias de incidencias también pertenecen a la cuenta y no cambian los ajustes de otros miembros: la asignación automática está en la pestaña **Incidencias** y el estado de las incidencias que crea Numo, en **IA y Numo** → **Incidencias que crea Numo**.
+Elige el atajo de envío en los ajustes de teclado. Se aplica a comentarios, a Numo y a Intro en el título de un formulario de creación; una descripción mantiene Command/Ctrl+Intro, y Mayús+Intro en un título siempre pasa a la descripción. Usa el botón de enviar si la plataforma intercepta el atajo; las teclas modificadoras varían según el sistema. Los proyectos que ocultaste aparecen en su propia pestaña **Proyectos ocultos**, donde puedes volver a mostrarlos. **Preferencias** también contiene la tarjeta **Aplicación de escritorio**: en la web enlaza a la descarga de la aplicación de escritorio y, en la aplicación de escritorio, muestra el servidor conectado y la versión de la aplicación. Las preferencias de incidencias también pertenecen a la cuenta y no cambian los ajustes de otros miembros: la asignación automática está en la pestaña **Incidencias** y el estado de las incidencias que crea Numo, en **Numo** → **Estado de las incidencias que crea Numo**.
 
 ![Selector de idioma, controles de tema claro, oscuro y del sistema, selectores de paleta de los modos claro y oscuro e interruptor de transparencia.](/documentation/es/profile-and-preferences-preferences-workflow.png)
 

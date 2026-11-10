@@ -10,10 +10,14 @@ import {
 
 const h = vi.hoisted(() => ({
   providers: [] as Array<{ id: string; label: string }>,
+  defaultProvider: "openrouter",
+  modelLocked: false,
+  comboboxRendered: false,
   providerStep: null as null | {
     providers: Array<{ id: string; label: string }>;
     current: string | null;
     onSelect: (provider: string, model: string) => void;
+    lockedProviders?: string[];
   },
   state: {
     conversationProvider: null as string | null,
@@ -43,7 +47,8 @@ vi.mock("@/lib/assistant-chat-context", () => ({
 vi.mock("@/lib/use-agent-models-query", () => ({
   useAgentModelsQuery: () => ({
     provider: "openrouter",
-    defaultProvider: "minddy",
+    defaultProvider: h.defaultProvider,
+    modelLocked: h.modelLocked,
     providers: h.providers,
     defaultModel: "z-ai/glm-5.3-flash",
     defaultReasoning: "medium",
@@ -56,10 +61,12 @@ vi.mock("@/lib/use-agent-models-query", () => ({
 }));
 vi.mock("@/components/agent/model-combobox", () => ({
   ModelCombobox: (props: { providerStep?: unknown }) => {
+    h.comboboxRendered = true;
     h.providerStep = props.providerStep as typeof h.providerStep;
     return null;
   },
 }));
+vi.mock("@/components/minddy-logo", () => ({ MinddyLogo: () => null }));
 vi.mock("@/components/model-logo", () => ({
   ModelLogo: () => null,
   ProviderLogo: () => null,
@@ -119,6 +126,9 @@ beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   h.sliderProps = null;
   h.providers = [];
+  h.defaultProvider = "openrouter";
+  h.modelLocked = false;
+  h.comboboxRendered = false;
   h.providerStep = null;
   h.state.conversationProvider = null;
   host = document.createElement("div");
@@ -170,11 +180,11 @@ describe("ConversationSettings", () => {
 
   it("hands the providers to the model list and saves the provider with its model (MIN-826)", async () => {
     h.providers = [
-      { id: "minddy", label: "minddy Cloud" },
+      { id: "openrouter", label: "OpenRouter" },
       { id: "anthropic", label: "Anthropic" },
     ];
     await act(async () => root.render(createElement(ConversationSettings)));
-    expect(h.providerStep).toMatchObject({ providers: h.providers, current: "minddy" });
+    expect(h.providerStep).toMatchObject({ providers: h.providers, current: "openrouter" });
 
     await act(async () => h.providerStep!.onSelect("anthropic", "claude-opus-5-5"));
     expect(h.update).toHaveBeenCalledWith({ provider: "anthropic", model: "claude-opus-5-5" });
@@ -185,14 +195,54 @@ describe("ConversationSettings", () => {
 
     // A model of the current provider keeps the provider and places the reasoning.
     h.update.mockClear();
-    await act(async () => h.providerStep!.onSelect("minddy", "z-ai/glm-5.3-flash"));
+    await act(async () => h.providerStep!.onSelect("openrouter", "z-ai/glm-5.3-flash"));
     expect(h.update).toHaveBeenCalledWith(expect.objectContaining({ model: "z-ai/glm-5.3-flash" }));
     expect(h.update.mock.calls[0]![0]).not.toHaveProperty("provider");
 
     // Back to the default provider stores no provider override.
     h.state.conversationProvider = "anthropic";
     await act(async () => root.render(createElement(ConversationSettings, { key: "anthropic" })));
-    await act(async () => h.providerStep!.onSelect("minddy", ""));
+    await act(async () => h.providerStep!.onSelect("openrouter", ""));
     expect(h.update).toHaveBeenLastCalledWith({ provider: null, model: null });
+  });
+
+  it("offers no model choice on minddy Cloud without a personal key (MIN-954)", async () => {
+    h.defaultProvider = "minddy";
+    h.modelLocked = true;
+    h.providers = [{ id: "minddy", label: "minddy Cloud" }];
+    await act(async () => root.render(createElement(ConversationSettings)));
+    expect(h.comboboxRendered).toBe(false);
+    expect(h.sliderProps).toBeNull();
+    expect(host.querySelector("button")).toBeNull();
+    // A level stored before MIN-954 is ignored, never "repaired" into a write.
+    expect(h.update).not.toHaveBeenCalled();
+  });
+
+  it("only switches provider on minddy Cloud when a personal key exists (MIN-954)", async () => {
+    h.defaultProvider = "minddy";
+    h.modelLocked = true;
+    h.providers = [
+      { id: "minddy", label: "minddy Cloud" },
+      { id: "anthropic", label: "Anthropic" },
+    ];
+    await act(async () => root.render(createElement(ConversationSettings)));
+    expect(h.sliderProps).toBeNull();
+    expect(h.providerStep).toMatchObject({ current: "minddy", lockedProviders: ["minddy"] });
+
+    // Leaving the instance's provider drops the level it ignored.
+    await act(async () => h.providerStep!.onSelect("anthropic", "claude-opus-5-5"));
+    expect(h.update).toHaveBeenLastCalledWith({ provider: "anthropic", model: "claude-opus-5-5", reasoningLevel: null });
+  });
+
+  it("clears the model and level when a personal conversation moves to minddy Cloud", async () => {
+    h.defaultProvider = "minddy";
+    h.providers = [
+      { id: "minddy", label: "minddy Cloud" },
+      { id: "anthropic", label: "Anthropic" },
+    ];
+    h.state.conversationProvider = "anthropic";
+    await act(async () => root.render(createElement(ConversationSettings)));
+    await act(async () => h.providerStep!.onSelect("minddy", ""));
+    expect(h.update).toHaveBeenLastCalledWith({ provider: null, model: null, reasoningLevel: null });
   });
 });

@@ -8,7 +8,7 @@ import {
 } from "@/lib/model-multiplier";
 import { getResolvedBilling, type ResolvedBilling } from "@/lib/server/billing-accounts";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
-import { PRICING_BASELINE_CONFIG_KEY } from "@/lib/ai-model-config";
+import { PRICING_BASELINE_CONFIG_KEY, stripModelSuffix } from "@/lib/ai-model-config";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { getOpenRouterModelInfo } from "./openrouter-index";
 
@@ -43,11 +43,11 @@ export interface ModelPlanLimit {
  * Minddy's default model price — the origin of the scale (×1). The model is
  * the one the admin picked for Numo, read on each call (behind the 60 s
  * `app_config` cache) so a dashboard change moves the scale without a deploy.
- * The suffix is dropped: the index prices the bare model.
+ * A routing suffix typed in the id is dropped: the index prices the bare model.
  */
 export async function getBaselinePricing(): Promise<ModelPricing | null> {
-  const { base } = await resolveConfiguredModel(PRICING_BASELINE_CONFIG_KEY);
-  return (await getOpenRouterModelInfo(base))?.pricing ?? null;
+  const { model } = await resolveConfiguredModel(PRICING_BASELINE_CONFIG_KEY);
+  return (await getOpenRouterModelInfo(stripModelSuffix(model)))?.pricing ?? null;
 }
 
 /** The ceiling applicable to this account, and the baseline to locate the models. */

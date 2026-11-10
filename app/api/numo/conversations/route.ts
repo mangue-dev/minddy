@@ -13,6 +13,7 @@ import { isReasoningLevel } from "@/lib/agent-reasoning";
 import {
   isNumoConversationConfigError,
   resolveNumoTurnConfiguration,
+  assertNumoChoiceAllowed,
 } from "@/lib/server/assistant/conversation-config";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { encodeConversationTitle, shouldProtectConversationTitle } from
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
         reasoningLevel: body.reasoningLevel,
         catalogOnly: true,
       });
+      assertNumoChoiceAllowed(configuration, body);
     } catch (error) {
       if (isPlanLimitError(error)) return planLimitResponse(error);
       if (isNumoConversationConfigError(error)) {

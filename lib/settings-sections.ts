@@ -37,7 +37,8 @@ export type AccountSettingsTab =
   | "smart-fill"
   | "cycles"
   | "inbox"
-  | "agent"
+  | "numo"
+  | "ai"
   | "mcp"
   | "git"
   | "data";
@@ -48,7 +49,9 @@ export type AccountSettingsTab =
  * the right content instead of falling back to the default tab.
  */
 export const ACCOUNT_SETTINGS_TAB_ALIASES: Readonly<Record<string, AccountSettingsTab>> = {
-  "mcp-clients": "agent",
+  // The former "AI & Numo" tab (split by MIN-954): its links led to the keys.
+  agent: "ai",
+  "mcp-clients": "mcp",
 };
 
 /** The `/projects/<id>/settings` tabs. */
@@ -97,6 +100,7 @@ export const SETTINGS_SECTIONS = {
   accountSmartFillObjectives: "account-smart-fill-objectives",
   accountSmartFillRelations: "account-smart-fill-relations",
   accountIssueIndexing: "account-issue-indexing",
+  accountNumo: "account-numo",
   accountNumoStatus: "account-numo-status",
   accountNumoMemory: "account-numo-memory",
   accountNumoBackground: "account-numo-background",
@@ -220,7 +224,8 @@ export function useSettingsSections(): SettingsSection[] {
       "smart-fill": tAccount("smartFillTab"),
       cycles: tAccount("cyclesTab"),
       inbox: tAccount("inboxTab"),
-      agent: tAccount("agentTab"),
+      numo: tAccount("numoTab"),
+      ai: tAccount("aiTab"),
       mcp: tAccount("mcpTab"),
       git: tAccount("gitTab"),
       data: tAccount("dataTab"),
@@ -607,7 +612,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountAiProvider,
-        tab: "agent",
+        tab: "ai",
         icon: KeyRound,
         title: tAccount("aiProviderTitle"),
         keywords: [
@@ -617,7 +622,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountAiUsages,
-        tab: "agent",
+        tab: "ai",
         icon: KeyRound,
         title: tAccount("aiUsagesTitle"),
         keywords: [
@@ -628,7 +633,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountNumoMemory,
-        tab: "agent",
+        tab: "numo",
         icon: BrainIcon,
         title: tAccount("numoMemoryTitle"),
         keywords: [
@@ -638,7 +643,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountNumoBackground,
-        tab: "agent",
+        tab: "numo",
         icon: BrainIcon,
         title: tAccount("numoBackgroundTitle"),
         keywords: [
@@ -648,7 +653,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountNumoWatches,
-        tab: "agent",
+        tab: "numo",
         icon: CalendarClockIcon,
         title: tAccount("numoWatchesTitle"),
         keywords: [
@@ -658,7 +663,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountNumoStatus,
-        tab: "agent",
+        tab: "numo",
         icon: Ticket,
         title: tAccount("numoIssuesTitle"),
         keywords: [
@@ -668,7 +673,7 @@ export function useSettingsSections(): SettingsSection[] {
       }),
       account({
         id: SETTINGS_SECTIONS.accountMcpClients,
-        tab: "agent",
+        tab: "mcp",
         icon: Plug,
         title: tAccount("mcpClientsTab"),
         keywords: ["mcp", "numo", "notion", "linear", "google", "connectors", "oauth"],

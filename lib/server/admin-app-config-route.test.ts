@@ -49,7 +49,7 @@ vi.mock("@/lib/server/decisions/model-validation", () => ({ validateDecisionMode
 vi.mock("@/lib/server/model-capability-validation", () => ({ validateCatalogCapabilityChoice }));
 
 const { GET, PATCH, POST } = await import("@/app/api/admin/app-config/route");
-const { MODEL_CONFIG_FILE_FORMAT } = await import("@/lib/ai-model-config-file");
+const { MODEL_CONFIG_FILE_FORMAT, MODEL_CONFIG_FILE_VERSION } = await import("@/lib/ai-model-config-file");
 
 function patch(body: unknown) {
   return PATCH(
@@ -110,9 +110,9 @@ describe("PATCH /api/admin/app-config — decision model", () => {
   });
 
   it("does not run the decision gate on other model settings", async () => {
-    await patch({ key: "smart_fill_model", value: "deepseek/deepseek-v4-flash" });
+    await patch({ key: "assistant_model", value: "deepseek/deepseek-v4-flash" });
     expect(validateDecisionModelChoice).not.toHaveBeenCalled();
-    expect(setAppConfigValue).toHaveBeenCalledWith("smart_fill_model", "deepseek/deepseek-v4-flash");
+    expect(setAppConfigValue).toHaveBeenCalledWith("assistant_model", "deepseek/deepseek-v4-flash");
   });
 });
 
@@ -155,43 +155,44 @@ describe("PATCH /api/admin/app-config — embedding models (MIN-717)", () => {
     expect(setAppConfigValue).not.toHaveBeenCalled();
   });
 
-  it("does not check text fields such as the relation decision model", async () => {
-    await patch({ key: "issue_relation_model", value: "deepseek/deepseek-v4-flash" });
+  it("does not check the language model against an embedding catalog", async () => {
+    await patch({ key: "assistant_model", value: "deepseek/deepseek-v4-flash" });
     expect(validateCatalogCapabilityChoice).not.toHaveBeenCalled();
-    expect(setAppConfigValue).toHaveBeenCalledWith("issue_relation_model", "deepseek/deepseek-v4-flash");
+    expect(setAppConfigValue).toHaveBeenCalledWith("assistant_model", "deepseek/deepseek-v4-flash");
   });
 });
 
-describe("category defaults (MIN-829)", () => {
-  it("releases the seeded task rows equal to their built-in default", async () => {
-    getAppConfigValues.mockResolvedValue({
-      smart_assign_model: "deepseek/deepseek-v4-flash",
-      brief_model: "openai/gpt-5",
-      smart_fill_model: "deepseek/deepseek-v4-flash",
-      smart_fill_model_suffix: "nitro",
-    });
-    const response = await patch({ key: "category_automations_model", value: "openai/gpt-5-mini" });
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({ released: ["smart_assign_model"] });
-    expect(setAppConfigValue).toHaveBeenCalledWith("category_automations_model", "openai/gpt-5-mini");
-    // A real override, and a default carrying its own shortcut, stay.
-    expect(clearAppConfigValue).toHaveBeenCalledTimes(1);
-    expect(clearAppConfigValue).toHaveBeenCalledWith("smart_assign_model");
+describe("one model per role (MIN-954)", () => {
+  it("reads a role still on its retired category default as that model", async () => {
+    getAppConfigValues.mockResolvedValue({ category_assistant_model: "openai/gpt-5-mini" });
+    const response = await GET(new NextRequest("http://localhost/api/admin/app-config"));
+    const { values } = await response.json();
+    expect(values).toMatchObject({ assistant_model: "openai/gpt-5-mini" });
+    expect(values).not.toHaveProperty("category_assistant_model");
   });
 
-  it("checks an embedding category default against its catalog family", async () => {
-    validateCatalogCapabilityChoice.mockResolvedValue({ ok: false, code: "capability_mismatch" });
-    const response = await patch({ key: "category_embeddings_model", value: "deepseek/deepseek-v4-flash" });
-    expect(response.status).toBe(400);
+  it("refuses a per-task, category, shortcut or recommended-models key", async () => {
+    for (const key of ["smart_fill_model", "category_automations_model", "assistant_model_suffix", "recommended_models"]) {
+      expect((await patch({ key, value: "openai/gpt-5-mini" })).status).toBe(400);
+    }
     expect(setAppConfigValue).not.toHaveBeenCalled();
+  });
+
+  it("clears a role's retired category row, so the role runs what was set", async () => {
+    expect((await patch({ key: "assistant_model", value: "openai/gpt-5-mini" })).status).toBe(200);
+    expect(setAppConfigValue).toHaveBeenCalledWith("assistant_model", "openai/gpt-5-mini");
+    expect(clearAppConfigValue).toHaveBeenCalledWith("category_assistant_model");
+    expect(clearAppConfigValue).toHaveBeenCalledWith("category_assistant_model_suffix");
+    // The routing shortcut is no longer set from the dashboard: it is cleared too.
+    expect(clearAppConfigValue).toHaveBeenCalledWith("assistant_model_suffix");
   });
 });
 
 describe("POST /api/admin/app-config — import (MIN-829)", () => {
   const file = {
     format: MODEL_CONFIG_FILE_FORMAT,
-    version: 1,
-    tasks: { jev_model: { model: "liquid/d1" }, brief_model: { model: "openai/gpt-5" } },
+    version: MODEL_CONFIG_FILE_VERSION,
+    tasks: { jev_model: { model: "liquid/d1" }, assistant_model: { model: "openai/gpt-5" } },
   };
   const post = (body: unknown) =>
     POST(new NextRequest("http://localhost/api/admin/app-config", { method: "POST", body: JSON.stringify(body) }));
@@ -203,14 +204,14 @@ describe("POST /api/admin/app-config — import (MIN-829)", () => {
   });
 
   it("previews the changes without writing", async () => {
-    getAppConfigValues.mockResolvedValue({ smart_fill_model: "openai/gpt-5-mini" });
+    getAppConfigValues.mockResolvedValue({ transcription_model: "openai/whisper-large-v3" });
     const response = await post({ file, apply: false });
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.applied).toBe(false);
     expect(body.changes).toEqual(
       expect.arrayContaining([
-        { key: "smart_fill_model", from: "openai/gpt-5-mini", to: null },
+        { key: "transcription_model", from: "openai/whisper-large-v3", to: null },
         { key: "jev_model", from: null, to: "liquid/d1" },
       ]),
     );
@@ -219,12 +220,12 @@ describe("POST /api/admin/app-config — import (MIN-829)", () => {
   });
 
   it("applies every change once all of them pass", async () => {
-    getAppConfigValues.mockResolvedValue({ smart_fill_model: "openai/gpt-5-mini" });
+    getAppConfigValues.mockResolvedValue({ transcription_model: "openai/whisper-large-v3" });
     const response = await post({ file, apply: true });
     expect(response.status).toBe(200);
     expect(setAppConfigValue).toHaveBeenCalledWith("jev_model", "liquid/d1");
-    expect(setAppConfigValue).toHaveBeenCalledWith("brief_model", "openai/gpt-5");
-    expect(clearAppConfigValue).toHaveBeenCalledWith("smart_fill_model");
+    expect(setAppConfigValue).toHaveBeenCalledWith("assistant_model", "openai/gpt-5");
+    expect(clearAppConfigValue).toHaveBeenCalledWith("transcription_model");
   });
 
   it("writes nothing when one value is refused", async () => {

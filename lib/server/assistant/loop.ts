@@ -36,6 +36,17 @@ import {
 import type { AssistantReasoning } from "@/lib/assistant-reasoning";
 import { AssistantReasoningStream } from "./reasoning-stream";
 import {
+  COMPACTION_TOOL_NAME,
+  compactionModel,
+  estimatePromptTokens,
+  numoCompactThreshold,
+  numoContextWindow,
+  planCompaction,
+  summarizeForCompaction,
+  truncateToolResults,
+  withContextSummary,
+} from "./context-compaction";
+import {
   ProviderRequestError,
   providerErrorFromResponse,
   reportProviderError,
@@ -265,6 +276,27 @@ export interface ProcessChatContext extends ToolContext {
     generation: GenerationInfo,
     roundCount: number,
   ) => Promise<void>;
+  /**
+   * Context compaction (MIN-954). Absent, the history is sent as it is.
+   * `summary` is the stored summary of the conversation's start, if any.
+   */
+  compaction?: NumoCompactionContext;
+}
+
+/** A stored history message: its id and creation time, the summary's boundary. */
+export interface StoredMessageOrigin {
+  id: string;
+  createdAt: string;
+}
+
+export interface NumoCompactionContext {
+  summary: string | null;
+  /** The stored row a history message came from; none for this turn's own messages. */
+  originOf: (message: ChatMessage) => StoredMessageOrigin | undefined;
+  /** Stores the new summary and the last stored message it covers. */
+  persist: (input: { summary: string; through: StoredMessageOrigin | null }) => Promise<void>;
+  /** Records the summary call in `ai_usage`, like the turn's own generations. */
+  recordUsage: (generation: GenerationInfo, roundCount: number) => Promise<void>;
 }
 
 const RETRYABLE_READ_TOOLS = new Set([
@@ -327,6 +359,55 @@ async function saveToolResultMessage(
   // this conflict is the same tool result, so it is safe to reuse.
   if (context.turnId && error.code === "23505") return;
   throw new Error(error.message);
+}
+
+/**
+ * Stores the compaction step as a tool call and its result, so the
+ * conversation shows it after a reload like any other step. Both rows are
+ * marked `context_compaction`: the next turns leave them out of the model's
+ * history. Returns the id of the call's message.
+ */
+async function saveCompactionStep(
+  context: ProcessChatContext,
+  callId: string,
+  success: boolean,
+): Promise<string> {
+  const call: AssistantToolCall = {
+    id: callId, type: "function", function: { name: COMPACTION_TOOL_NAME, arguments: "{}" },
+  };
+  const result = JSON.stringify({ status: success ? "compacted" : "failed" });
+  const callMetadata = { context_compaction: true };
+  const resultMetadata = { success, context_compaction: true };
+  const callMessageId = randomUUID();
+  const resultId = randomUUID();
+  const protect = await shouldProtectNumoToolContent(context.service);
+  const [protectedCall, protectedResult] = protect
+    ? await Promise.all([
+        encodeNumoToolMessage(context.userId, callMessageId, {
+          role: "assistant", content: null, tool_calls: [call], context: null, metadata: callMetadata,
+        }),
+        encodeNumoToolMessage(context.userId, resultId, {
+          role: "tool", content: result, tool_calls: null, context: null, metadata: resultMetadata,
+        }),
+      ])
+    : [null, null];
+  // Explicit times keep the call before its result in the thread's order.
+  const at = Date.now();
+  const turn = context.turnId ? { turn_id: context.turnId } : {};
+  const { error } = await context.service.from("assistant_messages").insert([
+    {
+      id: callMessageId, conversation_id: context.conversationId, ...turn, role: "assistant",
+      content: null, tool_calls: [call], metadata: callMetadata,
+      created_at: new Date(at).toISOString(), ...protectedCall,
+    },
+    {
+      id: resultId, conversation_id: context.conversationId, ...turn, role: "tool",
+      content: result, tool_call_id: callId, tool_name: COMPACTION_TOOL_NAME, metadata: resultMetadata,
+      created_at: new Date(at + 1).toISOString(), ...protectedResult,
+    },
+  ]);
+  if (error) throw new Error(error.message);
+  return callMessageId;
 }
 
 /**
@@ -416,6 +497,66 @@ export async function processChat(
   const stopSignalOff = context.onStopSignal?.(observeStop) ?? null;
   stopPollTimer = setTimeout(() => { void pollStop(); }, STOP_POLL_INTERVAL_MS);
 
+  // Context compaction (MIN-954): the stored summary joins the system prompt,
+  // and before each generation an oversized prompt is compacted once.
+  const compaction = context.compaction ?? null;
+  const baseSystem = compaction && messages[0]?.role === "system" ? messages[0] : null;
+  let contextSummary = compaction?.summary ?? null;
+  if (baseSystem && contextSummary) messages[0] = withContextSummary(baseSystem, contextSummary);
+  let compactThreshold: number | null = null;
+  const compactIfNeeded = async (): Promise<void> => {
+    if (!compaction || !baseSystem) return;
+    compactThreshold ??= numoCompactThreshold(await numoContextWindow(aiRuntime, requestModel));
+    if (estimatePromptTokens(messages, tools) <= compactThreshold) return;
+    const plan = planCompaction(messages, compactThreshold);
+    if (!plan) return;
+    const callId = `compact_${randomUUID()}`;
+    emitter.emit("tool_call_start", { id: callId, name: COMPACTION_TOOL_NAME });
+    const summaryModel = await compactionModel(aiRuntime, requestModel);
+    const outcome = await summarizeForCompaction({
+      runtime: aiRuntime,
+      model: summaryModel,
+      previousSummary: contextSummary,
+      summarized: plan.summarized,
+      signal: executionStop.signal,
+    });
+    if (outcome) {
+      await compaction.recordUsage(outcome.generation, roundCount).catch(() => {
+        console.error("[numo-compaction] usage_record_failed");
+      });
+    }
+    if (stopObserved) return;
+    emitter.emit("tool_call_complete", { id: callId, name: COMPACTION_TOOL_NAME, arguments: "{}" });
+    const summary = outcome?.summary ?? null;
+    if (summary) {
+      contextSummary = summary;
+      const tailResultChars = Math.floor(compactThreshold * 4 * 0.2);
+      messages.splice(0, messages.length,
+        withContextSummary(baseSystem, summary),
+        ...(plan.lastUser ? [plan.lastUser] : []),
+        ...truncateToolResults(plan.tail, tailResultChars));
+      // The summary covers every stored message up to the last one it read.
+      let through: StoredMessageOrigin | null = null;
+      for (const message of plan.summarized) through = compaction.originOf(message) ?? through;
+      // Best effort: the turn goes on with the compacted history either way,
+      // and a later turn compacts again from the messages.
+      await compaction.persist({ summary, through }).catch(() => {
+        console.error("[numo-compaction] summary_persist_failed");
+      });
+    }
+    const messageId = await saveCompactionStep(context, callId, !!summary).catch(() => {
+      console.error("[numo-compaction] step_persist_failed");
+      return null;
+    });
+    if (messageId) emitter.emit("message_complete", { message_id: messageId });
+    emitter.emit("tool_result", {
+      id: callId,
+      name: COMPACTION_TOOL_NAME,
+      result: { status: summary ? "compacted" : "failed" },
+      success: !!summary,
+    });
+  };
+
   try {
   while (continueLoop) {
     continueLoop = false;
@@ -431,6 +572,11 @@ export async function processChat(
     // Always reserve one text-only round after the tool budget. Previously the
     // sixth tool round ended the stream silently, with no final assistant reply.
     const forceConclusion = roundCount > MAX_TOOL_EXECUTION_ROUNDS;
+    // At most one compaction per model call, before the call opens.
+    if (!resumingTools) {
+      await compactIfNeeded();
+      if (stopObserved) break;
+    }
 
     let fullContent = resumingTools
       ? resumeCheckpoint?.assistantContent ?? ""

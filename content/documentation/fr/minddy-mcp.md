@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -60,10 +60,10 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept)",
-    "language": "agent:claude-code (fr passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (fr paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (fr paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 20,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (fr passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (fr paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (fr paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance); agent:claude-code (fr MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "numo",
@@ -84,7 +84,7 @@
       "src": "/documentation/fr/external-minddy-mcp-workflow.png",
       "alt": "Choix du client MCP minddy : Claude, Codex et autres assistants.",
       "caption": "Choisissez votre client pour afficher sa commande ou sa configuration d’installation.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -101,7 +101,7 @@
       "src": "/documentation/fr/external-minddy-mcp-install-workflow.png",
       "alt": "Étape d’installation de Codex dans l’assistant de connexion au MCP de minddy, avec le point d’accès de minddy Cloud.",
       "caption": "Cet exemple se connecte à minddy Cloud. Pour l’auto-hébergement, utilisez l’origine de votre instance ; la commande affichée n’a pas été exécutée pour cette capture.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -148,7 +148,7 @@ La disponibilité du service ne garantit pas son accessibilité réseau. Le clie
 
 Les clients externes utilisent les outils disponibles pour tickets, plans, commentaires, pages, retours, cycles, routines et carnet dans les limites autorisées. Les outils appliquent votre rôle actuel dans chaque projet à chaque appel : un changement de rôle s’applique donc sans reconnexion. En tant que lecteur, vous disposez des outils de lecture, ainsi que des outils de commentaire lorsque le propriétaire a activé **Peut commenter** pour vous. Le serveur MCP existe dans tous les forfaits Cloud ; l’IA du client dépend de sa configuration et de ses coûts.
 
-La section minddy MCP des paramètres du compte liste les accès externes et leur révocation. Révoquez un client devenu inutile ou non fiable. Cette section diffère de la carte **MCP pour Numo** de l’onglet **IA et Numo**, qui connecte Numo à d’autres services. Ne collez jamais de jetons dans les tickets, les retours publics ou les captures.
+La section minddy MCP des paramètres du compte liste les accès externes et leur révocation. Révoquez un client devenu inutile ou non fiable. Cette section diffère de la carte **MCP pour Numo** de l’onglet **MCP**, qui connecte Numo à d’autres services. Ne collez jamais de jetons dans les tickets, les retours publics ou les captures.
 
 ![Étape d’installation de Codex dans l’assistant de connexion au MCP de minddy, avec le point d’accès de minddy Cloud.](/documentation/fr/external-minddy-mcp-install-workflow.png)
 

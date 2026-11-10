@@ -1,11 +1,10 @@
-import { PlanLimitError } from "@/lib/server/plan-limit-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("next-intl/server", () => ({ getTranslations: async () => (key: string) => key }));
 const h = vi.hoisted(() => ({ user: "owner", provider: "minddy", authenticated: true,
   routes: new Map<string, string>(),
   rows: new Map<string, string | null>(), reads: [] as string[], writes: [] as Record<string, unknown>[],
-  readError: false, blockedModel: false,
+  readError: false,
   readCode: "PGRST205", capture: vi.fn(),
 }));
 function database() {
@@ -55,9 +54,6 @@ vi.mock("@/lib/server/agent/models-catalog", () => ({ getOpenRouterConversationM
   getAssistantModelsForUser: async () => ({ models: h.provider === "generic" ? [] : [{ id: "allowed" }] }) }));
 vi.mock("@/lib/server/assistant/reasoning", () => ({ getAssistantReasoningLevel: async () => "off" }));
 vi.mock("@/lib/server/error-tracking", () => ({ captureServerException: h.capture }));
-vi.mock("@/lib/server/agent/model-plan", () => ({ ensureModelInPlan: async () => {
-  if (h.blockedModel) throw new PlanLimitError("model_above_plan");
-} }));
 const { GET, PUT } = await import("@/app/api/account/numo-preferences/route");
 const { getNumoPreferences } = await import("./model-preferences");
 const { GET: getModels } = await import("@/app/api/assistant/models/route");
@@ -65,36 +61,47 @@ const request = (body?: unknown) => new Request("http://localhost/api/account/nu
   method: body === undefined ? "GET" : "PUT", ...(body === undefined ? {} : { body: JSON.stringify(body) }),
 }) as Parameters<typeof GET>[0];
 beforeEach(() => {
-  h.user = "owner"; h.provider = "minddy"; h.routes.clear(); h.authenticated = true; h.readError = false;
-  h.blockedModel = false; h.rows.clear(); h.reads = []; h.writes = [];
+  h.user = "owner"; h.provider = "openrouter"; h.routes.clear(); h.authenticated = true; h.readError = false;
+  h.rows.clear(); h.reads = []; h.writes = [];
   h.readCode = "PGRST205"; h.capture.mockReset();
 });
 describe("personal Numo preferences", () => {
   it("persists and reloads an owner's choice while isolating another account", async () => {
-    expect((await PUT(request({ provider: "minddy", default_model: "allowed", user_id: "other" }))).status).toBe(200);
-    expect(await (await GET(request())).json()).toMatchObject({ default_model: "allowed", application_model: "app-model" });
-    expect(h.writes[0]).toMatchObject({ user_id: "owner", provider: "minddy", model: "allowed" });
+    expect((await PUT(request({ provider: "openrouter", default_model: "allowed", user_id: "other" }))).status).toBe(200);
+    expect(await (await GET(request())).json()).toMatchObject({ default_model: "allowed", application_model: "app-model", model_locked: false });
+    expect(h.writes[0]).toMatchObject({ user_id: "owner", provider: "openrouter", model: "allowed" });
     h.user = "other";
     expect(await (await GET(request())).json()).toMatchObject({ default_model: null });
   });
   it("keeps separate provider namespaces and restores their previous defaults", async () => {
-    h.rows.set("owner:minddy", "allowed"); h.rows.set("owner:anthropic", "claude-choice");
+    h.rows.set("owner:openrouter", "allowed"); h.rows.set("owner:anthropic", "claude-choice");
     h.provider = "anthropic";
     expect(await getNumoPreferences("owner")).toMatchObject({ provider: "anthropic", default_model: "claude-choice" });
-    h.provider = "minddy";
-    expect(await getNumoPreferences("owner")).toMatchObject({ provider: "minddy", default_model: "allowed" });
+    h.provider = "openrouter";
+    expect(await getNumoPreferences("owner")).toMatchObject({ provider: "openrouter", default_model: "allowed" });
   });
 
-  it("reads minddy Cloud's pre-MIN-826 model, saved under openrouter", async () => {
-    h.rows.set("owner:openrouter", "legacy");
-    expect(await getNumoPreferences("owner")).toMatchObject({ provider: "minddy", default_model: "legacy" });
-    // A personal OpenRouter key never reads minddy Cloud's row, and the reverse.
-    h.rows.set("owner:minddy", "cloud");
-    expect(await getNumoPreferences("owner")).toMatchObject({ default_model: "cloud" });
+  it("ignores a model saved for minddy Cloud: the instance sets it (MIN-954)", async () => {
+    h.provider = "minddy";
+    h.rows.set("owner:minddy", "cloud"); h.rows.set("owner:openrouter", "legacy");
+    expect(await getNumoPreferences("owner")).toMatchObject({
+      provider: "minddy", default_model: null, application_model: "app-model", model_locked: true,
+    });
+    expect(h.reads).toHaveLength(0);
+    expect(await (await getModels(request())).json()).toMatchObject({ defaultModel: "app-model", modelLocked: true });
+  });
+  it("refuses a model for minddy Cloud and still routes Numo back to it", async () => {
+    h.provider = "anthropic";
+    const refused = await PUT(request({ provider: "minddy", default_model: "allowed" }));
+    expect(refused.status).toBe(422);
+    expect(await refused.json()).toMatchObject({ code: "model_locked" });
+    expect(h.writes).toHaveLength(0);
+    expect((await PUT(request({ provider: "minddy", default_model: null }))).status).toBe(200);
+    expect(h.routes.get("owner")).toBe("minddy");
   });
   it("clears a stale choice without requiring a functioning model catalog", async () => {
-    h.rows.set("owner:minddy", "removed");
-    expect((await PUT(request({ provider: "minddy", default_model: null }))).status).toBe(200);
+    h.rows.set("owner:openrouter", "removed");
+    expect((await PUT(request({ provider: "openrouter", default_model: null }))).status).toBe(200);
     expect(await (await GET(request())).json()).toMatchObject({ default_model: null });
   });
   it("routes Numo to the provider chosen with its model (MIN-826)", async () => {
@@ -103,23 +110,18 @@ describe("personal Numo preferences", () => {
     expect(h.writes[0]).toMatchObject({ provider: "anthropic", model: "allowed" });
     expect(await (await GET(request())).json()).toMatchObject({ provider: "anthropic", default_model: "allowed" });
   });
-  it.each([[], null, { provider: "minddy", default_model: "" }, { provider: "minddy", default_model: "bad model" },
+  it.each([[], null, { provider: "openrouter", default_model: "" }, { provider: "openrouter", default_model: "bad model" },
     { provider: "unknown", default_model: null }])("rejects malformed preference %j", async (body) => {
     expect((await PUT(request(body))).status).toBe(400); expect(h.writes).toHaveLength(0);
   });
   it("rejects unavailable models before saving", async () => {
-    expect((await PUT(request({ provider: "minddy", default_model: "missing" }))).status).toBe(422);
+    expect((await PUT(request({ provider: "openrouter", default_model: "missing" }))).status).toBe(422);
     expect(h.writes).toHaveLength(0);
   });
   it("allows a generic endpoint's explicit custom model without an application default", async () => {
     h.provider = "generic";
     expect((await PUT(request({ provider: "generic", default_model: "custom" }))).status).toBe(200);
     expect(await (await GET(request())).json()).toMatchObject({ default_model: "custom", application_model: null });
-  });
-  it("does not save a model that fails admission", async () => {
-    h.blockedModel = true;
-    expect((await PUT(request({ provider: "minddy", default_model: "allowed" }))).status).toBe(403);
-    expect(h.writes).toHaveLength(0);
   });
   it("does not silently reset a preference when storage is unavailable", async () => {
     h.readError = true;
@@ -143,8 +145,8 @@ describe("personal Numo preferences", () => {
     expect((await GET(request())).status).toBe(503);
   });
   it("uses the personal model in the catalog and the application default when no preference is saved", async () => {
-    h.rows.set("owner:minddy", "allowed");
-    expect(await (await getModels(request())).json()).toMatchObject({ defaultModel: "allowed" });
+    h.rows.set("owner:openrouter", "allowed");
+    expect(await (await getModels(request())).json()).toMatchObject({ defaultModel: "allowed", modelLocked: false });
     h.rows.clear();
     expect(await (await getModels(request())).json()).toMatchObject({ defaultModel: "app-model" });
     expect(h.capture).not.toHaveBeenCalled();

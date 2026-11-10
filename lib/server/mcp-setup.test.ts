@@ -184,7 +184,7 @@ describe("list_mcp_presets", () => {
     expect(result.connections).toEqual([
       expect.objectContaining({ id: CONNECTION_ID, needs_auth: true }),
     ]);
-    expect(result.settings_url).toContain("tab=agent");
+    expect(result.settings_url).toContain("tab=mcp");
     // No credential material ever leaves the row summaries.
     expect(JSON.stringify(result)).not.toMatch(/encrypted/);
   });

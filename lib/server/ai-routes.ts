@@ -10,6 +10,8 @@ import {
 import {
   BYOK_MODEL_KEYS,
   MINDDY_CLOUD_PROVIDER,
+  ROLE_USAGE_KEYS,
+  roleUsageKey,
   type AiProviderChoice,
   type ByokModelKey,
 } from "@/lib/ai-surfaces";
@@ -26,6 +28,10 @@ import type { AiProviderOption } from "@/lib/ai-provider-options";
  * means Minddy Cloud. Every call type is independent: Numo conversations can
  * run on a personal key while their titles and everything else stay on
  * Minddy Cloud.
+ *
+ * Since MIN-954 a route is chosen per model ROLE (LLM, embeddings, speech to
+ * text): the role's call type holds the row, and every call type of the role
+ * follows it. Rows saved for other call types before are ignored.
  */
 
 export type AiRoutes = Record<ByokModelKey, AiProviderChoice>;
@@ -64,9 +70,11 @@ export async function getAiRoutes(userId: string): Promise<AiRoutes> {
     BYOK_MODEL_KEYS.map((usageKey) => [usageKey, MINDDY_CLOUD_PROVIDER]),
   ) as AiRoutes;
   for (const row of rows) {
+    if (roleUsageKey(row.usage_key) !== row.usage_key) continue;
     const provider = providerByKey.get(row.ai_key_id);
     if (provider && isKnownAgentProvider(provider)) routes[row.usage_key] = provider;
   }
+  for (const usageKey of BYOK_MODEL_KEYS) routes[usageKey] = routes[roleUsageKey(usageKey)];
   return routes;
 }
 
@@ -108,6 +116,7 @@ export async function setAiRoute(
   usageKey: ByokModelKey,
   provider: AiProviderChoice,
 ): Promise<void> {
+  usageKey = roleUsageKey(usageKey);
   const service = getServiceClient();
   if (provider === MINDDY_CLOUD_PROVIDER) {
     if (!isManagedAiEnabled()) throw new AiRouteError("minddy Cloud is not available on this instance.");
@@ -136,7 +145,7 @@ export async function routeUnservedUsages(userId: string, provider: AgentProvide
   const [routes, keys] = await Promise.all([getAiRoutes(userId), readKeys(userId)]);
   const key = keys.find((entry) => entry.provider === provider);
   if (!key) return;
-  const usageKeys = BYOK_MODEL_KEYS.filter((usageKey) =>
+  const usageKeys = Object.values(ROLE_USAGE_KEYS).filter((usageKey) =>
     routes[usageKey] === MINDDY_CLOUD_PROVIDER && keyServesUsage(key, usageKey));
   if (usageKeys.length === 0) return;
   const { error, status } = await getServiceClient().from("user_ai_usage_routes").upsert(

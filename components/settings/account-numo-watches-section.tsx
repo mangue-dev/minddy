@@ -32,7 +32,7 @@ import {
 import { useNumoWatchWording } from "@/lib/use-numo-watch-wording";
 
 /**
- * Account → AI & Numo → Reminders (MIN-923): what Numo is waiting on for the
+ * Account → Numo → Reminders (MIN-923): what Numo is waiting on for the
  * user, each one cancellable. Reminders are set and changed in a
  * conversation with Numo; this list shows and cancels them.
  *

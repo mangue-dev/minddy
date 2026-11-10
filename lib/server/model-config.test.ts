@@ -21,7 +21,6 @@ vi.mock("@/lib/server/app-config", () => ({
 const {
   fetchOpenRouterWithSuffixFallback,
   modelConfigKeys,
-  resolveCascadeFromValues,
   resolveConfiguredModel,
   withModelSuffixFallback,
 } = await import("./model-config");
@@ -33,98 +32,53 @@ beforeEach(() => {
 });
 
 describe("resolveConfiguredModel", () => {
-  it("retombe sur le défaut du registre, nu, quand rien n'est posé", async () => {
-    const resolved = await resolveConfiguredModel("smart_fill_model");
-    expect(resolved.model).toBe(aiModelFallback("smart_fill_model"));
-    expect(resolved.base).toBe(aiModelFallback("smart_fill_model"));
-    expect(resolved.suffix).toBeNull();
+  it("falls back to the registry default when nothing is set", async () => {
+    expect((await resolveConfiguredModel("smart_fill_model")).model).toBe(aiModelFallback("assistant_model"));
   });
 
-  it("colle le raccourci au modèle choisi", async () => {
+  it("ignores a routing shortcut row: the dashboard no longer sets one (MIN-954)", async () => {
+    config.set("assistant_model", "openai/gpt-5-mini");
+    config.set("assistant_model_suffix", "nitro");
+    expect((await resolveConfiguredModel("assistant_model")).model).toBe("openai/gpt-5-mini");
+  });
+
+  it("sends an id typed with its shortcut as is", async () => {
+    config.set("assistant_model", "openai/gpt-5-mini:floor");
+    expect((await resolveConfiguredModel("assistant_model")).model).toBe("openai/gpt-5-mini:floor");
+  });
+});
+
+describe("one model per role (MIN-954)", () => {
+  it("runs every text task on the language model, ignoring its own former row", async () => {
+    config.set("assistant_model", "anthropic/claude-haiku-5.5");
     config.set("smart_fill_model", "openai/gpt-5-mini");
-    config.set("smart_fill_model_suffix", "nitro");
-    const resolved = await resolveConfiguredModel("smart_fill_model");
-    expect(resolved.model).toBe("openai/gpt-5-mini:nitro");
-    expect(resolved.base).toBe("openai/gpt-5-mini");
-    expect(resolved.suffix).toBe("nitro");
+    config.set("merge_message_model", "z-ai/glm-5.3");
+    for (const key of ["smart_fill_model", "conversation_title_model", "dictate_model", "faq_ask_model", "merge_message_model"]) {
+      expect((await resolveConfiguredModel(key)).model).toBe("anthropic/claude-haiku-5.5");
+    }
   });
 
-  it("suffixe AUSSI le défaut du registre — le raccourci vit sans le modèle", async () => {
-    config.set("smart_fill_model_suffix", "floor");
-    const resolved = await resolveConfiguredModel("smart_fill_model");
-    expect(resolved.model).toBe(`${aiModelFallback("smart_fill_model")}:floor`);
+  it("serves issue and feedback embeddings from one model", async () => {
+    config.set("issue_embedding_model", "google/gemini-embedding-001");
+    config.set("feedback_embedding_model", "openai/text-embedding-3-small");
+    expect((await resolveConfiguredModel("feedback_embedding_model")).model).toBe("google/gemini-embedding-001");
   });
 
-  it("demande les deux lignes en une fois", () => {
-    expect(modelConfigKeys("dictate_model")).toEqual(["dictate_model", "dictate_model_suffix"]);
-  });
-});
-
-describe("category defaults (MIN-829)", () => {
-  it("reads the task and its category in one batch", () => {
-    expect(modelConfigKeys("smart_fill_model")).toEqual([
-      "smart_fill_model",
-      "smart_fill_model_suffix",
-      "category_automations_model",
-      "category_automations_model_suffix",
-    ]);
+  it("reads a role's row and its retired category in one batch", () => {
+    expect(modelConfigKeys("smart_fill_model")).toEqual(["assistant_model", "category_assistant_model"]);
+    expect(modelConfigKeys("transcription_model")).toEqual(["transcription_model"]);
   });
 
-  it("inherits the category default, served the way the category asks", async () => {
-    config.set("category_automations_model", "openai/gpt-5-mini");
-    config.set("category_automations_model_suffix", "floor");
-    // The task's own suffix belongs to its override, absent here.
-    config.set("smart_fill_model_suffix", "nitro");
-    const resolved = await resolveConfiguredModel("smart_fill_model");
-    expect(resolved.model).toBe("openai/gpt-5-mini:floor");
+  it("keeps the retired category default while the role is unset", async () => {
+    config.set("category_assistant_model", "openai/gpt-5-mini");
+    expect((await resolveConfiguredModel("home_brief_model")).model).toBe("openai/gpt-5-mini");
+    config.set("assistant_model", "anthropic/claude-haiku-5.5");
+    expect((await resolveConfiguredModel("home_brief_model")).model).toBe("anthropic/claude-haiku-5.5");
   });
 
-  it("lets an explicit task override win over the category", async () => {
-    config.set("category_automations_model", "openai/gpt-5-mini");
-    config.set("category_automations_model_suffix", "floor");
-    config.set("brief_model", "anthropic/claude-sonnet-5");
-    const resolved = await resolveConfiguredModel("brief_model");
-    expect(resolved.model).toBe("anthropic/claude-sonnet-5");
-  });
-
-  it("keeps each task's own built-in default while the category is unset", async () => {
-    expect((await resolveConfiguredModel("merge_message_model")).base).toBe(
-      aiModelFallback("merge_message_model"),
-    );
-    expect((await resolveConfiguredModel("issue_embedding_model")).base).toBe(
-      aiModelFallback("issue_embedding_model"),
-    );
-  });
-
-  it("never lends a category to a standalone task", async () => {
-    config.set("category_automations_model", "openai/gpt-5-mini");
-    expect((await resolveConfiguredModel("jev_model")).base).toBe(aiModelFallback("jev_model"));
-  });
-});
-
-describe("resolveCascadeFromValues", () => {
-  const KEYS = ["assistant_model", "fallback_model"];
-
-  it("prend le suffixe de la clé qui a gagné", () => {
-    const values = {
-      assistant_model: "openai/gpt-5",
-      assistant_model_suffix: "nitro",
-      fallback_model: "deepseek/deepseek-v4-flash",
-      fallback_model_suffix: "floor",
-    };
-    expect(resolveCascadeFromValues(KEYS, values).model).toBe("openai/gpt-5:nitro");
-  });
-
-  it("descend d'un cran quand la première clé n'est pas posée", () => {
-    const values = {
-      fallback_model: "deepseek/deepseek-v4-flash",
-      fallback_model_suffix: "floor",
-    };
-    expect(resolveCascadeFromValues(KEYS, values).model).toBe("deepseek/deepseek-v4-flash:floor");
-  });
-
-  it("retombe sur le défaut de la PREMIÈRE clé quand rien n'est posé", () => {
-    expect(resolveCascadeFromValues(KEYS, {}).model).toBe(aiModelFallback("assistant_model"));
+  it("keeps the decision model apart from the language model", async () => {
+    config.set("assistant_model", "openai/gpt-5-mini");
+    expect((await resolveConfiguredModel("jev_model")).model).toBe(aiModelFallback("jev_model"));
   });
 });
 

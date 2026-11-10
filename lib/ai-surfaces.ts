@@ -10,15 +10,6 @@ export const AI_SURFACES = ["agent", "assistant", "automations", "voice", "feedb
 
 export type AiSurface = (typeof AI_SURFACES)[number];
 
-/**
- * The groups the account's AI settings show (MIN-826): each lists its precise
- * usages, the call types, and every call type chooses its own provider in
- * `user_ai_usage_routes` (no route means Minddy Cloud). The retired code-agent
- * surface is not one of them.
- */
-export const ROUTED_AI_SURFACES = ["assistant", "automations", "voice", "feedback"] as const;
-
-export type RoutedAiSurface = (typeof ROUTED_AI_SURFACES)[number];
 
 /**
  * The call type that answers for a whole surface when a caller does not name
@@ -72,6 +63,36 @@ export const BYOK_MODEL_KEYS = [
 ] as const;
 
 export type ByokModelKey = (typeof BYOK_MODEL_KEYS)[number];
+
+/**
+ * The model roles (MIN-954). Every AI call is one of four kinds, and each
+ * kind runs ONE model, chosen once: the LLM (Numo and every text task, from
+ * conversation titles to Smart Fill and the feedback review), the embedding
+ * model (issues and feedback alike), speech to text, and the decision model
+ * (instance-wide, OpenRouter only). The call types above stay as call sites
+ * and ledger labels; they no longer choose a model or a provider of their own.
+ */
+export const AI_MODEL_ROLES = ["llm", "embedding", "transcription"] as const;
+export type AiModelRole = (typeof AI_MODEL_ROLES)[number];
+
+/** The call type that stands for a role: its model and provider are the role's. */
+export const ROLE_USAGE_KEYS: Record<AiModelRole, ByokModelKey> = {
+  llm: "assistant_model",
+  embedding: "issue_embedding_model",
+  transcription: "transcription_model",
+};
+
+/** The role of a call type. */
+export function roleOfUsageKey(usageKey: ByokModelKey): AiModelRole {
+  if (usageKey === "issue_embedding_model" || usageKey === "feedback_embedding_model") return "embedding";
+  if (usageKey === "transcription_model") return "transcription";
+  return "llm";
+}
+
+/** The call type whose route and model a call type follows. */
+export function roleUsageKey(usageKey: ByokModelKey): ByokModelKey {
+  return ROLE_USAGE_KEYS[roleOfUsageKey(usageKey)];
+}
 export type ByokFeatureModels = Partial<Record<ByokModelKey, string>>;
 
 export interface AiSurfaceDefinition {

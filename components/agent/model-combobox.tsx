@@ -144,6 +144,11 @@ export function ModelCombobox({
     providers: AiProviderOption[];
     current: AiProviderChoice | null;
     onSelect: (provider: AiProviderChoice, model: string) => void;
+    /**
+     * Providers whose model the instance sets (MIN-954): choosing one selects
+     * it with its default model at once, without listing models.
+     */
+    lockedProviders?: readonly AiProviderChoice[];
   };
 }) {
   const stepped = !!providerStep && providerStep.providers.length > 1;
@@ -248,6 +253,11 @@ export function ModelCombobox({
     close();
   };
   const browseProvider = (next: AiProviderChoice) => {
+    if (providerStep?.lockedProviders?.includes(next)) {
+      providerStep.onSelect(next, "");
+      close();
+      return;
+    }
     setBrowsing(next);
     setQuery("");
     setShowAll(false);
@@ -430,7 +440,11 @@ export function ModelCombobox({
                     </span>
                     <HugeiconsIcon icon={CheckIcon}
                       className={cn("size-4 shrink-0", option.id === providerStep.current ? "opacity-100" : "opacity-0")} />
-                    <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
+                    {providerStep.lockedProviders?.includes(option.id) ? (
+                      <span aria-hidden className="size-3.5 shrink-0" />
+                    ) : (
+                      <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0 text-muted-foreground" />
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>

@@ -943,7 +943,7 @@ export const AssistantShell = forwardRef<
         </p>
       </div>
       <Button asChild size="sm">
-        <Link href="/settings?tab=agent">{t("providerUnavailableCta")}</Link>
+        <Link href="/settings?tab=ai">{t("providerUnavailableCta")}</Link>
       </Button>
     </div>
   ) : (

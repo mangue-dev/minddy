@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  AI_MODEL_CATEGORY_IDS,
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_GROUPS,
-  categoryMembers,
-  categoryModelKey,
+  aiModelFallback,
+  roleModelKey,
 } from "@/lib/ai-model-config";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
@@ -36,19 +35,19 @@ describe("AI settings registry and i18n catalogs", () => {
     const fields = messages.Admin.fields as Record<string, FieldEntry>;
     const groups = messages.Admin.groups as Record<string, GroupEntry>;
 
-    it(`donne un libellé à chaque réglage (${locale})`, () => {
+    it(`labels every setting (${locale})`, () => {
       const missing = AI_MODEL_CONFIG_FIELDS.filter((f) => !f.adminLabel && !fields[f.key]?.label).map(
         (f) => f.key,
       );
       expect(missing).toEqual([]);
     });
 
-    it(`donne un titre à chaque groupe (${locale})`, () => {
+    it(`titles every group (${locale})`, () => {
       const missing = AI_MODEL_CONFIG_GROUPS.filter((g) => !groups[g]?.title);
       expect(missing).toEqual([]);
     });
 
-    it(`n'a pas de clé orpheline (${locale})`, () => {
+    it(`has no orphan field label (${locale})`, () => {
       const known = new Set(AI_MODEL_CONFIG_FIELDS.map((f) => f.key));
       expect(Object.keys(fields).filter((k) => !known.has(k))).toEqual([]);
     });
@@ -63,60 +62,41 @@ describe("AI settings registry and i18n catalogs", () => {
     expect(diverging).toEqual([]);
   });
 
-  it("assigns non-text catalog capabilities to the matching runtime fields", () => {
+  it("assigns non-text catalog capabilities to the matching role fields", () => {
     const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
     expect(byKey.get("transcription_model")?.catalogCapability).toBe("transcription");
-    expect(byKey.get("feedback_embedding_model")?.catalogCapability).toBe("embedding");
+    expect(byKey.get("issue_embedding_model")?.catalogCapability).toBe("embedding");
     expect(byKey.get("assistant_model")?.catalogCapability).toBeUndefined();
-    expect(byKey.get("byok_default_openai_transcription_model")?.catalogCapability).toBe(
-      "transcription",
-    );
-    expect(byKey.get("byok_default_google_feedback_embedding_model")?.catalogCapability).toBe(
-      "embedding",
-    );
+    expect(byKey.get("byok_default_openai_transcription_model")?.catalogCapability).toBe("transcription");
+    expect(byKey.get("byok_default_google_issue_embedding_model")?.catalogCapability).toBe("embedding");
   });
 
-  it("gives the issue index its own embedding field, separate from feedback", () => {
-    const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
-    expect(byKey.get("issue_embedding_model")).toMatchObject({
-      catalogCapability: "embedding",
-      group: "embeddings",
-      category: "embeddings",
-    });
-    // The relation decision's LLM fallback is a text model.
-    expect(byKey.get("issue_relation_model")?.catalogCapability).toBeUndefined();
-    expect(byKey.get("byok_default_openai_issue_embedding_model")?.fallback).toBe(
-      "text-embedding-3-small",
-    );
-    expect(byKey.get("byok_default_google_issue_embedding_model")?.fallback).toBe(
-      "gemini-embedding-001",
-    );
-    expect(byKey.has("byok_default_anthropic_issue_embedding_model")).toBe(false);
+  it("keeps one model field per role, never one per task (MIN-954)", () => {
+    const models = AI_MODEL_CONFIG_FIELDS.filter((field) => field.kind === "model").map((field) => field.key);
+    expect(models).toEqual(["assistant_model", "issue_embedding_model", "transcription_model", "jev_model"]);
+    expect(AI_MODEL_CONFIG_FIELDS.some((field) => field.key.startsWith("category_"))).toBe(false);
   });
 
-  it("groups only tasks of one catalog capability under a category", () => {
-    for (const id of AI_MODEL_CATEGORY_IDS) {
-      const defaultField = AI_MODEL_CONFIG_FIELDS.find((field) => field.categoryDefault === id);
-      expect(defaultField?.key).toBe(categoryModelKey(id));
-      const members = categoryMembers(id);
-      expect(members.length).toBeGreaterThan(1);
-      for (const member of members) {
-        expect(member.catalogCapability).toBe(defaultField?.catalogCapability);
-        expect(member.group).toBe(defaultField?.group);
-      }
+  it("maps every former task key to its role and its role's default", () => {
+    for (const key of ["smart_fill_model", "conversation_title_model", "dictate_model", "faq_ask_model", "merge_message_model", "feedback_analysis_model"]) {
+      expect(roleModelKey(key)).toBe("assistant_model");
+      expect(aiModelFallback(key)).toBe(aiModelFallback("assistant_model"));
     }
-    // Alone in their capability, these stay standalone rows.
-    for (const key of ["jev_model", "transcription_model", "dictate_model"]) {
-      expect(AI_MODEL_CONFIG_FIELDS.find((field) => field.key === key)?.category).toBeUndefined();
-    }
+    expect(roleModelKey("feedback_embedding_model")).toBe("issue_embedding_model");
+    expect(roleModelKey("transcription_model")).toBe("transcription_model");
+    expect(roleModelKey("jev_model")).toBe("jev_model");
   });
 
-  it("omits provider-specific fields for unsupported model families", () => {
+  it("gives personal keys one default per provider and role", () => {
     const keys = new Set(AI_MODEL_CONFIG_FIELDS.map((field) => field.key));
     expect(keys.has("byok_default_anthropic_assistant_model")).toBe(true);
+    expect(keys.has("byok_default_anthropic_smart_fill_model")).toBe(false);
     expect(keys.has("byok_default_anthropic_transcription_model")).toBe(false);
-    expect(keys.has("byok_default_anthropic_feedback_embedding_model")).toBe(false);
-    expect(keys.has("byok_default_google_feedback_embedding_model")).toBe(true);
+    expect(keys.has("byok_default_google_feedback_embedding_model")).toBe(false);
+    expect(keys.has("byok_default_google_issue_embedding_model")).toBe(true);
+    const byKey = new Map(AI_MODEL_CONFIG_FIELDS.map((field) => [field.key, field]));
+    expect(byKey.get("byok_default_openai_issue_embedding_model")?.fallback).toBe("text-embedding-3-small");
+    expect(byKey.get("byok_default_google_issue_embedding_model")?.fallback).toBe("gemini-embedding-001");
   });
 
   it("defaults the OpenAI transcription fallback to a non-deprecated model", () => {
