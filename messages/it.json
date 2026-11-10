@@ -2192,7 +2192,11 @@
     "graphGroupLinks": "Collegamenti tra ticket degli obiettivi",
     "graphGroupLinksCount": "{count, plural, one {# collegamento tra i loro ticket} other {# collegamenti tra i loro ticket}}",
     "graphHidden": "{count, plural, one {# ticket collegato nascosto} other {# ticket collegati nascosti}} per mantenere leggibile il grafo",
-    "graphShowClosed": "Includi ticket e obiettivi chiusi"
+    "graphShowClosed": "Includi ticket e obiettivi chiusi",
+    "graphEnlarge": "Ingrandisci il grafo",
+    "graphZoomIn": "Aumenta lo zoom",
+    "graphZoomOut": "Riduci lo zoom",
+    "graphZoomReset": "Reimposta lo zoom"
   },
   "Trash": {
     "title": "Cestino",

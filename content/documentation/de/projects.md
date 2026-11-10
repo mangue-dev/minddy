@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 19,
+  "revision": 22,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -66,16 +66,18 @@
       "components/ui/confirm-delete-dialog.tsx",
       "components/stats/project-statistics.tsx",
       "components/stats/issue-graph.tsx",
+      "components/stats/issue-graph-canvas.tsx",
+      "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
       "app/api/projects/[id]/pull-request-stats/route.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (de changed passage translated from en revision 20 with catalog UI labels and the glossary register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "issues",
@@ -99,7 +101,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Tickets, Mitglieder, Ziele, Kategorien und Erstellt.",
       "caption": "Wähle Symbol, Namen oder Schlüssel, um sie direkt zu ändern; das Verschieben in den Papierkorb bleibt eine eigene Aktion weiter unten.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -116,7 +118,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -133,7 +135,7 @@
       "src": "/documentation/de/project-statistics.png",
       "alt": "Abschnitte Dynamik, Aktueller Stand und Mitwirkende eines Projekts mit rund tausend Tickets: wöchentliche Balken für erstellte und erledigte Tickets, ein Statusbalken, Kennzahlen und ein Statusbalken pro Person.",
       "caption": "Die Dynamik vergleicht die letzten vier Wochen mit den vier davor; überfällige und stockende Tickets zeigen, wo du hinschauen solltest.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -148,11 +150,11 @@
       "id": "project-issue-graph",
       "kind": "screenshot",
       "src": "/documentation/de/project-issue-graph.png",
-      "alt": "Ticket-Graph der offenen Tickets, in farbigen Blasen pro Ziel um quadratische Anker gruppiert, mit grauen Pfeilen vom übergeordneten Ticket zum Unterticket, roten Blockierpfeilen, gestrichelten Verwandt-Linien, grauen Verbindungslinien zwischen Zielen, der Legende und dem Schalter Abgeschlossene Tickets und Ziele einbeziehen.",
+      "alt": "Ticket-Graph der offenen Tickets, in farbigen Blasen pro Ziel um quadratische Anker gruppiert, mit grauen Pfeilen vom übergeordneten Ticket zum Unterticket, roten Blockierpfeilen, gestrichelten Verwandt-Linien, grauen Verbindungslinien zwischen Zielen, der Legende, dem Schalter Abgeschlossene Tickets und Ziele einbeziehen und der Schaltfläche Graph vergrößern oben rechts.",
       "caption": "Fahre über einen Punkt, um sein Ticket zu lesen und seine Verknüpfungen hervorzuheben; wähle ihn aus, um das Ticket im Seitenbereich zu öffnen.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
-      "capturedAt": "2026-11-04",
+      "capturedAt": "2026-11-10",
       "viewport": [
         816,
         784
@@ -179,11 +181,11 @@ Ein Projekt verbindet Tickets, Ziele, Seiten und die Personen, die daran arbeite
 
 Der Tab **Allgemein** beginnt mit der Identität des Projekts: seinem Symbol, seinem Namen und Schlüssel und darunter fünf Kennzahlen: **Tickets**, **Mitglieder**, **Ziele**, **Kategorien** und **Erstellt**. Als Eigentümer änderst du Symbol, Name und Schlüssel direkt dort, wo sie angezeigt werden; eine Speichern-Schaltfläche gibt es nicht mehr. Wähle das Symbol und dann **Neue Kugel** (nur angeboten, solange kein Bild die Kugel verdeckt), **Bild hochladen**, **Von einer Website importieren…**, das nach der Adresse der Website fragt und ihr Symbol übernimmt, sobald du **Importieren** wählst, oder, wenn ein Bild gesetzt ist, **Bild entfernen**, das zuerst nachfragt, weil das Bild gelöscht wird. Wähle den Namen oder den Schlüssel, um ihn zu bearbeiten: Am Computer wird daraus ein Feld, in dem Enter oder das Verlassen des Felds speichert und Escape abbricht; auf dem Telefon öffnet sich ein Blatt mit **Speichern**. Der Name darf nicht leer sein. Der Schlüssel wird in Großbuchstaben umgewandelt und muss aus 2 bis 5 Buchstaben (A–Z) bestehen; andernfalls erscheint ein Fehler und der Schlüssel wird nicht gespeichert. Prüfe nach einer Änderung die entstandenen Kennungen. Das Symbol unterscheidet das Projekt nur in der Navigation; die Mitgliedschaft ändert es nicht. Mitglieder und Leser sehen denselben Kopfbereich ohne diese Bedienelemente.
 
-Unter der Kopfzeile folgen die Statistiken des Projekts, berechnet aus seinen eigenen Daten und für alle im Projekt sichtbar. **Dynamik** vergleicht die in den letzten vier Wochen erledigten Tickets mit den vier Wochen davor, zeigt, ob der Backlog in diesem Zeitraum gewachsen oder geschrumpft ist, und nennt die mediane Durchlaufzeit von der Erstellung bis **Erledigt** in den letzten 90 Tagen; das Diagramm zeigt die pro Woche erstellten und erledigten Tickets über zwölf Wochen. **Aktueller Stand** teilt alle Tickets nach Status auf und zählt die offenen Tickets, die überfällig, nicht zugewiesen oder stockend sind, also in Bearbeitung oder in Prüfung und seit 14 Tagen ohne Änderung. Sind Pull Requests mit den Tickets des Projekts verknüpft, zeigt **Pull Requests**, wie viele zusammengeführt wurden, die mediane Zeit bis zur Zusammenführung, den Anteil der erledigten Tickets, die über einen zusammengeführten Pull Request geliefert wurden, und die Zusammenführungen pro Woche. **Mitwirkende** listet, wer in den letzten 90 Tagen die meisten Tickets erledigt hat, und teilt die Tickets jeder Person nach Status auf: offene im aktuellen Stand, abgeschlossene aus diesen 90 Tagen. **Ticket-Graph** zeichnet die offenen Tickets, die über eine Beziehung oder ein übergeordnetes Ticket verknüpft sind, nach Status eingefärbt, mit Pfeilen vom übergeordneten Ticket zum Unterticket und vom blockierenden zum blockierten Ticket. Die Tickets sammeln sich in einer farbigen Blase pro Ziel, um ein Quadrat, das für das Ziel steht und seine eigenen Beziehungen trägt; eine graue Linie zwischen zwei Zielen fasst die Verknüpfungen zwischen ihren Tickets zusammen, die erscheinen, wenn du mit der Maus über eines davon fährst. Bei sehr vielen Tickets bleiben die am stärksten vernetzten jedes Ziels, und die Blase zeigt, wie viele ausgeblendet sind. Wähle ein Ticket aus, um es im Seitenbereich zu öffnen, oder das Quadrat eines Ziels, um das Ziel zu öffnen; **Abgeschlossene Tickets und Ziele einbeziehen** fügt erledigte Arbeit hinzu. Bewege den Mauszeiger auf ein Ticket, um seine vollständige Karte und die Kennungen der verknüpften Tickets zu sehen, oder auf das Quadrat eines Ziels, um die Karte des Ziels zu sehen. Abgebrochene Tickets und Duplikate zählen nie als erledigt. Fahre mit der Maus über einen Balken oder fokussiere ihn, um seine genauen Werte zu lesen. Numo und minddy-MCP-Clients lesen dieselben Zahlen, mit den überfälligen und stockenden Tickets selbst.
+Unter der Kopfzeile folgen die Statistiken des Projekts, berechnet aus seinen eigenen Daten und für alle im Projekt sichtbar. **Dynamik** vergleicht die in den letzten vier Wochen erledigten Tickets mit den vier Wochen davor, zeigt, ob der Backlog in diesem Zeitraum gewachsen oder geschrumpft ist, und nennt die mediane Durchlaufzeit von der Erstellung bis **Erledigt** in den letzten 90 Tagen; das Diagramm zeigt die pro Woche erstellten und erledigten Tickets über zwölf Wochen. **Aktueller Stand** teilt alle Tickets nach Status auf und zählt die offenen Tickets, die überfällig, nicht zugewiesen oder stockend sind, also in Bearbeitung oder in Prüfung und seit 14 Tagen ohne Änderung. Sind Pull Requests mit den Tickets des Projekts verknüpft, zeigt **Pull Requests**, wie viele zusammengeführt wurden, die mediane Zeit bis zur Zusammenführung, den Anteil der erledigten Tickets, die über einen zusammengeführten Pull Request geliefert wurden, und die Zusammenführungen pro Woche. **Mitwirkende** listet, wer in den letzten 90 Tagen die meisten Tickets erledigt hat, und teilt die Tickets jeder Person nach Status auf: offene im aktuellen Stand, abgeschlossene aus diesen 90 Tagen. **Ticket-Graph** zeichnet die offenen Tickets, die über eine Beziehung oder ein übergeordnetes Ticket verknüpft sind, nach Status eingefärbt, mit Pfeilen vom übergeordneten Ticket zum Unterticket und vom blockierenden zum blockierten Ticket. Die Tickets sammeln sich in einer farbigen Blase pro Ziel, um ein Quadrat, das für das Ziel steht und seine eigenen Beziehungen trägt; eine graue Linie zwischen zwei Zielen fasst die Verknüpfungen zwischen ihren Tickets zusammen, die erscheinen, wenn du mit der Maus über eines davon fährst. Bei sehr vielen Tickets bleiben die am stärksten vernetzten jedes Ziels, und die Blase zeigt, wie viele ausgeblendet sind. Wähle ein Ticket aus, um es im Seitenbereich zu öffnen, oder das Quadrat eines Ziels, um das Ziel zu öffnen; **Abgeschlossene Tickets und Ziele einbeziehen** fügt erledigte Arbeit hinzu. **Graph vergrößern** oben rechts im Graphen öffnet ihn im Vollbild und zeigt mehr Tickets, wenn die Karte welche ausblendet: Zoome mit dem Mausrad, einer Zwei-Finger-Geste oder den Schaltflächen und ziehe, um den Ausschnitt zu verschieben. Bewege den Mauszeiger auf ein Ticket, um seine vollständige Karte und die Kennungen der verknüpften Tickets zu sehen, oder auf das Quadrat eines Ziels, um die Karte des Ziels zu sehen. Abgebrochene Tickets und Duplikate zählen nie als erledigt. Fahre mit der Maus über einen Balken oder fokussiere ihn, um seine genauen Werte zu lesen. Numo und minddy-MCP-Clients lesen dieselben Zahlen, mit den überfälligen und stockenden Tickets selbst.
 
 ![Abschnitte Dynamik, Aktueller Stand und Mitwirkende eines Projekts mit rund tausend Tickets: wöchentliche Balken für erstellte und erledigte Tickets, ein Statusbalken, Kennzahlen und ein Statusbalken pro Person.](/documentation/de/project-statistics.png)
 
-![Ticket-Graph der offenen Tickets, in farbigen Blasen pro Ziel um quadratische Anker gruppiert, mit grauen Pfeilen vom übergeordneten Ticket zum Unterticket, roten Blockierpfeilen, gestrichelten Verwandt-Linien, grauen Verbindungslinien zwischen Zielen, der Legende und dem Schalter Abgeschlossene Tickets und Ziele einbeziehen.](/documentation/de/project-issue-graph.png)
+![Ticket-Graph der offenen Tickets, in farbigen Blasen pro Ziel um quadratische Anker gruppiert, mit grauen Pfeilen vom übergeordneten Ticket zum Unterticket, roten Blockierpfeilen, gestrichelten Verwandt-Linien, grauen Verbindungslinien zwischen Zielen, der Legende, dem Schalter Abgeschlossene Tickets und Ziele einbeziehen und der Schaltfläche Graph vergrößern oben rechts.](/documentation/de/project-issue-graph.png)
 
 Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Smart Assign**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
 

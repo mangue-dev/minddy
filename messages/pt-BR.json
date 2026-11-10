@@ -2192,7 +2192,11 @@
     "graphGroupLinks": "Ligações entre tickets de objetivos",
     "graphGroupLinksCount": "{count, plural, =0 {# ligações entre seus tickets} one {# ligação entre seus tickets} other {# ligações entre seus tickets}}",
     "graphHidden": "{count, plural, =0 {# tickets ligados ocultos} one {# ticket ligado oculto} other {# tickets ligados ocultos}} para manter o grafo legível",
-    "graphShowClosed": "Incluir tickets e objetivos fechados"
+    "graphShowClosed": "Incluir tickets e objetivos fechados",
+    "graphEnlarge": "Ampliar o grafo",
+    "graphZoomIn": "Aumentar o zoom",
+    "graphZoomOut": "Diminuir o zoom",
+    "graphZoomReset": "Redefinir o zoom"
   },
   "Trash": {
     "title": "Lixeira",

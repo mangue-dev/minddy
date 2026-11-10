@@ -2192,7 +2192,11 @@
     "graphGroupLinks": "Verknüpfungen zwischen Tickets der Ziele",
     "graphGroupLinksCount": "{count, plural, one {# Verknüpfung zwischen ihren Tickets} other {# Verknüpfungen zwischen ihren Tickets}}",
     "graphHidden": "{count, plural, one {# verknüpftes Ticket ausgeblendet} other {# verknüpfte Tickets ausgeblendet}}, damit der Graph lesbar bleibt",
-    "graphShowClosed": "Abgeschlossene Tickets und Ziele einbeziehen"
+    "graphShowClosed": "Abgeschlossene Tickets und Ziele einbeziehen",
+    "graphEnlarge": "Graph vergrößern",
+    "graphZoomIn": "Heranzoomen",
+    "graphZoomOut": "Herauszoomen",
+    "graphZoomReset": "Zoom zurücksetzen"
   },
   "Trash": {
     "title": "Papierkorb",

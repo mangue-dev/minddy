@@ -2192,7 +2192,11 @@
     "graphGroupLinks": "Liens entre tickets d'objectifs",
     "graphGroupLinksCount": "{count, plural, one {# lien entre leurs tickets} other {# liens entre leurs tickets}}",
     "graphHidden": "{count, plural, one {# ticket lié masqué} other {# tickets liés masqués}} pour garder le graphe lisible",
-    "graphShowClosed": "Inclure les tickets et objectifs fermés"
+    "graphShowClosed": "Inclure les tickets et objectifs fermés",
+    "graphEnlarge": "Agrandir le graphe",
+    "graphZoomIn": "Zoom avant",
+    "graphZoomOut": "Zoom arrière",
+    "graphZoomReset": "Réinitialiser le zoom"
   },
   "Trash": {
     "title": "Corbeille",
