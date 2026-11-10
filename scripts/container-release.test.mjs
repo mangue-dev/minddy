@@ -52,7 +52,7 @@ test("builds target-native dependencies and strips runtime package managers", ()
 
 test("promotes OCI release tags only after scanning and signing the candidate digest", () => {
   assert.match(workflow, /candidate_tag=ghcr\.io\/\$\{GITHUB_REPOSITORY_OWNER,,\}\/minddy:candidate-\$SHA/);
-  assert.match(workflow, /tags: \$\{\{ steps\.image\.outputs\.candidate_tag \}\}/);
+  assert.match(workflow, /imagetools create --tag "\$CANDIDATE_TAG"/);
   assert.match(workflow, /scanners: vuln/);
 
   const buildIndex = workflow.indexOf("name: Publish signed-release candidate image");
@@ -65,4 +65,37 @@ test("promotes OCI release tags only after scanning and signing the candidate di
   assert.ok(scanIndex < signIndex);
   assert.ok(signIndex < promoteIndex);
   assert.ok(promoteIndex < gitTagIndex);
+});
+
+test("builds each architecture natively, untagged, and only after the release approval", () => {
+  const authorizeIndex = workflow.indexOf("\n  authorize:\n");
+  const imageIndex = workflow.indexOf("\n  image:\n");
+  const publishIndex = workflow.indexOf("\n  publish:\n");
+  assert.ok(authorizeIndex !== -1 && authorizeIndex < imageIndex && imageIndex < publishIndex);
+
+  const authorize = workflow.slice(authorizeIndex, imageIndex);
+  const image = workflow.slice(imageIndex, publishIndex);
+  const publish = workflow.slice(publishIndex);
+
+  // One approval gates the whole run: the gated job comes first and the other
+  // two cannot start without it.
+  assert.match(authorize, /environment: public-release/);
+  assert.match(image, /needs: authorize/);
+  assert.match(publish, /needs: \[authorize, image\]/);
+  assert.doesNotMatch(image + publish, /environment:/);
+
+  assert.match(image, /platform: linux\/amd64\n\s+arch: amd64\n\s+runner: ubuntu-24\.04\n/);
+  assert.match(image, /platform: linux\/arm64\n\s+arch: arm64\n\s+runner: ubuntu-24\.04-arm\n/);
+  assert.doesNotMatch(workflow, /setup-qemu-action/);
+  assert.match(image, /push-by-digest=true/);
+  assert.doesNotMatch(image, /^\s+tags:/m);
+
+  // Only the publish job can write the repository, sign or attest.
+  assert.doesNotMatch(authorize + image, /contents: write|id-token: write|attestations: write/);
+  assert.match(publish, /for platform in linux\/amd64 linux\/arm64; do/);
+});
+
+test("requires the commit's main CI run instead of repeating its gates", () => {
+  assert.match(workflow, /gh run list \\\n\s+--workflow ci\.yml \\\n\s+--branch main \\\n\s+--commit "\$RELEASE_SHA" \\\n\s+--event push \\\n\s+--status success/);
+  assert.doesNotMatch(workflow, /pnpm run (lint|typecheck|test|build)\b/);
 });

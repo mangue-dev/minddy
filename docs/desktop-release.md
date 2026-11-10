@@ -140,25 +140,42 @@ XDG paths, and updater behavior are documented in
 2. The shell has changed → automatic mode offers desktop applications; manual
    mode asks the question with “yes” by default.
 3. If desktop applications are retained, `deploy.sh` first waits for the core
-   release, then triggers the GitHub jobs for macOS, Linux, and Windows. It
-   waits for macOS signing and notarization, Linux GPG signing, and the Store
-   MSIX packages before attaching the artifacts to the release.
-4. After success, the bot commits `desktop/released.json` to `main`. This statement
-   makes the following detection accurate; it is never written before the
-   binaries and their manifest are actually published.
+   release, then triggers the GitHub jobs for Linux and Windows. It waits for
+   Linux GPG signing and the Store MSIX packages, which the jobs attach to the
+   release.
+4. macOS follows from the maintainer's Mac, as described below.
 
-`npm run desktop:release` remains a local diagnostic command which should neither
-publish the public feed or serve as proof of release. The public stream passes
-exclusively by `Public desktop release`, checkout the heart tag, then get
-its signature and publication identifiers from `public-release`.
+### macOS from the maintainer's Mac
+
+The Developer ID certificate and the notarization credentials stay in the
+maintainer's keychain; GitHub holds no Apple secret and the workflow has no
+macOS job. Publish macOS once the core release exists:
+
+1. Check out the release tag in a clean tree: `publish-desktop.mjs`
+   fingerprints the working tree, and the application must carry the tagged
+   sources.
+2. Export `MINDDY_DESKTOP_FEED_URL` and `APPLE_KEYCHAIN_PROFILE` (the
+   `notarytool` profile), then run `npm --prefix desktop run dist:mac`. It
+   signs, notarizes and staples both architectures.
+3. Run `node scripts/publish-desktop.mjs --verify-only`, then the same command
+   without the flag and with `BLOB_READ_WRITE_TOKEN` set. It checks the
+   signature, the stapled ticket and the manifest before the first byte, and
+   writes `latest-mac.yml` last.
+4. Attach the `.dmg`, `.zip`, blockmaps, `latest-mac.yml` and a
+   `SHA256SUMS-macOS` file to the release with `gh release upload`. Stage them
+   outside the repository.
+5. Commit the `desktop/released.json` that the publication wrote and merge it
+   through a pull request. The record makes the next detection accurate, and it
+   is never written before the binaries and their manifest are published. It
+   changes no deployed file, so it needs no promotion of its own.
 
 ### How long, and should you stay ahead
 
-**It is now a CI flow with a remote wait.** The signature,
-waiting for the Apple verdict, **stapling the ticket in the bundle**,
-production of `.dmg` and `.zip`, then sending runs on the GitHub runner
-macOS. The maintainer's position can sleep; `npm run deploy` only follows the
-workflow and displays its result.
+Linux and Windows run in GitHub Actions: the workstation can sleep, and
+`npm run deploy` only follows the workflow and displays its result. The macOS
+publication keeps the Mac busy while it signs, waits for the Apple verdict,
+**staples the ticket in the bundle**, produces the `.dmg` and `.zip`, then
+uploads them.
 
 Measured on the first real release (0.9.2):
 
@@ -383,16 +400,17 @@ says — a quiet ceiling is a lie.
 | Varies | Role | Who reads it |
 | --- | --- | --- |
 | `PUBLIC_DESKTOP_FEED_URL` | the public folder of the stream | build workflow; same value configured for `/api/desktop/download` |
-| `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | Apple notarization | GitHub environment `public-release` |
-| `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD` | signature Developer ID | GitHub environment `public-release` |
+| Developer ID certificate, `APPLE_KEYCHAIN_PROFILE` | macOS signature and notarization | the maintainer's keychain; never GitHub |
 | `WINDOWS_STORE_IDENTITY_NAME`, `WINDOWS_STORE_PUBLISHER` | immutable Partner Center package identity | GitHub environment variables on `public-release` |
 | `WINDOWS_WNS_APP_ID`, `WINDOWS_WNS_OBJECT_ID` | Reserved WNS COM class and channel registration identities | Currently unset; optional paired GitHub environment variables on `public-release` when WNS is activated |
 | `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` | write public feed | GitHub-only workflow |
 
 The public value of the flow is also configured on Vercel for the route of
-download. The secrets of signing, notarization and writing do not live
-in `.env` nor in a maintainer's keychain: they belong to
-the organization and are only exposed to the approved runner.
+download. The Linux signing key and the feed write token used by the workflow
+belong to the organization and are exposed only to the approved runner. The
+macOS signing identity and notarization profile are the exception: they live
+in the maintainer's keychain, and the Mac reads the feed write token from its
+local environment when it publishes.
 
 **The trap to know**: the feed URL must be present **at
 moment of build**, not only on Vercel. It is in the packaging that it enters
