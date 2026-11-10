@@ -6,24 +6,32 @@ import { defaultLocale, locales, type Locale } from "@/i18n/config";
 import { loadMessages } from "@/i18n/messages";
 import type englishCatalog from "@/messages/en.json";
 import { issueIdentifier } from "@/lib/issue-constants";
-import type { NumoWatchItem, NumoWatchOutcome } from "@/lib/numo-watches";
+import {
+  NUMO_RECURRING_FAILURE_LIMIT,
+  NUMO_RECURRING_GRACE_MS,
+  type NumoWatchItem,
+  type NumoWatchOutcome,
+} from "@/lib/numo-watches";
 import { commentStore } from "@/lib/server/comment-store";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
-import { sendNumoNote, type NumoNoteLink } from "@/lib/server/numo-notes";
+import { NUMO_NOTE_BODY_MAX, sendNumoNote, type NumoNoteLink } from "@/lib/server/numo-notes";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { encodeConversationTitle, shouldProtectConversationTitle } from "./conversation-title-content";
 import { NumoIntentStartError, startNumoIntent } from "./start-intent";
 import type { NumoTurn } from "./turns";
 import {
+  advanceRecurringNumoWatch,
   cancelClockWatches,
   claimNumoWatch,
   claimStrandedNumoWatches,
   expireNumoWatches,
   getNumoWatch,
   listClockWatches,
-  recentActedNumoWatchIds,
+  numoWatchOccurrenceRequestId,
+  recentActedNumoWatchRequestIds,
+  recordNumoWatchOccurrence,
   recordNumoWatchOutcome,
   type ClockWatch,
 } from "./watches";
@@ -46,6 +54,15 @@ import {
  *   own lane of the Numo turns clock (`drainNumoWatchTurns`). Out of usage,
  *   the watch falls back to a note that says so; a turn that later fails
  *   tells the user too (`notifyReminderOfNumoTurn`).
+ *
+ * A recurring reminder (MIN-953) comes back on its cadence. Each occurrence
+ * is claimed by moving the watch to its next one, in the same update, before
+ * anything is sent: a clock that dies afterwards loses no later occurrence.
+ * An occurrence missed by more than `NUMO_RECURRING_GRACE_MS` is skipped, not
+ * caught up. Each one runs in a conversation of its own, under the
+ * background guard with the grants the user confirmed (`intent.reminder
+ * .recurring`, see `turns.ts`), and sends no "on it" note. Three occurrences
+ * in a row that do not finish pause the reminder, and the user is told.
  *
  * A watch is claimed (`active` → `fired`) before anything is sent, so two
  * clocks never fire it twice; a clock that dies after the claim leaves it
@@ -233,10 +250,35 @@ async function createWatchConversation(service: SupabaseClient, watch: NumoWatch
   return id;
 }
 
-/** Start the `act` turn, in the watch's conversation when it can take one. */
+/** The title of the conversation one occurrence runs in: the reminder and the day. */
+function occurrenceTitle(watch: NumoWatchItem, locale: Locale, firedAt: string): string {
+  const day = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium", ...(watch.timezone ? { timeZone: watch.timezone } : {}),
+  }).format(new Date(firedAt));
+  const text = watch.instruction.length > 60 ? `${watch.instruction.slice(0, 59)}…` : watch.instruction;
+  return `${text} · ${day}`;
+}
+
+/**
+ * Start the `act` turn: in the watch's conversation when it can take one,
+ * and for an occurrence of a recurring watch always in a conversation of
+ * its own. Returns the conversation.
+ */
 async function startWatchTurn(service: SupabaseClient, watch: NumoWatchItem, input: {
-  prompt: string; title: string; metadata: Record<string, unknown>; locale: Locale;
-}): Promise<void> {
+  prompt: string; title: string; metadata: Record<string, unknown>; locale: Locale; retry: boolean;
+}): Promise<string> {
+  const occurrence = watch.recurrence && watch.fired_at ? { firedAt: watch.fired_at } : null;
+  // The request id makes admission idempotent within a conversation, and
+  // lets the reminders lane find the turn.
+  const requestId = occurrence ? numoWatchOccurrenceRequestId(watch.id, occurrence.firedAt) : watch.id;
+  if (occurrence && input.retry) {
+    // The clock died after the claim: the turn may have been admitted.
+    const { data, error } = await service.from("numo_assistant_turns").select("conversation_id")
+      .eq("request_id", requestId).eq("user_id", watch.user_id).limit(1);
+    if (error) throw new Error("Unable to read reminder turns");
+    const admitted = (data ?? [])[0]?.conversation_id;
+    if (typeof admitted === "string") return admitted;
+  }
   const start = (conversationId: string) => startNumoIntent({
     supabase: service,
     userId: watch.user_id,
@@ -249,21 +291,20 @@ async function startWatchTurn(service: SupabaseClient, watch: NumoWatchItem, inp
     action: "custom",
     conversationId,
     conversationUserId: watch.user_id,
-    // The watch id makes admission idempotent within a conversation, and
-    // lets the reminders lane find the turn.
-    requestId: watch.id,
+    requestId,
     // The reminders lane of the Numo turns clock runs it.
     executeInBackground: false,
     triggerSource: "chat",
     reminder: {
       watchId: watch.id, projectId: watch.project_id,
       targetType: watch.target_type, targetId: watch.target_id,
+      ...(occurrence ? { recurring: { firedAt: occurrence.firedAt, grants: watch.grants } } : {}),
     },
   });
-  if (watch.conversation_id) {
+  if (watch.conversation_id && !occurrence) {
     try {
       await start(watch.conversation_id);
-      return;
+      return watch.conversation_id;
     } catch (error) {
       // The conversation was deleted, or holds a turn right now: a new one.
       const busy = (error as Error | null)?.message === "conversation_busy";
@@ -271,13 +312,57 @@ async function startWatchTurn(service: SupabaseClient, watch: NumoWatchItem, inp
       if (!busy && !gone) throw error;
     }
   }
-  const conversationId = await createWatchConversation(service, watch, input.title);
+  const conversationId = await createWatchConversation(service, watch,
+    occurrence ? occurrenceTitle(watch, input.locale, occurrence.firedAt) : input.title);
   try {
     await start(conversationId);
   } catch (error) {
     await service.from("conversations").delete().eq("id", conversationId).eq("user_id", watch.user_id);
     throw error;
   }
+  return conversationId;
+}
+
+/** What the user reads about a reminder: the catalog and the note's title, in their language. */
+async function watchVoice(service: SupabaseClient, watch: NumoWatchItem) {
+  const { data: account, error } = await service.auth.admin.getUserById(watch.user_id);
+  if (error) throw new Error("Unable to read the account");
+  const metadata = (account?.user?.user_metadata ?? {}) as Record<string, unknown>;
+  const locale = localeOf(metadata);
+  const subject = await subjectOf(service, watch).catch(() => null);
+  const title = await watchNoteTitle(watch, subject, locale);
+  const t = createTranslator({ locale, messages: await catalog(locale), namespace: "Account" });
+  return { metadata, locale, title, t };
+}
+
+/**
+ * Record how an occurrence of a recurring watch went and, when it did not
+ * finish, tell the user once: that the reminder is now paused when this was
+ * one failure too many, otherwise why Numo did not act.
+ */
+export async function settleNumoWatchOccurrence(watch: NumoWatchItem, result: {
+  outcome?: NumoWatchOutcome; failed?: boolean; finished?: boolean;
+}, service: SupabaseClient = getServiceClient()): Promise<void> {
+  if (!watch.recurrence || !watch.fired_at) return;
+  const { paused } = await recordNumoWatchOccurrence(service,
+    { id: watch.id, firedAt: watch.fired_at }, result);
+  if (!result.failed) return;
+  const { title, t } = await watchVoice(service, watch);
+  // The pause note says more around the instruction than the others: a
+  // long instruction is cut so the note keeps its last words.
+  const room = NUMO_NOTE_BODY_MAX -
+    t("numoWatchNotePaused", { count: NUMO_RECURRING_FAILURE_LIMIT, instruction: "" }).length;
+  const instruction = watch.instruction.length > room
+    ? `${watch.instruction.slice(0, room - 1)}…`
+    : watch.instruction;
+  const body = paused
+    ? t("numoWatchNotePaused", { count: NUMO_RECURRING_FAILURE_LIMIT, instruction })
+    : result.outcome === "budget_fallback"
+      ? t("numoWatchNoteNoBudget", { instruction: watch.instruction })
+      : t("numoWatchNoteActFailed", { instruction: watch.instruction });
+  await sendNumoNote({
+    service, userId: watch.user_id, projectId: watch.project_id, title, body, link: linkOf(watch),
+  });
 }
 
 /**
@@ -287,13 +372,7 @@ async function startWatchTurn(service: SupabaseClient, watch: NumoWatchItem, inp
  */
 export async function dispatchNumoWatch(watch: NumoWatchItem,
   service: SupabaseClient = getServiceClient(), options: { retry?: boolean } = {}): Promise<NumoWatchOutcome> {
-  const { data: account, error } = await service.auth.admin.getUserById(watch.user_id);
-  if (error) throw new Error("Unable to read the account");
-  const metadata = (account?.user?.user_metadata ?? {}) as Record<string, unknown>;
-  const locale = localeOf(metadata);
-  const subject = await subjectOf(service, watch).catch(() => null);
-  const title = await watchNoteTitle(watch, subject, locale);
-  const t = createTranslator({ locale, messages: await catalog(locale), namespace: "Account" });
+  const { metadata, locale, title, t } = await watchVoice(service, watch);
   const note = async (body: string): Promise<NumoWatchOutcome | "sent"> => {
     const sent = await sendNumoNote({
       service, userId: watch.user_id, projectId: watch.project_id, title, body,
@@ -307,10 +386,26 @@ export async function dispatchNumoWatch(watch: NumoWatchItem,
     const sent = await note(watch.instruction);
     return sent === "sent" ? "notified" : sent;
   }
+  if (watch.recurrence && watch.fired_at) {
+    // An occurrence: the clock records how it went and tells the user when
+    // it did not start (`settleNumoWatchOccurrence`), so no note is sent here.
+    try {
+      const conversationId = await startWatchTurn(service, watch, {
+        prompt: t("numoWatchRecurringTurnMessage", { instruction: watch.instruction }),
+        title, metadata, locale, retry: options.retry === true,
+      });
+      await recordNumoWatchOccurrence(service, { id: watch.id, firedAt: watch.fired_at }, { conversationId });
+      return "acted";
+    } catch (startError) {
+      if (isBudgetError(startError)) return "budget_fallback";
+      console.error(`[numo-watches] watch=${watch.id} turn_failed`);
+      return "failed";
+    }
+  }
   try {
     await startWatchTurn(service, watch, {
       prompt: t("numoWatchTurnMessage", { condition: title, instruction: watch.instruction }),
-      title, metadata, locale,
+      title, metadata, locale, retry: options.retry === true,
     });
   } catch (startError) {
     // The watch fires once: whatever stopped the turn, the user still gets
@@ -330,27 +425,31 @@ export async function dispatchNumoWatch(watch: NumoWatchItem,
 
 /**
  * A reminder turn that did not finish (failed, stopped, or out of usage)
- * tells the user, and the watch records it. Called by `executeNumoTurn`.
+ * tells the user, and the watch records it. An occurrence of a recurring
+ * watch that finished clears its failure count. Called by `executeNumoTurn`.
  */
 export function notifyReminderOfNumoTurn(turn: NumoTurn, options: { usageExhausted?: boolean } = {}): void {
   const reminder = turn.intent.reminder;
   if (!reminder) return;
   const unfinished = turn.status === "failed" || turn.status === "stopped" ||
     turn.status === "waiting_input" || (turn.status === "completed" && options.usageExhausted === true);
-  if (!unfinished) return;
+  if (!unfinished && !(reminder.recurring && turn.status === "completed")) return;
   void (async () => {
     try {
       const service = getServiceClient();
       const watch = await getNumoWatch(service, turn.user_id, reminder.watchId);
-      if (!watch || watch.outcome !== "acted") return;
+      if (!watch) return;
+      if (reminder.recurring) {
+        // The occurrence this turn ran, whatever the watch moved on to since.
+        await settleNumoWatchOccurrence({ ...watch, fired_at: reminder.recurring.firedAt },
+          unfinished ? { outcome: "failed", failed: true } : { finished: true }, service);
+        return;
+      }
+      if (watch.outcome !== "acted") return;
       await recordNumoWatchOutcome(service, watch.id, "failed");
-      const { data: account } = await service.auth.admin.getUserById(watch.user_id);
-      const locale = localeOf((account?.user?.user_metadata ?? {}) as Record<string, unknown>);
-      const subject = await subjectOf(service, watch).catch(() => null);
-      const t = createTranslator({ locale, messages: await catalog(locale), namespace: "Account" });
+      const { title, t } = await watchVoice(service, watch);
       await sendNumoNote({
-        service, userId: watch.user_id, projectId: watch.project_id,
-        title: await watchNoteTitle(watch, subject, locale),
+        service, userId: watch.user_id, projectId: watch.project_id, title,
         body: t("numoWatchNoteActFailed", { instruction: watch.instruction }),
         link: linkOf(watch),
       });
@@ -363,6 +462,8 @@ export function notifyReminderOfNumoTurn(turn: NumoTurn, options: { usageExhaust
 export interface NumoWatchClockResult {
   expired: number;
   fired: number;
+  /** Occurrences of recurring watches missed by too long to run. */
+  skipped: number;
   canceled: number;
   retried: number;
 }
@@ -387,6 +488,11 @@ export async function runNumoWatchClock(options: {
       console.error(`[numo-watches] watch=${watch.id} dispatch_failed`);
       outcome = "failed";
     }
+    if (watch.recurrence) {
+      await settleNumoWatchOccurrence(watch, { outcome, failed: outcome !== "acted" }, service)
+        .catch(() => console.error(`[numo-watches] watch=${watch.id} settle_failed`));
+      return;
+    }
     await recordNumoWatchOutcome(service, watch.id, outcome);
   };
 
@@ -403,6 +509,7 @@ export async function runNumoWatchClock(options: {
   };
 
   let fired = 0;
+  let skipped = 0;
   let canceled = 0;
   let afterId: string | null = null;
   while (!pastDeadline()) {
@@ -420,6 +527,17 @@ export async function runNumoWatchClock(options: {
         const verdict = evaluateWatch(watch, state, now);
         if (verdict === "gone") { gone.push(watch.id); continue; }
         if (verdict === "wait" || fired >= FIRES_PER_TICK) continue;
+        if (watch.recurrence) {
+          // Claimed and moved to its next occurrence in one update. One the
+          // clock missed by too long is only moved.
+          const late = now.getTime() - Date.parse(watch.fire_at as string) > NUMO_RECURRING_GRACE_MS;
+          const occurrence = await advanceRecurringNumoWatch(service, watch, { fire: !late, now });
+          if (!occurrence) continue;
+          if (late) { skipped++; continue; }
+          fired++;
+          await run(occurrence, false);
+          continue;
+        }
         const claimed = await claimNumoWatch(service, watch, now);
         if (!claimed) continue;
         fired++;
@@ -434,7 +552,7 @@ export async function runNumoWatchClock(options: {
   }
   // Last, so a condition met just before expiry still fired above.
   const expired = await expireNumoWatches(service, now);
-  return { expired, fired, canceled, retried: stranded.length };
+  return { expired, fired, skipped, canceled, retried: stranded.length };
 }
 
 /**
@@ -444,10 +562,10 @@ export async function runNumoWatchClock(options: {
  */
 export async function drainNumoWatchTurns(options: { limit?: number } = {}): Promise<{ ran: number }> {
   const service = getServiceClient();
-  const watchIds = await recentActedNumoWatchIds(service, new Date(Date.now() - 24 * 60 * 60 * 1000));
-  if (watchIds.length === 0) return { ran: 0 };
+  const requestIds = await recentActedNumoWatchRequestIds(service, new Date(Date.now() - 24 * 60 * 60 * 1000));
+  if (requestIds.length === 0) return { ran: 0 };
   const { data, error } = await service.from("numo_assistant_turns")
-    .select("id, status").in("request_id", watchIds).in("status", ["queued", "retryable"])
+    .select("id, status").in("request_id", requestIds).in("status", ["queued", "retryable"])
     .lte("not_before", new Date().toISOString())
     .order("created_at", { ascending: true }).limit(options.limit ?? 4);
   if (error) throw new Error("Unable to read reminder turns");

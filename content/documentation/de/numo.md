@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 34,
-  "sourceRevision": 34,
+  "revision": 35,
+  "sourceRevision": 35,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -90,14 +90,18 @@
       "lib/server/numo/home-brief-prompt.ts",
       "app/api/home/brief/route.ts",
       "components/home/home-numo-brief.tsx",
-      "lib/server/numo/home-brief-opening.ts"
+      "lib/server/numo/home-brief-opening.ts",
+      "lib/numo-watches.ts",
+      "lib/server/numo/watch-proposal.ts",
+      "components/assistant/watch-proposal-card.tsx",
+      "lib/server/numo/watch-prompt.ts"
     ]
   },
   "review": {
-    "revision": 34,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-08"
+    "revision": 35,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-953: recurring reminders section and the last paragraph of #reminders, source audit against lib/numo-watches.ts, lib/server/numo/watches.ts, watch-clock.ts, watch-proposal.ts, lib/server/assistant/proactive-guard.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-953 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "code-work",
@@ -127,7 +131,7 @@
       "src": "/documentation/de/work-with-numo-workflow.png",
       "alt": "Numo-Demonstrationsgespräch mit Seitenkontext, Prioritätsänderung und gespeicherter Antwort.",
       "caption": "Vorhandener Demonstrationsverlauf, für die Anzeige übersetzt. Die gespeicherte Antwort nennt AUR-11 und AUR-7. Die Aufnahme belegt keine neue Ausführung.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -144,7 +148,7 @@
       "src": "/documentation/de/numo-permissions-and-approvals-workflow.svg",
       "alt": "Numo-Berechtigungsmatrix für Projektaktionen, persönliche Verbindungen und Routinen.",
       "caption": "Projektzugriff und ausdrückliche Aufträge begrenzen Numo-Aktionen. Externe Inhalte können keine Berechtigung erteilen.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -205,7 +209,7 @@
       "src": "/documentation/de/numo-execution-model-flow.svg",
       "alt": "Diagramm: Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
       "caption": "Lies die Schritte in dieser Reihenfolge. Absicht, Nachricht und UUID speichern. Turn beanspruchen, Werkzeuge und Ergebnisse sichern. Auf deine Antwort warten, wenn eine Eingabe nötig ist. Ereignisse wiedergeben; unklare Writes klären.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -237,7 +241,7 @@
       "src": "/documentation/de/numo-mcp-connections-workflow.png",
       "alt": "Persönliche MCP-Einstellungen mit leerer Liste und Schaltfläche zum Hinzufügen eines Servers.",
       "caption": "Numo-Verbindungen sind persönlich. Projektroutinen verwenden die Verbindungen des Projektinhabers.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -254,7 +258,7 @@
       "src": "/documentation/de/numo-mcp-connections-config-workflow.png",
       "alt": "Notion-Verbindungsassistent mit der aus dem Katalog bekannten Anmeldemethode.",
       "caption": "Anmeldeschritt eines Katalogdienstes. Es wurden keine Zugangsdaten eingegeben und kein Server kontaktiert.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -367,7 +371,19 @@ Ist die Bedingung erfüllt, löst die Wiedervorlage einmal aus. Für etwas, das 
 
 Eine Wiedervorlage, deren Bedingung nie erfüllt wird, läuft nach 90 Tagen ab, und du kannst 20 gleichzeitig haben. Solange ihr Ticket oder Ziel im Papierkorb liegt, wartet sie; sie wird entfernt, wenn der Eintrag endgültig gelöscht wird oder du den Zugriff auf sein Projekt verlierst.
 
-Eine Wiedervorlage ist keine Routine: Sie löst einmal aus, für ein Ticket, ein Ziel oder ein Datum, und nur du legst sie an, in einer Unterhaltung mit Numo; eine Routine läuft bei jedem Zeitplan oder Ereignis erneut, bis du sie pausierst. Routinen, `@Numo`-Erwähnungen und Numo im Hintergrund können keine Wiedervorlagen anlegen oder entfernen. **Kontoeinstellungen → KI & Numo → Wiedervorlagen** listet deine aktiven Wiedervorlagen, und mit **Wiedervorlage entfernen** nimmst du eine heraus. Um eine zu ändern, bitte Numo darum.
+Eine einmalige Wiedervorlage löst einmal aus, für ein Ticket, ein Ziel oder ein Datum; für etwas, das wiederkommt, leg eine [wiederkehrende Wiedervorlage](#recurring-reminders) an. Nur du legst eine Wiedervorlage an, in einer Unterhaltung mit Numo: Routinen, `@Numo`-Erwähnungen, Numo im Hintergrund und der Lauf einer Wiedervorlage können keine anlegen, ändern oder entfernen. **Kontoeinstellungen → KI & Numo → Wiedervorlagen** listet die Wiedervorlagen, die du behältst, und mit **Wiedervorlage entfernen** nimmst du eine heraus. Um eine zu ändern, bitte Numo darum.
+
+### Wiederkehrende Wiedervorlagen {#recurring-reminders}
+
+Eine Wiedervorlage kann auch regelmäßig wiederkommen: „jeden Abend um 19:00 geh meine Tickets durch und bereite morgen vor“ oder „jeden Montag um 9:00 prüf die Modellkosten und warn mich, wenn sie aus dem Ruder laufen“. Numo stellt sie auf jeden Tag, Montag bis Freitag, einen Tag pro Woche oder einen Tag pro Monat ein, zu einer Uhrzeit in deiner Zeitzone, die bei der Zeitumstellung gleich bleibt. Ein Monat, der kürzer ist als der gewählte Tag, nimmt seinen letzten Tag. Eine wiederkehrende Wiedervorlage läuft nicht ab, und du kannst 5 aktive unter deinen 20 haben.
+
+Bei jedem Lauf führt Numo die Anweisung in einer neuen Unterhaltung aus, benannt nach der Wiedervorlage und dem Tag, mit den Werkzeugen und Rechten, die du in diesem Moment hast; dieser Lauf zählt zu deiner KI-Nutzung. Niemand verfolgt ihn: Numo stellt darin keine Fragen, ändert sein Gedächtnis nicht und hält sich an die Grenzen von [Numo im Hintergrund](#background): In einem geteilten Projekt ändert es nur, was zu dir gehört, und es führt keine sensible Aktion aus. Deine Erinnerungen heben diese Grenzen hier nicht auf; das tun nur die Berechtigungen der Wiedervorlage. Numo notiert das Ergebnis in seinem Journal, und [Numos Zusammenfassung auf der Startseite](#home-word) berichtet davon. Keine Nachricht kündigt jeden Lauf an.
+
+Soll eine wiederkehrende Wiedervorlage mehr dürfen, sag es beim Anlegen. Sie kann die Erlaubnis bekommen, dich auch ohne Dringlichkeit zu benachrichtigen, in einem geteilten Projekt zu ändern, was nicht dir gehört, Pull Requests zu bearbeiten, deine externen MCP-Werkzeuge aufzurufen, öffentlich auf Feedback zu antworten, den Papierkorb zu nutzen, Mitglieder, Einladungen und Integrationen zu entfernen, deine Kontoeinstellungen zu ändern oder deine Projekte und, für einen Administrator, die Instanz zu verwalten. Numo speichert dann selbst nichts: Die Unterhaltung zeigt eine Karte, die auflistet, was die Wiedervorlage dürfen wird, und **Erlauben und anlegen** speichert sie. Deine eigenen Rechte werden bei jedem Lauf erneut geprüft: Eine Wiedervorlage, die die Instanz verwalten darf, bekommt kein Admin-Werkzeug mehr, sobald dein Konto kein Administrator mehr ist, und eine Wiedervorlage wird entfernt, wenn du den Zugriff auf ihr Projekt verlierst. Numo kann einer Wiedervorlage keine Berechtigung hinzufügen und keine umformulieren, die Berechtigungen hat: Es schlägt einen Ersatz vor, den du auf einer neuen Karte bestätigst.
+
+Ein Lauf, den minddy um mehr als sechs Stunden verpasst hat, wird übersprungen. Wird ein Lauf nicht abgeschlossen oder ist dein Nutzungslimit erreicht, bekommst du eine Nachricht. Nach 3 Läufen in Folge, die nicht abgeschlossen werden, wird die Wiedervorlage pausiert, und eine Nachricht sagt es dir. **Kontoeinstellungen → KI & Numo → Wiedervorlagen** zeigt für jede wiederkehrende Wiedervorlage ihren Rhythmus, ihren nächsten Lauf, was sie darf, und ihren letzten Lauf mit einem Link zu dieser Unterhaltung. **Wiedervorlage pausieren** hält sie an, und **Wiedervorlage fortsetzen** startet sie beim nächsten Lauf wieder.
+
+Eine wiederkehrende Wiedervorlage gehört dir; eine Routine gehört zu einem Projekt. Nur du siehst deine Wiedervorlage und ihre Unterhaltungen, sie läuft mit deinen Rechten und auf deine KI-Nutzung, und sie kann Berechtigungen haben. Eine Routine und ihre Läufe sieht jedes Mitglied des Projekts, sie läuft auf die Nutzung und die Verbindungen des Projektinhabers, sie kann auch durch ein Ereignis starten, und sie erreicht nie die Verwaltung der Instanz. Nimm eine wiederkehrende Wiedervorlage für deine eigenen Gewohnheiten und eine Routine für Arbeit, die das Team teilt.
 
 ## Dauerhafte Numo-Turns verstehen {#numo-execution-model}
 

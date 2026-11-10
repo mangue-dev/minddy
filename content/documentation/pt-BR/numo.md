@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 34,
-  "sourceRevision": 34,
+  "revision": 35,
+  "sourceRevision": 35,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-09",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -90,14 +90,18 @@
       "lib/server/numo/home-brief-prompt.ts",
       "app/api/home/brief/route.ts",
       "components/home/home-numo-brief.tsx",
-      "lib/server/numo/home-brief-opening.ts"
+      "lib/server/numo/home-brief-opening.ts",
+      "lib/numo-watches.ts",
+      "lib/server/numo/watch-proposal.ts",
+      "components/assistant/watch-proposal-card.tsx",
+      "lib/server/numo/watch-prompt.ts"
     ]
   },
   "review": {
-    "revision": 34,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-08"
+    "revision": 35,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-953: recurring reminders section and the last paragraph of #reminders, source audit against lib/numo-watches.ts, lib/server/numo/watches.ts, watch-clock.ts, watch-proposal.ts, lib/server/assistant/proactive-guard.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-953 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-09"
   },
   "related": [
     "code-work",
@@ -128,7 +132,7 @@
       "src": "/documentation/pt-BR/work-with-numo-workflow.png",
       "alt": "Conversa de demonstração Numo com contexto, mudança de prioridade e resposta salva.",
       "caption": "Conversa de demonstração existente, traduzida para exibição. A resposta salva cita AUR-11 e AUR-7; a captura não comprova uma nova execução.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -145,7 +149,7 @@
       "src": "/documentation/pt-BR/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permissões do Numo para ações do projeto, conexões pessoais e rotinas.",
       "caption": "O acesso ao projeto e os pedidos explícitos limitam as ações do Numo; conteúdo externo não concede permissões.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -206,7 +210,7 @@
       "src": "/documentation/pt-BR/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
       "caption": "Siga as etapas nesta ordem. Persistir intenção, mensagem e UUID. Assumir turno, gravar ferramentas e resultados. Aguardar sua resposta se necessário. Rever eventos e reconciliar escritas incertas.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -238,7 +242,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-workflow.png",
       "alt": "Configurações MCP pessoais, lista vazia e botão para adicionar outro servidor.",
       "caption": "As conexões de Numo são pessoais; as rotinas usam as do proprietário do projeto.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -255,7 +259,7 @@
       "src": "/documentation/pt-BR/numo-mcp-connections-config-workflow.png",
       "alt": "Assistente de conexão do Notion mostrando o método de login conhecido pelo catálogo.",
       "caption": "Etapa de login de um serviço do catálogo. Nenhuma credencial foi inserida e nenhum servidor foi contatado.",
-      "revision": 34,
+      "revision": 35,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -368,7 +372,19 @@ Quando a condição é atendida, o lembrete dispara uma única vez. Para algo qu
 
 Um lembrete cuja condição nunca é atendida expira após 90 dias, e você pode ter 20 ao mesmo tempo. Enquanto o ticket ou objetivo dele está na lixeira, o lembrete espera; ele é cancelado quando o item é excluído de vez ou quando você perde o acesso ao projeto dele.
 
-Um lembrete não é uma rotina: ele dispara uma vez, para um ticket, um objetivo ou uma data, e só você o cria, em uma conversa com o Numo; uma rotina é executada de novo a cada agendamento ou evento até você pausá-la. Rotinas, menções `@Numo` e o Numo em segundo plano não podem criar nem cancelar lembretes. **Configurações da conta → IA e Numo → Lembretes** lista seus lembretes ativos, e **Cancelar lembrete** remove um. Para alterar um lembrete, peça ao Numo.
+Um lembrete único dispara uma vez, para um ticket, um objetivo ou uma data; para algo que volta, crie um [lembrete recorrente](#recurring-reminders). Só você cria um lembrete, em uma conversa com o Numo: rotinas, menções `@Numo`, o Numo em segundo plano e a execução de um lembrete não podem criar, alterar nem cancelar nenhum. **Configurações da conta → IA e Numo → Lembretes** lista os lembretes que você mantém, e **Cancelar lembrete** remove um. Para alterar um lembrete, peça ao Numo.
+
+### Lembretes recorrentes {#recurring-reminders}
+
+Um lembrete também pode voltar periodicamente: "toda noite às 19:00, revise meus tickets e prepare meu dia de amanhã", ou "toda segunda às 9:00, confira os custos dos modelos e me avise se saírem do controle". O Numo programa para todos os dias, de segunda a sexta, um dia por semana ou um dia por mês, em um horário do seu fuso, que ele mantém nas mudanças de horário. Um mês mais curto que o dia escolhido usa o último dia. Um lembrete recorrente não expira, e você pode ter 5 ativos entre os seus 20.
+
+A cada execução, o Numo cumpre a instrução em uma nova conversa, com o nome do lembrete e o dia, com as ferramentas e permissões que você tem nesse momento; essa execução conta no seu uso de IA. Ninguém a acompanha: o Numo não faz perguntas, não altera a memória dele e respeita os limites do [Numo em segundo plano](#background): em um projeto compartilhado, ele só altera o que é seu, e não faz nenhuma ação sensível. As suas lembranças não removem esses limites aqui; só as permissões do próprio lembrete fazem isso. O Numo anota o resultado no diário dele, e [o resumo do Numo na Página inicial](#home-word) conta para você. Nenhuma mensagem anuncia cada execução.
+
+Para que um lembrete recorrente possa fazer mais, peça ao criá-lo. Ele pode ser autorizado a notificar você mesmo sem urgência, alterar conteúdo que não é seu em um projeto compartilhado, agir em pull requests, chamar suas ferramentas MCP externas, responder publicamente a feedbacks, usar a lixeira, remover membros, convites e integrações, alterar as configurações da sua conta, ou administrar seus projetos e, para um administrador, a instância. Nesse caso o Numo não salva nada sozinho: a conversa mostra um cartão que lista o que o lembrete poderá fazer, e **Permitir e criar** salva. As suas permissões são verificadas de novo a cada execução: um lembrete autorizado a administrar a instância não recebe nenhuma ferramenta de administração quando a sua conta deixa de ser administradora, e um lembrete é cancelado quando você perde o acesso ao projeto dele. O Numo não pode adicionar uma permissão a um lembrete nem reescrever um que tem permissões: ele propõe uma substituição, que você confirma em um novo cartão.
+
+Uma execução que o minddy perdeu por mais de seis horas é ignorada. Quando uma execução não termina, ou o seu limite de uso é atingido, você recebe uma mensagem. Depois de 3 execuções seguidas que não terminam, o lembrete é pausado e uma mensagem avisa você. **Configurações da conta → IA e Numo → Lembretes** mostra, para cada lembrete recorrente, a periodicidade, a próxima execução, o que ele pode fazer e a última execução, com um link para essa conversa. **Pausar lembrete** o interrompe e **Retomar lembrete** o reativa na próxima execução.
+
+Um lembrete recorrente é seu; uma rotina pertence a um projeto. Só você vê o seu lembrete e as conversas dele, ele é executado com as suas permissões e no seu uso de IA, e pode ter permissões próprias. Todos os membros do projeto veem uma rotina e as execuções dela, ela é executada no uso e nas conexões do proprietário do projeto, também pode começar com um evento, e nunca chega à administração da instância. Use um lembrete recorrente para os seus hábitos e uma rotina para o trabalho que a equipe compartilha.
 
 ## Entender os turnos persistentes do Numo {#numo-execution-model}
 

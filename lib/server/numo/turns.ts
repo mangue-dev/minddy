@@ -10,6 +10,7 @@ import {
   ADMIN_BACKGROUND_GRANT,
   ADMIN_PROMPT_BLOCK,
   BACKGROUND_ADMIN_PROMPT_BLOCK,
+  REMINDER_ADMIN_PROMPT_BLOCK,
   ROUTINE_ADMIN_LIMIT_PROMPT_LINE,
   adminGrantIsLive,
   type AdminGrant,
@@ -144,6 +145,10 @@ export interface NumoTurnIntent {
    * A reminder the user set (MIN-923) that fired with the action `act`. The
    * turn runs unattended: no memory writes, no tool that waits for an
    * answer, no reminder tools, and no sensitive action.
+   *
+   * With `recurring` (MIN-953) it is one occurrence of a recurring reminder:
+   * it runs under the background guard instead, where a sensitive action
+   * passes only when the user granted its category to this reminder.
    */
   reminder?: NumoReminderIntent | null;
 }
@@ -506,9 +511,14 @@ async function buildExecutionInput(input: {
   // Background Numo (MIN-944) acts for the user alone: an admin account's
   // wake gets a session-less grant, checked against the live account here
   // and before every call, and the background guard limits what it does.
+  // A recurring reminder (MIN-953) gets the same session-less grant, only
+  // when the user granted it `administration`: the account must be an admin
+  // NOW, at this occurrence, whatever it was when the reminder was set.
+  const recurringGrants = intent.reminder?.recurring?.grants ?? null;
   let adminGrant: AdminGrant | null = null;
-  if (intent.wake) {
-    if (!intent.documentation && !intent.routineId && intent.triggerSource !== "mention" &&
+  if (intent.wake || recurringGrants) {
+    if ((intent.wake || recurringGrants?.includes("administration")) &&
+      !intent.documentation && !intent.routineId && intent.triggerSource !== "mention" &&
       await adminGrantIsLive(turn.user_id, ADMIN_BACKGROUND_GRANT)) {
       adminGrant = ADMIN_BACKGROUND_GRANT;
     }
@@ -516,7 +526,10 @@ async function buildExecutionInput(input: {
     intent.adminSession && await adminGrantIsLive(turn.user_id, intent.adminSession)) {
     adminGrant = intent.adminSession;
   }
-  if (adminGrant) systemPrompt += "background" in adminGrant ? BACKGROUND_ADMIN_PROMPT_BLOCK : ADMIN_PROMPT_BLOCK;
+  if (adminGrant) {
+    systemPrompt += !("background" in adminGrant) ? ADMIN_PROMPT_BLOCK
+      : recurringGrants ? REMINDER_ADMIN_PROMPT_BLOCK : BACKGROUND_ADMIN_PROMPT_BLOCK;
+  }
   // Numo's memory (MIN-915): read in every turn of a user with the memory on,
   // written only where the user talks to Numo directly. A routine runs
   // unattended and a comment mention sits on a shared surface, so neither can
@@ -709,8 +722,10 @@ async function buildExecutionInput(input: {
     tools = tools.filter((tool) => !hidden.has(tool.function.name));
   }
   // A background turn is unattended too, and its guarded tools take the
-  // memory that allows them (`authorized_by`).
+  // memory that allows them (`authorized_by`). An occurrence of a recurring
+  // reminder is guarded by its grants instead.
   if (intent.wake) tools = proactiveToolSet(tools);
+  else if (recurringGrants) tools = proactiveToolSet(tools, { reminderGrants: recurringGrants });
   if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
   // An @Numo mention runs on the shared surface of this one project: a
   // reader's mention is offered read tools only (plus comments when allowed).
@@ -723,7 +738,7 @@ async function buildExecutionInput(input: {
 }
 
 const MEMORY_TOOL_NAMES = new Set(["remember", "forget"]);
-const WATCH_WRITE_TOOL_NAMES = new Set(["create_watch", "cancel_watch"]);
+const WATCH_WRITE_TOOL_NAMES = new Set(["create_watch", "update_watch", "cancel_watch"]);
 const WATCH_TOOL_NAMES = new Set([...WATCH_WRITE_TOOL_NAMES, "list_watches"]);
 const JOURNAL_TOOL_NAMES = new Set(["journal_write", "journal_close"]);
 
@@ -1147,8 +1162,9 @@ async function executeClaimedNumoTurn(input: {
       journalSource: execution.journalSource,
       journalScope: execution.journalScope,
       onJournalChange: () => { journalChanged = true; },
-      proactive: !!claimed.intent.wake,
+      proactive: !!claimed.intent.wake || !!claimed.intent.reminder?.recurring,
       reminder: !!claimed.intent.reminder,
+      reminderGrants: claimed.intent.reminder?.recurring?.grants ?? null,
       model: runtime.model,
       aiRuntime: runtime,
       conversationId: claimed.conversation_id,

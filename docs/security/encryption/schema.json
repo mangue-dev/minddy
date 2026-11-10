@@ -11196,6 +11196,21 @@
         "type": "text",
         "nullable": true,
         "generated": false
+      },
+      "recurrence": {
+        "type": "jsonb",
+        "nullable": true,
+        "generated": false
+      },
+      "grants": {
+        "type": "text[]",
+        "nullable": false,
+        "generated": false
+      },
+      "consecutive_failures": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [

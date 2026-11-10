@@ -302,3 +302,92 @@ describe("proactiveToolSet", () => {
     for (const name of Object.keys(SCOPED_WRITES)) expect(NUMO_TOOL_CAPABILITIES).toHaveProperty(name);
   });
 });
+
+describe("an occurrence of a recurring reminder (MIN-953)", () => {
+  const withGrants = (...reminderGrants: string[]) => ({ ...ctx, reminderGrants: reminderGrants as never });
+  const trash = { type: "project", id: SOLO };
+
+  it("lets a granted category through, and only that one", async () => {
+    expect(await guardProactiveTool("move_to_trash", trash, withGrants("trash")))
+      .toEqual({ ok: true, args: trash });
+    for (const [tool, args] of [
+      ["merge_pull_request", { project_id: SOLO, issue_id: SOLO_ISSUE }],
+      ["call_mcp_tool", { connection: "x", tool: "y" }],
+      ["update_account_settings", { theme: "dark" }],
+      ["respond_to_feedback", { project_id: SHARED, feedback_post_id: POST }],
+      ["remove_member", { project_id: SOLO, user_id: TEAMMATE }],
+      ["invite_member", { project_id: SOLO, email: "a@b.c" }],
+    ] as const) {
+      const refused = await guardProactiveTool(tool, args, withGrants("trash"));
+      expect(refused.ok, tool).toBe(false);
+      if (!refused.ok) expect(refused.error).toMatch(/did not allow it for this reminder/);
+    }
+    expect((await guardProactiveTool("merge_pull_request", { project_id: SOLO, issue_id: SOLO_ISSUE },
+      withGrants("pull_request"))).ok).toBe(true);
+  });
+
+  it("refuses every sensitive action to a reminder without grants", async () => {
+    const none = withGrants();
+    expect((await guardProactiveTool("move_to_trash", trash, none)).ok).toBe(false);
+    expect((await guardProactiveTool("call_mcp_tool", { connection: "x", tool: "y" }, none)).ok).toBe(false);
+    // Reads and the user's own planning stay free.
+    expect((await guardProactiveTool("get_issue", { project_id: SHARED, issue_id: THEIR_ISSUE }, none)).ok).toBe(true);
+    expect((await guardProactiveTool("journal_write", { content: "x" }, none)).ok).toBe(true);
+  });
+
+  it("does not take a memory in place of a grant", async () => {
+    const refused = await guardProactiveTool("move_to_trash", { ...trash, authorized_by: MEMORY }, withGrants());
+    expect(refused.ok).toBe(false);
+    // And a grant needs no memory; a stray authorized_by is dropped.
+    expect(await guardProactiveTool("move_to_trash", { ...trash, authorized_by: "none" }, withGrants("trash")))
+      .toEqual({ ok: true, args: trash });
+  });
+
+  it("keeps the scope of a shared project unless outside_scope is granted", async () => {
+    const theirs = { project_id: SHARED, issue_id: THEIR_ISSUE, body: "x" };
+    expect((await guardProactiveTool("add_comment", { ...theirs, issue_id: MY_ISSUE }, withGrants())).ok).toBe(true);
+    expect((await guardProactiveTool("add_comment", theirs, withGrants("trash"))).ok).toBe(false);
+    expect((await guardProactiveTool("create_issue", { project_id: SHARED, title: "x" }, withGrants())).ok).toBe(false);
+    expect((await guardProactiveTool("add_comment", theirs, withGrants("outside_scope"))).ok).toBe(true);
+    expect((await guardProactiveTool("create_issue", { project_id: SOLO, title: "x" }, withGrants())).ok).toBe(true);
+  });
+
+  it("sends a plain note only with the notification grant, an urgent one always", async () => {
+    const note = { project_id: SOLO, title: "t", body: "b" };
+    expect(await guardProactiveTool("notify_me", note, withGrants("notification"))).toEqual({ ok: true, args: note });
+    expect(db.urgentClaims).toBe(0);
+    const refused = await guardProactiveTool("notify_me", { ...note, authorized_by: MEMORY }, withGrants());
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.error).toMatch(/only when it is urgent/);
+    expect((await guardProactiveTool("notify_me",
+      { ...note, urgent: true, urgency_reason: "Production is down since 9am." }, withGrants())).ok).toBe(true);
+  });
+
+  it("reads or changes the instance only with the administration grant", async () => {
+    for (const tool of ["admin_get_costs", "admin_get_instance_models", "admin_update_instance_models"]) {
+      expect((await guardProactiveTool(tool, {}, withGrants("notification"))).ok, tool).toBe(false);
+      expect((await guardProactiveTool(tool, {}, withGrants("administration"))).ok, tool).toBe(true);
+    }
+  });
+
+  it("never sets, changes or cancels a reminder, whatever it was granted", async () => {
+    const all = withGrants("notification", "outside_scope", "administration", "account");
+    for (const tool of ["create_watch", "update_watch", "cancel_watch", "ask_user"]) {
+      expect((await guardProactiveTool(tool, {}, all)).ok, tool).toBe(false);
+    }
+  });
+
+  it("offers no authorized_by, and the urgency fields only where a plain note is not granted", () => {
+    const tool = (name: string): AssistantToolDef => ({
+      type: "function",
+      function: { name, description: name, parameters: { type: "object", properties: { project_id: {} } } },
+    });
+    const fields = (grants: string[]) => new Map(
+      proactiveToolSet(["move_to_trash", "notify_me", "create_watch"].map(tool), { reminderGrants: grants as never })
+        .map((t) => [t.function.name, Object.keys(t.function.parameters.properties)]));
+    expect(fields([]).get("move_to_trash")).toEqual(["project_id"]);
+    expect(fields([]).get("notify_me")).toEqual(["project_id", "urgent", "urgency_reason"]);
+    expect(fields(["notification"]).get("notify_me")).toEqual(["project_id"]);
+    expect(fields(["notification"]).has("create_watch")).toBe(false);
+  });
+});

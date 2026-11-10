@@ -2,6 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { NUMO_URGENT_NOTES_PER_DAY } from "@/lib/numo-background";
+import type { NumoWatchGrant } from "@/lib/numo-watches";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { issueStore } from "@/lib/server/issue-store";
 import { countPendingInvitations } from "@/lib/server/members";
@@ -51,19 +52,18 @@ import type { AssistantToolDef } from "./tools";
  * atomically by `claim_numo_urgent_note` so that clearing a note from the
  * inbox does not give the slot back.
  *
+ * An occurrence of a recurring reminder (MIN-953) runs under the same two
+ * rules, with one difference: what allows a sensitive action or a change
+ * outside the scope is not a memory but a grant of the reminder, a category
+ * the user confirmed when setting it (`reminderGrants`). A category that
+ * was not granted is refused, whatever the user's memories say: the user
+ * agreed to that list and no other.
+ *
  * Nothing changes in a conversation: the user is there to ask and to refuse.
  */
 
-export type SensitiveCategory =
-  | "trash"
-  | "delete"
-  | "pull_request"
-  | "external"
-  | "administration"
-  | "account"
-  | "public_reply"
-  | "notification"
-  | "outside_scope";
+/** The categories a memory, or a recurring reminder's grant, may allow. */
+export type SensitiveCategory = NumoWatchGrant;
 
 /** Tools that are sensitive whatever they target. */
 export const SENSITIVE_TOOLS: Readonly<Record<string, SensitiveCategory>> = {
@@ -92,7 +92,8 @@ export const PROACTIVE_EXCLUDED_TOOLS: ReadonlySet<string> = new Set(["ask_user"
  * reminder that acts later would run outside this guard, so a background
  * turn must not set one from what it read. It may still list them.
  */
-export const PROACTIVE_REQUEST_ONLY_TOOLS: ReadonlySet<string> = new Set(["create_watch", "cancel_watch"]);
+export const PROACTIVE_REQUEST_ONLY_TOOLS: ReadonlySet<string> =
+  new Set(["create_watch", "update_watch", "cancel_watch"]);
 
 /**
  * The user's own planning and notes: never sensitive. Cycle moves stay
@@ -180,6 +181,11 @@ export interface ProactiveGuardContext {
   requireExplicitProjectTarget?: boolean;
   /** The background turn: an urgent note is counted against it. */
   turnId?: string | null;
+  /**
+   * Set on an occurrence of a recurring reminder: the categories the user
+   * granted it. They decide in place of the user's memories.
+   */
+  reminderGrants?: readonly SensitiveCategory[] | null;
 }
 
 export type ProactiveGuardResult =
@@ -212,19 +218,24 @@ const AUTHORIZED_BY = {
  * wait for an answer, with `authorized_by` on the guarded ones and the
  * urgency fields on notify_me.
  */
-export function proactiveToolSet(tools: readonly AssistantToolDef[]): AssistantToolDef[] {
+export function proactiveToolSet(tools: readonly AssistantToolDef[],
+  options: { reminderGrants?: readonly SensitiveCategory[] | null } = {}): AssistantToolDef[] {
+  const grants = options.reminderGrants ?? null;
   return tools.filter((tool) => !PROACTIVE_EXCLUDED_TOOLS.has(tool.function.name) &&
     !PROACTIVE_REQUEST_ONLY_TOOLS.has(tool.function.name)).map((tool) => {
     const name = tool.function.name;
     if (!mayNeedAuthorization(name)) return tool;
+    // A recurring reminder's grants decide, not a memory: no `authorized_by`,
+    // and the urgency fields only where a plain note is not granted.
+    if (grants && (name !== "notify_me" || grants.includes("notification"))) return tool;
     const properties: Record<string, unknown> = {
       ...tool.function.parameters.properties,
-      authorized_by: AUTHORIZED_BY,
+      ...(grants ? {} : { authorized_by: AUTHORIZED_BY }),
     };
     if (name === "notify_me") {
       properties.urgent = {
         type: "boolean",
-        description: `True only for something serious that cannot wait until the user opens minddy (an outage, a security report, a deadline today). At most ${NUMO_URGENT_NOTES_PER_DAY} urgent notes in 24 hours. Without it, a note needs authorized_by.`,
+        description: `True only for something serious that cannot wait until the user opens minddy (an outage, a security report, a deadline today). At most ${NUMO_URGENT_NOTES_PER_DAY} urgent notes in 24 hours. Without it, a note ${grants ? "is refused" : "needs authorized_by"}.`,
       };
       properties.urgency_reason = {
         type: "string",
@@ -249,6 +260,18 @@ export function proactiveRefusal(toolName: string, reason: SensitiveCategory | "
     default:
       return `${toolName} refused: this action is sensitive (${reason.replace("_", " ")}) and needs a memory of the user that explicitly allows it (authorized_by). ${ask}`;
   }
+}
+
+/** The refusal an occurrence of a recurring reminder reads for a category it was not granted. */
+export function reminderGrantRefusal(toolName: string, reason: SensitiveCategory): string {
+  const ask = "Do not retry and do not look for a workaround: say so in a journal entry. The user can ask you in a conversation to change this reminder's permissions.";
+  if (reason === "notification") {
+    return `notify_me refused: this reminder may send a note only when it is urgent (urgent: true with urgency_reason). Otherwise write a journal entry.`;
+  }
+  if (reason === "outside_scope") {
+    return `${toolName} refused: in a project with other members, this reminder may change only what is the user's, and may not create content there. ${ask}`;
+  }
+  return `${toolName} refused: this action is sensitive (${reason.replace("_", " ")}) and the user did not allow it for this reminder. ${ask}`;
 }
 
 async function projectById(ctx: ProactiveGuardContext, id: unknown): Promise<GuardProject | null> {
@@ -402,8 +425,17 @@ export async function guardProactiveTool(toolName: string, rawArgs: Record<strin
   const authorizedBy = typeof rawAuthorizedBy === "string" && UUID_RE.test(rawAuthorizedBy.trim())
     ? rawAuthorizedBy.trim()
     : null;
-  /** The call needs a memory: refuse, or check the one it names. */
+  const grants = ctx.reminderGrants ?? null;
+  /**
+   * The call needs a memory: refuse, or check the one it names. In an
+   * occurrence of a recurring reminder, the reminder's grants decide instead.
+   */
   const needsMemory = async (reason: SensitiveCategory, projectId: string | null | "any"): Promise<ProactiveGuardResult> => {
+    if (grants) {
+      return grants.includes(reason)
+        ? { ok: true, args }
+        : { ok: false, error: reminderGrantRefusal(toolName, reason) };
+    }
     if (!authorizedBy) return { ok: false, error: proactiveRefusal(toolName, reason) };
     if (!(await authorizes(ctx, authorizedBy, projectId))) {
       return { ok: false, error: proactiveRefusal(toolName, "invalid_authorization") };
@@ -414,7 +446,10 @@ export async function guardProactiveTool(toolName: string, rawArgs: Record<strin
   // Instance administration acts on no project: checked before the project
   // rules, which would look for one.
   if (ADMIN_TOOL_NAMES.has(toolName)) {
-    return ADMIN_BACKGROUND_FREE_TOOLS.has(toolName) ? { ok: true, args } : needsMemory("administration", "any");
+    // A reminder reads the instance only with the administration grant.
+    return !grants && ADMIN_BACKGROUND_FREE_TOOLS.has(toolName)
+      ? { ok: true, args }
+      : needsMemory("administration", "any");
   }
 
   const capability = numoToolCapability(toolName);
@@ -428,11 +463,12 @@ export async function guardProactiveTool(toolName: string, rawArgs: Record<strin
   }
 
   if (toolName === "notify_me") {
+    if (grants?.includes("notification")) return { ok: true, args };
     const project = await projectOf(ctx, args);
-    if (authorizedBy) return needsMemory("notification", project?.id ?? null);
+    if (authorizedBy && !grants) return needsMemory("notification", project?.id ?? null);
     const reason = typeof urgencyReason === "string" ? urgencyReason.trim() : "";
     if (urgent !== true || reason.length < URGENCY_REASON_MIN) {
-      return { ok: false, error: proactiveRefusal(toolName, "notification") };
+      return { ok: false, error: grants ? reminderGrantRefusal(toolName, "notification") : proactiveRefusal(toolName, "notification") };
     }
     if (!(await claimUrgentNote(ctx))) return { ok: false, error: proactiveRefusal(toolName, "urgent_limit") };
     return { ok: true, args: { ...args, urgent: true } };
