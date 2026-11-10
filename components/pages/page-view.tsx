@@ -107,7 +107,6 @@ import type { PageCommentAnchor } from "@/components/pages/page-comment-bubble";
 import { PageConflictBanner } from "@/components/pages/page-conflict-banner";
 import { PageToc } from "@/components/pages/page-toc";
 import { PagePresence, usePresentOn } from "@/components/pages/page-presence";
-import { usePageWatch } from "@/lib/use-page-watch";
 import { usePageActivityWarmup } from "@/lib/page-activity-cache";
 import {
   pageHref,
@@ -347,9 +346,6 @@ function PageSurface({
   const { canWrite, canComment } = useProjectCapabilities(projectId);
   const pagePanel = useOptionalPagePanelActions();
   const present = usePresentOn(pageId);
-  // The watch heartbeat: while this surface holds the document open, the
-  // server knows someone is reading it and stays quiet about agent writes.
-  usePageWatch(projectId, pageId);
   // The page's own sub-pages come first in its "@" menu.
   const subpageIds = useMemo(
     () => pages.filter((page) => page.parent_id === pageId).map((page) => page.id),

@@ -3,22 +3,23 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasRecentPageActivity } from "./issue-event-store";
 import { insertEvents } from "@/lib/server/issue-events";
-import { insertNotifications } from "@/lib/server/notifications";
-import { PAGE_WATCH_FRESH_MS, type PageWriteKind } from "@/lib/pages";
+import type { PageWriteKind } from "@/lib/pages";
 
 /**
  * What a page TELLS when it changes (MIN-278): its activity line, and
- * the notification of the agent writing.
+ * nothing more.
  *
  * Two very distinct surfaces, and this is the basic decision of the ticket:
  *
  * • the ACTIVITY is consulted. It carries everything — created, modified, trashed, restored —, with its author, and it lives in the existing journal
  * (`issue_events`, polymorphic from the objectives), with a fourth parent column. A parallel `page_events` table would have
  * re-requested its API, actor hydration and rendering.
- * • a NOTIFICATION interrupts. There is therefore NONE for “someone has
- * modified a page”: it would be noise at four and a deluge at ten. Only
- * writing the AGENT produces one, and only for the one who launched
- * the run — not for the project.
+ * • a NOTIFICATION interrupts. There is therefore NONE for a page edit,
+ * whoever writes it: it would be noise at four and a deluge at ten. An agent's
+ * write used to notify the account that ran it (`page_agent_edit`), and
+ * MIN-958 removed that too: agents write pages often, and every write rang.
+ * Mentions and comments in a page still notify (page-mentions.ts, page
+ * comments).
  */
 
 /** The gestures that a page records. */
@@ -96,58 +97,4 @@ export async function recordPageEvent(
       ...(mcpKeyId ? { via_mcp: true, api_key_id: mcpKeyId } : {}),
     },
   ]);
-}
-
-/**
- * Warns the launcher of a run that the AGENT has just written to a page.
- *
- * `actorId` IS the recipient, and this is not an oddity: the six page writing tools
- * run under the id of the account that allowed them — the bearer
- * of the MCP key, the Numo user, the project owner. So this is the only person to warn, and warning the entire project with a gesture that no one asked for would be exactly the noise this ticket seeks to avoid.
- *
- * Unless they are watching the page RIGHT NOW: a fresh row in
- * `page_viewers` (lib/page-watch.ts pings it while the editor holds the
- * document open) means the write is already arriving live through realtime —
- * refetch and merge into the open editor — and the inbox line would only
- * repeat what the reader is seeing happen. Somewhere else in the app, or away
- * entirely, the line stays useful and keeps its push.
- *
- * `actor_id` remains NULL on the line: the actor is not a person, this is
- * the agent. Leaving it filled would cause the recipient to see their own portrait
- * next to "someone wrote in this page".
- *
- * `replaceUnread`: a run that goes over the same page ten times leaves
- * only one line — this is the same mechanism as run notifications, and it is
- * bounded on the page by the `page_id` clause of `insertNotifications`.
- */
-export async function notifyAgentPageWrite(
-  service: SupabaseClient,
-  params: { projectId: string; pageId: string; actorId: string },
-): Promise<void> {
-  // Watching beats warning: one indexed read before the write. The window is
-  // generous on purpose — three missed heartbeats still count as watching,
-  // so a single dropped ping never resurrects the line.
-  const { data } = await service
-    .from("page_viewers")
-    .select("user_id")
-    .eq("page_id", params.pageId)
-    .eq("user_id", params.actorId)
-    .gte("seen_at", new Date(Date.now() - PAGE_WATCH_FRESH_MS).toISOString())
-    .limit(1);
-  if (data && data.length > 0) return;
-
-  await insertNotifications(
-    service,
-    [
-      {
-        user_id: params.actorId,
-        project_id: params.projectId,
-        type: "page_agent_edit" as const,
-        issue_id: null,
-        page_id: params.pageId,
-        actor_id: null,
-      },
-    ],
-    { replaceUnread: true },
-  );
 }

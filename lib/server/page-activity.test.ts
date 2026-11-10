@@ -6,9 +6,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *
  * “No noise” is the fourth condition of the ticket, and it is the one that we do
  * note that by undergoing it: a page is re-recorded one second after the
- * last keystroke, so an afternoon of writing makes a thousand lines of activity —
- * and an agent who returns to the same page ten times, ten notifications. Both
- * terminals live here, and nothing on screen shows them before they give way.
+ * last keystroke, so an afternoon of writing makes a thousand lines of activity.
+ * That bound lives here, and nothing on screen shows it before it gives way.
  */
 
 // Explicit signatures: without them, `mock.calls` is typed on an empty tuple
@@ -17,22 +16,13 @@ const H = vi.hoisted(() => ({
   insertEvents: vi.fn<
     (service: unknown, rows: Array<Record<string, unknown>>) => Promise<void>
   >(async () => {}),
-  insertNotifications: vi.fn<
-    (
-      service: unknown,
-      rows: Array<Record<string, unknown>>,
-      opts?: Record<string, unknown>
-    ) => Promise<void>
-  >(async () => {}),
 }));
 
 vi.mock("./issue-events", () => ({ insertEvents: H.insertEvents }));
-vi.mock("./notifications", () => ({ insertNotifications: H.insertNotifications }));
 
-const { recordPageEvent, notifyAgentPageWrite } = await import("./page-activity");
+const { recordPageEvent } = await import("./page-activity");
 
 const PAGE = "page-1";
-const PROJECT = "project-1";
 const ACTOR = "user-1";
 
 /** False PostgREST: the coalescence reading returns what it is told, and on
@@ -64,7 +54,6 @@ function stubService(existing: unknown[]) {
 
 beforeEach(() => {
   H.insertEvents.mockClear();
-  H.insertNotifications.mockClear();
 });
 
 describe("recordPageEvent", () => {
@@ -155,51 +144,5 @@ describe("recordPageEvent", () => {
       await recordPageEvent(service, { pageId: PAGE, actorId: ACTOR, kind: "human", type });
     }
     expect(H.insertEvents).toHaveBeenCalledTimes(3);
-  });
-});
-
-describe("notifyAgentPageWrite", () => {
-  it("notifies the launcher without an actor and moves its unread row", async () => {
-    const { service, filters } = stubService([]);
-    await notifyAgentPageWrite(service, {
-      projectId: PROJECT,
-      pageId: PAGE,
-      actorId: ACTOR,
-    });
-
-    const [, rows, opts] = H.insertNotifications.mock.calls[0];
-    expect(rows).toEqual([
-      {
-        user_id: ACTOR,
-        project_id: PROJECT,
-        type: "page_agent_edit",
-        issue_id: null,
-        page_id: PAGE,
-        // `actor_id` NULL: the actor is not a person. Filled, the
-        // recipient would see their own portrait on an agent's writing.
-        actor_id: null,
-      },
-    ]);
-    // Ten passages on the same page = one line, not ten (MIN-278, “no
-    // noise "). The `page_id` clause of `insertNotifications` limits it to this one.
-    expect(opts).toEqual({ replaceUnread: true });
-    // The watching read comes FIRST, and only for THIS page and THIS reader.
-    expect(filters.map(([column]) => column)).toEqual([
-      "page_id",
-      "user_id",
-      "seen_at",
-    ]);
-  });
-
-  it("says NOTHING to a reader who has the page open right now", async () => {
-    const { service } = stubService([{ user_id: ACTOR }]);
-    await notifyAgentPageWrite(service, {
-      projectId: PROJECT,
-      pageId: PAGE,
-      actorId: ACTOR,
-    });
-    // The write is already arriving live in their editor; an inbox line
-    // would only repeat what they are seeing happen.
-    expect(H.insertNotifications).not.toHaveBeenCalled();
   });
 });
