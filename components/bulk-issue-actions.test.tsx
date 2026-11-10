@@ -67,7 +67,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-type SelectedIssue = { id: string; project_id: string; status?: string };
+type SelectedIssue = { id: string; project_id: string; status?: string; assignee_id?: string };
 
 async function renderPill(
   onDelete: () => void,
@@ -124,11 +124,19 @@ const dialogButton = (label: string) =>
 
 describe("bulk issue actions", () => {
   it("names Smart Assign only when it fills every selected ticket (MIN-820)", async () => {
+    // Clearing an assignee makes Smart Assign choose; triage is filled on exit.
     const issues = [
-      { id: "issue-1", project_id: "smart", status: "todo" },
+      { id: "issue-1", project_id: "smart", status: "todo", assignee_id: "user-1" },
       { id: "issue-2", project_id: "smart", status: "triage" },
     ];
     expect((await renderPill(vi.fn(), { issues, smartAssignProjects: ["smart"] })).smartAssign).toBe(true);
+    // An open issue that is already empty and of unknown age is not filled (MIN-903).
+    expect(
+      (await renderPill(vi.fn(), {
+        issues: [...issues, { id: "issue-3", project_id: "smart", status: "todo" }],
+        smartAssignProjects: ["smart"],
+      })).smartAssign,
+    ).toBe(false);
     expect(
       (await renderPill(vi.fn(), {
         issues: [...issues, { id: "issue-3", project_id: "smart", status: "canceled" }],

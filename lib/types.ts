@@ -245,6 +245,9 @@ export type NotificationType =
   /** Someone commented on a page I wrote, or a thread I participated in
  (MIN-282) — the exact counterpart of `comment` on a ticket. */
   | "page_comment"
+  /** Smart Assign filled several open issues for me in one backfill
+      (MIN-903): one line with their count, not one per issue. */
+  | "smart_assign_batch"
   /** A note Numo wrote for the user it works for (MIN-914): its own title and
       body, sealed in `numo_notes`, and an optional link to what it is about. */
   | "numo_message";
@@ -304,6 +307,10 @@ export interface MyNotification {
       its recipient. Null on every other type, or when the note is unreadable. */
   numo_note_title: string | null;
   numo_note_body: string | null;
+  /** How many issues a `smart_assign_batch` line stands for (MIN-903), and
+      the name of their project, which is that line's title. Null otherwise. */
+  issue_count: number | null;
+  project_name: string | null;
 }
 
 /**
@@ -582,6 +589,12 @@ export interface Project {
   orb_seed: string | null;
   /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
   smart_assign_enabled: boolean;
+  /** When Smart Assign was last turned on (MIN-903). An open issue with no
+      assignee that is older than this is not filled by it. */
+  smart_assign_enabled_at?: string | null;
+  /** Set while a backfill the owner asked for still has open issues to
+      assign (MIN-903); cleared when it is done. */
+  smart_assign_backfill_requested_at?: string | null;
   /** Retired: never read. Auto-assigning one's own issues is the account
       preference `auto_assign_created`. Kept until the column is dropped. */
   auto_assign_enabled: boolean;
@@ -1089,6 +1102,9 @@ export interface IssueCardIssue {
   due_date: string | null;
   recurrence: RecurrenceCadence | null;
   category_ids: string[];
+  /** When the issue was created. Optional: only the Smart Assign label reads
+      it (MIN-903), and a public or illustrative card has no use for it. */
+  created_at?: string;
   /** Markdown of the plan. Optional, and that's the point: the card only gets progress ("3/5") from it, so a public showing omits it — and the document itself never leaves the server. */
   plan?: string | null;
   integration_id?: string | null;

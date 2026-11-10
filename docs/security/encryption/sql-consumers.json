@@ -7542,6 +7542,23 @@
         "projects"
       ],
       "functionReferences": []
+    },
+    "smart_assign_backfill_candidates(uuid,integer)": {
+      "sha256": "7d7e122730e7371fdb4a2cae9fff2b4505d58b40e9223d81857e25902590d16f",
+      "securityDefiner": false,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [
+        "issues",
+        "issue_events"
+      ],
+      "protectedRelations": [
+        "issues",
+        "issue_events"
+      ],
+      "functionReferences": []
     }
   },
   "triggers": {

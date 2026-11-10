@@ -1290,6 +1290,16 @@
         "type": "boolean",
         "nullable": false,
         "generated": false
+      },
+      "smart_assign_enabled_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "smart_assign_backfill_requested_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -2820,6 +2830,11 @@
       "via_smart_assign": {
         "type": "boolean",
         "nullable": false,
+        "generated": false
+      },
+      "issue_count": {
+        "type": "integer",
+        "nullable": true,
         "generated": false
       }
     },

@@ -149,6 +149,10 @@ export function buildInboxToolResult(
       project_key: notification.project_key,
       target: targetOf(notification),
       comment_excerpt: notification.comment_excerpt,
+      // A backfill's single line (MIN-903): how many issues it assigned.
+      ...(notification.type === "smart_assign_batch"
+        ? { issue_count: notification.issue_count }
+        : {}),
       // A note Numo left for the user (MIN-914), in its own words.
       ...(notification.type === "numo_message"
         ? { note: { title: notification.numo_note_title, body: notification.numo_note_body } }

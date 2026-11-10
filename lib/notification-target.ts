@@ -15,7 +15,8 @@ import type { MessageKey } from "./i18n-keys";
 
 /** The target of a notification, reduced to what decides its destination. */
 export interface NotificationTarget {
-  /** Only the instance-wide notification (MIN-847) is routed by its type. */
+  /** The instance-wide notification (MIN-847) and the ones that open the
+      project as a whole are routed by their type. */
   type?: NotificationType;
   project_id: string | null;
   issue_id: string | null;
@@ -70,6 +71,8 @@ export function notificationTargetPath(n: NotificationTarget): string | null {
   if (n.issue_id) return issueHref(n.project_id, { id: n.issue_id });
   // A Numo note about the project as a whole (MIN-914) opens the project.
   if (n.type === "numo_message") return projectPath(n.project_id);
+  // A backfill assigned several issues (MIN-903): the project holds them all.
+  if (n.type === "smart_assign_batch") return projectPath(n.project_id);
   return null;
 }
 
@@ -124,6 +127,7 @@ export const NOTIFICATION_LINE_KEYS: Record<
   page_agent_edit: "linePageAgentEdit",
   page_comment: "linePageComment",
   numo_message: "lineNumoMessage",
+  smart_assign_batch: "lineSmartAssignBatch",
 };
 
 /** Numo answers use a reply-specific sentence instead of the generic comment line. */

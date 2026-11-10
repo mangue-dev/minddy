@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { verifyCronSecret } from "@/lib/server/cron-auth";
-import { sweepUnassignedIssues } from "@/lib/server/smart-assign";
+import {
+  resumeSmartAssignBackfills,
+  sweepUnassignedIssues,
+} from "@/lib/server/smart-assign";
 
 /**
  * The Smart Assign NET (MIN-31): tickets that should have been triggered
@@ -15,18 +18,28 @@ import { sweepUnassignedIssues } from "@/lib/server/smart-assign";
  *
  * Short by construction: the scan is limited (24 h, never assigned, 100
  * tickets), and the vast majority of wake-ups find nothing.
+ *
+ * It also resumes the backlog backfills an owner asked for (MIN-903) with the
+ * time the sweep left, so a large backlog is filled over several wake-ups.
  */
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+/** The backfill stops here, leaving the route time to answer before 60 s. */
+const BACKFILL_DEADLINE_MS = 45_000;
 
 async function handle(request: NextRequest) {
   if (!verifyCronSecret(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  const startedAt = Date.now();
   const result = await sweepUnassignedIssues();
-  return NextResponse.json({ ok: true, ...result });
+  const backfill = await resumeSmartAssignBackfills(
+    Math.max(0, BACKFILL_DEADLINE_MS - (Date.now() - startedAt))
+  );
+  return NextResponse.json({ ok: true, ...result, backfill });
 }
 
 export const GET = handle;

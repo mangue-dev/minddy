@@ -1938,6 +1938,7 @@
     "encrypted": [],
     "clear": {
       "bounded_metadata": [
+        "issue_count",
         "via_assistant",
         "via_automation",
         "via_mcp",
@@ -3109,6 +3110,8 @@
         "encryption_checked_at",
         "icon_attempted_at",
         "icon_checked_at",
+        "smart_assign_backfill_requested_at",
+        "smart_assign_enabled_at",
         "updated_at"
       ],
       "encryption_metadata": [

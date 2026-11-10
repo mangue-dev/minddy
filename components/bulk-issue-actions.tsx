@@ -92,7 +92,13 @@ export function BulkIssueActions({
   onLink?: () => void;
   /** The selected tickets, for the pull request links and Smart Assign.
       Absent: no pull request link offered. */
-  issues?: ReadonlyArray<{ id: string; project_id: string; status?: string }>;
+  issues?: ReadonlyArray<{
+    id: string;
+    project_id: string;
+    status?: string;
+    assignee_id?: string | null;
+    created_at?: string;
+  }>;
   /** The screen from which the selection starts, for analytics (“board” default). */
   surface?: string;
 }) {
@@ -131,8 +137,8 @@ export function BulkIssueActions({
     !!issues?.length &&
     issues.every((issue) =>
       smartAssignFillsEmptyAssignee(
-        projects?.find((project) => project.id === issue.project_id)?.smart_assign_enabled,
-        issue.status
+        projects?.find((project) => project.id === issue.project_id),
+        { status: issue.status, assigneeId: issue.assignee_id, createdAt: issue.created_at }
       )
     );
 

@@ -2,7 +2,11 @@
 
 import { useContext } from "react";
 import { ProjectsContext } from "@/lib/projects-context-store";
-import { objectiveSmartAssignEligible, smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
+import {
+  objectiveSmartAssignEligible,
+  smartAssignFillsEmptyAssignee,
+  type SmartAssignIssueState,
+} from "@/lib/smart-assign-config";
 
 /**
  * {@link smartAssignFillsEmptyAssignee} for an issue of a project the viewer
@@ -12,11 +16,10 @@ import { objectiveSmartAssignEligible, smartAssignFillsEmptyAssignee } from "@/l
  */
 export function useSmartAssignFillsEmpty(
   projectId: string | null | undefined,
-  status: string | null | undefined,
+  issue: SmartAssignIssueState,
 ): boolean {
-  const enabled = useContext(ProjectsContext)?.projects.find((project) => project.id === projectId)
-    ?.smart_assign_enabled;
-  return smartAssignFillsEmptyAssignee(enabled, status);
+  const project = useContext(ProjectsContext)?.projects.find((item) => item.id === projectId);
+  return smartAssignFillsEmptyAssignee(project, issue);
 }
 
 /**

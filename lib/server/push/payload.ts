@@ -5,6 +5,7 @@ import { decodePullRequestContent } from "@/lib/server/agent/pull-request-conten
 import "server-only";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { decodePageProjection } from "@/lib/server/page-content";
+import { readProjectNames } from "@/lib/server/project-content";
 import { readNumoNotes, type NumoNoteContent } from "@/lib/server/numo-note-content";
 
 import { createTranslator } from "next-intl";
@@ -106,6 +107,8 @@ export interface PushContext {
   /** A Numo note (MIN-914): its own title and body make the banner. */
   numoNotes: Map<string, NumoNoteContent>;
   projectKeys: Map<string, string>;
+  /** Name of the project a backfill line (MIN-903) is about: its title. */
+  projectNames: Map<string, string>;
   actorNames: Map<string, string>;
   apiKeyActors: Map<string, ApiKeyActor>;
 }
@@ -121,6 +124,7 @@ export function emptyPushContext(): PushContext {
     pages: new Map(),
     numoNotes: new Map(),
     projectKeys: new Map(),
+    projectNames: new Map(),
     actorNames: new Map(),
     apiKeyActors: new Map(),
   };
@@ -240,6 +244,10 @@ export async function loadPushContext(
     ctx.actorNames.set(id, displayName(toNamed(user), ""));
   }
   ctx.apiKeyActors = keyActors;
+  ctx.projectNames = await readProjectNames(
+    service,
+    rows.filter((row) => row.type === "smart_assign_batch").map((row) => row.project_id),
+  );
   // Each note is read for its own recipient, the only user it is sent to.
   for (const row of rows) {
     if (!row.numo_note_id) continue;
@@ -289,6 +297,10 @@ export function buildPushPayload(
   let title: string;
   if (row.type === "instance_config_changed") {
     title = t("instanceConfigTitle");
+  } else if (row.type === "smart_assign_batch") {
+    const name = row.project_id ? ctx.projectNames.get(row.project_id) : undefined;
+    if (!name || !row.issue_count) return null;
+    title = name;
   } else if (row.objective_id) {
     const name = ctx.objectives.get(row.objective_id);
     if (!name) return null;
@@ -348,7 +360,10 @@ export function buildPushPayload(
 
   return {
     title,
-    body: t(notificationLineKey(row.type, !!row.via_assistant), { actor }),
+    body: t(notificationLineKey(row.type, !!row.via_assistant), {
+      actor,
+      count: row.issue_count ?? 0,
+    }),
     lang: intlLocaleByLocale[locale],
     url,
     tag: url,

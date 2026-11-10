@@ -43,6 +43,7 @@ const ALL_TYPES: readonly NotificationType[] = [
   "page_comment",
   "instance_config_changed",
   "numo_message",
+  "smart_assign_batch",
 ];
 
 /** The table above should be COMPLETE: a type added to the product without its
@@ -74,7 +75,10 @@ describe("buildPushPayload", () => {
   it.each(ALL_TYPES.filter((type) => type !== "numo_message"))("rend une phrase substituée en EN et en FR — %s", (type) => {
     const ctx = ctxWithIssue();
     for (const locale of ["en", "fr"] as const) {
-      const payload = buildPushPayload(ctx, issueRow(type), locale);
+      // A backfill line is about a project and a number of issues.
+      ctx.projectNames.set(PROJECT, "Aurora");
+      const row = issueRow(type, type === "smart_assign_batch" ? { issue_count: 3 } : {});
+      const payload = buildPushPayload(ctx, row, locale);
       expect(payload).not.toBeNull();
       expect(payload!.body).not.toContain("Inbox.");
       expect(payload!.body).not.toContain("{actor}");
@@ -91,6 +95,22 @@ describe("buildPushPayload", () => {
       body: en.Inbox.lineInstanceConfigChanged.replace("{actor}", "Alice"),
       url: "/admin?tab=instance",
     });
+  });
+
+  it("pushes a backfill as one line: the project, and how many issues were assigned", () => {
+    const ctx = emptyPushContext();
+    ctx.projectNames.set(PROJECT, "Aurora");
+    const row = { user_id: "u", project_id: PROJECT, type: "smart_assign_batch",
+      issue_id: null, actor_id: null, via_smart_assign: true, issue_count: 12 } as NotificationRow;
+    expect(buildPushPayload(ctx, row, "en")).toMatchObject({
+      title: "Aurora",
+      body: "Smart Assign assigned you 12 issues",
+      url: `/projects/${PROJECT.slice(0, 8)}`,
+    });
+    expect(buildPushPayload(ctx, { ...row, issue_count: 1 }, "fr")?.body)
+      .toBe("Smart Assign vous a assigné 1 ticket");
+    // An unreadable project name pushes nothing rather than an untitled banner.
+    expect(buildPushPayload(emptyPushContext(), row, "en")).toBeNull();
   });
 
   it("pushes a Numo note in its own words, and nothing when the note is unreadable", () => {

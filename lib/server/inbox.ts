@@ -13,6 +13,7 @@ import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { accessibleProjectIds } from "@/lib/server/project-access";
+import { readProjectNames } from "@/lib/server/project-content";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
@@ -280,6 +281,13 @@ export async function readInboxNotifications({
     readable.map((n) => n.numo_note_id as string | null).filter(
       (id): id is string => !!id), userId) ?? new Map();
   if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
+  // A backfill line (MIN-903) is titled by its project: the name is read for
+  // those rows only, in projects the reader can still open.
+  const batchProjectNames = await readProjectNames(
+    service,
+    readable.filter((n) => n.type === "smart_assign_batch").map((n) => n.project_id as string | null),
+    userId,
+  );
 
   const issueMap = new Map((issues ?? []).map((item) => [item.id, item]));
   const objectiveMap = new Map(
@@ -493,6 +501,11 @@ export async function readInboxNotifications({
         numo_note_body: n.numo_note_id
           ? numoNotes.get(n.numo_note_id)?.body ?? null
           : null,
+        issue_count: typeof n.issue_count === "number" ? n.issue_count : null,
+        project_name:
+          n.type === "smart_assign_batch" && n.project_id
+            ? batchProjectNames.get(n.project_id) ?? null
+            : null,
       };
     });
 

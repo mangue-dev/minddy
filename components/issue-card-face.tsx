@@ -170,15 +170,19 @@ function IssueCardAssignee({
   assignee,
   projectId,
   status,
+  assigneeId,
+  createdAt,
 }: {
   assignee: Member | null;
   projectId: string;
   status: string;
+  assigneeId: string | null;
+  createdAt: string | undefined;
 }) {
   const tField = useTranslations("Field");
   // The project's Smart Assign fills an empty assignee (MIN-811): the empty
   // state names it, as in the issue panel.
-  const smartAssign = useSmartAssignFillsEmpty(projectId, status);
+  const smartAssign = useSmartAssignFillsEmpty(projectId, { status, assigneeId, createdAt });
   return (
     <IssueCardAssigneeAvatar
       assignee={assignee}
@@ -486,7 +490,13 @@ export function IssueCardFace({
           {/* Back in the corner, 12px from both edges: concentric with it. */}
           <span className="-mr-1.5 flex">
             {slots?.assignee ?? (
-              <IssueCardAssignee assignee={assignee} projectId={issue.project_id} status={issue.status} />
+              <IssueCardAssignee
+                assignee={assignee}
+                projectId={issue.project_id}
+                status={issue.status}
+                assigneeId={issue.assignee_id}
+                createdAt={issue.created_at}
+              />
             )}
           </span>
         </span>

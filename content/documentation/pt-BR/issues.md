@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 50,
-  "sourceRevision": 50,
+  "revision": 51,
+  "sourceRevision": 51,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -132,14 +132,17 @@
       "lib/create-context.tsx",
       "components/mention-hover-card.tsx",
       "components/resources.tsx",
-      "lib/server/smart-fill-objective.ts"
+      "lib/server/smart-fill-objective.ts",
+      "lib/smart-assign-config.ts",
+      "lib/server/smart-assign.ts",
+      "components/settings/smart-assign-section.tsx"
     ]
   },
   "review": {
-    "revision": 50,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude-code (Property paragraph now lists the XXL effort size and states that effort measures the size of the work, not its impact, MIN-949; checked against lib/issue-constants.ts and lib/server/smart-fill.ts; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured)",
-    "language": "agent:claude-code (pt-BR passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR translation of the changed passage, reviewed against en revision 49; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 51,
+    "fact": "agent:claude-code (MIN-903: the Smart Assign paragraph now says where an empty assignee reads Smart Assign or Unassigned, and a new paragraph describes the offer to assign open issues, its scope, the assignment rule it requires from every member and its single notification; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json, and the backfill run on the preview database; no figure recaptured: none shows the changed controls)",
+    "language": "agent:claude-code (pt-BR passages changed and added for MIN-903; self-reviewed against the pt-BR catalog and glossary; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "feedback",
@@ -185,7 +188,7 @@
       "src": "/documentation/pt-BR/new-issue.png",
       "alt": "Rascunho não enviado no projeto Aurora com título, descrição, propriedades que podem ser escolhidas manualmente e o botão Criar AUR-21.",
       "caption": "Descreva o resultado esperado e escolha as propriedades úteis antes de criar o ticket.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -202,7 +205,7 @@
       "src": "/documentation/pt-BR/triage-incoming.png",
       "alt": "Ticket recebido de demonstração AUR-19 com relato, propriedades e controles de duplicado, Recusar e Aceitar.",
       "caption": "Leia o relato recebido antes de aceitar, recusar ou vincular um duplicado.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -219,7 +222,7 @@
       "src": "/documentation/pt-BR/issue-statuses.png",
       "alt": "Os oito estados do ticket no seletor, com Backlog selecionado.",
       "caption": "A marca indica o estado atual. Escolha o que representa a situação real do trabalho.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -236,7 +239,7 @@
       "src": "/documentation/pt-BR/work-resources.png",
       "alt": "Janela para adicionar um link com um endereço de contato de exemplo.",
       "caption": "Confira o destino antes de adicionar o recurso. Este link de exemplo não foi enviado.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -253,7 +256,7 @@
       "src": "/documentation/pt-BR/work-dependencies.png",
       "alt": "A paleta de comandos lista os tickets que podem bloquear este, com a pergunta da relação no campo de busca.",
       "caption": "Escolha o sentido da relação antes do destino. O seletor é mostrado sem enviar a relação.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -270,7 +273,7 @@
       "src": "/documentation/pt-BR/work-sub-issues.png",
       "alt": "Seção de subtickets de um ticket pai de demonstração, com o botão Criar um subticket e sua seta de opções.",
       "caption": "Criar um subticket abre a criação com este ticket como pai; cada filho mantém seu próprio status e discussão.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -287,7 +290,7 @@
       "src": "/documentation/pt-BR/work-implementation-plan.png",
       "alt": "Plano de demonstração com duas tarefas de trabalho concluídas de seis.",
       "caption": "O plano salvo distingue etapas concluídas, ativas e pendentes. O progresso não comprova a execução da tarefa fictícia de código.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -304,7 +307,7 @@
       "src": "/documentation/pt-BR/issue-date-recurrence.png",
       "alt": "Seletor de prazo no modo recorrente com prévia semanal aos domingos e horário opcional.",
       "caption": "O modo recorrente mostra a frequência semanal. Confirme o primeiro prazo antes de criar o ticket.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -321,7 +324,7 @@
       "src": "/documentation/pt-BR/import-issues-preview-workflow.png",
       "alt": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas.",
       "caption": "Prévia CSV de duas linhas de demonstração traduzidas e das colunas detectadas. A importação não foi enviada; o planejamento opcional com IA foi bloqueado para a captura.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -338,7 +341,7 @@
       "src": "/documentation/pt-BR/file-preview.png",
       "alt": "Visualizador CSV de janela inteira com tarefas de exemplo, um botão Fechar grande e o menu Ações do arquivo com Baixar, Renomear e Remover.",
       "caption": "O visualizador compartilhado mantém Fechar abaixo da prévia. O menu Ações do arquivo oferece Baixar e, quando permitido, Renomear e Remover.",
-      "revision": 50,
+      "revision": 51,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -375,7 +378,9 @@ Para criar o ticket manualmente, desative Smart Fill se o botão estiver visíve
 
 Defina as propriedades úteis antes de confirmar: estado, prioridade, esforço, responsável, objetivo, categorias, prazo e recorrência. O responsável é o proprietário do projeto ou um Membro, nunca um leitor; um objetivo agrupa tickets em torno de um resultado do projeto. Você pode deixar propriedades opcionais sem valor em vez de adivinhar. A prioridade fica **Não definida** ou vai de baixa a urgente, passando por média e alta; o esforço fica **Não definido** ou usa XS, S, M, L, XL e XXL. O esforço mede o tamanho do trabalho, não o impacto: um trabalho de poucas horas continua sendo no máximo um L, por mais importante que seja, e essa importância vai na prioridade. Reserve XXL para trabalhos de vários dias, como uma reformulação ou um novo subsistema.
 
-Quando o Smart Assign está ativado no projeto, o seletor de responsável mostra **Smart Assign** em vez de **Sem responsável**. Os cartões de ticket e a paleta de comandos seguem a mesma regra, e um cartão sem responsável mostra o ícone do Smart Assign. Mantenha essa opção e o Smart Assign escolhe o responsável assim que o ticket sai da triagem. No painel do ticket, escolher **Smart Assign** remove o responsável atual e deixa o Smart Assign escolher de novo. Tickets **Cancelado** e **Duplicado** continuam **Sem responsável**.
+Quando o Smart Assign está ativado no projeto, o seletor de responsável mostra **Smart Assign** em vez de **Sem responsável** onde o Smart Assign vai escolher: no formulário de criação, em um ticket em triagem e em um ticket que tem responsável, no qual escolher **Smart Assign** remove esse responsável e deixa o Smart Assign escolher de novo. Os cartões de ticket e a paleta de comandos seguem a mesma regra, e um cartão que aguarda o Smart Assign mostra o ícone dele. Um ticket que já estava aberto e sem responsável quando o Smart Assign foi ativado continua **Sem responsável**, porque nada o atribui sozinho. Tickets **Cancelado** e **Duplicado** também continuam **Sem responsável**.
+
+Ativar o Smart Assign não atribui os tickets que já estavam esperando. Se o projeto tem tickets em **Backlog** ou **A fazer** que nunca foram atribuídos, o proprietário vê **Atribuir os tickets abertos?** com a quantidade. **Atribuir tickets** os atribui em segundo plano; um backlog grande leva alguns minutos. **Agora não** não muda nada, e a linha **Tickets abertos sem responsável** das configurações de **Smart Assign** do projeto oferece a mesma ação depois. Em um projeto com vários membros, a ação fica indisponível até que cada membro tenha uma regra de atribuição, e a pergunta não é feita. Os tickets que têm responsável, os que estão em outro status e aqueles dos quais alguém removeu o responsável manualmente ficam como estão. Cada pessoa recebe uma única notificação com o número de tickets atribuídos a ela; o proprietário que iniciou a operação não recebe nenhuma. Se o orçamento de IA do proprietário acabar, os tickets restantes continuam sem responsável.
 
 Confirme a criação e abra o novo ticket. Confira seu identificador e projeto. Abra novamente os seletores de propriedades para mudar valores conforme o ticket ficar mais claro. A descrição explica o trabalho; o plano de implementação é mantido separadamente na aba do plano.
 

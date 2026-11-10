@@ -39,6 +39,8 @@ function notification(
     comment_excerpt: null,
     numo_note_title: null,
     numo_note_body: null,
+    issue_count: null,
+    project_name: null,
     ...rest,
   };
 }

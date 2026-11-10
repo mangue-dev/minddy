@@ -71,6 +71,13 @@ describe("notificationTargetPath", () => {
   });
 });
 
+describe("a backfill line (MIN-903)", () => {
+  it("opens the project that holds the assigned issues", () => {
+    expect(notificationTargetPath({ type: "smart_assign_batch", project_id: P, issue_id: null }))
+      .toBe(`/projects/${P.slice(0, 8)}`);
+  });
+});
+
 describe("NOTIFICATION_LINE_KEYS", () => {
   // The `MessageKey<"Inbox">` typing already keeps the promise at compile time;
   // this test also involves building a catalog amputated by hand.

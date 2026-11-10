@@ -156,6 +156,8 @@ export async function POST(request: NextRequest) {
       key,
       color,
       smart_assign_enabled: smartAssignEnabled,
+      // A project born with Smart Assign on has it on from its first issue (MIN-903).
+      ...(smartAssignEnabled ? { smart_assign_enabled_at: new Date().toISOString() } : {}),
       ...(teamLanguage ? { feedback_team_language: teamLanguage } : {}),
     })
     .select("*")

@@ -22,7 +22,7 @@ import * as React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
 import { smartAssignFillsEmptyAssignee } from "@/lib/smart-assign-config";
-import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
+import { ProjectsContext } from "@/lib/projects-context-store";
 import { TriangleIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { CommandGroup, CommandItem } from "@/components/ui/command";
@@ -303,11 +303,16 @@ export function IssueShortcutMenu({
   const writeTargets = targets ?? [issue];
   // Clearing the assignee lets Smart Assign choose when it fills every
   // target's empty assignee (MIN-811): the row then names it.
-  const smartAssign =
-    useSmartAssignFillsEmpty(issue.project_id, issue.status) &&
-    writeTargets.every(
-      (target) => target.project_id === issue.project_id && smartAssignFillsEmptyAssignee(true, target.status),
-    );
+  const project = React.useContext(ProjectsContext)?.projects.find((item) => item.id === issue.project_id);
+  const smartAssign = writeTargets.every(
+    (target) =>
+      target.project_id === issue.project_id &&
+      smartAssignFillsEmptyAssignee(project, {
+        status: target.status,
+        assigneeId: target.assignee_id,
+        createdAt: target.created_at,
+      }),
+  );
   // Category writes across several targets are one gesture for ⌘Z (MIN-795).
   const { linked } = useUndoHistory();
   const tBulk = useTranslations("BulkActions");

@@ -47,6 +47,17 @@ export function notificationActor(
 }
 
 /**
+ * The values every line sentence may use: who acted, and how many issues the
+ * line stands for (only `lineSmartAssignBatch` reads the count).
+ */
+export function notificationLineValues(
+  n: MyNotification,
+  labels: NotificationLabels
+): { actor: string; count: number } {
+  return { actor: notificationActor(n, labels), count: n.issue_count ?? 0 };
+}
+
+/**
  * What we're talking about: the title of the target. The order follows that of
  * `notificationTargetPath` — one line carries only one target, but nothing in the
  * schema requires it, and the two functions must designate the same one.
@@ -60,6 +71,8 @@ export function notificationTitle(
   // A Numo note (MIN-914) carries its own title; its link only decides where
   // the click leads.
   if (n.type === "numo_message" && n.numo_note_title) return n.numo_note_title;
+  // A backfill (MIN-903) is about a project's issues, not one of them.
+  if (n.type === "smart_assign_batch") return n.project_name ?? n.project_key ?? "";
   if (n.objective_id) return n.objective_name ?? "";
   if (n.feedback_post_id) return n.feedback_title ?? "";
   // A routine (MIN-185): its title IS the line — it has no ticket

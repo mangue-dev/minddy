@@ -401,18 +401,22 @@ function AssigneePick({
   onChange,
   projectId,
   status,
+  assigneeId,
+  createdAt,
 }: {
   assignee: Member | null;
   members: Member[];
   onChange?: (id: string | null) => void;
   projectId: string;
   status: string;
+  assigneeId: string | null;
+  createdAt: string | undefined;
 }) {
   const t = useTranslations("IssueUI");
   const tField = useTranslations("Field");
   // The project's Smart Assign fills an empty assignee (MIN-811): the empty
   // state and the picker's clear option name it, as in the issue panel.
-  const smartAssign = useSmartAssignFillsEmpty(projectId, status);
+  const smartAssign = useSmartAssignFillsEmpty(projectId, { status, assigneeId, createdAt });
   const emptyLabel = tField(smartAssign ? "smartAssign" : "unassigned");
   const avatar = (
     <IssueCardAssigneeAvatar
@@ -870,6 +874,8 @@ export const IssueCardBody = memo(function IssueCardBody({
             onChange={setAssignee}
             projectId={issue.project_id}
             status={issue.status}
+            assigneeId={issue.assignee_id}
+            createdAt={issue.created_at}
           />
         ),
         status: <StatusPick value={issue.status} onChange={setStatus} />,

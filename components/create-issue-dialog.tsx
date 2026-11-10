@@ -1010,8 +1010,8 @@ export function CreateIssueDialog({
                     }
                     members={scopedMembers}
                     smartAssign={smartAssignFillsEmptyAssignee(
-                      activeProject?.smart_assign_enabled,
-                      fields.status,
+                      activeProject,
+                      { status: fields.status, assigneeId: fields.assignee_id, createdAt: null },
                     )}
                     open={openPicker === "assignee"}
                     onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
@@ -1102,8 +1102,8 @@ export function CreateIssueDialog({
                         onAssigneeChange: (assignee_id) =>
                           setFields((f) => ({ ...f, assignee_id })),
                         smartAssign: smartAssignFillsEmptyAssignee(
-                          activeProject?.smart_assign_enabled,
-                          fields.status,
+                          activeProject,
+                          { status: fields.status, assigneeId: fields.assignee_id, createdAt: null },
                         ),
                         onDueDateRequest: () => setOpenPicker("dueDate"),
                         priority: fields.priority,

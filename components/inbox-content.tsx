@@ -38,7 +38,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { notificationActor, notificationTitle } from "@/lib/notification-line";
+import { notificationLineValues, notificationTitle } from "@/lib/notification-line";
 import { useNotifications } from "@/lib/use-notifications";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 import {
@@ -267,7 +267,7 @@ export default function InboxContent({
     }
     const sentence = t(
       notificationLineKey(notification.type, notification.from_numo),
-      { actor: notificationActor(notification, labels) },
+      notificationLineValues(notification, labels),
     );
     return notification.comment_excerpt
       ? `${sentence}: ${notification.comment_excerpt}`
