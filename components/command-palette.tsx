@@ -683,8 +683,13 @@ export function CommandPalette({
         // — Assigned —
         // Smart Assign fills an empty assignee here (MIN-811).
         const smartAssign = smartAssignFillsEmptyAssignee(
-          projects.find((project) => project.id === issue.project_id)?.smart_assign_enabled,
-          issue.status,
+          projects.find((project) => project.id === issue.project_id),
+          {
+            status: issue.status,
+            assigneeId: issue.assignee_id,
+            // The search index does not carry the creation date.
+            createdAt: "created_at" in issue ? issue.created_at : undefined,
+          },
         );
         actions.push({
           id: "issue.assignee",

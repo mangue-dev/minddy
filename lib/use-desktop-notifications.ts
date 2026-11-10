@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { useAuth } from "./auth-context";
 import { getDesktopBridge } from "./desktop/bridge";
-import { notificationActor, notificationTitle } from "./notification-line";
+import { notificationLineValues, notificationTitle } from "./notification-line";
 import { notificationLineKey, notificationTargetPath } from "./notification-target";
 import { useNotifications } from "./use-notifications";
 import { usePushDevicesQuery } from "./use-push-devices-query";
@@ -117,9 +117,10 @@ export function useDesktopNotifications(): void {
     };
     for (const n of fresh.reverse()) {
       const target = notificationTargetPath(n);
-      const sentence = t(notificationLineKey(n.type, n.from_numo), {
-        actor: notificationActor(n, labels),
-      });
+      const sentence = t(
+        notificationLineKey(n.type, n.from_numo),
+        notificationLineValues(n, labels),
+      );
       bridge.showLocalNotification({
         id: n.id,
         title: notificationTitle(n, labels) || "minddy",

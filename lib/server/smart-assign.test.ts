@@ -24,6 +24,8 @@ const {
   getUserByIdMock,
   afterOrNowMock,
   fromMock,
+  rpcMock,
+  getProjectAccessMock,
 } = vi.hoisted(() => ({
   getAppConfigValuesMock: vi.fn<() => Promise<Record<string, string | null>>>(),
   canUseSmartAssignMock: vi.fn<(ownerId: string) => Promise<boolean>>(),
@@ -44,6 +46,10 @@ const {
   getUserByIdMock: vi.fn<(id: string) => Promise<unknown>>(),
   afterOrNowMock: vi.fn<(work: () => void | Promise<void>) => void>(),
   fromMock: vi.fn<(table: string) => unknown>(),
+  rpcMock: vi.fn<
+    (name: string, args: unknown, options?: { head?: boolean }) => Promise<unknown>
+  >(),
+  getProjectAccessMock: vi.fn<(userId: string, projectId: string) => Promise<unknown>>(),
 }));
 
 vi.mock("@/lib/server/app-config", () => ({
@@ -68,11 +74,25 @@ vi.mock("@/lib/server/notifications", () => ({
 vi.mock("@/lib/server/after-safe", () => ({
   afterOrNow: afterOrNowMock,
 }));
+vi.mock("@/lib/server/project-access", () => ({
+  getProjectAccess: getProjectAccessMock,
+}));
 vi.mock("@/lib/supabase-service", () => ({
-  getServiceClient: () => ({ from: fromMock, auth: { admin: { getUserById: getUserByIdMock } } }),
+  getServiceClient: () => ({
+    from: fromMock,
+    rpc: rpcMock,
+    auth: { admin: { getUserById: getUserByIdMock } },
+  }),
 }));
 
-import { runSmartAssign, smartAssignPickFrom, sweepUnassignedIssues } from "./smart-assign";
+import {
+  readSmartAssignBackfill,
+  requestSmartAssignBackfill,
+  runSmartAssign,
+  runSmartAssignBackfill,
+  smartAssignPickFrom,
+  sweepUnassignedIssues,
+} from "./smart-assign";
 import type { DecisionAnswers } from "./decisions/types";
 
 const NAMES: Record<string, string> = {
@@ -457,6 +477,290 @@ describe("sweepUnassignedIssues", () => {
     expect(insertEventsMock).toHaveBeenCalledWith(expect.anything(), [
       expect.objectContaining({ issue_id: "issue-9", smart_assign_ai: true }),
     ]);
+  });
+});
+
+describe("Smart Assign backfill (MIN-903)", () => {
+  /** What the candidates function answers: the count before and after the
+   * pass (head reads), and the ids of the pass. */
+  let counts: number[] = [];
+  let candidateIds: string[] = [];
+  /** Unread grouped lines already in the inbox, and the ids the pass removed. */
+  let unreadBatches: Array<{ id: string; user_id: string; issue_count: number }> = [];
+  let notificationsDeleted = false;
+  /** `false` = someone assigned the issue before the claim. */
+  let claimWins = true;
+
+  beforeEach(() => {
+    updatePayloads.length = 0;
+    counts = [2, 0];
+    candidateIds = ["issue-a", "issue-b"];
+    unreadBatches = [];
+    notificationsDeleted = false;
+    claimWins = true;
+    DB.issue.status = "todo";
+    DB.project.smart_assign_rules = { "user-dev": "All things backend" };
+    getAppConfigValuesMock.mockReset().mockResolvedValue({});
+    canUseSmartAssignMock.mockReset().mockResolvedValue(true);
+    runModelDecisionMock.mockReset().mockResolvedValue(answered(modelAnswer("user-dev", 0.8)));
+    runLlmDecisionMock.mockReset().mockResolvedValue(null);
+    insertEventsMock.mockReset().mockResolvedValue(null);
+    insertNotificationsMock.mockReset().mockResolvedValue(1);
+    getUserByIdMock.mockReset();
+    getProjectAccessMock.mockReset();
+    deferredWorks.length = 0;
+    afterOrNowMock.mockReset().mockImplementation((work: () => void | Promise<void>) => {
+      deferredWorks.push(work);
+    });
+    rpcMock.mockReset().mockImplementation(async (_name, _args, options) =>
+      options?.head
+        ? { count: counts.shift() ?? 0, error: null }
+        : { data: candidateIds, error: null }
+    );
+    wireAuthUsers();
+    fromMock.mockImplementation((table: string) => {
+      if (table === "projects") return fakeQuery(() => ({ data: DB.project, error: null }));
+      if (table === "project_members") return fakeQuery(() => ({ data: DB.members, error: null }));
+      if (table === "issue_categories")
+        return fakeQuery(() => ({ data: DB.categories, error: null }));
+      if (table === "issues") {
+        return fakeQuery((updated) =>
+          updated
+            ? { data: claimWins ? { id: DB.issue.id } : null, error: null }
+            : { data: DB.issue, error: null }
+        );
+      }
+      if (table === "notifications") {
+        const query = fakeQuery(() => ({ data: unreadBatches, error: null })) as Record<
+          string,
+          unknown
+        >;
+        query.delete = () => {
+          notificationsDeleted = true;
+          return query;
+        };
+        return query;
+      }
+      return fakeQuery(() => ({ data: null, error: null }));
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  const backfillRun = () =>
+    runSmartAssign({
+      issueId: "issue-1",
+      projectId: "project-1",
+      triggerActorId: "user-owner",
+      trigger: "backfill",
+    });
+
+  it.each(["triage", "in_progress", "in_review", "done", "canceled", "duplicate"])(
+    "leaves a %s issue alone",
+    async (status) => {
+      DB.issue.status = status;
+      await expect(backfillRun()).resolves.toBeNull();
+      expect(updatePayloads).toEqual([]);
+      expect(runModelDecisionMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(["backlog", "todo"])("assigns a %s issue, with no line per issue", async (status) => {
+    DB.issue.status = status;
+    await expect(backfillRun()).resolves.toBe("user-dev");
+    expect(updatePayloads).toContainEqual({ assignee_id: "user-dev" });
+    expect(insertNotificationsMock).not.toHaveBeenCalled();
+  });
+
+  it("tells each assignee once with the number of issues, then closes the request", async () => {
+    await expect(runSmartAssignBackfill("project-1")).resolves.toEqual({
+      assigned: 2,
+      remaining: 0,
+      outcome: "done",
+    });
+    expect(insertNotificationsMock).toHaveBeenCalledTimes(1);
+    expect(insertNotificationsMock).toHaveBeenCalledWith(expect.anything(), [
+      {
+        user_id: "user-dev",
+        project_id: "project-1",
+        type: "smart_assign_batch",
+        issue_id: null,
+        actor_id: null,
+        via_smart_assign: true,
+        issue_count: 2,
+      },
+    ]);
+    expect(updatePayloads).toContainEqual({ smart_assign_backfill_requested_at: null });
+  });
+
+  it("adds to the grouped line the assignee has not read yet", async () => {
+    unreadBatches = [{ id: "notif-1", user_id: "user-dev", issue_count: 3 }];
+    await runSmartAssignBackfill("project-1");
+    expect(insertNotificationsMock).toHaveBeenCalledWith(expect.anything(), [
+      expect.objectContaining({ user_id: "user-dev", issue_count: 5 }),
+    ]);
+    expect(notificationsDeleted).toBe(true);
+  });
+
+  it("does not announce to the owner the issues their own backfill gave them", async () => {
+    DB.project.smart_assign_rules = {};
+    await expect(runSmartAssignBackfill("project-1")).resolves.toMatchObject({ assigned: 2 });
+    expect(updatePayloads).toContainEqual({ assignee_id: "user-owner" });
+    expect(insertNotificationsMock).not.toHaveBeenCalled();
+  });
+
+  it("never replaces an assignee set while it runs", async () => {
+    claimWins = false;
+    counts = [2, 0];
+    await expect(runSmartAssignBackfill("project-1")).resolves.toMatchObject({ assigned: 0 });
+    expect(insertEventsMock).not.toHaveBeenCalled();
+    expect(insertNotificationsMock).not.toHaveBeenCalled();
+  });
+
+  it("stops on an empty AI budget and leaves the issues unassigned", async () => {
+    canUseSmartAssignMock.mockResolvedValue(false);
+    counts = [2, 2];
+    await expect(runSmartAssignBackfill("project-1")).resolves.toEqual({
+      assigned: 0,
+      remaining: 2,
+      outcome: "budget",
+    });
+    expect(updatePayloads).not.toContainEqual(expect.objectContaining({ assignee_id: expect.anything() }));
+    expect(updatePayloads).toContainEqual({ smart_assign_backfill_requested_at: null });
+  });
+
+  it("keeps the request when issues are left for the next pass", async () => {
+    counts = [5, 3];
+    await expect(runSmartAssignBackfill("project-1")).resolves.toEqual({
+      assigned: 2,
+      remaining: 3,
+      outcome: "continue",
+    });
+    expect(updatePayloads).not.toContainEqual({ smart_assign_backfill_requested_at: null });
+  });
+
+  it("closes a request that makes no progress", async () => {
+    claimWins = false;
+    counts = [2, 2];
+    await expect(runSmartAssignBackfill("project-1")).resolves.toMatchObject({
+      outcome: "stalled",
+    });
+    expect(updatePayloads).toContainEqual({ smart_assign_backfill_requested_at: null });
+  });
+
+  it("closes the request when Smart Assign was turned off meanwhile", async () => {
+    fromMock.mockImplementation((table: string) =>
+      fakeQuery(() => ({
+        data: table === "projects" ? { ...DB.project, smart_assign_enabled: false } : null,
+        error: null,
+      }))
+    );
+    await expect(runSmartAssignBackfill("project-1")).resolves.toMatchObject({
+      outcome: "disabled",
+    });
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  describe("requestSmartAssignBackfill", () => {
+    const ALL_RULES = { "user-owner": "Product", "user-dev": "Backend", "user-qa": "Tests" };
+    const access = (overrides: Record<string, unknown> = {}) => ({
+      isOwner: true,
+      project: {
+        ...DB.project,
+        smart_assign_rules: ALL_RULES,
+        smart_assign_backfill_requested_at: null,
+      },
+      ...overrides,
+    });
+
+    it("is refused while a member has no assignment rule", async () => {
+      getProjectAccessMock.mockResolvedValue(
+        access({ project: { ...DB.project, smart_assign_rules: { "user-dev": "Backend" } } })
+      );
+      await expect(requestSmartAssignBackfill("user-owner", "project-1")).resolves.toMatchObject({
+        ok: false,
+        status: 409,
+        errorKey: "smartAssignRulesMissing",
+      });
+      expect(updatePayloads).toEqual([]);
+      expect(deferredWorks).toEqual([]);
+    });
+
+    it("tells the settings that rules are missing, and how many issues wait", async () => {
+      getProjectAccessMock.mockResolvedValue(
+        access({ project: { ...DB.project, smart_assign_rules: {} } })
+      );
+      counts = [4];
+      await expect(readSmartAssignBackfill("user-owner", "project-1")).resolves.toEqual({
+        ok: true,
+        count: 4,
+        running: false,
+        rulesMissing: true,
+      });
+    });
+
+    it("needs no rule in a project with the owner alone", async () => {
+      const members = DB.members;
+      DB.members = [];
+      getProjectAccessMock.mockResolvedValue(
+        access({ project: { ...DB.project, smart_assign_rules: {} } })
+      );
+      counts = [2, 2, 0];
+      await expect(requestSmartAssignBackfill("user-owner", "project-1")).resolves.toMatchObject({
+        ok: true,
+        running: true,
+      });
+      DB.members = members;
+    });
+
+    it("is refused to anyone but the owner", async () => {
+      getProjectAccessMock.mockResolvedValue(access({ isOwner: false }));
+      await expect(requestSmartAssignBackfill("user-dev", "project-1")).resolves.toMatchObject({
+        ok: false,
+        status: 403,
+        errorKey: "ownerOnly",
+      });
+      expect(updatePayloads).toEqual([]);
+    });
+
+    it("is refused while Smart Assign is off", async () => {
+      getProjectAccessMock.mockResolvedValue(
+        access({ project: { ...DB.project, smart_assign_enabled: false } })
+      );
+      await expect(requestSmartAssignBackfill("user-owner", "project-1")).resolves.toMatchObject({
+        ok: false,
+        errorKey: "smartAssignOff",
+      });
+    });
+
+    it("records nothing when no open issue is waiting", async () => {
+      getProjectAccessMock.mockResolvedValue(access());
+      counts = [0];
+      await expect(requestSmartAssignBackfill("user-owner", "project-1")).resolves.toEqual({
+        ok: true,
+        count: 0,
+        running: false,
+        rulesMissing: false,
+      });
+      expect(updatePayloads).toEqual([]);
+      expect(deferredWorks).toEqual([]);
+    });
+
+    it("records the request and starts the first pass after the response", async () => {
+      getProjectAccessMock.mockResolvedValue(access());
+      counts = [2, 2, 0];
+      await expect(requestSmartAssignBackfill("user-owner", "project-1")).resolves.toEqual({
+        ok: true,
+        count: 2,
+        running: true,
+        rulesMissing: false,
+      });
+      expect(updatePayloads).toEqual([
+        { smart_assign_backfill_requested_at: expect.any(String) },
+      ]);
+      expect(insertEventsMock).not.toHaveBeenCalled();
+      await runDeferred();
+      expect(insertEventsMock).toHaveBeenCalledTimes(2);
+    });
   });
 });
 

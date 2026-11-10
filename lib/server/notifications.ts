@@ -64,6 +64,8 @@ export interface NotificationRow {
   /** The line comes from a project automation (MIN-147) — same reason as
  the flag above: without it, the inbox says "Someone". */
   via_automation?: boolean;
+  /** How many issues a `smart_assign_batch` line stands for (MIN-903). */
+  issue_count?: number | null;
 }
 
 /** The agent types displace each other: one live agent notification per issue.

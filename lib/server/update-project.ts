@@ -116,6 +116,14 @@ export async function updateProjectSettings({
       return { ok: false, status: 403, errorKey: "smartAssignNotAllowed" };
     }
     updates.smart_assign_enabled = input.smart_assign_enabled;
+    // The date Smart Assign was turned on decides which empty assignees it
+    // will fill (MIN-903). Turning it off drops a backfill still in progress.
+    if (input.smart_assign_enabled && !access.project.smart_assign_enabled) {
+      updates.smart_assign_enabled_at = new Date().toISOString();
+    }
+    if (!input.smart_assign_enabled) {
+      updates.smart_assign_backfill_requested_at = null;
+    }
   }
   if ("smart_triage_mode" in input) {
     const mode = parseSmartTriageMode(input.smart_triage_mode);

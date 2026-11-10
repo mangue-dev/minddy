@@ -25,18 +25,61 @@ export function hasAnyRule(
   return userIds.some((id) => !!rules?.[id]?.trim());
 }
 
+/** The statuses a backfill fills (MIN-903): accepted work nobody started.
+ * Triage is left out because the issue is assigned when it leaves triage. */
+export const SMART_ASSIGN_BACKFILL_STATUSES = ["backlog", "todo"] as const;
+
+export function isSmartAssignBackfillStatus(status: unknown): boolean {
+  return (SMART_ASSIGN_BACKFILL_STATUSES as readonly unknown[]).includes(status);
+}
+
+/** What the label needs from the project: the toggle, when it was last turned
+ * on, and whether a backfill the owner asked for is still running. */
+export interface SmartAssignProjectState {
+  smart_assign_enabled?: boolean | null;
+  smart_assign_enabled_at?: string | null;
+  smart_assign_backfill_requested_at?: string | null;
+}
+
+/** What the label needs from the issue. `createdAt: null` is an issue that
+ * does not exist yet (the creation form); `undefined` is an issue whose age
+ * the caller does not know, which is then not assumed to be recent. */
+export interface SmartAssignIssueState {
+  status: string | null | undefined;
+  assigneeId: string | null | undefined;
+  createdAt: string | null | undefined;
+}
+
 /**
  * Whether an empty assignee means "Smart Assign will choose" rather than
  * "nobody" (MIN-811), so the assignee pickers name it instead of offering
- * "Unassigned". Triage counts: the issue is assigned when it leaves triage.
- * Canceled and duplicate issues are never assigned by it, so they keep
- * "Unassigned".
+ * "Unassigned". The label follows what Smart Assign really does (MIN-903):
+ *
+ * - canceled and duplicate issues are never assigned by it;
+ * - an issue that has an assignee, or does not exist yet: emptying the field
+ *   makes Smart Assign choose, so the empty option names it;
+ * - an issue in triage is assigned when it leaves triage;
+ * - an open issue with no assignee is filled only if it was created after
+ *   Smart Assign was turned on, or while a backfill is filling the backlog.
+ *   Otherwise nothing will assign it, and it reads "Unassigned".
  */
 export function smartAssignFillsEmptyAssignee(
-  enabled: boolean | null | undefined,
-  status: string | null | undefined
+  project: SmartAssignProjectState | null | undefined,
+  issue: SmartAssignIssueState
 ): boolean {
-  return enabled === true && status !== "canceled" && status !== "duplicate";
+  if (project?.smart_assign_enabled !== true) return false;
+  if (issue.status === "canceled" || issue.status === "duplicate") return false;
+  if (issue.assigneeId || issue.createdAt === null) return true;
+  if (issue.status === "triage") return true;
+  if (
+    project.smart_assign_backfill_requested_at &&
+    isSmartAssignBackfillStatus(issue.status)
+  ) {
+    return true;
+  }
+  const enabledAt = Date.parse(project.smart_assign_enabled_at ?? "");
+  const createdAt = Date.parse(issue.createdAt ?? "");
+  return Number.isFinite(enabledAt) && Number.isFinite(createdAt) && createdAt >= enabledAt;
 }
 
 /**

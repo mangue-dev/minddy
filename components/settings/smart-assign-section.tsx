@@ -11,6 +11,20 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  fetchSmartAssignBackfillApi,
+  smartAssignBackfillKey,
+  startSmartAssignBackfillApi,
+} from "@/lib/smart-assign-backfill-api";
 import {useProjects} from "@/lib/projects-context";
 import {useMembersQuery} from "@/lib/use-members-query";
 import {UserAvatar} from "@/components/user-avatar";
@@ -43,8 +57,15 @@ const UserCircleSceneIcon = ({
  included — the AI ​​matches new issues against these rules). Owner-only;
  members see a disabled, read-only state.
 
+ Turning it on does not reach the issues that were already open with no
+ assignee: the owner is asked once whether Smart Assign should assign them,
+ and a row keeps the offer for later (MIN-903).
+
  The rules remain in VERTICAL rows: a free text of 500 characters
  does not fit at the end of a line. This is the assumed exception to key/value. */
+/** How often the row re-reads a running backfill. */
+const BACKFILL_POLL_MS = 3000;
+
 /** Two rule maps say the same thing once blank texts and edge spaces are ignored. */
 function sameRules(a: Record<string, string>, b: Record<string, string>): boolean {
   for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) {
@@ -63,7 +84,8 @@ export function SmartAssignSection({
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
   const tm = useTranslations("Members");
-  const { updateProject } = useProjects();
+  const { updateProject, refetch: refetchProjects } = useProjects();
+  const queryClient = useQueryClient();
   const { members, loading } = useMembersQuery(project.id, true);
 
   // Mirror the toggle locally so it flips instantly, then reconcile from the
@@ -83,6 +105,7 @@ export function SmartAssignSection({
       toast.success(
         t(next ? "smartAssignEnabledToast" : "smartAssignDisabledToast")
       );
+      if (next) void offerBackfill();
     } catch (e) {
       setEnabled(!next);
       toast.error((e as Error).message);
@@ -90,6 +113,68 @@ export function SmartAssignSection({
       setSavingToggle(false);
     }
   };
+
+  // The backlog (MIN-903). Read for the owner only: the count describes every
+  // open issue of the project, and the backfill runs on the owner's budget.
+  // While a backfill runs the read repeats, so the row follows it to its end.
+  const backfillKey = smartAssignBackfillKey(project.id);
+  const { data: backfill } = useQuery({
+    queryKey: backfillKey,
+    queryFn: ({ signal }) => fetchSmartAssignBackfillApi(project.id, signal),
+    enabled: isOwner && enabled,
+    refetchInterval: (query) => (query.state.data?.running ? BACKFILL_POLL_MS : false),
+  });
+  const [offeredCount, setOfferedCount] = useState<number | null>(null);
+  const [startingBackfill, setStartingBackfill] = useState(false);
+
+  const offerBackfill = async () => {
+    try {
+      const state = await queryClient.fetchQuery({
+        queryKey: backfillKey,
+        queryFn: () => fetchSmartAssignBackfillApi(project.id),
+        staleTime: 0,
+      });
+      // No offer while a member has no rule: the row says what is missing.
+      if (state.count > 0 && !state.running && !state.rulesMissing) {
+        setOfferedCount(state.count);
+      }
+    } catch {
+      // The offer is optional: the row below makes it again once the read works.
+    }
+  };
+
+  const startBackfill = async () => {
+    if (startingBackfill) return;
+    setStartingBackfill(true);
+    try {
+      queryClient.setQueryData(backfillKey, await startSmartAssignBackfillApi(project.id));
+      setOfferedCount(null);
+      // The project now carries the request: empty assignees read "Smart Assign".
+      void refetchProjects();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setStartingBackfill(false);
+    }
+  };
+
+  // Says how the backfill ended, once, when it stops running.
+  const backfillRunning = backfill?.running === true;
+  const backfillLeft = backfill?.count ?? 0;
+  const wasRunning = useRef(false);
+  useEffect(() => {
+    if (wasRunning.current && !backfillRunning) {
+      if (backfillLeft > 0) {
+        toast.info(t("smartAssignBackfillLeftToast", { count: backfillLeft }));
+      } else {
+        toast.success(t("smartAssignBackfillDoneToast"));
+      }
+      void refetchProjects();
+    }
+    wasRunning.current = backfillRunning;
+  }, [backfillRunning, backfillLeft, refetchProjects, t]);
+  const showBackfill = isOwner && enabled && (backfillRunning || backfillLeft > 0);
+  const backfillBlocked = backfill?.rulesMissing === true && !backfillRunning;
 
   // Rules draft keyed by user_id; dirty compares against the saved map.
   const savedRules = project.smart_assign_rules ?? {};
@@ -135,6 +220,8 @@ export function SmartAssignSection({
       }
       await updateProject(project.id, { smart_assign_rules: cleaned });
       toast.success(t("smartAssignRulesSaved"));
+      // The backfill opens once every member has a rule.
+      void queryClient.invalidateQueries({ queryKey: backfillKey });
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -184,6 +271,29 @@ export function SmartAssignSection({
               </Button>
             )}
           </EmptyScene>
+        )}
+
+        {showBackfill && (
+          <SettingsRow
+            label={t("smartAssignBackfillRowLabel")}
+            hint={t(
+              backfillBlocked ? "smartAssignBackfillNeedsRules" : "smartAssignBackfillRowHint"
+            )}
+            control={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={backfillRunning || startingBackfill || backfillBlocked}
+                onClick={() => void startBackfill()}
+              >
+                {(backfillRunning || startingBackfill) && <Spinner />}
+                {backfillRunning
+                  ? t("smartAssignBackfillRunning")
+                  : t("smartAssignBackfillAction", { count: backfillLeft })}
+              </Button>
+            }
+          />
         )}
 
         {showRules && (
@@ -243,6 +353,35 @@ export function SmartAssignSection({
             />
           ))}
       </SettingsGroup>
+
+      <Dialog
+        open={offeredCount !== null}
+        onOpenChange={(open) => {
+          if (!open) setOfferedCount(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("smartAssignBackfillTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("smartAssignBackfillDesc", { count: offeredCount ?? 0 })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOfferedCount(null)}>
+              {t("smartAssignBackfillLater")}
+            </Button>
+            <Button
+              type="button"
+              disabled={startingBackfill}
+              onClick={() => void startBackfill()}
+            >
+              {startingBackfill && <Spinner />}
+              {t("smartAssignBackfillConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

@@ -1203,8 +1203,12 @@ export function IssueSidePanel({
                       value={issue.assignee_id}
                       members={members}
                       smartAssign={smartAssignFillsEmptyAssignee(
-                        issueProject?.smart_assign_enabled,
-                        issue.status,
+                        issueProject,
+                        {
+                          status: issue.status,
+                          assigneeId: issue.assignee_id,
+                          createdAt: issue.created_at,
+                        },
                       )}
                       onChange={setAssignee}
                     />

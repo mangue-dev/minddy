@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { notificationActor, notificationTitle } from "./notification-line";
+import {
+  notificationActor,
+  notificationLineValues,
+  notificationTitle,
+} from "./notification-line";
 import { notificationLineKey } from "./notification-target";
 import type { MyNotification } from "./types";
 
@@ -121,5 +125,26 @@ describe("notificationTitle", () => {
     expect(notificationTitle(notification({ issue_id: "i1" }), LABELS)).toBe(
       "un ticket"
     );
+  });
+});
+
+describe("a backfill line (MIN-903)", () => {
+  const batch = notification({
+    type: "smart_assign_batch",
+    via_smart_assign: true,
+    project_id: "p1",
+    project_key: "AUR",
+    project_name: "Aurora",
+    issue_count: 12,
+  });
+
+  it("is titled by its project, and by the project key when the name is unreadable", () => {
+    expect(notificationTitle(batch, LABELS)).toBe("Aurora");
+    expect(notificationTitle({ ...batch, project_name: null }, LABELS)).toBe("AUR");
+  });
+
+  it("gives its sentence the actor and the number of issues", () => {
+    expect(notificationLineValues(batch, LABELS)).toEqual({ actor: "Smart Assign", count: 12 });
+    expect(notificationLineKey("smart_assign_batch", false)).toBe("lineSmartAssignBatch");
   });
 });

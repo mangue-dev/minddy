@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServiceClient } from "@/lib/supabase-service";
 import { decodeProject } from "@/lib/server/project-content";
 import { canUseSmartAssign } from "@/lib/server/entitlements";
+import { getProjectAccess } from "@/lib/server/project-access";
 import { insertEvents } from "@/lib/server/issue-events";
 import { insertNotifications } from "@/lib/server/notifications";
 import { fetchAuthUsersById } from "@/lib/server/auth-users";
@@ -17,7 +18,11 @@ import { runDecision } from "@/lib/server/decisions/runner";
 import { prepareSmartAssign } from "@/lib/server/decisions/prepare";
 import type { DecisionOutcome } from "@/lib/server/decisions/types";
 import { isStatus } from "@/lib/issue-validation";
-import { hasAnyRule, userIdsWithoutRule } from "@/lib/smart-assign-config";
+import {
+  hasAnyRule,
+  isSmartAssignBackfillStatus,
+  userIdsWithoutRule,
+} from "@/lib/smart-assign-config";
 import type { SmartAssignConfigWarning } from "@/lib/types";
 
 /**
@@ -60,6 +65,13 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  *   several seconds of latency have nothing to do in a POST — and it is that
  *   alone that the budget keeps;
  * - `sweepUnassignedIssues` (cron) catches up with what the latter `after()` loses.
+ *
+ * ## The backlog (MIN-903)
+ *
+ * None of these triggers reaches the issues that were already open and empty
+ * when the owner turned Smart Assign on. `runSmartAssignBackfill` fills them,
+ * only when the owner asks for it: backlog and todo issues that were never
+ * assigned, one grouped notification per person.
  */
 
 const MAX_DESCRIPTION_CHARS = 4000;
@@ -69,6 +81,18 @@ const MAX_DESCRIPTION_CHARS = 4000;
 const SWEEP_WINDOW_MS = 24 * 60 * 60_000;
 /** Enough to absorb a burst of sub-tickets, few enough to fit in the cron window — the rest is picked up the next time you wake up. */
 const SWEEP_LIMIT = 100;
+
+/** Issues one backfill pass reads. The cron runs the next pass. */
+const BACKFILL_PASS_LIMIT = 200;
+/** How long one backfill pass may run. A decision takes seconds, and both the
+ * route and the cron that host a pass stop at 60 s. */
+const BACKFILL_PASS_MS = 40_000;
+/** Projects with a pending backfill the cron resumes in one run. */
+const BACKFILL_PROJECTS_PER_RUN = 20;
+
+/** A backfill met an empty AI budget: it leaves the issue empty and stops,
+ * instead of handing the whole backlog to the owner. */
+class SmartAssignBudgetExhausted extends Error {}
 
 /** Statuses Smart Assign acts on: anything past triage that is still a real,
     living issue. */
@@ -89,8 +113,11 @@ export interface SmartAssignParams {
   triggerActorId: string | null;
   /** `sweep` = cron catch-up. It has no response to give, so it
       WAITS for the decision instead of deferring it — deferring is precisely
-      what caused the assignment it is repairing to be lost. */
-  trigger: "create" | "triage_exit" | "unassign" | "sweep";
+      what caused the assignment it is repairing to be lost.
+      `backfill` = the backlog pass the owner asked for (MIN-903). It waits
+      too, only accepts backlog and todo issues, writes no notification per
+      issue (its caller groups them) and throws when the AI budget is empty. */
+  trigger: "create" | "triage_exit" | "unassign" | "sweep" | "backfill";
 }
 
 /**
@@ -156,7 +183,14 @@ async function runSmartAssignUntagged(
   if (!project?.smart_assign_enabled) return null;
   const readableProject = await decodeProject(project);
   if (!issue || issue.assignee_id !== null) return null;
-  if (!isSmartAssignEligibleStatus(issue.status)) return null;
+  const backfill = params.trigger === "backfill";
+  if (
+    backfill
+      ? !isSmartAssignBackfillStatus(issue.status)
+      : !isSmartAssignEligibleStatus(issue.status)
+  ) {
+    return null;
+  }
 
   // The team = owner (no project_members row) + members with the member role.
   const ownerId = project.owner_id as string;
@@ -189,7 +223,10 @@ async function runSmartAssignUntagged(
       // would also suspend deterministic assignments, which cost nothing; and
       // a dry budget or a silent layer, the contract stays the same — we
       // assign someone, failing that the owner.
-      if (!(await canUseSmartAssign(ownerId))) return null;
+      if (!(await canUseSmartAssign(ownerId))) {
+        if (backfill) throw new SmartAssignBudgetExhausted();
+        return null;
+      }
       const [authUsers, { data: categoryRows }] = await Promise.all([
         fetchAuthUsersById(service, memberIds),
         service
@@ -228,6 +265,7 @@ async function runSmartAssignUntagged(
       });
       return smartAssignPickFrom(outcome, memberIds);
     } catch (err) {
+      if (err instanceof SmartAssignBudgetExhausted) throw err;
       console.error("[smart-assign] AI choice failed:", (err as Error).message);
       return null;
     }
@@ -239,7 +277,7 @@ async function runSmartAssignUntagged(
     // an unusable answer — remains an automatic assignment.
     return await claimForSmartAssign(service, params, picked ?? ownerId, picked !== null);
   };
-  if (params.trigger === "sweep") return await claim();
+  if (params.trigger === "sweep" || backfill) return await claim();
   afterOrNow(async () => {
     await claim();
   });
@@ -301,7 +339,7 @@ async function claimForSmartAssign(
     },
   ]);
 
-  if (chosen !== params.triggerActorId) {
+  if (params.trigger !== "backfill" && chosen !== params.triggerActorId) {
     await insertNotifications(service, [
       {
         user_id: chosen,
@@ -455,6 +493,329 @@ export async function sweepUnassignedIssues(
     }
   }
   return { candidates: candidates.length, assigned };
+}
+
+/** Open issues of the project a backfill may assign: backlog or todo, no
+ * assignee, never assigned before. Read by the database function, which
+ * excludes the issues someone unassigned by hand. */
+async function backfillCandidateIds(
+  service: SupabaseClient,
+  projectId: string,
+  limit: number
+): Promise<string[]> {
+  const { data, error } = await service.rpc("smart_assign_backfill_candidates", {
+    p_project_id: projectId,
+    p_limit: limit,
+  });
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown[]).filter((id): id is string => typeof id === "string");
+}
+
+/** How many open issues a backfill would assign in this project (MIN-903). */
+export async function countBackfillCandidates(projectId: string): Promise<number> {
+  const { count, error } = await getServiceClient().rpc(
+    "smart_assign_backfill_candidates",
+    { p_project_id: projectId },
+    { count: "exact", head: true }
+  );
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+export interface SmartAssignBackfillResult {
+  assigned: number;
+  remaining: number;
+  /** Why the pass ended. `continue` leaves the request in place for the next
+   * pass; every other value clears it. */
+  outcome: "done" | "continue" | "budget" | "stalled" | "disabled";
+}
+
+/**
+ * One pass of the backfill the owner asked for (MIN-903): assigns the open,
+ * never-assigned issues of the project through the ordinary run, then tells
+ * each assignee once.
+ *
+ * The run's compare-and-set keeps the promise that matters: an issue someone
+ * assigned in the meantime is never overwritten. Two passes may overlap (the
+ * route's first pass and the cron); each one only counts and notifies what it
+ * claimed itself.
+ *
+ * The request (`smart_assign_backfill_requested_at`) is cleared when nothing
+ * is left, when the AI budget is empty, when Smart Assign was turned off, or
+ * when a pass assigned nothing and the count did not move, so a project
+ * never stays "in progress" forever. The owner can ask again from the
+ * settings.
+ */
+export async function runSmartAssignBackfill(
+  projectId: string,
+  options: { limit?: number; budgetMs?: number } = {}
+): Promise<SmartAssignBackfillResult> {
+  const service = getServiceClient();
+  const deadline = Date.now() + (options.budgetMs ?? BACKFILL_PASS_MS);
+  const clearRequest = async () => {
+    await service
+      .from("projects")
+      .update({ smart_assign_backfill_requested_at: null })
+      .eq("id", projectId);
+  };
+
+  const { data: project } = await service
+    .from("projects")
+    .select("id, owner_id, smart_assign_enabled")
+    .eq("id", projectId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!project?.smart_assign_enabled) {
+    await clearRequest();
+    return { assigned: 0, remaining: 0, outcome: "disabled" };
+  }
+  const ownerId = project.owner_id as string;
+
+  const before = await countBackfillCandidates(projectId);
+  const candidates = before
+    ? await backfillCandidateIds(service, projectId, options.limit ?? BACKFILL_PASS_LIMIT)
+    : [];
+
+  const assignedByUser = new Map<string, number>();
+  let assigned = 0;
+  let budgetExhausted = false;
+  let interrupted = false;
+  for (const issueId of candidates) {
+    if (Date.now() >= deadline) {
+      interrupted = true;
+      break;
+    }
+    try {
+      const chosen = await runSmartAssign({
+        issueId,
+        projectId,
+        // Only the owner starts a backfill: it is their own gesture.
+        triggerActorId: ownerId,
+        trigger: "backfill",
+      });
+      if (!chosen) continue;
+      assigned++;
+      assignedByUser.set(chosen, (assignedByUser.get(chosen) ?? 0) + 1);
+    } catch (err) {
+      if (err instanceof SmartAssignBudgetExhausted) {
+        budgetExhausted = true;
+        break;
+      }
+      // An exploding ticket should not carry the following ones.
+      console.error("[smart-assign] backfill failed:", issueId, (err as Error).message);
+    }
+  }
+
+  // The owner asked for it and sees the result in the settings: like any
+  // assignment someone gives themselves, theirs is not announced.
+  assignedByUser.delete(ownerId);
+  await notifySmartAssignBatch(service, projectId, assignedByUser);
+  if (assigned > 0) scheduleRoutineEvents();
+
+  const remaining = assigned || candidates.length ? await countBackfillCandidates(projectId) : 0;
+  const outcome: SmartAssignBackfillResult["outcome"] =
+    remaining === 0
+      ? "done"
+      : budgetExhausted
+        ? "budget"
+        : assigned === 0 && !interrupted && remaining >= before
+          ? "stalled"
+          : "continue";
+  if (outcome !== "continue") await clearRequest();
+  return { assigned, remaining, outcome };
+}
+
+/**
+ * One line per person for a backfill (MIN-903): "Smart Assign assigned you 12
+ * issues", not twelve lines. A second pass adds to the line the person has
+ * not read yet instead of stacking another one.
+ */
+async function notifySmartAssignBatch(
+  service: SupabaseClient,
+  projectId: string,
+  assignedByUser: ReadonlyMap<string, number>
+): Promise<void> {
+  if (assignedByUser.size === 0) return;
+  try {
+    const userIds = [...assignedByUser.keys()];
+    const { data: unread } = await service
+      .from("notifications")
+      .select("id, user_id, issue_count")
+      .eq("type", "smart_assign_batch")
+      .eq("project_id", projectId)
+      .in("user_id", userIds)
+      .is("read_at", null);
+    const earlier = (unread ?? []) as Array<{
+      id: string;
+      user_id: string;
+      issue_count: number | null;
+    }>;
+    const inserted = await insertNotifications(
+      service,
+      userIds.map((userId) => ({
+        user_id: userId,
+        project_id: projectId,
+        type: "smart_assign_batch" as const,
+        issue_id: null,
+        actor_id: null,
+        via_smart_assign: true,
+        issue_count:
+          (assignedByUser.get(userId) ?? 0) +
+          earlier
+            .filter((row) => row.user_id === userId)
+            .reduce((sum, row) => sum + (row.issue_count ?? 0), 0),
+      }))
+    );
+    // Only once the new line is written: a failed insert keeps the old one.
+    if (inserted > 0 && earlier.length > 0) {
+      await service
+        .from("notifications")
+        .delete()
+        .in("id", earlier.map((row) => row.id));
+    }
+  } catch (err) {
+    console.error("[smart-assign] batch notification failed:", (err as Error).message);
+  }
+}
+
+export type SmartAssignBackfillState =
+  | { ok: true; count: number; running: boolean; rulesMissing: boolean }
+  | {
+      ok: false;
+      status: number;
+      errorKey:
+        | "projectNotFound"
+        | "ownerOnly"
+        | "smartAssignOff"
+        | "smartAssignNotAllowed"
+        | "smartAssignRulesMissing";
+    };
+
+/**
+ * Whether a member of the team still has no written rule. A backfill is
+ * refused until every member has one: a member with no rule is never picked,
+ * so the whole backlog would go to the others, or to the owner. A project
+ * with the owner alone needs no rule.
+ */
+async function backfillRulesMissing(project: {
+  id: string;
+  owner_id: string;
+  smart_assign_rules?: Record<string, string> | null;
+}): Promise<boolean> {
+  const { data: memberRows, error } = await getServiceClient()
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", project.id)
+    .eq("role", "member");
+  if (error) throw new Error(error.message);
+  const team = [
+    ...new Set([project.owner_id, ...(memberRows ?? []).map((m) => m.user_id as string)]),
+  ];
+  return team.length > 1 && userIdsWithoutRule(team, project.smart_assign_rules).length > 0;
+}
+
+/**
+ * What the settings show the owner (MIN-903): how many open issues a backfill
+ * would assign, and whether one is in progress. Owner only, like the toggle:
+ * the count describes the whole backlog and the backfill runs on their budget.
+ */
+export async function readSmartAssignBackfill(
+  actorId: string,
+  projectId: string
+): Promise<SmartAssignBackfillState> {
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+  if (!access.project.smart_assign_enabled) {
+    return { ok: true, count: 0, running: false, rulesMissing: false };
+  }
+  const [count, rulesMissing] = await Promise.all([
+    countBackfillCandidates(projectId),
+    backfillRulesMissing(access.project),
+  ]);
+  return {
+    ok: true,
+    count,
+    running: Boolean(access.project.smart_assign_backfill_requested_at),
+    rulesMissing,
+  };
+}
+
+/**
+ * The owner asks Smart Assign to fill the open issues (MIN-903). Records the
+ * request, starts a first pass after the response and leaves the rest to the
+ * cron. Nothing is recorded when there is nothing to assign, and the request
+ * is refused while a member has no assignment rule.
+ */
+export async function requestSmartAssignBackfill(
+  actorId: string,
+  projectId: string
+): Promise<SmartAssignBackfillState> {
+  const access = await getProjectAccess(actorId, projectId);
+  if (!access) return { ok: false, status: 404, errorKey: "projectNotFound" };
+  if (!access.isOwner) return { ok: false, status: 403, errorKey: "ownerOnly" };
+  if (!access.project.smart_assign_enabled) {
+    return { ok: false, status: 409, errorKey: "smartAssignOff" };
+  }
+  if (!(await canUseSmartAssign(access.project.owner_id))) {
+    return { ok: false, status: 403, errorKey: "smartAssignNotAllowed" };
+  }
+  if (await backfillRulesMissing(access.project)) {
+    return { ok: false, status: 409, errorKey: "smartAssignRulesMissing" };
+  }
+  const count = await countBackfillCandidates(projectId);
+  if (count === 0) return { ok: true, count: 0, running: false, rulesMissing: false };
+
+  const { error } = await getServiceClient()
+    .from("projects")
+    .update({ smart_assign_backfill_requested_at: new Date().toISOString() })
+    .eq("id", projectId)
+    .eq("smart_assign_enabled", true)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+
+  afterOrNow(async () => {
+    try {
+      await runSmartAssignBackfill(projectId);
+    } catch (err) {
+      console.error("[smart-assign] backfill failed:", projectId, (err as Error).message);
+    }
+  });
+  return { ok: true, count, running: true, rulesMissing: false };
+}
+
+/**
+ * The cron's share of the backfill: resumes the projects whose request is
+ * still pending, oldest first, within the time the cron has left.
+ */
+export async function resumeSmartAssignBackfills(
+  budgetMs = BACKFILL_PASS_MS
+): Promise<{ projects: number; assigned: number }> {
+  const service = getServiceClient();
+  const deadline = Date.now() + budgetMs;
+  const { data: rows, error } = await service
+    .from("projects")
+    .select("id")
+    .not("smart_assign_backfill_requested_at", "is", null)
+    .is("deleted_at", null)
+    .order("smart_assign_backfill_requested_at", { ascending: true })
+    .limit(BACKFILL_PROJECTS_PER_RUN);
+  if (error) throw new Error(error.message);
+
+  let projects = 0;
+  let assigned = 0;
+  for (const row of (rows ?? []) as Array<{ id: string }>) {
+    const left = deadline - Date.now();
+    if (left <= 0) break;
+    try {
+      const result = await runSmartAssignBackfill(row.id, { budgetMs: left });
+      projects++;
+      assigned += result.assigned;
+    } catch (err) {
+      console.error("[smart-assign] backfill resume failed:", row.id, (err as Error).message);
+    }
+  }
+  return { projects, assigned };
 }
 
 /**

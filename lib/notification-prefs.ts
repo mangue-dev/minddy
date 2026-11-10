@@ -87,6 +87,8 @@ export function categoryOfNotificationType(
 ): NotificationCategory | null {
   switch (type) {
     case "assigned":
+    // Several assignments told in one line (MIN-903) are still assignments.
+    case "smart_assign_batch":
       return "assigned";
     case "mention":
       return "mention";

@@ -68,6 +68,8 @@ function notification(id: string): MyNotification {
     comment_excerpt: null,
     numo_note_title: null,
     numo_note_body: null,
+    issue_count: null,
+    project_name: null,
     issue_id: "issue-id",
     issue_title: "A ticket",
     project_key: "MIN",

@@ -98,6 +98,30 @@ export async function decodeProjectName(row: Row,
   return plain.name;
 }
 
+/**
+ * Names of several projects, for a reader whose access the caller already
+ * checked. A project that cannot be read is left out rather than failing the
+ * whole read.
+ */
+export async function readProjectNames(service: SupabaseClient,
+  projectIds: ReadonlyArray<string | null | undefined>,
+  actorId: string | null = null): Promise<Map<string, string>> {
+  const ids = [...new Set(projectIds.filter((id): id is string => !!id))];
+  const names = new Map<string, string>();
+  if (ids.length === 0) return names;
+  const { data } = await service.from("projects")
+    .select("id, name, encrypted_content, encryption_version")
+    .in("id", ids).is("deleted_at", null);
+  for (const row of (data ?? []) as Row[]) {
+    try {
+      names.set(row.id as string, await decodeProjectName(row, actorId));
+    } catch {
+      console.error("[project-content] name_read_failed");
+    }
+  }
+  return names;
+}
+
 export async function encodeProject(row: Row,
   options: { service?: SupabaseClient; force?: boolean } = {}): Promise<Row> {
   if (!valid(row)) throw new Error("Incomplete project content");

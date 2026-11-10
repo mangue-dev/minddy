@@ -73,4 +73,8 @@ describe("Numo notes (MIN-914)", () => {
       .toBe("numo");
     expect(resolveNotificationPrefs({ notif_numo: false }).numo).toBe(false);
   });
+
+  it("puts a backfill's grouped line under the assignment switch (MIN-903)", () => {
+    expect(categoryOfNotification({ type: "smart_assign_batch" })).toBe("assigned");
+  });
 });
