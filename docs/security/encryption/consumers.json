@@ -2509,77 +2509,77 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 745,
+    "line": 746,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 768,
+    "line": 769,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 804,
+    "line": 805,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 809,
+    "line": 810,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 826,
+    "line": 827,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 865,
+    "line": 866,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1704,
+    "line": 1705,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1779,
+    "line": 1780,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 1828,
+    "line": 1829,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2319,
+    "line": 2320,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2491,
+    "line": 2492,
     "storage": false
   },
   {
@@ -11112,105 +11112,112 @@
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 162,
+    "line": 177,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 173,
+    "line": 188,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "issue_categories",
-    "line": 232,
+    "line": 255,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "issues",
-    "line": 318,
+    "line": 351,
+    "storage": false
+  },
+  {
+    "file": "lib/server/smart-assign.ts",
+    "operation": "from",
+    "resource": "issue_relations",
+    "line": 468,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "rpc",
     "resource": "smart_assign_backfill_candidates",
-    "line": 506,
+    "line": 735,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "rpc",
     "resource": "smart_assign_backfill_candidates",
-    "line": 516,
+    "line": 745,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 556,
+    "line": 785,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 562,
+    "line": 791,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 641,
+    "line": 870,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "notifications",
-    "line": 671,
+    "line": 900,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 705,
+    "line": 934,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 769,
+    "line": 998,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 796,
+    "line": 1025,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 842,
+    "line": 1071,
     "storage": false
   },
   {
     "file": "lib/server/smart-assign.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 851,
+    "line": 1080,
     "storage": false
   },
   {
@@ -11490,13 +11497,6 @@
     "file": "lib/server/update-project.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 146,
-    "storage": false
-  },
-  {
-    "file": "lib/server/update-project.ts",
-    "operation": "from",
-    "resource": "projects",
     "line": 171,
     "storage": false
   },
@@ -11504,14 +11504,21 @@
     "file": "lib/server/update-project.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 184,
+    "line": 196,
     "storage": false
   },
   {
     "file": "lib/server/update-project.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 204,
+    "line": 209,
+    "storage": false
+  },
+  {
+    "file": "lib/server/update-project.ts",
+    "operation": "from",
+    "resource": "projects",
+    "line": 229,
     "storage": false
   },
   {

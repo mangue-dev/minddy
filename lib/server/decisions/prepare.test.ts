@@ -166,6 +166,82 @@ describe("buildSmartAssignSpec", () => {
   });
 });
 
+describe("buildSmartAssignSpec — workload and context hints (MIN-957)", () => {
+  const hints = (openCount: number, openPoints: number, extra = {}) => ({
+    openCount,
+    openPoints,
+    leadsObjective: false,
+    relatedCount: 0,
+    recentCategoryCount: 0,
+    ...extra,
+  });
+  const spec = buildSmartAssignSpec({
+    projectName: "minddy",
+    issue: { title: "Fix the API", description: null, categories: "Bug", priority: null, effort: null },
+    members: [
+      { id: "user-busy", name: "Clément", owner: true, rule: "Backend", hints: hints(6, 21) },
+      {
+        id: "user-free",
+        name: "Jérémy",
+        owner: false,
+        rule: "Backend",
+        hints: hints(1, 2, { leadsObjective: true, relatedCount: 2, recentCategoryCount: 1 }),
+      },
+      { id: "user-idle", name: "Ada", owner: false, rule: null, hints: hints(0, 0) },
+    ],
+  });
+
+  it("gives the decision model the hints in the state", () => {
+    expect(spec.state.members).toEqual([
+      {
+        id: "user-busy", name: "Clément", owner: true, rule: "Backend",
+        open_issues: 6, open_effort_points: 21, leads_objective: false,
+        related_issues: 0, recent_category_issues: 0,
+      },
+      {
+        id: "user-free", name: "Jérémy", owner: false, rule: "Backend",
+        open_issues: 1, open_effort_points: 2, leads_objective: true,
+        related_issues: 2, recent_category_issues: 1,
+      },
+      {
+        id: "user-idle", name: "Ada", owner: false, rule: null,
+        open_issues: 0, open_effort_points: 0, leads_objective: false,
+        related_issues: 0, recent_category_issues: 0,
+      },
+    ]);
+  });
+
+  it("tells both engines that the hints only break ties", () => {
+    const question = spec.questions[0];
+    expect(question.label).toContain("Never pass over the only member whose rule fits");
+    expect(spec.llm.systemPrompt).toContain("Never pass over the only member whose rule fits");
+    expect(validateDecisionSpec(spec)).toBe(true);
+  });
+
+  it("writes the workload of every member and the context of those who have one", () => {
+    expect(spec.llm.userMessage).toContain(
+      "- Clément (user_id: user-busy) [owner]\n  Rule: Backend\n  Workload: 6 open issues (21 effort points)\n- Jérémy"
+    );
+    expect(spec.llm.userMessage).toContain(
+      "Workload: 1 open issue (2 effort points)\n  Context: leads this issue's objective; assigned to 2 related issues; completed 1 recent issue in the same categories"
+    );
+    expect(spec.llm.userMessage).toContain("Rule: (no rule)\n  Workload: no open issue");
+  });
+
+  it("keeps the rules-only spec when no hint could be read", () => {
+    const plain = buildSmartAssignSpec({
+      projectName: "minddy",
+      issue: { title: "Fix the API", description: null, categories: "", priority: null, effort: null },
+      members: [{ id: "user-a", name: "Ada", owner: true, rule: "Backend" }],
+    });
+    expect(plain.state.members).toEqual([
+      { id: "user-a", name: "Ada", owner: true, rule: "Backend" },
+    ]);
+    expect(plain.questions[0].label).toBe("Which team member is best suited to handle this issue?");
+    expect(plain.llm.userMessage).not.toContain("Workload");
+  });
+});
+
 describe("prepareSmartAssign", () => {
   // The minimal account shape `fetchAuthUsersById` returns; only the
   // metadata and the email are read.

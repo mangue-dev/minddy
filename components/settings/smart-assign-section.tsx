@@ -10,6 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import { StatusIndicator } from "@/components/issue-indicators";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,7 +37,12 @@ import {useProjects} from "@/lib/projects-context";
 import {useMembersQuery} from "@/lib/use-members-query";
 import {UserAvatar} from "@/components/user-avatar";
 import {displayName} from "@/lib/display-name";
-import {userIdsWithoutRule} from "@/lib/smart-assign-config";
+import {
+  SMART_ASSIGN_FROM_STATUSES,
+  smartAssignFromStatusOf,
+  userIdsWithoutRule,
+  type SmartAssignFromStatus,
+} from "@/lib/smart-assign-config";
 import {EmptyScene} from "@/components/empty-scene";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
@@ -56,6 +69,9 @@ const UserCircleSceneIcon = ({
  multi-member projects, one free-text assignment rule per member (owner
  included — the AI ​​matches new issues against these rules). Owner-only;
  members see a disabled, read-only state.
+
+ "Assign from" sets the status from which an issue may be assigned: backlog
+ by default, or todo for teams that only assign committed work (MIN-957).
 
  Turning it on does not reach the issues that were already open with no
  assignee: the owner is asked once whether Smart Assign should assign them,
@@ -84,6 +100,7 @@ export function SmartAssignSection({
   const t = useTranslations("Settings");
   const tc = useTranslations("Common");
   const tm = useTranslations("Members");
+  const ts = useTranslations("Status");
   const { updateProject, refetch: refetchProjects } = useProjects();
   const queryClient = useQueryClient();
   const { members, loading } = useMembersQuery(project.id, true);
@@ -111,6 +128,33 @@ export function SmartAssignSection({
       toast.error((e as Error).message);
     } finally {
       setSavingToggle(false);
+    }
+  };
+
+  // "Assign from" (MIN-957), mirrored like the toggle.
+  const savedFromStatus = smartAssignFromStatusOf(project);
+  const [fromStatus, setFromStatus] = useState(savedFromStatus);
+  const [savingFromStatus, setSavingFromStatus] = useState(false);
+  useEffect(() => {
+    setFromStatus(savedFromStatus);
+  }, [savedFromStatus]);
+
+  const changeFromStatus = async (next: SmartAssignFromStatus) => {
+    if (!isOwner || savingFromStatus || next === fromStatus) return;
+    const previous = fromStatus;
+    setFromStatus(next);
+    setSavingFromStatus(true);
+    try {
+      await updateProject(project.id, { smart_assign_from_status: next });
+      // The setting decides which open issues a backfill counts. Lowering it
+      // to backlog brings the backlog in: the owner is offered to assign it.
+      if (next === "backlog") void offerBackfill();
+      else void queryClient.invalidateQueries({ queryKey: backfillKey });
+    } catch (e) {
+      setFromStatus(previous);
+      toast.error((e as Error).message);
+    } finally {
+      setSavingFromStatus(false);
     }
   };
 
@@ -273,11 +317,48 @@ export function SmartAssignSection({
           </EmptyScene>
         )}
 
+        {enabled && (
+          <SettingsRow
+            label={t("smartAssignFromLabel")}
+            hint={t("smartAssignFromHint")}
+            control={
+              <Select
+                value={fromStatus}
+                onValueChange={(next) => void changeFromStatus(next as SmartAssignFromStatus)}
+                disabled={!isOwner || savingFromStatus}
+              >
+                <SelectTrigger className="w-40" aria-label={t("smartAssignFromLabel")}>
+                  <SelectValue>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <StatusIndicator status={fromStatus} className="size-4" />
+                      <span className="truncate">{ts(fromStatus)}</span>
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {SMART_ASSIGN_FROM_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      <span className="flex items-center gap-2">
+                        <StatusIndicator status={status} className="size-4" />
+                        {ts(status)}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
+        )}
+
         {showBackfill && (
           <SettingsRow
             label={t("smartAssignBackfillRowLabel")}
             hint={t(
-              backfillBlocked ? "smartAssignBackfillNeedsRules" : "smartAssignBackfillRowHint"
+              backfillBlocked
+                ? "smartAssignBackfillNeedsRules"
+                : fromStatus === "todo"
+                  ? "smartAssignBackfillRowHintTodo"
+                  : "smartAssignBackfillRowHint"
             )}
             control={
               <Button

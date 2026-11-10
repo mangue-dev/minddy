@@ -1300,6 +1300,11 @@
         "type": "timestamp with time zone",
         "nullable": true,
         "generated": false
+      },
+      "smart_assign_from_status": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
       }
     },
     "primaryKey": [

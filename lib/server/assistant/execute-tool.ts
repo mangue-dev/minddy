@@ -298,6 +298,7 @@ import {
   type InboxReadState,
 } from "@/lib/inbox-tool";
 import { resolveAssistantProjectId, resolveAssistantProjectTarget } from "./project-scope";
+import { smartAssignFromStatusOf } from "@/lib/smart-assign-config";
 import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 
 // ── Tool execution ─────────────────────────────────────────────────────
@@ -3239,6 +3240,7 @@ async function executeToolUnlisted(
               key: result.project.key,
               color: result.project.color,
               smart_assign_enabled: result.project.smart_assign_enabled,
+              smart_assign_from_status: smartAssignFromStatusOf(result.project),
               smart_assign_rules: result.project.smart_assign_rules,
               smart_triage_mode: result.project.smart_triage_mode,
               feedback_review_enabled: result.project.feedback_review_enabled,

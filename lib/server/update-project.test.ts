@@ -115,3 +115,57 @@ describe("updateProjectSettings — smart_triage_mode", () => {
     expect(result).toEqual({ ok: false, status: 403, errorKey: "ownerOnly" });
   });
 });
+
+describe("updateProjectSettings — smart_assign_from_status (MIN-957)", () => {
+  const patch = (input: Record<string, unknown>) =>
+    updateProjectSettings({ projectId: "project-1", actorId: "user-owner", input });
+
+  it("accepts the two start statuses", async () => {
+    for (const status of ["backlog", "todo"]) {
+      const result = await patch({ smart_assign_from_status: status });
+      expect(result.ok).toBe(true);
+      expect(updated).toMatchObject({ smart_assign_from_status: status });
+    }
+  });
+
+  it("refuses any other status, in progress included", async () => {
+    for (const status of ["in_progress", "triage", "", null]) {
+      const result = await patch({ smart_assign_from_status: status });
+      expect(result).toMatchObject({ ok: false, status: 400, errorKey: "invalidSmartAssignFromStatus" });
+    }
+    expect(updated).toBeNull();
+  });
+
+  it("restarts the covered period when an active project goes back to backlog", async () => {
+    getProjectAccessMock.mockResolvedValue({
+      ...ACCESS,
+      project: { ...ACCESS.project, smart_assign_enabled: true, smart_assign_from_status: "todo" },
+    });
+    await patch({ smart_assign_from_status: "backlog" });
+    expect(updated).toMatchObject({ smart_assign_enabled_at: expect.any(String) });
+  });
+
+  it("leaves that date alone when the setting is raised, unchanged, or Smart Assign is off", async () => {
+    getProjectAccessMock.mockResolvedValue({
+      ...ACCESS,
+      project: { ...ACCESS.project, smart_assign_enabled: true, smart_assign_from_status: "backlog" },
+    });
+    await patch({ smart_assign_from_status: "todo" });
+    expect(updated).not.toHaveProperty("smart_assign_enabled_at");
+    await patch({ smart_assign_from_status: "backlog" });
+    expect(updated).not.toHaveProperty("smart_assign_enabled_at");
+
+    getProjectAccessMock.mockResolvedValue({
+      ...ACCESS,
+      project: { ...ACCESS.project, smart_assign_enabled: false, smart_assign_from_status: "todo" },
+    });
+    await patch({ smart_assign_from_status: "backlog" });
+    expect(updated).not.toHaveProperty("smart_assign_enabled_at");
+  });
+
+  it("is refused to a member", async () => {
+    getProjectAccessMock.mockResolvedValue({ ...ACCESS, isOwner: false });
+    const result = await patch({ smart_assign_from_status: "todo" });
+    expect(result).toMatchObject({ ok: false, status: 403, errorKey: "ownerOnly" });
+  });
+});

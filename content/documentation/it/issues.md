@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 51,
-  "sourceRevision": 51,
+  "revision": 52,
+  "sourceRevision": 52,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-10",
   "compatibility": {
@@ -139,9 +139,9 @@
     ]
   },
   "review": {
-    "revision": 51,
-    "fact": "agent:claude-code (MIN-903: the Smart Assign paragraph now says where an empty assignee reads Smart Assign or Unassigned, and a new paragraph describes the offer to assign open issues, its scope, the assignment rule it requires from every member and its single notification; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json, and the backfill run on the preview database; no figure recaptured: none shows the changed controls)",
-    "language": "agent:claude-code (it passages changed and added for MIN-903; self-reviewed against the it catalog and glossary; agent review, not human acceptance)",
+    "revision": 52,
+    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls)",
+    "language": "agent:claude-code (it passages changed and added for MIN-957; self-reviewed against the it catalog and glossary; agent review, not human acceptance)",
     "date": "2026-11-10"
   },
   "related": [
@@ -187,7 +187,7 @@
       "src": "/documentation/it/new-issue.png",
       "alt": "Bozza non inviata nel progetto Aurora con titolo, descrizione, proprietà selezionabili manualmente e il pulsante Crea AUR-21.",
       "caption": "Descrivi il risultato atteso e scegli le proprietà utili prima di creare il ticket.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -204,7 +204,7 @@
       "src": "/documentation/it/triage-incoming.png",
       "alt": "Ticket dimostrativo AUR-19 in arrivo con segnalazione, proprietà e comandi per duplicato, Rifiuta e Accetta.",
       "caption": "Leggi la segnalazione ricevuta prima di accettarla, rifiutarla o collegare un duplicato.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -221,7 +221,7 @@
       "src": "/documentation/it/issue-statuses.png",
       "alt": "Gli otto stati del ticket nel selettore, con Backlog selezionato.",
       "caption": "La spunta indica lo stato attuale. Scegli quello che rispecchia lo stato effettivo del lavoro.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -238,7 +238,7 @@
       "src": "/documentation/it/work-resources.png",
       "alt": "Finestra di aggiunta di un link con un indirizzo di contatto d’esempio.",
       "caption": "Controlla la destinazione prima di aggiungere la risorsa. Questo link d’esempio non è stato inviato.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -255,7 +255,7 @@
       "src": "/documentation/it/work-dependencies.png",
       "alt": "La palette dei comandi mostra i ticket che possono bloccare questo, con la domanda della relazione nel campo di ricerca.",
       "caption": "Scegli la direzione della relazione prima della destinazione. Il selettore è mostrato senza inviare la relazione.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -272,7 +272,7 @@
       "src": "/documentation/it/work-sub-issues.png",
       "alt": "Sezione dei sottoticket di un ticket principale dimostrativo, con il pulsante Crea un sottoticket e la sua freccia delle opzioni.",
       "caption": "Crea un sottoticket apre la creazione con questo ticket come principale; ogni figlio conserva stato e discussione propri.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -289,7 +289,7 @@
       "src": "/documentation/it/work-implementation-plan.png",
       "alt": "Piano dimostrativo con due attività di lavoro completate su sei.",
       "caption": "Il piano salvato distingue passaggi completati, attivi e in attesa. L’avanzamento non dimostra l’esecuzione dell’attività di codice fittizia.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -306,7 +306,7 @@
       "src": "/documentation/it/issue-date-recurrence.png",
       "alt": "Selettore di scadenza ricorrente con anteprima settimanale la domenica e orario facoltativo.",
       "caption": "La modalità ricorrente mostra la cadenza settimanale. Conferma la prima scadenza prima di creare il ticket.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -323,7 +323,7 @@
       "src": "/documentation/it/import-issues-preview-workflow.png",
       "alt": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate.",
       "caption": "Anteprima CSV di due righe dimostrative tradotte e delle colonne rilevate. L’importazione non è stata inviata; la pianificazione IA facoltativa è stata bloccata per la cattura.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -340,7 +340,7 @@
       "src": "/documentation/it/file-preview.png",
       "alt": "Visualizzatore CSV a tutta finestra con attività di esempio, un grande pulsante Chiudi e il menu Azioni del file con Scarica, Rinomina e Rimuovi.",
       "caption": "Il visualizzatore condiviso colloca Chiudi sotto l’anteprima. Il menu Azioni del file offre Scarica e, con i permessi necessari, Rinomina e Rimuovi.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -379,7 +379,9 @@ Imposta le proprietà utili prima di confermare: stato, priorità, impegno, asse
 
 Quando Smart Assign è attivo nel progetto, il selettore dell'assegnatario mostra **Smart Assign** al posto di **Non assegnato** ovunque Smart Assign stia per scegliere: nel modulo di creazione, su un ticket in triage e su un ticket che ha un assegnatario, dove scegliere **Smart Assign** rimuove quell'assegnatario e lascia scegliere di nuovo a Smart Assign. Le schede dei ticket e la palette dei comandi seguono la stessa regola, e una scheda in attesa di Smart Assign ne mostra l'icona. Un ticket che era già aperto e senza assegnatario quando Smart Assign è stato attivato resta **Non assegnato**, perché nulla lo assegna da solo. Anche i ticket **Annullato** e **Duplicato** restano **Non assegnato**.
 
-Attivare Smart Assign non assegna i ticket che erano già in attesa. Se il progetto ha ticket in **Backlog** o **Da fare** che non sono mai stati assegnati, il proprietario vede **Assegnare i ticket aperti?** con il loro numero. **Assegna i ticket** li assegna in background; un backlog grande richiede alcuni minuti. **Non ora** non cambia nulla, e la riga **Ticket aperti senza assegnatario** delle impostazioni **Smart Assign** del progetto propone la stessa azione in seguito. In un progetto con più membri, l'azione resta non disponibile finché ogni membro non ha una regola di assegnazione, e la domanda non viene posta. I ticket che hanno un assegnatario, quelli in un altro stato e quelli a cui qualcuno ha tolto l'assegnatario a mano restano come sono. Ogni persona riceve una sola notifica con il numero di ticket che le sono stati assegnati; il proprietario che ha avviato l'operazione non ne riceve. Se il budget IA del proprietario si esaurisce, i ticket rimanenti restano senza assegnatario.
+Per impostazione predefinita, Smart Assign assegna un ticket appena esce dal triage. Nelle impostazioni **Smart Assign** del progetto, il proprietario può impostare **Assegna a partire da** su **Da fare**: un ticket in triage o in **Backlog** resta allora **Non assegnato**, e Smart Assign lo assegna quando passa a **Da fare** o a uno stato successivo. Per scegliere tra membri le cui regole di assegnazione si adattano a un ticket, Smart Assign considera anche i ticket che ciascuno ha già in **Da fare**, **In corso** e **In revisione**, pesati per l'impegno, chi è responsabile dell'obiettivo del ticket e chi è assegnatario del ticket padre, dei ticket collegati e dei ticket delle stesse categorie completati di recente. Questi elementi servono solo a scegliere a parità di regole: un membro la cui regola è l'unica adatta riceve il ticket, qualunque sia il numero di ticket che ha già.
+
+Attivare Smart Assign non assegna i ticket che erano già in attesa. Se il progetto ha ticket in **Backlog** o **Da fare** che non sono mai stati assegnati, il proprietario vede **Assegnare i ticket aperti?** con il loro numero. Con **Assegna a partire da** su **Da fare**, vengono contati e assegnati solo i ticket in **Da fare**. **Assegna i ticket** li assegna in background; un backlog grande richiede alcuni minuti. **Non ora** non cambia nulla, e la riga **Ticket aperti senza assegnatario** delle impostazioni **Smart Assign** del progetto propone la stessa azione in seguito. In un progetto con più membri, l'azione resta non disponibile finché ogni membro non ha una regola di assegnazione, e la domanda non viene posta. I ticket che hanno un assegnatario, quelli in un altro stato e quelli a cui qualcuno ha tolto l'assegnatario a mano restano come sono. Ogni persona riceve una sola notifica con il numero di ticket che le sono stati assegnati; il proprietario che ha avviato l'operazione non ne riceve. Se il budget IA del proprietario si esaurisce, i ticket rimanenti restano senza assegnatario.
 
 Conferma la creazione e apri il nuovo ticket. Controlla identificativo e progetto. Riapri i selettori delle proprietà per cambiare i valori quando l’attività diventa più chiara. La descrizione spiega il lavoro; il piano di implementazione si mantiene separatamente nella scheda del piano.
 

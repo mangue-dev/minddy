@@ -326,5 +326,6 @@
   "20270109200114_issues_effort_xxl.sql": "2ba123af148ee6159ca46a54f5c84f66c08678d4ea742407392dee51203c5135",
   "20270109200115_numo_watch_recurrence.sql": "3d34fddae2ebcf5645c07002378bdacf85807cb9183d57ae4d1ad0696c29d4a4",
   "20270109200116_numo_context_summary.sql": "b6bdeac6fddd537a4a6b8026b41ffc3fffbdf0afc639dd5a3a9e39f499f8c9ba",
-  "20270109200117_smart_assign_backfill.sql": "f8fb6c2655954e5a85f1ccb2669d0a7f9120d31ba709ca434c5a6aec6c64d6d6"
+  "20270109200117_smart_assign_backfill.sql": "f8fb6c2655954e5a85f1ccb2669d0a7f9120d31ba709ca434c5a6aec6c64d6d6",
+  "20270109200118_smart_assign_from_status.sql": "bf05978a6227f86596bdacbc76df990a615727d4dd0a8a337d7c1d62d51efa64"
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * THE BRANCH (MIN-564) — `runSmartAssign` through the decision layer.
@@ -107,6 +107,7 @@ const DB = {
     name: "minddy",
     owner_id: "user-owner",
     smart_assign_enabled: true,
+    smart_assign_from_status: "backlog",
     automations: [],
     smart_assign_rules: { "user-dev": "All things backend" } as Record<string, string>,
   },
@@ -118,6 +119,8 @@ const DB = {
     priority: "high",
     effort: "m",
     assignee_id: null as string | null,
+    objective_id: null as string | null,
+    parent_id: null as string | null,
   },
   members: [{ user_id: "user-dev" }, { user_id: "user-qa" }],
   categories: [{ category_id: "cat-bug" }, { category_id: "cat-tech" }],
@@ -131,21 +134,55 @@ const deferredWorks: (() => void | Promise<void>)[] = [];
 /** A PostgREST chain reduced to what the run touches: chained filters are
  * ignored; `maybeSingle()` / the await resolve the given row, `update()`
  * records its payload (the claim's compare-and-set is what we assert on). */
-function fakeQuery(resolve: (updated: boolean) => { data: unknown; error: unknown }): unknown {
+function fakeQuery(
+  resolve: (updated: boolean, selection: string) => { data: unknown; error: unknown }
+): unknown {
   const query: Record<string, unknown> = {};
   let updated = false;
-  for (const method of ["select", "eq", "is", "not", "in", "or", "order", "limit"]) {
+  // The columns of a read tell the reads of one table apart.
+  let selection = "";
+  for (const method of ["eq", "neq", "is", "not", "in", "or", "order", "limit"]) {
     query[method] = () => query;
   }
+  query.select = (columns?: string) => {
+    if (!updated) selection = columns ?? "";
+    return query;
+  };
   query.update = (payload: unknown) => {
     updated = true;
     updatePayloads.push(payload);
     return query;
   };
-  query.maybeSingle = () => Promise.resolve(resolve(updated));
+  query.maybeSingle = () => Promise.resolve(resolve(updated, selection));
   query.then = (onFulfilled: (value: { data: unknown; error: unknown }) => unknown) =>
-    Promise.resolve(resolve(updated)).then(onFulfilled);
+    Promise.resolve(resolve(updated, selection)).then(onFulfilled);
   return query;
+}
+
+/** What the hint reads of the run answer (MIN-957). Empty by default: the
+ * decision then sees a team with no open issue and no tie to the issue. */
+const HINTS = {
+  workload: [] as Array<{ assignee_id: string; effort: string | null }>,
+  objectiveLead: null as string | null,
+  relations: [] as Array<{ source_id: string; target_id: string }>,
+  related: [] as Array<{ id: string; assignee_id: string | null }>,
+  recent: [] as Array<{ id: string; assignee_id: string }>,
+  fail: false,
+};
+function resetHints() {
+  Object.assign(HINTS, {
+    workload: [], objectiveLead: null, relations: [], related: [], recent: [], fail: false,
+  });
+}
+/** The hint reads on `issues`, told apart by their columns; `null` for any
+ * other read of the table (the guard read, the claim, the sweep scan). */
+function hintRead(selection: string): { data: unknown; error: unknown } | null {
+  const answer = (data: unknown) =>
+    HINTS.fail ? { data: null, error: { message: "down" } } : { data, error: null };
+  if (selection === "assignee_id, effort") return answer(HINTS.workload);
+  if (selection === "id, assignee_id") return answer(HINTS.related);
+  if (selection.includes("issue_categories!inner")) return answer(HINTS.recent);
+  return null;
 }
 
 /** The run's guard read is the FIRST issues query; the claim's
@@ -160,9 +197,18 @@ function wireDb() {
       { id: "cat-bug", project_id: "project-1", name: "Bug" },
       { id: "cat-tech", project_id: "project-1", name: "Technique" },
     ], error: null }));
+    if (table === "objectives")
+      return fakeQuery(() => ({
+        data: HINTS.objectiveLead ? { id: "objective-1", lead_user_id: HINTS.objectiveLead } : null,
+        error: null,
+      }));
+    if (table === "issue_relations")
+      return fakeQuery(() => ({ data: HINTS.relations, error: null }));
     if (table === "issues") {
-      return fakeQuery((updated) =>
-        updated ? { data: { id: DB.issue.id }, error: null } : { data: DB.issue, error: null }
+      return fakeQuery((updated, selection) =>
+        updated
+          ? { data: { id: DB.issue.id }, error: null }
+          : (hintRead(selection) ?? { data: DB.issue, error: null })
       );
     }
     return fakeQuery(() => ({ data: null, error: null }));
@@ -223,6 +269,11 @@ describe("runSmartAssign — decision layer", () => {
       });
     wireDb();
     wireAuthUsers();
+    resetHints();
+    DB.issue.status = "todo";
+    DB.issue.objective_id = null;
+    DB.issue.parent_id = null;
+    DB.project.smart_assign_from_status = "backlog";
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -433,9 +484,206 @@ describe("runSmartAssign — decision layer", () => {
   });
 });
 
+describe("runSmartAssign — start status (MIN-957)", () => {
+  beforeEach(() => {
+    updatePayloads.length = 0;
+    getAppConfigValuesMock.mockReset().mockResolvedValue({});
+    canUseSmartAssignMock.mockReset().mockResolvedValue(true);
+    runModelDecisionMock.mockReset().mockResolvedValue(answered(modelAnswer("user-dev", 0.8)));
+    runLlmDecisionMock.mockReset().mockResolvedValue(null);
+    insertEventsMock.mockReset().mockResolvedValue(null);
+    insertNotificationsMock.mockReset().mockResolvedValue(null);
+    getUserByIdMock.mockReset();
+    deferredWorks.length = 0;
+    afterOrNowMock.mockReset().mockImplementation((work: () => void | Promise<void>) => {
+      deferredWorks.push(work);
+    });
+    wireDb();
+    wireAuthUsers();
+    resetHints();
+    DB.issue.status = "todo";
+    DB.project.smart_assign_from_status = "todo";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  const run = (trigger: "create" | "unassign" | "sweep" | "start_status" | "triage_exit") =>
+    runSmartAssign({
+      issueId: "issue-1",
+      projectId: "project-1",
+      triggerActorId: "user-creator",
+      trigger,
+      ...(trigger === "start_status" ? { previousStatus: "backlog" } : {}),
+    });
+
+  it.each(["create", "unassign", "sweep", "triage_exit"] as const)(
+    "leaves a backlog issue empty on %s when the project assigns from todo",
+    async (trigger) => {
+      DB.issue.status = "backlog";
+      await expect(run(trigger)).resolves.toBeNull();
+      await runDeferred();
+      expect(updatePayloads).toEqual([]);
+      expect(runModelDecisionMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it("assigns the issue when it leaves the backlog", async () => {
+    await run("start_status");
+    await runDeferred();
+    expect(updatePayloads).toContainEqual({ assignee_id: "user-dev" });
+  });
+
+  it("assigns an issue created in todo, as before", async () => {
+    await run("create");
+    await runDeferred();
+    expect(updatePayloads).toContainEqual({ assignee_id: "user-dev" });
+  });
+
+  it("changes nothing for the same move in a project that assigns from backlog", async () => {
+    // The issue was already covered in the backlog: it is empty by choice
+    // (older than the activation, or unassigned by hand), not waiting.
+    DB.project.smart_assign_from_status = "backlog";
+    await expect(run("start_status")).resolves.toBeNull();
+    await runDeferred();
+    expect(updatePayloads).toEqual([]);
+  });
+
+  it("limits the backfill run to todo", async () => {
+    const backfill = () =>
+      runSmartAssign({
+        issueId: "issue-1",
+        projectId: "project-1",
+        triggerActorId: "user-owner",
+        trigger: "backfill",
+      });
+    DB.issue.status = "backlog";
+    await expect(backfill()).resolves.toBeNull();
+    DB.issue.status = "todo";
+    await expect(backfill()).resolves.toBe("user-dev");
+  });
+});
+
+describe("runSmartAssign — workload and context hints (MIN-957)", () => {
+  beforeEach(() => {
+    updatePayloads.length = 0;
+    getAppConfigValuesMock.mockReset().mockResolvedValue({});
+    canUseSmartAssignMock.mockReset().mockResolvedValue(true);
+    runModelDecisionMock.mockReset().mockResolvedValue(answered(modelAnswer("user-qa", 0.8)));
+    runLlmDecisionMock.mockReset().mockResolvedValue(null);
+    insertEventsMock.mockReset().mockResolvedValue(null);
+    insertNotificationsMock.mockReset().mockResolvedValue(null);
+    getUserByIdMock.mockReset();
+    afterOrNowMock.mockReset().mockImplementation(() => {});
+    wireDb();
+    wireAuthUsers();
+    resetHints();
+    DB.issue.status = "todo";
+    DB.issue.objective_id = "objective-1";
+    DB.issue.parent_id = "issue-parent";
+    DB.project.smart_assign_from_status = "backlog";
+    // Two members with the same rule; one of them is loaded.
+    DB.project.smart_assign_rules = { "user-dev": "Backend", "user-qa": "Backend" };
+    HINTS.workload = [
+      { assignee_id: "user-dev", effort: "xl" },
+      { assignee_id: "user-dev", effort: "l" },
+      { assignee_id: "user-dev", effort: null },
+      { assignee_id: "user-qa", effort: "xs" },
+      // Someone who left the team is nobody's workload.
+      { assignee_id: "user-gone", effort: "xl" },
+    ];
+    HINTS.objectiveLead = "user-qa";
+    HINTS.relations = [
+      { source_id: "issue-1", target_id: "issue-2" },
+      { source_id: "issue-3", target_id: "issue-1" },
+    ];
+    HINTS.related = [
+      { id: "issue-parent", assignee_id: "user-qa" },
+      { id: "issue-2", assignee_id: "user-qa" },
+      { id: "issue-3", assignee_id: null },
+    ];
+    HINTS.recent = [
+      { id: "issue-7", assignee_id: "user-dev" },
+      { id: "issue-8", assignee_id: "user-qa" },
+    ];
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    DB.issue.objective_id = null;
+    DB.issue.parent_id = null;
+    DB.project.smart_assign_rules = { "user-dev": "All things backend" };
+  });
+
+  const specOf = () =>
+    runModelDecisionMock.mock.calls[0][0] as {
+      state: { members: Array<Record<string, unknown>> };
+      questions: Array<{ label: string }>;
+      llm: { userMessage: string; systemPrompt: string };
+    };
+
+  it("gives both engines each member's workload and ties to the issue", async () => {
+    await expect(sweepRun()).resolves.toBe("user-qa");
+    const spec = specOf();
+    expect(spec.state.members).toEqual([
+      {
+        id: "user-owner", name: "Clément", owner: true, rule: null,
+        open_issues: 0, open_effort_points: 0, leads_objective: false,
+        related_issues: 0, recent_category_issues: 0,
+      },
+      {
+        // xl (8) + l (5) + an unsized issue counted as a medium (3).
+        id: "user-dev", name: "Ada", owner: false, rule: "Backend",
+        open_issues: 3, open_effort_points: 16, leads_objective: false,
+        related_issues: 0, recent_category_issues: 1,
+      },
+      {
+        id: "user-qa", name: "Grace", owner: false, rule: "Backend",
+        open_issues: 1, open_effort_points: 1, leads_objective: true,
+        related_issues: 2, recent_category_issues: 1,
+      },
+    ]);
+    expect(spec.llm.userMessage).toContain("Workload: 3 open issues (16 effort points)");
+    expect(spec.llm.userMessage).toContain(
+      "Context: leads this issue's objective; assigned to 2 related issues; completed 1 recent issue in the same categories"
+    );
+  });
+
+  it("presents the hints as tie-breakers, never as a reason to skip the only fitting member", async () => {
+    await sweepRun();
+    const spec = specOf();
+    for (const text of [spec.questions[0].label, spec.llm.systemPrompt]) {
+      expect(text).toContain("the assignment rules decide who is able to handle the issue");
+      expect(text).toContain("Never pass over the only member whose rule fits because they are busy");
+    }
+  });
+
+  it("assigns the loaded member when the layer picks them: the load never blocks", async () => {
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer("user-dev", 0.9)));
+    await expect(sweepRun()).resolves.toBe("user-dev");
+    expect(updatePayloads).toContainEqual({ assignee_id: "user-dev" });
+  });
+
+  it("decides on the rules alone when the hints cannot be read", async () => {
+    HINTS.fail = true;
+    await expect(sweepRun()).resolves.toBe("user-qa");
+    const spec = specOf();
+    expect(spec.state.members[1]).toEqual({
+      id: "user-dev", name: "Ada", owner: false, rule: "Backend",
+    });
+    expect(spec.llm.userMessage).not.toContain("Workload");
+  });
+
+  it("reads no hint for the deterministic cases", async () => {
+    DB.project.smart_assign_rules = {};
+    HINTS.fail = true;
+    await expect(sweepRun()).resolves.toBe("user-owner");
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
+  });
+});
+
 describe("sweepUnassignedIssues", () => {
   beforeEach(() => {
     updatePayloads.length = 0;
+    resetHints();
     getAppConfigValuesMock.mockReset().mockResolvedValue({});
     canUseSmartAssignMock.mockReset().mockResolvedValue(true);
     runModelDecisionMock.mockReset().mockResolvedValue(answered(modelAnswer("user-dev", 0.8)));
@@ -448,20 +696,27 @@ describe("sweepUnassignedIssues", () => {
   });
 
   it("sweeps through the decision layer and counts what it claimed", async () => {
-    let issueQueries = 0;
+    let scans = 0;
     fromMock.mockImplementation((table: string) => {
       if (table === "issues") {
-        issueQueries += 1;
-        // 1st = the candidates scan, 2nd = the run's guard read, 3rd = the
-        // claim's compare-and-set.
-        if (issueQueries === 1)
-          return fakeQuery(() => ({
-            data: [{ id: "issue-9", project_id: "project-1" }],
-            error: null,
-          }));
-        if (issueQueries === 2)
-          return fakeQuery(() => ({ data: { ...DB.issue, id: "issue-9" }, error: null }));
-        return fakeQuery(() => ({ data: { id: "issue-9" }, error: null }));
+        return fakeQuery((updated, selection) => {
+          // The claim's compare-and-set.
+          if (updated) return { data: { id: "issue-9" }, error: null };
+          // The candidates scans, one per start status: the issue belongs to
+          // a project that assigns from backlog, read first.
+          if (selection.includes("projects!inner")) {
+            scans += 1;
+            return {
+              data:
+                scans === 1
+                  ? [{ id: "issue-9", project_id: "project-1", created_at: "2026-11-09T10:00:00Z" }]
+                  : [],
+              error: null,
+            };
+          }
+          // The run's hint reads, then its guard read.
+          return hintRead(selection) ?? { data: { ...DB.issue, id: "issue-9" }, error: null };
+        });
       }
       if (table === "issue_events") return fakeQuery(() => ({ data: [], error: null }));
       if (table === "projects") return fakeQuery(() => ({ data: DB.project, error: null }));
@@ -473,6 +728,7 @@ describe("sweepUnassignedIssues", () => {
     });
     wireAuthUsers();
     await expect(sweepUnassignedIssues()).resolves.toEqual({ candidates: 1, assigned: 1 });
+    expect(scans).toBe(2);
     expect(updatePayloads).toContainEqual({ assignee_id: "user-dev" });
     expect(insertEventsMock).toHaveBeenCalledWith(expect.anything(), [
       expect.objectContaining({ issue_id: "issue-9", smart_assign_ai: true }),

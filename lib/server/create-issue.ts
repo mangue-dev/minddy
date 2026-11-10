@@ -723,6 +723,8 @@ export async function createIssueForProject({
   // written here, before the answer. Delayed, he got lost — that's all
   // topic of MIN-31 revisited (see header of lib/server/smart-assign.ts).
   // Only the call to the model restarts in `after()`, from the run.
+  // The run also applies the project's start status (MIN-957): an issue born
+  // in the backlog of a project that assigns from todo stays empty.
   let smartAssignee: string | null = null;
   if (data.assignee_id == null && isSmartAssignEligibleStatus(data.status)) {
     smartAssignee = await applySmartAssign({

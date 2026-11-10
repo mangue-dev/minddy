@@ -235,8 +235,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       .order("created_at")
   );
   const projectFields = ["id", "name", "key", "color", "created_at",
-    "updated_at", "deleted_at", "smart_assign_enabled", "smart_assign_rules",
-    "auto_assign_enabled", "feedback_review_enabled",
+    "updated_at", "deleted_at", "smart_assign_enabled", "smart_assign_from_status",
+    "smart_assign_rules", "auto_assign_enabled", "feedback_review_enabled",
     "feedback_review_skip_over_budget", "automations_enabled", "automations",
     "feedback_translate_enabled", "feedback_team_language",
     "feedback_no_translate_languages", "orb_seed"];

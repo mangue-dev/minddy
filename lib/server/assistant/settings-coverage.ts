@@ -194,6 +194,7 @@ export const PROJECT_FIELD_COVERAGE: Readonly<Record<string, "update_project" | 
   key: "update_project",
   color: "update_project",
   smart_assign_enabled: "update_project",
+  smart_assign_from_status: "update_project",
   smart_assign_rules: "update_project",
   smart_triage_mode: "update_project",
   feedback_review_enabled: "update_project",
