@@ -25,6 +25,7 @@ import { encodePage } from "@/lib/server/page-content";
 import { isDatabaseSchema, type DatabaseValues } from "@/lib/page-databases";
 import { encodeRoutine } from "@/lib/server/routine-content";
 import { decodeProject, encodeProject } from "@/lib/server/project-content";
+import { parseSmartAssignFromStatus, smartAssignFromStatusOf } from "@/lib/smart-assign-config";
 import { encodeAttachmentValue, shouldEncryptAttachmentMetadata } from
   "@/lib/server/attachment-content";
 
@@ -474,6 +475,11 @@ async function importProjects(
       name: source.name ?? old?.name,
       automations: source.automations ?? old?.automations ?? [],
       smart_assign_rules: source.smart_assign_rules ?? old?.smart_assign_rules ?? {},
+      // An archive written before the setting existed, or one that was edited,
+      // keeps the project's current start status (MIN-957).
+      smart_assign_from_status:
+        parseSmartAssignFromStatus(source.smart_assign_from_status) ??
+        smartAssignFromStatusOf(old),
       encryption_version: existingRow?.encryption_version ?? 0,
     };
     rows.push(await encodeProject(candidate, { service }));

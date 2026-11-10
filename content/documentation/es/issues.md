@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 51,
-  "sourceRevision": 51,
+  "revision": 52,
+  "sourceRevision": 52,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-10",
   "compatibility": {
@@ -139,9 +139,9 @@
     ]
   },
   "review": {
-    "revision": 51,
-    "fact": "agent:claude-code (MIN-903: the Smart Assign paragraph now says where an empty assignee reads Smart Assign or Unassigned, and a new paragraph describes the offer to assign open issues, its scope, the assignment rule it requires from every member and its single notification; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json, and the backfill run on the preview database; no figure recaptured: none shows the changed controls)",
-    "language": "agent:claude-code (es passages changed and added for MIN-903; self-reviewed against the es catalog and glossary; agent review, not human acceptance)",
+    "revision": 52,
+    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls)",
+    "language": "agent:claude-code (es passages changed and added for MIN-957; self-reviewed against the es catalog and glossary; agent review, not human acceptance)",
     "date": "2026-11-10"
   },
   "related": [
@@ -187,7 +187,7 @@
       "src": "/documentation/es/new-issue.png",
       "alt": "Borrador sin enviar en el proyecto Aurora con título, descripción, propiedades que se pueden elegir manualmente y el botón Crear AUR-21.",
       "caption": "Describe el resultado esperado y elige las propiedades útiles antes de crear el ticket.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -204,7 +204,7 @@
       "src": "/documentation/es/triage-incoming.png",
       "alt": "Incidencia entrante de demostración AUR-19 con informe, propiedades y controles de duplicado, Rechazar y Aceptar.",
       "caption": "Lee el informe recibido antes de aceptarlo, rechazarlo o enlazar un duplicado.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -221,7 +221,7 @@
       "src": "/documentation/es/issue-statuses.png",
       "alt": "Los ocho estados del ticket en el selector, con el estado de backlog seleccionado.",
       "caption": "La marca indica el estado actual. Elige el que corresponda al estado real del trabajo.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -238,7 +238,7 @@
       "src": "/documentation/es/work-resources.png",
       "alt": "Diálogo para añadir un enlace con una dirección de contacto de ejemplo.",
       "caption": "Revisa el destino antes de añadir el recurso. Este enlace de ejemplo no se ha enviado.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -255,7 +255,7 @@
       "src": "/documentation/es/work-dependencies.png",
       "alt": "La paleta de comandos muestra las incidencias que pueden bloquear esta, con la pregunta de la relación en su campo de búsqueda.",
       "caption": "Elige el sentido de la relación antes de su destino. El selector se muestra sin enviar la relación.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -272,7 +272,7 @@
       "src": "/documentation/es/work-sub-issues.png",
       "alt": "Sección de subincidencias de una incidencia principal de demostración, con el botón Crear una subincidencia y su flecha de opciones.",
       "caption": "Crear una subincidencia abre la creación con esta incidencia como principal; cada hija conserva su estado y conversación.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -289,7 +289,7 @@
       "src": "/documentation/es/work-implementation-plan.png",
       "alt": "Plan de demostración con dos tareas de trabajo completadas de seis.",
       "caption": "El plan guardado distingue pasos completados, activos y pendientes. Su progreso no demuestra que se ejecutara la tarea de código ficticia.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -306,7 +306,7 @@
       "src": "/documentation/es/issue-date-recurrence.png",
       "alt": "Selector de fecha en modo recurrente con vista previa semanal los domingos y hora opcional.",
       "caption": "El modo recurrente muestra la frecuencia semanal. Confirma la primera fecha antes de crear el ticket.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -323,7 +323,7 @@
       "src": "/documentation/es/import-issues-preview-workflow.png",
       "alt": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas.",
       "caption": "Vista previa CSV de dos filas de demostración traducidas y las columnas detectadas. No se envió la importación; la planificación opcional con IA se bloqueó para la captura.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -340,7 +340,7 @@
       "src": "/documentation/es/file-preview.png",
       "alt": "Visor CSV a toda ventana con tareas de ejemplo, un botón Cerrar grande y el menú Acciones del archivo con Descargar, Cambiar nombre y Eliminar.",
       "caption": "El visor compartido coloca Cerrar debajo de la vista previa. El menú Acciones del archivo ofrece Descargar y, con los permisos necesarios, Cambiar nombre y Eliminar.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -379,7 +379,9 @@ Configura las propiedades útiles antes de confirmar: estado, prioridad, esfuerz
 
 Cuando Smart Assign está activado en el proyecto, el selector de responsable muestra **Smart Assign** en lugar de **Sin asignar** allí donde Smart Assign va a elegir: en el formulario de creación, en una incidencia en clasificación y en una incidencia que tiene responsable, donde elegir **Smart Assign** quita a ese responsable y deja que Smart Assign vuelva a elegir. Las tarjetas de incidencia y la paleta de comandos siguen la misma regla, y una tarjeta que espera a Smart Assign muestra su icono. Una incidencia que ya estaba abierta y sin responsable cuando se activó Smart Assign conserva **Sin asignar**, porque nada la asigna por sí solo. Las incidencias **Cancelada** y **Duplicada** también conservan **Sin asignar**.
 
-Activar Smart Assign no asigna las incidencias que ya estaban esperando. Si el proyecto tiene incidencias en **Backlog** o **Pendiente** que nunca se han asignado, el propietario ve **¿Asignar las incidencias abiertas?** con su número. **Asignar incidencias** las asigna en segundo plano; un backlog grande tarda varios minutos. **Ahora no** no cambia nada, y la fila **Incidencias abiertas sin responsable** de los ajustes de **Smart Assign** del proyecto ofrece la misma acción más adelante. En un proyecto con varios miembros, la acción no está disponible hasta que cada miembro tenga una regla de asignación, y la pregunta no se muestra. Las incidencias que tienen responsable, las que están en otro estado y aquellas a las que alguien quitó el responsable a mano se quedan como están. Cada persona recibe una sola notificación con el número de incidencias que se le han asignado; el propietario que lo inició no recibe ninguna. Si el presupuesto de IA del propietario se agota, las incidencias restantes siguen sin responsable.
+De forma predeterminada, Smart Assign asigna una incidencia en cuanto sale de la clasificación. En los ajustes de **Smart Assign** del proyecto, el propietario puede poner **Asignar a partir de** en **Pendiente**: una incidencia en clasificación o en **Backlog** conserva entonces **Sin asignar**, y Smart Assign la asigna cuando pasa a **Pendiente** o a un estado posterior. Para elegir entre miembros cuyas reglas de asignación encajan con una incidencia, Smart Assign también tiene en cuenta las incidencias que cada uno ya tiene en **Pendiente**, **En curso** y **En revisión**, ponderadas por el esfuerzo, quién es responsable del objetivo de la incidencia y quién tiene asignadas su incidencia principal, sus incidencias relacionadas y las incidencias de las mismas categorías completadas recientemente. Estos datos solo sirven para desempatar: un miembro cuya regla es la única que encaja recibe la incidencia, tenga las que tenga.
+
+Activar Smart Assign no asigna las incidencias que ya estaban esperando. Si el proyecto tiene incidencias en **Backlog** o **Pendiente** que nunca se han asignado, el propietario ve **¿Asignar las incidencias abiertas?** con su número. Con **Asignar a partir de** en **Pendiente**, solo se cuentan y se asignan las incidencias en **Pendiente**. **Asignar incidencias** las asigna en segundo plano; un backlog grande tarda varios minutos. **Ahora no** no cambia nada, y la fila **Incidencias abiertas sin responsable** de los ajustes de **Smart Assign** del proyecto ofrece la misma acción más adelante. En un proyecto con varios miembros, la acción no está disponible hasta que cada miembro tenga una regla de asignación, y la pregunta no se muestra. Las incidencias que tienen responsable, las que están en otro estado y aquellas a las que alguien quitó el responsable a mano se quedan como están. Cada persona recibe una sola notificación con el número de incidencias que se le han asignado; el propietario que lo inició no recibe ninguna. Si el presupuesto de IA del propietario se agota, las incidencias restantes siguen sin responsable.
 
 Confirma la creación y abre la nueva incidencia. Comprueba su identificador y proyecto. Vuelve a abrir los selectores de propiedades para cambiar valores conforme la tarea quede más clara. La descripción explica el trabajo; el plan de implementación se mantiene por separado en la pestaña del plan.
 

@@ -39,8 +39,10 @@ import {
   buildSmartAssignMemberLines,
   buildSmartAssignSystemPrompt,
   buildSmartAssignUserMessage,
+  smartAssignHintGuidance,
   smartAssignParameters,
   type SmartAssignMember,
+  type SmartAssignMemberHints,
 } from "@/lib/server/smart-assign";
 import { toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
@@ -165,6 +167,10 @@ export function buildSmartFillSpec(input: {
  * The members arrive with their names already resolved and their owner mark
  * and rule attached (`SmartAssignMember`); the question offers exactly the
  * real member ids, like the `choose_assignee` enum does today.
+ *
+ * When the run read them, each member also carries workload and context
+ * hints (MIN-957). Both engines get them: the decision model in the state,
+ * with the weighing rule in its question, and the LLM pass in its prompt.
  */
 export function buildSmartAssignSpec(input: {
   projectName: string;
@@ -179,6 +185,8 @@ export function buildSmartAssignSpec(input: {
   members: SmartAssignMember[];
 }): DecisionSpec {
   const { projectName, issue, members } = input;
+  const hinted = members.some((m) => m.hints);
+  const question = "Which team member is best suited to handle this issue?";
   return {
     useCase: "smart_assign",
     state: {
@@ -195,13 +203,26 @@ export function buildSmartAssignSpec(input: {
         name: m.name,
         owner: m.owner,
         rule: m.rule?.trim() || null,
+        ...(m.hints
+          ? {
+              open_issues: m.hints.openCount,
+              open_effort_points: m.hints.openPoints,
+              leads_objective: m.hints.leadsObjective,
+              related_issues: m.hints.relatedCount,
+              recent_category_issues: m.hints.recentCategoryCount,
+            }
+          : {}),
       })),
     },
     questions: [
       {
         key: "user_id",
         kind: "single_choice",
-        label: "Which team member is best suited to handle this issue?",
+        // The decision model has no system prompt: the question is where it
+        // learns that the hints only break ties.
+        label: hinted
+          ? `${question} Each member has an assignment rule, a workload (open_issues, open_effort_points) and context marks (leads_objective, related_issues, recent_category_issues). ${smartAssignHintGuidance()}`
+          : question,
         options: choiceOptions(members.map((m) => ({ value: m.id, label: m.name }))),
       },
     ],
@@ -244,13 +265,20 @@ export function prepareSmartAssign(input: {
   authUsers: Map<string, User>;
   /** The issue's category names, already resolved by the caller. */
   categoryNames: string[];
+  /** Workload and context per member (MIN-957), or nothing when the caller
+   * could not read them: the spec is then the rules-only one. */
+  hints?: ReadonlyMap<string, SmartAssignMemberHints> | null;
 }): DecisionSpec {
-  const members: SmartAssignMember[] = input.memberIds.map((id) => ({
-    id,
-    name: displayName(toNamed(input.authUsers.get(id))),
-    owner: id === input.ownerId,
-    rule: input.rules[id] ?? null,
-  }));
+  const members: SmartAssignMember[] = input.memberIds.map((id) => {
+    const hints = input.hints?.get(id);
+    return {
+      id,
+      name: displayName(toNamed(input.authUsers.get(id))),
+      owner: id === input.ownerId,
+      rule: input.rules[id] ?? null,
+      ...(hints ? { hints } : {}),
+    };
+  });
   return buildSmartAssignSpec({
     projectName: input.projectName,
     issue: {

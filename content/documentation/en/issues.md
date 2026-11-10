@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 51,
-  "sourceRevision": 51,
+  "revision": 52,
+  "sourceRevision": 52,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-10",
   "compatibility": {
@@ -139,9 +139,9 @@
     ]
   },
   "review": {
-    "revision": 51,
-    "fact": "agent:claude-code (MIN-903: the Smart Assign paragraph now says where an empty assignee reads Smart Assign or Unassigned, and a new paragraph describes the offer to assign open issues, its scope, the assignment rule it requires from every member and its single notification; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json, and the backfill run on the preview database; no figure recaptured: none shows the changed controls)",
-    "language": "agent:claude-code (en passages changed and added for MIN-903; self-reviewed against the en catalog and glossary; agent review, not human acceptance)",
+    "revision": 52,
+    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls)",
+    "language": "agent:claude-code (en passages changed and added for MIN-957; self-reviewed against the en catalog and glossary; agent review, not human acceptance)",
     "date": "2026-11-10"
   },
   "related": [
@@ -187,7 +187,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -203,7 +203,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -220,7 +220,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -237,7 +237,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -254,7 +254,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -271,7 +271,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issues section of a demonstration parent issue, with the Create a sub-issue button and its options chevron.",
       "caption": "Create a sub-issue opens the creation dialog with this issue as parent; a child keeps its own status and discussion.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -288,7 +288,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -305,7 +305,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -322,7 +322,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -339,7 +339,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -378,7 +378,9 @@ Set the useful properties before confirming: status, priority, effort, assignee,
 
 When the project's Smart Assign is on, the assignee picker shows **Smart Assign** instead of **Unassigned** wherever Smart Assign is going to choose: in the creation form, on an issue in triage, and on an issue that has an assignee, where choosing **Smart Assign** removes that assignee and lets Smart Assign choose again. Issue cards and the command palette follow the same rule, and a card waiting for Smart Assign shows its icon. An issue that was already open with no assignee when Smart Assign was turned on keeps **Unassigned**, because nothing assigns it on its own. **Canceled** and **Duplicate** issues keep **Unassigned** as well.
 
-Turning Smart Assign on does not assign the issues that were already waiting. When the project has **Backlog** or **Todo** issues that were never assigned, the owner sees **Assign open issues?** with their number. **Assign issues** assigns them in the background; a large backlog takes several minutes. **Not now** changes nothing, and the **Open issues with no assignee** row of the project's **Smart Assign** settings offers the same action later. On a project with several members, the action stays unavailable until every member has an assignment rule, and the question is not asked. Issues that have an assignee, issues in another status and issues someone unassigned by hand are left as they are. Each person receives a single notification with the number of issues assigned to them; the owner who started it receives none. If the owner's AI budget runs out, the remaining issues stay unassigned.
+By default, Smart Assign assigns an issue as soon as it leaves triage. In the project's **Smart Assign** settings, the owner can set **Assign from** to **Todo**: an issue in triage or in **Backlog** then keeps **Unassigned**, and Smart Assign assigns it when it moves to **Todo** or a later status. To choose between members whose assignment rules fit an issue, Smart Assign also considers the issues each of them already has in **Todo**, **In progress** and **In review**, weighted by effort, who leads the issue's objective, and who is assigned to its parent, to its related issues and to recently completed issues of the same categories. These only break ties: a member whose rule is the only one that fits gets the issue, however many they already have.
+
+Turning Smart Assign on does not assign the issues that were already waiting. When the project has **Backlog** or **Todo** issues that were never assigned, the owner sees **Assign open issues?** with their number. With **Assign from** set to **Todo**, only **Todo** issues are counted and assigned. **Assign issues** assigns them in the background; a large backlog takes several minutes. **Not now** changes nothing, and the **Open issues with no assignee** row of the project's **Smart Assign** settings offers the same action later. On a project with several members, the action stays unavailable until every member has an assignment rule, and the question is not asked. Issues that have an assignee, issues in another status and issues someone unassigned by hand are left as they are. Each person receives a single notification with the number of issues assigned to them; the owner who started it receives none. If the owner's AI budget runs out, the remaining issues stay unassigned.
 
 Confirm creation and open the new issue. Check its identifier and project. Reopen its property pickers to change values as the task becomes clearer. The description explains the work; an implementation plan is maintained separately in the Plan tab.
 

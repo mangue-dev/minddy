@@ -3092,6 +3092,7 @@
         "feedback_no_translate_languages",
         "feedback_team_language",
         "orb_seed",
+        "smart_assign_from_status",
         "smart_triage_mode"
       ],
       "routing_identity": [

@@ -169,6 +169,36 @@ describe("Smart Assign triggers on issue writes", () => {
     expect(smartAssignRuns.map((run) => run.trigger)).toEqual(["triage_exit"]);
   });
 
+  it("hands an unassigned issue that leaves the backlog to the run (MIN-957)", async () => {
+    seed({ status: "backlog", assignee_id: null });
+
+    await patch({ status: "todo" });
+
+    // The run decides: it assigns only if the project assigns from todo.
+    expect(smartAssignRuns).toEqual([
+      {
+        issueId: "issue-1",
+        projectId: PROJECT,
+        triggerActorId: ME,
+        trigger: "start_status",
+        previousStatus: "backlog",
+      },
+    ]);
+  });
+
+  it("does not run for a later status change, or when the issue has an assignee", async () => {
+    seed({ status: "todo", assignee_id: null });
+    await patch({ status: "in_progress" });
+
+    seed({ status: "backlog", assignee_id: TEAMMATE });
+    await patch({ status: "todo" });
+
+    seed({ status: "backlog", assignee_id: null });
+    await patch({ status: "canceled" });
+
+    expect(smartAssignRuns).toEqual([]);
+  });
+
   it("leaves a triaged or canceled issue unassigned", async () => {
     seed({ status: "triage", assignee_id: TEAMMATE });
     await patch({ assignee_id: null });

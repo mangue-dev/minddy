@@ -3,6 +3,7 @@ import { scheduleRoutineEvents } from "@/lib/server/routine-hooks";
 import { issueStore } from "@/lib/server/issue-store";
 import "server-only";
 import { categoryStore } from "@/lib/server/category-store";
+import { objectiveStore } from "@/lib/server/objective-store";
 
 import { previouslyAssignedIssues } from "./issue-event-store";
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -19,10 +20,16 @@ import { prepareSmartAssign } from "@/lib/server/decisions/prepare";
 import type { DecisionOutcome } from "@/lib/server/decisions/types";
 import { isStatus } from "@/lib/issue-validation";
 import {
+  DEFAULT_SMART_ASSIGN_FROM_STATUS,
   hasAnyRule,
   isSmartAssignBackfillStatus,
+  smartAssignFromStatusOf,
+  smartAssignReaches,
   userIdsWithoutRule,
+  type SmartAssignFromStatus,
 } from "@/lib/smart-assign-config";
+import { effortToPoints } from "@/lib/cycle";
+import type { IssueEffort } from "@/lib/issue-constants";
 import type { SmartAssignConfigWarning } from "@/lib/types";
 
 /**
@@ -30,6 +37,10 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  * projects that opted in. Triggered after an issue is created past triage
  * without an assigned, when an unassigned issue leaves triage, or when someone
  * clears the assignee of an issue past triage (MIN-811).
+ *
+ * "Past triage" is the default. The owner may set the project to assign from
+ * todo instead (`smart_assign_from_status`, MIN-957): a backlog issue then
+ * stays empty and is assigned when it reaches todo or a later status.
  *
  * - Single-member project (owner only): deterministic, no AI.
  * - Multi-member with no rule written for anyone: deterministic too, the owner —
@@ -39,7 +50,9 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  *   decision model (MIN-694) answers on the
  *   structured state first, the existing `choose_assignee` LLM pass is
  *   replayed verbatim as the fallback, and any failure of both falls back to
- *   the owner so the run always assigns someone.
+ *   the owner so the run always assigns someone. The decision also sees
+ *   each member's current workload and what ties them to the issue (MIN-957),
+ *   as hints to choose between members whose rules fit.
  *
  * The written event carries `smart_assign_ai`: only the third case sets it to
  * true, and only if the decision layer answered a valid member. This is what
@@ -70,8 +83,8 @@ import type { SmartAssignConfigWarning } from "@/lib/types";
  *
  * None of these triggers reaches the issues that were already open and empty
  * when the owner turned Smart Assign on. `runSmartAssignBackfill` fills them,
- * only when the owner asks for it: backlog and todo issues that were never
- * assigned, one grouped notification per person.
+ * only when the owner asks for it: issues from the start status up to todo
+ * that were never assigned, one grouped notification per person.
  */
 
 const MAX_DESCRIPTION_CHARS = 4000;
@@ -94,15 +107,13 @@ const BACKFILL_PROJECTS_PER_RUN = 20;
  * instead of handing the whole backlog to the owner. */
 class SmartAssignBudgetExhausted extends Error {}
 
-/** Statuses Smart Assign acts on: anything past triage that is still a real,
-    living issue. */
-export function isSmartAssignEligibleStatus(status: unknown): boolean {
-  return (
-    isStatus(status) &&
-    status !== "triage" &&
-    status !== "canceled" &&
-    status !== "duplicate"
-  );
+/** Statuses Smart Assign acts on: a real, living issue that has reached the
+    project's start status. With the default, anything past triage. */
+export function isSmartAssignEligibleStatus(
+  status: unknown,
+  fromStatus: SmartAssignFromStatus = DEFAULT_SMART_ASSIGN_FROM_STATUS
+): boolean {
+  return isStatus(status) && smartAssignReaches(fromStatus, status);
 }
 
 export interface SmartAssignParams {
@@ -115,9 +126,13 @@ export interface SmartAssignParams {
       WAITS for the decision instead of deferring it — deferring is precisely
       what caused the assignment it is repairing to be lost.
       `backfill` = the backlog pass the owner asked for (MIN-903). It waits
-      too, only accepts backlog and todo issues, writes no notification per
+      too, only accepts issues from the start status up to todo, writes no notification per
       issue (its caller groups them) and throws when the AI budget is empty. */
-  trigger: "create" | "triage_exit" | "unassign" | "sweep" | "backfill";
+  trigger: "create" | "triage_exit" | "start_status" | "unassign" | "sweep" | "backfill";
+  /** With `start_status` (MIN-957): the status the issue just left. The run
+      assigns only if that status was below the project's start status, so
+      the same move in a project that already covered it changes nothing. */
+  previousStatus?: string;
 }
 
 /**
@@ -165,7 +180,7 @@ async function runSmartAssignUntagged(
         .eq("id", params.projectId)
         .is("deleted_at", null)
         .maybeSingle(),
-      issueStore(service).select("id, title, description, status, priority, effort, assignee_id")
+      issueStore(service).select("id, title, description, status, priority, effort, assignee_id, objective_id, parent_id")
         .is("deleted_at", null)
         .eq("id", params.issueId)
         .eq("project_id", params.projectId)
@@ -184,10 +199,17 @@ async function runSmartAssignUntagged(
   const readableProject = await decodeProject(project);
   if (!issue || issue.assignee_id !== null) return null;
   const backfill = params.trigger === "backfill";
+  const fromStatus = smartAssignFromStatusOf(project);
   if (
     backfill
-      ? !isSmartAssignBackfillStatus(issue.status)
-      : !isSmartAssignEligibleStatus(issue.status)
+      ? !isSmartAssignBackfillStatus(issue.status, fromStatus)
+      : !isSmartAssignEligibleStatus(issue.status, fromStatus)
+  ) {
+    return null;
+  }
+  if (
+    params.trigger === "start_status" &&
+    smartAssignReaches(fromStatus, params.previousStatus)
   ) {
     return null;
   }
@@ -227,16 +249,26 @@ async function runSmartAssignUntagged(
         if (backfill) throw new SmartAssignBudgetExhausted();
         return null;
       }
-      const [authUsers, { data: categoryRows }] = await Promise.all([
+      // Read once, used twice: the category names of the prompt and the
+      // "who handled this kind of issue" hint.
+      const categoryIds = Promise.resolve(
+        service.from("issue_categories").select("category_id").eq("issue_id", params.issueId)
+      ).then(({ data }) => rowsOf(data).map((row) => row.category_id as string));
+      const [authUsers, issueCategoryIds, hints] = await Promise.all([
         fetchAuthUsersById(service, memberIds),
-        service
-          .from("issue_categories")
-          .select("category_id")
-          .eq("issue_id", params.issueId),
+        categoryIds,
+        loadSmartAssignHints(service, {
+          projectId: params.projectId,
+          issueId: params.issueId,
+          objectiveId: typeof issue.objective_id === "string" ? issue.objective_id : null,
+          parentId: typeof issue.parent_id === "string" ? issue.parent_id : null,
+          memberIds,
+          categoryIds,
+        }),
       ]);
       const { data: decodedCategories, error: categoryError } = await categoryStore(service)
         .select("id, name").eq("project_id", params.projectId)
-        .in("id", (categoryRows ?? []).map((row) => row.category_id));
+        .in("id", issueCategoryIds);
       if (categoryError) throw new Error("Unable to read smart-assignment categories");
       const spec = prepareSmartAssign({
         projectName: (readableProject.name as string) ?? "",
@@ -251,6 +283,7 @@ async function runSmartAssignUntagged(
         rules,
         authUsers,
         categoryNames: (decodedCategories ?? []).map((row) => row.name as string),
+        hints,
       });
       // One decision, two engines: the decision model first on the structured state, the
       // `choose_assignee` LLM pass replayed verbatim as the fallback, one
@@ -356,30 +389,206 @@ async function claimForSmartAssign(
   return chosen;
 }
 
-/** One team member as the AI pass sees them: resolved name, owner mark and
- * the owner-written rule (raw — the builders trim it). The pure prompt
- * builders below and the decision layer (`lib/server/decisions/prepare.ts`)
- * both consume this shape. */
+/**
+ * What the decision knows about one member beyond their rule (MIN-957): how
+ * much they already carry, and what ties them to the issue. Hints only: they
+ * help choose between members whose rules fit and never rule anyone out.
+ */
+export interface SmartAssignMemberHints {
+  /** Issues of the project assigned to them in todo, in progress or in review. */
+  openCount: number;
+  /** The same issues weighted by effort; an unsized issue counts as a medium. */
+  openPoints: number;
+  /** They lead the objective the issue belongs to. */
+  leadsObjective: boolean;
+  /** Related issues and parent issue assigned to them. */
+  relatedCount: number;
+  /** Recently completed issues of the same categories they were assigned to. */
+  recentCategoryCount: number;
+}
+
+/** The statuses that count as current workload. Backlog is not committed work. */
+const WORKLOAD_STATUSES = ["todo", "in_progress", "in_review"];
+/** How many completed issues of the same categories the hint looks back on. */
+const RECENT_CATEGORY_ISSUES = 20;
+
+/** PostgREST rows, or nothing when the read returned something else. */
+function rowsOf(data: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(data) ? (data as Array<Record<string, unknown>>) : [];
+}
+
+/**
+ * Reads the hints of every team member for one issue. Returns `null` when a
+ * read fails: the decision then runs on the rules alone, as it did before,
+ * rather than on a workload that reads as zero for everyone.
+ */
+async function loadSmartAssignHints(
+  service: SupabaseClient,
+  input: {
+    projectId: string;
+    issueId: string;
+    objectiveId: string | null;
+    parentId: string | null;
+    memberIds: string[];
+    categoryIds: Promise<string[]>;
+  }
+): Promise<Map<string, SmartAssignMemberHints> | null> {
+  try {
+    const hints = new Map<string, SmartAssignMemberHints>(
+      input.memberIds.map((id) => [
+        id,
+        { openCount: 0, openPoints: 0, leadsObjective: false, relatedCount: 0, recentCategoryCount: 0 },
+      ])
+    );
+    const read = async (query: PromiseLike<{ data: unknown; error: unknown }>) => {
+      const result = await query;
+      if (result.error) throw new Error("Unable to read smart-assignment hints");
+      return result.data;
+    };
+
+    const workload = read(
+      issueStore(service).select("assignee_id, effort")
+        .eq("project_id", input.projectId)
+        .is("deleted_at", null)
+        .in("assignee_id", input.memberIds)
+        .in("status", WORKLOAD_STATUSES)
+    );
+    const lead = input.objectiveId
+      ? read(
+          objectiveStore(service).select("id, lead_user_id")
+            .eq("id", input.objectiveId)
+            .eq("project_id", input.projectId)
+            .is("deleted_at", null)
+            .maybeSingle()
+        )
+      : Promise.resolve(null);
+    const related = (async () => {
+      const relations = rowsOf(
+        await read(
+          service
+            .from("issue_relations")
+            .select("source_id, target_id")
+            .eq("project_id", input.projectId)
+            .or(`source_id.eq.${input.issueId},target_id.eq.${input.issueId}`)
+        )
+      );
+      const ids = new Set<string>(input.parentId ? [input.parentId] : []);
+      for (const relation of relations) {
+        ids.add(relation.source_id as string);
+        ids.add(relation.target_id as string);
+      }
+      ids.delete(input.issueId);
+      if (ids.size === 0) return [];
+      return rowsOf(
+        await read(
+          issueStore(service).select("id, assignee_id")
+            .eq("project_id", input.projectId)
+            .is("deleted_at", null)
+            .in("id", [...ids])
+        )
+      );
+    })();
+    const recent = (async () => {
+      const categoryIds = await input.categoryIds;
+      if (categoryIds.length === 0) return [];
+      return rowsOf(
+        await read(
+          issueStore(service).select("id, assignee_id, issue_categories!inner(category_id)")
+            .eq("project_id", input.projectId)
+            .is("deleted_at", null)
+            .eq("status", "done")
+            .neq("id", input.issueId)
+            .not("assignee_id", "is", null)
+            .in("issue_categories.category_id", categoryIds)
+            .order("completed_at", { ascending: false })
+            .limit(RECENT_CATEGORY_ISSUES)
+        )
+      );
+    })();
+
+    const [workloadRows, leadRow, relatedRows, recentRows] = await Promise.all([
+      workload,
+      lead,
+      related,
+      recent,
+    ]);
+    for (const row of rowsOf(workloadRows)) {
+      const member = hints.get(row.assignee_id as string);
+      if (!member) continue;
+      member.openCount++;
+      member.openPoints += effortToPoints((row.effort as IssueEffort | null) ?? null);
+    }
+    const leadId = (leadRow as { lead_user_id?: unknown } | null)?.lead_user_id;
+    const leader = typeof leadId === "string" ? hints.get(leadId) : undefined;
+    if (leader) leader.leadsObjective = true;
+    for (const row of relatedRows) {
+      const member = hints.get(row.assignee_id as string);
+      if (member) member.relatedCount++;
+    }
+    for (const row of recentRows) {
+      const member = hints.get(row.assignee_id as string);
+      if (member) member.recentCategoryCount++;
+    }
+    return hints;
+  } catch (err) {
+    console.error("[smart-assign] hints failed:", (err as Error).message);
+    return null;
+  }
+}
+
+/** One team member as the AI pass sees them: resolved name, owner mark, the
+ * owner-written rule (raw — the builders trim it) and, when they could be
+ * read, the workload and context hints. The pure prompt builders below and
+ * the decision layer (`lib/server/decisions/prepare.ts`) both consume this
+ * shape. */
 export interface SmartAssignMember {
   id: string;
   name: string;
   owner: boolean;
   rule: string | null;
+  hints?: SmartAssignMemberHints;
 }
 
-/** The member block of the prompt: one line per member, rule included. */
+/** The hints of one member as prompt lines, the second only when something
+ * ties the member to the issue. */
+function smartAssignHintLines(hints: SmartAssignMemberHints): string {
+  const workload =
+    hints.openCount === 0
+      ? "no open issue"
+      : `${hints.openCount} open ${hints.openCount === 1 ? "issue" : "issues"} (${hints.openPoints} effort points)`;
+  const context = [
+    hints.leadsObjective ? "leads this issue's objective" : null,
+    hints.relatedCount > 0
+      ? `assigned to ${hints.relatedCount} related ${hints.relatedCount === 1 ? "issue" : "issues"}`
+      : null,
+    hints.recentCategoryCount > 0
+      ? `completed ${hints.recentCategoryCount} recent ${hints.recentCategoryCount === 1 ? "issue" : "issues"} in the same categories`
+      : null,
+  ].filter(Boolean);
+  return `\n  Workload: ${workload}${context.length ? `\n  Context: ${context.join("; ")}` : ""}`;
+}
+
+/** The member block of the prompt: one entry per member, rule first, then
+ * the hints when the run could read them. */
 export function buildSmartAssignMemberLines(members: SmartAssignMember[]): string {
   return members
     .map((member) => {
       const owner = member.owner ? " [owner]" : "";
       const rule = member.rule?.trim();
-      return `- ${member.name} (user_id: ${member.id})${owner}\n  Rule: ${rule || "(no rule)"}`;
+      const hints = member.hints ? smartAssignHintLines(member.hints) : "";
+      return `- ${member.name} (user_id: ${member.id})${owner}\n  Rule: ${rule || "(no rule)"}${hints}`;
     })
     .join("\n");
 }
 
+/** How the engines must weigh the hints against the rules (MIN-957). One
+ * text, shared by the LLM prompt and the decision model's question. */
+export function smartAssignHintGuidance(): string {
+  return "Workload and context are hints, never rules: the assignment rules decide who is able to handle the issue. Use the hints only to choose between members whose rules fit about equally well; among those, prefer the member tied to the issue by its context, then the one with the lighter workload. Never pass over the only member whose rule fits because they are busy.";
+}
+
 /** The system prompt. Rules first: the per-member written rules are what
- * makes the choice possible, names only break ties. */
+ * makes the choice possible; workload and context only break ties. */
 export function buildSmartAssignSystemPrompt(projectName: string): string {
   return `You are Smart Assign, minddy's automatic issue router for the project "${projectName}".
 A new issue needs an owner. Choose the ONE team member best suited to handle it and call choose_assignee.
@@ -388,6 +597,7 @@ Rules:
 - You MUST call choose_assignee with exactly one user_id from the member list. Never refuse, never reply in plain text.
 - Each member may have an assignment rule: free text written by the project owner describing the kind of tasks they should get (any language). Match the issue against these rules first.
 - Use the issue's title, description and categories to identify the type of work; priority and effort are tiebreakers only.
+- A member may carry a Workload line (the issues they already have in todo, in progress or in review, and their total effort points) and a Context line (what ties them to this issue). ${smartAssignHintGuidance()}
 - A member without a rule can still be chosen if nothing else matches better.
 - If nothing clearly matches, pick the project owner.`;
 }
@@ -453,18 +663,36 @@ export async function sweepUnassignedIssues(
   const service = getServiceClient();
   const since = new Date(Date.now() - SWEEP_WINDOW_MS).toISOString();
 
-  const { data: rows, error } = await issueStore(service).select("id, project_id, projects!inner(smart_assign_enabled, deleted_at)")
-    .is("deleted_at", null)
-    .is("assignee_id", null)
-    .not("status", "in", "(triage,canceled,duplicate)")
-    .eq("projects.smart_assign_enabled", true)
-    .is("projects.deleted_at", null)
-    .or(`created_at.gte.${since},updated_at.gte.${since}`)
-    .order("created_at", { ascending: true })
-    .limit(limit);
-  if (error) throw new Error(error.message);
+  // One read per start status (MIN-957): the backlog issues of a project
+  // that assigns from todo are not candidates, and must not fill the window
+  // ahead of the issues that are.
+  const unassignedSince = (fromStatus: SmartAssignFromStatus, excluded: string) =>
+    issueStore(service).select("id, project_id, created_at, projects!inner(smart_assign_enabled, smart_assign_from_status, deleted_at)")
+      .is("deleted_at", null)
+      .is("assignee_id", null)
+      .not("status", "in", excluded)
+      .eq("projects.smart_assign_enabled", true)
+      .eq("projects.smart_assign_from_status", fromStatus)
+      .is("projects.deleted_at", null)
+      .or(`created_at.gte.${since},updated_at.gte.${since}`)
+      .order("created_at", { ascending: true })
+      .limit(limit);
+  const reads = await Promise.all([
+    unassignedSince("backlog", "(triage,canceled,duplicate)"),
+    unassignedSince("todo", "(triage,backlog,canceled,duplicate)"),
+  ]);
+  const failed = reads.find((read) => read.error);
+  if (failed?.error) throw new Error(failed.error.message);
 
-  const candidates = (rows ?? []) as Array<{ id: string; project_id: string }>;
+  const candidates = (
+    reads.flatMap((read) => read.data ?? []) as Array<{
+      id: string;
+      project_id: string;
+      created_at: string;
+    }>
+  )
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .slice(0, limit);
   if (candidates.length === 0) return { candidates: 0, assigned: 0 };
 
   const everAssigned = await previouslyAssignedIssues(service, candidates.map((c) => c.id));
@@ -495,9 +723,10 @@ export async function sweepUnassignedIssues(
   return { candidates: candidates.length, assigned };
 }
 
-/** Open issues of the project a backfill may assign: backlog or todo, no
- * assignee, never assigned before. Read by the database function, which
- * excludes the issues someone unassigned by hand. */
+/** Open issues of the project a backfill may assign: from the project's start
+ * status up to todo, no assignee, never assigned before. Read by the database
+ * function, which applies the start status and excludes the issues someone
+ * unassigned by hand. */
 async function backfillCandidateIds(
   service: SupabaseClient,
   projectId: string,

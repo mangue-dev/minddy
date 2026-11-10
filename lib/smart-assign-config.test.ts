@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   isSmartAssignBackfillStatus,
+  parseSmartAssignFromStatus,
   smartAssignFillsEmptyAssignee,
+  smartAssignFromStatusOf,
+  smartAssignReaches,
 } from "./smart-assign-config";
 
 const ENABLED_AT = "2026-11-01T10:00:00.000Z";
@@ -66,13 +69,74 @@ describe("smartAssignFillsEmptyAssignee", () => {
   });
 });
 
+describe("smartAssignFillsEmptyAssignee — assign from todo (MIN-957)", () => {
+  const fromTodo = { ...on, smart_assign_from_status: "todo" };
+
+  it("keeps Unassigned below the start status, whatever the issue", () => {
+    // Not assigned yet: triage and backlog, even for a recent issue.
+    expect(smartAssignFillsEmptyAssignee(fromTodo, empty("triage", AFTER))).toBe(false);
+    expect(smartAssignFillsEmptyAssignee(fromTodo, empty("backlog", AFTER))).toBe(false);
+    // The creation form on a backlog issue, and clearing an assignee there.
+    expect(smartAssignFillsEmptyAssignee(fromTodo, empty("backlog", null))).toBe(false);
+    expect(
+      smartAssignFillsEmptyAssignee(fromTodo, {
+        status: "backlog",
+        assigneeId: "user-1",
+        createdAt: AFTER,
+      })
+    ).toBe(false);
+  });
+
+  it("names Smart Assign from the start status on", () => {
+    expect(smartAssignFillsEmptyAssignee(fromTodo, empty("todo", null))).toBe(true);
+    expect(smartAssignFillsEmptyAssignee(fromTodo, empty("todo", AFTER))).toBe(true);
+    expect(smartAssignFillsEmptyAssignee(fromTodo, empty("in_progress", AFTER))).toBe(true);
+    expect(smartAssignFillsEmptyAssignee(fromTodo, empty("todo", BEFORE))).toBe(false);
+  });
+
+  it("limits a running backfill to todo", () => {
+    const fillingFromTodo = { ...filling, smart_assign_from_status: "todo" };
+    expect(smartAssignFillsEmptyAssignee(fillingFromTodo, empty("todo", BEFORE))).toBe(true);
+    expect(smartAssignFillsEmptyAssignee(fillingFromTodo, empty("backlog", BEFORE))).toBe(false);
+  });
+});
+
+describe("the start status", () => {
+  it("accepts backlog and todo only", () => {
+    expect(parseSmartAssignFromStatus("backlog")).toBe("backlog");
+    expect(parseSmartAssignFromStatus("todo")).toBe("todo");
+    expect(parseSmartAssignFromStatus("in_progress")).toBeNull();
+    expect(parseSmartAssignFromStatus(undefined)).toBeNull();
+  });
+
+  it("reads backlog from a project that has no setting or an unknown one", () => {
+    expect(smartAssignFromStatusOf(undefined)).toBe("backlog");
+    expect(smartAssignFromStatusOf({})).toBe("backlog");
+    expect(smartAssignFromStatusOf({ smart_assign_from_status: "in_review" })).toBe("backlog");
+    expect(smartAssignFromStatusOf({ smart_assign_from_status: "todo" })).toBe("todo");
+  });
+
+  it("is reached by its own status and the later ones, never by triage or a closed issue", () => {
+    const reached = (from: "backlog" | "todo") =>
+      ["triage", "backlog", "todo", "in_progress", "in_review", "done", "canceled", "duplicate"]
+        .filter((status) => smartAssignReaches(from, status));
+    expect(reached("backlog")).toEqual(["backlog", "todo", "in_progress", "in_review", "done"]);
+    expect(reached("todo")).toEqual(["todo", "in_progress", "in_review", "done"]);
+  });
+});
+
 describe("isSmartAssignBackfillStatus", () => {
   it("accepts backlog and todo, and nothing else", () => {
-    expect(["backlog", "todo"].every(isSmartAssignBackfillStatus)).toBe(true);
+    expect(["backlog", "todo"].every((status) => isSmartAssignBackfillStatus(status))).toBe(true);
     expect(
       ["triage", "in_progress", "in_review", "done", "canceled", "duplicate", null].some(
-        isSmartAssignBackfillStatus
+        (status) => isSmartAssignBackfillStatus(status)
       )
     ).toBe(false);
+  });
+
+  it("stops at todo when the project assigns from todo", () => {
+    expect(isSmartAssignBackfillStatus("todo", "todo")).toBe(true);
+    expect(isSmartAssignBackfillStatus("backlog", "todo")).toBe(false);
   });
 });

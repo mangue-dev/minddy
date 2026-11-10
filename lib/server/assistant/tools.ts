@@ -39,6 +39,7 @@ import { RELATION_TYPE_VALUES } from "@/lib/relation-validation";
 import { TRASH_TYPES } from "@/lib/server/trash";
 import { VIEW_SORTS } from "@/lib/server/views";
 import { SMART_TRIAGE_MODES } from "@/lib/smart-triage";
+import { SMART_ASSIGN_FROM_STATUSES } from "@/lib/smart-assign-config";
 import { MEMBER_ROLES } from "@/lib/project-roles";
 import { locales } from "@/i18n/config";
 
@@ -1820,6 +1821,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "Smart Assign: let the AI propose an assignee for a new issue from the per-member rules below. Plan-gated on activation.",
+          },
+          smart_assign_from_status: {
+            type: "string",
+            enum: [...SMART_ASSIGN_FROM_STATUSES],
+            description:
+              "Smart Assign \"Assign from\": the status from which an issue may be assigned. 'backlog' (default) assigns every issue past triage; 'todo' leaves backlog issues unassigned until they move to todo.",
           },
           smart_assign_rules: {
             type: "object",

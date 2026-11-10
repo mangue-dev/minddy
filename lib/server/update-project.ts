@@ -7,6 +7,7 @@ import { canUseSmartAssign } from "@/lib/server/entitlements";
 import { isValidKey, normalizeKey } from "@/lib/project-key";
 import { normalizeLanguage, type FeedbackLanguage } from "@/lib/feedback/languages";
 import { parseSmartTriageMode } from "@/lib/smart-triage";
+import { parseSmartAssignFromStatus, smartAssignFromStatusOf } from "@/lib/smart-assign-config";
 import type { Project } from "@/lib/types";
 import { decodeProject, encodeProject, projectContentValues } from
   "@/lib/server/project-content";
@@ -22,7 +23,8 @@ import { decodeProject, encodeProject, projectContentValues } from
  * A unique-violation on `key` (23505) surfaces as `projectKeyAlreadyUsed`.
  * `smart_assign_enabled` is gated by the billing stub (`canUseSmartAssign`) on
  * enable; `smart_assign_rules` replaces the whole map, with keys restricted to
- * the current team. `smart_triage_mode` only accepts deterministic rules.
+ * the current team. `smart_assign_from_status` only accepts the known start
+ * statuses. `smart_triage_mode` only accepts deterministic rules.
  */
 export type UpdateProjectResult =
   | { ok: true; project: Project }
@@ -37,6 +39,7 @@ export type UpdateProjectResult =
         | "projectNotFound"
         | "ownerOnly"
         | "smartAssignNotAllowed"
+        | "invalidSmartAssignFromStatus"
         | "invalidSmartTriageMode"
         | "projectAutomationsRetired"
         | "databaseError";
@@ -123,6 +126,28 @@ export async function updateProjectSettings({
     }
     if (!input.smart_assign_enabled) {
       updates.smart_assign_backfill_requested_at = null;
+    }
+  }
+  if ("smart_assign_from_status" in input) {
+    const fromStatus = parseSmartAssignFromStatus(input.smart_assign_from_status);
+    if (!fromStatus) {
+      return { ok: false, status: 400, errorKey: "invalidSmartAssignFromStatus" };
+    }
+    updates.smart_assign_from_status = fromStatus;
+    // Lowering the start status to backlog makes Smart Assign cover backlog
+    // issues from now on (MIN-957). The ones already there are left to the
+    // backfill the settings offer, so they keep reading "Unassigned": the
+    // date that separates the two moves with the setting.
+    const enabledAfter =
+      typeof updates.smart_assign_enabled === "boolean"
+        ? updates.smart_assign_enabled
+        : access.project.smart_assign_enabled === true;
+    if (
+      fromStatus === "backlog" &&
+      smartAssignFromStatusOf(access.project) !== "backlog" &&
+      enabledAfter
+    ) {
+      updates.smart_assign_enabled_at = new Date().toISOString();
     }
   }
   if ("smart_triage_mode" in input) {

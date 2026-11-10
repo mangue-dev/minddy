@@ -828,6 +828,10 @@ export async function updateIssueFields({
   // Clearing the assignee of an issue past triage hands it back to Smart
   // Assign (MIN-811): with the toggle on, the pickers offer "Smart Assign"
   // instead of "Unassigned", and the run picks someone again.
+  //
+  // A project may assign from todo instead of backlog (MIN-957): an
+  // unassigned issue that leaves the backlog is handed to the run, which
+  // assigns it only if the project had left it empty until now.
   const assigneeAfterUpdate =
     "assignee_id" in updates ? updates.assignee_id : before.assignee_id;
   const statusAfterUpdate = "status" in updates ? updates.status : before.status;
@@ -835,17 +839,26 @@ export async function updateIssueFields({
     "status" in updates &&
     before.status === "triage" &&
     isSmartAssignEligibleStatus(updates.status);
+  const leavesBacklog =
+    "status" in updates &&
+    before.status === "backlog" &&
+    updates.status !== "backlog" &&
+    isSmartAssignEligibleStatus(updates.status);
   const clearsAssignee =
     "assignee_id" in updates &&
     before.assignee_id != null &&
     isSmartAssignEligibleStatus(statusAfterUpdate);
   let smartAssignee: string | null = null;
-  if (assigneeAfterUpdate == null && (leavesTriage || clearsAssignee)) {
+  if (assigneeAfterUpdate == null && (leavesTriage || leavesBacklog || clearsAssignee)) {
     smartAssignee = await applySmartAssign({
       issueId,
       projectId: before.project_id as string,
       triggerActorId: actorId,
-      trigger: leavesTriage ? "triage_exit" : "unassign",
+      ...(leavesTriage
+        ? { trigger: "triage_exit" as const }
+        : leavesBacklog
+          ? { trigger: "start_status" as const, previousStatus: "backlog" }
+          : { trigger: "unassign" as const }),
     });
   }
 

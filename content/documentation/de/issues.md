@@ -25,8 +25,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 51,
-  "sourceRevision": 51,
+  "revision": 52,
+  "sourceRevision": 52,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-10",
   "compatibility": {
@@ -139,9 +139,9 @@
     ]
   },
   "review": {
-    "revision": 51,
-    "fact": "agent:claude-code (MIN-903: the Smart Assign paragraph now says where an empty assignee reads Smart Assign or Unassigned, and a new paragraph describes the offer to assign open issues, its scope, the assignment rule it requires from every member and its single notification; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json, and the backfill run on the preview database; no figure recaptured: none shows the changed controls)",
-    "language": "agent:claude-code (de passages changed and added for MIN-903; self-reviewed against the de catalog and glossary; agent review, not human acceptance)",
+    "revision": 52,
+    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls)",
+    "language": "agent:claude-code (de passages changed and added for MIN-957; self-reviewed against the de catalog and glossary; agent review, not human acceptance)",
     "date": "2026-11-10"
   },
   "related": [
@@ -187,7 +187,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -204,7 +204,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -221,7 +221,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -238,7 +238,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -255,7 +255,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -272,7 +272,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Unterticket-Bereich eines Demo-Elterntickets mit der Schaltfläche „Unterticket erstellen“ und ihrem Optionspfeil.",
       "caption": "„Unterticket erstellen“ öffnet die Erstellung mit diesem Ticket als Elternticket; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -289,7 +289,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -306,7 +306,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -323,7 +323,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -340,7 +340,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 51,
+      "revision": 52,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -379,7 +379,9 @@ Setze vor der Bestätigung die hilfreichen Eigenschaften: Status, Priorität, Au
 
 Ist Smart Assign im Projekt aktiviert, zeigt die Auswahl der zuständigen Person überall dort **Smart Assign** statt **Nicht zugewiesen**, wo Smart Assign wählen wird: im Erstellungsformular, bei einem Ticket in der Triage und bei einem Ticket mit zuständiger Person, bei dem **Smart Assign** diese Person entfernt und Smart Assign neu wählen lässt. Ticketkarten und die Befehlspalette folgen derselben Regel, und eine Karte, die auf Smart Assign wartet, zeigt dessen Symbol. Ein Ticket, das beim Aktivieren von Smart Assign bereits offen und ohne zuständige Person war, behält **Nicht zugewiesen**, weil nichts es von selbst zuweist. Tickets mit dem Status **Abgebrochen** oder **Duplikat** behalten ebenfalls **Nicht zugewiesen**.
 
-Das Aktivieren von Smart Assign weist die Tickets nicht zu, die bereits gewartet haben. Enthält das Projekt Tickets in **Backlog** oder **Zu erledigen**, die noch nie zugewiesen waren, sieht der Eigentümer **Offene Tickets zuweisen?** mit ihrer Anzahl. **Tickets zuweisen** weist sie im Hintergrund zu; ein großes Backlog dauert einige Minuten. **Nicht jetzt** ändert nichts, und die Zeile **Offene Tickets ohne zuständige Person** in den **Smart Assign**-Einstellungen des Projekts bietet dieselbe Aktion später an. In einem Projekt mit mehreren Mitgliedern bleibt die Aktion gesperrt, bis jedes Mitglied eine Zuweisungsregel hat, und die Frage wird nicht gestellt. Tickets mit zuständiger Person, Tickets in einem anderen Status und Tickets, deren zuständige Person jemand von Hand entfernt hat, bleiben unverändert. Jede Person erhält eine einzige Benachrichtigung mit der Anzahl der ihr zugewiesenen Tickets; der Eigentümer, der den Vorgang gestartet hat, erhält keine. Ist das KI-Budget des Eigentümers aufgebraucht, bleiben die restlichen Tickets ohne zuständige Person.
+Standardmäßig weist Smart Assign ein Ticket zu, sobald es die Triage verlässt. In den **Smart Assign**-Einstellungen des Projekts kann der Eigentümer **Zuweisen ab** auf **Zu erledigen** stellen: Ein Ticket in der Triage oder im **Backlog** behält dann **Nicht zugewiesen**, und Smart Assign weist es zu, sobald es nach **Zu erledigen** oder in einen späteren Status wechselt. Um zwischen Mitgliedern zu wählen, deren Zuweisungsregeln zu einem Ticket passen, berücksichtigt Smart Assign außerdem die Tickets, die jedes von ihnen bereits in **Zu erledigen**, **In Bearbeitung** und **In Prüfung** hat, gewichtet nach Aufwand, den Lead des Ziels, zu dem das Ticket gehört, und die Personen, denen das übergeordnete Ticket, verknüpfte Tickets und kürzlich erledigte Tickets derselben Kategorien zugewiesen sind. Diese Angaben entscheiden nur bei Gleichstand: Ein Mitglied, dessen Regel als einzige passt, erhält das Ticket, egal wie viele es schon hat.
+
+Das Aktivieren von Smart Assign weist die Tickets nicht zu, die bereits gewartet haben. Enthält das Projekt Tickets in **Backlog** oder **Zu erledigen**, die noch nie zugewiesen waren, sieht der Eigentümer **Offene Tickets zuweisen?** mit ihrer Anzahl. Steht **Zuweisen ab** auf **Zu erledigen**, werden nur Tickets in **Zu erledigen** gezählt und zugewiesen. **Tickets zuweisen** weist sie im Hintergrund zu; ein großes Backlog dauert einige Minuten. **Nicht jetzt** ändert nichts, und die Zeile **Offene Tickets ohne zuständige Person** in den **Smart Assign**-Einstellungen des Projekts bietet dieselbe Aktion später an. In einem Projekt mit mehreren Mitgliedern bleibt die Aktion gesperrt, bis jedes Mitglied eine Zuweisungsregel hat, und die Frage wird nicht gestellt. Tickets mit zuständiger Person, Tickets in einem anderen Status und Tickets, deren zuständige Person jemand von Hand entfernt hat, bleiben unverändert. Jede Person erhält eine einzige Benachrichtigung mit der Anzahl der ihr zugewiesenen Tickets; der Eigentümer, der den Vorgang gestartet hat, erhält keine. Ist das KI-Budget des Eigentümers aufgebraucht, bleiben die restlichen Tickets ohne zuständige Person.
 
 Bestätige die Erstellung und öffne das neue Ticket. Prüfe Kennung und Projekt. Öffne die Eigenschaftsauswahl erneut, um Werte zu ändern, sobald die Aufgabe klarer wird. Die Beschreibung erklärt die Arbeit; ein Umsetzungsplan wird gesondert im Plan-Tab gepflegt.
 

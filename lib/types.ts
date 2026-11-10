@@ -11,6 +11,7 @@ import type { RepoProviderId } from "./repo-providers";
 import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
 import type { SmartTriageMode } from "./smart-triage";
+import type { SmartAssignFromStatus } from "./smart-assign-config";
 import type { CommentVisibility } from "./feedback/types";
 import type { MemberRole, ProjectRole } from "./project-roles";
 
@@ -589,8 +590,12 @@ export interface Project {
   orb_seed: string | null;
   /** Smart Assign: auto-assign unassigned issues past triage (opt-in, owner-set). */
   smart_assign_enabled: boolean;
-  /** When Smart Assign was last turned on (MIN-903). An open issue with no
-      assignee that is older than this is not filled by it. */
+  /** "Assign from" (MIN-957): the status from which Smart Assign may assign
+      an issue. Absent on a row read before the column existed: `backlog`. */
+  smart_assign_from_status?: SmartAssignFromStatus;
+  /** When Smart Assign last started covering new statuses: turned on
+      (MIN-903), or its start status lowered to backlog (MIN-957). An open
+      issue with no assignee that is older than this is not filled by it. */
   smart_assign_enabled_at?: string | null;
   /** Set while a backfill the owner asked for still has open issues to
       assign (MIN-903); cleared when it is done. */
@@ -655,6 +660,7 @@ export interface ProjectUpdateInput {
   key?: string;
   color?: string | null;
   smart_assign_enabled?: boolean;
+  smart_assign_from_status?: SmartAssignFromStatus;
   smart_assign_rules?: Record<string, string>;
   /** Smart Triage mode (MIN-566) — validated server-side against the known
       values; arming `jev` additionally requires the owner's AI budget. */
