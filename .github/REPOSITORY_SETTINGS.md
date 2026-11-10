@@ -89,6 +89,11 @@ date above:
      maintainer, and disallow administrator bypass;
    - allow deployments only from the `production` branch and `v*` tags;
    - keep publication credentials only in this environment.
+   `Public core release` reads no secret from it: its first job holds the
+   environment as the approval and branch gate, and the image and publication
+   jobs depend on that job. `npm run release:preflight` compares the Actions
+   allowlist and the configured secret and variable names with what the release
+   workflows use.
 5. In Actions → General, require approval for all external contributors. Never
    use `pull_request_target` to execute pull request code.
 6. Keep CodeQL default setup enabled for Actions, C/C++, and

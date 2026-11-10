@@ -132,11 +132,13 @@ test("the deployment and workflow require the current version and three attestat
   );
   assert.doesNotMatch(workflow, /x-access-token:\$GH_TOKEN/);
 
-  const preparation = deploy.indexOf('npm run release:prepare -- "$TARGET_VERSION"');
+  // The version is prepared in a pull request, so the candidate is the remote
+  // main commit: the review names it and blocks before any workflow starts.
+  const candidate = deploy.indexOf('"$(git rev-parse HEAD)" != "$(git rev-parse origin/main)"');
   const securityGate = deploy.indexOf("node scripts/release-security-policy.mjs");
-  const push = deploy.indexOf("git push origin main");
-  assert.ok(preparation !== -1 && preparation < securityGate, "the review covers the prepared commit");
-  assert.ok(securityGate < push, "the review blocks before pushing the candidate");
+  const promotion = deploy.indexOf("dispatch_and_wait promote-production.yml");
+  assert.ok(candidate !== -1 && candidate < securityGate, "the review covers the remote main commit");
+  assert.ok(securityGate < promotion, "the review blocks before requesting the promotion");
 });
 
 test("the actual workflow gate accepts current reviews and rejects stale or incomplete public reviews", () => {
@@ -328,12 +330,15 @@ test("the desktop release authenticates every protected tag fetch", () => {
   const authenticationOffsets = offsetsOf(authenticatedRemote);
   const fetchOffsets = offsetsOf(protectedFetch);
 
-  assert.equal(fetchOffsets.length, 3, "all desktop jobs fetch the protected release tag");
+  assert.equal(fetchOffsets.length, 2, "both desktop jobs fetch the protected release tag");
   assert.equal(
     authenticationOffsets.length,
-    fetchOffsets.length + 1,
-    "each desktop fetch and the release record push configure authentication",
+    fetchOffsets.length,
+    "each desktop fetch configures authentication",
   );
+  // macOS is signed on the maintainer's Mac, so no Apple credential and no
+  // push to the protected main branch belong to this workflow.
+  assert.doesNotMatch(workflow, /runs-on: macos|APPLE_|MACOS_CERTIFICATE|git push/);
   for (let index = 0; index < fetchOffsets.length; index += 1) {
     assert.ok(
       authenticationOffsets[index] < fetchOffsets[index],
@@ -360,7 +365,8 @@ test("the public release publishes a signed multi-platform OCI image", () => {
   const workflow = readFileSync(new URL("../.github/workflows/release.yml", import.meta.url), "utf8");
 
   assert.match(workflow, /packages: write/);
-  assert.match(workflow, /platforms: linux\/amd64,linux\/arm64/);
+  assert.match(workflow, /platform: linux\/amd64\n/);
+  assert.match(workflow, /platform: linux\/arm64\n/);
   assert.match(workflow, /release_tag=v\$VERSION/);
   assert.match(workflow, /minor_tag=v\$major\.\$minor/);
   assert.match(workflow, /major_tag=v\$major/);

@@ -1,0 +1,118 @@
+name: Release preflight
+
+# The release-only gates used to run for the first time inside `Public core
+# release`, after the candidate had been merged, promoted and approved. A
+# vulnerable base image or a missing compatibility row then cost a fix pull
+# request, a second promotion and a second approval. This workflow runs the
+# same gates on the candidate while it is still a pull request. It publishes
+# nothing and reads no secret.
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - .dockerignore
+      # The release preparation bumps this manifest, so the pull request that
+      # freezes a candidate always runs the preflight.
+      - desktop/package.json
+      - deploy/self-hosted/compatibility.json
+      - scripts/build-release-artifacts.mjs
+      - scripts/add-container-release-artifact.mjs
+      - scripts/release-lib.mjs
+      - .github/workflows/release.yml
+      - .github/workflows/release-preflight.yml
+  # The pinned base image ages without any commit: run it by hand on `main`
+  # before preparing a release.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  artifacts:
+    name: Release artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # The artifact builder reads the previous release tag and archives the
+      # whole tree, so it needs history and tags.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          check-latest: true
+
+      - name: Require one version across the manifests
+        id: version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          test "$(node -p "require('./desktop/package.json').version")" = "$VERSION"
+          node -e "import('./scripts/release-lib.mjs').then(({ assertVersion }) => assertVersion(process.argv[1]))" "$VERSION"
+          # Between two releases the manifests still declare the published
+          # version. Its compatibility row is frozen and may predate a floor
+          # raised since, so the artifacts are built only for a version that
+          # is being prepared.
+          if [ -n "$(git tag --list "v$VERSION")" ]; then
+            echo "::notice::v$VERSION is already published: no version is being prepared, so the release artifacts are not built."
+            echo "prepared=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "prepared=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and verify the release artifacts
+        if: steps.version.outputs.prepared == 'true'
+        run: |
+          node scripts/build-release-artifacts.mjs "$RUNNER_TEMP/release"
+          cd "$RUNNER_TEMP/release"
+          sha256sum --check SHA256SUMS
+
+  image:
+    name: Build and scan ${{ matrix.platform }} image
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      # Same Dockerfile, context and native runner as the release. The image
+      # stays in the runner: attestations are left out because the local image
+      # store cannot hold them.
+      - name: Build the image without publishing it
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: minddy:preflight
+          provenance: false
+          sbom: false
+
+      - name: Enforce fixed high and critical vulnerability threshold
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: minddy:preflight
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          scanners: vuln

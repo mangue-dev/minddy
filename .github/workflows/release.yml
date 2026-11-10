@@ -12,22 +12,29 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
-  packages: write
+# Each job declares the narrowest token it needs. Nothing below can start
+# before the `public-release` approval: the two later jobs depend on the
+# approved one.
+permissions: {}
 
 concurrency:
   group: production-publication
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Verify, tag and publish v${{ inputs.version }}
+  authorize:
+    name: Authorize v${{ inputs.version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 10
     environment: public-release
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+    outputs:
+      name: ${{ steps.image.outputs.name }}
+      candidate_tag: ${{ steps.image.outputs.candidate_tag }}
+      tags: ${{ steps.image.outputs.tags }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -49,51 +56,35 @@ jobs:
           test -z "$(git tag --list "v$RELEASE_VERSION")"
           node -e "import('./scripts/release-lib.mjs').then(({ assertVersion }) => assertVersion(process.env.RELEASE_VERSION))"
 
-      # This barrier deliberately precedes the installation: the code of a
-      # dependency or a script in the repository has not executed anything yet.
+      # This barrier deliberately precedes any build: no dependency and no
+      # build script of the repository has executed anything yet.
       - name: Public repository check
         run: node scripts/check-public-repo.mjs
 
       - name: Remote public namespace check
         run: node scripts/check-public-repo.mjs --remote origin
 
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10.28.0
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-          check-latest: true
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-      # Root typecheck and tests import the shell source, including Electron's
-      # types, as in CI. No dependency script or native binary download runs.
-      - name: Install desktop test dependencies
-        run: npm --prefix desktop ci --ignore-scripts
-      - run: pnpm run lint
-      - run: pnpm run typecheck
-      - run: node scripts/build-desktop.mjs
-      - run: pnpm run test
-      - run: pnpm run test:release
-      - run: node scripts/audit.mjs
-
-      # The build is redone without .env or secrets. Neutral public values
-      # allow Next to produce the same surface as on an instance,
-      # without contacting an external service.
-      - name: Reproducible web build
+      # Lint, typecheck, the desktop bundle, every test suite, the dependency
+      # audit and the edition builds already ran in a blank runner for this
+      # exact commit: `Promote production` advances `production` only to a main
+      # SHA whose push CI succeeded, and the policy above pins the release to
+      # that SHA. Requiring that run replaces running the same commands again.
+      - name: Require the successful main CI run of this commit
         env:
-          NEXT_PUBLIC_SUPABASE_URL: https://supabase.invalid
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: release-build-placeholder
-          SUPABASE_SERVICE_ROLE_KEY: release-build-placeholder
-          NEXT_PUBLIC_APP_URL: https://minddy.invalid
-        run: pnpm run build
-
-      - name: Build release artifacts
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
-        run: pnpm run release:artifacts
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.sha }}
+        run: |
+          CI_RUN=$(gh run list \
+            --workflow ci.yml \
+            --branch main \
+            --commit "$RELEASE_SHA" \
+            --event push \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+          test -n "$CI_RUN" || { echo "::error::No successful main CI run exists for $RELEASE_SHA."; exit 1; }
+          echo "Validated successful main CI run $CI_RUN for $RELEASE_SHA"
 
       - name: Define official image name
         id: image
@@ -118,10 +109,6 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -142,14 +129,50 @@ jobs:
             exit 1
           fi
 
-      - name: Publish signed-release candidate image
-        id: container
+  # Each architecture builds on a runner of that architecture. Emulating arm64
+  # on an amd64 runner ran `next build` under QEMU and took 25 of the release's
+  # 40 minutes. The images are pushed by digest only: no tag exists until the
+  # publish job has scanned and signed the assembled manifest.
+  image:
+    name: Build ${{ matrix.platform }} image
+    needs: authorize
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-24.04
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push the image by digest
+        id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.image.outputs.candidate_tag }}
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ needs.authorize.outputs.name }},push-by-digest=true,name-canonical=true,push=true
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ inputs.sha }}
@@ -158,10 +181,96 @@ jobs:
           provenance: mode=max
           sbom: true
 
+      - name: Record the pushed digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::The build reported no digest."; exit 1; }
+          mkdir -p "$RUNNER_TEMP/oci-digests"
+          printf '%s\n' "$DIGEST" > "$RUNNER_TEMP/oci-digests/$ARCH"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oci-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/oci-digests/${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Verify, tag and publish v${{ inputs.version }}
+    needs: [authorize, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          check-latest: true
+
+      # The artifact scripts use Node built-ins only, so no dependency is
+      # installed in the job that holds the publication token.
+      - name: Build release artifacts
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node scripts/build-release-artifacts.mjs
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: oci-digest-*
+          path: ${{ runner.temp }}/oci-digests
+          merge-multiple: true
+
+      # The manifest list keeps each platform's SBOM and provenance
+      # attestations. Only the candidate tag points to it at this stage.
+      - name: Publish signed-release candidate image
+        id: container
+        env:
+          IMAGE: ${{ needs.authorize.outputs.name }}
+          CANDIDATE_TAG: ${{ needs.authorize.outputs.candidate_tag }}
+        run: |
+          sources=()
+          for arch in amd64 arm64; do
+            digest=$(cat "$RUNNER_TEMP/oci-digests/$arch")
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::Missing $arch image digest."; exit 1; }
+            sources+=("$IMAGE@$digest")
+          done
+          docker buildx imagetools create --tag "$CANDIDATE_TAG" "${sources[@]}"
+          docker buildx imagetools inspect "$CANDIDATE_TAG" --format '{{json .Manifest}}' > "$RUNNER_TEMP/oci-manifest.json"
+          digest=$(jq -r '.digest' "$RUNNER_TEMP/oci-manifest.json")
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::The candidate manifest has no digest."; exit 1; }
+          for platform in linux/amd64 linux/arm64; do
+            jq -e --arg platform "$platform" \
+              '[.manifests[].platform | "\(.os)/\(.architecture)"] | index($platform) != null' \
+              "$RUNNER_TEMP/oci-manifest.json" >/dev/null \
+              || { echo "::error::The candidate manifest lacks $platform."; exit 1; }
+          done
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
       - name: Enforce fixed high and critical vulnerability threshold
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: ${{ steps.image.outputs.name }}@${{ steps.container.outputs.digest }}
+          image-ref: ${{ needs.authorize.outputs.name }}@${{ steps.container.outputs.digest }}
           format: table
           exit-code: "1"
           ignore-unfixed: true
@@ -173,7 +282,7 @@ jobs:
         if: github.event.repository.visibility == 'public'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
-          subject-name: ${{ steps.image.outputs.name }}
+          subject-name: ${{ needs.authorize.outputs.name }}
           subject-digest: ${{ steps.container.outputs.digest }}
           push-to-registry: true
 
@@ -181,15 +290,15 @@ jobs:
 
       - name: Keylessly sign the OCI manifest
         env:
-          IMAGE: ${{ steps.image.outputs.name }}
+          IMAGE: ${{ needs.authorize.outputs.name }}
           DIGEST: ${{ steps.container.outputs.digest }}
         run: cosign sign --yes "$IMAGE@$DIGEST"
 
       - name: Promote official OCI tags
         env:
-          IMAGE: ${{ steps.image.outputs.name }}
+          IMAGE: ${{ needs.authorize.outputs.name }}
           DIGEST: ${{ steps.container.outputs.digest }}
-          TAGS: ${{ steps.image.outputs.tags }}
+          TAGS: ${{ needs.authorize.outputs.tags }}
         run: |
           while IFS= read -r tag; do
             if [[ -n "$tag" ]]; then
@@ -200,9 +309,9 @@ jobs:
       - name: Add immutable container identity to release assets
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-          IMAGE: ${{ steps.image.outputs.name }}
+          IMAGE: ${{ needs.authorize.outputs.name }}
           DIGEST: ${{ steps.container.outputs.digest }}
-        run: pnpm run release:container-artifact -- "$IMAGE" "$DIGEST"
+        run: node scripts/add-container-release-artifact.mjs "$IMAGE" "$DIGEST"
 
       - name: Attest release artifacts
         if: github.event.repository.visibility == 'public'

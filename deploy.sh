@@ -11,7 +11,7 @@ Usage: npm run deploy [-- auto|all|custom|windows]
 Minddy's single publishing assistant.
 
   auto    recommend scopes based on modified files
-  all     publish the core, deploy the web app, and publish the desktop applications
+  all     publish the core, deploy the web app, and publish the Linux and Windows desktop applications
   custom  ask a question for each scope
   windows publish only the existing version's Microsoft Store packages
 
@@ -20,11 +20,16 @@ With no argument, an interactive menu offers the automatic, all, and custom mode
 Scopes:
   public core  SemVer version + tag + GitHub Release + artifacts
   Cloud web    www.minddy.app instance deployed from `production`
-  desktop      macOS, Linux, and Microsoft Store Windows packages attached to the core release
-  windows      x64 and ARM64 Store MSIX packages, without macOS or Linux jobs
+  desktop      Linux and Microsoft Store Windows packages attached to the core release;
+               macOS is signed and published from the maintainer's Mac
+  windows      x64 and ARM64 Store MSIX packages, without the Linux job
 
 Marketing is part of the web build: a marketing-only change suggests
 a Cloud deployment without artificially creating a core version.
+
+A core release publishes the version already prepared on main: prepare it in
+a pull request with `npm run release:prepare -- X.Y.Z`. This assistant never
+pushes to main.
 
 When a required pentest is still pending, an interactive private-repository
 test release can be explicitly accepted. For non-interactive use, set
@@ -64,8 +69,12 @@ if ! git show-ref --verify --quiet refs/remotes/origin/production; then
   echo "Error: origin/production does not exist."
   exit 1
 fi
-if [ "$CURRENT" = "main" ]; then
-  git merge --ff-only origin/main
+git merge --ff-only origin/main
+# `main` only accepts squash-merged pull requests, so this assistant never
+# pushes to it: the candidate is the commit the remote already has.
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+  echo "Error: local main has commits that origin/main lacks. Publish them through a pull request first."
+  exit 1
 fi
 
 SCOPE=$(node scripts/release-scope.mjs)
@@ -136,7 +145,7 @@ case "$MODE" in
   custom)
     if yes_no "Publish a new version of the public heart?" "$([ "$AUTO_CORE" = "true" ] && echo yes || echo no)"; then CORE=1; fi
     if yes_no "Deploy the Minddy Cloud web (marketing included)?" "$([ "$AUTO_WEB" = "true" ] && echo yes || echo no)"; then WEB=1; fi
-    if yes_no "Build and publish the desktop applications for macOS, Linux, and Windows?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
+    if yes_no "Build and publish the Linux and Windows desktop applications?" "$([ "$AUTO_DESKTOP" = "true" ] && echo yes || echo no)"; then DESKTOP=1; fi
     ;;
 esac
 
@@ -227,7 +236,6 @@ dispatch_and_wait() {
 }
 
 TARGET_VERSION=""
-REUSE_PREPARED=0
 if [ "$CORE" -eq 1 ]; then
   require_gh
   if [ "$CURRENT" != "main" ]; then
@@ -235,30 +243,35 @@ if [ "$CORE" -eq 1 ]; then
     exit 1
   fi
   CURRENT_VERSION=$(node -p "require('./package.json').version")
-  PREPARED=0
-  if [ -z "$(git tag --list "v$CURRENT_VERSION")" ]; then
-    PREPARED=1
-  fi
-  if [ "$PREPARED" -eq 1 ] && yes_no "The $CURRENT_VERSION version is prepared but not published. Take it back?" yes; then
-    TARGET_VERSION="$CURRENT_VERSION"
-    REUSE_PREPARED=1
-  else
-    IFS='.' read -r V_MAJOR V_MINOR V_PATCH <<< "$CURRENT_VERSION"
+  if [ -n "$(git tag --list "v$CURRENT_VERSION")" ]; then
     echo ""
-    echo "Version actuelle : $CURRENT_VERSION"
-    echo "  1) patch → $V_MAJOR.$V_MINOR.$((V_PATCH + 1))"
-    echo "  2) minor → $V_MAJOR.$((V_MINOR + 1)).0"
-    echo "  3) major → $((V_MAJOR + 1)).0.0"
-    echo "4) enter a version"
-    read -r -p "New version [1-4]: " VERSION_CHOICE
-    case "$VERSION_CHOICE" in
-      1) TARGET_VERSION="$V_MAJOR.$V_MINOR.$((V_PATCH + 1))" ;;
-      2) TARGET_VERSION="$V_MAJOR.$((V_MINOR + 1)).0" ;;
-      3) TARGET_VERSION="$((V_MAJOR + 1)).0.0" ;;
-      4) read -r -p "Version SemVer : " TARGET_VERSION ;;
-      *) echo "Invalid choice."; exit 1 ;;
-    esac
+    echo "Version $CURRENT_VERSION is already published, and main only accepts pull requests."
+    if [ "$MODE" = "auto" ]; then
+      # Product files change with most deployments; a Cloud deployment must
+      # not wait for a version nobody has prepared.
+      echo "No new version is prepared on main: deploying the Cloud web without a core release."
+      CORE=0
+      # Selecting the core had implied the web promotion its tag needs.
+      [ "$AUTO_WEB" = "true" ] || WEB=0
+      if [ "$WEB" -eq 0 ] && [ "$DESKTOP" -eq 0 ]; then
+        echo "Nothing to publish: production already serves main."
+        exit 0
+      fi
+    else
+      echo "Prepare the next version on a work branch, then run this command again once it is merged:"
+      echo "  npm run work:start -- \"release X.Y.Z\""
+      echo "  npm run release:prepare -- X.Y.Z"
+      echo "  add the X.Y.Z row to deploy/self-hosted/compatibility.json and bump deploy/self-hosted/.env.example"
+      echo "  git commit -s -am \"chore: prepare release X.Y.Z\""
+      echo "  npm run work:pr -- \"chore: prepare release X.Y.Z\" -m \"...\""
+      echo "The pull request runs the Release preflight workflow on the candidate."
+      exit 1
+    fi
   fi
+fi
+if [ "$CORE" -eq 1 ]; then
+  TARGET_VERSION="$CURRENT_VERSION"
+  echo "→ Public core v$TARGET_VERSION is prepared on main and not published yet."
   node -e 'import("./scripts/release-lib.mjs").then(({assertVersion}) => assertVersion(process.argv[1]))' "$TARGET_VERSION"
 fi
 
@@ -271,18 +284,18 @@ fi
 echo "→ Checking release tooling..."
 npm run test:release
 
-if [ "$CORE" -eq 1 ]; then
-  if [ "$REUSE_PREPARED" -eq 0 ]; then
-    echo "→ Preparing public core v$TARGET_VERSION..."
-    npm run release:prepare -- "$TARGET_VERSION"
-    git add package.json package-lock.json desktop/package.json desktop/package-lock.json
-    git commit -s -m "chore: prepare release $TARGET_VERSION"
-  fi
-fi
+# Settings and release data that a workflow would otherwise find missing after
+# the protected approval: the Actions allowlist, the environments' secrets and
+# variables, and the prepared version's compatibility data.
+echo "→ Checking repository settings for the selected workflows..."
+PREFLIGHT_ARGS=()
+if [ "$CORE" -eq 1 ] || [ "$WEB" -eq 1 ]; then PREFLIGHT_ARGS+=(--workflow promote-production.yml); fi
+if [ "$CORE" -eq 1 ]; then PREFLIGHT_ARGS+=(--workflow release.yml --version "$TARGET_VERSION"); fi
+if [ "$DESKTOP" -eq 1 ]; then PREFLIGHT_ARGS+=(--workflow desktop-release.yml); fi
+node scripts/release-preflight.mjs "${PREFLIGHT_ARGS[@]}"
 
-# `release:prepare` creates the commit that will actually be promoted. The journal must therefore
-# intervene after this preparation, but always before the push and the CI of
-# candidate, so that his report can name the exact SHA.
+# The report must name the exact SHA that will be promoted, so the review is
+# requested once the candidate is known and before any workflow starts.
 if [ "$WEB" -eq 1 ]; then
   SECURITY_CANDIDATE_SHA=$(git rev-parse HEAD)
   echo ""
@@ -332,7 +345,6 @@ fi
 DEPLOYED_SHA=""
 if [ "$CORE" -eq 1 ] || [ "$WEB" -eq 1 ]; then
   require_gh
-  git push origin main
   DEPLOYED_SHA=$(git rev-parse HEAD)
   echo "→ Waiting for main CI on $(git rev-parse --short HEAD)..."
   wait_for_run ci.yml "$DEPLOYED_SHA" push main
@@ -365,21 +377,23 @@ if [ "$DESKTOP" -eq 1 ]; then
     echo "Error: desktop applications need an existing public core release v$DESKTOP_VERSION."
     exit 1
   fi
+  # The public-release environment accepts only `production` and release tags,
+  # whichever platforms are published.
+  git fetch origin production
+  DESKTOP_WORKFLOW_REF="production"
+  DESKTOP_RUN_SHA=$(git rev-parse origin/production)
   if [ "$DESKTOP_TARGET" = "windows" ]; then
-    DESKTOP_WORKFLOW_REF="main"
-    DESKTOP_RUN_SHA=$(git rev-parse HEAD)
     echo "→ Publishing only Microsoft Store packages for v$DESKTOP_VERSION..."
   else
-    git fetch origin production
-    DESKTOP_WORKFLOW_REF="production"
-    DESKTOP_RUN_SHA=$(git rev-parse origin/production)
-    echo "→ Publishing desktop applications for macOS, Linux, and Microsoft Store, v$DESKTOP_VERSION..."
+    echo "→ Publishing Linux and Microsoft Store desktop applications, v$DESKTOP_VERSION..."
   fi
   dispatch_and_wait desktop-release.yml "$DESKTOP_WORKFLOW_REF" "$DESKTOP_RUN_SHA" \
     -f version="$DESKTOP_VERSION" \
     -f target="$DESKTOP_TARGET"
   if [ "$DESKTOP_TARGET" = "all" ]; then
-    git pull --ff-only origin main
+    echo "→ macOS is next, from this Mac: build, notarize and publish it, then record"
+    echo "  desktop/released.json in a pull request (docs/desktop-release.md)."
+    echo "  The record changes no deployed file and needs no promotion of its own."
   fi
 fi
 

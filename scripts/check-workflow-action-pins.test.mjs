@@ -165,6 +165,7 @@ test("release-surface workflows and Dockerfile satisfy the repository pinning po
     "dco.yml",
     "desktop-release.yml",
     "promote-production.yml",
+    "release-preflight.yml",
     "release.yml",
   ];
   const findings = [];

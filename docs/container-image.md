@@ -112,5 +112,9 @@ operation on each target architecture before publication.
 
 Before the first OCI publication, make the `minddy` GHCR package public and
 grant the public repository's release workflow write access. The
-`public-release` environment remains the approval boundary: its workflow token
-needs `packages: write` and `id-token: write`, but no long-lived registry key.
+`public-release` environment remains the approval boundary: the job that holds
+it runs first and the build and publication jobs depend on it. Their workflow
+tokens need `packages: write`, and the publication job `id-token: write`, but
+no long-lived registry key. Each architecture is built on a runner of that
+architecture and pushed by digest; a tag exists only once the assembled
+manifest has been scanned and signed.

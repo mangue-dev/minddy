@@ -136,16 +136,36 @@ In automatic mode:
 - desktop applications are only suggested if the actual shell footprint differs
   from the last publication.
 
-If core is selected, the wizard asks for patch/minor/major or an explicit
-version. It updates the five manifests/lockfiles — including the public MCP
-registry manifest, whose publication is documented in
-[docs/mcp-registry-publication.md](docs/mcp-registry-publication.md) — creates
-the commit signed DCO, pushes `main` and waits for its remote CI. It then triggers
-`Promote production`, which is waiting for environment approval
-`cloud-production`, rechecks successful CI of exact SHA, rejects any discrepancies,
-applies the pending migrations to the production database and advances
-`production` in fast-forward. Workflow waits for GitHub Deployment
-Vercel `Production` to `success` status. It does not use any local Vercel tokens.
+`main` accepts only squash-merged pull requests, so the assistant never pushes
+to it. It refuses to run when the local `main` differs from `origin/main`, and
+it publishes the version that `main` already declares.
+
+Prepare a core version in a pull request before running the assistant:
+
+```bash
+npm run work:start -- "release X.Y.Z"
+npm run release:prepare -- X.Y.Z
+```
+
+`release:prepare` updates the five manifests and lockfiles, including the
+public MCP registry manifest, whose publication is documented in
+[mcp-registry-publication.md](mcp-registry-publication.md). Add the version's
+row to `deploy/self-hosted/compatibility.json`, bump `MINDDY_RELEASE` and
+`MINDDY_IMAGE` in `deploy/self-hosted/.env.example`, commit with the DCO
+sign-off and open the pull request with `npm run work:pr`. That pull request
+runs the [release preflight](#release-preflight).
+
+When no new version is prepared, the automatic mode deploys the Cloud web
+without a core release, and the `all` and `custom` modes stop with these
+instructions if the core was selected.
+
+Once the candidate is on `main`, the assistant checks the repository settings
+(see the preflight), waits for the remote CI of that commit, then triggers
+`Promote production`. The workflow waits for the `cloud-production` approval,
+rechecks the successful CI of the exact SHA, rejects any discrepancy, applies
+the pending migrations to the production database and fast-forwards
+`production`. It then waits for the Vercel GitHub Deployment `Production` to
+reach `success`. It uses no local Vercel token.
 
 A core release involves this Cloud promotion: the public tag cannot be
 created only on a commit actually deployed. After promotion, the wizard launches
@@ -173,12 +193,57 @@ spin in disposable runners. Production secrets remain in the
 GitHub environments or in the organization's Vercel integration.
 
 Internally, `scripts/prepare-release.mjs` refuses a non-SemVer version or an
-existing tag. The public workflow repeats the repository barrier,
-frozen installation, lint, typecheck, desktop bundle, tests, audit and a real
-`next build` without secrets. It generates the artifacts before creating the
-tag and attests them when the repository visibility supports GitHub artifact
-attestations. Any required step failing before tag creation therefore does not
-leave a half-release.
+existing tag. `Public core release` runs three jobs behind one
+`public-release` approval:
+
+1. `authorize` holds the approval. It checks the release policy, the public
+   repository barrier and the OCI tag's absence, and requires the successful
+   `main` CI run of the exact commit. That run already covered lint, typecheck,
+   the desktop bundle, every test suite, the dependency audit and the edition
+   builds in blank runners, so the release does not repeat them.
+2. `image` builds the container on one runner per architecture
+   (`ubuntu-24.04` and `ubuntu-24.04-arm`) and pushes each image by digest,
+   without a tag.
+3. `publish` builds the source artifacts, assembles the two digests into the
+   candidate manifest, scans it, attests and signs it, promotes the official
+   tags, then creates the Git tag and the GitHub Release.
+
+The last two jobs depend on the first, so nothing runs before the approval, and
+only `publish` holds a token that can write the repository, sign or attest. Any
+step failing before the tag is created leaves no half-release.
+
+## Release preflight
+
+A failure inside `Public core release` is found after the candidate was merged,
+promoted and approved, and its fix costs another pull request, another
+promotion and another approval. Two checks run earlier.
+
+The **`Release preflight` workflow** builds the container image on both
+architectures without publishing it and applies the release's vulnerability
+threshold. When the manifests declare a version that has no tag yet, it also
+builds the release artifacts; a published version's compatibility row is frozen
+and is not checked again. It runs on every pull request that changes
+the `Dockerfile`, a version manifest, the compatibility matrix, or the release
+scripts and workflows, so the pull request that prepares a version always runs
+it. It reads no secret. The pinned base image ages without any commit: start
+the workflow by hand on `main` before preparing a release, and fix a finding in
+the same pull request as the version bump.
+
+```bash
+gh workflow run release-preflight.yml --ref main
+```
+
+**`npm run release:preflight`** reads the repository settings that only a
+maintainer can see, and `npm run deploy` runs it before requesting an approval:
+
+- every action used by the selected workflows is in the Actions allowlist (a
+  missing pin ends the workflow in `startup_failure`);
+- every secret and variable those workflows read is configured on their
+  environment or on the repository. Only names are read;
+- with `--version X.Y.Z`: both manifests declare the version, its tag is free,
+  and the compatibility row and `.env.example` reference it.
+
+It needs a GitHub CLI session with repository administration access.
 
 ## Artifacts of the heart
 
@@ -291,17 +356,23 @@ history. Any follow-up fix also starts from `main`; it never exists only on
 The desktop does not automatically receive each version of the core: it is a
 window on the web, and a web modification does not change the shell. When
 `npm run desktop:check` shows a different fingerprint, launch **Public desktop
-release** with a core version already released. The workflow builds macOS on
-`macos-26`, signs, notarizes, staples the ticket, checks the update flow, and
-attaches `.dmg`, `.zip`, blockmaps and `latest-mac.yml`. In parallel, it builds
-Linux AppImage, DEB, and RPM packages on Ubuntu for `x64` and `arm64`, signs
-every Linux package and each architecture-specific update manifest with GPG,
-verifies each signature, and attaches the public key, checksums, signatures, and
-attestations. A third job builds Windows x64 and ARM64 Store MSIX packages,
-validates their manifests, and exercises installation with disposable signed
-copies while leaving the Store submissions unsigned. Microsoft Store is the
-exclusive Windows signing, distribution, and update channel. The workflow
-records the desktop fingerprint only after all three jobs succeed. See
+release** with a core version already released. One job builds Linux AppImage,
+DEB, and RPM packages on Ubuntu for `x64` and `arm64`, signs every Linux
+package and each architecture-specific update manifest with GPG, verifies each
+signature, attaches the public key, checksums, signatures, and attestations,
+and adds the signing fingerprint to the release notes. A second job builds
+Windows x64 and ARM64 Store MSIX packages, validates their manifests, and
+exercises installation with disposable signed copies while leaving the Store
+submissions unsigned. Microsoft Store is the exclusive Windows signing,
+distribution, and update channel.
+
+macOS is not built by the workflow. The Developer ID certificate and the
+notarization credentials stay on the maintainer's Mac, which signs, notarizes
+and publishes the macOS feed, then records the publication in
+`desktop/released.json` through a pull request; the steps are in
+[desktop-release.md](desktop-release.md#macos-from-the-maintainers-mac). The
+record changes no deployed file, so it needs no promotion of its own; the next
+Cloud deployment carries it. See
 [linux-desktop.md](linux-desktop.md) for the Linux verification contract and
 [desktop-release.md](desktop-release.md#windows-microsoft-store) for the Windows
 release contract.
@@ -309,14 +380,11 @@ release contract.
 Native desktop packages are built only by this publication workflow. Daily CI
 still bundles the Electron sources and tests the release helpers, but it does
 not spend Windows or Linux runner minutes producing packages that will be
-discarded. The generated `desktop/released.json` record does not start another
-daily CI run after the protected desktop workflow completes.
+discarded.
 
 The following secrets belong to the GitHub environment
 `public-release`, not to an account or a personal keychain:
 
-- `MACOS_CERTIFICATE_P12_BASE64` and `MACOS_CERTIFICATE_PASSWORD` ;
-- `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID` and `APPLE_API_ISSUER`;
 - `PUBLIC_DESKTOP_FEED_URL` and `PUBLIC_DESKTOP_BLOB_READ_WRITE_TOKEN` for the
   Generic stable electron-updater flow.
 - `LINUX_GPG_PRIVATE_KEY` and `LINUX_GPG_PASSPHRASE`, plus the public
@@ -338,7 +406,10 @@ organization and publication is carried out by the CI.
 - `cloud-production` protects `Promote production` with required maintainers;
   its dedicated deploy key is exposed only after approval and is the only
   credential that can advance `production`;
-- `public-release` protects the tag, GitHub Release and Apple secrets;
+- `public-release` protects the tag, the GitHub Release and the Linux signing
+  key. One
+  approval covers a whole `Public core release` run: its first job holds the
+  environment and the other two depend on it;
 - `production` prohibits updates, force-pushes, and deletion for every human
   identity. Its only writable deploy key belongs to the promotion workflow;
 - Git Vercel integration must publish an exactly named GitHub Deployment
@@ -352,6 +423,11 @@ Vercel verdict. Reproducible settings are listed in
 `.github/REPOSITORY_SETTINGS.md`.
 
 ## Prepublication validation for the first self-hosted release pair
+
+This procedure is the record of how `v0.10.0` and `v0.10.1` were published. It
+predates the `main` ruleset: its step 5 relied on the assistant pushing a
+candidate to `main`, which the ruleset now refuses. A future pair goes through
+two prepared pull requests instead.
 
 The historical `v0.9.4` and `v0.9.5` tags are lightweight and predate the
 self-hosting contract. They must never be moved or replaced. When clean-room
@@ -449,6 +525,9 @@ Cloud deployment state is not a self-hosting artifact or a fallback service.
 ## Failure and recovery
 
 - Before creating the tag: correct the commit or configuration, then restart.
+  A configuration fix (allowlist, secret, registry setting) needs no new
+  commit: dispatch `Public core release` again for the same SHA. A code fix
+  changes the candidate, so it needs a new promotion first.
 - Tag pushed but release absent: do not move the tag; create the release at
   from the artifacts preserved by the workflow, or publish a patch if the
   content is false.
