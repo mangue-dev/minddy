@@ -57,7 +57,8 @@ export function buildNumoMemoryBlock(memories: readonly NumoMemory[], options: {
   const rules = options.writable
     ? `- Save a memory with remember when the user asks you to ("remember that…") or states a stable preference, fact or standing instruction they clearly want applied next time. Never save issue, page or conversation content, one-off requests, or guesses.
 - Decide whether it applies to all the user's work or to one project; ask when unsure. Update a memory by passing its id in replaces rather than adding a near-duplicate, and delete it with forget when the user asks or it is no longer true.
-- Each time you save or delete a memory, say so in one short line of your reply (for example "Remembered: …").`
+- Each time you save or delete a memory, say so in one short line of your reply (for example "Remembered: …").
+- Your earlier conversations with the user are not in this prompt. When the user refers to something said before that is neither in this conversation nor in these memories, find it with search_conversations and read it with read_conversation before answering; never say you don't remember without searching.`
     : "- You can read these memories here, but not change them.";
 
   const block = `

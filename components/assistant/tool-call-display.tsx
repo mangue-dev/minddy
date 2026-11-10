@@ -431,6 +431,24 @@ const TOOL_META: Record<string, ToolMeta> = {
       return success ? t("memoryDeleted") : t("memoryFailed");
     },
   },
+  // Numo's search in earlier conversations (MIN-956).
+  search_conversations: {
+    icon: MessageMultiple01Icon,
+    getLabel: (args, result, success, status, t) => {
+      const query = typeof args.query === "string" ? args.query.trim() : "";
+      if (status === "running")
+        return query ? t("searchingConversationsFor", { query }) : t("searchingConversations");
+      if (!success) return t("searchConversationsFailed");
+      return t("conversationsFound", { count: resultCount(result, "conversations") });
+    },
+  },
+  read_conversation: {
+    icon: MessageMultiple01Icon,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("readingConversation");
+      return success ? t("conversationRead") : t("readConversationFailed");
+    },
+  },
   // Numo's reminders (MIN-923): set and cancelled at the user's request.
   create_watch: {
     icon: CalendarClockIcon,
