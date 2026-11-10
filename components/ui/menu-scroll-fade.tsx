@@ -31,7 +31,10 @@ function MenuScrollFadeEdge({ edge, visible }: { edge: "start" | "end"; visible:
   // The gradient spans the scroller's padding too, whatever padding a caller set.
   const [inset, setInset] = React.useState({ edge: 0, left: 0, right: 0 });
   React.useLayoutEffect(() => {
-    const scroller = anchor.current?.parentElement;
+    // The scroller is not always the direct parent: cmdk's list wraps its
+    // children in a sizer without padding, which left the fade short of the
+    // list's own padding and let the rows show between the fade and the edge.
+    const scroller = scrollerOf(anchor.current);
     if (!scroller) return;
     const style = getComputedStyle(scroller);
     const next = {
@@ -68,6 +71,16 @@ function MenuScrollFadeEdge({ edge, visible }: { edge: "start" | "end"; visible:
       </div>
     </div>
   );
+}
+
+/** The nearest ancestor that scrolls vertically, else the direct parent. */
+function scrollerOf(node: HTMLElement | null): HTMLElement | null {
+  const parent = node?.parentElement ?? null;
+  for (let element = parent; element; element = element.parentElement) {
+    const overflow = getComputedStyle(element).overflowY;
+    if (overflow === "auto" || overflow === "scroll") return element;
+  }
+  return parent;
 }
 
 /**

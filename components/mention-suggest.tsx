@@ -25,6 +25,7 @@ import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ObjectiveIconBadge } from "@/components/objective-icon";
+import { OBJECTIVE_TEXT, objectiveTextStyle } from "@/components/objective-label";
 import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { NumoFace } from "@/components/numo-face";
@@ -322,7 +323,14 @@ export function MentionOptionRow({
     >
       <MentionFigure option={option} />
       <span className="min-w-0 truncate">
-        {option.label}
+        {option.type === "objective" ? (
+          // The objective's name in its color, as in every other objective list.
+          <span className={OBJECTIVE_TEXT} style={objectiveTextStyle(option.color)}>
+            {option.label}
+          </span>
+        ) : (
+          option.label
+        )}
         {option.detail && (
           <span className="ml-1.5 text-muted-foreground">{option.detail}</span>
         )}

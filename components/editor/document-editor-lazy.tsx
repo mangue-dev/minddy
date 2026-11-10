@@ -46,11 +46,16 @@ const DocumentEditorImpl = lazy(() =>
 export type LazyDocumentEditorProps = DocumentEditorProps;
 
 /** The committed text at the editor's typography, while the editor is not
- mounted yet (its chunk, or the document it waits for). */
+ mounted yet (its chunk, or the document it waits for). Its size follows the
+ editor's `size`, and `data-editor-fallback` gives it the 16 px the editor
+ host takes on touch screens (app/globals.css, `pointer: coarse`): without
+ it, a description opened on a phone painted at 14 px, then grew when the
+ editor replaced it (MIN-935). */
 export function DocumentEditorFallback({
   value,
   className,
-}: Pick<LazyDocumentEditorProps, "value" | "className">) {
+  size = "compact",
+}: Pick<LazyDocumentEditorProps, "value" | "className" | "size">) {
   if (value.trim() === "") {
     return (
       <div
@@ -62,9 +67,11 @@ export function DocumentEditorFallback({
   return (
     <div
       className={cn(
-        "text-sm leading-relaxed break-words whitespace-pre-wrap outline-none",
+        size === "page" ? "text-base" : "text-sm",
+        "leading-relaxed break-words whitespace-pre-wrap outline-none",
         className
       )}
+      data-editor-fallback=""
       aria-hidden
     >
       {value}
@@ -79,7 +86,7 @@ export function LazyDocumentEditor(props: LazyDocumentEditorProps) {
   const [ready] = useState(() => loaded);
   if (ready) return <ready.DocumentEditor {...props} />;
   return (
-    <Suspense fallback={<DocumentEditorFallback value={props.value} className={props.className} />}>
+    <Suspense fallback={<DocumentEditorFallback value={props.value} className={props.className} size={props.size} />}>
       <DocumentEditorImpl {...props} />
     </Suspense>
   );
@@ -120,7 +127,7 @@ export function DeferredDocumentEditor(props: LazyDocumentEditorProps) {
     };
   }, [ready]);
   if (!ready) {
-    return <DocumentEditorFallback value={props.value} className={props.className} />;
+    return <DocumentEditorFallback value={props.value} className={props.className} size={props.size} />;
   }
   return <LazyDocumentEditor {...props} />;
 }

@@ -84,7 +84,8 @@ import {
 } from "@/components/ui/tooltip";
 import Link from "@/components/app-link";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
-import { ReasoningBlock } from "@/components/agent/reasoning-block";
+import { ReasoningBlock, ThinkingStep } from "@/components/agent/reasoning-block";
+import { WatchProposalCard, watchProposalsOf } from "@/components/assistant/watch-proposal-card";
 import { assistantMessageReasoning } from "@/lib/assistant-reasoning";
 import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
@@ -688,27 +689,13 @@ export const AssistantShell = forwardRef<
   // set is built in reading order, so its last id is that answer.
   const latestCopyId = useMemo(() => [...copyButtonIds].at(-1), [copyButtonIds]);
 
-  // Is the active lap already showing work? Its timed header then reads
-  // the signal “Numo is working” and the reflection indicator would be duplicated.
-  const lastBlock = blocks[blocks.length - 1];
-  const activeTurnHasWork =
-    lastBlock?.kind === "turn" &&
-    lastBlock.active &&
-    (lastBlock.work.length > 0 ||
-      state.activeToolCalls.length > 0 ||
-      Boolean(state.streamingReasoning));
-
-  const allToolCallsComplete =
-    state.activeToolCalls.length > 0 &&
-    state.activeToolCalls.every((tc) => tc.status === "complete");
-  const showThinking =
-    isStreaming &&
-    !state.streamingContent &&
-    !state.streamingReasoning &&
-    (state.activeToolCalls.length === 0 || allToolCallsComplete) &&
-    !activeTurnHasWork;
-
-  const renderMessage = (msg: AssistantMessage, afterContent?: ReactNode) =>
+  // Inside a turn, a reminder's approval card is drawn under the answer by
+  // the turn itself (`watchProposalsOutside`), not inside the folded work.
+  const renderMessage = (
+    msg: AssistantMessage,
+    afterContent?: ReactNode,
+    watchProposalsOutside = false,
+  ) =>
     // Answer to an ask_user question: it is not displayed in a bubble, but in
     // the details of the question line (askUserReplies).
     askUserReplies.hiddenBubbleIds.has(msg.id) ? null : (
@@ -723,6 +710,7 @@ export const AssistantShell = forwardRef<
         showCopyButton={copyButtonIds.has(msg.id)}
         pinCopyButton={msg.id === latestCopyId}
         afterContent={afterContent}
+        watchProposalsOutside={watchProposalsOutside}
       />
     );
 
@@ -1106,7 +1094,7 @@ export const AssistantShell = forwardRef<
                             name: call.function.name,
                             ...state.toolCallResults.get(call.id),
                           }))),
-                          content: renderMessage({ ...msg, content: null, tool_calls: calls }),
+                          content: renderMessage({ ...msg, content: null, tool_calls: calls }, undefined, true),
                         });
                       }
                     }
@@ -1148,6 +1136,25 @@ export const AssistantShell = forwardRef<
                         });
                       }
                     }
+                    // A turn opens on its accordion at once, with a Thinking
+                    // step until something streams: the first real step takes
+                    // that step's place (same key as live reasoning), so the
+                    // thread does not jump when the work starts. A reply that
+                    // streams text with no work stays a plain answer.
+                    if (
+                      block.active &&
+                      isStreaming &&
+                      events.length === 0 &&
+                      !block.summary &&
+                      !state.streamingContent
+                    ) {
+                      events.push({
+                        key: "streaming-reasoning",
+                        kind: "action",
+                        active: true,
+                        content: <ThinkingStep />,
+                      });
+                    }
                     const hasWork = events.length > 0;
                     // The files Numo wrote close the turn, under its answer (MIN-793).
                     const files = block.active ? [] : generatedFilesOf(
@@ -1159,6 +1166,16 @@ export const AssistantShell = forwardRef<
                       ? <GeneratedFileCards files={files} />
                       : null;
                     const summaryCarriesFiles = Boolean(block.summary?.content);
+                    // A reminder waiting for the user's approval sits under the
+                    // answer, where it is seen, not in the folded work.
+                    const watchCards = watchProposalsOf(
+                      [...block.work, ...(block.summary ? [block.summary] : [])]
+                        .flatMap((msg) => msg.tool_calls ?? []),
+                      state.toolCallResults,
+                      block.active ? state.activeToolCalls : [],
+                    ).map((proposal) => (
+                      <WatchProposalCard key={`watch-${proposal.id}`} proposal={proposal} />
+                    ));
                     return (
                       <div key={block.key} className="flex flex-col gap-3">
                         {hasWork && (
@@ -1172,7 +1189,7 @@ export const AssistantShell = forwardRef<
                           </WorkAccordion>
                         )}
                         {block.summary
-                          ? renderMessage(block.summary, summaryCarriesFiles ? fileCards : undefined)
+                          ? renderMessage(block.summary, summaryCarriesFiles ? fileCards : undefined, true)
                           : null}
                         {summaryCarriesFiles ? null : fileCards}
                         {block.active &&
@@ -1183,21 +1200,18 @@ export const AssistantShell = forwardRef<
                             activeToolCalls={[]}
                           />
                         ) : null}
+                        {watchCards}
                       </div>
                     );
                   })}
 
-                  {(showThinking || isGeneratingServer) && (
+                  {isGeneratingServer && (
                     <div className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
                       <NumoIcon
                         state="thinking"
                         className="size-4 text-muted-foreground"
                       />
-                      <span>
-                        {isGeneratingServer
-                          ? t("generatingServer")
-                          : t("thinking")}
-                      </span>
+                      <span>{t("generatingServer")}</span>
                     </div>
                   )}
 

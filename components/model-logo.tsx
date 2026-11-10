@@ -31,6 +31,7 @@ import PoolsideColor from "@lobehub/icons/es/Poolside/components/Color";
 import QwenColor from "@lobehub/icons/es/Qwen/components/Color";
 import Relace from "@lobehub/icons/es/Relace/components/Mono";
 import Stepfun from "@lobehub/icons/es/Stepfun/components/Mono";
+import TypeSafeAI from "@lobehub/icons/es/TypeSafeAI/components/Mono";
 import TencentColor from "@lobehub/icons/es/Tencent/components/Color";
 import UpstageColor from "@lobehub/icons/es/Upstage/components/Color";
 import XiaomiMiMo from "@lobehub/icons/es/XiaomiMiMo/components/Mono";
@@ -109,6 +110,8 @@ const PROVIDER_LOGOS: Record<string, ComponentType<LobeLogo>> = {
   ai21: Ai21,
   xiaomi: XiaomiMiMo,
   "ibm-granite": IBM,
+  // TypeSafe AI publishes Jev, the default decision model.
+  typesafe: TypeSafeAI,
 };
 
 /**

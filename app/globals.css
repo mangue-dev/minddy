@@ -1042,20 +1042,17 @@ html[data-input-modality="keyboard"] :is(.sidebar-nav-panel, [role="tablist"]) :
    element remains the editable content DOM; the same surrounding chrome is
    reused with read-only highlighted content in an Agent conversation. */
 .code-block-node-view {
-  --code-block-border: #d0d7de;
   --code-block-background: #f6f8fa;
   --code-block-foreground: #1f2328;
   --code-block-muted: #59636e;
   --code-block-hover: rgb(31 35 40 / 8%);
   margin-block: 0.5rem;
   overflow: hidden;
-  border: 1px solid var(--code-block-border);
   border-radius: 1.5rem;
   background: var(--code-block-background);
   color: var(--code-block-foreground);
 }
 .dark .code-block-node-view {
-  --code-block-border: #343434;
   --code-block-background: #202020;
   --code-block-foreground: #f5f5f5;
   --code-block-muted: #a3a3a3;
@@ -1405,7 +1402,17 @@ div:has(> [data-streamdown="table"]) {
      descriptions and comments are `contenteditable` hosts in `text-sm`, so
      the page zoomed although every `<input>` was already at 16 px. The size
      goes on the host only: the mention chips inside it are
-     `contenteditable="false"`, and headings and code keep their own sizes. */
+     `contenteditable="false"`, and headings and code keep their own sizes.
+
+     Every editor host takes it, editable or not, and so does the plain-text
+     fallback shown while the editor loads (MIN-935). An issue's description
+     and plan open as a read-only preview, then as the live editor once its
+     session attaches (which stays read-only until then): scoped to editable
+     hosts only, the text painted at 14 px and grew to 16 px a moment later,
+     like a late load. A clipped excerpt in a mention preview card is not
+     read or written there, so it keeps the compact size. */
+  .ProseMirror:not([data-compact-excerpt] *),
+  [data-editor-fallback]:not([data-compact-excerpt] *),
   input:not(
       [type="checkbox"],
       [type="radio"],

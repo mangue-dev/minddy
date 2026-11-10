@@ -6,7 +6,6 @@ import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHoriz
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/components/app-link";
 import { useFormatter, useTranslations } from "next-intl";
-import { useLiveNow } from "@/lib/use-live-now";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,16 +31,14 @@ import { useRoutineRunsQuery } from "@/lib/use-routines-query";
 import { RoutineTrashDialog, useRoutineActions } from "@/components/routines/use-routine-actions";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import { calendarDaysBetween } from "@/lib/due-date";
+import { DateMentionChip } from "@/components/date-mention-chip";
+import { dayKey, type MentionDate } from "@/lib/mention-date";
+import { PlainPreview } from "@/components/typed-mention-chip";
+import { plainMarkdownParts } from "@/lib/plain-markdown";
 import type { RoutineSchedule } from "@/lib/routine-schedule";
 import type { RoutineRunSummary } from "@/lib/routines-api";
 import type { MessageKey } from "@/lib/i18n-keys";
 import { formatRoutineRunDuration } from "@/lib/routine-run-metrics";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
@@ -462,11 +459,9 @@ export function RoutineDetail({
                                     <span className="min-w-0 truncate text-muted-foreground">
                                       {run.awaiting_input
                                         ? t("runWaitingInput")
-                                        : run.error_message
-                                          ? run.error_message
-                                          : run.outcome
-                                            ? run.outcome
-                                            : t(runStatusKey(run.status))}
+                                        : run.error_message || run.outcome
+                                          ? <RunResultPreview text={(run.error_message || run.outcome) as string} />
+                                          : t(runStatusKey(run.status))}
                                     </span>
                                     <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
                                   </div>
@@ -521,66 +516,41 @@ export function RoutineDetail({
 
 /**
  * The COMING passage, at the top of the list of executions. Everything is in
- * `text-muted-foreground`: this is what distinguishes it from a passage which had
- * place, without giving it a separate icon or badge. No gestures — the line is not
- * not clickable, there is nothing to read yet.
+ * `text-muted-foreground`: this is what distinguishes it from a passage which
+ * took place, without a separate icon or badge. No gestures: the line is not
+ * clickable, there is nothing to read yet.
  *
- * **It is said in RELATIVE** — “today at 09:00”, “in 3 days at 11:00”.
- * This is the question we ask ourselves when reading it: not *when* in absolute terms,
- * but *how soon*. The exact date has not disappeared, it has passed
- * behind, on hover, in the tooltip.
- *
- * The tooltip trigger is the TEXT — not the line. Hence the absence
- * of `flex-1` on the `span`: stretched, it would make the entire width a zone of
- * hover, and the tooltip would come out missing what it explains.
- *
- * The difference is counted in CALENDAR days and not in duration: at 10 p.m., a passage
- * tomorrow at 9 a.m. is “tomorrow,” not “in 11 hours.” What changes from one
- * transition to the other, it's the name of the day, not a number of hours.
- *
- * `useLiveNow` lives HERE rather than in the shutter: a clock that beats to the minute
- * should only re-render the line that reads it.
- *
- * A run late by a FULL day — the cron is dead — falls back on the date
- * absolute: “today” would be false, and such a delay must be seen.
+ * The moment itself is a date mention pill, the same one the editor shows:
+ * "Today 09:00", "Tomorrow 09:00", or the full date further out, with how far
+ * it is from now on hover. It is built from the reader's wall clock, which is
+ * what the pill reads. A run late by a day or more (the cron is dead) shows
+ * its past date, so such a delay is seen.
  */
 function NextRunRow({ at }: { at: string }) {
   const t = useTranslations("Routines");
-  const format = useFormatter();
-  const now = useLiveNow();
-
   const date = new Date(at);
-  const exact = format.dateTime(date, {
-    dateStyle: "full",
-    timeStyle: "short",
-  });
-  const time = format.dateTime(date, { hour: "2-digit", minute: "2-digit" });
-  const days = calendarDaysBetween(now, date);
-
-  const label =
-    days < 0
-      ? t("nextRunAt", {
-          date: format.dateTime(date, {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }),
-        })
-      : days === 0
-        ? t("nextRunToday", { time })
-        : days === 1
-          ? t("nextRunTomorrow", { time })
-          : t("nextRunInDays", { days, time });
+  const pad = (part: number) => String(part).padStart(2, "0");
+  const value: MentionDate = {
+    date: dayKey(date),
+    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+  };
 
   return (
-    <div className="flex items-center gap-3 px-2 py-2.5 text-sm text-muted-foreground">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="min-w-0 truncate">{label}</span>
-        </TooltipTrigger>
-        <TooltipContent>{exact}</TooltipContent>
-      </Tooltip>
+    <div className="flex min-w-0 items-center gap-1.5 px-2 py-2.5 text-sm text-muted-foreground">
+      <span className="shrink-0">{t("nextRunLabel")}</span>
+      <DateMentionChip value={value} />
     </div>
   );
+}
+
+/**
+ * A run's outcome or error as one plain line: Markdown syntax is flattened,
+ * and typed mentions read as their target rather than their stored label.
+ * The first 400 characters are enough for a truncated cell.
+ */
+function RunResultPreview({ text }: { text: string }) {
+  const parts = useMemo(() => plainMarkdownParts(text.slice(0, 400)), [text]);
+  return <PlainPreview parts={parts} />;
 }
 
 /** Formats a server-derived share while keeping BYOK/unavailable values distinct. */

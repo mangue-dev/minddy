@@ -76,4 +76,31 @@ describe("typed project mention", () => {
     act(() => root.unmount());
     projects.value = null;
   });
+
+  // An editor node parsed from stored Markdown carries an empty figure: the
+  // pill still finds the project's orb and icon (objective hover card).
+  it("takes its orb and icon from the user's projects when an editor node carries none", async () => {
+    projects.value = { projects: [{ id: PROJECT, orb_seed: "seed-1", icon_url: "https://icon" }] };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      mentions: [{ type: "project", id: PROJECT, label: "Test" }],
+    }))));
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(createElement(TypedMentionChip, {
+        type: "project",
+        id: PROJECT,
+        appearance: { seed: null, color: null, icon: null },
+      }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const pill = container.querySelector("[data-type='project']");
+    expect(pill?.getAttribute("data-icon")).toBe("https://icon");
+    expect(pill?.getAttribute("data-seed")).toBe("seed-1");
+    act(() => root.unmount());
+    projects.value = null;
+  });
 });

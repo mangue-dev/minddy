@@ -48,6 +48,9 @@ interface ToolCallListProps {
   seedLive?: boolean;
   /** The proposal tickets have just been written (their number). */
   onSeedCreated?: (created: number) => void;
+  /** Draws a reminder's approval card under its line. Off where the host
+   *  draws it under the turn's answer instead. */
+  watchProposals?: boolean;
 }
 
 /** The proposition carried by a result of `propose_backlog`, if it has
@@ -1452,6 +1455,7 @@ export function ToolCallList({
   askUserAnswer,
   seedLive = false,
   onSeedCreated,
+  watchProposals = true,
 }: ToolCallListProps) {
   const t = useTranslations("ToolCall");
   const grouped = useGroupedActions();
@@ -1570,8 +1574,9 @@ export function ToolCallList({
           <SecretCallout key={`secret-${item.id}`} envLine={secret.envLine} />
         ) : null;
       })}
-      {items.map((item) => {
-        // A recurring reminder with permissions waits for the user here.
+      {watchProposals && items.map((item) => {
+        // A recurring reminder with permissions waits for the user here,
+        // unless the host draws the card under the turn's answer.
         const proposal =
           item.name === "create_watch" && item.status === "complete" && item.success !== false
             ? watchProposalOf(item.result)

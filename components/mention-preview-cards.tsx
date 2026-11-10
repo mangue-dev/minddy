@@ -146,7 +146,7 @@ export function FadedExcerpt({ markdown }: { markdown: string }) {
   if (!markdown.trim()) return null;
   return (
     <div className={cn("pointer-events-none -mx-3 max-h-40 overflow-hidden pl-9", FADE_RIGHT_AND_BOTTOM, CONTENT_DIM)}>
-      <div className="w-[30rem]">
+      <div className="w-[30rem]" data-compact-excerpt>
         <LazyDocumentEditor value={markdown} readOnly size="compact" ariaLabel="" />
       </div>
     </div>

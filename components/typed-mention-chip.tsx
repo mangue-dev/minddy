@@ -112,11 +112,14 @@ export function TypedMentionChip({
   const links = useMentionLinks();
   const scratchpad = useOptionalScratchpad();
   // A project mention written as Markdown (a Numo answer, the Home summary)
-  // carries no figure: the user's own project list gives its orb and icon,
-  // like an editor node would.
+  // carries no figure, and neither does an editor node read back from stored
+  // Markdown (a description preview in a hover card): the user's own project
+  // list gives its orb and icon, like a freshly inserted node would.
   const projects = useOptionalProjects()?.projects;
-  const known = type === "project" && !appearance ? projects?.find((project) => project.id === id) : undefined;
-  const figure = appearance ?? (known ? { seed: projectOrbSeed(known), icon: known.icon_url ?? null } : undefined);
+  const known = type === "project" && !appearance?.seed && !appearance?.icon
+    ? projects?.find((project) => project.id === id)
+    : undefined;
+  const figure = known ? { ...appearance, seed: projectOrbSeed(known), icon: known.icon_url ?? null } : appearance;
   // An MCP pill shows its service's logo, and a page its emoji or the
   // database glyph: the server answers both, so it is asked even when the
   // surface's sources already named the target (MIN-879).

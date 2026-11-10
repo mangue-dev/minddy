@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import messages from "@/messages/en.json";
 import type { IssuePrReadiness } from "@/lib/issue-pr-store";
 import { reducePullRequestReadiness } from "@/lib/pr-readiness";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { IssuePrChip } from "./issue-pr-chip";
 
 // Radix opens a hover card on pointer movement jsdom does not simulate: the
@@ -59,7 +60,9 @@ const render = (
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return act(() => root.render(<QueryClientProvider client={client}>
     <NextIntlClientProvider locale="en" messages={messages}>
-      <IssuePrChip pr={pr} readiness={readiness} onOpenPr={onOpenPr} />
+      <TooltipProvider>
+        <IssuePrChip pr={pr} readiness={readiness} onOpenPr={onOpenPr} />
+      </TooltipProvider>
     </NextIntlClientProvider>
   </QueryClientProvider>));
 };
@@ -98,9 +101,22 @@ it("opens a live pull request from the chip", async () => {
   const onOpenPr = vi.fn();
   await render({ prId: "pr", prNumber: 4, state: "open" }, onOpenPr);
   const button = host.querySelector<HTMLButtonElement>("button[aria-label]")!;
-  expect(button.getAttribute("aria-label")).toBe(messages.Agent.viewPullRequest);
+  expect(button.getAttribute("aria-label")).toBe(`${messages.Agent.viewPullRequest} #4, ${messages.Agent.prOpen}`);
+  // Like the issue card: the number, not the state words.
+  expect(button.textContent).toContain("#4");
   await act(() => button.click());
   expect(onOpenPr).toHaveBeenCalledOnce();
+});
+
+it("shows the CI readiness of an open pull request next to its number, like the issue card", async () => {
+  const failing: IssuePrReadiness = {
+    unavailable: false,
+    readiness: { state: "checks_failing", blockers: [], passed: [], mergeAllowed: false, methods: [], preferredMethod: null },
+  };
+  await render({ prId: "pr", prNumber: 4, state: "open" }, vi.fn(), failing);
+  expect(host.querySelector(`[aria-label="${messages.PullRequests.readinessChecksFailing}"]`)).not.toBeNull();
+  // The board's readiness is reused: nothing is read before the card opens.
+  expect(fetchMock).not.toHaveBeenCalled();
 });
 
 it("reads nothing before its card opens, then shows where the pull request stands", async () => {
