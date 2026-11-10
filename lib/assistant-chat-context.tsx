@@ -13,7 +13,7 @@ import {
   type SetStateAction,
 } from "react";
 import { useLocale } from "next-intl";
-import { useQueryClient } from "@tanstack/react-query";
+import { QueryClientContext } from "@tanstack/react-query";
 import { HIDDEN_PROJECTS_KEY } from "@/lib/use-hidden-projects";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/theme-provider";
@@ -95,14 +95,16 @@ export function AssistantChatProvider({
   // account, and if it changed the language (a cookie, not user_metadata),
   // apply that change too.
   const { setTheme } = useTheme();
-  const queryClient = useQueryClient();
+  // Read without throwing: a tree without a QueryClientProvider has no
+  // hidden-projects cache to refresh.
+  const queryClient = useContext(QueryClientContext);
   const handleToolResult = useCallback(
     (name: string, success: boolean, result: unknown) => {
       if (!success) return;
       if (name !== "update_account_settings") return;
       void refreshUser();
       // Hidden projects (MIN-692) are a table, not the account metadata.
-      void queryClient.invalidateQueries({ queryKey: HIDDEN_PROJECTS_KEY });
+      void queryClient?.invalidateQueries({ queryKey: HIDDEN_PROJECTS_KEY });
       const nextLocale = (result as { settings?: { locale?: string } })
         ?.settings?.locale;
       if (nextLocale && nextLocale !== currentLocale) {
