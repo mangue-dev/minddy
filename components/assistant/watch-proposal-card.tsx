@@ -38,6 +38,29 @@ export function watchProposalOf(result: unknown): NumoWatchProposal | null {
   return r?.confirmation_required === true ? parseNumoWatchProposal(r.proposal) : null;
 }
 
+/**
+ * The proposals a turn's `create_watch` calls are waiting on, once each, in
+ * call order: persisted calls read their result from `results`, live calls
+ * carry it themselves.
+ */
+export function watchProposalsOf(
+  calls: { id: string; function: { name: string } }[],
+  results: ReadonlyMap<string, { status: string; result?: unknown; success?: boolean }>,
+  liveCalls: { name: string; status: string; result?: unknown; success?: boolean }[] = [],
+): NumoWatchProposal[] {
+  const entries = [
+    ...calls.map((call) => ({ name: call.function.name, ...results.get(call.id) })),
+    ...liveCalls,
+  ];
+  const proposals = new Map<string, NumoWatchProposal>();
+  for (const entry of entries) {
+    if (entry.name !== "create_watch" || entry.status !== "complete" || entry.success === false) continue;
+    const proposal = watchProposalOf(entry.result);
+    if (proposal && !proposals.has(proposal.id)) proposals.set(proposal.id, proposal);
+  }
+  return [...proposals.values()];
+}
+
 export function WatchProposalCard({ proposal }: { proposal: NumoWatchProposal }) {
   const t = useTranslations("ToolCall");
   const ta = useTranslations("Account");

@@ -874,6 +874,10 @@ export function IssueSidePanel({
     void onSetCategories(issue.id, ids).catch((err) => toast.error((err as Error).message));
   });
   const setParentLinkStable = useStableCallback(setParentLink);
+  // The sub-issues menu's "Add an existing sub-issue": the panel's relation
+  // picker on the `parent_of` step, which lists only the tickets the one-level
+  // nesting accepts (lib/issue-hierarchy.ts).
+  const openAddExistingSubIssue = useStableCallback(() => setRelationType("parent_of"));
   const reply = useStableCallback((parentId: string, body: string, mentions: Parameters<typeof addComment>[1], attachments: Parameters<typeof addComment>[3]) =>
     addComment(body, mentions, parentId, attachments));
   const compose = useStableCallback((body: string, mentions: Parameters<typeof addComment>[1], attachments: Parameters<typeof addComment>[3]) =>
@@ -1314,6 +1318,7 @@ export function IssueSidePanel({
                     allIssues={allIssues}
                     projectKey={projectKey}
                     onOpenIssue={onOpenIssue}
+                    onAddExisting={openAddExistingSubIssue}
                     readOnly={readOnly}
                   />
                 )}

@@ -2,8 +2,8 @@
 
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Add01Icon } from "@hugeicons/core-free-icons";
-import { memo, useMemo } from "react";
+import { Add01Icon, HierarchySquare01Icon } from "@hugeicons/core-free-icons";
+import { memo, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
@@ -22,19 +22,24 @@ import type { Issue } from "@/lib/types";
 /**
  * Parent-side view of its children: progress, the list, then "Create a
  * sub-issue", which opens the creation dialog with this issue as parent; its
- * menu asks Numo to split the issue into sub-issues instead.
+ * menu adds an existing issue as a sub-issue, or asks Numo to split the issue
+ * into sub-issues instead.
  */
 export const SubIssuesSection = memo(function SubIssuesSection({
   issue,
   allIssues,
   projectKey,
   onOpenIssue,
+  onAddExisting,
   readOnly = false,
 }: {
   issue: Issue;
   allIssues: Issue[];
   projectKey: string;
   onOpenIssue: (id: string) => void;
+  /** Opens the picker of existing issues that may become sub-issues of this
+      one (the `parent_of` relation step). Absent: the entry is not offered. */
+  onAddExisting?: () => void;
   /** Project readers: sub-issues are listed without the create button. */
   readOnly?: boolean;
 }) {
@@ -58,6 +63,10 @@ export const SubIssuesSection = memo(function SubIssuesSection({
   // statusCompletionCredit (lib/cycle.ts), which gives 1 to any closed status.
   const done = children.filter((c) => isClosedStatus(c.status)).length;
   const percent = total === 0 ? 0 : Math.round((done / total) * 100);
+
+  // The picker opens once the dropdown has closed: opened earlier, it would
+  // lose its focus to the dropdown's exit (same as the Relations row).
+  const pendingAddExisting = useRef(false);
 
   const createSubIssue = () =>
     create?.openCreateIssue({ projectId: issue.project_id, parentId: issue.id });
@@ -123,11 +132,27 @@ export const SubIssuesSection = memo(function SubIssuesSection({
           onClick={createSubIssue}
           menuLabel={t("moreSubIssueOptions")}
           menuAlign="start"
+          menuContentProps={{
+            onCloseAutoFocus: (event) => {
+              if (!pendingAddExisting.current) return;
+              pendingAddExisting.current = false;
+              event.preventDefault();
+              onAddExisting?.();
+            },
+          }}
           menu={
-            <DropdownMenuItem onSelect={splitWithNumo}>
-              <NumoIcon className="size-4" />
-              {t("splitWithNumo")}
-            </DropdownMenuItem>
+            <>
+              {onAddExisting && (
+                <DropdownMenuItem onSelect={() => { pendingAddExisting.current = true; }}>
+                  <HugeiconsIcon icon={HierarchySquare01Icon} />
+                  {t("addExistingSubIssue")}
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={splitWithNumo}>
+                <NumoIcon className="size-4" />
+                {t("splitWithNumo")}
+              </DropdownMenuItem>
+            </>
           }
         >
           <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />

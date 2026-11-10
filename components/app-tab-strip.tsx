@@ -466,10 +466,8 @@ const StripTab = memo(function StripTab({
     : indicatorKind === "count" && indicatorLabel && indicatorCount !== undefined
       ? { kind: "count", label: indicatorLabel, count: indicatorCount } : null;
   return <AppTabItem tab={tab} active={active} focusable={focusable} label={label}
-    icon={pageIcon
-      ? <span className="text-sm leading-none" aria-hidden>{pageIcon}</span>
-      : <AppTabIcon section={section} project={project} projectId={projectId}
-          objectiveColor={objectiveColor} objectiveStatus={objectiveStatus} />}
+    icon={<AppTabIcon section={section} project={project} projectId={projectId}
+      objectiveColor={objectiveColor} objectiveStatus={objectiveStatus} pageIcon={pageIcon} />}
     badge={tabBadge(indicator, nav)} busy={busy} last={last}
     compositeIcon={composite} width={width}
     onActivate={() => { if (!busy) void session.activate(tab.id); }} onClose={() => onClose(tab.id)}

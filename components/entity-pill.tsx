@@ -117,6 +117,9 @@ export function EntityPill({
         highlight &&
           "hover:border-foreground/15 hover:bg-accent/70 focus-within:border-foreground/15 focus-within:bg-accent/70",
         radius === "full" ? "rounded-full" : "rounded-md",
+        // On touch the commands sit in the flow (see below): the pill widens
+        // and keeps a tight right edge around them.
+        commands.length > 0 && "touch:pr-1.5",
         dimmed && "opacity-60",
         className
       )}
@@ -128,6 +131,10 @@ export function EntityPill({
             "pointer-events-none absolute inset-y-0 right-0 flex items-center gap-1 rounded-[inherit] bg-gradient-to-l from-card via-card to-transparent pl-4 pr-1 transition-[opacity,--tw-gradient-from,--tw-gradient-via]",
             highlight &&
               "group-hover/pill:from-accent group-hover/pill:via-accent",
+            // Nothing can hover on touch, so the commands are always shown:
+            // overprinting them would hide the end of the label for good.
+            // They move after the label instead and the pill grows to fit.
+            "touch:static touch:shrink-0 touch:bg-none touch:p-0",
             // On the keyboard, it is the focus of the button which reveals it - otherwise we
             // would rely on an invisible.
             persistent

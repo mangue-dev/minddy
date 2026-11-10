@@ -87,6 +87,9 @@ interface ChatMessageProps {
   pinCopyButton?: boolean;
   /** Content placed between an assistant answer and its Copy button. */
   afterContent?: ReactNode;
+  /** The host draws this message's reminder approval cards under the turn's
+   *  answer, so its tool calls leave them out. */
+  watchProposalsOutside?: boolean;
 }
 
 // ── Copy button and sent time ─────────────────────────────────────
@@ -496,6 +499,7 @@ export const ChatMessage = memo(function ChatMessage({
   showCopyButton = true,
   pinCopyButton = false,
   afterContent,
+  watchProposalsOutside = false,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const usageExhausted = parseNumoUsageExhausted(message.metadata);
@@ -592,6 +596,7 @@ export const ChatMessage = memo(function ChatMessage({
                 askUserAnswer={askUserAnswer}
                 seedLive={seedLive}
                 onSeedCreated={onSeedCreated}
+                watchProposals={!watchProposalsOutside}
               />
             )}
           </div>
@@ -642,6 +647,9 @@ export function StreamingMessage({
             // The question during the stream is not displayed in a bubble: from the
             // end of the turn, the LIVING card takes the place of the composer.
             askUserHidden
+            // Streamed calls sit in the turn's folded work: the shell draws a
+            // reminder's approval card under the answer.
+            watchProposals={false}
           />
         )}
       </div>

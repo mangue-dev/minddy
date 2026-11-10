@@ -13,7 +13,7 @@ const icons = { home: Home01Icon, all: BOARD_ICON, tickets: BOARD_ICON, inbox: I
   "pull-requests": GitPullRequestIcon, trash: Delete02Icon, settings: Settings01Icon, billing: CreditCardIcon,
   admin: Shield01Icon, pages: File02Icon, objectives: Target01Icon, feedback: MessageMultiple01Icon, triage: CircleDotDashedIcon };
 
-export function AppTabIcon({ section, project, projectId, objectiveColor: color, objectiveStatus }: {
+export function AppTabIcon({ section, project, projectId, objectiveColor: color, objectiveStatus, pageIcon }: {
   section: string;
   project?: Project;
   projectId: string | null;
@@ -23,7 +23,11 @@ export function AppTabIcon({ section, project, projectId, objectiveColor: color,
   /** The objective's status, once known: its real status glyph replaces the
    *  target (MIN-785). */
   objectiveStatus?: ObjectiveStatus;
+  /** A pinned page's emoji: it replaces the section icon, after the project
+   *  orb like any other screen icon. */
+  pageIcon?: string | null;
 }) {
+  const pageGlyph = pageIcon ? <span className="text-sm leading-none" aria-hidden>{pageIcon}</span> : null;
   const objectiveGlyph = color !== undefined && objectiveStatus
     ? <ObjectiveStatusIndicator status={objectiveStatus} className="size-3.5 shrink-0" />
     : null;
@@ -36,11 +40,12 @@ export function AppTabIcon({ section, project, projectId, objectiveColor: color,
     return (
       <span className="flex shrink-0 items-center gap-1">
         <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-4 rounded-[4px]" />
-        {objectiveGlyph ?? <HugeiconsIcon icon={SectionIcon} aria-hidden className="size-3.5 shrink-0"
+        {pageGlyph ?? objectiveGlyph ?? <HugeiconsIcon icon={SectionIcon} aria-hidden className="size-3.5 shrink-0"
           style={color !== undefined ? { color: objectiveColor(color) } : undefined} />}
       </span>
     );
   }
+  if (pageGlyph) return pageGlyph;
   if (objectiveGlyph) return objectiveGlyph;
   if (color !== undefined) return <HugeiconsIcon icon={Target01Icon} aria-hidden className="size-3.5 shrink-0" style={{ color: objectiveColor(color) }} />;
   if (project) return <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-4 rounded-[4px]" />;

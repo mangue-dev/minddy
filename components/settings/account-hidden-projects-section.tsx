@@ -2,13 +2,14 @@
 
 import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ViewIcon } from "@hugeicons/core-free-icons";
+import { ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import Link from "@/components/app-link";
+import { EmptyScene } from "@/components/empty-scene";
 import { ProjectOrb } from "@/components/project-orb";
-import { SettingsEmpty, SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";
+import { SettingsGroup, SettingsListRow } from "@/components/settings/settings-ui";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useProjects } from "@/lib/projects-context";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
@@ -39,7 +40,7 @@ export function AccountHiddenProjectsSection() {
       help={t("hiddenProjectsHelp")}
     >
       {hidden.length === 0 ? (
-        <SettingsEmpty>{t("hiddenProjectsEmpty")}</SettingsEmpty>
+        <EmptyScene size="compact" icon={ViewOffIcon} title={t("hiddenProjectsEmpty")} />
       ) : (
         hidden.map((project) => (
           <SettingsListRow

@@ -421,7 +421,6 @@ html.dark[data-theme-dark="high-contrast-dark"] {
     [data-theme-dark="high-contrast-dark"]
   )
 ) .code-block-node-view {
-  --code-block-border: var(--border);
   --code-block-background: var(--surface-sunken);
   --code-block-foreground: var(--foreground);
   --code-block-muted: var(--muted-foreground);

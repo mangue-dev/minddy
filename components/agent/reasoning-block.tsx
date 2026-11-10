@@ -87,3 +87,18 @@ export function ReasoningBlock({
     </Collapsible>
   );
 }
+
+/**
+ * The step a turn opens on before anything has streamed: the same line as a
+ * live `ReasoningBlock`, without a counter. The first real step (reasoning or
+ * a tool call) takes its place, so the turn does not jump when work starts.
+ */
+export function ThinkingStep() {
+  const t = useTranslations("ToolCall");
+  return (
+    <div className={cn(TOOL_LINE_CLASS, "text-muted-foreground")}>
+      <HugeiconsIcon icon={BrainIcon} className={TOOL_ICON_CLASS} />
+      <span className="min-w-0 truncate text-shimmer">{t("thinking")}</span>
+    </div>
+  );
+}
