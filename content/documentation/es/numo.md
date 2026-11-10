@@ -21,8 +21,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 36,
-  "sourceRevision": 36,
+  "revision": 37,
+  "sourceRevision": 37,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-10",
   "compatibility": {
@@ -101,9 +101,9 @@
     ]
   },
   "review": {
-    "revision": 36,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-953: recurring reminders section and the last paragraph of #reminders, source audit against lib/numo-watches.ts, lib/server/numo/watches.ts, watch-clock.ts, watch-proposal.ts, lib/server/assistant/proactive-guard.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: step 2 of #work-with-numo, the default-model paragraph, the compaction paragraph of #continue and the model sentence of #numo-execution-model, source audit against lib/server/assistant/conversation-config.ts, lib/server/assistant/context-compaction.ts, components/assistant/conversation-settings.tsx and messages/*.json; no browser walkthrough; no figure shows the model control or the compaction step; existing figures kept, not recaptured); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-953 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "revision": 37,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-953: recurring reminders section and the last paragraph of #reminders, source audit against lib/numo-watches.ts, lib/server/numo/watches.ts, watch-clock.ts, watch-proposal.ts, lib/server/assistant/proactive-guard.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: step 2 of #work-with-numo, the default-model paragraph, the compaction paragraph of #continue and the model sentence of #numo-execution-model, source audit against lib/server/assistant/conversation-config.ts, lib/server/assistant/context-compaction.ts, components/assistant/conversation-settings.tsx and messages/*.json; no browser walkthrough; no figure shows the model control or the compaction step; existing figures kept, not recaptured); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-955: the paragraph on what Numo can change in #numo-permissions-and-approvals, source audit against lib/server/assistant/settings-coverage.ts, lib/server/account-settings.ts and the update_member_role tool; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-953 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-955 passage translated from en; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-10"
   },
   "related": [
@@ -134,7 +134,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 36,
+      "revision": 37,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -151,7 +151,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 36,
+      "revision": 37,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -212,7 +212,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Sigue las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 36,
+      "revision": 37,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -244,7 +244,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 36,
+      "revision": 37,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -261,7 +261,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
       "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 36,
+      "revision": 37,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -324,7 +324,7 @@ Si solicita información, envía tu elección antes de esperar que continúen la
 
 Numo actúa dentro del acceso y el rol del usuario actual. Pedirlo por chat no concede a un miembro ajustes exclusivos del propietario. El Numo de un lector, en el chat o mediante `@Numo` en un comentario que tenga permitido publicar, solo usa herramientas de lectura y se factura al lector. El propietario administra miembros, integraciones, repositorios y configuración del tablón de feedback. Los ajustes personales pertenecen a la cuenta actual.
 
-Numo puede cambiar preferencias compatibles y ajustes del proyecto autorizados al propietario. Las credenciales de proveedores, conexiones Git, segundo factor y archivos de avatar los configuras tú.
+Numo puede cambiar las preferencias de tu cuenta, ocultar o volver a mostrar proyectos para ti y, cuando un proyecto es tuyo, sus ajustes, sus miembros y sus roles. Algunas acciones siguen siendo tuyas: las claves de proveedores y los modelos de IA, las conexiones Git, el inicio de sesión, el segundo factor y las aplicaciones conectadas, el avatar y el icono del proyecto, la transferencia de la propiedad, la exportación de datos y la eliminación de la cuenta.
 
 ### Autorizar la acción {#authorization}
 

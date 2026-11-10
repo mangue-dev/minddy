@@ -156,6 +156,7 @@ export const NUMO_TOOL_CAPABILITIES: Record<string, NumoToolCapability> = {
   update_project: "admin",
   invite_member: "admin",
   remove_member: "admin",
+  update_member_role: "admin",
   cancel_invitation: "admin",
   create_routine: "admin",
   update_routine: "admin",

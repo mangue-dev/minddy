@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NUMO_MEMORY_META_KEY, resolveNumoMemoryEnabled } from "@/lib/numo-memory";
 import { NUMO_BACKGROUND_META_KEY, resolveNumoBackgroundEnabled } from "@/lib/numo-background";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -19,8 +20,12 @@ import {
   SMART_FILL_RELATIONS_META_KEY,
   SMART_FILL_REEVALUATE_META_KEY,
   SMART_FILL_TITLE_META_KEY,
+  SMART_FILL_OBJECTIVES_META_KEY,
+  SMART_FILL_OBJECTIVE_NAME_META_KEY,
   ISSUE_INDEXING_META_KEY,
   resolveIssueIndexing,
+  resolveSmartFillObjectiveName,
+  resolveSmartFillObjectives,
   resolveSmartFill,
   resolveSmartFillReevaluation,
   resolveSmartFillRelations,
@@ -76,6 +81,26 @@ import {
 import { ANALYTICS_CONSENT_META_KEY, resolveAnalyticsConsent } from "@/lib/cookie-consent";
 import { DICTATION_CLEANUP_META_KEY, resolveDictationCleanup } from "@/lib/dictation-context";
 import {
+  DICTATION_VOCABULARY_META_KEY,
+  MAX_VOCABULARY_ENTRIES,
+  resolveDictationVocabulary,
+  sanitizeVocabulary,
+  type VocabularyEntry,
+} from "@/lib/dictation-vocabulary";
+import {
+  AGENT_TARGET_IDS,
+  PROMPT_SEND_AGENT_META_KEY,
+  PROMPT_SEND_META_KEY,
+  resolvePromptSend,
+  resolvePromptSendAgent,
+  type AgentTarget,
+} from "@/lib/prompt-delivery";
+import {
+  HiddenProjectsError,
+  listHiddenProjectIds,
+  setProjectHidden,
+} from "@/lib/server/hidden-projects";
+import {
   WEEK_START_META_KEY,
   WEEK_START_OPTIONS,
   isWeekStartPreference,
@@ -118,6 +143,12 @@ export interface AccountSettings {
   send_shortcut: SendMode;
   /** Voice dictation cleanup pass (MIN-773); off = raw transcription. */
   dictation_cleanup: boolean;
+  /** Dictation vocabulary (MIN-773): spellings and replacements. */
+  dictation_vocabulary: VocabularyEntry[];
+  /** Coding agent (MIN-951): prompts open in the agent's app instead of being copied. */
+  prompt_send_to_agent: boolean;
+  /** The app prompts open in; null = the first connected one. */
+  prompt_send_agent: AgentTarget | null;
   /** First day of the week (MIN-881); `auto` follows the interface language. */
   week_start: WeekStartPreference;
   smart_fill: boolean;
@@ -129,6 +160,10 @@ export interface AccountSettings {
   smart_fill_title: boolean;
   /** Smart Fill relations (MIN-717): link related issues and dependencies after save. */
   smart_fill_relations: boolean;
+  /** Smart Fill for objectives (MIN-919): color and target date of new objectives. */
+  smart_fill_objectives: boolean;
+  /** Smart Fill writes the name of an objective created without one (MIN-919). */
+  smart_fill_objective_name: boolean;
   /** Issue indexing (MIN-717): embedding vectors of the account's issues, independent of Smart Fill. */
   issue_indexing: boolean;
   /** Cycles (MIN-32) — Account → Cycles, one key per knob in user_metadata. */
@@ -137,6 +172,11 @@ export interface AccountSettings {
   analytics_consent: "accepted" | "declined" | null;
   /** Inbox (MIN-82) — one toggle per trigger family. */
   notifications: NotificationPrefs;
+  /**
+   * Projects the user hid from their sidebar and lists (MIN-692). Only read
+   * when the caller passes the request's RLS client; otherwise absent.
+   */
+  hidden_project_ids?: string[];
 }
 
 function metaString(meta: Record<string, unknown>, key: string): string {
@@ -178,6 +218,9 @@ function toSettings(
     prompt_copy_auto_start: resolvePromptCopyAutoStart(meta),
     send_shortcut: resolveSendMode(meta),
     dictation_cleanup: resolveDictationCleanup(meta),
+    dictation_vocabulary: resolveDictationVocabulary(meta),
+    prompt_send_to_agent: resolvePromptSend(meta),
+    prompt_send_agent: resolvePromptSendAgent(meta),
     week_start: resolveWeekStartPreference(meta),
     smart_fill: resolveSmartFill(meta),
     smart_fill_created: resolveSmartFillScope(meta, "created"),
@@ -185,6 +228,8 @@ function toSettings(
     smart_fill_reevaluate: resolveSmartFillReevaluation(meta),
     smart_fill_title: resolveSmartFillTitle(meta),
     smart_fill_relations: resolveSmartFillRelations(meta),
+    smart_fill_objectives: resolveSmartFillObjectives(meta),
+    smart_fill_objective_name: resolveSmartFillObjectiveName(meta),
     issue_indexing: resolveIssueIndexing(meta),
     cycles: resolveCyclePrefs(meta),
     analytics_consent: resolveAnalyticsConsent(meta),
@@ -192,10 +237,17 @@ function toSettings(
   };
 }
 
+/**
+ * `supabase` is the request's RLS client. With it, the read also lists the
+ * hidden projects and the update can hide or show projects; without it (a
+ * caller that only has the service client), those stay out of reach.
+ */
 export async function getAccountSettings({
   userId,
+  supabase,
 }: {
   userId: string;
+  supabase?: SupabaseClient;
 }): Promise<
   { ok: true; settings: AccountSettings } | { ok: false; error: string }
 > {
@@ -205,18 +257,44 @@ export async function getAccountSettings({
     return { ok: false, error: error?.message ?? "Account not found." };
   }
   const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
-  return {
-    ok: true,
-    settings: toSettings(meta, data.user.email ?? null),
-  };
+  const settings = toSettings(meta, data.user.email ?? null);
+  if (supabase) {
+    try {
+      settings.hidden_project_ids = await listHiddenProjectIds(supabase, userId);
+    } catch (e) {
+      if (!(e instanceof HiddenProjectsError)) throw e;
+      return { ok: false, error: "Could not read the hidden projects." };
+    }
+  }
+  return { ok: true, settings };
+}
+
+const HIDE_PROJECTS_INPUT = "hide_project_ids";
+const SHOW_PROJECTS_INPUT = "show_project_ids";
+const MAX_PROJECT_IDS = 50;
+
+/** A list of project ids from the tool input, or an error message. */
+function projectIdList(input: Record<string, unknown>, key: string): string[] | string {
+  if (!(key in input)) return [];
+  const value = input[key];
+  if (
+    !Array.isArray(value) ||
+    value.length > MAX_PROJECT_IDS ||
+    !value.every((id) => typeof id === "string" && id.trim() !== "")
+  ) {
+    return `${key} must be a list of at most ${MAX_PROJECT_IDS} project ids.`;
+  }
+  return [...new Set(value.map((id: string) => id.trim()))];
 }
 
 export async function updateAccountSettings({
   userId,
   input,
+  supabase,
 }: {
   userId: string;
   input: Record<string, unknown>;
+  supabase?: SupabaseClient;
 }): Promise<
   { ok: true; settings: AccountSettings } | { ok: false; error: string }
 > {
@@ -340,6 +418,42 @@ export async function updateAccountSettings({
     }
     next[PROMPT_COPY_AUTO_START_META_KEY] = input.prompt_copy_auto_start;
   }
+  if (PROMPT_SEND_AGENT_META_KEY in input) {
+    const agent = input[PROMPT_SEND_AGENT_META_KEY];
+    // `null` clears the choice: prompts open in the first connected app.
+    if (agent === null) {
+      delete next[PROMPT_SEND_AGENT_META_KEY];
+    } else if (!AGENT_TARGET_IDS.includes(agent as AgentTarget)) {
+      return {
+        ok: false,
+        error: `${PROMPT_SEND_AGENT_META_KEY} must be one of: ${AGENT_TARGET_IDS.join(", ")}, or null.`,
+      };
+    } else {
+      next[PROMPT_SEND_AGENT_META_KEY] = agent;
+    }
+  }
+  if (DICTATION_VOCABULARY_META_KEY in input) {
+    const raw = input[DICTATION_VOCABULARY_META_KEY];
+    if (!Array.isArray(raw) || raw.length > MAX_VOCABULARY_ENTRIES) {
+      return {
+        ok: false,
+        error: `${DICTATION_VOCABULARY_META_KEY} must be a list of at most ${MAX_VOCABULARY_ENTRIES} entries.`,
+      };
+    }
+    // The same normalization as the settings screen: unusable entries drop,
+    // duplicates merge. An empty list clears the vocabulary.
+    next[DICTATION_VOCABULARY_META_KEY] = sanitizeVocabulary(raw);
+  }
+  const hide = projectIdList(input, HIDE_PROJECTS_INPUT);
+  if (typeof hide === "string") return { ok: false, error: hide };
+  const show = projectIdList(input, SHOW_PROJECTS_INPUT);
+  if (typeof show === "string") return { ok: false, error: show };
+  if (hide.some((id) => show.includes(id))) {
+    return { ok: false, error: "A project cannot be both hidden and shown in one call." };
+  }
+  if ((hide.length > 0 || show.length > 0) && !supabase) {
+    return { ok: false, error: "Hidden projects cannot be changed from here." };
+  }
   if (SMART_FILL_META_KEY in input) {
     if (typeof input[SMART_FILL_META_KEY] !== "boolean") {
       return { ok: false, error: "smart_fill must be a boolean." };
@@ -348,6 +462,9 @@ export async function updateAccountSettings({
   }
   for (const key of [
     DICTATION_CLEANUP_META_KEY,
+    PROMPT_SEND_META_KEY,
+    SMART_FILL_OBJECTIVES_META_KEY,
+    SMART_FILL_OBJECTIVE_NAME_META_KEY,
     SMART_FILL_CREATED_META_KEY,
     SMART_FILL_TRIAGE_META_KEY,
     SMART_FILL_REEVALUATE_META_KEY,
@@ -455,6 +572,12 @@ export async function updateAccountSettings({
     SMART_FILL_TITLE_META_KEY,
     SMART_FILL_RELATIONS_META_KEY,
     ISSUE_INDEXING_META_KEY,
+    SMART_FILL_OBJECTIVES_META_KEY,
+    SMART_FILL_OBJECTIVE_NAME_META_KEY,
+    DICTATION_CLEANUP_META_KEY,
+    DICTATION_VOCABULARY_META_KEY,
+    PROMPT_SEND_META_KEY,
+    PROMPT_SEND_AGENT_META_KEY,
     // Without it, a call carrying ONLY the preset came out here as “nothing to
     // change” — even though the block that wrote it had just placed it.
     ANALYTICS_CONSENT_META_KEY,
@@ -468,19 +591,41 @@ export async function updateAccountSettings({
     CYCLE_AUTO_CAPTURE_COMPLETED_META_KEY,
   ];
   const metaChanged = CHANGEABLE.some((k) => k in input);
-  if (!metaChanged) {
+  if (!metaChanged && hide.length === 0 && show.length === 0) {
     return { ok: false, error: "No account settings to update." };
   }
 
-  const { error: writeErr } = await service.auth.admin.updateUserById(userId, {
-    user_metadata: next,
-  });
-  if (writeErr) {
-    console.error("[account-settings] update failed:", writeErr.message);
-    return { ok: false, error: writeErr.message };
+  if (metaChanged) {
+    const { error: writeErr } = await service.auth.admin.updateUserById(userId, {
+      user_metadata: next,
+    });
+    if (writeErr) {
+      console.error("[account-settings] update failed:", writeErr.message);
+      return { ok: false, error: writeErr.message };
+    }
+  }
+
+  // Hidden projects (MIN-692) live in their own table, written through the
+  // request's RLS client: hiding needs read access to the project.
+  if (supabase) {
+    try {
+      const missing: string[] = [];
+      for (const projectId of hide) {
+        if ((await setProjectHidden(supabase, userId, projectId, true)) === "not_found") {
+          missing.push(projectId);
+        }
+      }
+      for (const projectId of show) await setProjectHidden(supabase, userId, projectId, false);
+      if (missing.length > 0) {
+        return { ok: false, error: `Project not found: ${missing.join(", ")}.` };
+      }
+    } catch (e) {
+      if (!(e instanceof HiddenProjectsError)) throw e;
+      return { ok: false, error: "Could not change the hidden projects." };
+    }
   }
 
   // ONLY one path to construct the rendered state, regardless of what moved —
   // and it propagates a read failure instead of inventing values.
-  return getAccountSettings({ userId });
+  return getAccountSettings({ userId, supabase });
 }

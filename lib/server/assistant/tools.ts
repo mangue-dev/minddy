@@ -21,6 +21,8 @@ import { ACCOUNT_THEMES } from "@/lib/account-theme";
 import { DARK_THEME_PRESETS, LIGHT_THEME_PRESETS } from "@/lib/theme-presets";
 import { SEND_MODES } from "@/lib/keyboard/send-shortcut";
 import { WEEK_START_OPTIONS } from "@/lib/week-start";
+import { AGENT_TARGET_IDS } from "@/lib/prompt-delivery";
+import { MAX_VOCABULARY_ENTRIES } from "@/lib/dictation-vocabulary";
 import { WEBHOOK_EVENTS, WEBHOOK_SCOPES } from "@/lib/server/webhooks";
 import { CYCLE_INTENSITIES } from "@/lib/cycle-prefs";
 import { FEEDBACK_POST_STATUSES } from "@/lib/feedback/types";
@@ -37,6 +39,7 @@ import { RELATION_TYPE_VALUES } from "@/lib/relation-validation";
 import { TRASH_TYPES } from "@/lib/server/trash";
 import { VIEW_SORTS } from "@/lib/server/views";
 import { SMART_TRIAGE_MODES } from "@/lib/smart-triage";
+import { MEMBER_ROLES } from "@/lib/project-roles";
 import { locales } from "@/i18n/config";
 
 const VIEW_DESCRIPTIONS = databaseViewsToolDescriptions(NUMO_DATABASE_VIEW_TOOL_NAMES);
@@ -1872,6 +1875,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "string",
             description: "The invitee's account email.",
           },
+          role: {
+            type: "string",
+            enum: [...MEMBER_ROLES],
+            description:
+              "Role granted when they accept: 'member' (default) works on the project; 'reader' only reads it and is never assigned.",
+          },
+          can_comment: {
+            type: "boolean",
+            description: "Reader only: may also comment. Ignored for a member.",
+          },
         },
         required: ["email"],
       },
@@ -1892,6 +1905,38 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
           },
         },
         required: ["user_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_member_role",
+      description:
+        "Change the role of a project member, or of a pending invitation, as Settings → Members does. OWNER ONLY. Pass user_id (from list_members) for a member, or invitation_id (from list_members' pending_invitations) for an invitation, never both. 'reader' only reads the project: demoting a member to reader unassigns their open issues and the objectives they lead, so confirm with the user first. The owner's own role cannot change.",
+      parameters: {
+        type: "object",
+        properties: {
+          user_id: {
+            type: "string",
+            description: "user_id of the member (from list_members).",
+          },
+          invitation_id: {
+            type: "string",
+            description: "Id of a pending invitation (from list_members).",
+          },
+          role: {
+            type: "string",
+            enum: [...MEMBER_ROLES],
+            description: "'member' or 'reader'.",
+          },
+          can_comment: {
+            type: "boolean",
+            description:
+              "Reader only: may also comment. Omitted on a member keeps a reader's current option; false for an invitation.",
+          },
+        },
+        required: ["role"],
       },
     },
   },
@@ -2037,7 +2082,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_account_settings",
       description:
-        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, light and dark color palettes, popover transparency, keyboard send shortcut, the status Numo-created issues land in, the auto-assign, Smart Fill (master, created issues, triage), and prompt-copy-auto-start preferences, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, and analytics consent. Call this before update_account_settings so you use exact current values.",
+        "Read the current user's own account settings: display name, email (read-only), interface language, display theme, light and dark color palettes, popover transparency, keyboard send shortcut, first day of the week, Numo's memory, background work and default status, the auto-assign preferences, the coding agent preferences (prompt copy auto-start, opening prompts in the agent's app and which app), voice dictation (cleanup, vocabulary), Smart Fill (master, created issues, triage, re-evaluation, titles, relations, objectives, objective names) and issue indexing, the cycle preferences (enabled, duration, start day, intensity, auto-capture), the Inbox notification toggles, analytics consent, and the ids of the projects the user hid. Call this before update_account_settings so you use exact current values.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -2123,10 +2168,42 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "When copying an issue's prompt, move that issue to in_progress.",
           },
+          prompt_send_to_agent: {
+            type: "boolean",
+            description:
+              "Account → Preferences → Coding agent: open prompts directly in the coding agent's app instead of copying them. Only takes effect on a computer and while an agent with an app (Claude, Codex, Cursor) is connected to minddy's MCP; otherwise prompts are copied.",
+          },
+          prompt_send_agent: {
+            type: ["string", "null"],
+            enum: [...AGENT_TARGET_IDS, null],
+            description:
+              "The app prompts open in when prompt_send_to_agent is on. null (or an app no longer connected) falls back to the first connected app.",
+          },
           dictation_cleanup: {
             type: "boolean",
             description:
               "Clean up voice dictations (punctuation, filler words, self-corrections) before they are inserted. Off inserts the raw transcription.",
+          },
+          dictation_vocabulary: {
+            type: "array",
+            maxItems: MAX_VOCABULARY_ENTRIES,
+            items: {
+              type: "object",
+              properties: {
+                term: {
+                  type: "string",
+                  description: "How the word is written (a product name, a person, jargon).",
+                },
+                heardAs: {
+                  type: "string",
+                  description:
+                    "Optional: what transcription writes instead; every whole-word occurrence is replaced by term.",
+                },
+              },
+              required: ["term"],
+            },
+            description:
+              "The dictation vocabulary. REPLACES the whole list: read it with get_account_settings and resend the entries to keep. An empty list clears it.",
           },
           smart_fill: {
             type: "boolean",
@@ -2157,6 +2234,16 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "boolean",
             description:
               "Let Smart Fill link a saved issue to related issues and dependencies (related, blocks, blocked by). Requires smart_fill.",
+          },
+          smart_fill_objectives: {
+            type: "boolean",
+            description:
+              "Let Smart Fill complete the objectives the user creates: color and target date. On by default. Requires smart_fill.",
+          },
+          smart_fill_objective_name: {
+            type: "boolean",
+            description:
+              "Let Smart Fill write the name of an objective created without one. On by default. Requires smart_fill.",
           },
           issue_indexing: {
             type: "boolean",
@@ -2245,6 +2332,17 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             enum: ["accepted", "declined", null],
             description:
               "The user's product-analytics consent (cookies, PostHog). 'accepted' enables measurement, 'declined' turns it off, null clears the stored answer (they will be asked again).",
+          },
+          hide_project_ids: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "Projects to hide from the user's sidebar and project lists (ids from list_projects). Hiding is personal: access, members and content stay the same for everyone.",
+          },
+          show_project_ids: {
+            type: "array",
+            items: { type: "string" },
+            description: "Hidden projects to show again (ids from hidden_project_ids).",
           },
         },
       },
