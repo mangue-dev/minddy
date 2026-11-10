@@ -6,6 +6,8 @@ const H = vi.hoisted(() => ({
   createNumoMemory: vi.fn(),
   updateNumoMemory: vi.fn(),
   deleteNumoMemory: vi.fn(),
+  searchNumoConversations: vi.fn(),
+  readNumoConversation: vi.fn(),
 }));
 vi.mock("@/lib/server/project-access", async (original) => ({
   ...await original<typeof import("@/lib/server/project-access")>(),
@@ -16,6 +18,12 @@ vi.mock("@/lib/server/numo/memory-content", async (original) => ({
   createNumoMemory: H.createNumoMemory,
   updateNumoMemory: H.updateNumoMemory,
   deleteNumoMemory: H.deleteNumoMemory,
+}));
+
+vi.mock("@/lib/server/numo/conversation-search", async (original) => ({
+  ...await original<typeof import("@/lib/server/numo/conversation-search")>(),
+  searchNumoConversations: H.searchNumoConversations,
+  readNumoConversation: H.readNumoConversation,
 }));
 
 import { executeTool, type ToolContext } from "./execute-tool";
@@ -121,5 +129,52 @@ describe("Numo memory tools (MIN-915)", () => {
     expect((await executeTool("forget", { id: MEMORY }, readOnly)).success).toBe(false);
     expect(H.createNumoMemory).not.toHaveBeenCalled();
     expect(H.deleteNumoMemory).not.toHaveBeenCalled();
+  });
+});
+
+describe("Numo's search in earlier conversations (MIN-956)", () => {
+  const CURRENT = "33333333-3333-4333-8333-333333333333";
+  const EARLIER = "44444444-4444-4444-8444-444444444444";
+
+  it("asks for every field, takes no project and stays available to a Reader", () => {
+    expect(tool("search_conversations")?.function.parameters.required)
+      .toEqual(["query", "after", "before", "limit"]);
+    expect(tool("read_conversation")?.function.parameters.required)
+      .toEqual(["conversation_id", "offset"]);
+    expect(PROJECT_SCOPED_TOOLS.has("search_conversations")).toBe(false);
+    expect(NUMO_TOOL_CAPABILITIES.search_conversations).toBe("personal");
+    expect(readerToolSet(CONVERSATION_ASSISTANT_TOOLS, false).map((candidate) => candidate.function.name))
+      .toEqual(expect.arrayContaining(["search_conversations", "read_conversation"]));
+  });
+
+  it("searches the user's own history and leaves the current conversation out", async () => {
+    H.searchNumoConversations.mockResolvedValue({ conversations: [], searched: 0, window_full: false });
+    const result = await executeTool("search_conversations",
+      { query: "pricing", after: null, before: null, limit: null }, context({ conversationId: CURRENT }));
+    expect(result.success).toBe(true);
+    expect(H.searchNumoConversations).toHaveBeenCalledWith(expect.anything(), "user-1",
+      expect.objectContaining({ query: "pricing", excludeConversationId: CURRENT }));
+  });
+
+  it("reads an earlier conversation, but not the current one", async () => {
+    H.readNumoConversation.mockResolvedValue({ messages: [], total: 0, next_offset: null });
+    const ctx = context({ conversationId: CURRENT });
+    expect((await executeTool("read_conversation", { conversation_id: EARLIER, offset: null }, ctx)).success)
+      .toBe(true);
+    expect((await executeTool("read_conversation", { conversation_id: CURRENT, offset: null }, ctx)).success)
+      .toBe(false);
+    expect((await executeTool("read_conversation", { conversation_id: "pricing", offset: null }, ctx)).success)
+      .toBe(false);
+    expect(H.readNumoConversation).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads nothing where the memory is off, in a routine or in a mention", async () => {
+    const readOnly = context({ memoryWritable: false });
+    expect((await executeTool("search_conversations",
+      { query: "pricing", after: null, before: null, limit: null }, readOnly)).success).toBe(false);
+    expect((await executeTool("read_conversation",
+      { conversation_id: EARLIER, offset: null }, readOnly)).success).toBe(false);
+    expect(H.searchNumoConversations).not.toHaveBeenCalled();
+    expect(H.readNumoConversation).not.toHaveBeenCalled();
   });
 });

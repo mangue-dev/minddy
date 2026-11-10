@@ -802,7 +802,10 @@ async function buildExecutionInput(input: {
   };
 }
 
-const MEMORY_TOOL_NAMES = new Set(["remember", "forget"]);
+// The search in earlier conversations (MIN-956) goes with the memory: offered
+// where the user talks to Numo directly, never on a shared surface (a mention)
+// or in an unattended turn, whose instructions may come from someone else.
+const MEMORY_TOOL_NAMES = new Set(["remember", "forget", "search_conversations", "read_conversation"]);
 const WATCH_WRITE_TOOL_NAMES = new Set(["create_watch", "update_watch", "cancel_watch"]);
 const WATCH_TOOL_NAMES = new Set([...WATCH_WRITE_TOOL_NAMES, "list_watches"]);
 const JOURNAL_TOOL_NAMES = new Set(["journal_write", "journal_close"]);

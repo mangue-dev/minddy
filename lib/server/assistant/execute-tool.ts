@@ -259,6 +259,11 @@ import {
 } from "@/lib/server/numo/memory-content";
 import { NUMO_MEMORY_LIMIT } from "@/lib/numo-memory";
 import {
+  ConversationSearchError,
+  readNumoConversation,
+  searchNumoConversations,
+} from "@/lib/server/numo/conversation-search";
+import {
   NUMO_JOURNAL_OPEN_LIMIT,
   NumoJournalError,
   closeJournalEntry,
@@ -1028,6 +1033,44 @@ async function executeMemoryTool(
   }
 }
 
+async function executeConversationSearchTool(
+  toolName: "search_conversations" | "read_conversation",
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+): Promise<ToolExecution> {
+  // The same gate as the memory: the user's history is searched only in a
+  // conversation they hold with Numo, with the memory switched on.
+  if (!ctx.memoryWritable) {
+    return toolError("The conversation history is not available here: Numo's memory is switched off, or this is a routine or a comment mention. Do not retry.");
+  }
+  try {
+    if (toolName === "search_conversations") {
+      return {
+        result: await searchNumoConversations(ctx.service, ctx.userId, {
+          query: args.query, after: args.after, before: args.before, limit: args.limit,
+          excludeConversationId: ctx.conversationId ?? null,
+        }),
+        success: true,
+      };
+    }
+    const conversationId = typeof args.conversation_id === "string"
+      && UUID_PATTERN.test(args.conversation_id.trim())
+      ? args.conversation_id.trim().toLowerCase()
+      : null;
+    if (!conversationId) return toolError("conversation_id must be an id from search_conversations.");
+    if (conversationId === ctx.conversationId) {
+      return toolError("This is the current conversation: it is already in your context.");
+    }
+    return {
+      result: await readNumoConversation(ctx.service, ctx.userId, { conversationId, offset: args.offset }),
+      success: true,
+    };
+  } catch (error) {
+    if (error instanceof ConversationSearchError) return toolError(error.message);
+    throw error;
+  }
+}
+
 async function executeJournalTool(
   toolName: "journal_write" | "journal_close",
   args: Record<string, unknown>,
@@ -1553,6 +1596,11 @@ async function executeToolUnlisted(
     // ── Numo's memory (MIN-915 — the user's own, never a project's) ────
     if (toolName === "remember" || toolName === "forget") {
       return executeMemoryTool(toolName, args, ctx);
+    }
+
+    // ── Earlier conversations (MIN-956 — the user's own Numo history) ───
+    if (toolName === "search_conversations" || toolName === "read_conversation") {
+      return executeConversationSearchTool(toolName, args, ctx);
     }
 
     // ── Numo's journal (MIN-927 — the user's own, never a project's) ────
