@@ -37,7 +37,7 @@ const { GET } = await import(
 );
 
 const ORIGIN = "https://www.minddy.app";
-const SETTINGS = "/settings?tab=agent";
+const SETTINGS = "/settings?tab=mcp";
 
 const DESKTOP_STATE = `d${"a".repeat(64)}`;
 
@@ -77,7 +77,7 @@ describe("MCP OAuth callback redirect", () => {
     );
     const next = appReturn(response);
     expect(next.pathname).toBe("/settings");
-    expect(next.searchParams.get("tab")).toBe("agent");
+    expect(next.searchParams.get("tab")).toBe("mcp");
     expect(decodeMcpOAuthReturn(next.searchParams.get("mcp_oauth")!)).toEqual({
       state: DESKTOP_STATE,
       code: "4/0A+b",

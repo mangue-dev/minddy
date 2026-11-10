@@ -14,11 +14,7 @@ import {
   fetchAdminUserDetails,
   setAdminPlanOverride,
 } from "@/lib/server/admin-users";
-import {
-  AI_MODEL_CONFIG_FIELDS,
-  isSuffixableField,
-  modelSuffixKey,
-} from "@/lib/ai-model-config";
+import { AI_MODEL_CONFIG_FIELDS } from "@/lib/ai-model-config";
 import { buildModelConfigFile } from "@/lib/ai-model-config-file";
 import { getFinanceSummary } from "@/lib/server/finance";
 import {
@@ -130,9 +126,9 @@ export const ADMIN_READ_TOOLS = new Set([
 ]);
 
 const MODEL_KEYS_HINT =
-  "Keys come from admin_get_instance_models: a category default (category_<id>_model), a task key, " +
-  "a routing shortcut (<key>_suffix: nitro, floor or exacto), assistant_reasoning_level, " +
-  "recommended_models (a JSON array string) or a provider default for personal keys (byok_default_*).";
+  "Keys come from admin_get_instance_models: a role model (assistant_model, issue_embedding_model, " +
+  "transcription_model, jev_model), assistant_reasoning_level, numo_wake_daily_limit " +
+  "or a provider default for personal keys (byok_default_*).";
 
 export const ADMIN_ASSISTANT_TOOLS: AssistantToolDef[] = [
   {
@@ -140,7 +136,7 @@ export const ADMIN_ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "admin_get_instance_models",
       description:
-        "INSTANCE ADMIN. Read the AI model configuration of this instance: every setting with its stored value (null = default) and its built-in default, plus the same configuration as the exportable file (format minddy.instance-models). Categories (assistant, automations, embeddings, feedback) hold one default model; a task follows its category until its own key is set, which overrides it. A task left unset with an unset category runs on its built-in default. Read-only.",
+        "INSTANCE ADMIN. Read the AI model configuration of this instance: every setting with its stored value (null = default) and its built-in default, plus the same configuration as the exportable file (format minddy.instance-models). There is one model per role: assistant_model is the LLM that Numo and every text task run (titles, web search, Smart Fill, Smart Assign, voice cleanup, feedback review…), issue_embedding_model serves issue and feedback embeddings alike, transcription_model is speech to text, jev_model the decision model. No task has a model of its own. Read-only.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -149,7 +145,7 @@ export const ADMIN_ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "admin_update_instance_models",
       description:
-        `INSTANCE ADMIN. Change AI model settings for the WHOLE instance: every member's Numo, automations, voice and feedback. ${MODEL_KEYS_HINT} An empty value returns a setting to its default (for a task: back to following its category). Each value is checked like the admin screen does (a decision model is test-called, an embedding field only takes embedding models); one refusal changes nothing. Always confirm the exact changes with ask_user first.`,
+        `INSTANCE ADMIN. Change AI model settings for the WHOLE instance: every member's Numo, automations, voice and feedback. ${MODEL_KEYS_HINT} An empty value returns a setting to its default. Each value is checked like the admin screen does (a decision model is test-called, an embedding field only takes embedding models); one refusal changes nothing. Always confirm the exact changes with ask_user first.`,
       parameters: {
         type: "object",
         properties: {
@@ -312,20 +308,13 @@ function adminError(message: string): AdminToolResult {
 
 async function readModels(): Promise<AdminToolResult> {
   const values = await readAiConfigValues();
-  const settings = AI_MODEL_CONFIG_FIELDS.flatMap((field) => {
-    const row = {
-      key: field.key,
-      kind: field.kind,
-      ...(field.category ? { category: field.category } : {}),
-      ...(field.categoryDefault ? { category_default_of: field.categoryDefault } : {}),
-      ...(field.catalogCapability ? { capability: field.catalogCapability } : {}),
-      value: values[field.key] ?? null,
-      default: field.fallback || null,
-    };
-    if (!isSuffixableField(field)) return [row];
-    const suffixKey = modelSuffixKey(field.key);
-    return [row, { key: suffixKey, kind: "suffix", value: values[suffixKey] ?? null, default: null }];
-  });
+  const settings = AI_MODEL_CONFIG_FIELDS.map((field) => ({
+    key: field.key,
+    kind: field.kind,
+    ...(field.catalogCapability ? { capability: field.catalogCapability } : {}),
+    value: values[field.key] ?? null,
+    default: field.fallback || null,
+  }));
   return { result: { settings, file: buildModelConfigFile(values) }, success: true };
 }
 
@@ -414,20 +403,12 @@ async function updateModels(args: Record<string, unknown>): Promise<AdminToolRes
     if (!check.ok) return adminError(`${change.key}: ${check.error}`);
   }
   const applied: Array<{ key: string; value: string | null }> = [];
-  const released: string[] = [];
   for (const change of changes) {
     const write = await writeAiConfigValue(change.key, change.value);
     if (!write.ok) return adminError(`${change.key}: ${write.error}`);
     applied.push({ key: write.key, value: write.value || null });
-    released.push(...write.released);
   }
-  return {
-    result: {
-      applied,
-      ...(released.length > 0 ? { now_following_their_category: released } : {}),
-    },
-    success: true,
-  };
+  return { result: { applied }, success: true };
 }
 
 async function importModels(args: Record<string, unknown>, ctx: AdminToolContext): Promise<AdminToolResult> {

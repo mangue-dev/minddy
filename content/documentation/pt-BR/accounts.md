@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 18,
+  "revision": 21,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -70,14 +70,15 @@
       "lib/keyboard/shortcuts.ts",
       "desktop/src/local-installer.ts",
       "desktop/src/local-account.ts",
-      "lib/week-start.ts"
+      "lib/week-start.ts",
+      "components/settings/account-numo-section.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 21,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "choose-an-instance",
@@ -109,7 +110,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -126,7 +127,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Cabeçalho do perfil com o avatar e seu selo de edição, o nome e o email somente leitura.",
       "caption": "Selecione o avatar para gerar ou enviar um, ou o nome para alterá-lo; o endereço de email continua somente leitura.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -143,7 +144,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -160,7 +161,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -200,7 +201,7 @@ Abra o menu da conta, escolha sair e confirme. No aplicativo desktop, fechar uma
 
 Uma sessão fica conectada enquanto você usa o minddy, por até um ano, e termina após 30 dias sem uso. Quando ela termina, ou é encerrada em outro dispositivo, o minddy volta à tela de entrada com uma mensagem informando que sua sessão expirou. Entre novamente para continuar de onde parou.
 
-O grupo **Sessões** da aba **Segurança** das configurações da conta lista os navegadores e apps de desktop conectados à sua conta, marca o dispositivo que você está usando e mostra quando cada um dos outros esteve ativo pela última vez. Para encerrar todas as outras sessões, por exemplo em um notebook perdido ou um computador compartilhado, escolha **Sair de todos** na linha **Sair dos outros dispositivos** e confirme: todos os outros navegadores e apps de desktop conectados à sua conta voltam para a tela de entrada. Para encerrar só uma sessão, escolha **Sair** na linha dela e confirme; só esse dispositivo volta para a tela de entrada. Nos dois casos, o dispositivo que você está usando continua conectado. Os aplicativos que você autorizou em **MCP do minddy** → **Aplicativos conectados** mantêm o acesso até que você o revogue lá.
+O grupo **Sessões** da aba **Segurança** das configurações da conta lista os navegadores e apps de desktop conectados à sua conta, marca o dispositivo que você está usando e mostra quando cada um dos outros esteve ativo pela última vez. Para encerrar todas as outras sessões, por exemplo em um notebook perdido ou um computador compartilhado, escolha **Sair de todos** na linha **Sair dos outros dispositivos** e confirme: todos os outros navegadores e apps de desktop conectados à sua conta voltam para a tela de entrada. Para encerrar só uma sessão, escolha **Sair** na linha dela e confirme; só esse dispositivo volta para a tela de entrada. Nos dois casos, o dispositivo que você está usando continua conectado. Os aplicativos que você autorizou em **MCP** → **Aplicativos conectados** mantêm o acesso até que você o revogue lá.
 
 Se a mensagem não chegar, confira o endereço, a pasta de spam e a identidade da instância. O operador de uma instância auto-hospedada precisa ter configurado um envio de e-mail funcional para o Auth; os e-mails opcionais de notificação da aplicação e a confirmação do Auth são funções distintas. Uma página de confirmação expirada permite voltar à entrada para solicitar um novo link. Não encaminhe links de confirmação ou recuperação como evidência para diagnóstico: eles autorizam acesso à conta.
 
@@ -253,7 +254,7 @@ O tema escolhe o modo claro, escuro ou do sistema. **Paleta do modo claro** e **
 
 **Primeiro dia da semana** define o dia em que suas semanas começam. O calendário do seletor de data, os dias de uma rotina e sua ordem em Rotinas, as linhas da grade de atividade das suas estatísticas e uma menção de data como `@quinta em 2 semanas` seguem essa escolha. **Conforme o idioma** mantém o costume do idioma da interface: domingo em inglês e português do Brasil, segunda-feira nos demais idiomas. Escolha segunda-feira, domingo ou sábado para defini-lo você mesmo. A escolha é salva na conta. Os [ciclos pessoais](/docs/personal-cycle) mantêm o próprio dia de início.
 
-Escolha o atalho de envio na seção de teclado. Ele vale para comentários, para o Numo e para Enter no título de um formulário de criação; uma descrição mantém Command/Ctrl+Enter, e Shift+Enter em um título sempre passa para a descrição. Use o botão de enviar se a plataforma interceptar o atalho; as teclas modificadoras variam entre sistemas. Os projetos que você ocultou ficam listados na aba própria **Projetos ocultos**, onde você pode mostrá-los de novo. **Preferências** também reúne o cartão **Aplicativo de desktop**: na web, ele leva ao download do aplicativo de desktop; no aplicativo de desktop, mostra o servidor conectado e a versão do aplicativo. As preferências de tickets também pertencem à conta e não alteram as de outros membros: a atribuição automática fica na aba **Tickets**, e o status dos tickets criados pelo Numo em **IA e Numo** → **Tickets criados pelo Numo**.
+Escolha o atalho de envio na seção de teclado. Ele vale para comentários, para o Numo e para Enter no título de um formulário de criação; uma descrição mantém Command/Ctrl+Enter, e Shift+Enter em um título sempre passa para a descrição. Use o botão de enviar se a plataforma interceptar o atalho; as teclas modificadoras variam entre sistemas. Os projetos que você ocultou ficam listados na aba própria **Projetos ocultos**, onde você pode mostrá-los de novo. **Preferências** também reúne o cartão **Aplicativo de desktop**: na web, ele leva ao download do aplicativo de desktop; no aplicativo de desktop, mostra o servidor conectado e a versão do aplicativo. As preferências de tickets também pertencem à conta e não alteram as de outros membros: a atribuição automática fica na aba **Tickets**, e o status dos tickets criados pelo Numo em **Numo** → **Status dos tickets criados pelo Numo**.
 
 ![Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.](/documentation/pt-BR/profile-and-preferences-preferences-workflow.png)
 

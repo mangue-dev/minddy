@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   // Same origin as the callback itself: the session cookies live there. The
   // deployment URL would cross origins and log the browser out.
   const returnUrl = new URL("/settings", oauthAppOrigin());
-  returnUrl.searchParams.set("tab", "agent");
+  returnUrl.searchParams.set("tab", "mcp");
 
   // A flow started in the desktop app (MIN-912) is redeemed by the app, with
   // the session that started it: this browser may have no minddy session at

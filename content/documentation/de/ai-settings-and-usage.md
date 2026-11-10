@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 25,
+  "revision": 27,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -59,14 +59,17 @@
       "components/billing/usage-segment-ui.tsx",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "components/agent/model-combobox.tsx"
+      "components/agent/model-combobox.tsx",
+      "lib/server/assistant/model-preferences.ts",
+      "app/api/account/numo-preferences/route.ts",
+      "lib/server/ai-routes.ts"
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 27,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "scheduled-routines"
@@ -85,9 +88,9 @@
       "id": "ai-keys-and-models-workflow",
       "kind": "diagram",
       "src": "/documentation/de/ai-providers-and-numo-defaults-flow.svg",
-      "alt": "Verbundene Anbieter, ein Anbieter je Nutzung sowie Anbieter und Modell von Numo sind getrennte Einstellungen.",
-      "caption": "Jede Nutzung läuft über minddy Cloud oder einen verbundenen Anbieter. Numos Standard wird je Anbieter gespeichert; ein Gespräch kann eigenen Anbieter und eigenes Modell wählen.",
-      "revision": 26,
+      "alt": "Verbundene Anbieter, ein Anbieter je Modellart und das Sprachmodell sind getrennte Einstellungen.",
+      "caption": "Jede Modellart läuft über minddy Cloud oder einen verbundenen Anbieter. Auf minddy Cloud legt die Instanz das Sprachmodell fest; mit einem persönlichen Schlüssel wird sein Modell je Anbieter gespeichert, und ein Gespräch kann ein eigenes wählen.",
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -104,12 +107,12 @@
             "detail": "minddy Cloud und deine API-Schlüssel stehen nebeneinander bereit."
           },
           {
-            "title": "Ein Anbieter je Nutzung",
-            "detail": "Jede einzelne Nutzung, von Numos Titeln bis zur Transkription, wählt ihren Anbieter."
+            "title": "Ein Anbieter je Modellart",
+            "detail": "Sprachmodell, Embeddings und Sprache zu Text wählen jeweils ihren."
           },
           {
             "title": "Anbieter und Modell von Numo",
-            "detail": "Wähle einen Anbieter, dann sein Modell. Ein Gespräch kann eigene wählen."
+            "detail": "minddy Cloud nutzt das Modell der Instanz. Ein eigener Schlüssel wählt seins."
           }
         ]
       }
@@ -129,13 +132,13 @@ Der Abschnitt **minddy-KI** der KI-Kontoeinstellungen konfiguriert die API-Anbie
 
 In den KI-Kontoeinstellungen führt **Verbundene Anbieter** minddy Cloud, das in deinem Plan enthalten ist, und die API-Anbieter auf, die du verbunden hast. Wähle **Anbieter hinzufügen**, wähle einen Anbieter, gib seinen API-Schlüssel und gegebenenfalls die erforderliche Basis-URL ein und speichere. Du kannst mehrere Anbieter verbinden; ein neuer entfernt die anderen nicht und ändert nicht, worüber deine Nutzungen laufen. Füge einen Schlüssel nie in ein Gespräch oder einen Screenshot ein.
 
-Darunter führen **Numo**, **Automatisierungen**, **Sprachdiktat** und **Feedback** ihre einzelnen Nutzungen auf, etwa Numos Gespräche, Gesprächstitel und Websuche oder Smart Fill und Sprache zu Text. Jede Nutzung wählt ihren eigenen Anbieter, minddy Cloud oder einen verbundenen, und lässt sich einzeln ändern: Du kannst alles bei minddy Cloud lassen außer Numos Gesprächen. Eine Nutzung bietet nur Anbieter an, die sie bedienen können: Transkription und Suche nach Bedeutung brauchen einen Anbieter mit diesen Modellen, und die Websuche braucht minddy Cloud oder einen OpenRouter-Schlüssel. Läuft eine Nutzung über einen deiner Schlüssel, erscheint ihr Modell unter dem Anbieter: Behalte das vorausgewählte Modell des Anbieters oder wähle ein anderes. Deine Auswahl gilt sofort. Auf einer Instanz ohne minddy Cloud übernimmt ein neu verbundener Anbieter jede Nutzung, die noch keinen hat.
+Darunter wählt **Modelle** einen Anbieter je Modellart: **Sprachmodell** für Numo und jede KI-Funktion, die Text liest oder schreibt, **Embeddings** für die Suche nach Bedeutung sowie verwandte Tickets und verwandtes Feedback, und **Sprache zu Text** für Diktate. Jede Art wählt minddy Cloud oder einen verbundenen Anbieter, der sie bedienen kann: Embeddings und Sprache zu Text brauchen einen Anbieter mit diesen Modellen. Keine Funktion hat einen eigenen Anbieter oder ein eigenes Modell; die Websuche, die minddy Cloud oder einen OpenRouter-Schlüssel braucht, bleibt auf minddy Cloud, wenn dein Sprachmodell über einen anderen Anbieter läuft. Läuft **Embeddings** oder **Sprache zu Text** über einen deiner Schlüssel, erscheint sein Modell unter dem Anbieter: Behalte das vorausgewählte Modell des Anbieters oder wähle ein anderes. Die Auswahl gilt sofort. Auf einer Instanz ohne minddy Cloud bedient ein neu verbundener Anbieter jede Art, die noch keinen hat.
 
-Wähle für Numos **Unterhaltungen** den Anbieter und dann ein Modell dieses Anbieters. Die Auswahl zeigt das Standardmodell der App unter seinem eigenen Namen, abgehakt, solange du ihm folgst; wählst du es, folgt deine Einstellung weiter dem App-Standard, sodass spätere Änderungen daran weiter gelten. **App-Standard** erscheint nur dann als Option, wenn dieses Modell nicht im Katalog steht. Dieser Standard wird für dein Konto und getrennt für jeden Anbieter gespeichert, auch über Neuladen und neue Sitzungen hinweg. In einem Gespräch öffnet sich die Modellliste neben dem Mikrofon auf den Anbietern, wenn mehrere verfügbar sind; wähle einen, um seine Modelle zu sehen. Das Gespräch behält diesen Anbieter und dieses Modell, und Gespräche, die deinem Standard folgen, übernehmen spätere Kontoänderungen. Bereits zugelassene Durchläufe behalten ihren festgelegten Anbieter und ihr Modell. Ein gespeichertes Modell, das nicht mehr verfügbar ist oder deinen Plan übersteigt, wird abgelehnt: Wähle ein anderes Modell oder das Standardmodell der App. Wird der Anbieter eines Gesprächs entfernt, bittet Numo dich, einen anderen zu wählen, statt selbst zu wechseln. Kontoexport und -import enthalten diese Modelleinstellungen, ohne Anbieter-Zugangsdaten.
+Wähle für **Sprachmodell** den Anbieter. Auf **minddy Cloud** nutzt es das Modell und die Denkintensität, die die Administration der Instanz eingestellt hat; weder diese Zeile noch ein Gespräch bietet dann ein Modell an. Mit einem deiner Schlüssel wählst du ein Modell dieses Anbieters: Numo und jede Textfunktion nutzen es. Die Auswahl zeigt das Standardmodell der App unter seinem eigenen Namen, abgehakt, solange du ihm folgst; wählst du es, folgt deine Einstellung weiter dem App-Standard, sodass spätere Änderungen daran weiter gelten. **App-Standard** erscheint nur dann als Option, wenn dieses Modell nicht im Katalog steht. Dieser Standard wird für dein Konto und getrennt für jeden Anbieter gespeichert, auch über Neuladen und neue Sitzungen hinweg. In einem Gespräch öffnet sich die Modellliste neben dem Mikrofon auf den Anbietern, wenn mehrere verfügbar sind; wähle einen, um seine Modelle zu sehen. Das Gespräch behält diesen Anbieter und dieses Modell, und Gespräche, die deinem Standard folgen, übernehmen spätere Kontoänderungen. Bereits zugelassene Durchläufe behalten ihren festgelegten Anbieter und ihr Modell. Ein gespeichertes Modell, das nicht mehr verfügbar ist, wird abgelehnt: Wähle ein anderes Modell oder das Standardmodell der App. Wird der Anbieter eines Gesprächs entfernt, bittet Numo dich, einen anderen zu wählen, statt selbst zu wechseln. Kontoexport und -import enthalten diese Modelleinstellungen, ohne Anbieter-Zugangsdaten.
 
 Ein unbestätigter oder nicht erreichbarer Schlüssel kann unterstützte allgemeine KI-Aufrufe über das minddy-Kontingent laufen lassen, wenn verwaltete KI eingerichtet ist. Dein Anbieter berechnet Aufrufe mit seinem Schlüssel, und minddy erfasst sie nicht. Validierte persönliche Schlüssel und von minddy finanzierte Arbeit folgen den [Budgetregeln unten](#consumption).
 
-![Verbundene Anbieter, ein Anbieter je Nutzung sowie Anbieter und Modell von Numo sind getrennte Einstellungen.](/documentation/de/ai-providers-and-numo-defaults-flow.svg)
+![Verbundene Anbieter, ein Anbieter je Modellart und das Sprachmodell sind getrennte Einstellungen.](/documentation/de/ai-providers-and-numo-defaults-flow.svg)
 
 ### Lokale Modelle {#models}
 

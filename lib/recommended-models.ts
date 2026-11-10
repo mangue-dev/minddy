@@ -14,9 +14,9 @@
  * model beyond ×40 cannot be launched by anyone: it has nothing to do here,
  * however capable it may be. The list therefore targets the Pareto frontier between what codes well and what is affordable, most of it under the Go ceiling.
  *
- * This is NOT a filter: the rest of the catalog remains accessible to the search, and the admin can rewrite the list without deployment
- * (`app_config.recommended_models`, cf. `lib/ai-model-config.ts`). Hence the
- * form — simple ids.
+ * This is NOT a filter: the rest of the catalog remains accessible to the
+ * search. Since MIN-954 the list lives in code only: the admin no longer
+ * rewrites it.
  *
  * It's a SET, not a sequence: the display order is CALCULATED, from least expensive to most expensive (`resolveRecommended`). The only one that remains true — the OpenRouter prices move, and a rank frozen on the day we wrote it would end up announcing a cost scale that no longer exists. The order of the table
  * below is therefore only for reading convenience.
@@ -65,32 +65,3 @@ export const DEFAULT_RECOMMENDED_MODELS: string[] = [
   // ×29 — the top of the range that a Pro can still afford (ceiling ×40).
   "anthropic/claude-sonnet-5",
 ];
-
-/**
- * Readable list taken from the value `app_config`, or `null` when there is NOTHING
- * usable (empty, unreadable JSON, not an array, no valid id).
- *
- * `null` is a verdict, not an error: the server responds with a fallback — a
- * broken setting should not empty the picker — and the admin API with a 400, so that
- * no one saves a list that will never be used. Same parser on
- * both sides: what the admin screen accepts is exactly what the picker will read.
- *
- * Duplicates are overwritten rather than refused: twice the same id in a
- * `CommandItem` would give two identical lines of which only one reacts.
- */
-export function parseRecommendedModels(raw: string | null | undefined): string[] | null {
-  if (!raw?.trim()) return null;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (!Array.isArray(parsed)) return null;
-  const ids = new Set<string>();
-  for (const entry of parsed) {
-    const id = typeof entry === "string" ? entry.trim() : "";
-    if (id) ids.add(id);
-  }
-  return ids.size > 0 ? [...ids] : null;
-}

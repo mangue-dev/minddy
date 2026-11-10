@@ -102,9 +102,9 @@ describe("MCP connection helpers", () => {
   });
 
   it("links to the MCP settings tab and an optional connection", () => {
-    expect(mcpSettingsHref()).toBe("/settings?tab=agent");
+    expect(mcpSettingsHref()).toBe("/settings?tab=mcp");
     expect(mcpSettingsHref("connection-1")).toBe(
-      "/settings?tab=agent&mcp_connection=connection-1",
+      "/settings?tab=mcp&mcp_connection=connection-1",
     );
   });
 

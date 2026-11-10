@@ -90,6 +90,8 @@ interface AgentModelsResult {
   defaultProvider?: AiProviderChoice | null;
   /** Providers the account can choose for Numo. */
   providers?: AiProviderOption[];
+  /** The instance sets this provider's Numo model and reasoning (MIN-954). */
+  modelLocked?: boolean;
 }
 
 export async function fetchAgentModels(
@@ -132,6 +134,7 @@ export async function fetchAgentModels(
     providerChoice?: AiProviderChoice | null;
     defaultProvider?: AiProviderChoice | null;
     providers?: AiProviderOption[];
+    modelLocked?: boolean;
   };
   const localEndpoint: AgentModelsResult["localEndpoint"] =
     data.localEndpoint &&
@@ -155,6 +158,7 @@ export async function fetchAgentModels(
     providerChoice: data.providerChoice ?? null,
     defaultProvider: data.defaultProvider ?? null,
     providers: data.providers ?? [],
+    modelLocked: data.modelLocked ?? false,
     ...(localEndpoint ? { localEndpoint } : {}),
   };
   // The web server never contacts a local address. The desktop app discovers
@@ -199,6 +203,7 @@ export function useAgentModelsQuery(
     providerChoice: data?.providerChoice ?? null,
     defaultProvider: data?.defaultProvider ?? null,
     providers: data?.providers ?? [],
+    modelLocked: data?.modelLocked ?? false,
     loading: isPending,
   };
 }

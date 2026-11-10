@@ -8,12 +8,8 @@ import {
 import {
   AI_MODEL_CONFIG_FIELDS,
   AI_MODEL_CONFIG_KEYS,
-  categoryMembers,
+  categoryKeyOf,
   getAiConfigField,
-  isModelSuffix,
-  isModelSuffixKey,
-  modelSuffixKey,
-  MODEL_SUFFIXES,
 } from "@/lib/ai-model-config";
 import {
   diffModelConfig,
@@ -22,7 +18,6 @@ import {
   type ModelConfigChange,
   type ModelConfigFileError,
 } from "@/lib/ai-model-config-file";
-import { parseRecommendedModels } from "@/lib/recommended-models";
 import { isReasoningLevel, REASONING_LEVELS } from "@/lib/agent-reasoning";
 import { validateDecisionModelChoice } from "@/lib/server/decisions/model-validation";
 import { validateCatalogCapabilityChoice } from "@/lib/server/model-capability-validation";
@@ -56,10 +51,27 @@ export type AiConfigCheck = { ok: true; value: string } | AiConfigRefusal;
 /**
  * Every stored value of the registry and its suffixes, counts included: the
  * models file leaves counts out, the dashboard and the admin tools do not.
+ *
+ * A role still running on its retired category default (MIN-829) reads as
+ * that value (MIN-954): the dashboard, an export and an import's preview show
+ * the model the role really runs, and the next save of the role clears the
+ * category row.
  */
-export function readAiConfigValues(): Promise<Record<string, string | null>> {
+export async function readAiConfigValues(): Promise<Record<string, string | null>> {
   const counts = AI_MODEL_CONFIG_FIELDS.filter((field) => field.kind === "count").map((field) => field.key);
-  return getAppConfigValues([...MODEL_CONFIG_FILE_KEYS, ...counts]);
+  const legacy = MODEL_CONFIG_FILE_KEYS.flatMap((key) => {
+    const category = categoryKeyOf(key);
+    return category ? [category] : [];
+  });
+  const stored = await getAppConfigValues([...MODEL_CONFIG_FILE_KEYS, ...counts, ...legacy]);
+  const values: Record<string, string | null> = {};
+  for (const key of [...MODEL_CONFIG_FILE_KEYS, ...counts]) values[key] = stored[key] ?? null;
+  for (const key of MODEL_CONFIG_FILE_KEYS) {
+    const category = categoryKeyOf(key);
+    if (!category || values[key]?.trim() || !stored[category]?.trim()) continue;
+    values[key] = stored[category] ?? null;
+  }
+  return values;
 }
 
 /**
@@ -91,18 +103,6 @@ export async function checkAiConfigValue(key: string, value: unknown): Promise<A
       error: `Reasoning level must be one of: ${REASONING_LEVELS.join(", ")}`,
     };
   }
-  // A routing suffix has three legal values; reject typos here instead of
-  // letting OpenRouter return 404 on every call.
-  if (isModelSuffixKey(key) && !isModelSuffix(trimmed)) {
-    return { ok: false, status: 400, error: `Suffix must be one of: ${MODEL_SUFFIXES.join(", ")}` };
-  }
-  if (field?.kind === "recommended" && parseRecommendedModels(trimmed) === null) {
-    return {
-      ok: false,
-      status: 400,
-      error: "Recommended models must be a JSON array with at least one model id",
-    };
-  }
 
   // The global decision model (MIN-694) is checked against the decision
   // catalog and probed before it is written: a refused choice must never be
@@ -120,8 +120,7 @@ export async function checkAiConfigValue(key: string, value: unknown): Promise<A
     }
   }
 
-  // Embedding and transcription fields (MIN-717), category defaults
-  // included, must name a model of that family in the platform catalog. BYOK
+  // Embedding and transcription fields (MIN-717) must name a model of that family in the platform catalog. BYOK
   // provider defaults (`modelId`) live in a namespace this catalog does not
   // describe.
   if (
@@ -144,38 +143,25 @@ export async function checkAiConfigValue(key: string, value: unknown): Promise<A
 
 /**
  * Model emptied = back to the default: delete the row instead of writing the
- * default id, so that the setting follows later product changes.
+ * default id, so that the setting follows later product changes. A role's
+ * retired category row (MIN-829) and any routing shortcut are cleared with
+ * it, so the role runs exactly what the administrator set, default included
+ * (MIN-954).
  */
 async function store(key: string, value: string): Promise<void> {
   if (!value) await clearAppConfigValue(key);
   else await setAppConfigValue(key, value);
-}
-
-/**
- * A new instance is seeded with rows for some tasks
- * (`20270106091000_initial_data.sql`), equal to their built-in default.
- * Under a category they would read as overrides and hide its default. When a
- * category default is set, a member row equal to the member's own built-in
- * default and without a routing shortcut is released. Those rows can be
- * encrypted, which rules out cleaning them in SQL.
- */
-async function releaseSeededMembers(categoryKey: string): Promise<string[]> {
-  const category = getAiConfigField(categoryKey)?.categoryDefault;
-  if (!category) return [];
-  const members = categoryMembers(category);
-  const values = await getAppConfigValues(
-    members.flatMap((field) => [field.key, modelSuffixKey(field.key)]),
-  );
-  const seeded = members.filter(
-    (field) =>
-      values[field.key]?.trim() === field.fallback && !values[modelSuffixKey(field.key)]?.trim(),
-  );
-  for (const field of seeded) await clearAppConfigValue(field.key);
-  return seeded.map((field) => field.key);
+  // Rows the dashboard no longer sets, so they never linger unseen: the
+  // retired category default and the routing shortcuts (MIN-954).
+  if (getAiConfigField(key)?.kind !== "model") return;
+  const legacy = categoryKeyOf(key);
+  for (const row of [`${key}_suffix`, ...(legacy ? [legacy, `${legacy}_suffix`] : [])]) {
+    await clearAppConfigValue(row);
+  }
 }
 
 export type AiConfigWrite =
-  | { ok: true; key: string; value: string; released: string[] }
+  | { ok: true; key: string; value: string }
   | AiConfigRefusal;
 
 /** Checks then writes one value. */
@@ -183,8 +169,7 @@ export async function writeAiConfigValue(key: string, value: unknown): Promise<A
   const check = await checkAiConfigValue(key, value);
   if (!check.ok) return check;
   await store(key, check.value);
-  const released = check.value ? await releaseSeededMembers(key) : [];
-  return { ok: true, key, value: check.value, released };
+  return { ok: true, key, value: check.value };
 }
 
 export type AiConfigImport =
@@ -224,8 +209,6 @@ export async function importAiConfigFile(input: unknown, apply: boolean): Promis
     }
     checked.push({ key: change.key, value: check.value });
   }
-  // The file is the whole configuration: no seeded row needs releasing, the
-  // file already says which tasks override their category.
   for (const { key, value } of checked) await store(key, value);
   return { ok: true, applied: true, ...summary };
 }

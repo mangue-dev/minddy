@@ -56,7 +56,7 @@ describe("MCP OAuth return to the desktop app", () => {
   it("survives the bounce page and the deep-link reader unchanged", () => {
     // Codes carry characters that a second URL decoding would corrupt.
     const value = { state: `d${"a".repeat(64)}`, code: "4/0A+b&c%2F=é", iss: "https://accounts.google.com" };
-    const path = `/settings?tab=agent&mcp_oauth=${encodeMcpOAuthReturn(value)}`;
+    const path = `/settings?tab=mcp&mcp_oauth=${encodeMcpOAuthReturn(value)}`;
     const opened = parseDesktopOpenLink(buildDesktopOpenUrl(path));
     const raw = new URL(opened!, "https://minddy.invalid").searchParams.get("mcp_oauth");
     expect(decodeMcpOAuthReturn(raw!)).toEqual(value);

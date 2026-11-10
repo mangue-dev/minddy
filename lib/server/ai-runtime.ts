@@ -11,6 +11,8 @@ import {
 import {
   MINDDY_CLOUD_PROVIDER,
   byokFeatureDefaultModelKey,
+  roleOfUsageKey,
+  roleUsageKey,
   surfaceForModelKey,
   type AiProviderChoice,
   type AiSurface,
@@ -143,7 +145,8 @@ async function providerDefaultModel(
   modelKey: ByokModelKey,
 ): Promise<string | null> {
   if (!providerSupportsModelKey(provider, modelKey)) return null;
-  const featureKey = byokFeatureDefaultModelKey(provider, modelKey);
+  // One preselected model per provider and role (MIN-954).
+  const featureKey = byokFeatureDefaultModelKey(provider, roleUsageKey(modelKey));
   const values = await getAppConfigValues([featureKey]);
   const configured = values[featureKey]?.trim();
   if (configured) return configured;
@@ -165,6 +168,16 @@ export async function resolveByokFeatureDefaultModel(
   return provider === "openrouter"
     ? platformModel(modelKey)
     : providerDefaultModel(provider, modelKey);
+}
+
+/**
+ * The LLM an account chose for a provider: Numo's default for it, which
+ * every text task follows (MIN-954). `null` keeps the provider's default.
+ */
+async function accountLlmModel(userId: string, provider: AgentProviderId): Promise<string | null> {
+  // Loaded on demand: the preferences module reads this one.
+  const { getNumoDefaultModel } = await import("@/lib/server/assistant/model-preferences");
+  return (await getNumoDefaultModel(userId, provider).catch(() => null))?.trim() || null;
 }
 
 /**
@@ -219,7 +232,13 @@ export async function resolveAiRuntime(params: {
     if (isLocalAgentProvider(byok.provider)) {
       throw new LocalEndpointRequiresLocalRunError();
     }
-    const chosen = params.applicationModelDefault ? null : byok.featureModels[params.modelKey]?.trim();
+    // The account's model for the call's role (MIN-954): the LLM is the one
+    // Numo runs on this provider, embeddings and speech to text the key's own.
+    const chosen = params.applicationModelDefault || modelOverride
+      ? null
+      : roleOfUsageKey(params.modelKey) === "llm"
+        ? await accountLlmModel(params.userId, byok.provider)
+        : byok.featureModels[roleUsageKey(params.modelKey)]?.trim();
     const model =
       modelOverride ||
       chosen ||

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 25,
+  "revision": 26,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -59,14 +59,17 @@
       "components/billing/usage-segment-ui.tsx",
       "docs/security/project-roles.md",
       "lib/project-roles.ts",
-      "components/agent/model-combobox.tsx"
+      "components/agent/model-combobox.tsx",
+      "lib/server/assistant/model-preferences.ts",
+      "app/api/account/numo-preferences/route.ts",
+      "lib/server/ai-routes.ts"
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-946 passage with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 26,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-946 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "scheduled-routines"
@@ -85,9 +88,9 @@
       "id": "ai-keys-and-models-workflow",
       "kind": "diagram",
       "src": "/documentation/en/ai-providers-and-numo-defaults-flow.svg",
-      "alt": "Connected providers, a provider for each usage, and Numo's provider and model are separate settings.",
-      "caption": "Each usage runs on minddy Cloud or a connected provider. Numo's default is saved per provider; a conversation can choose its own provider and model.",
-      "revision": 25,
+      "alt": "Connected providers, a provider per kind of model, and the language model are separate settings.",
+      "caption": "Each kind of model runs on minddy Cloud or a connected provider. On minddy Cloud the instance sets the language model; on a personal key, its model is saved per provider and a conversation can choose its own.",
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -104,12 +107,12 @@
             "detail": "minddy Cloud and your API keys stay available side by side."
           },
           {
-            "title": "A provider per usage",
-            "detail": "Each precise usage, from Numo's titles to transcription, chooses its provider."
+            "title": "A provider per kind of model",
+            "detail": "The language model, embeddings and speech to text each choose theirs."
           },
           {
             "title": "Numo provider and model",
-            "detail": "Pick a provider, then its model. A conversation can choose its own."
+            "detail": "minddy Cloud runs the instance's model. A personal key picks its own."
           }
         ]
       }
@@ -129,13 +132,13 @@ The **minddy AI** section of account AI settings configures the API providers us
 
 In account AI settings, **Connected providers** lists minddy Cloud, included in your plan, and the API providers you connected. Choose **Add provider**, select a provider, enter its API key and any required base URL, then save. You can connect several providers; adding one neither removes the others nor changes what your usages run on. Never paste a key into a conversation or screenshot.
 
-Below, **Numo**, **Automations**, **Voice dictation** and **Feedback** list their precise usages, such as Numo's conversations, conversation titles and web search, or Smart Fill and speech to text. Each usage chooses its own provider, minddy Cloud or a connected one, and changes alone: you can keep everything on minddy Cloud except Numo's conversations. A usage only offers the providers that can serve it: transcription and search by meaning need a provider with those models, and web search needs minddy Cloud or an OpenRouter key. When a usage runs on one of your keys, its model appears under the provider: keep the provider's preselected model or choose another. Choices apply at once. On an instance without minddy Cloud, a newly connected provider serves every usage that has none yet.
+Below, **Models** chooses a provider for each kind of model: **Language model** for Numo and every AI feature that reads or writes text, **Embeddings** for search by meaning and related issues and feedback, and **Speech to text** for dictation. Each chooses minddy Cloud or a connected provider that can serve it: embeddings and speech to text need a provider with those models. No feature has a provider or a model of its own; web search, which needs minddy Cloud or an OpenRouter key, stays on minddy Cloud when your language model runs on another provider. When **Embeddings** or **Speech to text** runs on one of your keys, its model appears under the provider: keep the provider's preselected model or choose another. Choices apply at once. On an instance without minddy Cloud, a newly connected provider serves every kind that has none yet.
 
-For Numo's **Conversations**, choose the provider, then a model from that provider. The picker shows the app's default model under its own name, checked while you follow it; choosing it keeps your setting following the app default, so later changes to that default still apply. **App default** appears as an option only when that model is not in the catalog. This default is saved for your account and separately for each provider, across reloads and new sessions. In a conversation, the model list next to the microphone opens on the providers when several are available; choose one to see its models. The conversation keeps that provider and model, and conversations following your default pick up later account changes. Already admitted turns retain their frozen provider and model. A saved model that becomes unavailable or exceeds your plan is refused: choose another model or the app's default model. If a conversation's provider is removed, Numo asks you to choose another one instead of switching on its own. Account export/import includes these model preferences, without provider credentials.
+For **Language model**, choose the provider. On **minddy Cloud**, it runs the model and reasoning level set by the instance's administrator, so neither this row nor a conversation offers a model. With one of your keys, choose a model from that provider: Numo and every text feature run it. The picker shows the app's default model under its own name, checked while you follow it; choosing it keeps your setting following the app default, so later changes to that default still apply. **App default** appears as an option only when that model is not in the catalog. This default is saved for your account and separately for each provider, across reloads and new sessions. In a conversation, the model list next to the microphone opens on the providers when several are available; choose one to see its models. The conversation keeps that provider and model, and conversations following your default pick up later account changes. Already admitted turns retain their frozen provider and model. A saved model that becomes unavailable is refused: choose another model or the app's default model. If a conversation's provider is removed, Numo asks you to choose another one instead of switching on its own. Account export/import includes these model preferences, without provider credentials.
 
 An unconfirmed or unreachable key may leave supported general AI calls on managed minddy usage when managed AI is configured. Your provider bills calls made with its key, and minddy does not record them. Validated personal keys and minddy-funded work follow the [budget rules below](#consumption).
 
-![Connected providers, a provider for each usage, and Numo's provider and model are separate settings.](/documentation/en/ai-providers-and-numo-defaults-flow.svg)
+![Connected providers, a provider per kind of model, and the language model are separate settings.](/documentation/en/ai-providers-and-numo-defaults-flow.svg)
 
 ### Local models {#models}
 

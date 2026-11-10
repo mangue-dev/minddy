@@ -63,8 +63,12 @@ import {
   type ChatContentPart,
   type ChatMessage,
   type ProcessChatCheckpoint,
+  type StoredMessageOrigin,
   type ToolExecutionLedger,
 } from "@/lib/server/assistant/loop";
+import { COMPACTION_TOOL_NAME } from "@/lib/server/assistant/context-compaction";
+import { decodeContextSummary, encodeContextSummary,
+  shouldProtectContextSummary } from "./context-summary-content";
 import type { ToolExecution } from "@/lib/server/assistant/execute-tool";
 import { withoutWebSearch } from "@/lib/server/web-search";
 import { decodeNumoTurnIntent, encodeNumoTurnIntent,
@@ -457,6 +461,7 @@ function mentionsNote(metadata: unknown): string {
 
 type StoredMessage = {
   id: string;
+  created_at: string;
   turn_id: string | null;
   role: ChatMessage["role"];
   content: string | null;
@@ -467,6 +472,48 @@ type StoredMessage = {
   context: AssistantPageContext | null;
 };
 
+/**
+ * The most messages a turn reloads after the stored summary (MIN-954). It is
+ * a safety bound, not the history window: compaction keeps the history well
+ * below it, and reloading this many lets the first call compact what an older
+ * conversation had accumulated instead of dropping it.
+ */
+const NUMO_HISTORY_SAFETY_LIMIT = 300;
+
+/** A compaction step's own rows: shown in the thread, never sent to the model. */
+function isCompactionStepRow(message: StoredMessage): boolean {
+  return (message.metadata as { context_compaction?: unknown } | null)?.context_compaction === true
+    || message.tool_name === COMPACTION_TOOL_NAME
+    || (message.tool_calls ?? []).some((call) => call.function?.name === COMPACTION_TOOL_NAME);
+}
+
+/**
+ * The conversation's stored summary and the last message it covers. A
+ * summary that cannot be read is ignored, together with its boundary: the
+ * turn then reloads the messages it summarized.
+ */
+async function loadContextSummary(service: SupabaseClient, turn: NumoTurn): Promise<{
+  summary: string | null;
+  through: StoredMessageOrigin | null;
+}> {
+  try {
+    const { data, error } = await service.from("conversations")
+      .select("context_summary, context_summary_through_at, context_summary_through_id")
+      .eq("id", turn.conversation_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data?.context_summary) return { summary: null, through: null };
+    const summary = await decodeContextSummary(turn.user_id, turn.conversation_id,
+      data.context_summary as string);
+    const at = data.context_summary_through_at as string | null;
+    const id = data.context_summary_through_id as string | null;
+    return { summary, through: at && id ? { createdAt: at, id } : null };
+  } catch {
+    console.error("[numo-compaction] summary_read_failed");
+    return { summary: null, through: null };
+  }
+}
+
 async function buildExecutionInput(input: {
   turn: NumoTurn;
   readClient: SupabaseClient;
@@ -474,6 +521,8 @@ async function buildExecutionInput(input: {
   runtime: ResolvedAiRuntime;
 }): Promise<{
   messages: ChatMessage[];
+  contextSummary: string | null;
+  originOf: (message: ChatMessage) => StoredMessageOrigin | undefined;
   tools: AssistantToolDef[];
   adminGrant: AdminGrant | null;
   memoryWritable: boolean;
@@ -589,19 +638,28 @@ async function buildExecutionInput(input: {
 - Nobody is notified when this occurrence ends normally. Call notify_me only when the result asks the owner to act or changes one of their decisions: one or two sentences, linked to the record concerned. When there is nothing worth reading, notify nobody. A failure, a stop or an exhausted budget already notifies the owner, so never send a note for those.`;
   }
 
-  const { data, error } = await service
+  // The history resumes after the stored summary (MIN-954): what it covers
+  // reaches the model through the summary, appended to the system prompt.
+  const stored = await loadContextSummary(service, turn);
+  let historyQuery = service
     .from("assistant_messages")
     .select("turn_id, role, content, tool_calls, tool_call_id, tool_name, metadata, context, created_at, id")
-    .eq("conversation_id", turn.conversation_id)
+    .eq("conversation_id", turn.conversation_id);
+  if (stored.through) {
+    const { createdAt, id } = stored.through;
+    historyQuery = historyQuery.or(
+      `created_at.gt."${createdAt}",and(created_at.eq."${createdAt}",id.gt.${id})`);
+  }
+  const { data, error } = await historyQuery
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
-    .limit(30);
+    .limit(NUMO_HISTORY_SAFETY_LIMIT);
   if (error) throw new Error(error.message);
   const recentHistory = (await hydrateNumoToolMessages(service,
     await hydrateNumoFinalMessages(service,
       await hydrateNumoUserMessages(service,
         (data ?? []) as StoredMessage[], turn.user_id), turn.user_id),
-    turn.user_id)).reverse();
+    turn.user_id)).filter((message) => !isCompactionStepRow(message)).reverse();
   // The bounded window can begin inside an older parallel tool batch. OpenAI
   // rejects a tool result without its preceding assistant call, so start at the
   // first complete message boundary instead of sending a malformed history.
@@ -655,6 +713,8 @@ async function buildExecutionInput(input: {
       : [],
   );
 
+  // Where each history message is stored, so a summary can mark the last one it covers.
+  const origins = new WeakMap<ChatMessage, StoredMessageOrigin>();
   // Each message resolves its mentions and attachments independently; a
   // bounded number at a time keeps a long history from flooding storage.
   const historyMessages = await mapWithConcurrency(history, BULK_WRITE_CONCURRENCY,
@@ -693,13 +753,15 @@ async function buildExecutionInput(input: {
         }),
       ];
     }
-    return {
+    const chatMessage: ChatMessage = {
       role: message.role,
       content,
       tool_calls: message.tool_calls ?? undefined,
       tool_call_id: message.tool_call_id ?? undefined,
       name: message.tool_name ?? undefined,
     };
+    origins.set(chatMessage, { id: message.id, createdAt: message.created_at });
+    return chatMessage;
   });
   for (const message of historyMessages) if (message) messages.push(message);
   let tools: AssistantToolDef[] = adminGrant
@@ -734,7 +796,10 @@ async function buildExecutionInput(input: {
   else if (readerAccess && intent.triggerSource === "mention") {
     tools = readerToolSet(tools, readerAccess.canComment);
   }
-  return { messages, tools, adminGrant, memoryWritable, journalSource, journalScope };
+  return {
+    messages, contextSummary: stored.summary, originOf: (message) => origins.get(message),
+    tools, adminGrant, memoryWritable, journalSource, journalScope,
+  };
 }
 
 const MEMORY_TOOL_NAMES = new Set(["remember", "forget"]);
@@ -1260,6 +1325,42 @@ async function executeClaimedNumoTurn(input: {
         console.info("[numo-chat] timing", { requestId: claimed.request_id,
           phase: "generation_ready", roundCount,
           executionElapsedMs: Math.round(performance.now() - executionStartedAt) });
+      },
+      compaction: {
+        summary: execution.contextSummary,
+        originOf: execution.originOf,
+        persist: async ({ summary, through }) => {
+          const value = await shouldProtectContextSummary(service)
+            ? await encodeContextSummary(claimed.user_id, claimed.conversation_id, summary)
+            : summary;
+          const { error } = await service.from("conversations").update({
+            context_summary: value,
+            ...(through
+              ? { context_summary_through_at: through.createdAt, context_summary_through_id: through.id }
+              : {}),
+          }).eq("id", claimed.conversation_id);
+          if (error) throw new Error(error.message);
+        },
+        // A summary call is part of the turn: same run, its own ledger slot
+        // (the turn's generations use the first 50 of each attempt's 100).
+        recordUsage: (generation, roundCount) => recordAiUsage({
+          runId: claimed.run_id,
+          seq: Math.max(0, claimed.attempts - 1) * 100 + 50 + roundCount,
+          feature: claimed.intent.routineId ? "routine_code" : "numo_chat",
+          provider: runtime.provider,
+          keyMode: runtime.mode,
+          model: generation.model,
+          generationId: generation.generationId,
+          promptTokens: generation.promptTokens,
+          completionTokens: generation.completionTokens,
+          totalTokens: generation.totalTokens,
+          cost: generation.cost,
+          billTo: { userId: claimed.user_id },
+          projectId: claimed.intent.projectId,
+          conversationId: claimed.conversation_id,
+          numoTurnId: claimed.id,
+          routineId: claimed.intent.routineId ?? null,
+        }),
       },
       onGeneration: async (generation, roundCount) => {
         await recordAiUsage({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Activity, ServerStack01Icon, DollarCircleIcon as CircleDollarSign, FileExportIcon, FlowIcon as Workflow, KeyRoundIcon as KeyRound, MessageSquareHeartIcon, Mic01Icon as Mic, PieChart, ReceiptText, Search01Icon, Sparkles, StarIcon, UserGroupIcon as Users, VectorSquareIcon } from "@hugeicons/core-free-icons";
+import { Activity, ServerStack01Icon, DollarCircleIcon as CircleDollarSign, FileExportIcon, FlowIcon as Workflow, KeyRoundIcon as KeyRound, Mic01Icon as Mic, PieChart, ReceiptText, Search01Icon, Sparkles, UserGroupIcon as Users, VectorSquareIcon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import type { AppIcon } from "@/components/icon";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -21,12 +21,10 @@ export const ADMIN_SECTIONS = {
   costsByFeature: "costs-by-feature",
   costsLogs: "costs-logs",
   modelsFile: "models-file",
-  modelsRecommended: "models-recommended",
   modelsAssistant: "models-assistant",
-  modelsAutomations: "models-automations",
   modelsEmbeddings: "models-embeddings",
   modelsVoice: "models-voice",
-  modelsFeedback: "models-feedback",
+  modelsDecision: "models-decision",
   modelsByok: "models-byok",
   instanceVariables: "instance-variables",
 } as const;
@@ -56,10 +54,9 @@ const MODEL_GROUP_SECTIONS: Record<
   { id: AdminSectionId; icon: AppIcon }
 > = {
   assistant: { id: ADMIN_SECTIONS.modelsAssistant, icon: Sparkles },
-  automations: { id: ADMIN_SECTIONS.modelsAutomations, icon: Workflow },
   embeddings: { id: ADMIN_SECTIONS.modelsEmbeddings, icon: VectorSquareIcon },
   voice: { id: ADMIN_SECTIONS.modelsVoice, icon: Mic },
-  feedback: { id: ADMIN_SECTIONS.modelsFeedback, icon: MessageSquareHeartIcon },
+  decision: { id: ADMIN_SECTIONS.modelsDecision, icon: Workflow },
   byok: { id: ADMIN_SECTIONS.modelsByok, icon: KeyRound },
 };
 
@@ -94,9 +91,7 @@ export function useAdminSections(): AdminSection[] {
       Object.keys(MODEL_GROUP_SECTIONS) as AiConfigGroup[]
     ).map((group) => {
       const meta = MODEL_GROUP_SECTIONS[group];
-      const fields = AI_MODEL_CONFIG_FIELDS.filter(
-        (field) => field.group === group && field.kind !== "recommended",
-      );
+      const fields = AI_MODEL_CONFIG_FIELDS.filter((field) => field.group === group);
       return section({
         id: meta.id,
         tab: "models",
@@ -164,13 +159,6 @@ export function useAdminSections(): AdminSection[] {
         icon: FileExportIcon,
         title: t("modelsFile.title"),
         keywords: [t("modelsFile.export"), t("modelsFile.import"), "export", "import", "json", "file"],
-      }),
-      section({
-        id: ADMIN_SECTIONS.modelsRecommended,
-        tab: "models",
-        icon: StarIcon,
-        title: t("fields.recommended_models.label"),
-        keywords: ["recommended_models", "recommended", "picker"],
       }),
       ...modelSections,
       section({

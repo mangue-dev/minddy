@@ -5,6 +5,7 @@ import { getNumoConversation, getNumoConversationConfig, getNumoConversationDeta
 import { encodeConversationTitle, shouldProtectConversationTitle } from
   "@/lib/server/numo/conversation-title-content";
 import {
+  assertNumoChoiceAllowed,
   isNumoConversationConfigError,
   resolveNumoTurnConfiguration,
 } from "@/lib/server/assistant/conversation-config";
@@ -44,7 +45,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
           { status: 400 },
         );
       }
-      await resolveNumoTurnConfiguration({
+      const configuration = await resolveNumoTurnConfiguration({
         userId: auth.user.id,
         provider: Object.hasOwn(patch, "provider") ? patch.provider : config.provider,
         model: Object.hasOwn(patch, "model") ? patch.model : config.model,
@@ -52,6 +53,12 @@ export async function PATCH(request: NextRequest, { params }: Context) {
           ? patch.reasoningLevel
           : config.reasoningLevel,
         catalogOnly: true,
+      });
+      // Only the values this request sends are refused: a choice stored
+      // before MIN-954 is ignored, not an error.
+      assertNumoChoiceAllowed(configuration, {
+        model: Object.hasOwn(patch, "model") ? patch.model : null,
+        reasoningLevel: Object.hasOwn(patch, "reasoningLevel") ? patch.reasoningLevel : null,
       });
     } catch (error) {
       if (isPlanLimitError(error)) return planLimitResponse(error);

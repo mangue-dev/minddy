@@ -19,13 +19,13 @@ const settings = [
   ["profile-and-preferences-preferences-workflow", "preferences", "account-appearance"],
   ["account-security-workflow", "security", "account-security"],
   ["devices-and-notifications-workflow", "inbox", "account-push-devices"],
-  ["ai-keys-and-models-workflow", "agent", "account-ai-provider"],
-  ["ai-keys-and-models-defaults-workflow", "agent", "account-agent"],
+  ["ai-keys-and-models-workflow", "ai", "account-ai-provider"],
+  ["ai-keys-and-models-defaults-workflow", "ai", "account-ai-usages"],
   ["transfer-between-instances-workflow", "data", "account-data-import"],
   ["transfer-between-instances-export-workflow", "data", "account-data-export"],
   ["privacy-and-account-deletion-workflow", "data", "account-data-delete"],
   // MCP for Numo is a card of the "AI & Numo" tab since MIN-737.
-  ["numo-mcp-connections-workflow", "agent", "account-mcp-clients"],
+  ["numo-mcp-connections-workflow", "mcp", "account-mcp-clients"],
   ["external-minddy-mcp-workflow", "mcp", "account-mcp"],
 ];
 const knownScreens = new Set([...settings.map(([screen]) => screen),
@@ -146,7 +146,7 @@ for (const locale of locales) {
         node.textContent = node.textContent.replaceAll(origin, "https://www.minddy.app");
       }, new URL(CAPTURE.baseUrl).origin);
     });
-    await capture("numo-mcp-connections-config-workflow", "/settings?tab=agent", "[role=dialog] form", async () => {
+    await capture("numo-mcp-connections-config-workflow", "/settings?tab=mcp", "[role=dialog] form", async () => {
       await page.locator("#settings-section-account-mcp-clients").waitFor();
       await page.getByRole("button", { name: "Notion", exact: true }).click();
       // Notion's method comes from the catalog: shown, not asked.

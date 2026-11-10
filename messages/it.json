@@ -2976,7 +2976,7 @@
     "gitDisconnectDescription": "minddy dimenticherà questa connessione. Puoi riconnetterti in qualsiasi momento.",
     "gitDisconnectDescriptionLinked": "minddy dimenticherà questa connessione e la svincolerà da questi progetti: {projects}.",
     "connectedAppRevokedToast": "{name} disconnesso.",
-    "mcpTab": "MCP di minddy",
+    "mcpTab": "MCP",
     "mcpSectionTitle": "Collega gli assistenti a minddy",
     "mcpSectionDesc": "Consenti a Claude, Codex e altri assistenti di accedere a minddy.",
     "mcpDialogTitle": "Connetti {name}",
@@ -2984,7 +2984,6 @@
     "mcpDialogDone": "È connesso",
     "cyclesTab": "Cicli",
     "inboxTab": "Notifiche",
-    "agentTab": "IA e Numo",
     "dataTab": "Privacy e dati",
     "aiProviderTitle": "Fornitore IA",
     "aiProviderCloudGroup": "Fornitori cloud",
@@ -3145,46 +3144,22 @@
     "vocabularyRemoveDescription": "La dettatura smetterà di usare questa grafia. Puoi aggiungerla di nuovo in qualsiasi momento.",
     "vocabularyRemoveConfirm": "Rimuovi",
     "aiProviderMinddyIncluded": "Incluso nel tuo piano",
-    "aiUsagesTitle": "Utilizzi",
-    "aiUsage_assistant": "Numo",
-    "aiUsage_automations": "Automazioni",
-    "aiUsage_voice": "Dettatura vocale",
-    "aiUsage_feedback": "Feedback",
+    "aiUsagesTitle": "Modelli",
     "aiUsageProvider": "Fornitore per {usage}",
     "aiUsageSaveError": "Impossibile salvare questa scelta. Riprova.",
-    "aiUsageKey_assistant_model": "Conversazioni",
-    "aiUsageKeyHint_assistant_model": "Risposte di Numo nelle conversazioni e nei commenti",
-    "aiUsageKey_conversation_title_model": "Titoli delle conversazioni",
-    "aiUsageKeyHint_conversation_title_model": "Dà un nome a una conversazione dal suo primo messaggio",
-    "aiUsageKey_web_search_model": "Ricerca web",
-    "aiUsageKeyHint_web_search_model": "Ricerche web di Numo; richiede minddy Cloud o una chiave OpenRouter",
-    "aiUsageKey_numo_wake_model": "Smistamento eventi",
-    "aiUsageKeyHint_numo_wake_model": "Decide se i nuovi eventi richiedono Numo",
-    "aiUsageKey_home_brief_model": "Riepilogo della home",
-    "aiUsageKeyHint_home_brief_model": "Scrive le poche righe di Numo nella home",
-    "aiUsageKey_smart_assign_model": "Smart Assign",
-    "aiUsageKeyHint_smart_assign_model": "Assegna un ticket che esce dal triage senza responsabile",
-    "aiUsageKey_smart_fill_model": "Smart Fill",
-    "aiUsageKeyHint_smart_fill_model": "Compila i campi di un nuovo ticket da titolo e descrizione",
-    "aiUsageKey_smart_fill_title_model": "Titoli Smart Fill",
-    "aiUsageKeyHint_smart_fill_title_model": "Dà un titolo a un ticket creato senza",
-    "aiUsageKey_import_map_model": "Mappatura dell’importazione",
-    "aiUsageKeyHint_import_map_model": "Propone la destinazione di ogni colonna importata",
-    "aiUsageKey_brief_model": "Scomposizione del brief",
-    "aiUsageKeyHint_brief_model": "Trasforma un brief di progetto in obiettivi e ticket",
-    "aiUsageKey_issue_embedding_model": "Ricerca dei ticket per significato",
-    "aiUsageKeyHint_issue_embedding_model": "Indicizza i ticket per trovare quelli collegati",
-    "aiUsageKey_issue_relation_model": "Relazioni tra ticket",
-    "aiUsageKeyHint_issue_relation_model": "Conferma se due ticket sono collegati",
-    "aiUsageKey_dictate_model": "Pulizia della dettatura",
-    "aiUsageKeyHint_dictate_model": "Pulisce le trascrizioni e trasforma la dettatura in bozze",
-    "aiUsageKey_transcription_model": "Da voce a testo",
-    "aiUsageKeyHint_transcription_model": "Trascrive le tue registrazioni",
-    "aiUsageKey_feedback_analysis_model": "Analisi dei feedback",
-    "aiUsageKeyHint_feedback_analysis_model": "Unisce i feedback duplicati e propone unioni",
-    "aiUsageKey_feedback_embedding_model": "Somiglianza dei feedback",
-    "aiUsageKeyHint_feedback_embedding_model": "Misura quanto si somigliano i feedback",
-    "aiUsageModel": "Modello per {usage}"
+    "aiUsageModel": "Modello per {usage}",
+    "numoTab": "Numo",
+    "aiTab": "IA",
+    "numoGeneralTitle": "Numo",
+    "numoMemorySwitchHint": "Numo ricorda ciò che gli chiedi di tenere a mente.",
+    "numoBackgroundHint": "Numo agisce su ciò che ti riguarda mentre sei via.",
+    "numoMemoriesTitle": "Ricordi",
+    "aiRole_llm": "Modello linguistico",
+    "aiRoleHint_llm": "Numo e ogni funzione IA che legge o scrive testo",
+    "aiRole_embedding": "Embedding",
+    "aiRoleHint_embedding": "Ricerca per significato, ticket e feedback collegati",
+    "aiRole_transcription": "Da voce a testo",
+    "aiRoleHint_transcription": "Trascrive le tue registrazioni"
   },
   "AccountData": {
     "importTitle": "Trasferisci i dati da un'altra istanza minddy",
@@ -4211,7 +4186,10 @@
     "watchProposalConfirm": "Consenti e crea",
     "watchProposalDone": "Puoi metterlo in pausa o annullarlo dalle impostazioni.",
     "watchProposalAlreadySet": "Questo promemoria è già stato confermato.",
-    "watchProposalFailed": "Impossibile creare il promemoria. Chiedi a Numo di proporlo di nuovo."
+    "watchProposalFailed": "Impossibile creare il promemoria. Chiedi a Numo di proporlo di nuovo.",
+    "compactingContext": "Compattazione del contesto…",
+    "contextCompacted": "Contesto compattato",
+    "contextCompactionFailed": "Impossibile compattare il contesto"
   },
   "PullRequests": {
     "descriptionMoreActions": "Azioni della descrizione",
@@ -4733,21 +4711,10 @@
     "loadError": "Impossibile caricare la configurazione.",
     "saved": "Impostazione salvata",
     "fieldDefault": "Modello predefinito",
-    "suffix": {
-      "label": "Instradamento del fornitore",
-      "none": "Nessun instradamento",
-      "nitro": "Il più veloce",
-      "floor": "Più economico",
-      "exacto": "Più affidabile"
-    },
     "groups": {
       "assistant": {
-        "title": "Assistente",
-        "desc": "Numo nelle conversazioni e nei commenti, con i suoi titoli e la ricerca web."
-      },
-      "automations": {
-        "title": "Automazioni",
-        "desc": "Smart Fill, Smart Assign, relazioni, brief, importazioni e messaggi di commit per le unioni."
+        "title": "Modello linguistico",
+        "desc": "Numo e ogni attività di testo: titoli delle conversazioni, ricerca web, smistamento eventi, riepilogo della home, Smart Fill, Smart Assign, relazioni, importazioni, brief, messaggi di merge, pulizia delle dettature, revisione dei feedback e domande delle FAQ."
       },
       "byok": {
         "title": "Chiavi personali",
@@ -4756,115 +4723,39 @@
       "voice": {
         "title": "Voce"
       },
-      "feedback": {
-        "title": "Feedback e sito pubblico",
-        "desc": "Elaborazione della bacheca dei feedback e risposte IA offerte ai visitatori senza account."
-      },
       "byokOther": "Altri endpoint",
       "embeddings": {
         "title": "Embedding",
         "desc": "Trasforma ticket e feedback in vettori per trovare ciò che è collegato."
+      },
+      "decision": {
+        "title": "Decisioni"
       }
     },
     "fields": {
       "assistant_model": {
-        "label": "Modello Numo",
-        "desc": "Numo in chat e nelle risposte ai commenti."
+        "label": "Modello",
+        "desc": "L'unico modello linguistico che minddy usa, ovunque."
       },
       "assistant_reasoning_level": {
         "label": "Livello di ragionamento",
         "desc": "I livelli più alti possono migliorare le attività complesse, ma richiedono più tempo e token. Si applica alle chat e ai commenti di Numo."
       },
-      "recommended_models": {
-        "label": "Modelli consigliati",
-        "desc": "L'elenco breve su cui si apre il selettore di modelli, ovunque nell'app, prima che si digiti qualcosa. Non nasconde nulla: la ricerca raggiunge comunque l'intero catalogo e un'ultima riga mostra altri modelli. L'ordine è calcolato in base al prezzo, dal più economico, quindi scegli solo quali modelli consigliare. Nessuno può selezionare un modello oltre il limite del piano Pro (×40)."
-      },
-      "smart_assign_model": {
-        "label": "Smart Assign",
-        "desc": "Assegna un ticket che esce dal triage senza nessun assegnatario."
-      },
-      "smart_fill_model": {
-        "label": "Modello Smart Fill",
-        "desc": "Legge il titolo e la descrizione di un nuovo ticket e ne compila i campi. Qualcuno ne attende il risultato: scegli un modello veloce."
-      },
-      "smart_fill_title_model": {
-        "label": "Titoli Smart Fill",
-        "desc": "Scrive il titolo di un ticket creato senza titolo, a partire dalla descrizione. Qualcuno ne attende il risultato: scegli un modello veloce."
-      },
       "issue_embedding_model": {
-        "label": "Embedding dei ticket",
-        "desc": "Vettorizza titolo e descrizione dei ticket per trovare relazioni candidate. Cambiarlo avvia un nuovo indice; vettori vecchi e nuovi non vengono mai confrontati."
-      },
-      "issue_relation_model": {
-        "label": "Modello di decisione delle relazioni",
-        "desc": "Conferma se un candidato è correlato, blocca o è bloccato da un ticket quando il modello di decisione è incerto. Nessuno attende la risposta."
-      },
-      "conversation_title_model": {
-        "label": "Titoli di conversazione",
-        "desc": "Dà un nome in poche parole a una conversazione di Numo, a partire dal primo messaggio. Basta un modello piccolo."
-      },
-      "numo_wake_model": {
-        "label": "Modello di smistamento eventi",
-        "desc": "Decide se un gruppo di eventi dello spazio di lavoro deve svegliare Numo quando il modello di decisione è incerto. Nessuno aspetta la risposta."
-      },
-      "home_brief_model": {
-        "label": "Modello del riepilogo della home",
-        "desc": "Scrive le poche frasi e i suggerimenti che Numo mostra nella home, dopo una modifica del suo diario. Nessuno aspetta la risposta."
+        "label": "Modello di embedding",
+        "desc": "Vale per ticket e feedback. Cambiarlo avvia un nuovo indice; vettori vecchi e nuovi non vengono mai confrontati."
       },
       "numo_wake_daily_limit": {
         "label": "Turni in background al giorno",
         "desc": "Turni in background che un membro riceve in 24 ore. Oltre questo limite, Numo non si risveglia finché la finestra non si libera. 0 disattiva Numo in background per tutti. Vuoto equivale a 20."
       },
-      "web_search_model": {
-        "label": "Modello di ricerca web",
-        "desc": "Legge i risultati della ricerca e scrive la risposta. Basta un modello piccolo."
-      },
-      "dictate_model": {
-        "label": "Dettatura → bozza",
-        "desc": "Ripulisce ogni trascrizione vocale e trasforma i dettati strutturati in bozze di ticket, obiettivi, feedback o attività."
-      },
       "transcription_model": {
         "label": "Riconoscimento vocale",
-        "desc": "Converte l'audio della dettatura in testo."
-      },
-      "feedback_analysis_model": {
-        "label": "Analisi dei feedback",
-        "desc": "Unisce i duplicati evidenti sulla bacheca e suggerisce unioni per il resto."
-      },
-      "feedback_embedding_model": {
-        "label": "Embedding dei feedback",
-        "desc": "Vettorizza i feedback per misurarne la somiglianza."
-      },
-      "import_map_model": {
-        "label": "Modello di mappatura CSV",
-        "desc": "Legge le intestazioni delle colonne, i loro valori distinti e alcuni campioni, e propone dove va ogni colonna. L'utente vede la proposta e può correggerla prima di importare."
-      },
-      "brief_model": {
-        "label": "Modello di suddivisione del brief",
-        "desc": "Legge il brief e restituisce l'intero lotto in una volta: da 3 a 6 obiettivi, da 10 a 40 ticket con priorità e impegno. L'utente esamina la proposta sullo schermo prima che venga scritto qualcosa."
-      },
-      "merge_message_model": {
-        "label": "Modello per i commit di unione generati"
+        "desc": "Converte l'audio della dettatura in testo. La pulizia successiva usa il modello linguistico."
       },
       "jev_model": {
         "label": "Modello di decisione",
-        "desc": "L'unico modello che risponde a tutte le decisioni IA dell'istanza: Smart Fill, Smart Assign e la revisione dei feedback. Vengono proposti solo modelli di decisione, e ogni scelta viene provata con una chiamata prima di essere salvata. La soglia di confidenza è stata calibrata su Jev, il modello predefinito: un altro modello può ripiegare sull'LLM più o meno spesso."
-      },
-      "faq_ask_model": {
-        "label": "Modello del riquadro FAQ",
-        "desc": "Risponde alla domanda di un visitatore a partire dalle FAQ della pagina e dalla documentazione del prodotto. Qualcuno aspetta la risposta, e il riquadro funziona tutto il giorno sul sito pubblico: scegli un modello veloce ed economico."
-      },
-      "category_assistant_model": {
-        "label": "Modello predefinito dell’assistente"
-      },
-      "category_automations_model": {
-        "label": "Modello predefinito delle automazioni"
-      },
-      "category_embeddings_model": {
-        "label": "Modello predefinito degli embedding"
-      },
-      "category_feedback_model": {
-        "label": "Modello predefinito di feedback e sito pubblico"
+        "desc": "L'unico modello che risponde a tutte le decisioni IA dell'istanza: Smart Fill, Smart Assign, relazioni, smistamento eventi e revisione dei feedback. Vengono proposti solo modelli di decisione, e ogni scelta viene provata con una chiamata prima di essere salvata. La soglia di confidenza è stata calibrata su Jev, il modello predefinito: un altro modello può ripiegare sul modello linguistico più o meno spesso."
       }
     },
     "decisionModelErrors": {
@@ -4908,16 +4799,6 @@
       "supportPurpose": "Apri gli account solo per assistenza o fatturazione. Le attività e i contenuti personali non sono mostrati qui.",
       "lookupFailed": "Impossibile trovare l’account. Controlla l’indirizzo e riprova.",
       "detailsFailed": "Impossibile caricare il piano e il budget. Apri l’account per riprovare."
-    },
-    "recommended": {
-      "pickModel": "Scegli un modello",
-      "add": "Aggiungi un modello",
-      "reset": "Torna alla selezione predefinita",
-      "remove": "Rimuovi questo modello",
-      "empty": "Nessun consiglio: il selettore si apre sull'intero catalogo. Salvare un elenco vuoto ripristina la selezione predefinita.",
-      "incomplete": "Scegli un modello per ogni riga prima di salvare.",
-      "duplicate": "Lo stesso modello compare due volte: rimuovine uno prima di salvare.",
-      "hint": "Mostrati per primi in ogni selettore di modelli, dal più economico."
     },
     "byok": {
       "borderDefault": "Predefinito per tutto l'account"
@@ -5005,19 +4886,6 @@
       "countHint": "Tutti gli account di questa istanza.",
       "countFailed": "Impossibile contare gli account.",
       "supportTitle": "Assistenza account"
-    },
-    "categoryDefault": {
-      "label": "Modello predefinito",
-      "builtIn": "Valori integrati",
-      "hint_assistant": "Usato da Numo, dai titoli delle conversazioni e dalla ricerca web.",
-      "hint_automations": "Usato da ogni automazione qui sotto che non ha un modello proprio.",
-      "hint_embeddings": "Cambiarlo avvia un nuovo indice: i ticket vengono indicizzati di nuovo.",
-      "hint_feedback": "Usato dall’analisi dei feedback e dal riquadro domande delle FAQ.",
-      "tasks": "Modelli per attività ({count})",
-      "overridden": "{count, plural, =0 {Tutte le attività usano il modello predefinito} one {# attività usa un proprio modello} other {# attività usano un proprio modello}}",
-      "overrides": "Usa un proprio modello invece di quello predefinito.",
-      "follows": "Usa il modello predefinito.",
-      "useDefault": "Modello predefinito"
     },
     "modelsFile": {
       "title": "Esporta e importa",

@@ -105,15 +105,17 @@ beforeEach(() => {
 });
 
 describe("GET /api/assistant/models", () => {
-  it("lists minddy Cloud with the saved model when Numo has no route", async () => {
-    h.preference = "deepseek/deepseek-v4-flash";
+  it("lists minddy Cloud with the instance's model, locked, when Numo has no route (MIN-954)", async () => {
+    // A model saved for minddy Cloud before MIN-954 no longer applies.
+    h.preference = "anthropic/claude-opus-5";
     const body = await (await call()).json();
     expect(body).toMatchObject({
       provider: "openrouter",
       providerChoice: "minddy",
       defaultProvider: "minddy",
-      defaultModel: "deepseek/deepseek-v4-flash",
+      defaultModel: "app-model",
       defaultReasoning: "off",
+      modelLocked: true,
     });
     expect(body.models.map((model: { id: string }) => model.id)).toEqual(["deepseek/deepseek-v4-flash"]);
     expect(reads("plan-limit")).toBe(1);
@@ -123,7 +125,7 @@ describe("GET /api/assistant/models", () => {
   it("decodes the routed key once and never returns it", async () => {
     h.route = { ai_key_id: "key-1" };
     const body = await (await call()).json();
-    expect(body).toMatchObject({ provider: "anthropic", providerChoice: "anthropic", defaultModel: "app-model", models: [] });
+    expect(body).toMatchObject({ provider: "anthropic", providerChoice: "anthropic", defaultModel: "app-model", models: [], modelLocked: false });
     expect(h.decode).toHaveBeenCalledTimes(1);
     expect(reads("plan-limit")).toBe(0);
     expect(JSON.stringify(body)).not.toContain("sk-test");
@@ -132,7 +134,7 @@ describe("GET /api/assistant/models", () => {
   it("lists another provider's models on request", async () => {
     h.route = { ai_key_id: "key-1" };
     const body = await (await GET(new NextRequest("https://minddy.test/api/assistant/models?provider=minddy"))).json();
-    expect(body).toMatchObject({ provider: "openrouter", providerChoice: "minddy", defaultProvider: "anthropic" });
+    expect(body).toMatchObject({ provider: "openrouter", providerChoice: "minddy", defaultProvider: "anthropic", modelLocked: true });
     expect(h.decode).not.toHaveBeenCalled();
   });
 });

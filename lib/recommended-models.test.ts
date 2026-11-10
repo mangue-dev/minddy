@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_RECOMMENDED_MODELS, parseRecommendedModels } from "@/lib/recommended-models";
+import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { BILLING_PLANS } from "@/lib/billing-plans";
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { providerFromModel } from "@/lib/model-display";
 import { hasProviderLogo } from "@/components/model-logo";
 
 /**
- * The recommended selection: the fallback produces, and the parser shared by the API
- * admin (which refuses to write) and the catalog (which reads).
+ * The recommended selection, written in code: since MIN-954 the admin no
+ * longer rewrites it.
  *
  * The fallback deserves its own assertions because it is an NOTICE written to the
  * hand, not derived data : nothing in the code catches it if it drifts.
  */
 
-describe("le repli produit", () => {
+describe("the product list", () => {
   it("fits within what a picker can show at once", () => {
     // Around ten, say between 8 and 20: beyond that, open on the selection
     // recommended is no longer better than opening the catalog.
@@ -26,7 +26,7 @@ describe("le repli produit", () => {
     expect(new Set(DEFAULT_RECOMMENDED_MODELS).size).toBe(DEFAULT_RECOMMENDED_MODELS.length);
   });
 
-  it("ne contient que des ids OpenRouter complets", () => {
+  it("holds only full OpenRouter ids", () => {
     // `vendor/model`: a bare id does not resolve on any provider on the platform,
     // and would therefore never come across the catalog.
     for (const id of DEFAULT_RECOMMENDED_MODELS) {
@@ -70,45 +70,5 @@ describe("le repli produit", () => {
     // entry fee, otherwise the selection is only used for Pro accounts.
     const go = BILLING_PLANS.find((p) => p.id === "go");
     expect(go?.maxModelMultiplier).toBeGreaterThan(0);
-  });
-
-  it("is what the admin registry serves as a fallback", () => {
-    // The `app_config` field should fall on THIS list, not a copy.
-    expect(parseRecommendedModels(aiModelFallback("recommended_models"))).toEqual(
-      DEFAULT_RECOMMENDED_MODELS,
-    );
-  });
-});
-
-describe("parseRecommendedModels", () => {
-  it("reads a list of ids without reordering them", () => {
-    // The parser does NOT sort: the display order is calculated later, on the
-    // prix (`resolveRecommended`). Ici on rend ce qu'on a lu, tel quel.
-    expect(parseRecommendedModels('["b/2","a/1"]')).toEqual(["b/2", "a/1"]);
-  });
-
-  it("returns null for anything the picker could not display", () => {
-    expect(parseRecommendedModels(null)).toBeNull();
-    expect(parseRecommendedModels("")).toBeNull();
-    expect(parseRecommendedModels("   ")).toBeNull();
-    expect(parseRecommendedModels("pas du json")).toBeNull();
-    expect(parseRecommendedModels('{"a":1}')).toBeNull();
-    expect(parseRecommendedModels("[]")).toBeNull();
-    expect(parseRecommendedModels('["", "  "]')).toBeNull();
-    expect(parseRecommendedModels("[1, 2]")).toBeNull();
-  });
-
-  it("discards empty entries without discarding the list", () => {
-    expect(parseRecommendedModels('["a/1", "", 42, "b/2"]')).toEqual(["a/1", "b/2"]);
-  });
-
-  it("deduplicates entries", () => {
-    // Two `CommandItem` of the same `value` would give two identical lines of which
-    // only one reacts to the keyboard.
-    expect(parseRecommendedModels('["a/1","a/1","b/2"]')).toEqual(["a/1", "b/2"]);
-  });
-
-  it("rogne les espaces autour d'un id", () => {
-    expect(parseRecommendedModels('[" a/1 "]')).toEqual(["a/1"]);
   });
 });

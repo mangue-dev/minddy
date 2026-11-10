@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { getNumoPreferences, saveNumoDefaultModel } from "@/lib/server/assistant/model-preferences";
+import {
+  getNumoPreferences,
+  numoModelIsInstanceDefined,
+  saveNumoDefaultModel,
+} from "@/lib/server/assistant/model-preferences";
 import { resolveNumoTurnConfiguration, isNumoConversationConfigError } from "@/lib/server/assistant/conversation-config";
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { captureServerException } from "@/lib/server/error-tracking";
@@ -26,7 +30,8 @@ export async function GET(request: NextRequest) {
 /**
  * Saves Numo's default provider and model (MIN-826). The provider is the
  * route of the Numo usage; the model is saved for that provider, after it
- * passed the provider's catalog and the plan ceiling.
+ * passed the provider's catalog. Only a personal key takes a model: on the
+ * instance's provider the administrator's model runs (MIN-954).
  */
 export async function PUT(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -44,6 +49,12 @@ export async function PUT(request: NextRequest) {
     model = body.default_model;
   } catch {
     return NextResponse.json({ error: "Invalid Numo model preference" }, { status: 400 });
+  }
+  if (model !== null && numoModelIsInstanceDefined(provider)) {
+    return NextResponse.json({
+      error: "Numo's model is set by this workspace's administrator. Use a personal key to choose another.",
+      code: "model_locked",
+    }, { status: 422 });
   }
   try {
     if (model !== null) {

@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -54,14 +54,15 @@
       "lib/server/instance-variables.ts",
       "app/api/admin/instance-variables/route.ts",
       "components/admin/admin-instance-dashboard.tsx",
-      "components/agent/model-combobox.tsx"
+      "components/agent/model-combobox.tsx",
+      "lib/server/assistant/conversation-config.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-08"
+    "revision": 18,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts); agent:claude-code (MIN-954: sentence on Numo's model on minddy Cloud in #models, source audit against lib/server/assistant/conversation-config.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954 model roles: #models, #models-file, #decision-model and #smart-fill-relations rewritten for one model per role, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot still shows the former category cards and needs a recapture); agent:claude-code (MIN-954: recommended models and routing shortcuts removed from #models and #models-file, checked against components/admin/admin-models-dashboard.tsx and lib/ai-model-config-file.ts)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +80,7 @@
       "src": "/documentation/it/instance-administration-overview.png",
       "alt": "Scheda Account con il numero di account e la ricerca di un account tramite email esatta.",
       "caption": "Account mostra il numero di account e la ricerca per il supporto; l’immagine proviene da un’istanza dimostrativa.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +97,7 @@
       "src": "/documentation/it/instance-administration-models.png",
       "alt": "Scheda Modelli con un modello predefinito per categoria e i modelli per attività chiusi.",
       "caption": "Modelli mostra un modello predefinito per categoria; i modelli per attività restano chiusi. Per questa immagine non è stata modificata alcuna impostazione di modello o fornitore.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/it/instance-administration-instance.png",
       "alt": "Scheda Istanza con l’origine di ogni variabile, una chiave OpenRouter mascherata impostata qui e gli indirizzi degli amministratori presi dal file.",
       "caption": "Istanza mostra da dove viene ogni valore; i segreti mostrano solo gli ultimi caratteri. Questa cattura proviene da un’istanza self-hosted locale usa e getta.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -152,13 +153,15 @@ La console ha tre schede: **Account**, **Costi**, **Modelli** e, dove consentito
 
 **Costi** mostra quanto i fornitori di IA costano all’istanza, in dollari, come li fatturano, e si aggiorna da solo finché resta aperto. Scegli il periodo nel menu in alto a destra del pannello e restringi tutto con il pulsante **Filtri** accanto, per funzione o modello. Le chiamate effettuate con le chiavi personali dei membri non vengono mai registrate, quindi non compaiono qui. Seguono quattro cifre, ognuna con la sua tendenza e la variazione rispetto al periodo precedente: spesa totale, richieste, token e costo per milione di token. Poi vengono le funzioni e i modelli più costosi, quindi la spesa al giorno per modello e per famiglia di funzioni, le richieste al giorno per modello e le esecuzioni recenti, che si aprono sulle loro chiamate. Ricavi, abbonamenti e margini non sono mostrati: la fatturazione Stripe si gestisce in Stripe. Le chiavi OpenRouter per account che nessun account usa più vengono eliminate ogni notte.
 
-## Scegliere i modelli per categoria {#models}
+## Scegliere i modelli {#models}
 
-Ogni scheda di **Modelli** ha un **Modello predefinito** per la sua categoria: **Assistente** (Numo, titoli delle conversazioni, ricerca web, smistamento eventi, riepilogo della home), **Automazioni** (Smart Fill e i suoi titoli, Smart Assign, decisioni sulle relazioni, mappatura delle importazioni CSV, suddivisione dei brief, messaggi di commit per le unioni), **Embedding** (embedding di ticket e feedback) e **Feedback e sito pubblico** (analisi dei feedback, riquadro domande delle FAQ). Un’attività segue il modello predefinito della sua categoria finché non le dai un modello proprio in **Modelli per attività**; perché torni a seguire la categoria, scegli nel suo selettore il modello della categoria, mostrato con il suo nome e spuntato finché l’attività lo segue. **Modello predefinito** resta un’opzione solo quando quel modello non è nel catalogo. Finché il modello predefinito di una categoria non è impostato, ogni attività mantiene il proprio valore integrato. **Livello di ragionamento**, **Modello di decisione** e le due impostazioni di **Voce** hanno righe proprie. Nella scheda **Assistente**, **Turni in background al giorno** limita i turni che [Numo in background](/docs/numo#background) esegue per un membro in 24 ore: 20 se il campo è vuoto, 0 per disattivare Numo in background per tutti. Il file dei modelli non lo contiene e non lo reimposta. Impostare il modello predefinito di una categoria libera le attività che hanno ancora il valore integrato, come quelle con cui viene creata una nuova istanza; un’attività impostata su un altro modello lo mantiene. **Modelli consigliati** fissa la breve lista con cui si apre ogni selettore di modelli. **Chiavi personali** è chiusa in fondo: riguarda solo i membri che usano la propria chiave del fornitore.
+**Modelli** ha una scheda per tipo di modello, e ogni tipo usa un solo modello per tutta l’istanza. **Modello linguistico** stabilisce il modello che usano Numo e ogni attività di testo: titoli delle conversazioni, ricerca web, smistamento eventi, riepilogo della home, Smart Fill e i suoi titoli, Smart Assign, decisioni sulle relazioni, mappatura degli import CSV, scomposizione dei brief, messaggi di commit di merge, pulizia delle dettature, revisione dei feedback e il riquadro delle domande della FAQ. La stessa scheda contiene il **Livello di ragionamento** di Numo e **Turni in background al giorno**, che limita i turni che [Numo in background](/docs/numo#background) fa per un membro in 24 ore: 20 se vuoto, 0 per disattivare Numo in background per tutti; il file dei modelli non lo contiene né lo reimposta. **Embedding** stabilisce l’unico modello di embedding per ticket e feedback, **Voce** il modello di riconoscimento vocale e **Decisioni** il [modello di decisione](#decision-model). Nessuna attività ha un modello proprio. Un’istanza che aveva impostato un modello predefinito di categoria in una versione precedente continua a usarlo: la scheda lo mostra, e salvare la scheda lo sostituisce. **Chiavi personali** è chiuso in fondo: per ogni fornitore, contiene il modello che la chiave di un membro usa per ogni tipo quando il membro non ne ha scelto nessuno.
+
+Su minddy Cloud, il Numo di ogni membro usa il modello e il **Livello di ragionamento** della scheda **Modello linguistico**, che i membri non possono cambiare. Solo una chiave personale dà a un membro la scelta del modello linguistico, che serve poi Numo e ogni sua attività di testo.
 
 ## Esportare e importare la configurazione dei modelli {#models-file}
 
-In alto a destra del pannello **Modelli**, **Esporta** scarica la configurazione dei modelli in un file JSON con versione (formato `minddy.instance-models`): modelli predefiniti delle categorie, modelli delle attività, scorciatoie di instradamento, livello di ragionamento, modelli consigliati e valori predefiniti dei fornitori per le chiavi personali. Non contiene chiavi API né account. **Importa** legge un file di questo tipo ed elenca ogni modifica prima di scrivere qualcosa; **Applica** le scrive tutte, oppure nessuna quando un valore viene rifiutato, per esempio un modello che non è un modello di decisione. Un’importazione sostituisce la configurazione: le impostazioni che il file non contiene tornano al valore predefinito. Un file di una versione precedente di minddy viene aggiornato al formato attuale; un file di una versione più recente viene rifiutato finché l’istanza non è aggiornata. Le voci che questa versione non conosce vengono elencate e ignorate.
+In alto a destra del pannello **Modelli**, **Esporta** scarica la configurazione dei modelli come file JSON con versione (formato `minddy.instance-models`): il modello di ogni tipo, il livello di ragionamento e i modelli predefiniti delle chiavi personali. Non contiene chiavi API né account. **Importa** legge un file del genere ed elenca ogni modifica prima di scrivere qualcosa; **Applica** le scrive tutte, o nessuna se un valore viene rifiutato, per esempio un modello che non è di decisione. Un’importazione sostituisce la configurazione: le impostazioni che il file omette tornano al valore predefinito. Un file di una versione precedente di minddy viene aggiornato al formato attuale: i suoi modelli predefiniti delle categorie Assistente ed Embedding riempiono il modello linguistico e quello di embedding, e i suoi modelli per attività, scorciatoie di instradamento e modelli consigliati vengono elencati e saltati. Un file di una versione più recente viene rifiutato finché l’istanza non viene aggiornata.
 
 ## Amministrare l’istanza con Numo {#numo}
 
@@ -176,18 +179,13 @@ Salvare un segreto o gli indirizzi degli amministratori chiede il tuo codice a d
 
 ## Scegliere il modello di decisione IA {#decision-model}
 
-In **Modelli**, sezione **Automazioni**, **Modello di decisione** imposta l’unico modello di decisione che risponde a tutte le decisioni IA dell’istanza: Smart Fill, Smart Assign e la revisione dei feedback. Non esiste una scelta per progetto, per utente o per funzione. Il selettore propone solo modelli OpenRouter che pubblicano la capacità di decisione; i modelli di chat, embedding e trascrizione non compaiono mai. Il salvataggio prova il candidato con una decisione rappresentativa. Un modello che non è di decisione, rifiuta la richiesta, restituisce una risposta non valida o impiega più di 5 secondi viene rifiutato, e il modello attuale resta in uso. Se il catalogo non può essere caricato, ogni modifica viene rifiutata. Le istanze self-hosted senza IA gestita non hanno un catalogo della piattaforma e mantengono il modello predefinito, Jev.
+In **Modelli**, **Decisioni**, **Modello di decisione** stabilisce l’unico modello di decisione che risponde a tutte le decisioni IA dell’istanza: Smart Fill, Smart Assign, decisioni sulle relazioni, smistamento eventi e revisione dei feedback. Non esiste una scelta per progetto, utente o funzione. Il selettore elenca solo i modelli OpenRouter che pubblicano la capacità di decisione; i modelli di chat, embedding e trascrizione non compaiono mai. Il salvataggio prova il candidato con una decisione rappresentativa. Un modello che non è di decisione, rifiuta la richiesta, restituisce una risposta non valida o impiega più di 5 secondi viene rifiutato, e il modello attuale resta in uso. Quando il catalogo non può essere caricato, ogni modifica viene rifiutata. Le istanze self-hosted senza IA gestita non hanno un catalogo di piattaforma e mantengono il predefinito, Jev.
 
-Le nuove decisioni usano il modello salvato entro circa un minuto su ogni processo del server. Se il modello fallisce o risponde sotto la soglia di confidenza, la decisione ripiega sul modello LLM proprio della funzione, come prima. La soglia è stata calibrata su Jev e gli altri modelli di decisione distribuiscono la confidenza in modo diverso: dopo un cambio, controlla la concordanza per modello nella vista di database `ai_decision_evaluations_weekly`. Le righe di utilizzo registrano il modello che ha risposto.
-
-**Titoli Smart Fill**, in **Modelli**, sezione **Automazioni**, **Modelli per attività**, sceglie il modello che scrive il titolo di un ticket creato senza titolo e lo riscrive durante una rivalutazione. È un compito di scrittura, non una decisione: il modello decisionale non lo gestisce mai. Il valore predefinito è `deepseek/deepseek-v4-flash`; qualcuno attende il ticket, quindi scegli un modello veloce.
+Le nuove decisioni usano il modello salvato entro circa un minuto su ogni processo server. Quando il modello fallisce o risponde sotto la soglia di confidenza, la decisione ripiega sul modello linguistico. La soglia è stata calibrata su Jev e gli altri modelli di decisione distribuiscono la confidenza in modo diverso: dopo un cambio, verifica la concordanza per modello nella vista `ai_decision_evaluations_weekly` del database. Le righe di utilizzo registrano il modello che ha risposto.
 
 ## Configurare le relazioni di Smart Fill {#smart-fill-relations}
 
-Dopo il salvataggio di un ticket, Smart Fill può indicizzarlo e collegarlo ai ticket correlati. Due campi in **Modelli** regolano questo lavoro:
-
-- **Embedding dei ticket**, nella sezione **Embedding**, **Modelli per attività**, sceglie il modello che trasforma titolo e descrizione dei ticket in vettori. Il valore predefinito è `openai/text-embedding-3-small`. Cambiarlo avvia una nuova versione dell’indice: vettori vecchi e nuovi non vengono mai confrontati. Il job orario `/api/cron/issue-index` indicizza poi i ticket esistenti, 100 per esecuzione, addebitando il proprietario di ogni progetto; non crea mai relazioni. Lo stesso modello trasforma in vettore ogni interrogazione della ricerca per significato, con le impostazioni del provider IA del membro che cerca, e le interrogazioni vengono confrontate solo con i vettori della versione attuale dell’indice. Finché un ticket non viene reindicizzato, la ricerca dei ticket correlati e la ricerca per significato lo raggiungono solo tramite le sue parole. Lo stesso job converte in vettori cifrati quelli salvati in chiaro non appena il loro progetto inizia a cifrare.
-- **Modello di decisione delle relazioni**, nella sezione **Automazioni**, **Modelli per attività**, è il modello LLM di riserva che risponde alle decisioni sulle relazioni quando il [modello di decisione](#decision-model) fallisce o non è sicuro, come il modello LLM proprio di ogni funzione. Il valore predefinito è `deepseek/deepseek-v4-flash`.
+Dopo il salvataggio di un ticket, Smart Fill può indicizzarlo e collegarlo ai ticket correlati. **Modello di embedding**, in **Modelli**, **Embedding**, trasforma titolo e descrizione dei ticket, e i feedback, in vettori. Il predefinito è `openai/text-embedding-3-small`. Cambiarlo avvia una nuova versione dell’indice: vettori vecchi e nuovi non vengono mai confrontati. Il job orario `/api/cron/issue-index` indicizza poi i ticket esistenti, 100 per esecuzione, e li addebita al proprietario di ogni progetto; non crea mai relazioni. Lo stesso modello trasforma ogni query della ricerca per significato in un vettore, con le impostazioni del fornitore IA del membro che cerca, e le query vengono confrontate solo con i vettori della versione attuale dell’indice. Finché un ticket non viene reindicizzato, la ricerca dei ticket correlati e la ricerca per significato lo trovano solo per le sue parole. Lo stesso job cifra i vettori salvati in chiaro appena il loro progetto viene cifrato. Le decisioni sulle relazioni usano il [modello di decisione](#decision-model) e ripiegano sul modello linguistico quando fallisce o è incerto.
 
 I campi di embedding e di trascrizione rifiutano al salvataggio un modello della famiglia sbagliata, per esempio un modello di chat in un campo di embedding, e il modello attuale resta in uso. Questo controllo richiede il catalogo della piattaforma: se non può essere caricato, come su un’istanza self-hosted senza IA gestita, la scelta non può essere verificata e viene accettata. Per i membri che eseguono le automazioni con la propria chiave, i valori predefiniti per provider includono `issue_embedding_model`: `text-embedding-3-small` per OpenAI e `gemini-embedding-001` per Google.
 

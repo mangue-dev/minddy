@@ -2558,7 +2558,10 @@ The authenticated settings API validates models against the effective provider
 catalog and managed plan; generic endpoints may use their own model namespace.
 Missing storage fails explicitly. A cleared preference follows the application
 model, explicit conversation choices take precedence, and admitted turns retain
-their frozen configuration. Apply migration `20270109200040` before enabling the
+their frozen configuration. Since MIN-954 a model is chosen only on a personal
+key: on the instance's provider (`minddy`) Numo runs the administrator's
+`assistant_model`, and rows saved under that provider are ignored at read
+rather than deleted. Apply migration `20270109200040` before enabling the
 updated application. This change was exercised only against the local Docker
 pilot; no remote database migration or production activation is claimed.
 
@@ -2870,3 +2873,19 @@ who may write the project.
 `20270109200097` adds the `routine` kind: a `routine_id` column cascading with
 its routine, and the guard and purge read the routine's `encryption_version`
 like the other parents'. It adds no caret topic.
+
+## Numo context summaries (MIN-954)
+
+`conversations.context_summary` holds the summary that replaces the compacted
+start of a Numo conversation. It is written by a model from the conversation's
+own messages and tool results, so it is conversation content: the policy
+classifies it as an encryption target. It uses a user-key format-3 envelope
+(`mdys3:`) bound to the conversation ID and the `context_summary` column, and it
+is encrypted exactly where conversation titles are
+(`shouldProtectConversationTitle`). Only the turn executor writes and reads it,
+through the service client, after the turn was admitted for its owner; it is not
+part of the account export, which already carries the messages it derives from.
+A summary that cannot be decrypted is ignored together with its boundary, so the
+turn reloads the messages it covered. `context_summary_through_at` and
+`context_summary_through_id` mark the last message the summary covers; they are
+clear timestamp and routing metadata. Migration `20270109200116` is additive.

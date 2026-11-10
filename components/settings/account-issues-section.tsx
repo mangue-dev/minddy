@@ -1,14 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { useAccountPreference } from "@/components/settings/use-account-preference";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
-import { StatusIndicator } from "@/components/issue-indicators";
-import { NUMO_DEFAULT_STATUS_OPTIONS, resolveNumoDefaultStatus } from "@/lib/numo-default-status";
-import type { NumoDefaultStatus } from "@/lib/numo-default-status";
 import { PROMPT_COPY_AUTO_START_META_KEY, resolvePromptCopyAutoStart } from "@/lib/prompt-copy-auto-start";
 import { AUTO_ASSIGN_ON_START_META_KEY, resolveAutoAssignOnStart } from "@/lib/auto-assign-on-start";
 
@@ -91,49 +87,5 @@ export function AccountIssuesSection() {
         />
       </SettingsGroup>
     </>
-  );
-}
-
-/** Account → AI & Numo: the status of the issues Numo creates for me. */
-export function AccountNumoIssuesSection() {
-  const ta = useTranslations("Account");
-  const tStatus = useTranslations("Status");
-  const [numoStatus, setNumoStatus, ready] = useAccountPreference<NumoDefaultStatus>(
-    "numo_default_status",
-    resolveNumoDefaultStatus,
-  );
-
-  return (
-    <SettingsGroup
-      anchor={SETTINGS_SECTIONS.accountNumoStatus}
-      title={ta("numoIssuesTitle")}
-    >
-      <SettingsRow
-        htmlFor="account-numo-status"
-        label={ta("numoStatusTitle")}
-        hint={ta("numoStatusDesc")}
-        control={
-          <Select
-            value={numoStatus}
-            onValueChange={(v) => void setNumoStatus(v as NumoDefaultStatus)}
-            disabled={!ready}
-          >
-            <SelectTrigger id="account-numo-status" className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {NUMO_DEFAULT_STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  <span className="flex items-center gap-2">
-                    <StatusIndicator status={s} className="size-4" />
-                    {tStatus(s)}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        }
-      />
-    </SettingsGroup>
   );
 }

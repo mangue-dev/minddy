@@ -2682,6 +2682,21 @@
         "type": "text",
         "nullable": true,
         "generated": false
+      },
+      "context_summary": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "context_summary_through_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "context_summary_through_id": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [

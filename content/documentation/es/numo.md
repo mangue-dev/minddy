@@ -21,10 +21,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 35,
-  "sourceRevision": 35,
+  "revision": 36,
+  "sourceRevision": 36,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -82,7 +82,6 @@
       "lib/server/numo/journal-prompt.ts",
       "lib/server/numo/wake.ts",
       "lib/server/assistant/proactive-guard.ts",
-      "components/settings/account-numo-background-section.tsx",
       "lib/server/numo/watches.ts",
       "lib/server/numo/watch-clock.ts",
       "components/settings/account-numo-watches-section.tsx",
@@ -94,14 +93,18 @@
       "lib/numo-watches.ts",
       "lib/server/numo/watch-proposal.ts",
       "components/assistant/watch-proposal-card.tsx",
-      "lib/server/numo/watch-prompt.ts"
+      "lib/server/numo/watch-prompt.ts",
+      "lib/server/assistant/context-compaction.ts",
+      "lib/server/assistant/conversation-config.ts",
+      "components/assistant/conversation-settings.tsx",
+      "components/settings/account-numo-section.tsx"
     ]
   },
   "review": {
-    "revision": 35,
-    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-953: recurring reminders section and the last paragraph of #reminders, source audit against lib/numo-watches.ts, lib/server/numo/watches.ts, watch-clock.ts, watch-proposal.ts, lib/server/assistant/proactive-guard.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-953 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 36,
+    "fact": "agent:claude-code (MIN-912: desktop OAuth sentence checked against lib/mcp-authorization.ts and app/api/account/mcp-connections/oauth/callback/route.ts; rest of the article unchanged since the previous review; no figure recaptured, no figure shows this flow); agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 3 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-915: Numo's memory section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-927: Numo's journal section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-929: Numo in the background section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-923: Numo's reminders section, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (Numo in the background now on by default: first sentence of #background, checked against lib/numo-background.ts and migration 20270109200112); agent:claude-code (MIN-930: Home summary section, MIN-933 opening message, reminders sentence, journal, background and suggestion-row sentences, source audit against the change; no browser walkthrough yet; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-946: AI budget warning sentence of #home-word, source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-953: recurring reminders section and the last paragraph of #reminders, source audit against lib/numo-watches.ts, lib/server/numo/watches.ts, watch-clock.ts, watch-proposal.ts, lib/server/assistant/proactive-guard.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: step 2 of #work-with-numo, the default-model paragraph, the compaction paragraph of #continue and the model sentence of #numo-execution-model, source audit against lib/server/assistant/conversation-config.ts, lib/server/assistant/context-compaction.ts, components/assistant/conversation-settings.tsx and messages/*.json; no browser walkthrough; no figure shows the model control or the compaction step; existing figures kept, not recaptured); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-914 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-915 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-927 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-923 passage with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-930 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-953 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "code-work",
@@ -131,7 +134,7 @@
       "src": "/documentation/es/work-with-numo-workflow.png",
       "alt": "Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.",
       "caption": "Conversación de demostración existente, traducida para mostrarla. La respuesta guardada cita AUR-11 y AUR-7; la captura no acredita una nueva ejecución.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -148,7 +151,7 @@
       "src": "/documentation/es/numo-permissions-and-approvals-workflow.svg",
       "alt": "Matriz de permisos de Numo para acciones del proyecto, conexiones personales y rutinas.",
       "caption": "El acceso al proyecto y las peticiones explícitas limitan las acciones de Numo; el contenido externo no concede permisos.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -209,7 +212,7 @@
       "src": "/documentation/es/numo-execution-model-flow.svg",
       "alt": "Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
       "caption": "Sigue las etapas en este orden. Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-10-16",
       "viewport": [
@@ -241,7 +244,7 @@
       "src": "/documentation/es/numo-mcp-connections-workflow.png",
       "alt": "Ajustes MCP personales, lista vacía y botón para añadir otro servidor.",
       "caption": "Las conexiones de Numo son personales; las rutinas usan las del propietario del proyecto.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -258,7 +261,7 @@
       "src": "/documentation/es/numo-mcp-connections-config-workflow.png",
       "alt": "Asistente de conexión de Notion con el método de inicio de sesión conocido por el catálogo.",
       "caption": "Paso de inicio de sesión de un servicio del catálogo. No se introdujeron credenciales ni se contactó con ningún servidor.",
-      "revision": 35,
+      "revision": 36,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -287,7 +290,7 @@ Numo trabaja con el contexto de tu conversación y los permisos de tu cuenta. Fo
 Abre la incidencia o el proyecto y usa el botón flotante de Numo. La página actual pasa a ser el contexto. Las acciones contextuales que delegan trabajo en Numo abren este mismo panel. Necesitas acceso al proyecto y uso de IA disponible o una clave personal compatible.
 
 1. Comprueba el contexto del cuadro de entrada. Indica la incidencia si hay varios elementos relevantes. Para añadir una incidencia como contexto, escribe `@` en el cuadro de entrada o usa **Añadir contexto**, que agrupa el contexto en las mismas secciones que el menú `@`, las incidencias en **Incidencias** y tus servidores MCP conectados en **Servidores MCP**; una descripción también muestra incidencias encontradas [por el sentido](/docs/navigation#search-by-meaning) bajo **Relacionadas por significado**.
-2. Elige el proveedor, el modelo y el nivel de razonamiento de la conversación con el logotipo del proveedor, junto al micrófono; al pasar el cursor se muestra el modelo actual. Estas opciones afectan a la conversación. Si el modelo no ofrece control del razonamiento, el control deslizante se queda en **Sin razonamiento**; en un modelo que siempre razona, **Sin razonamiento** usa su nivel más ligero.
+2. En minddy Cloud, Numo usa el modelo y el nivel de razonamiento que eligió la administración de tu instancia, como Smart Fill y Smart Assign, y el campo de composición no muestra ningún control de modelo. Con una clave personal para Numo, el logotipo del proveedor, junto al micrófono, elige el proveedor, el modelo y el nivel de razonamiento de la conversación; al pasar el cursor se muestra el modelo actual. Si el modelo no ofrece control del razonamiento, el control deslizante se queda en **Sin razonamiento**; en un modelo que siempre razona, **Sin razonamiento** usa su nivel más ligero. El mismo logotipo devuelve la conversación a **minddy Cloud**.
 3. Envía una petición acotada, por ejemplo: «Lee esta incidencia y propón criterios de aceptación. No cambies su estado».
 4. Lee la respuesta y abre sus enlaces a incidencias o fuentes. Si pediste una modificación, comprueba el objeto modificado. Las incidencias, objetivos, proyectos, páginas y miembros que Numo encontró aparecen en su respuesta como menciones en forma de etiqueta: cada una abre su destino, y la que no puedes ver se muestra como **No disponible**. Numo también escribe estas menciones en lo que redacta, como las descripciones y planes de las incidencias, las descripciones de objetivos, los comentarios, las páginas y el cuaderno, solo para los elementos que identificó; un miembro mencionado ahí recibe una notificación como con cualquier mención.
 
@@ -305,13 +308,15 @@ Si pegas en el campo de mensaje un texto de más de 12.000 caracteres, como unos
 
 Cuando pides un seguimiento, o una lista de elementos que comparten campos, como candidaturas con su empresa, su estado y su fecha, Numo crea una [base de datos](/docs/databases) con esas columnas y sus primeras entradas en lugar de una página.
 
-El modelo predeterminado de Numo se configura en **Ajustes de la cuenta → IA y Numo → Modelo predeterminado de Numo**: el valor de la app o un modelo personal del proveedor activo. Una elección explícita en la conversación tiene prioridad. Consulta [los ajustes de IA y uso](/docs/ai-settings-and-usage#ai-keys-and-models).
+Con una clave personal, el modelo predeterminado de Numo se configura en **Ajustes de la cuenta → IA → Numo → Conversaciones**, guardado para ese proveedor: el valor de la app o un modelo que elijas. La elección propia de una conversación tiene prioridad. En minddy Cloud no hay modelo que elegir. Consulta [los ajustes de IA y uso](/docs/ai-settings-and-usage#ai-keys-and-models).
 
 ![Conversación de demostración de Numo con contexto, cambio de prioridad y respuesta guardada.](/documentation/es/work-with-numo-workflow.png)
 
 ### Continuar una conversación {#continue}
 
 La lista permite recuperar conversaciones anteriores. Continúa la que contiene las decisiones necesarias. Numo organiza y sigue el trabajo: lee y actualiza incidencias, planes, páginas y otros contenidos de minddy, y puede leer las pull requests vinculadas. Si se lo pides, también puede comentar una pull request, resolver las conversaciones de revisión ya atendidas y fusionarla. Cuando Numo busca incidencias, las coincidencias de texto y los identificadores exactos van primero; una búsqueda descriptiva puede añadir incidencias del mismo proyecto encontradas por el sentido, que Numo debe comprobar antes de basarse en ellas. No escribe código ni hace push de commits. Para que se escriba código, copia el prompt de la incidencia para tu propio agente de código; consulta [Trabajo con código y pull requests](/docs/code-work#external-coding-agents).
+
+Cuando una conversación se vuelve demasiado larga para reenviarla a bajo coste, unos 90.000 tokens o tres cuartas partes de lo que el modelo puede leer si es menos, Numo la compacta antes de su siguiente llamada: la respuesta muestra **Compactando el contexto…** y después **Contexto compactado**. Numo resume los mensajes y resultados de herramientas más antiguos y conserva literalmente tu último mensaje y los últimos intercambios; las respuestas siguientes parten de ese resumen. El resumen cuenta en el uso de IA como el resto de la respuesta. Si falla, el paso indica **No se pudo compactar el contexto** y Numo responde con toda la conversación.
 
 Si solicita información, envía tu elección antes de esperar que continúen las acciones dependientes. Una tarjeta de consumo o error explica la interrupción. Comprueba cualquier escritura externa antes de pedir que se repita.
 
@@ -341,7 +346,7 @@ Numo guarda recuerdos breves sobre ti para que no tengas que repetirte: una pref
 
 Un recuerdo vale para todos tus proyectos o para uno solo; Numo te pregunta cuando no sabe cuál. Un recuerdo de proyecto se usa en las conversaciones de ese proyecto y cuando Numo trabaja en ese proyecto desde otra conversación. Tus recuerdos son solo tuyos: los demás miembros no los ven y su Numo no los usa. Las rutinas y `@Numo` en un comentario leen tus recuerdos, pero no pueden cambiarlos. Puedes guardar hasta 100 recuerdos de 1000 caracteres cada uno; al llegar al límite, Numo te pregunta cuál reemplazar.
 
-**Ajustes de la cuenta → IA y Numo → Memoria de Numo** muestra cada recuerdo con el proyecto al que se aplica. **Editar** cambia su texto, **Eliminar** lo quita y **Olvidarlo todo** los quita todos; una eliminación no se puede deshacer. También puedes pedirle a Numo que olvide algo. El interruptor junto al título de la sección desactiva la memoria: Numo deja de leer y guardar recuerdos, y los guardados se conservan.
+**Ajustes de la cuenta → Numo → Recuerdos** muestra cada recuerdo con el proyecto al que se aplica. **Editar** cambia su texto, **Eliminar** lo quita y **Olvidarlo todo** los quita todos; una eliminación no se puede deshacer. También puedes pedirle a Numo que olvide algo. **Memoria de Numo**, en la tarjeta **Numo** de arriba, desactiva la memoria: Numo deja de leer y guardar recuerdos, y los guardados se conservan.
 
 ### Diario de Numo {#journal}
 
@@ -355,7 +360,7 @@ En cuanto escribes, el saludo y el resumen se quedan arriba de la conversación 
 
 ### Numo en segundo plano {#background}
 
-**Ajustes de la cuenta → IA y Numo → Numo en segundo plano** está activado por defecto: Numo trabaja para ti mientras no estás. Cuando algo en tus proyectos te concierne, como una incidencia asignada a ti, una mención o una rutina fallida, o coincide con lo que uno de tus recuerdos le pide vigilar, Numo se activa unos minutos después y actúa con las mismas herramientas y el mismo modelo que en una conversación. Con el recuerdo «para cada nueva incidencia de MIN que necesite una búsqueda web, hazla y publica el resultado como comentario», investiga cada nueva incidencia, publica el comentario y lo anota en su diario, donde escribe lo que hizo y lo que te espera. **Inicio** resume lo que anotó. El interruptor necesita la memoria de Numo: mientras la memoria esté desactivada, Numo en segundo plano también lo está, y vuelve con ella.
+**Ajustes de la cuenta → Numo → Numo en segundo plano** está activado por defecto: Numo trabaja para ti mientras no estás. Cuando algo en tus proyectos te concierne, como una incidencia asignada a ti, una mención o una rutina fallida, o coincide con lo que uno de tus recuerdos le pide vigilar, Numo se activa unos minutos después y actúa con las mismas herramientas y el mismo modelo que en una conversación. Con el recuerdo «para cada nueva incidencia de MIN que necesite una búsqueda web, hazla y publica el resultado como comentario», investiga cada nueva incidencia, publica el comentario y lo anota en su diario, donde escribe lo que hizo y lo que te espera. **Inicio** resume lo que anotó. El interruptor necesita la memoria de Numo: mientras la memoria esté desactivada, Numo en segundo plano también lo está, y vuelve con ella.
 
 En un proyecto compartido, Numo solo cambia lo que es tuyo: las incidencias asignadas a ti o que creaste, los objetivos que lideras y las páginas que creaste. Crear contenido ahí, o cambiar cualquier otra cosa, necesita un recuerdo que lo pida. En todos tus proyectos, también en los que trabajas solo, no manda nada a la papelera ni restaura nada, no actúa sobre ningún pull request, no llama a herramientas MCP externas, no administra el proyecto (ajustes, miembros, integraciones), no cambia los ajustes de tu cuenta y no responde públicamente a los comentarios de feedback, salvo que uno de tus recuerdos permita esa acción. El servidor comprueba que el recuerdo existe, es tuyo y se aplica al proyecto que toca la acción. Numo solo te deja un mensaje en la bandeja de entrada cuando un recuerdo lo pide, o por algo urgente, y en ese caso como mucho dos veces en 24 horas.
 
@@ -371,7 +376,7 @@ Cuando se cumple la condición, el recordatorio se activa una sola vez. Para alg
 
 Un recordatorio cuya condición nunca se cumple caduca a los 90 días, y puedes tener 20 a la vez. Mientras su incidencia u objetivo está en la papelera, el recordatorio espera; se cancela cuando el elemento se elimina definitivamente o cuando pierdes el acceso a su proyecto.
 
-Un recordatorio puntual se activa una vez, para una incidencia, un objetivo o una fecha; para algo que vuelve, crea un [recordatorio recurrente](#recurring-reminders). Solo tú creas un recordatorio, en una conversación con Numo: las rutinas, las menciones `@Numo`, Numo en segundo plano y la ejecución de un recordatorio no pueden crear, cambiar ni cancelar ninguno. **Ajustes de la cuenta → IA y Numo → Recordatorios** muestra los recordatorios que conservas, y **Cancelar recordatorio** quita uno. Para cambiar un recordatorio, pídeselo a Numo.
+Un recordatorio puntual se activa una vez, para una incidencia, un objetivo o una fecha; para algo que vuelve, crea un [recordatorio recurrente](#recurring-reminders). Solo tú creas un recordatorio, en una conversación con Numo: las rutinas, las menciones `@Numo`, Numo en segundo plano y la ejecución de un recordatorio no pueden crear, cambiar ni cancelar ninguno. **Ajustes de la cuenta → Numo → Recordatorios** muestra los recordatorios que conservas, y **Cancelar recordatorio** quita uno. Para cambiar un recordatorio, pídeselo a Numo.
 
 ### Recordatorios recurrentes {#recurring-reminders}
 
@@ -381,13 +386,13 @@ En cada ejecución, Numo lleva a cabo la instrucción en una conversación nueva
 
 Para que un recordatorio recurrente pueda hacer más, pídelo al crearlo. Se le puede permitir notificarte aunque no sea urgente, cambiar contenido que no es tuyo en un proyecto compartido, actuar sobre pull requests, llamar a tus herramientas MCP externas, responder públicamente a las sugerencias, usar la papelera, quitar miembros, invitaciones e integraciones, cambiar los ajustes de tu cuenta, o administrar tus proyectos y, para un administrador, la instancia. En ese caso Numo no guarda nada por sí mismo: la conversación muestra una tarjeta que enumera lo que el recordatorio podrá hacer, y **Permitir y crear** lo guarda. Tus permisos se comprueban de nuevo en cada ejecución: un recordatorio autorizado a administrar la instancia no recibe ninguna herramienta de administración cuando tu cuenta deja de ser administradora, y un recordatorio se cancela cuando pierdes el acceso a su proyecto. Numo no puede añadir un permiso a un recordatorio ni reformular uno que tiene permisos: propone un reemplazo, que confirmas en una tarjeta nueva.
 
-Una ejecución que minddy se perdió por más de seis horas se omite. Cuando una ejecución no termina, o alcanzas tu límite de uso, recibes un mensaje. Tras 3 ejecuciones seguidas que no terminan, el recordatorio se pausa y un mensaje te lo dice. **Ajustes de la cuenta → IA y Numo → Recordatorios** muestra, para cada recordatorio recurrente, su periodicidad, su próxima ejecución, lo que puede hacer y su última ejecución, con un enlace a esa conversación. **Pausar recordatorio** lo detiene y **Reanudar recordatorio** lo reactiva en su próxima ejecución.
+Una ejecución que minddy se perdió por más de seis horas se omite. Cuando una ejecución no termina, o alcanzas tu límite de uso, recibes un mensaje. Tras 3 ejecuciones seguidas que no terminan, el recordatorio se pausa y un mensaje te lo dice. **Ajustes de la cuenta → Numo → Recordatorios** muestra, para cada recordatorio recurrente, su periodicidad, su próxima ejecución, lo que puede hacer y su última ejecución, con un enlace a esa conversación. **Pausar recordatorio** lo detiene y **Reanudar recordatorio** lo reactiva en su próxima ejecución.
 
 Un recordatorio recurrente es tuyo; una rutina pertenece a un proyecto. Solo tú ves tu recordatorio y sus conversaciones, se ejecuta con tus permisos y sobre tu uso de IA, y puede tener permisos propios. Todos los miembros del proyecto ven una rutina y sus ejecuciones, se ejecuta sobre el uso y las conexiones del propietario del proyecto, también puede empezar con un evento, y nunca llega a la administración de la instancia. Usa un recordatorio recurrente para tus hábitos y una rutina para el trabajo que comparte el equipo.
 
 ## Comprender los turnos duraderos de Numo {#numo-execution-model}
 
-Los mensajes interactivos, acciones contextuales y rutinas entran en conversaciones Numo. El modelo y razonamiento de conversación se eligen en el campo de composición. Numo actúa mediante sus herramientas de minddy y las conexiones MCP personales que hayas añadido; no necesita ningún repositorio. Una rutina crea una nueva conversación con instrucciones guardadas y contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
+Los mensajes interactivos, acciones contextuales y rutinas entran en conversaciones Numo. Con una clave personal, el modelo y el razonamiento de la conversación se eligen en el campo de composición; en minddy Cloud los fija la instancia. Numo actúa mediante sus herramientas de minddy y las conexiones MCP personales que hayas añadido; no necesita ningún repositorio. Una rutina crea una nueva conversación con instrucciones guardadas y contexto de propietario y proyecto. No es necesario mantener una sesión de escritorio abierta.
 
 ![Diagrama: Persistir intención, mensaje y UUID. Reclamar turno, guardar herramientas y resultados. Esperar tu respuesta cuando haga falta información. Releer eventos y conciliar escrituras inciertas.](/documentation/es/numo-execution-model-flow.svg)
 
@@ -403,7 +408,7 @@ Detener Numo termina su turno. Una acción externa ya enviada todavía puede fin
 
 ## Conectar un servicio MCP personal a Numo {#numo-mcp-connections}
 
-En los ajustes de cuenta, abre **IA y Numo** y usa la tarjeta **MCP para Numo**. Los enlaces a la antigua pestaña MCP para Numo llevan allí. Elige un servicio del catálogo o añade otro servidor MCP HTTPS público. El catálogo y registro no evitan requisitos de inscripción o aprobación del proveedor. Numo puede preparar la conexión en una conversación interactiva, pero no en una rutina autónoma.
+En los ajustes de cuenta, abre **MCP** y usa la tarjeta **MCP para Numo**. Los enlaces a la antigua pestaña MCP para Numo llevan allí. Elige un servicio del catálogo o añade otro servidor MCP HTTPS público. El catálogo y registro no evitan requisitos de inscripción o aprobación del proveedor. Numo puede preparar la conexión en una conversación interactiva, pero no en una rutina autónoma.
 
 La conexión se hace en un asistente. Un servidor personalizado o del registro pide primero su nombre y su dirección HTTPS; un servicio del catálogo se abre directamente en el paso de inicio de sesión. Un servicio del catálogo, una conexión guardada o una entrada del registro que declara un token ya conoce su método de inicio de sesión: el paso lo muestra y **Usar otro método** permite cambiarlo. Si no, elige **Iniciar sesión con OAuth**, **Token Bearer** o **Sin autenticación**. Las **Opciones avanzadas** contienen el transporte (Streamable HTTP por defecto, también admite SSE antiguo) y las cabeceras cifradas. Pon secretos en credenciales o cabeceras, nunca en la URL. No admite comandos locales ni redes privadas. Para una aplicación OAuth existente, registra la URL de retorno mostrada e introduce ID y secreto. Tras guardar, el último paso espera el inicio de sesión, prueba la conexión y muestra cuántas herramientas encontró Numo. En escritorio, solo se abre en el navegador del sistema la página de inicio de sesión del proveedor: no necesitas tener la sesión iniciada en minddy ahí, y la aplicación completa la conexión cuando vuelves.
 

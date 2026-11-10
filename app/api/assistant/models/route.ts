@@ -9,6 +9,7 @@ import {
   getNumoDefaultModel,
   getNumoPreferences,
   numoApplicationModel,
+  numoModelIsInstanceDefined,
 } from "@/lib/server/assistant/model-preferences";
 import { DatabaseOperationError } from "@/lib/server/failure-diagnostics";
 import { captureServerException } from "@/lib/server/error-tracking";
@@ -25,6 +26,8 @@ function providerParam(request: NextRequest): AiProviderChoice | null {
  * Model and reasoning catalog for Numo's conversation composer. Without a
  * `provider`, the catalog of Numo's default provider; with one, the models of
  * that provider (MIN-826), so the picker chooses a provider, then a model.
+ * `modelLocked` says the instance sets that provider's model (MIN-954): the
+ * picker then offers no model or reasoning choice.
  */
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -43,11 +46,14 @@ export async function GET(request: NextRequest) {
   }
   const accountProvider = preferences instanceof DatabaseOperationError ? null : preferences.provider;
   const choice = providerParam(request) ?? accountProvider;
+  const modelLocked = numoModelIsInstanceDefined(choice);
   const [catalog, defaultReasoning, defaultModel] = await Promise.all([
     getAssistantModelsForUser(auth.user.id, undefined, choice),
     getAssistantReasoningLevel(),
     !choice
       ? Promise.resolve(null)
+      : modelLocked
+        ? numoApplicationModel(choice).catch(() => null)
       : choice === accountProvider && !(preferences instanceof DatabaseOperationError)
         ? Promise.resolve(preferences.default_model ?? preferences.application_model)
         : Promise.all([getNumoDefaultModel(auth.user.id, choice), numoApplicationModel(choice)])
@@ -59,6 +65,7 @@ export async function GET(request: NextRequest) {
     defaultModel,
     defaultReasoning,
     providerChoice: choice,
+    modelLocked,
     defaultProvider: accountProvider,
     providers: preferences instanceof DatabaseOperationError ? [] : preferences.providers,
   });

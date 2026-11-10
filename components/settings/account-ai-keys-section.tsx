@@ -16,28 +16,27 @@ import { SettingsGroup, SettingsRow } from "@/components/settings/settings-ui";
 import { ProviderOptionLabel } from "@/components/ai-provider-label";
 import { ModelCombobox } from "@/components/agent/model-combobox";
 import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
-import { SETTINGS_SECTIONS, type SettingsSectionId } from "@/lib/settings-sections";
+import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { useNumoPreferencesQuery, useSaveNumoPreferences } from "@/lib/use-numo-preferences-query";
 import { useAiRoutesQuery, useSetAiRoute } from "@/lib/use-ai-routes-query";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { updateAiKeyPreferencesApi, type AiKey } from "@/lib/agent-keys-api";
 import {
-  AI_SURFACE_DEFINITIONS,
   MINDDY_CLOUD_PROVIDER,
-  ROUTED_AI_SURFACES,
+  ROLE_USAGE_KEYS,
+  type AiModelRole,
   type AiProviderChoice,
   type ByokModelKey,
-  type RoutedAiSurface,
 } from "@/lib/ai-surfaces";
 import type { AiProviderOption } from "@/lib/ai-provider-options";
 import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 
 /**
- * Minddy's AI settings (MIN-826): the providers the account can use, then a
- * provider for every precise usage, grouped as Numo, automations, voice and
- * feedback. Each call type is independent, so Numo conversations can run on a
- * personal key while their titles and everything else stay on minddy Cloud.
- * Choices apply at once and roll back if the server refuses them.
+ * Minddy's AI settings: the providers the account can use, then a provider
+ * for each model ROLE (MIN-954) — the language model that Numo and every
+ * text feature run, the embedding model, and speech to text. No feature
+ * chooses a provider or a model of its own. Choices apply at once and roll
+ * back if the server refuses them.
  */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
@@ -51,27 +50,12 @@ export function AccountAiKeysSection() {
         title={t("aiConnectedProviders")} variant="block">
         <ByokConnectPanel mode="settings" />
       </SettingsGroup>
-      <UsageGroup surface="assistant" anchor={SETTINGS_SECTIONS.accountAiUsages} />
-      {ROUTED_AI_SURFACES.filter((surface) => surface !== "assistant").map((surface) => (
-        <UsageGroup key={surface} surface={surface} />
-      ))}
+      <SettingsGroup anchor={SETTINGS_SECTIONS.accountAiUsages} title={t("aiUsagesTitle")}>
+        <LanguageModelRow />
+        <RoleRow role="embedding" />
+        <RoleRow role="transcription" />
+      </SettingsGroup>
     </section>
-  );
-}
-
-function usageKeysOf(surface: RoutedAiSurface): readonly ByokModelKey[] {
-  return AI_SURFACE_DEFINITIONS.find((entry) => entry.id === surface)?.modelKeys ?? [];
-}
-
-/** One category of usages: a row per call type. */
-function UsageGroup({ surface, anchor }: { surface: RoutedAiSurface; anchor?: SettingsSectionId }) {
-  const t = useTranslations("Account");
-  return (
-    <SettingsGroup anchor={anchor} title={t(`aiUsage_${surface}`)}>
-      {usageKeysOf(surface).map((usageKey) => usageKey === "assistant_model"
-        ? <NumoConversationsRow key={usageKey} />
-        : <UsageRow key={usageKey} usageKey={usageKey} />)}
-    </SettingsGroup>
   );
 }
 
@@ -85,7 +69,7 @@ function ProviderSelect({ value, options, onChange, ariaLabel, disabled }: {
 }) {
   const current = options.find((option) => option.id === value) ?? { id: value, label: value };
   if (options.length <= 1) {
-    return <span className="flex h-9 items-center text-sm"><ProviderOptionLabel option={current} /></span>;
+    return <span className="flex h-9 items-center text-sm sm:justify-end"><ProviderOptionLabel option={current} /></span>;
   }
   return (
     <Select value={value} onValueChange={(next) => onChange(next as AiProviderChoice)} disabled={disabled}>
@@ -121,25 +105,29 @@ function useModelCopy() {
   };
 }
 
-/** Numo conversations: provider, then that provider's default model. */
-function NumoConversationsRow() {
+/**
+ * The language model (MIN-954): its provider, then that provider's model,
+ * which Numo and every text feature run. The instance's provider runs the
+ * administrator's model, so only a personal key offers a model.
+ */
+function LanguageModelRow() {
   const t = useTranslations("Account");
   const modelCopy = useModelCopy();
   const preferences = useNumoPreferencesQuery();
   const save = useSaveNumoPreferences(() => toast.error(t("numoModelSaveError")));
   const data = preferences.data;
   const provider = data?.provider ?? MINDDY_CLOUD_PROVIDER;
-  const label = t("aiUsageKey_assistant_model");
+  const label = t("aiRole_llm");
   return (
     <SettingsRow
       label={label}
-      hint={t("aiUsageKeyHint_assistant_model")}
+      hint={t("aiRoleHint_llm")}
       control={
         <UsageControls
           provider={<ProviderSelect value={provider} options={data?.providers ?? []}
             ariaLabel={t("aiUsageProvider", { usage: label })} disabled={!data}
             onChange={(next) => save.mutate({ provider: next, default_model: null })} />}
-          model={<ModelCombobox scope="assistant" providerChoice={provider}
+          model={data?.model_locked ? undefined : <ModelCombobox scope="assistant" providerChoice={provider}
             value={data?.default_model ?? ""}
             onChange={(value) => data && save.mutate({ provider, default_model: value || null })}
             disabled={!data}
@@ -155,19 +143,20 @@ function NumoConversationsRow() {
   );
 }
 
-/** Any other call type: a provider, and a key's model for it. */
-function UsageRow({ usageKey }: { usageKey: Exclude<ByokModelKey, "assistant_model"> }) {
+/** Embeddings or speech to text: a provider, and a key's model for it. */
+function RoleRow({ role }: { role: Exclude<AiModelRole, "llm"> }) {
+  const usageKey = ROLE_USAGE_KEYS[role];
   const t = useTranslations("Account");
   const routes = useAiRoutesQuery();
   const { keys } = useAiKeysQuery();
   const setRoute = useSetAiRoute(() => toast.error(t("aiUsageSaveError")));
   const provider = routes.data?.routes[usageKey] ?? MINDDY_CLOUD_PROVIDER;
   const key = provider === MINDDY_CLOUD_PROVIDER ? undefined : keys.find((entry) => entry.provider === provider);
-  const label = t(`aiUsageKey_${usageKey}`);
+  const label = t(`aiRole_${role}`);
   return (
     <SettingsRow
       label={label}
-      hint={t(`aiUsageKeyHint_${usageKey}`)}
+      hint={t(`aiRoleHint_${role}`)}
       control={
         <UsageControls
           provider={<ProviderSelect value={provider} options={routes.data?.options[usageKey] ?? []}

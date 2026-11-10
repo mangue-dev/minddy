@@ -636,6 +636,7 @@
       "column": "user_id"
     },
     "encrypted": [
+      "context_summary",
       "error_message",
       "title"
     ],
@@ -647,17 +648,19 @@
         "status"
       ],
       "routing_identity": [
+        "context_summary_through_id",
         "id",
         "project_id",
         "user_id"
       ],
       "timestamp": [
         "archived_at",
+        "context_summary_through_at",
         "created_at",
-        "error_encryption_checked_at",
         "error_encryption_attempted_at",
-        "title_encryption_checked_at",
+        "error_encryption_checked_at",
         "title_encryption_attempted_at",
+        "title_encryption_checked_at",
         "updated_at"
       ]
     }

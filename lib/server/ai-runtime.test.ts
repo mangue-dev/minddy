@@ -20,6 +20,11 @@ vi.mock("@/lib/server/agent/model", () => ({
   resolveProviderDefaultModel: vi.fn(async () => null),
 }));
 vi.mock("@/lib/server/safe-fetch", () => ({ safeFetchResponse }));
+// The account's language model on a provider: its Numo default (MIN-954).
+const numoDefaults = new Map<string, string>();
+vi.mock("@/lib/server/assistant/model-preferences", () => ({
+  getNumoDefaultModel: vi.fn(async (_userId: string, provider: string) => numoDefaults.get(provider) ?? null),
+}));
 
 const resolveUserAiKey = vi.fn(async (userId: string) => `account-key-${userId}`);
 const resolvePublicAiKey = vi.fn(async () => "public-key");
@@ -41,6 +46,7 @@ const {
 describe("resolveAiRuntime", () => {
   beforeEach(() => {
     config.clear();
+    numoDefaults.clear();
     getUserByok.mockReset();
     process.env.MINDDY_EDITION = "cloud";
     process.env.OPENROUTER_API_KEY = "platform-key";
@@ -94,20 +100,22 @@ describe("resolveAiRuntime", () => {
     });
   });
 
-  it("prefers the account's explicit model for a native provider", async () => {
+  it("runs every text call on the account's language model for its provider (MIN-954)", async () => {
+    numoDefaults.set("anthropic", "claude-custom");
     getUserByok.mockResolvedValue({
       provider: "anthropic",
       apiKey: "anthropic-key",
       baseUrl: "https://api.anthropic.com/v1",
-      featureModels: { assistant_model: "claude-custom" },
+      // A per-task model saved before MIN-954 is no longer read.
+      featureModels: { smart_fill_model: "claude-legacy" },
     });
-    await expect(
-      resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
-    ).resolves.toMatchObject({
-      mode: "byok",
-      provider: "anthropic",
-      model: "claude-custom",
-    });
+    for (const modelKey of ["assistant_model", "smart_fill_model", "conversation_title_model"] as const) {
+      await expect(resolveAiRuntime({ userId: "u1", modelKey })).resolves.toMatchObject({
+        mode: "byok",
+        provider: "anthropic",
+        model: "claude-custom",
+      });
+    }
   });
 
   it("lets Numo follow application defaults instead of legacy per-key model choices", async () => {
@@ -167,9 +175,10 @@ describe("resolveAiRuntime", () => {
               provider: "anthropic",
               apiKey: "anthropic-key",
               baseUrl: "https://api.anthropic.com/v1",
-              featureModels: { assistant_model: "claude-custom" },
+              featureModels: {},
             },
     );
+    numoDefaults.set("anthropic", "claude-custom");
 
     await expect(
       resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),

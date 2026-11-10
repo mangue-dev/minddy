@@ -5,7 +5,7 @@ import { getAuthedUser } from "@/lib/server/api-auth";
 import { adminGrantForRequest } from "@/lib/server/assistant/admin-tools";
 import { getServiceClient } from "@/lib/supabase-service";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
-import { ensureUsageBudget, type UserUsage } from "@/lib/server/usage";
+import { ensureUsageBudget } from "@/lib/server/usage";
 import {
   isPlanLimitError,
   planLimitResponse,
@@ -448,11 +448,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Plan usage budget (MIN-72) — pre-flight before a new Numo LLM call.
-  let admittedUsage: UserUsage;
   try {
-    admittedUsage = pageContext?.documentation
-      ? await ensureUsageBudget(user.id)
-      : await ensureUsageBudget(user.id, "assistant", "assistant_model");
+    if (pageContext?.documentation) await ensureUsageBudget(user.id);
+    else await ensureUsageBudget(user.id, "assistant", "assistant_model");
     timing("budget_checked");
   } catch (err) {
     if (isPlanLimitError(err)) return planLimitResponse(err);
@@ -576,7 +574,6 @@ export async function POST(request: NextRequest) {
   try {
     configuration = await resolveNumoTurnConfiguration({
       userId: user.id,
-      admittedBilling: admittedUsage.billing,
       ...(pageContext?.documentation ? { managedOnly: true } : {}),
       provider: pageContext?.documentation ? null : body.provider !== undefined ? body.provider : existingConversation?.provider,
       model: pageContext?.documentation ? null : body.model !== undefined ? body.model : existingConversation?.model,

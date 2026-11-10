@@ -1,6 +1,6 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AiProviderChoice } from "./ai-surfaces";
+import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice } from "./ai-surfaces";
 import type { AiProviderOption } from "./ai-provider-options";
 import { apiErrorCode, HttpResponseError } from "./backend-availability";
 import { agentModelsQueryKey } from "./use-agent-models-query";
@@ -11,6 +11,8 @@ export type NumoPreferences = {
   provider: AiProviderChoice;
   default_model: string | null;
   application_model: string | null;
+  /** The instance sets Numo's model and reasoning on this provider (MIN-954). */
+  model_locked: boolean;
   providers: AiProviderOption[];
 };
 export type NumoPreferencesPatch = Pick<NumoPreferences, "provider" | "default_model">;
@@ -27,7 +29,7 @@ async function requestNumoPreferences(patch?: NumoPreferencesPatch): Promise<Num
     throw new HttpResponseError(body?.error ?? (patch ? "Could not save Numo preferences" : "Could not load Numo preferences"),
       response.status, apiErrorCode(body));
   }
-  return { providers: [], ...body };
+  return { providers: [], model_locked: false, ...body };
 }
 export const saveNumoPreferencesApi = (patch: NumoPreferencesPatch) => requestNumoPreferences(patch);
 export function useNumoPreferencesQuery() {
@@ -51,6 +53,7 @@ export function useSaveNumoPreferences(onError: (error: Error) => void) {
           ...patch,
           // A new provider's application default is unknown until the server answers.
           application_model: patch.provider === previous.provider ? previous.application_model : null,
+          model_locked: patch.provider === MINDDY_CLOUD_PROVIDER,
         });
       }
       return { previous };

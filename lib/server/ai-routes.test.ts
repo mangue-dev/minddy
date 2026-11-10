@@ -79,17 +79,23 @@ beforeEach(() => {
 const ids = (options: Array<{ id: string }>) => options.map((option) => option.id);
 
 describe("call-type routes", () => {
-  it("serves each call type from its own route, and minddy Cloud without one", async () => {
+  it("serves every call type of a role from the role's route (MIN-954)", async () => {
     await setAiRoute("user", "assistant_model", "anthropic");
-    // Numo conversations on the key; their titles stay on minddy Cloud.
+    // The language model serves Numo and every text call type alike.
     expect((await getUserByok("user", "assistant", "text", "assistant_model"))?.provider).toBe("anthropic");
-    expect(await getUserByok("user", "assistant", "text", "conversation_title_model")).toBeNull();
-    // A surface-level read uses the surface's main call type.
-    expect((await getUserByok("user", "assistant"))?.provider).toBe("anthropic");
-    expect(await getUserByok("user", "automations")).toBeNull();
+    expect((await getUserByok("user", "assistant", "text", "conversation_title_model"))?.provider).toBe("anthropic");
+    expect((await getUserByok("user", "automations"))?.provider).toBe("anthropic");
+    // Embeddings and speech to text keep their own route: none here.
+    expect(await getUserByok("user", "automations", "embedding", "issue_embedding_model")).toBeNull();
     const routes = await getAiRoutes("user");
-    expect(routes.assistant_model).toBe("anthropic");
-    expect(routes.conversation_title_model).toBe("minddy");
+    expect(routes.conversation_title_model).toBe("anthropic");
+    expect(routes.feedback_embedding_model).toBe("minddy");
+  });
+
+  it("ignores a route saved for a single call type before MIN-954", async () => {
+    h.tables.user_ai_usage_routes = [{ user_id: "user", usage_key: "smart_fill_model", ai_key_id: "key-anthropic" }];
+    expect(await getUserByok("user", "automations", "text", "smart_fill_model")).toBeNull();
+    expect((await getAiRoutes("user")).smart_fill_model).toBe("minddy");
   });
 
   it("offers only the providers that can serve a call type", async () => {
@@ -107,13 +113,16 @@ describe("call-type routes", () => {
     expect(await getUserByokForProvider("user", "google")).toBeNull();
   });
 
-  it("moves a call type back to minddy Cloud and refuses providers that cannot serve it", async () => {
+  it("moves a role back to minddy Cloud and refuses providers that cannot serve it", async () => {
+    // A call type's route is its role's.
     await setAiRoute("user", "feedback_analysis_model", "openai");
+    expect(h.tables.user_ai_usage_routes).toEqual([
+      expect.objectContaining({ usage_key: "assistant_model", ai_key_id: "key-openai" }),
+    ]);
     await setAiRoute("user", "feedback_analysis_model", "minddy");
     expect(h.tables.user_ai_usage_routes).toEqual([]);
     await expect(setAiRoute("user", "feedback_analysis_model", "google")).rejects.toBeInstanceOf(AiRouteError);
     await expect(setAiRoute("user", "transcription_model", "anthropic")).rejects.toBeInstanceOf(AiRouteError);
-    await expect(setAiRoute("user", "web_search_model", "openai")).rejects.toBeInstanceOf(AiRouteError);
     h.tables.user_ai_keys!.push(key("ollama"));
     await expect(setAiRoute("user", "assistant_model", "ollama")).rejects.toBeInstanceOf(AiRouteError);
     h.tables.user_ai_keys!.push(key("google", { validated_at: null }));
@@ -134,8 +143,9 @@ describe("call-type routes", () => {
     await routeUnservedUsages("user", "anthropic");
     const routes = await getAiRoutes("user");
     expect(routes.assistant_model).toBe("openai");
-    expect(routes.smart_fill_model).toBe("anthropic");
-    // Anthropic cannot transcribe: that call type keeps no provider.
+    expect(routes.smart_fill_model).toBe("openai");
+    // Anthropic cannot transcribe nor embed: those roles keep no provider.
     expect(routes.transcription_model).toBe("minddy");
+    expect(h.tables.user_ai_usage_routes).toHaveLength(1);
   });
 });

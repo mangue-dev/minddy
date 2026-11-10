@@ -16,7 +16,7 @@ const request = (query = "") => new NextRequest(`https://www.minddy.app/api/reco
 
 beforeEach(() => {
   readAiConfigValues.mockReset().mockResolvedValue({
-    category_assistant_model: "openai/gpt-5-mini",
+    assistant_model: "openai/gpt-5-mini",
     jev_model: "liquid/d1",
   });
 });
@@ -39,9 +39,8 @@ describe("GET /api/recommended-models", () => {
     const file = await response.json();
     expect(file).toMatchObject({
       format: "minddy.instance-models",
-      version: 1,
-      categories: { assistant: { model: "openai/gpt-5-mini" } },
-      tasks: { jev_model: { model: "liquid/d1" } },
+      version: 2,
+      tasks: { assistant_model: { model: "openai/gpt-5-mini" }, jev_model: { model: "liquid/d1" } },
     });
   });
 

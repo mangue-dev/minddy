@@ -1145,6 +1145,15 @@ const TOOL_META: Record<string, ToolMeta> = {
       });
     },
   },
+  // Not a tool Numo calls: the server compacts the context (MIN-954) and
+  // shows it as a step of the turn.
+  compact_context: {
+    icon: FileStack,
+    getLabel: (_args, _result, success, status, t) => {
+      if (status === "running") return t("compactingContext");
+      return success ? t("contextCompacted") : t("contextCompactionFailed");
+    },
+  },
   ask_user: {
     icon: MessageCircleQuestion,
     getLabel: (args, _result, _success, status, t) => {
@@ -1270,6 +1279,7 @@ const ACTION_KIND: Record<string, ActionKind> = {
   // A seed proposal does not write anything: it waits for the user.
   propose_backlog: "other",
   ask_user: "other",
+  compact_context: "other",
 };
 
 function actionKind(name: string): ActionKind {

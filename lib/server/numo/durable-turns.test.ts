@@ -13,6 +13,9 @@ const h = vi.hoisted(() => ({
   queuedTurns: [] as Array<Record<string, unknown>>,
   claims: [] as Array<Record<string, unknown>>,
   turnUpdates: [] as Array<Record<string, unknown>>,
+  conversation: null as Record<string, unknown> | null,
+  conversationUpdates: [] as Array<Record<string, unknown>>,
+  historyFilters: [] as string[],
   failActivity: false,
   managedAi: false,
   operationSpent: 0,
@@ -33,6 +36,11 @@ function queryFor(table: string) {
     select: () => query,
     update: (row: Record<string, unknown>) => {
       if (table === "numo_assistant_turns") h.turnUpdates.push(row);
+      if (table === "conversations") h.conversationUpdates.push(row);
+      return query;
+    },
+    or: (filter: string) => {
+      if (table === "assistant_messages") h.historyFilters.push(filter);
       return query;
     },
     insert: (row: Record<string, unknown>) => {
@@ -57,7 +65,7 @@ function queryFor(table: string) {
       error: null,
     }),
     maybeSingle: async () => ({
-      data: table === "numo_assistant_turns" ? h.turn : null,
+      data: table === "numo_assistant_turns" ? h.turn : table === "conversations" ? h.conversation : null,
       error: null,
     }),
     then: (resolve: (value: unknown) => unknown) => Promise.resolve({
@@ -249,6 +257,9 @@ beforeEach(() => {
   h.queuedTurns.length = 0;
   h.claims.length = 0;
   h.turnUpdates.length = 0;
+  h.conversation = null;
+  h.conversationUpdates.length = 0;
+  h.historyFilters.length = 0;
   h.failActivity = false;
   h.managedAi = false;
   h.operationSpent = 0;
@@ -284,6 +295,33 @@ beforeEach(() => {
 });
 
 describe("durable Numo execution", () => {
+  it("resumes after the stored summary and keeps compaction steps out of the history (MIN-954)", async () => {
+    h.conversation = {
+      context_summary: "The user audits MIN-42.",
+      context_summary_through_at: "2026-11-10T00:43:52.394446+00:00",
+      context_summary_through_id: "51600000-0000-4000-8000-0000000000c1",
+    };
+    h.messages.push(
+      { id: "step-result", turn_id: h.turn!.id, role: "tool", content: "{\"status\":\"compacted\"}",
+        tool_calls: null, tool_call_id: "compact_1", tool_name: "compact_context",
+        metadata: { success: true, context_compaction: true }, context: null },
+      { id: "step-call", turn_id: h.turn!.id, role: "assistant", content: null,
+        tool_calls: [{ id: "compact_1", type: "function", function: { name: "compact_context", arguments: "{}" } }],
+        tool_call_id: null, tool_name: null, metadata: { context_compaction: true }, context: null },
+    );
+    await executeNumoTurn({ turnId: h.turn!.id as string, readClient: service });
+    expect(h.historyFilters).toEqual([
+      'created_at.gt."2026-11-10T00:43:52.394446+00:00",and(created_at.eq."2026-11-10T00:43:52.394446+00:00",id.gt.51600000-0000-4000-8000-0000000000c1)',
+    ]);
+    const [messages, , , context] = h.processChat.mock.calls[0];
+    expect(context.compaction.summary).toBe("The user audits MIN-42.");
+    expect(messages.map((message: { role: string }) => message.role)).toEqual(["system", "user"]);
+    expect(context.compaction.originOf(messages[1])).toEqual(expect.objectContaining({ id: "user-message" }));
+
+    await context.compaction.persist({ summary: "New notes.", through: { id: "user-message", createdAt: "2026-11-10T01:00:00Z" } });
+    expect(h.conversationUpdates).toEqual([{ context_summary: "New notes.",
+      context_summary_through_at: "2026-11-10T01:00:00Z", context_summary_through_id: "user-message" }]);
+  });
   it("uses the published guide and only help tools for a documentation turn", async () => {
     h.turn = { ...h.turn!, intent: { ...(h.turn!.intent as object), locale: "fr", documentation: { articleId: "numo" } } };
     await executeNumoTurn({ turnId: h.turn.id as string, readClient: service });

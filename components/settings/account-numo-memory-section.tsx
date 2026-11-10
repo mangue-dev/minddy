@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { AppTooltip } from "@/components/ui/app-tooltip";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { RowsSkeleton } from "@/components/loading-skeletons";
 import { SettingsEmpty, SettingsGroup } from "@/components/settings/settings-ui";
@@ -40,16 +39,17 @@ function excerpt(text: string): string {
 }
 
 /**
- * Account → AI & Numo → Numo's memory (MIN-915): the switch, and every memory
- * Numo keeps, each one editable and deletable. Turning the memory off keeps
- * the memories; Numo just stops reading and writing them.
+ * Account → Numo → Memories (MIN-915): every memory Numo keeps, each one
+ * editable and deletable. Its switch sits in the Numo card (MIN-954);
+ * turning the memory off keeps the memories, Numo just stops reading and
+ * writing them.
  */
 export function AccountNumoMemorySection() {
   const t = useTranslations("Account");
   const tc = useTranslations("Common");
   const queryClient = useQueryClient();
   const { projects } = useProjects();
-  const [enabled, setEnabled, ready] = useAccountPreference(
+  const [enabled, , ready] = useAccountPreference(
     NUMO_MEMORY_META_KEY,
     resolveNumoMemoryEnabled,
   );
@@ -108,16 +108,7 @@ export function AccountNumoMemorySection() {
     <>
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountNumoMemory}
-        title={t("numoMemoryTitle")}
-        help={t("numoMemoryHelp")}
-        action={
-          <Switch
-            aria-label={t("numoMemorySwitch")}
-            checked={enabled}
-            onCheckedChange={(next) => void setEnabled(next)}
-            disabled={!ready}
-          />
-        }
+        title={t("numoMemoriesTitle")}
         footer={memories.length > 0 ? (
           <div className="flex w-full items-center justify-between gap-3">
             <span className="text-xs text-muted-foreground">

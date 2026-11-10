@@ -18,9 +18,7 @@ import {
   type ModelPricing,
 } from "@/lib/model-multiplier";
 import type { ModelReasoning } from "@/lib/agent-reasoning";
-import { getAppConfigValue } from "@/lib/server/app-config";
-import { aiModelFallback } from "@/lib/ai-model-config";
-import { parseRecommendedModels } from "@/lib/recommended-models";
+import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { dedupeModelVariants } from "@/lib/model-variants";
 import { nativeModelReasoning } from "@/lib/model-reasoning-rules";
 import {
@@ -361,19 +359,14 @@ async function attachMultipliers(
  * then EMPTY, and the picker reopens on the entire catalog — the correct fallback: better
  * is worth too many models than a list of tips none of which can be launched.
  *
- * Never hidden with the list of models, for the same reason as
- * multipliers: an admin changes this setting whenever he wants, and an hour of
- * cache would make it lie.
  */
 async function resolveRecommended(
   models: AgentModelEntry[],
   useOpenRouterPricing: boolean,
 ): Promise<string[]> {
-  const raw = await getAppConfigValue("recommended_models").catch(() => null);
-  const ids =
-    parseRecommendedModels(raw) ??
-    parseRecommendedModels(aiModelFallback("recommended_models")) ??
-    [];
+  // The product's list (MIN-954): the admin no longer rewrites it, and a
+  // row saved before is ignored.
+  const ids = DEFAULT_RECOMMENDED_MODELS;
   const available = new Set(models.map((m) => m.id));
   const applicable = ids.filter((id) => available.has(id));
   // A BYOK native provider has no reason to join OpenRouter to store

@@ -2,7 +2,7 @@ import { getDesktopBridge } from "@/lib/desktop/bridge";
 
 /**
  * Carries a provider's answer from the OAuth callback back into the desktop
- * app (MIN-912): `/settings?tab=agent&mcp_oauth=…`, reached through
+ * app (MIN-912): `/settings?tab=mcp&mcp_oauth=…`, reached through
  * `/desktop/return` and `minddy://open`. The app redeems it with its own
  * session, so the browser never needs a minddy session of its own.
  */

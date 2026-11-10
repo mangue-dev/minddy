@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 17,
-  "sourceRevision": 17,
+  "revision": 18,
+  "sourceRevision": 18,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-10",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -54,14 +54,15 @@
       "lib/server/instance-variables.ts",
       "app/api/admin/instance-variables/route.ts",
       "components/admin/admin-instance-dashboard.tsx",
-      "components/agent/model-combobox.tsx"
+      "components/agent/model-combobox.tsx",
+      "lib/server/assistant/conversation-config.ts"
     ]
   },
   "review": {
-    "revision": 17,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-08"
+    "revision": 18,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts); agent:claude-code (MIN-954: sentence on Numo's model on minddy Cloud in #models, source audit against lib/server/assistant/conversation-config.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954 model roles: #models, #models-file, #decision-model and #smart-fill-relations rewritten for one model per role, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot still shows the former category cards and needs a recapture); agent:claude-code (MIN-954: recommended models and routing shortcuts removed from #models and #models-file, checked against components/admin/admin-models-dashboard.tsx and lib/ai-model-config-file.ts)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-10"
   },
   "related": [
     "authentication-and-email",
@@ -79,7 +80,7 @@
       "src": "/documentation/fr/instance-administration-overview.png",
       "alt": "Onglet Comptes avec le nombre de comptes et la recherche d’un compte par adresse e-mail exacte.",
       "caption": "Comptes affiche le nombre de comptes et la recherche de support ; la capture provient d’une instance de démonstration.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -96,7 +97,7 @@
       "src": "/documentation/fr/instance-administration-models.png",
       "alt": "Onglet Modèles avec un modèle par défaut par catégorie et les modèles par tâche repliés.",
       "caption": "Modèles affiche un modèle par défaut par catégorie ; les modèles par tâche restent repliés. Aucun réglage de modèle ou de fournisseur n’a été modifié pour cette capture.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -113,7 +114,7 @@
       "src": "/documentation/fr/instance-administration-instance.png",
       "alt": "Onglet Instance avec la source de chaque variable, une clé OpenRouter masquée définie ici et les adresses des administrateurs issues du fichier.",
       "caption": "Instance indique d’où vient chaque valeur ; les secrets ne gardent que leurs derniers caractères. Cette capture provient d’une instance auto-hébergée locale jetable.",
-      "revision": 17,
+      "revision": 18,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -152,13 +153,15 @@ La console compte trois onglets : **Comptes**, **Coûts**, **Modèles** et, là 
 
 **Coûts** affiche ce que les fournisseurs d’IA coûtent à l’instance, en dollars, comme ils le facturent, et se met à jour tout seul tant qu’il reste ouvert. Choisissez la période dans le menu en haut à droite du volet, et restreignez tout avec le bouton **Filtres** à côté, par fonctionnalité ou par modèle. Les appels effectués avec les clés personnelles des membres ne sont jamais enregistrés et n’apparaissent donc pas ici. Quatre chiffres suivent, chacun avec sa tendance et son évolution par rapport à la période précédente : dépense totale, requêtes, tokens et coût par million de tokens. Viennent ensuite les fonctionnalités et les modèles les plus coûteux, puis la dépense par jour par modèle et par famille de fonctionnalités, les requêtes par jour par modèle et les exécutions récentes, qui s’ouvrent sur leurs appels. Les revenus, abonnements et marges ne sont pas affichés : la facturation Stripe se gère dans Stripe. Les clés OpenRouter par compte qu’aucun compte n’utilise plus sont supprimées chaque nuit.
 
-## Choisir les modèles par catégorie {#models}
+## Choisir les modèles {#models}
 
-Chaque carte de **Modèles** a un **Modèle par défaut** pour sa catégorie : **Assistant** (Numo, titres de conversation, recherche web, tri des événements, mot de l'accueil), **Automatisations** (Smart Fill et ses titres, Smart Assign, décisions de relation, correspondance des imports CSV, découpage des briefs, messages de commit de fusion), **Embeddings** (embeddings des tickets et des retours) et **Retours et site public** (analyse des retours, boîte à questions de la FAQ). Une tâche suit le modèle par défaut de sa catégorie jusqu’à ce que vous lui donniez son propre modèle dans **Modèles par tâche** ; pour qu’elle suive à nouveau la catégorie, choisissez dans son sélecteur le modèle de la catégorie, affiché sous son propre nom et coché tant que la tâche le suit. **Modèle par défaut** ne reste une option que si ce modèle ne figure pas au catalogue. Tant que le modèle par défaut d’une catégorie n’est pas renseigné, chaque tâche garde sa propre valeur intégrée. **Niveau de raisonnement**, **Modèle de décision** et les deux réglages **Voix** ont leur propre ligne. Dans la carte **Assistant**, **Tours en arrière-plan par jour** plafonne les tours que [Numo en arrière-plan](/docs/numo#background) effectue pour un membre sur 24 heures : 20 si le champ est vide, 0 pour désactiver Numo en arrière-plan pour tous. Le fichier de modèles ne le contient pas et ne le réinitialise pas. Renseigner le modèle par défaut d’une catégorie libère les tâches qui portent encore leur valeur intégrée, comme celles qu’une nouvelle instance reçoit à l’installation ; une tâche réglée sur un autre modèle le garde. **Modèles conseillés** fixe la courte liste sur laquelle s’ouvre chaque sélecteur de modèle. **Clés personnelles** est replié en bas de page : il ne concerne que les membres qui utilisent leur propre clé de fournisseur.
+**Modèles** compte une carte par sorte de modèle, et chaque sorte utilise un seul modèle pour toute l’instance. **Modèle de langage** règle le modèle qu’utilisent Numo et toutes les tâches de texte : titres de conversation, recherche web, tri des événements, mot de l’accueil, Smart Fill et ses titres, Smart Assign, décisions de relation, correspondance des imports CSV, découpage des briefs, messages de commit de fusion, nettoyage des dictées, relecture des retours et questions de la FAQ. La même carte contient le **Niveau de raisonnement** de Numo et **Tours en arrière-plan par jour**, qui plafonne les tours que [Numo en arrière-plan](/docs/numo#background) fait pour un membre en 24 heures : 20 si le champ est vide, 0 pour désactiver Numo en arrière-plan pour tous ; le fichier des modèles ne le contient ni ne le réinitialise. **Embeddings** règle le modèle d’embeddings unique des tickets et des retours, **Voix** le modèle de transcription vocale et **Décisions** le [modèle de décision](#decision-model). Aucune tâche n’a de modèle propre. Une instance qui avait réglé un modèle par défaut de catégorie dans une version antérieure continue de l’utiliser : la carte l’affiche, et enregistrer la carte le remplace. **Clés personnelles** est replié en bas : pour chaque fournisseur, il contient le modèle qu’utilise la clé d’un membre pour chaque sorte quand ce membre n’en a choisi aucun.
+
+Sur minddy Cloud, le Numo de chaque membre utilise le modèle et le **Niveau de raisonnement** de la carte **Modèle de langage**, que les membres ne peuvent pas changer. Seule une clé personnelle donne à un membre le choix du modèle de langage, qui sert alors à Numo et à toutes ses tâches de texte.
 
 ## Exporter et importer la configuration des modèles {#models-file}
 
-En haut à droite du volet **Modèles**, **Exporter** télécharge la configuration des modèles dans un fichier JSON versionné (format `minddy.instance-models`) : modèles par défaut des catégories, modèles des tâches, raccourcis de routage, niveau de raisonnement, modèles conseillés et valeurs par défaut des fournisseurs pour les clés personnelles. Il ne contient ni clé d’API ni compte. **Importer** lit un tel fichier et liste chaque changement avant toute écriture ; **Appliquer** les écrit tous, ou aucun quand une valeur est refusée, par exemple un modèle qui n’est pas un modèle de décision. Un import remplace la configuration : les réglages absents du fichier reviennent à leur valeur par défaut. Un fichier d’une version antérieure de minddy est mis au format actuel ; un fichier d’une version plus récente est refusé tant que l’instance n’est pas mise à jour. Les entrées inconnues de cette version sont listées et ignorées.
+En haut à droite du volet **Modèles**, **Exporter** télécharge la configuration des modèles dans un fichier JSON versionné (format `minddy.instance-models`) : le modèle de chaque sorte, le niveau de raisonnement et les modèles par défaut des clés personnelles. Il ne contient ni clé d’API ni compte. **Importer** lit un tel fichier et liste chaque changement avant toute écriture ; **Appliquer** les écrit tous, ou aucun si une valeur est refusée, par exemple un modèle qui n’est pas un modèle de décision. Un import remplace la configuration : les réglages absents du fichier reviennent à leur valeur par défaut. Un fichier d’une version antérieure de minddy est mis au format actuel : ses modèles par défaut des catégories Assistant et Embeddings remplissent le modèle de langage et le modèle d’embeddings, et ses modèles par tâche, raccourcis de routage et modèles conseillés sont listés puis ignorés. Un fichier d’une version plus récente est refusé tant que l’instance n’est pas mise à jour.
 
 ## Administrer l’instance avec Numo {#numo}
 
@@ -176,18 +179,13 @@ Enregistrer un secret ou les adresses des administrateurs demande votre code à 
 
 ## Choisir le modèle de décision IA {#decision-model}
 
-Dans **Modèles**, section **Automatisations**, **Modèle de décision** fixe le modèle unique qui répond à toutes les décisions IA de l’instance : Smart Fill, Smart Assign et la relecture des retours. Il n’existe aucun choix par projet, par utilisateur ou par fonctionnalité. Le sélecteur ne propose que les modèles OpenRouter qui publient la capacité de décision ; les modèles de conversation, d’embedding et de transcription n’y apparaissent jamais. L’enregistrement teste le candidat par une décision représentative. Un modèle qui n’est pas un modèle de décision, refuse la requête, renvoie une réponse invalide ou dépasse 5 secondes est refusé, et le modèle actuel reste utilisé. Quand le catalogue ne peut pas être chargé, tout changement est refusé. Une instance auto-hébergée sans IA gérée n’a pas de catalogue plateforme et conserve le modèle par défaut, Jev.
+Dans **Modèles**, **Décisions**, **Modèle de décision** règle le modèle de décision unique qui répond à toutes les décisions IA de l’instance : Smart Fill, Smart Assign, décisions de relation, tri des événements et relecture des retours. Il n’existe aucun choix par projet, par utilisateur ou par fonction. Le sélecteur ne liste que les modèles OpenRouter qui publient la capacité de décision ; les modèles de chat, d’embeddings et de transcription n’y apparaissent jamais. L’enregistrement teste le candidat avec une décision représentative. Un modèle qui n’est pas un modèle de décision, refuse la requête, renvoie une réponse invalide ou met plus de 5 secondes est refusé, et le modèle actuel reste en service. Quand le catalogue ne peut pas être chargé, tout changement est refusé. Les instances auto-hébergées sans IA gérée n’ont pas de catalogue de plateforme et gardent le modèle par défaut, Jev.
 
-Les nouvelles décisions utilisent le modèle enregistré en une minute environ sur chaque processus serveur. Quand le modèle échoue ou répond sous le seuil de confiance, la décision retombe sur le modèle LLM propre à la fonctionnalité, comme avant. Le seuil a été calibré sur Jev et les autres modèles de décision répartissent leur confiance autrement : après un changement, vérifiez l’accord par modèle dans la vue de base de données `ai_decision_evaluations_weekly`. Les lignes d’usage enregistrent le modèle qui a répondu.
-
-**Titres Smart Fill**, dans **Modèles**, section **Automatisations**, **Modèles par tâche**, choisit le modèle qui rédige le titre d’un ticket créé sans titre, et le réécrit lors d’une réévaluation. C’est une tâche de rédaction, pas une décision : le modèle de décision n’y répond jamais. La valeur par défaut est `deepseek/deepseek-v4-flash` ; quelqu’un attend le ticket, choisissez donc un modèle rapide.
+Les nouvelles décisions utilisent le modèle enregistré en une minute environ, sur chaque processus serveur. Quand le modèle échoue ou répond sous le seuil de confiance, la décision retombe sur le modèle de langage. Le seuil a été calibré sur Jev et les autres modèles de décision répartissent leur confiance autrement : après un changement, vérifiez l’accord par modèle dans la vue `ai_decision_evaluations_weekly` de la base. Les lignes d’usage indiquent le modèle qui a répondu.
 
 ## Configurer les relations Smart Fill {#smart-fill-relations}
 
-Après l’enregistrement d’un ticket, Smart Fill peut l’indexer et le relier aux tickets liés. Deux champs de **Modèles** encadrent ce travail :
-
-- **Embeddings des tickets**, dans la section **Embeddings**, **Modèles par tâche**, choisit le modèle qui transforme le titre et la description des tickets en vecteurs. La valeur par défaut est `openai/text-embedding-3-small`. Le changer démarre une nouvelle version de l’index : anciens et nouveaux vecteurs ne sont jamais comparés. La tâche horaire `/api/cron/issue-index` indexe ensuite les tickets existants, 100 par exécution, en facturant le propriétaire de chaque projet ; elle ne crée jamais de relation. Le même modèle transforme chaque requête de recherche par le sens en vecteur, avec les réglages de fournisseur IA du membre qui cherche, et les requêtes ne sont comparées qu’aux vecteurs de la version actuelle de l’index. Tant qu’un ticket n’est pas réindexé, la recherche de tickets liés et la recherche par le sens ne l’atteignent que par ses mots. La même tâche convertit en vecteurs chiffrés ceux enregistrés en clair dès que leur projet est chiffré.
-- **Modèle de décision des relations**, dans la section **Automatisations**, **Modèles par tâche**, est le modèle LLM de repli qui répond aux décisions de relation quand le [modèle de décision](#decision-model) échoue ou n’est pas sûr, comme le modèle LLM propre à chaque fonctionnalité. La valeur par défaut est `deepseek/deepseek-v4-flash`.
+Une fois un ticket enregistré, Smart Fill peut l’indexer et le lier aux tickets liés. **Modèle d’embeddings**, dans **Modèles**, **Embeddings**, transforme le titre et la description des tickets, ainsi que les retours, en vecteurs. Le modèle par défaut est `openai/text-embedding-3-small`. Le changer démarre une nouvelle version de l’index : anciens et nouveaux vecteurs ne sont jamais comparés. La tâche horaire `/api/cron/issue-index` indexe alors les tickets existants, 100 par passage, et facture le propriétaire de chaque projet ; elle ne crée jamais de relation. Le même modèle transforme chaque requête de recherche par le sens en vecteur, avec les réglages de fournisseur IA du membre qui cherche, et les requêtes ne sont comparées qu’aux vecteurs de la version actuelle de l’index. Tant qu’un ticket n’est pas réindexé, la recherche de tickets liés et la recherche par le sens ne le trouvent que par ses mots. La même tâche chiffre les vecteurs stockés en clair dès que leur projet est chiffré. Les décisions de relation utilisent le [modèle de décision](#decision-model) et retombent sur le modèle de langage quand il échoue ou hésite.
 
 Les champs d’embedding et de transcription refusent à l’enregistrement un modèle de la mauvaise famille, par exemple un modèle de conversation dans un champ d’embeddings, et le modèle actuel reste utilisé. Cette vérification nécessite le catalogue de la plateforme : quand il ne peut pas être chargé, comme sur une instance auto-hébergée sans IA gérée, le choix ne peut pas être vérifié et il est accepté. Pour les membres qui exécutent les automatisations avec leur propre clé, les valeurs par défaut par fournisseur comprennent `issue_embedding_model` : `text-embedding-3-small` pour OpenAI et `gemini-embedding-001` pour Google.
 

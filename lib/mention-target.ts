@@ -46,7 +46,7 @@ export type MentionTargetType =
 /** The global board on its cycle view: a cycle has no screen of its own. */
 export const CYCLE_VIEW_PATH = withQuery("/all", { view: "cycle" });
 /** The account settings card listing connected MCP servers. */
-export const MCP_SETTINGS_PATH = withQuery("/settings", { tab: "agent", section: "account-mcp-clients" });
+export const MCP_SETTINGS_PATH = withQuery("/settings", { tab: "mcp", section: "account-mcp-clients" });
 
 /**
  * The path opened by a mention, or `null` when it leads nowhere.

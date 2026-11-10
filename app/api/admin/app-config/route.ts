@@ -61,7 +61,7 @@ export async function PATCH(request: NextRequest) {
       const { status, ok: _ok, ...refusal } = result;
       return NextResponse.json(refusal, { status });
     }
-    return NextResponse.json({ key: result.key, value: result.value, released: result.released });
+    return NextResponse.json({ key: result.key, value: result.value });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Save failed";
     console.error("[admin/app-config PATCH]", message);
