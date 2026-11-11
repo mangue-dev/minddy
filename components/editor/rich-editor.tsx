@@ -43,6 +43,7 @@ import {
 } from "@tiptap/react";
 import type { AnyExtension } from "@tiptap/core";
 import { BlockSelectionExtension } from "@/components/editor/block-selection";
+import { UnfocusedSelection } from "@/components/editor/unfocused-selection";
 import type { Node as PMNode } from "@tiptap/pm/model";
 import type { EditorView } from "@tiptap/pm/view";
 import { useLocale, useTranslations } from "next-intl";
@@ -546,6 +547,8 @@ export function RichEditor({
         // nothing, and the document bears the real arrow.
         Arrows,
         BlockSelectionExtension.configure({ selectOnEscape }),
+        // No block shows as selected in an editor nobody is in.
+        UnfocusedSelection,
         // The placeholder is US and not @tiptap/extensions: why
         // is written in block-placeholder.ts, and it fits in two words — the
         // nested blocks, and the cursor read one keystroke late.

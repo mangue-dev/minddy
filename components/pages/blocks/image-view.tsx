@@ -147,7 +147,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
  302 redirect to a signed URL, which Next's optimizer can neither cache nor resize — it would do one more
  round trip to render exactly the same byte. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <button type="button" disabled={!src} aria-label={t("imageOpen")} aria-haspopup="dialog"
+          <button type="button" data-image-open disabled={!src} aria-label={t("imageOpen")} aria-haspopup="dialog"
             className="block w-full text-left disabled:cursor-default"
             onClick={() => { if (src) setZoomed(true); }}>
           {/* `layoutDependency`: the hero flight runs when the preview opens or
@@ -250,6 +250,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
 
       {(editable || alt) && src && (
         <input
+          data-image-caption
           value={alt}
           readOnly={!editable}
           placeholder={t("imageCaption")}
@@ -311,5 +312,21 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
  * browser by the markdown projection (see blocks/subpage-view.tsx).
  */
 export function imageNodeView(): NodeViewRenderer {
-  return ReactNodeViewRenderer(ImageView) as unknown as NodeViewRenderer;
+  return ReactNodeViewRenderer(ImageView, {
+    stopEvent: stopImageChromeEvent,
+  }) as unknown as NodeViewRenderer;
+}
+
+/**
+ * The open button and the caption field take their own presses and keys.
+ * Handed to ProseMirror, a press on either selected the whole block: opening
+ * the image, or typing its alternative text, left it framed as selected once
+ * the reader closed. A drag still goes to ProseMirror, which finds the block
+ * under the pointer and moves it.
+ */
+function stopImageChromeEvent({ event }: { event: Event }): boolean {
+  const target = event.target as Element | null;
+  if (!target || typeof target.closest !== "function") return false;
+  if (event.type.startsWith("drag") || event.type === "drop") return false;
+  return target.closest("[data-image-open], [data-image-caption]") !== null;
 }
