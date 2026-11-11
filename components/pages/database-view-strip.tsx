@@ -224,9 +224,9 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
             : [{ value: "__default__", label: name }]}
           menuActions={actions}
           trigger={
-            <Button variant="ghost" aria-label={t("views")}
+            <Button variant={mobile ? "outline" : "ghost"} aria-label={t("views")}
               className={mobile
-                ? "-ml-3 h-11 min-w-0 max-w-full justify-start gap-2 px-3 text-base"
+                ? "h-11 min-w-0 max-w-full justify-start gap-2 px-4 text-base"
                 : "-ml-2 h-8 min-w-0 max-w-full justify-start gap-1.5 px-2 text-sm"}>
               <span className="truncate">{name}</span>
               <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />

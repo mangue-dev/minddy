@@ -857,7 +857,7 @@ export function BoardToolbar({
               const view = viewById.get(key);
               return view ? [{ value: key, label: view.kind === "my" ? t("myView") : view.name }] : [];
             })}
-            trigger={<Button variant="ghost" size="sm" className="min-w-0 max-w-full justify-start gap-2">
+            trigger={<Button variant="outline" size="sm" className="min-w-0 max-w-full justify-start gap-2">
               <span className="truncate">{cycleTab?.active ? t("cycleTab") : activeView?.kind === "my" ? t("myView") : activeView?.name ?? t("newView")}</span>
               <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
             </Button>}

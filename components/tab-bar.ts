@@ -10,6 +10,9 @@
  *
  * The two classes go together: each tab at the size of its label, and
  * the row at the height of a row.
+ *
+ * On a phone the column is the screen: the tabs share its width, as a
+ * segmented control does, each one an easy target.
  */
-export const TAB_LIST_DENSE = "h-9 justify-start";
-export const TAB_TRIGGER_DENSE = "flex-none px-3";
+export const TAB_LIST_DENSE = "h-9 justify-start app-mobile:h-11 app-mobile:w-full app-mobile:translate-x-0!";
+export const TAB_TRIGGER_DENSE = "flex-none px-3 app-mobile:flex-1";

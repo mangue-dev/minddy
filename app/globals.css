@@ -4191,10 +4191,29 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 
 :root[data-app-layout="mobile"] {
+  /* The inbox needs no title: its filter picker and its actions are the
+     top row, beside the close button, the picker concentric with the
+     sheet's corner like a search field. The title stays for screen readers. */
   .mobile-inbox-sheet[data-slot="sheet-content"] {
     height: 85dvh;
     max-height: var(--mobile-sheet-room);
-    padding-top: calc(var(--mobile-sheet-top) + 44px);
+    padding-top: var(--mobile-sheet-top);
+  }
+  .mobile-inbox-sheet > .mobile-picker-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .mobile-inbox-sheet [data-inbox-sheet-bar] {
+    min-height: 44px;
+    padding: 0 calc(var(--mobile-sheet-close-room) - var(--mobile-sheet-inset)) 8px calc(var(--mobile-sheet-top) - var(--mobile-sheet-inset));
+  }
+  .mobile-inbox-sheet [data-inbox-sheet-bar] button {
+    height: 44px;
+    min-height: 44px;
   }
   .mobile-inbox-sheet .divide-y > :not(:last-child) { border-bottom-width: 0; }
 }

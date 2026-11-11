@@ -135,14 +135,16 @@ export function ObjectiveBoardHeader({
             objectives={objectives}
             projectId={projectId}
           />
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 app-mobile:hidden">
             <span className="text-xs text-muted-foreground">{tStatus(status.value)}</span>
           </div>
         </div>
       </div>
 
-      {/* Indicators — progress · lead · target */}
-      <div className="flex shrink-0 items-center gap-x-6">
+      {/* Indicators — progress · lead · target. Not on a phone: the header
+          keeps the way back, the objective and its actions, and the
+          indicators live on the objective's own page. */}
+      <div className="flex shrink-0 items-center gap-x-6 app-mobile:hidden">
         {/* The ring matches the lead avatar and target-date icon so all three
         indicators share the same visual grid: a circle followed by two lines.
         The percentage lives in the tooltip because it is effort-weighted,

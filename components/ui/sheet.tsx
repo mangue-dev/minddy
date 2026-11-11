@@ -56,6 +56,14 @@ function SheetOverlay({
         className
       )}
       {...props}
+      // The overlay is portaled, but React bubbles its events through the
+      // component tree: a sheet opened from a card handed the tap that
+      // closes it to that card, which opened. Stopped here, the tap only
+      // closes the sheet (Radix still closes it from its capture listener).
+      onClick={(event) => {
+        props.onClick?.(event)
+        event.stopPropagation()
+      }}
     />
   )
 }
