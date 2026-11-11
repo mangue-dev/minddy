@@ -22,7 +22,11 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setAppearance", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setNavigationBar", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "signInWithApple", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "signInWithApple", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pushPermission", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "registerForPushNotifications", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "unregisterForPushNotifications", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openNotificationSettings", returnType: CAPPluginReturnPromise)
     ]
 
     weak var controller: MinddyViewController?
@@ -181,6 +185,73 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.reject(message)
                 }
             }
+        }
+    }
+
+    // MARK: - Push notifications
+
+    /// `granted`, `denied` or `default`, without asking anything.
+    @objc func pushPermission(_ call: CAPPluginCall) {
+        PushNotifications.shared.permission { call.resolve(["permission": $0]) }
+    }
+
+    /// Registers this installation with APNs and resolves with what the server
+    /// stores: the token, the platform and the gateway it belongs to. With
+    /// `activate`, from the person's gesture, it first asks for the permission
+    /// when they have not answered yet; without it, it only renews a token
+    /// already allowed. Resolves with `permission` alone when there is no token
+    /// to give.
+    @objc func registerForPushNotifications(_ call: CAPPluginCall) {
+        let activate = call.getBool("activate") ?? false
+        let push = PushNotifications.shared
+        push.permission { permission in
+            let register = {
+                push.token { result in
+                    switch result {
+                    case .success(let token):
+                        call.resolve([
+                            "permission": "granted",
+                            "transport": "apns",
+                            "endpoint": "apns:" + token.map { String(format: "%02x", $0) }.joined(),
+                            "installationId": PushNotifications.installationId,
+                            "platform": "ios",
+                            "environment": PushNotifications.environment
+                        ])
+                    case .failure(let error):
+                        call.reject(error.localizedDescription)
+                    }
+                }
+            }
+            if permission == "granted" {
+                register()
+            } else if permission == "default" && activate {
+                push.requestPermission { granted in
+                    if granted { register() } else { call.resolve(["permission": "denied"]) }
+                }
+            } else {
+                call.resolve(["permission": permission])
+            }
+        }
+    }
+
+    @objc func unregisterForPushNotifications(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            UIApplication.shared.unregisterForRemoteNotifications()
+            call.resolve()
+        }
+    }
+
+    /// Opens minddy's notification settings in the Settings app.
+    @objc func openNotificationSettings(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let target: String
+            if #available(iOS 16.0, *) {
+                target = UIApplication.openNotificationSettingsURLString
+            } else {
+                target = UIApplication.openSettingsURLString
+            }
+            if let url = URL(string: target) { UIApplication.shared.open(url) }
+            call.resolve()
         }
     }
 

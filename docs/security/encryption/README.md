@@ -2905,3 +2905,16 @@ the rows cascade with the account and are not part of the account export,
 since a revocable credential is not personal content. Sending the token to
 Apple to check, refresh or revoke it is an intentional external transmission.
 Migration `20270109200119` is additive.
+
+## APNs app and gateway of a push device (MIN-907)
+
+`push_subscriptions.apns_platform` (`ios` or `macos`) and `apns_environment`
+(`production` or `sandbox`) record which app and which APNs gateway a token
+belongs to, as the device reports them at registration. They are clear
+operational configuration: they select the `apns-topic` and the gateway, say
+nothing about the person, and stay empty on Web Push and WNS rows (a check
+constraint enforces it). An APNs row without them predates the iOS app and is
+sent as the macOS app in production. The token itself stays in the sealed
+content. Migration `20270109200120` is additive: `register_protected_push`
+gains two optional parameters, so the previous release keeps registering
+devices unchanged.

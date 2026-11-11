@@ -3348,7 +3348,9 @@
       ],
       "operational_configuration": [
         "locale",
-        "transport"
+        "transport",
+        "apns_platform",
+        "apns_environment"
       ],
       "routing_identity": [
         "id",

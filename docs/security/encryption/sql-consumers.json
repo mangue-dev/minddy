@@ -7063,8 +7063,8 @@
       ],
       "functionReferences": []
     },
-    "register_protected_push(uuid,text,text,text,text,text,text,text,text,text,boolean)": {
-      "sha256": "d5e05c15727a47f7bafe5e05dd9817dad38174e7b040e5a56c65a55afe2d707a",
+    "register_protected_push(uuid,text,text,text,text,text,text,text,text,text,boolean,text,text)": {
+      "sha256": "052fac19046cc4895ab9df795f989b284534177c678704bdcf4f65132af517f7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

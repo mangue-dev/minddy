@@ -157,6 +157,24 @@ checks the refresh token a web round returns, and seals it with the user's key
 (`lib/server/apple-sign-in.ts`). This needs the optional `APPLE_SIGN_IN_*`
 variables of `.env.example`; without them nothing is kept or revoked.
 
+## Push notifications
+
+The app receives the same notifications as the web and the macOS app, through
+APNs. The page asks for the permission from the switch in the notification
+settings, never at launch: the plugin's `registerForPushNotifications`
+(`App/PushNotifications.swift`) shows iOS's prompt only when called with
+`activate`, and renews an allowed token otherwise. The token goes to the
+server with its app (`ios`) and its gateway: `sandbox` when the signing
+profile in the bundle says `aps-environment` is `development`, `production`
+for TestFlight and App Store builds, which carry no profile. The server keeps
+both in `push_subscriptions` and sends to the matching gateway with the iOS
+app's topic (`lib/server/push/apns.ts`). The macOS app's APNs key is
+team-scoped and serves both apps.
+
+A notification carries the path of what it is about. A tap opens it on the
+selected server; when the tap launched the app, that path replaces the entry
+page. While the app is in front, notifications still show as banners.
+
 ## Nothing is sold in the app
 
 Subscriptions are bought on the web. Inside the app, `usePurchasesHidden()`
@@ -212,5 +230,5 @@ the updated `ios/App/CapApp-SPM/Package.swift`.
 - Apple's private email relay for accounts that hide their address.
 - Email links (confirmation, password reset) open in Safari, not in the app,
   until universal links exist.
-- Native push notifications, the share extension and universal links.
+- Universal links.
 - The Android project.

@@ -328,5 +328,6 @@
   "20270109200116_numo_context_summary.sql": "b6bdeac6fddd537a4a6b8026b41ffc3fffbdf0afc639dd5a3a9e39f499f8c9ba",
   "20270109200117_smart_assign_backfill.sql": "f8fb6c2655954e5a85f1ccb2669d0a7f9120d31ba709ca434c5a6aec6c64d6d6",
   "20270109200118_smart_assign_from_status.sql": "bf05978a6227f86596bdacbc76df990a615727d4dd0a8a337d7c1d62d51efa64",
-  "20270109200119_apple_sign_in_tokens.sql": "b59b0b3a30d483420d1e9bee49a8cb92f8bb98da0e4b0f6452227a48e537bf9e"
+  "20270109200119_apple_sign_in_tokens.sql": "b59b0b3a30d483420d1e9bee49a8cb92f8bb98da0e4b0f6452227a48e537bf9e",
+  "20270109200120_push_apns_target.sql": "a0126a2bba1780c4355537bb088daf5c7033c2d5024c552bce37db1416b22217"
 }

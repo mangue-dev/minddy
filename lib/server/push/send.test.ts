@@ -24,7 +24,10 @@ const H = vi.hoisted(() => ({
 vi.mock("web-push", () => ({
   default: { setVapidDetails: vi.fn() },
 }));
-vi.mock("./apns", () => ({ sendApnsNotification: H.sendApns }));
+vi.mock("./apns", async (importOriginal) => ({
+  apnsTarget: (await importOriginal<typeof import("./apns")>()).apnsTarget,
+  sendApnsNotification: H.sendApns,
+}));
 vi.mock("./wns", () => ({ sendWnsNotification: H.sendWns }));
 vi.mock("./web", () => ({ sendPinnedWebPushNotification: H.send }));
 
@@ -142,12 +145,39 @@ describe("sendPushToUser", () => {
     const tally = await sendPushToUser(service, "u1", PAYLOAD);
 
     expect(tally).toEqual({ sent: 1, gone: 0, failed: 0 });
-    expect(H.sendApns).toHaveBeenCalledWith(`apns:${"ab".repeat(32)}`, PAYLOAD);
+    // A row from before the iOS app: the macOS app in production.
+    expect(H.sendApns).toHaveBeenCalledWith(`apns:${"ab".repeat(32)}`, PAYLOAD, {
+      platform: "macos",
+      environment: "production",
+    });
     expect(H.send).not.toHaveBeenCalled();
     expect(ops[0]).toMatchObject({
       table: "push_subscriptions",
       op: "update",
       args: { failure_count: 0 },
+    });
+  });
+
+  it("sends to the app and the gateway recorded with the token", async () => {
+    H.sendApns.mockResolvedValue({ status: 200, reason: null });
+    const { service } = stubService([
+      {
+        id: "iphone",
+        endpoint: `apns:${"ef".repeat(32)}`,
+        transport: "apns",
+        apns_platform: "ios",
+        apns_environment: "sandbox",
+        p256dh: null,
+        auth: null,
+        locale: "fr",
+      },
+    ]);
+
+    await sendPushToUser(service, "u1", PAYLOAD);
+
+    expect(H.sendApns).toHaveBeenCalledWith(`apns:${"ef".repeat(32)}`, PAYLOAD, {
+      platform: "ios",
+      environment: "sandbox",
     });
   });
 

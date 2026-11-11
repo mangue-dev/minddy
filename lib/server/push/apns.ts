@@ -5,7 +5,6 @@ import { createPrivateKey, sign } from "node:crypto";
 
 import type { PushPayload } from "./payload";
 
-const APNS_ORIGIN = "https://api.push.apple.com";
 const TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
 
 export interface ApnsResponse {
@@ -13,7 +12,42 @@ export interface ApnsResponse {
   reason: string | null;
 }
 
-function apnsBundleId(): string {
+/** The app a token belongs to: each has its own bundle identifier (topic). */
+export type ApnsPlatform = "ios" | "macos";
+/** The gateway a token belongs to: development builds use the sandbox. */
+export type ApnsEnvironment = "production" | "sandbox";
+
+/**
+ * Where a device receives its notifications, as recorded with its token
+ * (`push_subscriptions.apns_platform` and `apns_environment`). A row without
+ * them predates the iOS app: the macOS app in production.
+ */
+export interface ApnsTarget {
+  platform: ApnsPlatform;
+  environment: ApnsEnvironment;
+}
+
+export const LEGACY_APNS_TARGET: ApnsTarget = { platform: "macos", environment: "production" };
+
+export function apnsTarget(platform: unknown, environment: unknown): ApnsTarget {
+  return {
+    platform: platform === "ios" ? "ios" : "macos",
+    environment: environment === "sandbox" ? "sandbox" : "production",
+  };
+}
+
+const APNS_ORIGINS: Record<ApnsEnvironment, string> = {
+  production: "https://api.push.apple.com",
+  sandbox: "https://api.sandbox.push.apple.com",
+};
+
+/**
+ * The `apns-topic` of each app. The key is team-scoped, so one key serves
+ * both: `APNS_BUNDLE_ID` names the macOS app, `APNS_IOS_BUNDLE_ID` the iOS
+ * app, `app.minddy.ios` unless set.
+ */
+export function apnsBundleId(platform: ApnsPlatform = "macos"): string {
+  if (platform === "ios") return process.env.APNS_IOS_BUNDLE_ID?.trim() || "app.minddy.ios";
   return process.env.APNS_BUNDLE_ID?.trim() || "";
 }
 
@@ -69,12 +103,14 @@ export function apnsProviderToken(now = Date.now()): string | null {
 /** An isolated HTTP/2 POST. The appellant's contract remains "never throw." */
 export async function sendApnsNotification(
   endpoint: string,
-  payload: PushPayload
+  payload: PushPayload,
+  target: ApnsTarget = LEGACY_APNS_TARGET,
 ): Promise<ApnsResponse> {
   const providerToken = apnsProviderToken();
   if (!providerToken) return { status: 0, reason: "NotConfigured" };
   const deviceToken = endpoint.startsWith("apns:") ? endpoint.slice(5) : endpoint;
-  const topic = apnsBundleId();
+  const topic = apnsBundleId(target.platform);
+  if (!topic) return { status: 0, reason: "NotConfigured" };
   const expiration = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
   const body = JSON.stringify({
     aps: {
@@ -86,7 +122,7 @@ export async function sendApnsNotification(
 
   try {
     return await new Promise((resolve) => {
-      const client = connect(APNS_ORIGIN);
+      const client = connect(APNS_ORIGINS[target.environment]);
       let settled = false;
       const finish = (response: ApnsResponse) => {
         if (settled) return;

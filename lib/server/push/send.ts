@@ -4,7 +4,7 @@ import type { WebPushError } from "web-push";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { configureWebPush } from "./vapid";
-import { sendApnsNotification } from "./apns";
+import { apnsTarget, sendApnsNotification } from "./apns";
 import { sendWnsNotification } from "./wns";
 import type { PushPayload } from "./payload";
 import { sendPinnedWebPushNotification } from "./web";
@@ -47,6 +47,9 @@ export interface PushSubscriptionRow {
   transport?: "web" | "apns" | "wns";
   p256dh: string | null;
   auth: string | null;
+  /** The APNs app and gateway recorded with the token; absent on older rows. */
+  apns_platform?: string | null;
+  apns_environment?: string | null;
 }
 
 const CONCURRENCY = 5;
@@ -75,7 +78,11 @@ async function sendToSubscription(
   payload: PushPayload
 ): Promise<PushSendOutcome> {
   if (sub.transport === "apns") {
-    const response = await sendApnsNotification(sub.endpoint, payload);
+    const response = await sendApnsNotification(
+      sub.endpoint,
+      payload,
+      apnsTarget(sub.apns_platform, sub.apns_environment),
+    );
     if (response.status === 200) {
       await service
         .from("push_subscriptions")
@@ -196,7 +203,7 @@ export async function activeSubscriptionsOf(
 ): Promise<PushSubscriptionRow[]> {
   const { data, error } = await service
     .from("push_subscriptions")
-    .select("id, user_id, endpoint, endpoint_digest, transport, p256dh, auth, native_installation_id, device_label, user_agent, encrypted_content")
+    .select("id, user_id, endpoint, endpoint_digest, transport, apns_platform, apns_environment, p256dh, auth, native_installation_id, device_label, user_agent, encrypted_content")
     .eq("user_id", userId)
     .eq("enabled", true);
   if (error) {

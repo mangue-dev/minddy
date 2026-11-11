@@ -36,6 +36,8 @@ final class MinddyViewController: CAPBridgeViewController {
         plugin.controller = self
         bridge?.registerPluginInstance(plugin)
         shellPlugin = plugin
+        // Capacitor's notification router is the delegate; it hands pushes on.
+        bridge?.notificationRouter.pushNotificationHandler = PushNotifications.shared
         navigationBar.onSelect = { [weak plugin] id in plugin?.navigationBarDidSelect(id) }
 
         guard let webView, let capacitorDelegate = webView.navigationDelegate as? NSObject else { return }
@@ -163,11 +165,28 @@ final class MinddyViewController: CAPBridgeViewController {
         // minddy Cloud. The app opens on the product instead: this request
         // replaces that one before it answers.
         super.viewDidLoad()
-        if let entry = entryURL {
+        PushNotifications.shared.controller = self
+        // A notification tapped while the app was closed opens its own page.
+        let tapped = PushNotifications.shared.takePendingPath().flatMap(url(forPath:))
+        if let entry = tapped ?? entryURL {
             webView?.load(URLRequest(url: entry))
         }
         view.addSubview(navigationBar)
         coverUntilFirstLoad()
+    }
+
+    /// Opens a path of the selected server, such as a tapped notification's.
+    func open(path: String) {
+        guard let url = url(forPath: path) else { return }
+        webView?.load(URLRequest(url: url))
+    }
+
+    /// `path` on the selected server, or nil when it is not a path of it.
+    private func url(forPath path: String) -> URL? {
+        guard path.hasPrefix("/"), !path.hasPrefix("//"),
+              let url = URL(string: origin + path),
+              ServerStore.url(url, isWithin: origin) else { return nil }
+        return url
     }
 
     /// Where the app opens on its server. The server sends a signed-out

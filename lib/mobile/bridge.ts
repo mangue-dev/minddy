@@ -61,6 +61,22 @@ export interface MobileShellPlugin {
    * `lib/apple-sign-in.ts`. Absent in older shells.
    */
   signInWithApple?(): Promise<MobileAppleCredential>;
+  /** The notification permission, without asking. Absent in older shells. */
+  pushPermission?(): Promise<{ permission: NotificationPermission }>;
+  /**
+   * Registers with APNs and resolves with what the server stores. With
+   * `activate`, called from the person's gesture, it first shows iOS's
+   * prompt when they have not answered yet; without it, it only renews an
+   * allowed token. Resolves with `permission` alone when there is no token.
+   * See `lib/push/client.ts`. Absent in older shells.
+   */
+  registerForPushNotifications?(options?: {
+    activate?: boolean;
+  }): Promise<MobilePushRegistration>;
+  /** Stops this installation's notifications at the APNs level. */
+  unregisterForPushNotifications?(): Promise<void>;
+  /** Opens minddy's notification settings in the Settings app. */
+  openNotificationSettings?(): Promise<void>;
   /**
    * Describes the page's bottom bar for the shell to draw natively: see
    * `lib/mobile/native-navigation.ts`. Absent in older shells.
@@ -80,6 +96,19 @@ export interface MobileShellPlugin {
     event: "navigationAction",
     handler: (action: { id: string }) => void,
   ): MobileListenerHandle | Promise<MobileListenerHandle>;
+}
+
+/** What the shell's push registration returns: a token only when allowed. */
+export interface MobilePushRegistration {
+  permission: NotificationPermission;
+  transport?: "apns";
+  /** `apns:` followed by the hexadecimal device token. */
+  endpoint?: string;
+  /** Links a token to the one it replaces on the server. */
+  installationId?: string;
+  platform?: "ios";
+  /** The APNs gateway of this build: `sandbox` for development builds. */
+  environment?: "production" | "sandbox";
 }
 
 /** What the native Sign in with Apple sheet returns. */
