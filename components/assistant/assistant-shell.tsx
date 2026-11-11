@@ -556,7 +556,8 @@ export const AssistantShell = forwardRef<
   const pathname = usePathname();
   const starterPage = assistantStarterPage(pathname, pageContext);
   const [composerEmpty, setComposerEmpty] = useState(true);
-  const showStarters = !hasMessages && !mobile && composerEmpty && !embeddedConversationId && !startersPending;
+  // On a phone only in the Numo sheet: Home keeps its page clear.
+  const showStarters = !hasMessages && (!mobile || compact) && composerEmpty && !embeddedConversationId && !startersPending;
 
   // Question ask_user ACTIVE: the last visible message is a message
   // assistant carrying a tool-call ask_user and Numo is at rest (he is waiting for the
@@ -1267,6 +1268,8 @@ export const AssistantShell = forwardRef<
                 page={starterPage}
                 visible={showStarters}
                 items={starterItems}
+                // In the sheet the rows span the composer's width.
+                className={compact ? "mx-0 flex" : undefined}
                 onPick={(prompt) => chatInputRef.current?.fill(prompt)}
               />
               {/* Active question: the card takes the PLACE of the composer. THE

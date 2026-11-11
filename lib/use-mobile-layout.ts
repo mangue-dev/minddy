@@ -43,7 +43,15 @@ function focusedTextField(): HTMLElement | null {
  * viewport for the frame of its focus gives it nothing to scroll to — the
  * technique of react-aria's `usePreventScroll`, which vaul ships too.
  */
-const OFFSCREEN = "translateY(-2000px)";
+export const OFFSCREEN = "translateY(-2000px)";
+
+/** True while a field is moved off screen for the frame of its focus. */
+export function isFocusingOffscreen(element: Element | null): boolean {
+  for (let node = element; node; node = node.parentElement) {
+    if (node instanceof HTMLElement && node.style.transform === OFFSCREEN) return true;
+  }
+  return false;
+}
 function focusWithoutScroll(field: HTMLElement, focus: boolean) {
   // Focusing from a tap fires the focus handler too: one transform, one restore.
   if (field.style.transform !== OFFSCREEN) {
@@ -307,11 +315,15 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
       const touch = event.changedTouches[0];
       if (!touch || !touchStart || Math.hypot(touch.clientX - touchStart.x, touch.clientY - touchStart.y) > 10) return;
       event.preventDefault();
-      focusWithoutScroll(target, true);
+      if (fromShell) target.focus({ preventScroll: true });
+      else focusWithoutScroll(target, true);
     };
     // Focus moved another way: keyboard arrows, the editor, a script.
+    // Not in the mobile app: its shell keeps WebKit from scrolling to a
+    // focused field (mobile/README.md), and the frame off screen made a
+    // scroll area reveal the field 2000px up, to its top.
     const onFocus = (event: FocusEvent) => {
-      if (isMobileLayout() && isTextField(event.target)) focusWithoutScroll(event.target, false);
+      if (isMobileLayout() && !fromShell && isTextField(event.target)) focusWithoutScroll(event.target, false);
     };
 
     // The shell's report comes before the keyboard moves: lay out for where

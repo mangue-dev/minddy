@@ -2,7 +2,6 @@
 
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 
-import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -171,7 +170,21 @@ export function AssistantPanel() {
       <MobileSheetContent
         side={mobile ? "bottom" : "right"}
         showCloseButton={mobile}
-        onOpenAutoFocus={mobile ? focusMobileSheet : undefined}
+        // On a phone the sheet opens on its composer, keyboard up: it is
+        // opened to write to Numo.
+        onOpenAutoFocus={mobile ? (event) => {
+          event.preventDefault();
+          // The composer mounts a few frames after the sheet: try until it
+          // has the focus, for at most half a second.
+          const until = performance.now() + 500;
+          const focusComposer = () => {
+            shellRef.current?.focus();
+            const active = document.activeElement;
+            const typing = active instanceof HTMLElement && active.isContentEditable;
+            if (!typing && performance.now() < until) requestAnimationFrame(focusComposer);
+          };
+          requestAnimationFrame(focusComposer);
+        } : undefined}
         onCloseAutoFocus={mobile ? (event) => {
           event.preventDefault();
           document.querySelector<HTMLElement>("[data-mobile-numo-launcher]")?.focus();

@@ -77,6 +77,7 @@ import { useScrollFade } from "@/lib/use-scroll-fade";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { useMergedRef } from "@/components/ui/menu-scroll-fade";
 import { visibleBand } from "@/lib/visible-band";
+import { isFocusingOffscreen } from "@/lib/use-mobile-layout";
 
 /**
  * The island's height, and the gap it keeps around itself. Every field typed
@@ -108,6 +109,15 @@ function scrollParent(node: HTMLElement | null): HTMLElement | null {
  * is still running aims at the same place instead of adding to it.
  */
 export function revealSelection(view: EditorView) {
+  // A field taking the focus spends one frame off screen
+  // (lib/use-mobile-layout.ts): its caret is read once it is back, or the
+  // scroll aimed 2000px above and sent the panel to its top.
+  if (isFocusingOffscreen(view.dom)) {
+    requestAnimationFrame(() => {
+      if (!view.isDestroyed) revealSelection(view);
+    });
+    return;
+  }
   let caret: { top: number; bottom: number };
   try {
     caret = view.coordsAtPos(view.state.selection.head);

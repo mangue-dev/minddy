@@ -54,7 +54,10 @@ export interface CommentEditorProps {
   ariaLabel?: string;
   /** Visible height before the first line is typed, in text rows. */
   rows?: number;
-  autoFocus?: boolean;
+  /** Focus once mounted. On a phone `true` is held back, so a surface does
+   *  not raise the keyboard on its own; `"requested"` is for a field a tap
+   *  just opened (Reply), which the keyboard follows. */
+  autoFocus?: boolean | "requested";
   disabled?: boolean;
   className?: string;
 }

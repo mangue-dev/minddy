@@ -316,7 +316,10 @@ export interface RichEditorProps {
   /** The find and replace bar on ⌘F (find-bar.tsx): pages and the notebook
    only, never descriptions, comments or composers. Read at build time. */
   find?: boolean;
-  autoFocus?: boolean;
+  /** Focus once mounted. On a phone `true` is held back, so a surface does
+   *  not raise the keyboard on its own; `"requested"` is for a field a tap
+   *  just opened (Reply), which the keyboard follows. */
+  autoFocus?: boolean | "requested";
   /**
    * Build the editor during the first render rather than in an effect, so the
    * first frame already shows the formatted document instead of an empty box
@@ -772,9 +775,13 @@ export function RichEditor({
   // the keyboard down until the user taps (lib/mobile-sheet-focus).
   const [shouldFocus] = useState(autoFocus);
   useEffect(() => {
-    if (!editor || !shouldFocus || !allowInputAutoFocus()) return;
+    if (!editor || !shouldFocus || (shouldFocus !== "requested" && !allowInputAutoFocus())) return;
     queueMicrotask(() => {
-      if (!editor.isDestroyed) editor.commands.focus("end");
+      // No scroll of its own: on a phone the field is moved off screen for
+      // the frame of its focus (lib/use-mobile-layout.ts), and a scroll then
+      // aimed at it sent the panel to its top. The caret is revealed once it
+      // is back (components/editor/mobile-editor-toolbar.tsx).
+      if (!editor.isDestroyed) editor.commands.focus("end", { scrollIntoView: !isMobileLayout() });
     });
   }, [editor, shouldFocus]);
 

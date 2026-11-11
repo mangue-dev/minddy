@@ -3750,6 +3750,32 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet[data-mobile-dialog]:has(> [data-mobile-sheet-row]) > [data-slot="dialog-title"] {
     margin-bottom: 8px;
   }
+  /* Numo's context pills, read and tapped at arm's length: a 14px label, a
+     24px figure, and a 24px button for its eye or cross, whose 16px icon is
+     the size of the label beside it. */
+  .context-pill {
+    gap: 8px;
+    padding-block: 6px;
+    padding-left: 6px;
+    font-size: 0.875rem;
+    max-width: 16rem;
+  }
+  .context-pill > :first-child {
+    width: 24px;
+    height: 24px;
+  }
+  .context-pill > :first-child svg {
+    width: 14px;
+    height: 14px;
+  }
+  .context-pill button {
+    width: 24px;
+    height: 24px;
+  }
+  .context-pill button svg {
+    width: 16px;
+    height: 16px;
+  }
   /* A pressed row answers the finger with the control's fill. */
   .mobile-bottom-sheet :is([cmdk-item], [data-mobile-sheet-row]):is(:active, [data-pressed]):not([data-disabled="true"], :disabled) {
     background: var(--control);

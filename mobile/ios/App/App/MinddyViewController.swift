@@ -46,6 +46,7 @@ final class MinddyViewController: CAPBridgeViewController {
         // the left, which opens its sidebar.
         webView.allowsBackForwardNavigationGestures = false
         Self.hideFormAccessoryBar
+        letFocusRaiseKeyboard()
         observeKeyboard()
     }
 
@@ -137,6 +138,25 @@ final class MinddyViewController: CAPBridgeViewController {
         // Replaces the method on that class alone, never on `UIResponder`.
         class_replaceMethod(contentView, selector, imp_implementationWithBlock(empty), method_getTypeEncoding(method))
     }()
+
+    /// Lets a field the page focuses raise the keyboard, as a native app's
+    /// does. WebKit raises it only for a focus that a tap gave in the same
+    /// moment, so a reply field opened by "Reply", or Numo's composer when
+    /// its sheet opens, took the focus without a keyboard. For any other focus
+    /// WebKit asks its UI delegate (`_webView:focusShouldStartInputSession:`,
+    /// a private member of `WKUIDelegatePrivate`); Capacitor's delegate does
+    /// not answer, which means no. This adds the answer, yes, to that
+    /// delegate's class. The page itself still decides when to focus: on a
+    /// phone it focuses only where a tap asked for it
+    /// (`lib/mobile-sheet-focus.ts`).
+    private func letFocusRaiseKeyboard() {
+        guard let delegate = webView?.uiDelegate else { return }
+        let selector = NSSelectorFromString(["_webView", ":focusShouldStartInputSession:"].joined())
+        let delegateClass: AnyClass = type(of: delegate as AnyObject)
+        guard !class_respondsToSelector(delegateClass, selector) else { return }
+        let answer: @convention(block) (AnyObject, AnyObject, AnyObject) -> Bool = { _, _, _ in true }
+        class_addMethod(delegateClass, selector, imp_implementationWithBlock(answer), "B@:@@")
+    }
 
     override func viewDidLoad() {
         // Capacitor loads the server's root, which is the public site on

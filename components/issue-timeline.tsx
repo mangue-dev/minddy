@@ -1,6 +1,7 @@
 "use client";
 
-import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+import { primeMobileKeyboard } from "@/lib/mobile-sheet-focus";
+import { focusFieldIn } from "@/lib/focus-field";
 
 import { OneLine } from "@/components/one-line";
 import { MentionHover } from "@/components/mention-hover";
@@ -988,7 +989,11 @@ export function ReplyComposer({
     const affordance = (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={(event) => {
+          // The tap that opens the field brings the keyboard with it.
+          primeMobileKeyboard(event.currentTarget);
+          setOpen(true);
+        }}
         className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-b-lg px-3.5 py-2.5 text-left text-sm text-muted-foreground outline-none transition-colors hover:text-foreground"
       >
         <ActorAvatar members={members} id={currentUserId} name={meName} />
@@ -1010,6 +1015,7 @@ export function ReplyComposer({
         // in the same place, it should look the same.
         threadIsPublic && "bg-brand/[0.03]"
       )}
+      onClick={focusFieldIn}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
       {...(allowAttachments ? drop.handlers : {})}
     >
@@ -1028,7 +1034,8 @@ export function ReplyComposer({
           if (!draft.trim()) close();
         }}
         placeholder={placeholderText}
-        autoFocus={allowInputAutoFocus()}
+        // Opened by a tap on "Reply": the field is what that tap asked for.
+        autoFocus="requested"
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
       />
@@ -1047,6 +1054,14 @@ export function ReplyComposer({
         {allowAttachments && (
           <AttachButton onFiles={uploads.addFiles} disabled={posting} />
         )}
+        {/* Dictation sits with the attachments: what goes into the text. */}
+        <DictateButton
+          context="comment"
+          onTranscription={(text) =>
+            setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+          }
+          disabled={posting}
+        />
         <Button variant="ghost" size="sm" className="rounded-full" onClick={close}>
           {tCommon("cancel")}
         </Button>
@@ -1061,14 +1076,6 @@ export function ReplyComposer({
             {t("reply")}
           </Button>
         </SendShortcutTooltip>
-        {/* Dictate at the far right of the reply row (spec). */}
-        <DictateButton
-          context="comment"
-          onTranscription={(text) =>
-            setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
-          }
-          disabled={posting}
-        />
       </div>
     </div>
   );
@@ -1492,6 +1499,7 @@ export const CommentComposer = memo(function CommentComposer({
         // the only thing someone is looking at while typing.
         isPublic && "bg-brand/[0.06]"
       )}
+      onClick={focusFieldIn}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
       {...(allowAttachments ? drop.handlers : {})}
     >

@@ -110,6 +110,11 @@ or scrolls to reveal a field, and while the keyboard is up the page's scroll
 moves only under a finger. Each of those moves was a jump on top of the page's
 own movement.
 
+A field the page focuses by itself raises the keyboard, as in a native app:
+WebKit asks its UI delegate before showing the keyboard for a focus that no tap
+gave, and the shell answers yes (`letFocusRaiseKeyboard`). The page focuses a
+field on its own only where a tap asked for one (Reply, opening Numo).
+
 ## Nothing is sold in the app
 
 Subscriptions are bought on the web. Inside the app, `usePurchasesHidden()`

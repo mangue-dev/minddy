@@ -1,4 +1,5 @@
 import { isMobileLayout } from "@/lib/app-layout";
+import { isNativeMobile } from "@/lib/mobile/bridge";
 
 /** Automatic text focus opens the software keyboard before a sheet settles. */
 export function allowInputAutoFocus() {
@@ -28,9 +29,15 @@ const PRIMED_KEYBOARD_MS = 1000;
  * stand-in field at once: the keyboard is already up when the sheet moves
  * the focus to its own field, and stays up. The stand-in removes itself when
  * it loses the focus, or after a second if nothing took it.
+ *
+ * `from` is the element tapped: inside a dialog the stand-in goes into that
+ * dialog. Outside it, the dialog's focus trap pulled the focus back to the
+ * dialog itself, which scrolled its content to the top.
  */
-export function primeMobileKeyboard() {
-  if (typeof document === "undefined" || !isMobileLayout()) return;
+export function primeMobileKeyboard(from?: Element | null) {
+  // The mobile app lets any focus raise the keyboard (mobile/README.md):
+  // there the stand-in would only take the focus away for a moment.
+  if (typeof document === "undefined" || !isMobileLayout() || isNativeMobile()) return;
   const field = document.createElement("input");
   field.type = "text";
   field.tabIndex = -1;
@@ -40,7 +47,7 @@ export function primeMobileKeyboard() {
   // to scroll to.
   field.style.cssText =
     "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;pointer-events:none;";
-  document.body.append(field);
+  (from?.closest('[role="dialog"], [role="alertdialog"]') ?? document.body).append(field);
   const remove = () => {
     window.clearTimeout(timer);
     field.remove();
