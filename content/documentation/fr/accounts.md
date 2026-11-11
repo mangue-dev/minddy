@@ -21,7 +21,7 @@
   "revision": 21,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -56,6 +56,7 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
+      "lib/server/apple-sign-in.ts",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "lib/theme-presets.ts",
@@ -212,7 +213,7 @@ Si le message n’arrive pas, vérifiez l’adresse, les indésirables et l’in
 
 ## Protéger son compte avec un second facteur {#account-security}
 
-Ouvrez la section Sécurité des paramètres du compte et activez l’authentification à deux facteurs. Ce second facteur s’applique aussi aux connexions par Google ou GitHub ; l’authentification du fournisseur ne le remplace pas.
+Ouvrez la section Sécurité des paramètres du compte et activez l’authentification à deux facteurs. Ce second facteur s’applique aussi aux connexions par Google, GitHub ou Apple ; l’authentification du fournisseur ne le remplace pas.
 
 1. Scannez le code QR avec un authentificateur TOTP ou saisissez manuellement la clé de configuration affichée. N’incluez jamais le code QR ni cette clé dans une capture.
 2. Saisissez le code actuel à six chiffres et confirmez. S’il a expiré, essayez le suivant ; après trop de tentatives, attendez avant de réessayer.
@@ -226,7 +227,7 @@ L’activation actualise la session courante et tente de déconnecter les autres
 
 Pendant la connexion, si vous n’avez pas votre téléphone, utilisez un code de récupération conservé. Son utilisation désactive l’authentification à deux facteurs et invalide tous les codes restants. Une fois connecté, configurez de nouveau votre authentificateur et conservez les nouveaux codes. Ce parcours ne garantit pas une restauration du compte par l’assistance humaine.
 
-Remplacer les codes de récupération invalide la liste précédente. Leur remplacement et la désactivation volontaire exigent les contrôles d’authentification récente du serveur. Lisez la confirmation : désactiver cette fonction signifie que le facteur supplémentaire ne sera plus demandé, y compris lors d’une connexion par Google ou GitHub.
+Remplacer les codes de récupération invalide la liste précédente. Leur remplacement et la désactivation volontaire exigent les contrôles d’authentification récente du serveur. Lisez la confirmation : désactiver cette fonction signifie que le facteur supplémentaire ne sera plus demandé, y compris lors d’une connexion par Google, GitHub ou Apple.
 
 
 ## Récupérer l’accès à votre compte {#account-recovery}
@@ -274,7 +275,7 @@ Le consentement est distinct des données nécessaires au fonctionnement du comp
 
 Avant de supprimer le compte, exportez les données à conserver depuis l’onglet **Confidentialité et données**. Lisez l’aperçu des projets dont vous êtes propriétaire, des membres affectés, des tickets, des commentaires et de l’abonnement actif. Les conséquences sur les projets possédés touchent d’autres personnes ; réglez ces questions avant de confirmer.
 
-Ouvrez la confirmation de suppression seulement lorsque vous êtes prêt. Saisissez l’e-mail du compte et, pour un compte avec mot de passe, ce mot de passe. Les comptes sans mot de passe exigent une connexion récente. Suivez les indications d’un refus d’authentification récente plutôt que de réessayer à l’aveugle. Une suppression réussie déconnecte le compte et revient au site public. Ce n’est pas une corbeille récupérable. Gardez les exports privés et traitez les questions restantes d’abonnement ou de fournisseur dans les contrôles de facturation et de service correspondants.
+Ouvrez la confirmation de suppression seulement lorsque vous êtes prêt. Saisissez l’e-mail du compte et, pour un compte avec mot de passe, ce mot de passe. Les comptes sans mot de passe exigent une connexion récente. Suivez les indications d’un refus d’authentification récente plutôt que de réessayer à l’aveugle. Une suppression réussie déconnecte le compte et revient au site public. Si le compte se connecte avec Apple, la suppression demande aussi à Apple de retirer l’accès de minddy à votre compte Apple. Ce n’est pas une corbeille récupérable. Gardez les exports privés et traitez les questions restantes d’abonnement ou de fournisseur dans les contrôles de facturation et de service correspondants.
 
 
 ## Configurer les routines {#routines}

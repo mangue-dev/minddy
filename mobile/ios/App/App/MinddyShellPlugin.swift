@@ -21,13 +21,16 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "reload", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAppearance", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setNavigationBar", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "signInWithApple", returnType: CAPPluginReturnPromise)
     ]
 
     weak var controller: MinddyViewController?
 
     /// The sign-in sheet in progress: the system drops a session nobody holds.
     private var authSession: ASWebAuthenticationSession?
+    /// The Sign in with Apple sheet in progress, held for the same reason.
+    private var appleSignIn: AppleSignIn?
 
     @objc func state(_ call: CAPPluginCall) {
         call.resolve([
@@ -146,6 +149,37 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
             if !session.start() {
                 self.authSession = nil
                 call.reject("The sign-in sheet could not open.")
+            }
+        }
+    }
+
+    /// Signs in with Apple in the system sheet and resolves with the identity
+    /// token, the raw nonce it was issued for, the one-time authorization code
+    /// and, on the first authorization only, the person's name. Closing the
+    /// sheet resolves with nothing. See `AppleSignIn`.
+    @objc func signInWithApple(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let signIn = AppleSignIn { [weak self] in
+                self?.controller?.view.window ?? ASPresentationAnchor()
+            }
+            self.appleSignIn = signIn
+            signIn.start { [weak self] result in
+                self?.appleSignIn = nil
+                switch result {
+                case .success(let outcome):
+                    var data: [String: Any] = [
+                        "identityToken": outcome.identityToken,
+                        "nonce": outcome.nonce
+                    ]
+                    if let code = outcome.authorizationCode { data["authorizationCode"] = code }
+                    if let name = outcome.fullName { data["fullName"] = name }
+                    call.resolve(data)
+                case .failure(.canceled):
+                    call.resolve([:])
+                case .failure(.failed(let message)):
+                    call.reject(message)
+                }
             }
         }
     }

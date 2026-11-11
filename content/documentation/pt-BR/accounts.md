@@ -21,7 +21,7 @@
   "revision": 21,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -56,6 +56,7 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
+      "lib/server/apple-sign-in.ts",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "lib/theme-presets.ts",
@@ -208,7 +209,7 @@ Se a mensagem não chegar, confira o endereço, a pasta de spam e a identidade d
 
 ## Proteger a conta com dois fatores {#account-security}
 
-Abra a seção Segurança nas configurações da conta e ative a autenticação de dois fatores. Esse segundo fator também é exigido ao entrar pelo Google ou GitHub; a autenticação do provedor não o substitui.
+Abra a seção Segurança nas configurações da conta e ative a autenticação de dois fatores. Esse segundo fator também é exigido ao entrar pelo Google, pelo GitHub ou pela Apple; a autenticação do provedor não o substitui.
 
 1. Escaneie o código QR com um aplicativo autenticador TOTP ou digite manualmente a chave de configuração exibida. Nunca inclua o código QR nem a chave em uma captura de tela.
 2. Digite o código atual de seis dígitos e confirme. Se ele tiver expirado, tente o próximo código; depois de muitas tentativas, aguarde antes de tentar novamente.
@@ -222,7 +223,7 @@ A ativação atualiza a sessão atual e tenta encerrar as outras sessões. Se fo
 
 Durante o login, se estiver sem o telefone, use um dos códigos de recuperação que guardou. Usar um código desativa a autenticação de dois fatores e invalida todos os códigos restantes. Depois de entrar, configure o autenticador novamente e guarde os novos códigos de recuperação. Essa operação não garante que o suporte humano possa recuperar a conta.
 
-Substituir os códigos de recuperação invalida a lista anterior. Tanto a substituição quanto a desativação voluntária exigem as verificações de autenticação recente do servidor. Leia a confirmação: ao desativar a função, o fator adicional deixa de ser exigido, inclusive ao entrar pelo Google ou GitHub.
+Substituir os códigos de recuperação invalida a lista anterior. Tanto a substituição quanto a desativação voluntária exigem as verificações de autenticação recente do servidor. Leia a confirmação: ao desativar a função, o fator adicional deixa de ser exigido, inclusive ao entrar pelo Google, pelo GitHub ou pela Apple.
 
 
 ## Recuperar o acesso à conta {#account-recovery}
@@ -270,7 +271,7 @@ Esse consentimento é separado dos dados necessários ao funcionamento da conta.
 
 Antes de excluir a conta, exporte pela aba **Privacidade e dados** o que precisa conservar. Leia a prévia dos projetos que possui, membros afetados, tickets, comentários e assinatura ativa. As consequências para os projetos próprios afetam outras pessoas; resolva essas questões antes de confirmar.
 
-Abra a confirmação de exclusão somente quando estiver pronto. Digite o email da conta e, nas contas com senha, a senha. Contas sem senha exigem um login recente. Siga as orientações de uma recusa por autenticação não recente, em vez de repetir tentativas às cegas. Uma exclusão bem-sucedida encerra a sessão e retorna ao site público. Essa operação não envia os dados para uma lixeira recuperável. Mantenha as exportações privadas e trate qualquer questão restante de assinatura ou provedor pelos controles correspondentes de cobrança e serviço.
+Abra a confirmação de exclusão somente quando estiver pronto. Digite o email da conta e, nas contas com senha, a senha. Contas sem senha exigem um login recente. Siga as orientações de uma recusa por autenticação não recente, em vez de repetir tentativas às cegas. Uma exclusão bem-sucedida encerra a sessão e retorna ao site público. Se a conta entra com a Apple, a exclusão também pede à Apple que revogue o acesso do minddy à sua Conta Apple. Essa operação não envia os dados para uma lixeira recuperável. Mantenha as exportações privadas e trate qualquer questão restante de assinatura ou provedor pelos controles correspondentes de cobrança e serviço.
 
 
 ## Configurar rotinas {#routines}

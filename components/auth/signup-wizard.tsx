@@ -8,7 +8,7 @@ import { createUuid } from "@/lib/create-uuid";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,6 +79,7 @@ const ISSUE_KEYS = {
 
 export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
   const t = useTranslations("Auth");
+  const locale = useLocale();
   const tCommon = useTranslations("Common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -273,8 +274,22 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
     identity: t("signupStepIdentityName"),
     password: t("signupStepPasswordName"),
   };
+  // The ways in this server offers, in the buttons' order, so the sentence
+  // never names a provider the screen does not show.
+  const PROVIDER_NAMES = { google: "Google", github: "GitHub", apple: "Apple" } as const;
+  const methods = new Intl.ListFormat(locale, { type: "disjunction" }).format([
+    ...(["google", "github", "apple"] as const)
+      .filter((provider) => oauthProviders.includes(provider))
+      .map((provider) => PROVIDER_NAMES[provider]),
+    t("signupEmailMethod"),
+  ]);
   const headings: Record<SignupStep, { title: string; subtitle: string }> = {
-    account: { title: t("signupAccountTitle"), subtitle: t("signupAccountSubtitle") },
+    // Blank (one line kept) until the server says which providers it offers,
+    // like the list of methods under it.
+    account: {
+      title: t("signupAccountTitle"),
+      subtitle: oauthProvidersResolved ? t("signupAccountSubtitle", { methods }) : "\u00a0",
+    },
     identity: { title: t("signupIdentityTitle"), subtitle: t("signupIdentitySubtitle") },
     password: { title: t("signupPasswordTitle"), subtitle: t("signupPasswordSubtitle") },
   };

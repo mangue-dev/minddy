@@ -8845,6 +8845,51 @@
     ],
     "foreignKeys": []
   },
+  "apple_sign_in_tokens": {
+    "columns": {
+      "user_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "client_id": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "updated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "user_id",
+      "client_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "users",
+        "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
   "assistant_active_conversation": {
     "columns": {
       "user_id": {

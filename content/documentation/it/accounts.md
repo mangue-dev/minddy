@@ -21,7 +21,7 @@
   "revision": 20,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -56,6 +56,7 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
+      "lib/server/apple-sign-in.ts",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "lib/theme-presets.ts",
@@ -208,7 +209,7 @@ Se l’email non arriva, controlla indirizzo, cartella dello spam e identità de
 
 ## Proteggere l’account con un secondo fattore {#account-security}
 
-Apri la sezione Sicurezza nelle impostazioni dell’account e attiva l’autenticazione a due fattori. Questo secondo fattore viene richiesto anche quando accedi tramite Google o GitHub: l’autenticazione del provider non lo sostituisce.
+Apri la sezione Sicurezza nelle impostazioni dell’account e attiva l’autenticazione a due fattori. Questo secondo fattore viene richiesto anche quando accedi tramite Google, GitHub o Apple: l’autenticazione del provider non lo sostituisce.
 
 1. Scansiona il codice QR con un’app di autenticazione TOTP oppure inserisci manualmente la chiave di configurazione mostrata. Non includere né il codice QR né la chiave in una schermata.
 2. Inserisci il codice corrente di sei cifre e conferma. Se è scaduto, prova con il codice successivo; dopo troppi tentativi, attendi prima di riprovare.
@@ -222,7 +223,7 @@ L’attivazione aggiorna la sessione corrente e tenta di disconnettere le altre 
 
 Durante l’accesso, se non hai il telefono, usa uno dei codici di recupero che hai conservato. L’uso di un codice disattiva l’autenticazione a due fattori e invalida tutti i codici rimanenti. Dopo l’accesso, configura nuovamente l’app di autenticazione e conserva i nuovi codici di recupero. Questa procedura non garantisce il ripristino dell’account da parte dell’assistenza umana.
 
-La sostituzione dei codici di recupero invalida l’elenco precedente. Sia la sostituzione sia la disattivazione volontaria richiedono i controlli di autenticazione recente del server. Leggi la conferma: disattivando la funzione, il fattore aggiuntivo non verrà più richiesto, neppure negli accessi tramite Google o GitHub.
+La sostituzione dei codici di recupero invalida l’elenco precedente. Sia la sostituzione sia la disattivazione volontaria richiedono i controlli di autenticazione recente del server. Leggi la conferma: disattivando la funzione, il fattore aggiuntivo non verrà più richiesto, neppure negli accessi tramite Google, GitHub o Apple.
 
 
 ## Recuperare l’accesso all’account {#account-recovery}
@@ -270,7 +271,7 @@ Il consenso è distinto dai dati necessari al funzionamento dell’account. Legg
 
 Prima di eliminare l’account, esporta dalla scheda **Privacy e dati** ciò che devi conservare. Leggi l’anteprima dei progetti di cui sei proprietario, dei membri coinvolti, dei ticket, dei commenti e dell’abbonamento attivo. Le conseguenze sui progetti posseduti riguardano altre persone: risolvile prima di confermare.
 
-Apri la conferma di eliminazione soltanto quando sei pronto. Digita l’indirizzo email dell’account e, se l’account ha una password, anche la password. Gli account senza password richiedono un accesso recente. Segui le indicazioni di un eventuale rifiuto di autenticazione recente, senza riprovare alla cieca. Se l’eliminazione riesce, la sessione viene chiusa e si torna al sito pubblico. Non è uno spostamento nel cestino recuperabile. Mantieni private le esportazioni e gestisci eventuali questioni residue su abbonamenti o provider tramite i rispettivi controlli di fatturazione e servizio.
+Apri la conferma di eliminazione soltanto quando sei pronto. Digita l’indirizzo email dell’account e, se l’account ha una password, anche la password. Gli account senza password richiedono un accesso recente. Segui le indicazioni di un eventuale rifiuto di autenticazione recente, senza riprovare alla cieca. Se l’eliminazione riesce, la sessione viene chiusa e si torna al sito pubblico. Se l’account accede con Apple, l’eliminazione chiede anche ad Apple di revocare l’accesso di minddy al tuo Account Apple. Non è uno spostamento nel cestino recuperabile. Mantieni private le esportazioni e gestisci eventuali questioni residue su abbonamenti o provider tramite i rispettivi controlli di fatturazione e servizio.
 
 
 ## Configurare le routine {#routines}

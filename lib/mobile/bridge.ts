@@ -56,6 +56,12 @@ export interface MobileShellPlugin {
    */
   authenticate?(options: { url: string; callbackScheme: string }): Promise<{ url?: string }>;
   /**
+   * Signs in with Apple in the system sheet. Resolves without
+   * `identityToken` when the person closes it. See
+   * `lib/apple-sign-in.ts`. Absent in older shells.
+   */
+  signInWithApple?(): Promise<MobileAppleCredential>;
+  /**
    * Describes the page's bottom bar for the shell to draw natively: see
    * `lib/mobile/native-navigation.ts`. Absent in older shells.
    */
@@ -74,6 +80,18 @@ export interface MobileShellPlugin {
     event: "navigationAction",
     handler: (action: { id: string }) => void,
   ): MobileListenerHandle | Promise<MobileListenerHandle>;
+}
+
+/** What the native Sign in with Apple sheet returns. */
+export interface MobileAppleCredential {
+  /** Apple's identity token, a JWT whose `nonce` claim is the SHA-256 of `nonce`. */
+  identityToken?: string;
+  /** The raw nonce the token was issued for, which Supabase hashes to compare. */
+  nonce?: string;
+  /** A one-time code, valid five minutes, that the server exchanges for a revocable token. */
+  authorizationCode?: string;
+  /** The person's name, given on the first authorization only. */
+  fullName?: string;
 }
 
 export interface MobileKeyboardMove {

@@ -21,7 +21,7 @@
   "revision": 20,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -56,6 +56,7 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
+      "lib/server/apple-sign-in.ts",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "lib/theme-presets.ts",
@@ -206,7 +207,7 @@ Kommt keine E-Mail an, prüfe Adresse, Spamordner und die Identität der Instanz
 
 ## Das Konto mit einem zweiten Faktor schützen {#account-security}
 
-Öffne den Bereich Sicherheit in den Kontoeinstellungen und aktiviere die Zwei-Faktor-Authentifizierung. Der zweite Faktor gilt auch bei der Anmeldung über Google oder GitHub; die Anmeldung beim Anbieter ersetzt ihn nicht.
+Öffne den Bereich Sicherheit in den Kontoeinstellungen und aktiviere die Zwei-Faktor-Authentifizierung. Der zweite Faktor gilt auch bei der Anmeldung über Google, GitHub oder Apple; die Anmeldung beim Anbieter ersetzt ihn nicht.
 
 1. Scanne den QR-Code mit einer TOTP-Authentifizierungsapp oder trage den angezeigten Einrichtungsschlüssel manuell ein. Nimm weder den QR-Code noch den Schlüssel in einen Screenshot auf.
 2. Gib den aktuellen sechsstelligen Code ein und bestätige ihn. Ist er abgelaufen, versuche den nächsten. Warte nach zu vielen Versuchen, bevor du es erneut versuchst.
@@ -220,7 +221,7 @@ Die Aktivierung aktualisiert die aktuelle Sitzung und versucht, andere Sitzungen
 
 Verwende bei der Anmeldung einen gespeicherten Wiederherstellungscode, wenn dein Telefon nicht verfügbar ist. Dadurch wird die Zwei-Faktor-Authentifizierung deaktiviert, und alle übrigen Codes werden ungültig. Richte nach der Anmeldung deine Authentifizierungsapp erneut ein und speichere die neuen Wiederherstellungscodes. Dieser Ablauf verspricht keine Kontowiederherstellung durch menschlichen Support.
 
-Wenn du die Wiederherstellungscodes ersetzt, wird die vorherige Liste ungültig. Sowohl das Ersetzen als auch das absichtliche Deaktivieren erfordert die serverseitigen Prüfungen einer kürzlich erfolgten Anmeldung. Lies die Bestätigung: Nach dem Deaktivieren wird der zusätzliche Faktor nicht mehr verlangt, auch nicht bei einer Anmeldung über Google oder GitHub.
+Wenn du die Wiederherstellungscodes ersetzt, wird die vorherige Liste ungültig. Sowohl das Ersetzen als auch das absichtliche Deaktivieren erfordert die serverseitigen Prüfungen einer kürzlich erfolgten Anmeldung. Lies die Bestätigung: Nach dem Deaktivieren wird der zusätzliche Faktor nicht mehr verlangt, auch nicht bei einer Anmeldung über Google, GitHub oder Apple.
 
 
 ## Den Kontozugriff wiederherstellen {#account-recovery}
@@ -268,7 +269,7 @@ Die Zustimmung ist von den für den Kontobetrieb erforderlichen Daten getrennt. 
 
 Exportiere vor der Kontolöschung benötigte Daten im Tab **Datenschutz & Daten**. Lies die Vorschau deiner eigenen Projekte, betroffenen Mitglieder, Tickets, Kommentare und des aktiven Abonnements. Kläre vor der Bestätigung die Folgen für andere Menschen, die an deinen Projekten beteiligt sind.
 
-Öffne die Löschbestätigung erst, wenn du bereit bist. Gib deine Konto-E-Mail-Adresse und bei Passwortkonten das Passwort ein. Konten ohne Passwort benötigen eine kürzlich erfolgte Anmeldung. Folge den Hinweisen, wenn die erneute Authentifizierung abgelehnt wird, statt die Anfrage wiederholt zu senden. Eine erfolgreiche Löschung meldet das Konto ab und führt zur öffentlichen Website zurück. Dies ist kein wiederherstellbarer Papierkorb. Halte Exporte privat und bearbeite verbleibende Abonnement- oder Anbieterfragen über die jeweiligen Abrechnungs- und Anbieterfunktionen.
+Öffne die Löschbestätigung erst, wenn du bereit bist. Gib deine Konto-E-Mail-Adresse und bei Passwortkonten das Passwort ein. Konten ohne Passwort benötigen eine kürzlich erfolgte Anmeldung. Folge den Hinweisen, wenn die erneute Authentifizierung abgelehnt wird, statt die Anfrage wiederholt zu senden. Eine erfolgreiche Löschung meldet das Konto ab und führt zur öffentlichen Website zurück. Meldest du dich mit Apple an, bittet die Löschung Apple außerdem, minddy den Zugriff auf deinen Apple Account zu entziehen. Dies ist kein wiederherstellbarer Papierkorb. Halte Exporte privat und bearbeite verbleibende Abonnement- oder Anbieterfragen über die jeweiligen Abrechnungs- und Anbieterfunktionen.
 
 
 ## Routinen konfigurieren {#routines}

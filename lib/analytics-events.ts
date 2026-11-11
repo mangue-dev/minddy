@@ -77,9 +77,9 @@ export interface AnalyticsEventProps {
 
   // ── Auth ──
   login_submitted: { method: "password" };
-  login_failed: { method: "password" | "google" | "github"; reason: string };
+  login_failed: { method: "password" | "google" | "github" | "apple"; reason: string };
   login_succeeded: { method: "password" };
-  oauth_initiated: { provider: "google" | "github"; context: "login" | "signup" };
+  oauth_initiated: { provider: "google" | "github" | "apple"; context: "login" | "signup" };
   signup_submitted: NoProps;
   signup_succeeded: { requires_email_confirmation: boolean };
   signup_failed: { reason: string };

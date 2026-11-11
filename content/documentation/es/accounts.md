@@ -21,7 +21,7 @@
   "revision": 20,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -56,6 +56,7 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
+      "lib/server/apple-sign-in.ts",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "lib/theme-presets.ts",
@@ -206,7 +207,7 @@ Si el correo no llega, comprueba la dirección, la carpeta de spam y la identida
 
 ## Proteger la cuenta con un segundo factor {#account-security}
 
-Abre la sección Seguridad en los ajustes de la cuenta y activa la autenticación de dos factores. El segundo factor también se aplica al iniciar sesión mediante Google o GitHub; la autenticación del proveedor no lo sustituye.
+Abre la sección Seguridad en los ajustes de la cuenta y activa la autenticación de dos factores. El segundo factor también se aplica al iniciar sesión mediante Google, GitHub o Apple; la autenticación del proveedor no lo sustituye.
 
 1. Escanea el código QR con un autenticador TOTP o introduce manualmente la clave de configuración mostrada. Nunca incluyas ni el código QR ni la clave en una captura.
 2. Introduce el código actual de seis dígitos y confirma. Si ha caducado, prueba el siguiente. Después de demasiados intentos, espera antes de volver a intentarlo.
@@ -220,7 +221,7 @@ La activación actualiza la sesión actual e intenta cerrar las demás sesiones.
 
 Si no tienes el teléfono, utiliza al iniciar sesión uno de los códigos de recuperación que guardaste. Usarlo desactiva la autenticación de dos factores e invalida los códigos restantes. Una vez dentro, configura de nuevo el autenticador y guarda los nuevos códigos de recuperación. Este proceso no garantiza que el soporte humano pueda restaurar la cuenta.
 
-Sustituir los códigos de recuperación invalida la lista anterior. Tanto la sustitución como la desactivación voluntaria requieren las comprobaciones de autenticación reciente del servidor. Lee la confirmación: al desactivar la función, el factor adicional deja de solicitarse, incluso al entrar por Google o GitHub.
+Sustituir los códigos de recuperación invalida la lista anterior. Tanto la sustitución como la desactivación voluntaria requieren las comprobaciones de autenticación reciente del servidor. Lee la confirmación: al desactivar la función, el factor adicional deja de solicitarse, incluso al entrar por Google, GitHub o Apple.
 
 
 ## Recuperar el acceso a tu cuenta {#account-recovery}
@@ -269,7 +270,7 @@ El consentimiento para analítica se distingue de los datos necesarios para util
 
 Antes de eliminar la cuenta, exporta los datos que necesites conservar desde la pestaña **Privacidad y datos**. Lee la vista previa de tus proyectos, los miembros afectados, los tickets, los comentarios y la suscripción activa. Resuelve antes de confirmar las consecuencias para otras personas que participan en tus proyectos.
 
-Abre la confirmación de eliminación solo cuando estés preparado. Escribe el correo de tu cuenta y, si tienes una cuenta con contraseña, introduce también esa contraseña. Las cuentas sin contraseña necesitan un inicio de sesión reciente. Si se exige volver a autenticarte, sigue esa indicación antes de repetir la solicitud. Una eliminación completada cierra la sesión y vuelve al sitio público. Esta acción no envía la cuenta a una papelera recuperable. Mantén las exportaciones privadas y resuelve cualquier cuestión pendiente de suscripción o proveedores desde los controles de facturación y de servicio.
+Abre la confirmación de eliminación solo cuando estés preparado. Escribe el correo de tu cuenta y, si tienes una cuenta con contraseña, introduce también esa contraseña. Las cuentas sin contraseña necesitan un inicio de sesión reciente. Si se exige volver a autenticarte, sigue esa indicación antes de repetir la solicitud. Una eliminación completada cierra la sesión y vuelve al sitio público. Si la cuenta inicia sesión con Apple, la eliminación también pide a Apple que retire el acceso de minddy a tu cuenta de Apple. Esta acción no envía la cuenta a una papelera recuperable. Mantén las exportaciones privadas y resuelve cualquier cuestión pendiente de suscripción o proveedores desde los controles de facturación y de servicio.
 
 
 ## Configurar rutinas {#routines}

@@ -130,6 +130,33 @@ The `minddy` scheme is not registered with iOS: only the open sheet can catch
 it. iOS names the app in the sheet's prompt from `CFBundleName`, so that key
 holds `minddy` rather than the target name.
 
+## Signing in with Apple
+
+App Review asks for Sign in with Apple next to Google and GitHub (guideline
+4.8). In the app it is native: the plugin's `signInWithApple` method shows
+Apple's sheet (`App/AppleSignIn.swift`), with a random nonce whose SHA-256 goes
+to Apple. The page gets the identity token and the raw nonce and opens its
+session with `signInWithIdToken` (`lib/apple-sign-in.ts`); no browser round is
+involved. Apple gives the person's name on the first authorization only: it
+becomes the account's display name when the account has none. The target's
+`App.entitlements` carries the Sign in with Apple capability of
+`app.minddy.ios`.
+
+The web and the desktop app use the same provider through OAuth, with the
+Services ID `app.minddy.web`. In Supabase's Apple provider, **Client IDs** lists
+`app.minddy.web,app.minddy.ios` in that order, since the OAuth round uses the
+first one. Its **Secret Key** is a JWT signed with the Sign in with Apple key
+(Key ID `NAC8NXN6Q5`, not the APNs key) for `app.minddy.web`, valid six months
+at most: the current one, set on preview and production on 11 November 2026,
+expires on **10 May 2027**. Generate the next one from the same key before then.
+
+Deleting an account revokes its Apple authorization (guideline 5.1.1(v)).
+Supabase keeps no provider token, so the server keeps one in
+`apple_sign_in_tokens`: it exchanges the app's one-time authorization code, or
+checks the refresh token a web round returns, and seals it with the user's key
+(`lib/server/apple-sign-in.ts`). This needs the optional `APPLE_SIGN_IN_*`
+variables of `.env.example`; without them nothing is kept or revoked.
+
 ## Nothing is sold in the app
 
 Subscriptions are bought on the web. Inside the app, `usePurchasesHidden()`
@@ -182,7 +209,7 @@ the updated `ios/App/CapApp-SPM/Package.swift`.
 ## What is not done here yet
 
 - Signing, TestFlight and the App Store release workflow.
-- Sign in with Apple.
+- Apple's private email relay for accounts that hide their address.
 - Email links (confirmation, password reset) open in Safari, not in the app,
   until universal links exist.
 - Native push notifications, the share extension and universal links.

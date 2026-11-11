@@ -14,6 +14,13 @@ import { getSupabase } from "./supabase";
 import { getDesktopBridge } from "./desktop/bridge";
 import { getMobileBridge } from "./mobile/bridge";
 import { mobileAuthShell, runMobileAuthSession } from "./mobile/auth-session";
+import {
+  hasAppleIdentity,
+  nativeAppleShell,
+  saveAppleAuthorization,
+  signInWithNativeApple,
+} from "./apple-sign-in";
+import { sanitizeInternalRedirectPath } from "./auth-redirect";
 import { DESKTOP_CALLBACK_FLAG } from "./desktop/config";
 import { oauthCallbackUrl } from "./oauth-callback-url";
 import { beginDesktopAuthTurn } from "./desktop/auth-turn";
@@ -38,8 +45,16 @@ async function exchangeAuthLink(link: DesktopAuthLink): Promise<string> {
   const supabase = getSupabase();
   if (link.kind === "error") throw new Error(link.error);
   if (link.kind === "code") {
-    const { error } = await supabase.auth.exchangeCodeForSession(link.code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(link.code);
     if (error) throw error;
+    // An Apple round returns Apple's refresh token once, here: the server
+    // keeps it to revoke when the account is deleted.
+    const appleToken = data.session?.provider_refresh_token;
+    if (appleToken && hasAppleIdentity(data.user)) {
+      await saveAppleAuthorization(null, appleToken).catch((err: unknown) => {
+        console.error("[auth] apple authorization not saved:", err);
+      });
+    }
   } else {
     // The email link was NOT consumed by the callback: it was passed on as
     // is, precisely so that the session is born here.
@@ -70,7 +85,7 @@ async function finishMobileSignIn(link: DesktopAuthLink): Promise<void> {
   }
 }
 
-export type OAuthProvider = "google" | "github";
+export type OAuthProvider = "google" | "github" | "apple";
 
 interface AuthContextValue {
   user: User | null;
@@ -247,7 +262,7 @@ export function AuthProvider({
             : null;
         if (external && typeof external === "object") {
           setOauthProviders(
-            (["google", "github"] as const).filter(
+            (["google", "github", "apple"] as const).filter(
               (provider) => (external as Record<string, unknown>)[provider] === true,
             ),
           );
@@ -514,7 +529,17 @@ export function AuthProvider({
   }, []);
 
   const signInWithOAuth = useCallback(
-    async (provider: "google" | "github", redirectAfter?: string) => {
+    async (provider: OAuthProvider, redirectAfter?: string) => {
+      // The iOS app signs in with Apple in Apple's own sheet, without a
+      // browser round (lib/apple-sign-in.ts).
+      const appleShell = provider === "apple" ? nativeAppleShell(getMobileBridge()?.shell) : null;
+      if (appleShell) {
+        const outcome = await signInWithNativeApple(appleShell, getSupabase());
+        if (outcome.kind === "signed-in") {
+          window.location.replace(sanitizeInternalRedirectPath(redirectAfter));
+        }
+        return;
+      }
       const desktop = getDesktopBridge();
       // The mobile app runs the round in the system's sign-in sheet, through
       // the desktop app's callback (lib/mobile/auth-session.ts).

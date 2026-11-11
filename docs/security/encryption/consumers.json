@@ -1543,56 +1543,56 @@
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": null,
-    "line": 48,
+    "line": 51,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 76,
+    "line": 79,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 86,
+    "line": 89,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 92,
+    "line": 95,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": null,
-    "line": 146,
+    "line": 149,
     "storage": true
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "billing_accounts",
-    "line": 164,
+    "line": 167,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 194,
+    "line": 197,
     "storage": false
   },
   {
     "file": "lib/server/account-deletion.ts",
     "operation": "from",
     "resource": "user_avatars",
-    "line": 232,
+    "line": 235,
     "storage": false
   },
   {
@@ -2412,6 +2412,20 @@
     "operation": "from",
     "resource": "app_tabs",
     "line": 61,
+    "storage": false
+  },
+  {
+    "file": "lib/server/apple-sign-in.ts",
+    "operation": "from",
+    "resource": "apple_sign_in_tokens",
+    "line": 159,
+    "storage": false
+  },
+  {
+    "file": "lib/server/apple-sign-in.ts",
+    "operation": "from",
+    "resource": "apple_sign_in_tokens",
+    "line": 187,
     "storage": false
   },
   {

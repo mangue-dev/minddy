@@ -21,7 +21,7 @@
   "revision": 19,
   "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -56,6 +56,7 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
+      "lib/server/apple-sign-in.ts",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "lib/theme-presets.ts",
@@ -212,7 +213,7 @@ If mail does not arrive, check the address, spam folder and instance identity. A
 
 ## Protect your account with two-factor authentication {#account-security}
 
-Open account settings' Security section and turn on two-factor authentication. This second factor also applies when signing in through Google or GitHub; provider authentication does not replace it.
+Open account settings' Security section and turn on two-factor authentication. This second factor also applies when signing in through Google, GitHub or Apple; provider authentication does not replace it.
 
 1. Scan the QR code with a TOTP authenticator, or enter the displayed setup key manually. Never include either in a screenshot.
 2. Enter the current six-digit code and confirm. If it expired, try the next code; after too many attempts, wait before retrying.
@@ -224,7 +225,7 @@ Activation refreshes the current session and attempts to sign out other sessions
 
 ### Recovery and changes {#recovery}
 
-Without the phone, use a saved recovery code during sign-in. Using a recovery code turns off two-factor authentication and invalidates the remaining codes. Once signed in, enroll your authenticator again and save the new recovery codes. This flow does not promise account restoration by human support. Replacing recovery codes invalidates the previous set; replacement and deliberate disablement require the server’s fresh authentication checks. Read the confirmation: disabling means the additional factor is no longer requested, including when signing in through Google or GitHub.
+Without the phone, use a saved recovery code during sign-in. Using a recovery code turns off two-factor authentication and invalidates the remaining codes. Once signed in, enroll your authenticator again and save the new recovery codes. This flow does not promise account restoration by human support. Replacing recovery codes invalidates the previous set; replacement and deliberate disablement require the server’s fresh authentication checks. Read the confirmation: disabling means the additional factor is no longer requested, including when signing in through Google, GitHub or Apple.
 
 
 ## Recover account access {#account-recovery}
@@ -272,7 +273,7 @@ Consent is distinct from data needed to operate the account. Review the instance
 
 Export data you need to retain from the **Privacy & data** tab before deletion. Read the preview of owned projects, affected members, issues, comments and active subscription. Owned-project consequences affect other people; resolve those before confirming.
 
-Open the deletion confirmation only when ready. Type your account email and, for password accounts, the password. Accounts without a password need a recent sign-in. Follow any fresh-authentication refusal rather than retrying blindly. A successful deletion signs out and returns to the public site. This is not recoverable trash. Keep exports private and handle any remaining subscription or provider concerns through the relevant billing and provider controls.
+Open the deletion confirmation only when ready. Type your account email and, for password accounts, the password. Accounts without a password need a recent sign-in. Follow any fresh-authentication refusal rather than retrying blindly. A successful deletion signs out and returns to the public site. If the account signs in with Apple, deletion also asks Apple to revoke minddy’s access to your Apple Account. This is not recoverable trash. Keep exports private and handle any remaining subscription or provider concerns through the relevant billing and provider controls.
 
 
 ## Routine controls {#routines}

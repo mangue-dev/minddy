@@ -2889,3 +2889,19 @@ A summary that cannot be decrypted is ignored together with its boundary, so the
 turn reloads the messages it covered. `context_summary_through_at` and
 `context_summary_through_id` mark the last message the summary covers; they are
 clear timestamp and routing metadata. Migration `20270109200116` is additive.
+
+## Sign in with Apple revocation tokens (MIN-907)
+
+`apple_sign_in_tokens` holds the Apple refresh token that account deletion
+revokes at `appleid.apple.com/auth/revoke` (App Review guideline 5.1.1(v)).
+Supabase keeps no provider token, so the server stores one per user and Apple
+client: the iOS app's bundle identifier for a code exchanged from the native
+sheet, the web Services ID for the token Supabase returns after a web round.
+Rows are born sealed: the token is a user-key format-3 envelope in
+`encrypted_content`, bound to the user and the client ID, and the table has no
+clear-text column or legacy path. `client_id` is clear operational metadata.
+Only the service role reads or writes it, through `lib/server/apple-sign-in.ts`;
+the rows cascade with the account and are not part of the account export,
+since a revocable credential is not personal content. Sending the token to
+Apple to check, refresh or revoke it is an intentional external transmission.
+Migration `20270109200119` is additive.
