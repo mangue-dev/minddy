@@ -41,6 +41,7 @@ import type { Editor } from "@tiptap/core";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compress";
+import { sendableUpload } from "@/lib/mobile/upload-body";
 import {
   MAX_PAGE_FILE_BYTES,
   isImageMime,
@@ -152,10 +153,10 @@ export function postFile<T = PageFileUploaded>(
     accept?: (data: unknown) => boolean;
   } = {}
 ): Promise<T> {
-  return new Promise((resolve, reject) => {
+  return sendableUpload(file).then((body) => new Promise<T>((resolve, reject) => {
     const form = new FormData();
     for (const [name, value] of Object.entries(fields)) form.append(name, value);
-    form.append("file", file);
+    form.append("file", body, file.name);
     const request = new XMLHttpRequest();
     request.open("POST", url);
     request.upload.onprogress = (event) => {
@@ -179,7 +180,7 @@ export function postFile<T = PageFileUploaded>(
     };
     request.onerror = () => reject(new Error("network error"));
     request.send(form);
-  });
+  }));
 }
 
 /**

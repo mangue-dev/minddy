@@ -188,6 +188,15 @@ A notification carries the path of what it is about. A tap opens it on the
 selected server; when the tap launched the app, that path replaces the entry
 page. While the app is in front, notifications still show as banners.
 
+## Files dropped from another app
+
+A file dragged from Files or Photos into the WebView is backed by a temporary
+copy that the page can read but WebKit's network process cannot: uploaded as
+is, it reached the server without its file (400). Every upload of a file the
+person drops or picks goes through `sendableUpload` (`lib/mobile/upload-body.ts`),
+which reads the bytes in the page first inside the app. A new upload site
+must use it too.
+
 ## Universal links
 
 A link to minddy Cloud tapped in Mail, Messages or Notes opens the app on that
