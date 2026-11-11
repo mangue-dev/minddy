@@ -158,14 +158,16 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
         <motion.div aria-hidden className="absolute inset-0 bg-background/70 backdrop-blur-2xl backdrop-saturate-150"
           variants={{ initial: { opacity: 0 }, visible: { opacity: 1 }, exit: { opacity: 0 } }}
           transition={timing(ENTER_DURATION, EXIT_DURATION)} />
-        <motion.div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pt-4 sm:px-8 sm:pt-8"
+        {/* The content clears the notch and, in landscape, the side cut-outs:
+            the viewer covers the whole screen, status bar included. */}
+        <motion.div className="relative flex min-h-0 flex-1 items-center justify-center pt-[max(1rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] sm:pt-[max(2rem,env(safe-area-inset-top))] sm:pr-[max(2rem,env(safe-area-inset-right))] sm:pl-[max(2rem,env(safe-area-inset-left))]"
           variants={hero
             ? { initial: { opacity: 1 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
             : { initial: { opacity: 0, scale: 0.98, y: 8 }, visible: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.98, y: 0 } }}
           transition={timing(ENTER_DURATION, EXIT_DURATION)}>
           {children}
         </motion.div>
-        <motion.div className="relative flex shrink-0 cursor-auto justify-center px-4 pt-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+        <motion.div className="relative flex shrink-0 cursor-auto justify-center pt-4 pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.5rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]"
           onClick={event => event.stopPropagation()}
           variants={{ initial: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 0 } }}
           transition={timing(0.24, EXIT_DURATION, 0.12)}>

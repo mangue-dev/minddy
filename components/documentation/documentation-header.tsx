@@ -30,7 +30,7 @@ export async function DocumentationHeader({ articles, locale, currentId, title, 
     ...articles.map(({ id, locale, title, summary, content, tags, topic }) => ({ id, locale, title, summary, content, tags, topic })),
   ];
   return (
-    <header className="fixed inset-x-0 top-0 z-30 flex h-24 items-center border-b border-border bg-background px-3 pb-8 sm:h-16 sm:px-6 sm:pb-0">
+    <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center border-b border-border bg-background px-3 sm:px-6">
       <div className="flex shrink-0 items-center gap-2 lg:-ml-6 lg:h-16 lg:w-72 lg:gap-4 lg:border-r lg:border-border lg:pl-6 lg:pr-3">
         <DocumentationMobileNavigation {...navigation} />
         <div className="flex items-center gap-3">
@@ -43,8 +43,10 @@ export async function DocumentationHeader({ articles, locale, currentId, title, 
         <div className="ml-2 lg:ml-auto"><DocumentationSearch articles={searchArticles}
           locale={locale} initialQuery={initialQuery} labels={{ search: t("search"), articles: t("articles"), noResults: t("noResults"), open: t("openArticle") }} /></div>
       </div>
-      <nav aria-label={t("breadcrumb")} className="absolute inset-x-6 bottom-0 flex h-8 min-w-0 items-center gap-3 text-xs sm:static sm:mx-6 sm:h-auto sm:flex-1 sm:text-[13px]">
-        <span className="max-w-[45%] shrink-0 truncate text-muted-foreground sm:max-w-none">{topic}</span><span aria-hidden className="text-muted-foreground/50">/</span>
+      {/* A phone's header has no room for the trail: the article's own title
+          and the contents bar below say where the reader is. */}
+      <nav aria-label={t("breadcrumb")} className="mx-6 hidden min-w-0 flex-1 items-center gap-3 text-[13px] sm:flex">
+        <span className="shrink-0 truncate text-muted-foreground">{topic}</span><span aria-hidden className="text-muted-foreground/50">/</span>
         <span aria-current="page" className="truncate">{title}</span>
       </nav>
       <div className="ml-auto shrink-0"><DocumentationAccountActions currentId={currentId} sections={sections} locale={locale} /></div>

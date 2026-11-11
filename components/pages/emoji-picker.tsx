@@ -122,10 +122,13 @@ export function EmojiPicker({
                     {children}
                   </div>
                 ),
+                // On a phone the nine columns share the sheet's width, each cell
+                // a ninth of the row and square, rather than nine fixed 32px
+                // cells on the left. (frimousse sets the row to flex inline.)
                 Emoji: ({ emoji, ...props }) => (
                   <button
                     type="button"
-                    className="flex size-8 items-center justify-center rounded-md text-lg data-[active]:bg-accent"
+                    className="flex size-8 items-center justify-center rounded-md text-lg data-[active]:bg-accent app-mobile:aspect-square app-mobile:h-auto app-mobile:w-[calc(100%/9)] app-mobile:shrink-0 app-mobile:rounded-xl app-mobile:text-[28px]"
                     {...props}
                   >
                     {emoji.emoji}

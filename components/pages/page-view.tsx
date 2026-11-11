@@ -211,6 +211,9 @@ function PageStatus({
           onClick={onOpenHistory}
           aria-label={accessibleLabel}
           className={cn(
+            // On a phone it is a header button like the others beside it,
+            // its icon read at arm's length.
+            "app-mobile:size-11 app-mobile:[&_svg]:size-5",
             state === "error"
               ? "text-destructive hover:text-destructive"
               : state === "conflict"

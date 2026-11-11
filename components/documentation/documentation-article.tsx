@@ -47,7 +47,7 @@ export async function DocumentationArticleView({ article, articles }: { article:
     </div>}
     <div className="text-base leading-7 break-words [&_p]:my-4 [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-2 [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4">
       {chunks.map((chunk, index) => {
-        return <section key={chunk.id ?? index} id={chunk.id ?? undefined} tabIndex={-1} className="scroll-mt-40 sm:scroll-mt-32 xl:scroll-mt-24">
+        return <section key={chunk.id ?? index} id={chunk.id ?? undefined} tabIndex={-1} className="scroll-mt-32 xl:scroll-mt-24">
           {chunk.id && (chunk.level === 2 ? <h2 className="mt-10 text-2xl font-semibold">{chunk.title}</h2> : <h3 className="mt-6 text-xl font-semibold">{chunk.title}</h3>)}
           <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
             p: ({ node, children }) => node?.children.length === 1 && node.children[0].type === "element" && node.children[0].tagName === "img"

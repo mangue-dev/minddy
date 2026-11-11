@@ -689,6 +689,7 @@ function AccountButton({
 }) {
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
+  const tAccount = useTranslations("Account");
   const { user, signOut } = useAuth();
   const { capabilities } = useRuntimeConfig();
   const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
@@ -740,7 +741,9 @@ function AccountButton({
 
   if (mobile) {
     const destinations = [
-      { href: "/settings?tab=profile", label: name, icon: null },
+      // The row names the place, as its neighbours do; the name is already
+      // on the button that opened the sheet.
+      { href: "/settings?tab=profile", label: tAccount("profileTab"), icon: null },
       ...(showBilling ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
       { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
       { href: "/trash", label: t("trash"), icon: Delete02Icon },
@@ -1102,7 +1105,9 @@ export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, 
     className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-none"
     onClickCapture={mobile ? (event) => { if (isPlainNavigationClick(event) && event.target instanceof Element && event.target.closest("a[href]")) onNavigate?.(); } : undefined}>
     {children}
-    <SidebarOnboarding mobile={mobile} onLayerOpenChange={onLayerOpenChange} />
+    {/* The getting-started checklist is a desktop affair: on a phone the
+        sidebar keeps to navigation. */}
+    {!mobile && <SidebarOnboarding onLayerOpenChange={onLayerOpenChange} />}
     <div data-sidebar-footer className={cn("shrink-0 pt-2 pb-2.5", GUTTER)}><SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} /></div>
   </aside>;
 }

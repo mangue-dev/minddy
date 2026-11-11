@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, Edit04Icon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { memo, startTransition, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -521,6 +521,10 @@ export const PageDatabaseView = memo(function PageDatabaseView({
   // the sort, filter and column sheets.
   const [mobileSearch, setMobileSearch] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<"settings" | "sort" | "filter" | "columns" | null>(null);
+  // Renaming the view is one of its settings on a phone; the strip keeps the
+  // dialog and opens it on each request.
+  const [renameRequest, setRenameRequest] = useState(0);
+  const tBoard = useTranslations("Board");
   // The side panel's toolbar: its settings menu sorts in place and opens the
   // filter or column popover against its button once the menu has closed.
   const panelToolbar = compact && !mobile;
@@ -793,10 +797,11 @@ export const PageDatabaseView = memo(function PageDatabaseView({
     ),
   ];
   const contentWidth = columnWidths.reduce((total, width) => total + width, 0);
-  // The chrome columns around the data: the row gutter (+ and handle), which a
-  // touch screen does without, the selection checkbox, and the trailing cell.
+  // The chrome columns around the data: the row gutter (+ and handle) and the
+  // selection checkbox, which a phone does without so the table starts under
+  // the title, and the trailing cell. A row tapped on a phone opens.
   const gutterWidth = mobile ? 0 : 64;
-  const selectWidth = mobile ? 44 : 32;
+  const selectWidth = mobile ? 0 : 32;
   const chromeWidth = gutterWidth + selectWidth + 56;
   const filterEditor = (
     <DatabaseFilterEditor schema={schema} filter={filters} members={members} onChange={setFilters} />
@@ -977,6 +982,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
             onRename={databaseViews.rename}
             onDelete={databaseViews.remove}
             onMove={databaseViews.move}
+            renameRequest={renameRequest}
           />
         </div>
         {mobile ? (
@@ -1095,6 +1101,14 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                   <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               ))}
+              {canWrite && (
+                <button type="button" data-mobile-sheet-row
+                  onClick={() => { setMobileSheet(null); setRenameRequest((count) => count + 1); }}
+                  className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-sm active:bg-control">
+                  <HugeiconsIcon icon={Edit04Icon} className="size-5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{tBoard("renameView")}</span>
+                </button>
+              )}
             </MobileSheetContent>
           </Sheet>
           <Sheet open={mobileSheet === "sort"} onOpenChange={(open) => setMobileSheet(open ? "sort" : null)}>
@@ -1132,7 +1146,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
         >
           <colgroup>
             {!mobile && <col style={{ width: gutterWidth }} />}
-            <col style={{ width: selectWidth }} />
+            {!mobile && <col style={{ width: selectWidth }} />}
             {columnWidths.map((width, index) => (
               <col
                 key={index}
@@ -1146,6 +1160,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
           <thead>
             <tr className="text-left text-muted-foreground">
               {!mobile && <th scope="col" className="w-16 bg-background" />}
+              {!mobile && (
               <th scope="col" className="w-8 bg-background">
                 {/* The tooltip sits on the wrapper: as the checkbox's own trigger,
                     its `data-state` would replace the checked state. */}
@@ -1175,6 +1190,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                 </div>
                 </AppTooltip>
               </th>
+              )}
               <th
                 scope="col"
                 className="overflow-hidden border-b border-border/50 p-1 font-normal"
@@ -1466,6 +1482,7 @@ const DatabaseRow = memo(function DatabaseRow({
           </div>
         </td>
       )}
+      {!mobile && (
       <td
         className="pointer-events-none sticky left-0 z-20 h-10 w-8 p-0 pointer-coarse:h-12"
         data-selection-cell
@@ -1489,6 +1506,7 @@ const DatabaseRow = memo(function DatabaseRow({
           </AppTooltip>
         </div>
       </td>
+      )}
       <td className="h-10 overflow-hidden border-b border-border/40 p-0 pointer-coarse:h-12">
         <button
           type="button"

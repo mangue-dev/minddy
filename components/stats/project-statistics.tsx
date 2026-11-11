@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { issuesQueryFn } from "@/lib/issues-api";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useObjectivesQuery } from "@/lib/use-objectives-query";
@@ -174,6 +175,7 @@ function useDuration() {
 export function ProjectStatistics({ project }: { project: Project }) {
   const t = useTranslations("ProjectStats");
   const duration = useDuration();
+  const mobile = useMobileLayout() === true;
 
   // The board's own cache entries, as in the identity header above.
   const { data: issues } = useQuery({
@@ -380,7 +382,9 @@ export function ProjectStatistics({ project }: { project: Project }) {
         </StatsSection>
       )}
 
-      <IssueGraphCard project={project} issues={issues} relations={relations} objectives={objectives} />
+      {/* The graph is read on a wide screen: on a phone its nodes are too
+          small to tell apart or to tap. */}
+      {!mobile && <IssueGraphCard project={project} issues={issues} relations={relations} objectives={objectives} />}
     </div>
   );
 }
