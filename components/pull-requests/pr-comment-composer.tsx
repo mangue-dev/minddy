@@ -27,6 +27,7 @@
 // which allows the row field to be THE SAME in the PR panel and in
 // the diff view of a commit.
 
+import { focusFieldIn } from "@/lib/focus-field";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -136,6 +137,7 @@ export function PrCommentComposer({
           line ? "rounded-lg bg-control" : "rounded-2xl bg-control",
           drop.dragging && "ring-2 ring-brand/20",
         )}
+        onClick={focusFieldIn}
         onPaste={pasteFileHandler(uploads.addFiles)}
         {...drop.handlers}
       >

@@ -2403,6 +2403,12 @@ html.marquee-drawing * {
 @media (prefers-reduced-motion: reduce) {
   .page-editor [data-block-comment-button] { transition: none; }
 }
+/* A phone has no hover to reveal the button, and a tap on a block lands on
+   it by accident; a block is commented from the block menu instead. */
+:root[data-app-layout="mobile"] .page-editor [data-block-comment-button],
+:root[data-app-layout="mobile"] .page-editor [data-block-comment-preview] {
+  display: none;
+}
 /* While the comment button is hovered, its block wears the block-selection
    box (the "Selection boxes" rules below), so the button names its block. */
 .page-editor [data-block-comment-preview] {
