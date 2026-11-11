@@ -49,6 +49,13 @@ export interface MobileShellPlugin {
    */
   setAppearance?(options: { dark: boolean }): Promise<void>;
   /**
+   * Opens `url` in the system's sign-in sheet (`ASWebAuthenticationSession`)
+   * and resolves with the first URL of `callbackScheme` it reaches, or
+   * without `url` when the person closes the sheet. See
+   * `lib/mobile/auth-session.ts`. Absent in older shells.
+   */
+  authenticate?(options: { url: string; callbackScheme: string }): Promise<{ url?: string }>;
+  /**
    * Describes the page's bottom bar for the shell to draw natively: see
    * `lib/mobile/native-navigation.ts`. Absent in older shells.
    */

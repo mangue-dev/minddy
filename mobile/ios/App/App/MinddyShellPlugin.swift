@@ -1,3 +1,4 @@
+import AuthenticationServices
 import Capacitor
 import Foundation
 
@@ -19,10 +20,14 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "openServerPicker", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reload", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAppearance", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "setNavigationBar", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "setNavigationBar", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise)
     ]
 
     weak var controller: MinddyViewController?
+
+    /// The sign-in sheet in progress: the system drops a session nobody holds.
+    private var authSession: ASWebAuthenticationSession?
 
     @objc func state(_ call: CAPPluginCall) {
         call.resolve([
@@ -105,6 +110,46 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    /// Runs a provider's sign-in pages in the system's sign-in sheet, where
+    /// Google accepts them (it refuses an embedded WebView), and resolves with
+    /// the URL that ends the round: `minddy://auth?code=…`, which the page
+    /// exchanges itself (`lib/mobile/auth-session.ts`). Closing the sheet
+    /// resolves without a URL.
+    ///
+    /// Only https pages can be opened, and only a custom scheme ends the
+    /// round, so a page cannot use this to open something else.
+    @objc func authenticate(_ call: CAPPluginCall) {
+        guard let raw = call.getString("url"), let url = URL(string: raw), url.scheme == "https",
+              let scheme = call.getString("callbackScheme"), !scheme.isEmpty,
+              !["http", "https"].contains(scheme.lowercased()) else {
+            call.reject("A sign-in needs an https page and a custom callback scheme.")
+            return
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.authSession?.cancel()
+            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: scheme) { [weak self] callback, error in
+                self?.authSession = nil
+                if let callback {
+                    call.resolve(["url": callback.absoluteString])
+                } else if let error = error as? ASWebAuthenticationSessionError, error.code == .canceledLogin {
+                    call.resolve([:])
+                } else {
+                    call.reject(error?.localizedDescription ?? "The sign-in did not finish.")
+                }
+            }
+            session.presentationContextProvider = self
+            // Shares Safari's cookies, so someone already signed in to the
+            // provider there only confirms.
+            session.prefersEphemeralWebBrowserSession = false
+            self.authSession = session
+            if !session.start() {
+                self.authSession = nil
+                call.reject("The sign-in sheet could not open.")
+            }
+        }
+    }
+
     /// A tap on the native bar, sent to the page that owns the action.
     func navigationBarDidSelect(_ id: String) {
         notifyListeners("navigationAction", data: ["id": id])
@@ -127,5 +172,11 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             action(controller)
         }
+    }
+}
+
+extension MinddyShellPlugin: ASWebAuthenticationPresentationContextProviding {
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+        controller?.view.window ?? ASPresentationAnchor()
     }
 }

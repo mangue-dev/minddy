@@ -1,5 +1,6 @@
 "use client";
 
+import { isNativeMobile } from "@/lib/mobile/bridge";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
@@ -256,7 +257,9 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
     track("oauth_initiated", { provider, context: "signup" });
     try {
       await signInWithOAuth(provider, redirectTo);
-      if (inDesktopApp) setOauthPending(null);
+      // The round goes on elsewhere (desktop), or the sign-in sheet was closed
+      // (mobile): the buttons are free again.
+      if (inDesktopApp || isNativeMobile()) setOauthPending(null);
     } catch (err) {
       track("signup_failed", { reason: errorReason(err) });
       setError(authErrorMessage(err, t));

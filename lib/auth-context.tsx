@@ -12,6 +12,8 @@ import {
 } from "react";
 import { getSupabase } from "./supabase";
 import { getDesktopBridge } from "./desktop/bridge";
+import { getMobileBridge } from "./mobile/bridge";
+import { mobileAuthShell, runMobileAuthSession } from "./mobile/auth-session";
 import { DESKTOP_CALLBACK_FLAG } from "./desktop/config";
 import { oauthCallbackUrl } from "./oauth-callback-url";
 import { beginDesktopAuthTurn } from "./desktop/auth-turn";
@@ -26,6 +28,47 @@ import { signalRealtimeRekey } from "./realtime-topic";
 import { HttpResponseError, isBackendUnavailableError } from "./backend-availability";
 import { withClientRequestDeadline } from "./client-request-deadline";
 import type { User, Session } from "@supabase/supabase-js";
+
+/**
+ * Opens the session an app's authentication round brought back: an OAuth
+ * code (desktop and mobile) or an email link token (desktop). Returns the
+ * page to land on.
+ */
+async function exchangeAuthLink(link: DesktopAuthLink): Promise<string> {
+  const supabase = getSupabase();
+  if (link.kind === "error") throw new Error(link.error);
+  if (link.kind === "code") {
+    const { error } = await supabase.auth.exchangeCodeForSession(link.code);
+    if (error) throw error;
+  } else {
+    // The email link was NOT consumed by the callback: it was passed on as
+    // is, precisely so that the session is born here.
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: link.tokenHash,
+      type: link.type,
+    });
+    if (error) throw error;
+  }
+  return link.next;
+}
+
+/**
+ * Ends a mobile OAuth round: exchanges the code and reloads the app on the
+ * new session, or lands on the login page with the same error codes as the
+ * web. Mirrors `DesktopAuthBridge`.
+ */
+async function finishMobileSignIn(link: DesktopAuthLink): Promise<void> {
+  try {
+    window.location.replace(await exchangeAuthLink(link));
+  } catch (err) {
+    console.error("[mobile] sign-in failed:", err);
+    const code = link.kind === "error" ? link.error : "auth_callback_failed";
+    const reason = link.kind === "error" ? link.reason : "exchange_failed";
+    window.location.replace(
+      `/login?error=${encodeURIComponent(code)}&reason=${encodeURIComponent(reason)}`
+    );
+  }
+}
 
 export type OAuthProvider = "google" | "github";
 
@@ -473,10 +516,13 @@ export function AuthProvider({
   const signInWithOAuth = useCallback(
     async (provider: "google" | "github", redirectAfter?: string) => {
       const desktop = getDesktopBridge();
+      // The mobile app runs the round in the system's sign-in sheet, through
+      // the desktop app's callback (lib/mobile/auth-session.ts).
+      const mobile = mobileAuthShell(getMobileBridge()?.shell);
       const callbackUrl = oauthCallbackUrl(
         window.location.origin,
         redirectAfter,
-        desktop ? beginDesktopAuthTurn() : undefined,
+        desktop || mobile ? beginDesktopAuthTurn() : undefined,
       );
 
       const { data, error } = await getSupabase().auth.signInWithOAuth({
@@ -485,32 +531,20 @@ export function AuthProvider({
           redirectTo: callbackUrl.toString(),
           // Google rejects OAuth in embedded browsers. The desktop app requests
           // the URL and opens it in the system browser instead of navigating.
-          ...(desktop ? { skipBrowserRedirect: true } : {}),
+          ...(desktop || mobile ? { skipBrowserRedirect: true } : {}),
         },
       });
       if (error) throw error;
       if (desktop && data?.url) desktop.openExternal(data.url);
+      if (mobile && data?.url) {
+        const outcome = await runMobileAuthSession(mobile, data.url);
+        if (outcome.kind === "link") await finishMobileSignIn(outcome.link);
+      }
     },
     []
   );
 
-  const completeDesktopSignIn = useCallback(async (link: DesktopAuthLink) => {
-    const supabase = getSupabase();
-    if (link.kind === "error") throw new Error(link.error);
-    if (link.kind === "code") {
-      const { error } = await supabase.auth.exchangeCodeForSession(link.code);
-      if (error) throw error;
-    } else {
-      // The email link was NOT consumed by the callback: it transmitted it as
-      // which, precisely so that the session is born here.
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: link.tokenHash,
-        type: link.type,
-      });
-      if (error) throw error;
-    }
-    return link.next;
-  }, []);
+  const completeDesktopSignIn = useCallback(exchangeAuthLink, []);
 
   const signOut = useCallback(async () => {
     explicitSignOut.current = true;

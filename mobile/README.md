@@ -115,6 +115,21 @@ WebKit asks its UI delegate before showing the keyboard for a focus that no tap
 gave, and the shell answers yes (`letFocusRaiseKeyboard`). The page focuses a
 field on its own only where a tap asked for one (Reply, opening Numo).
 
+## Signing in with Google and GitHub
+
+Google refuses OAuth inside a WebView, so the provider's pages open in the
+system's sign-in sheet (`ASWebAuthenticationSession`) through the plugin's
+`authenticate` method. The round is the desktop app's: the page asks Supabase
+for the provider URL with a `redirectTo` that carries the `desktop` flag and a
+turn nonce, `/auth/callback` answers with `minddy://auth?code=…&turn=…` without
+using the code, and the sheet catches that URL and gives it back to the page.
+The page checks the nonce and exchanges the code itself, because the PKCE
+verifier stays in the WebView's storage (`lib/mobile/auth-session.ts`).
+
+The `minddy` scheme is not registered with iOS: only the open sheet can catch
+it. iOS names the app in the sheet's prompt from `CFBundleName`, so that key
+holds `minddy` rather than the target name.
+
 ## Nothing is sold in the app
 
 Subscriptions are bought on the web. Inside the app, `usePurchasesHidden()`
@@ -167,7 +182,8 @@ the updated `ios/App/CapApp-SPM/Package.swift`.
 ## What is not done here yet
 
 - Signing, TestFlight and the App Store release workflow.
-- Sign-in with Google and GitHub from inside the app, and Sign in with Apple.
-  Email and password sign-in works.
+- Sign in with Apple.
+- Email links (confirmation, password reset) open in Safari, not in the app,
+  until universal links exist.
 - Native push notifications, the share extension and universal links.
 - The Android project.

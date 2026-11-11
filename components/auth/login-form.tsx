@@ -1,5 +1,6 @@
 "use client";
 
+import { isNativeMobile } from "@/lib/mobile/bridge";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Clock01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
@@ -200,7 +201,9 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     track("oauth_initiated", { provider, context: "login" });
     try {
       await signInWithOAuth(provider, redirectTo);
-      if (inDesktopApp) setOauthPending(null);
+      // The round goes on elsewhere (desktop), or the sign-in sheet was closed
+      // (mobile): the buttons are free again.
+      if (inDesktopApp || isNativeMobile()) setOauthPending(null);
     } catch (err) {
       track("login_failed", { method: provider, reason: errorReason(err) });
       setError(authErrorMessage(err, t));
