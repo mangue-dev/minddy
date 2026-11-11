@@ -34,13 +34,17 @@ export function ResponsivePopoverAnchor(props: React.ComponentProps<typeof Deskt
   const mobile = React.useContext(MobilePopover);
   return mobile ? null : <DesktopAnchor {...props} />;
 }
-export function ResponsivePopoverContent({ className, onOpenAutoFocus, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy, mobileTitle, ...props }: React.ComponentProps<typeof DesktopContent> & { mobileTitle?: React.ReactNode }) {
+export function ResponsivePopoverContent({ className, onOpenAutoFocus, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy, mobileTitle, mobileTitleHidden = false, ...props }: React.ComponentProps<typeof DesktopContent> & {
+  mobileTitle?: React.ReactNode;
+  /** The title stays for screen readers only: the sheet's own controls take its row. */
+  mobileTitleHidden?: boolean;
+}) {
   const mobile = React.useContext(MobilePopover);
   const t = useTranslations("Picker");
   if (!mobile) return <DesktopContent onOpenAutoFocus={(event) => focusSearchInputOnOpen(event, onOpenAutoFocus)} {...{ className, container, align, side, sideOffset, alignOffset, avoidCollisions, collisionPadding, collisionBoundary, sticky, hideWhenDetached, arrowPadding, updatePositionStrategy }} {...props} />;
   return <MobileSheetContent {...props} side="bottom" onOpenAutoFocus={onOpenAutoFocus} aria-describedby={undefined}
     data-mobile-picker className={cn("mobile-bottom-sheet mobile-picker-sheet gap-0 p-2 pt-12", className)}>
-    <SheetTitle className={mobileTitle ? "mobile-picker-title truncate" : "sr-only"}>{mobileTitle ?? t("search")}</SheetTitle>
+    <SheetTitle className={mobileTitle && !mobileTitleHidden ? "mobile-picker-title truncate" : "sr-only"}>{mobileTitle ?? t("search")}</SheetTitle>
     {props.children}
   </MobileSheetContent>;
 }

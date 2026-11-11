@@ -3522,9 +3522,24 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     min-width: 0;
     width: auto;
   }
-  .mobile-bottom-sheet [data-calendar] :is(.rdp-day, button[data-day]) { height: 44px; }
-  .mobile-bottom-sheet [data-calendar] button[data-day] { width: 100%; }
-  .mobile-bottom-sheet [data-calendar] :is(.rdp-button_previous, .rdp-button_next) { width: 44px; height: 44px; }
+  /* Square days, as a phone's calendar draws them: the column's width sets
+     the height, a little under 52px on a 402pt phone. */
+  .mobile-bottom-sheet [data-calendar] .rdp-day { height: auto; aspect-ratio: 1; }
+  .mobile-bottom-sheet [data-calendar] button[data-day] {
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    font-size: 1rem;
+  }
+  .mobile-bottom-sheet [data-calendar] .rdp-weekday { font-size: 0.8125rem; }
+  .mobile-bottom-sheet [data-calendar] .rdp-caption_label { font-size: 1.0625rem; }
+  /* Each chevron takes one day column, so it stands over Monday and Sunday. */
+  .mobile-bottom-sheet [data-calendar] :is(.rdp-button_previous, .rdp-button_next) { width: calc(100% / 7); height: 44px; }
+  /* The picker's settings rows start where the chevrons' icons do: half a
+     day column in, less half the 16px icon, on both sides. */
+  .mobile-bottom-sheet[data-datetime-picker] [data-picker-row] {
+    padding-inline: calc(100% / 14 - 8px);
+  }
   .mobile-bottom-sheet [data-calendar] .rdp-month_caption { height: 44px; }
   /* The top of a sheet is a title bar, as on a native sheet: the title in
      the middle, the close button at the side, the content below. Both sides
@@ -3934,6 +3949,22 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"])[data-slot="sheet-content"] {
     padding-top: var(--mobile-sheet-top);
+  }
+  /* A calendar is no list to scroll: its sheet takes the height the month
+     needs, up to the room under the notch, rather than the list's 75%. */
+  .mobile-picker-sheet:has([data-calendar])[data-slot="sheet-content"] {
+    max-height: var(--mobile-sheet-room);
+  }
+  /* A control that takes the title's row (the date picker's mode): beside
+     the close button, its corner concentric with the sheet's, as the
+     inbox's filter is. */
+  .mobile-picker-sheet:has([data-sheet-header-bar])[data-slot="sheet-content"] {
+    padding-top: var(--mobile-sheet-top);
+  }
+  .mobile-picker-sheet [data-sheet-header-bar] {
+    display: flex;
+    min-height: 44px;
+    padding: 0 calc(var(--mobile-sheet-close-room) - var(--mobile-sheet-inset)) 0 calc(var(--mobile-sheet-top) - var(--mobile-sheet-inset));
   }
   .mobile-picker-sheet > .mobile-picker-title {
     position: absolute;

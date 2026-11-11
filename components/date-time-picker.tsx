@@ -9,7 +9,7 @@
 import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { PointerAnchor } from "@/components/pointer-anchor";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { RepeatIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, RepeatIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import * as React from "react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
@@ -30,6 +30,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { SearchSelect } from "@/components/search-select";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/ui/kbd";
 import { DATE_ONLY, dueDateFormat, dueDateHasTime, parseDueDate } from "@/lib/due-date";
@@ -131,6 +134,7 @@ export function DateTimePicker({
   const tIssueUI = useTranslations("IssueUI");
   const format = useFormatter();
   const locale = useLocale();
+  const mobile = useMobileLayout() === true;
   // Locale objects come from a tiny standalone subpath — only DayPicker itself
   // (via <Calendar> below) is heavy enough to deserve the lazy boundary.
   const dfLocale = {
@@ -448,6 +452,8 @@ export function DateTimePicker({
       )}
       <ResponsivePopoverContent
         mobileTitle={ariaLabel ?? placeholder ?? t("placeholder")}
+        // The mode picker heads a recurring field's sheet in the title's place.
+        mobileTitleHidden={recurrable}
         align={
           variant === "field" || variant === "ghost" || variant === "anchored"
             ? "start"
@@ -477,6 +483,26 @@ export function DateTimePicker({
  then “from which day”. This is also what remains visible at the top when the window is too short and the popover scrolls. */}
         {recurrable && (
           <div className="flex flex-col gap-2.5 pb-3">
+            {mobile ? (
+              // On a phone the mode is one picker in the sheet's top row, as
+              // the inbox's filter is, beside the close button.
+              <div data-sheet-header-bar>
+                <SearchSelect
+                  value={isRecurring ? "recurring" : "once"}
+                  onChange={(next) => { if (next) setMode(next as "once" | "recurring"); }}
+                  options={[
+                    { value: "once", label: tRec("once") },
+                    { value: "recurring", label: tRec("recurring") },
+                  ]}
+                  trigger={
+                    <Button type="button" variant="outline" aria-label={tRec("cadence")} className="h-11 min-w-0 max-w-full justify-start gap-2 px-4 text-base">
+                      <span className="truncate">{isRecurring ? tRec("recurring") : tRec("once")}</span>
+                      <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+                    </Button>
+                  }
+                />
+              </div>
+            ) : (
             <SegmentedControl
               options={[
                 { value: "once", label: tRec("once") },
@@ -486,16 +512,17 @@ export function DateTimePicker({
               onChange={setMode}
               ariaLabel={tRec("cadence")}
             />
+            )}
             {isRecurring && (
-              <div className="flex items-center justify-between gap-3">
-                <label htmlFor={cadenceId} className="text-sm text-muted-foreground">
+              <div data-picker-row className="flex items-center justify-between gap-3 app-mobile:min-h-12">
+                <label htmlFor={cadenceId} className="text-sm text-muted-foreground app-mobile:text-base app-mobile:text-foreground">
                   {tRec("cadence")}
                 </label>
                 <Select
                   value={recurrence ?? undefined}
                   onValueChange={(v) => setCadence(v as RecurrenceCadence, value)}
                 >
-                  <SelectTrigger id={cadenceId} size="sm" className="w-auto">
+                  <SelectTrigger id={cadenceId} size={mobile ? "default" : "sm"} className="w-auto app-mobile:rounded-full app-mobile:px-4">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -521,9 +548,11 @@ export function DateTimePicker({
             locale={dfLocale}
           />
         </React.Suspense>
-        {!dateOnly && <div data-sheet-section className="flex flex-col gap-2.5 border-t border-border pt-3">
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={switchId} className="text-sm text-muted-foreground">
+        {!dateOnly && <div data-sheet-section className="flex flex-col gap-2.5 border-t border-border pt-3 app-mobile:gap-0 app-mobile:pt-1">
+          {/* On a phone each setting is a full row of the sheet, its label at
+              reading size, as in the system's own date settings. */}
+          <div data-picker-row className="flex items-center justify-between gap-3 app-mobile:min-h-12">
+            <label htmlFor={switchId} className="text-sm text-muted-foreground app-mobile:text-base app-mobile:text-foreground">
               {t("addTime")}
             </label>
             <Switch
@@ -534,8 +563,8 @@ export function DateTimePicker({
             />
           </div>
           {timeEnabled && selected && (
-            <div className="flex items-center justify-between gap-3">
-              <label htmlFor={timeId} className="text-sm text-muted-foreground">
+            <div data-picker-row className="flex items-center justify-between gap-3 app-mobile:min-h-12">
+              <label htmlFor={timeId} className="text-sm text-muted-foreground app-mobile:text-base app-mobile:text-foreground">
                 {t("time")}
               </label>
               <input
@@ -543,16 +572,31 @@ export function DateTimePicker({
                 type="time"
                 value={`${pad(selected.getHours())}:${pad(selected.getMinutes())}`}
                 onChange={handleTimeChange}
-                className="rounded-md bg-control px-2 py-1 text-sm tabular-nums outline-none transition-colors focus-visible:bg-control-hover [&::-webkit-calendar-picker-indicator]:opacity-60"
+                className="rounded-md bg-control px-2 py-1 text-sm tabular-nums outline-none transition-colors focus-visible:bg-control-hover app-mobile:min-h-10 app-mobile:rounded-full app-mobile:px-4 app-mobile:text-base [&::-webkit-calendar-picker-indicator]:opacity-60"
               />
             </div>
           )}
           {isRecurring && (
-            <p className="max-w-[15rem] text-xs leading-snug text-muted-foreground">
+            // The phone sheet keeps to its controls; the desktop popover explains.
+            <p className="max-w-[15rem] text-xs leading-snug text-muted-foreground app-mobile:hidden">
               {tRec("hint")}
             </p>
           )}
         </div>}
+        {mobile ? (
+          // The two actions as the sheet's buttons, side by side under the
+          // thumb, rather than two small links.
+          <div data-picker-row className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" className="h-11 flex-1 text-base" onClick={() => handleDaySelect(new Date())}>
+              {t("today")}
+            </Button>
+            {selected && (
+              <Button type="button" variant="outline" className="h-11 flex-1 text-base" onClick={clear}>
+                {t("clear")}
+              </Button>
+            )}
+          </div>
+        ) : (
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -571,6 +615,7 @@ export function DateTimePicker({
             </button>
           )}
         </div>
+        )}
       </ResponsivePopoverContent>
     </ResponsivePopover>
   );

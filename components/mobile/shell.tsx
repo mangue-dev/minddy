@@ -116,7 +116,6 @@ function ServerChoice({ shell, state }: { shell: MobileShellPlugin; state: Mobil
             spellCheck={false}
             required
             className="mt-2 h-11 bg-background/80 text-foreground"
-            placeholder="https://minddy.example.com"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
             aria-invalid={invalid}
