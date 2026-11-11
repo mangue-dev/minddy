@@ -4241,50 +4241,34 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     overscroll-behavior: contain;
     padding: 0 2px 1rem;
   }
-  .creation-field-label {
-    display: block;
-    margin: 1rem 0 0.5rem;
-    font-size: 0.75rem;
-    color: var(--muted-foreground);
+  /* The title and the description are written as in an issue's panel:
+     plain text, no boxes and no labels, the title above in its own size. */
+  .creation-title {
+    margin: 0.5rem 0 0.75rem;
+    font-size: 1.375rem;
+    line-height: 1.3;
   }
-  .creation-title, .creation-description {
-    margin: 0;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.75rem;
-    font-size: 1rem;
-    line-height: 1.5;
-  }
+  /* The editor keeps its own type scale, as in an issue's panel: a font
+     size forced on it alone left its line height and the task checkboxes
+     set for the other size, the caret below the placeholder. */
   .creation-description { min-height: 6rem; }
-  .creation-description .ProseMirror { font-size: 1rem; }
-  .creation-title:focus, .creation-description:focus-within { border-color: var(--ring); }
-  .creation-properties {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
+  /* The property buttons, a carousel above the create button: the row
+     scrolls sideways under a finger, each button its desktop self. */
+  .creation-carousel > *, .creation-carousel button {
+    flex-shrink: 0;
   }
-  .creation-property {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.5rem 0.5rem 0;
+  /* A carousel as the editor's toolbar is: each button snaps to the start. */
+  .creation-carousel > * {
+    scroll-snap-align: start;
   }
-  .creation-property > button {
-    width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    height: auto;
-    padding-inline: 0;
-    justify-content: flex-start;
-    overflow: hidden;
+  .creation-carousel button {
+    min-height: 40px;
+    font-size: 1rem;
   }
-  .creation-property > button span:not(.sr-only) {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  /* Their icons read at arm's length: 22px, the avatar and status dot alike. */
+  .creation-carousel button :is(svg, img, [data-slot="avatar"]) {
+    width: 22px;
+    height: 22px;
   }
   .creation-form-footer {
     flex-shrink: 0;
@@ -4298,32 +4282,10 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     min-width: 44px;
   }
   .creation-submit { width: 100%; }
-  .creation-submit > :not(.creation-dictation), .creation-submit button[type="submit"] { flex: 1; }
-  .creation-submit > .creation-dictation { flex: none; }
-}
-
-:root[data-app-layout="mobile"] {
-  .creation-property > button,
-  .creation-property > button:hover,
-  .creation-property > button:focus-visible,
-  .creation-property > button[aria-expanded=true] {
-    background-color: transparent;
-  }
-  .creation-property:focus-within { border-color: var(--ring); }
-  .creation-property > button:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: -2px;
-  }
-  .creation-smart-fill {
-    grid-column: 1 / -1;
-    display: flex;
-    min-height: 56px;
-    align-items: center;
-    gap: 1rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0.75rem;
-  }
+  /* Only the action grows: the resources and dictation buttons beside it
+     keep their round size. */
+  .creation-submit > * { flex: none; }
+  .creation-submit > button[type="submit"] { flex: 1; }
 }
 
 /* A bottom sheet on a wide screen (MIN-841). The mobile layout also serves an

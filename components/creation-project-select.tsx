@@ -15,12 +15,13 @@ import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/types";
 
 // Desktop: a pill mirroring the dialog's close button (top-4, 28px high,
-// `bg-control`), on the opposite corner. Mobile: a plain trigger beside the
-// sheet title, whose header row gives it the 44px touch height.
+// `bg-control`), on the opposite corner. Mobile: a filled capsule heading the
+// sheet, 44px like the close button and, like it, as far from the side as
+// from the top, concentric with the sheet's corner.
 const DIALOG_PILL =
   "flex h-7 min-w-0 items-center gap-1.5 rounded-full bg-control px-2.5 text-sm text-foreground outline-none transition-colors";
 const SHEET_TRIGGER =
-  "flex min-w-0 items-center gap-1.5 rounded-md px-1.5 text-base font-medium text-foreground outline-none transition-colors";
+  "flex h-11 min-w-0 items-center gap-2 rounded-full bg-control px-4 ml-[calc(var(--mobile-sheet-top)-var(--mobile-sheet-inline))] text-base font-medium text-foreground outline-none transition-colors active:bg-control-hover data-pressed:bg-control-hover";
 const INTERACTIVE = "hover:bg-control-hover focus-visible:bg-control-hover";
 
 /**

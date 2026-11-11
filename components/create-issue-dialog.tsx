@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { SplitButton } from "@/components/ui/split-button";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -28,7 +29,7 @@ import { useDescriptionMentions } from "@/lib/use-mention-sources";
 import { useResourceMentions } from "@/lib/use-resource-mentions";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
-import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
+import { CreationCarousel, CreationDictation } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import {
   AddResourceButton,
@@ -192,7 +193,6 @@ export function CreateIssueDialog({
   const mobile = useMobileLayout() === true;
   const tField = useTranslations("Field");
   const tDrafts = useTranslations("Drafts");
-  const tRelations = useTranslations("Relations");
   const { user } = useAuth();
   const { track } = useAnalytics();
   // Closing keeps the form; reopening resumes it (MIN-776). Declared before
@@ -843,6 +843,185 @@ export function CreateIssueDialog({
   // A draft keeps finished uploads only, so it waits for those in flight.
   const saveDraftDisabled = submitting || numoBusy || uploads.uploading || !draftHasContent();
 
+  // The property buttons, as on a desktop: in the form there, on a phone a
+  // carousel above the create button, Smart Fill first.
+  const smartFillButton = (
+    <>
+                {smartFillAvailable && (
+                  <SmartFillCompact
+                      fullWidth={false}
+                      shortcut
+                      writesTitle={resolveSmartFillTitle(user?.user_metadata)}
+                      value={smartFill}
+                      onChange={(value) => {
+                        smartFillTouchedRef.current = true;
+                        setSmartFill(value);
+                      }}
+                      // Sets one property by hand without turning Smart Fill
+                      // off: the value wins and its field returns (MIN-809).
+                      manual={{
+                        // Always in the row too; here so ⌘⇧F reaches them.
+                        status: fields.status,
+                        onStatusChange: (status) => setFields((f) => ({ ...f, status })),
+                        assigneeId: fields.assignee_id,
+                        members: scopedMembers,
+                        onAssigneeChange: (assignee_id) =>
+                          setFields((f) => ({ ...f, assignee_id })),
+                        smartAssign: smartAssignFillsEmptyAssignee(
+                          activeProject,
+                          { status: fields.status, assigneeId: fields.assignee_id, createdAt: null },
+                        ),
+                        onDueDateRequest: () => setOpenPicker("dueDate"),
+                        priority: fields.priority,
+                        onPriorityChange: (priority) => setFields((f) => ({ ...f, priority })),
+                        effort: fields.effort,
+                        onEffortChange: (effort) => setFields((f) => ({ ...f, effort })),
+                        categories: scopedCategories,
+                        categoryIds,
+                        onCategoryIdsChange: setCategoryIds,
+                        objectives: scopedObjectives,
+                        objectiveId: fields.objective_id,
+                        onObjectiveChange: (objective_id) =>
+                          setFields((f) => ({ ...f, objective_id })),
+                        // The relations Smart Fill would link, picked as R does.
+                        ...(!showsRelationPicker && {
+                          relations: {
+                            kinds: creationRelationKinds(relations, true),
+                            onRequest: (kind) => {
+                              setRelationStartStep(kind);
+                              setOpenPicker("relation");
+                            },
+                          },
+                        }),
+                        // The title Smart Fill would write (MIN-813).
+                        ...(writesTitle && {
+                          onTitleRequest: () => setTitleRequested(true),
+                          onTitleFocus: () => titleRef.current?.focus(),
+                        }),
+                      }}
+                    />
+                )}
+    </>
+  );
+  const propertyButtons = (
+    <>
+                  <StatusCompact
+                    showValue={false}
+                    value={fields.status}
+                    onChange={(status) => setFields((f) => ({ ...f, status }))}
+                    open={openPicker === "status"}
+                    onOpenChange={(o) => setOpenPicker(o ? "status" : null)}
+                    shortcutHint={KEY_FOR_FIELD.status}
+                  />
+                {/* Smart Fill provides these values when enabled, unless one
+                    is set by hand: its shortcut opens the picker (MIN-746). */}
+                {showsField("priority") && (
+                    <PriorityCompact
+                      showValue={false}
+                      value={fields.priority}
+                      onChange={(priority) => setFields((f) => ({ ...f, priority }))}
+                      open={openPicker === "priority"}
+                      onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
+                      shortcutHint={KEY_FOR_FIELD.priority}
+                    />
+                )}
+                {showsField("effort") && (
+                    <EffortCompact
+                      showValue={false}
+                      value={fields.effort}
+                      onChange={(effort) => setFields((f) => ({ ...f, effort }))}
+                      open={openPicker === "effort"}
+                      onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
+                      shortcutHint={KEY_FOR_FIELD.effort}
+                    />
+                )}
+                {showsField("category") && (
+                    <CategoriesCompact
+                      showValue={false}
+                      categories={scopedCategories}
+                      projectId={activeProjectId}
+                      value={categoryIds}
+                      onChange={setCategoryIds}
+                      open={openPicker === "category"}
+                      onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
+                      shortcutHint={KEY_FOR_FIELD.category}
+                    />
+                )}
+                  <AssigneeCompact
+                    showValue={false}
+                    value={fields.assignee_id}
+                    onChange={(assignee_id) =>
+                      setFields((f) => ({ ...f, assignee_id }))
+                    }
+                    members={scopedMembers}
+                    smartAssign={smartAssignFillsEmptyAssignee(
+                      activeProject,
+                      { status: fields.status, assigneeId: fields.assignee_id, createdAt: null },
+                    )}
+                    open={openPicker === "assignee"}
+                    onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
+                    shortcutHint={KEY_FOR_FIELD.assignee}
+                  />
+                {/* Relations sit between the assignee and the due date: the
+                    picker, then the chosen ones as pills. Smart Fill also links
+                    related issues after the save (MIN-717), so the picker leaves
+                    with the other inferred fields, unless the account turned
+                    relation linking off or R opened it; chosen pills stay. */}
+                {(showsRelationPicker || relations.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {showsRelationPicker && (
+                        <CreationRelationsCompact
+                          projectId={activeProjectId}
+                          projectKey={activeProject?.key ?? ""}
+                          active={open}
+                          value={relations}
+                          onChange={setRelations}
+                          disabled={submitting}
+                          open={openPicker === "relation"}
+                          onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
+                          shortcutHint={RELATION_SHORTCUT_HINT}
+                          hierarchy
+                          startStep={relationStartStep}
+                        />
+                      )}
+                      <CreationRelationPills
+                        projectId={activeProjectId}
+                        projectKey={activeProject?.key ?? ""}
+                        active={open}
+                        value={relations}
+                        onChange={setRelations}
+                        disabled={submitting}
+                        className="contents"
+                      />
+                    </div>
+                )}
+                  <DueDateCompact
+                    value={fields.due_date}
+                    onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
+                    recurrence={fields.recurrence}
+                    onRecurrenceChange={(next) => setFields((f) => ({ ...f, ...next }))}
+                    open={openPicker === "dueDate"}
+                    onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
+                    shortcutHint={KEY_FOR_FIELD.dueDate}
+                  />
+                {/* Smart Fill also chooses the objective, unless one is set. */}
+                {showsField("objective") && (
+                    <ObjectiveCompact
+                      showValue={false}
+                      value={fields.objective_id}
+                      onChange={(objective_id) =>
+                        setFields((f) => ({ ...f, objective_id }))
+                      }
+                      objectives={scopedObjectives}
+                      projectId={activeProjectId}
+                      open={openPicker === "objective"}
+                      onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
+                      shortcutHint={KEY_FOR_FIELD.objective}
+                    />
+                )}
+    </>
+  );
+
   const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
     context="issue_form" onTranscription={(text) => { track("issue_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
     disabled={submitting} shortcutKey="mod+shift+d" onProcessingChange={setTranscribing}
@@ -864,8 +1043,9 @@ export function CreateIssueDialog({
           {/* "Create in" (MIN-741): level with the close button on desktop;
               on phones it joins the sheet title instead of adding a row. */}
           {mobile ? (
+            // The project alone heads the sheet: what is created is plain.
             <div data-mobile-sheet-header className="flex shrink-0 items-center gap-2">
-              <DialogTitle className="shrink-0">{t("newIssueTitle")}</DialogTitle>
+              <DialogTitle className="sr-only">{t("newIssueTitle")}</DialogTitle>
               {projectSelect("sheet")}
             </div>
           ) : (
@@ -949,198 +1129,42 @@ export function CreateIssueDialog({
               />
               </div>
 
-              {/* Property values stay compact on desktop and receive labels on mobile. */}
-              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
-                <CreationProperty mobile={mobile} label={tField("status")}>
-                  <StatusCompact
-                    showValue={mobile}
-                    value={fields.status}
-                    onChange={(status) => setFields((f) => ({ ...f, status }))}
-                    open={openPicker === "status"}
-                    onOpenChange={(o) => setOpenPicker(o ? "status" : null)}
-                    shortcutHint={KEY_FOR_FIELD.status}
-                  />
-                </CreationProperty>
-                {/* Smart Fill provides these values when enabled, unless one
-                    is set by hand: its shortcut opens the picker (MIN-746). */}
-                {showsField("priority") && (
-                  <CreationProperty mobile={mobile} label={tField("priority")}>
-                    <PriorityCompact
-                      showValue={mobile}
-                      value={fields.priority}
-                      onChange={(priority) => setFields((f) => ({ ...f, priority }))}
-                      open={openPicker === "priority"}
-                      onOpenChange={(o) => setOpenPicker(o ? "priority" : null)}
-                      shortcutHint={KEY_FOR_FIELD.priority}
-                    />
-                  </CreationProperty>
-                )}
-                {showsField("effort") && (
-                  <CreationProperty mobile={mobile} label={tField("effort")}>
-                    <EffortCompact
-                      showValue={mobile}
-                      value={fields.effort}
-                      onChange={(effort) => setFields((f) => ({ ...f, effort }))}
-                      open={openPicker === "effort"}
-                      onOpenChange={(o) => setOpenPicker(o ? "effort" : null)}
-                      shortcutHint={KEY_FOR_FIELD.effort}
-                    />
-                  </CreationProperty>
-                )}
-                {showsField("category") && (
-                  <CreationProperty mobile={mobile} label={tField("categories")}>
-                    <CategoriesCompact
-                      showValue={mobile}
-                      categories={scopedCategories}
-                      projectId={activeProjectId}
-                      value={categoryIds}
-                      onChange={setCategoryIds}
-                      open={openPicker === "category"}
-                      onOpenChange={(o) => setOpenPicker(o ? "category" : null)}
-                      shortcutHint={KEY_FOR_FIELD.category}
-                    />
-                  </CreationProperty>
-                )}
-                <CreationProperty mobile={mobile} label={tField("assignee")}>
-                  <AssigneeCompact
-                    showValue={mobile}
-                    value={fields.assignee_id}
-                    onChange={(assignee_id) =>
-                      setFields((f) => ({ ...f, assignee_id }))
-                    }
-                    members={scopedMembers}
-                    smartAssign={smartAssignFillsEmptyAssignee(
-                      activeProject,
-                      { status: fields.status, assigneeId: fields.assignee_id, createdAt: null },
-                    )}
-                    open={openPicker === "assignee"}
-                    onOpenChange={(o) => setOpenPicker(o ? "assignee" : null)}
-                    shortcutHint={KEY_FOR_FIELD.assignee}
-                  />
-                </CreationProperty>
-                {/* Relations sit between the assignee and the due date: the
-                    picker, then the chosen ones as pills. Smart Fill also links
-                    related issues after the save (MIN-717), so the picker leaves
-                    with the other inferred fields, unless the account turned
-                    relation linking off or R opened it; chosen pills stay. */}
-                {(showsRelationPicker || relations.length > 0) && (
-                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {showsRelationPicker && (
-                        <CreationRelationsCompact
-                          projectId={activeProjectId}
-                          projectKey={activeProject?.key ?? ""}
-                          active={open}
-                          value={relations}
-                          onChange={setRelations}
-                          disabled={submitting}
-                          open={openPicker === "relation"}
-                          onOpenChange={(o) => setOpenPicker(o ? "relation" : null)}
-                          shortcutHint={RELATION_SHORTCUT_HINT}
-                          hierarchy
-                          startStep={relationStartStep}
-                        />
-                      )}
-                      <CreationRelationPills
-                        projectId={activeProjectId}
-                        projectKey={activeProject?.key ?? ""}
-                        active={open}
-                        value={relations}
-                        onChange={setRelations}
-                        disabled={submitting}
-                        className="contents"
-                      />
-                    </div>
-                  </CreationProperty>
-                )}
-                <CreationProperty mobile={mobile} label={tField("dueDate")}>
-                  <DueDateCompact
-                    value={fields.due_date}
-                    onChange={(due_date) => setFields((f) => ({ ...f, due_date }))}
-                    recurrence={fields.recurrence}
-                    onRecurrenceChange={(next) => setFields((f) => ({ ...f, ...next }))}
-                    open={openPicker === "dueDate"}
-                    onOpenChange={(o) => setOpenPicker(o ? "dueDate" : null)}
-                    shortcutHint={KEY_FOR_FIELD.dueDate}
-                  />
-                </CreationProperty>
-                {/* Smart Fill also chooses the objective, unless one is set. */}
-                {showsField("objective") && (
-                  <CreationProperty mobile={mobile} label={tField("objective")}>
-                    <ObjectiveCompact
-                      showValue={mobile}
-                      value={fields.objective_id}
-                      onChange={(objective_id) =>
-                        setFields((f) => ({ ...f, objective_id }))
-                      }
-                      objectives={scopedObjectives}
-                      projectId={activeProjectId}
-                      open={openPicker === "objective"}
-                      onOpenChange={(o) => setOpenPicker(o ? "objective" : null)}
-                      shortcutHint={KEY_FOR_FIELD.objective}
-                    />
-                  </CreationProperty>
-                )}
-                {smartFillAvailable && (
-                  <SmartFillCompact
-                      fullWidth={mobile}
-                      shortcut
-                      writesTitle={resolveSmartFillTitle(user?.user_metadata)}
-                      value={smartFill}
-                      onChange={(value) => {
-                        smartFillTouchedRef.current = true;
-                        setSmartFill(value);
-                      }}
-                      // Sets one property by hand without turning Smart Fill
-                      // off: the value wins and its field returns (MIN-809).
-                      manual={{
-                        // Always in the row too; here so ⌘⇧F reaches them.
-                        status: fields.status,
-                        onStatusChange: (status) => setFields((f) => ({ ...f, status })),
-                        assigneeId: fields.assignee_id,
-                        members: scopedMembers,
-                        onAssigneeChange: (assignee_id) =>
-                          setFields((f) => ({ ...f, assignee_id })),
-                        smartAssign: smartAssignFillsEmptyAssignee(
-                          activeProject,
-                          { status: fields.status, assigneeId: fields.assignee_id, createdAt: null },
-                        ),
-                        onDueDateRequest: () => setOpenPicker("dueDate"),
-                        priority: fields.priority,
-                        onPriorityChange: (priority) => setFields((f) => ({ ...f, priority })),
-                        effort: fields.effort,
-                        onEffortChange: (effort) => setFields((f) => ({ ...f, effort })),
-                        categories: scopedCategories,
-                        categoryIds,
-                        onCategoryIdsChange: setCategoryIds,
-                        objectives: scopedObjectives,
-                        objectiveId: fields.objective_id,
-                        onObjectiveChange: (objective_id) =>
-                          setFields((f) => ({ ...f, objective_id })),
-                        // The relations Smart Fill would link, picked as R does.
-                        ...(!showsRelationPicker && {
-                          relations: {
-                            kinds: creationRelationKinds(relations, true),
-                            onRequest: (kind) => {
-                              setRelationStartStep(kind);
-                              setOpenPicker("relation");
-                            },
-                          },
-                        }),
-                        // The title Smart Fill would write (MIN-813).
-                        ...(writesTitle && {
-                          onTitleRequest: () => setTitleRequested(true),
-                          onTitleFocus: () => titleRef.current?.focus(),
-                        }),
-                      }}
-                    />
-                )}
-              </div>
+              {!mobile && (
+                <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
+                  {propertyButtons}
+                  {smartFillButton}
+                </div>
+              )}
 
             </MobileSheetScrollArea>
             {/* Submission stays visible while the mobile form body scrolls. */}
+            {mobile ? (
+              <div className="creation-form-footer flex flex-col gap-2">
+                <CreationCarousel>
+                  {smartFillButton}
+                  {propertyButtons}
+                </CreationCarousel>
+                {/* Resources, then the action, then dictation: one row, and
+                    on a phone creating only creates (no copy, no draft). */}
+                <div className="creation-submit flex items-center gap-2">
+                  <AddResourceButton
+                    onFiles={uploads.addFiles}
+                    onLink={uploads.addLink}
+                    onPage={uploads.addPage}
+                    projectId={activeProjectId}
+                    disabled={submitting}
+                    variant="outline"
+                  />
+                  <Button type="submit" disabled={createDisabled} className="min-w-0 flex-1">
+                    {submitting && <Spinner />}
+                    <span className="truncate">{createLabel}</span>
+                  </Button>
+                  {dictationControl}
+                </div>
+              </div>
+            ) : (
             <div className="creation-form-footer mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
-              {!mobile && dictationControl}
+              {dictationControl}
               {/* The proposed wiki is that of the selected project. Pages cited
                   before switching project are discarded by the server when they
                   do not belong to the arrival project (MIN-275). */}
@@ -1204,10 +1228,9 @@ export function CreateIssueDialog({
                     </span>
                   </SplitButton>
                 </SendShortcutTooltip>
-                {/* On phones the recorder sits beside the create button. */}
-                {mobile && dictationControl}
               </div>
             </div>
+            )}
           </form>
 
           {/* Numo takes over the dictation: the border highlights the edge of the modal
