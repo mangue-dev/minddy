@@ -24,8 +24,22 @@ enum ServerStore {
             return origin
         }
         #endif
+        return configuredCloudOrigin
+    }
+
+    /// minddy Cloud as the build configures it, never the debug override.
+    static var configuredCloudOrigin: String {
         let configured = Bundle.main.object(forInfoDictionaryKey: "MinddyCloudOrigin") as? String
         return configured.flatMap(normalize) ?? "https://www.minddy.app"
+    }
+
+    /// What to store for the server chosen on the server-choice page: nothing
+    /// for minddy Cloud, the origin otherwise. The comparison is with Cloud as
+    /// configured: the debug override lasts one launch only, so a server equal
+    /// to it must be stored, or the next launch from the home screen would
+    /// fall back to Cloud.
+    static func storedOrigin(forChosen origin: String, cloud: String) -> String? {
+        origin == cloud ? nil : origin
     }
 
     /// The self-hosted server the user entered, validated again on every read.

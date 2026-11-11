@@ -53,7 +53,7 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
             // Choosing Cloud's own address is choosing Cloud.
-            ServerStore.customOrigin = origin == ServerStore.cloudOrigin ? nil : origin
+            ServerStore.customOrigin = ServerStore.storedOrigin(forChosen: origin, cloud: ServerStore.configuredCloudOrigin)
             call.resolve()
             controller.restart()
         }
