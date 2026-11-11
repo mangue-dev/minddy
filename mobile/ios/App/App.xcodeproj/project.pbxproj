@@ -16,6 +16,8 @@
 		A1907B0000000000000000A4 /* NavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1907A0000000000000000A4 /* NavigationBar.swift */; };
 		A1907B0000000000000000A6 /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1907A0000000000000000A6 /* AppleSignIn.swift */; };
 		A1907B0000000000000000A8 /* PushNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1907A0000000000000000A8 /* PushNotifications.swift */; };
+		A1907B0000000000000000A9 /* AppNavigator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1907A0000000000000000A9 /* AppNavigator.swift */; };
+		A1907B0000000000000000AA /* UniversalLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1907A0000000000000000AA /* UniversalLink.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -35,6 +37,8 @@
 		A1907A0000000000000000A4 /* NavigationBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationBar.swift; sourceTree = "<group>"; };
 		A1907A0000000000000000A6 /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		A1907A0000000000000000A8 /* PushNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotifications.swift; sourceTree = "<group>"; };
+		A1907A0000000000000000A9 /* AppNavigator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigator.swift; sourceTree = "<group>"; };
+		A1907A0000000000000000AA /* UniversalLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UniversalLink.swift; sourceTree = "<group>"; };
 		A1907A0000000000000000A7 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -85,6 +89,8 @@
 				A1907A0000000000000000A4 /* NavigationBar.swift */,
 				A1907A0000000000000000A6 /* AppleSignIn.swift */,
 				A1907A0000000000000000A8 /* PushNotifications.swift */,
+				A1907A0000000000000000A9 /* AppNavigator.swift */,
+				A1907A0000000000000000AA /* UniversalLink.swift */,
 				A1907A0000000000000000A7 /* App.entitlements */,
 				A1907A0000000000000000A3 /* ServerStore.swift */,
 				A1907A0000000000000000A2 /* MinddyShellPlugin.swift */,
@@ -186,6 +192,8 @@
 				A1907B0000000000000000A4 /* NavigationBar.swift in Sources */,
 				A1907B0000000000000000A6 /* AppleSignIn.swift in Sources */,
 				A1907B0000000000000000A8 /* PushNotifications.swift in Sources */,
+				A1907B0000000000000000A9 /* AppNavigator.swift in Sources */,
+				A1907B0000000000000000AA /* UniversalLink.swift in Sources */,
 				A1907B0000000000000000A3 /* ServerStore.swift in Sources */,
 				A1907B0000000000000000A2 /* MinddyShellPlugin.swift in Sources */,
 				A1907B0000000000000000A1 /* MinddyViewController.swift in Sources */,

@@ -20,6 +20,9 @@ shell lives with the rest of the web app:
 | `ios/App/App/NavigationBar.swift` | the bottom bar, drawn natively in Liquid Glass |
 | `ios/App/App/MinddyShellPlugin.swift` | the shell's own plugin, `MinddyShell` in JavaScript |
 | `ios/App/App/ServerStore.swift` | the selected server and the rules for a server address |
+| `ios/App/App/AppNavigator.swift`, `UniversalLink.swift` | the pages a notification or a universal link opens, and which links stay in the browser |
+| `ios/App/App/App.entitlements` | the capabilities: Sign in with Apple, push, and the associated domains of universal links |
+| `ios/Tests/` | the runner of `test:ios` |
 | `ios/App/App/Info.plist` | minddy Cloud's origin and the camera, photo and microphone usage texts |
 | `ios/App/CapApp-SPM/` | the Swift package Capacitor generates; committed, never edited by hand |
 | `lib/mobile/bridge.ts` (outside) | the contract of `MinddyShell` and the detection the web app uses |
@@ -185,6 +188,47 @@ A notification carries the path of what it is about. A tap opens it on the
 selected server; when the tap launched the app, that path replaces the entry
 page. While the app is in front, notifications still show as banners.
 
+## Universal links
+
+A link to minddy Cloud tapped in Mail, Messages or Notes opens the app on that
+page rather than Safari, whether the app was running or not. iOS decides from
+two lists:
+
+- the domains in `App.entitlements` (`com.apple.developer.associated-domains`):
+  `www.minddy.app`, and `preview.minddy.app` in developer mode;
+- the paths each domain serves in `/.well-known/apple-app-site-association`
+  (`app/.well-known/apple-app-site-association/route.ts`). They are written in
+  `lib/apple-app-site-association.ts`: the product's screens, from
+  `lib/protected-prefixes.ts`, and the e-mail links that sign someone in
+  (sign-up confirmation and password reset on `/auth/callback?token_hash=…`,
+  invitations on `/signup?invite=…`). Billing, OAuth consent, the desktop
+  app's sign-in rounds, the public site, the manual, `/api` and the public
+  share links stay in the browser; the module gives the reason for each.
+
+The apex `minddy.app` is not declared: Vercel answers it with a 308 to `www`
+for every path, and Apple does not follow a redirect for this file. Links the
+product writes all use `www`.
+
+`SceneDelegate` receives the link, at launch in its connection options and
+later through `scene(_:continue:)`, and `AppNavigator` opens it the way it opens
+a tapped notification: in the WebView when the app is running, in place of the
+entry page when the link launched it. The domain list is compiled into the app,
+so a self-hosted server's links never open it. A link whose origin is not the
+selected server's, a minddy Cloud link while the app is on a self-hosted
+server, opens in Safari (`UniversalLink.swift`): the WebView keeps to the
+selected server.
+
+An e-mail link opened in the app keeps the token in a cookie of the WebView,
+and the session opens there after the tap on `/auth/confirm`, as in a browser
+(`lib/auth-otp-pending.ts`).
+
+To test a branch, deploy it to a fixed Vercel alias and add
+`applinks:<alias>?mode=developer` to `App.entitlements` for the device build
+only. A developer-mode domain is fetched by the device itself rather than
+through Apple's CDN, and needs **Settings → Developer → Associated Domains
+Development** on the iPhone. **Settings → Developer → Universal Links →
+Diagnostics** tells whether a URL would open the app.
+
 ## Nothing is sold in the app
 
 Subscriptions are bought on the web. Inside the app, `usePurchasesHidden()`
@@ -225,10 +269,18 @@ lockfile, runs `npm --prefix mobile run typecheck`, bundles the pages and runs
 `npx cap sync ios`, then fails if the committed Swift package manifest changed.
 The iOS build itself needs macOS and does not run in CI yet.
 
+The shell's decisions that need no UIKit (the server address rules, where a
+universal link goes) have their own runner, which compiles them with `swiftc`
+outside Xcode, on macOS only:
+
+```bash
+npm --prefix mobile run test:ios
+```
+
 The web side is covered by the root suite:
 
 ```bash
-npx vitest run lib/mobile components/billing/purchases-hidden.test.tsx
+npx vitest run lib/mobile lib/apple-app-site-association.test.ts components/billing/purchases-hidden.test.tsx
 ```
 
 After adding a Capacitor plugin, run `npm --prefix mobile run sync` and commit
@@ -237,7 +289,4 @@ the updated `ios/App/CapApp-SPM/Package.swift`.
 ## What is not done here yet
 
 - Signing, TestFlight and the App Store release workflow.
-- Email links (confirmation, password reset) open in Safari, not in the app,
-  until universal links exist.
-- Universal links.
 - The Android project.

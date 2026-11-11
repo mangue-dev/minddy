@@ -8,6 +8,7 @@
   "scripts": {
     "build": "node ../scripts/build-mobile.mjs",
     "typecheck": "tsc --noEmit",
+    "test:ios": "mkdir -p ios/DerivedData && swiftc ios/App/App/ServerStore.swift ios/App/App/UniversalLink.swift ios/Tests/main.swift -o ios/DerivedData/shell-logic-tests && ios/DerivedData/shell-logic-tests",
     "sync": "npm run build && cap sync ios",
     "open:ios": "cap open ios",
     "build:ios": "npm run sync && xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/DerivedData CODE_SIGNING_ALLOWED=NO build"

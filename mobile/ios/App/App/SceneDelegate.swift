@@ -7,6 +7,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
+        // A universal link that launched the app waits for the screen, which
+        // then opens on it rather than on its entry page.
+        connectionOptions.userActivities.forEach(openUniversalLink)
+
         window = UIWindow(windowScene: windowScene)
         window?.rootViewController = MinddyViewController()
         window?.makeKeyAndVisible()
@@ -19,6 +23,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        openUniversalLink(userActivity)
         SceneDelegateProxy.shared.scene(scene, continue: userActivity)
+    }
+
+    /// A link of an associated domain (`App.entitlements`) that iOS opened in
+    /// the app rather than in Safari.
+    private func openUniversalLink(_ activity: NSUserActivity) {
+        guard activity.activityType == NSUserActivityTypeBrowsingWeb, let url = activity.webpageURL else { return }
+        AppNavigator.shared.open(universalLink: url)
     }
 }

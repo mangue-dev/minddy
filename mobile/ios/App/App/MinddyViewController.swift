@@ -165,17 +165,19 @@ final class MinddyViewController: CAPBridgeViewController {
         // minddy Cloud. The app opens on the product instead: this request
         // replaces that one before it answers.
         super.viewDidLoad()
-        PushNotifications.shared.controller = self
-        // A notification tapped while the app was closed opens its own page.
-        let tapped = PushNotifications.shared.takePendingPath().flatMap(url(forPath:))
-        if let entry = tapped ?? entryURL {
+        AppNavigator.shared.controller = self
+        // A notification tapped or a link followed while the app was closed
+        // opens its own page.
+        let asked = AppNavigator.shared.takePendingPath().flatMap(url(forPath:))
+        if let entry = asked ?? entryURL {
             webView?.load(URLRequest(url: entry))
         }
         view.addSubview(navigationBar)
         coverUntilFirstLoad()
     }
 
-    /// Opens a path of the selected server, such as a tapped notification's.
+    /// Opens a path of the selected server, such as a tapped notification's
+    /// or a universal link's.
     func open(path: String) {
         guard let url = url(forPath: path) else { return }
         webView?.load(URLRequest(url: url))

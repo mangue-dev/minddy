@@ -13,7 +13,7 @@ import UserNotifications
 ///
 /// A notification carries the path of what it is about, built by the server
 /// (`lib/notification-target.ts`). A tap opens it on the selected server,
-/// whether the app was running or not.
+/// whether the app was running or not (`AppNavigator`).
 ///
 /// Capacitor makes its own router the notification center's delegate when a
 /// bridge starts, and that router shows nothing in the foreground and ignores
@@ -22,12 +22,7 @@ import UserNotifications
 final class PushNotifications: NSObject {
     static let shared = PushNotifications()
 
-    /// The screen that opens a tapped notification, once it exists.
-    weak var controller: MinddyViewController?
-
     private var waiting: [(Result<Data, Error>) -> Void] = []
-    /// A tap that arrived before the screen could open it.
-    private var pendingPath: String?
 
     // MARK: - Permission and token
 
@@ -99,22 +94,6 @@ final class PushNotifications: NSObject {
         UserDefaults.standard.set(id, forKey: key)
         return id
     }
-
-    // MARK: - Taps
-
-    /// The path a tap asked for before the screen existed, given once.
-    func takePendingPath() -> String? {
-        defer { pendingPath = nil }
-        return pendingPath
-    }
-
-    private func open(path: String) {
-        if let controller, controller.isViewLoaded {
-            controller.open(path: path)
-        } else {
-            pendingPath = path
-        }
-    }
 }
 
 extension PushNotifications: NotificationHandlerProtocol {
@@ -126,6 +105,6 @@ extension PushNotifications: NotificationHandlerProtocol {
 
     func didReceive(response: UNNotificationResponse) {
         guard let path = response.notification.request.content.userInfo["url"] as? String else { return }
-        DispatchQueue.main.async { [weak self] in self?.open(path: path) }
+        DispatchQueue.main.async { AppNavigator.shared.open(path: path) }
     }
 }
