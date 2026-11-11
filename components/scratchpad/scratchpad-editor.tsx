@@ -17,7 +17,11 @@ import {
 } from "@/lib/scratchpad";
 import { RichEditor, editorMarkdown } from "@/components/editor/rich-editor";
 import { useAttachmentImageUploads } from "@/components/editor/document-uploads";
-import { SectionCopy } from "@/components/scratchpad/section-copy-extension";
+import { SECTION_COPY_REFRESH, SectionCopy } from "@/components/scratchpad/section-copy-extension";
+import { createRoot } from "react-dom/client";
+import { McpAgentLogo } from "@/components/mcp-agent-logo";
+import { AGENT_TARGETS } from "@/lib/prompt-delivery";
+import { usePromptDelivery } from "@/lib/prompt-delivery-context";
 import { ScratchpadParagraph } from "@/components/scratchpad/scratchpad-paragraph";
 import { PasteMarkdownTasks } from "@/components/scratchpad/paste-markdown";
 import { HeadingFromListInput } from "@/components/scratchpad/heading-from-list-input";
@@ -277,6 +281,14 @@ export function ScratchpadEditor({
   // Reassigned each time it is rendered (SectionCopy only reads its options once, at
   // creation of the plugin, but calls the ref at the time of clicking).
   const copySectionRef = useRef<(headingIndex: number) => void>(() => {});
+  // A section's button sends its prompt where every prompt goes: with the
+  // agent's logo and "Send to …" when the account opens prompts in an agent's
+  // app (MIN-951), the copy glyph otherwise. Read through refs at each redraw.
+  const { target: promptTarget } = usePromptDelivery();
+  const promptTargetRef = useRef(promptTarget);
+  promptTargetRef.current = promptTarget;
+  const copySectionLabelRef = useRef(copySectionLabel);
+  copySectionLabelRef.current = copySectionLabel;
   copySectionRef.current = (headingIndex: number) => {
     const done = sectionGesture(headingIndex, startOnCopy);
     if (done) onCopySectionRef.current(done.markdown, done.moved);
@@ -292,8 +304,18 @@ export function ScratchpadEditor({
         // otherwise have taken away (paste-markdown.ts).
         PasteMarkdownTasks,
         SectionCopy.configure({
-          label: copySectionLabel,
+          label: () => copySectionLabelRef.current,
           onCopy: (index) => copySectionRef.current(index),
+          iconKey: () => promptTargetRef.current ?? "copy",
+          renderIcon: (host) => {
+            const target = promptTargetRef.current;
+            if (!target) return null;
+            const root = createRoot(host);
+            root.render(<McpAgentLogo agent={AGENT_TARGETS[target].logo} size={14} />);
+            // ProseMirror drops a widget while it updates the view, which may
+            // be inside a React render: unmount once it is done.
+            return () => queueMicrotask(() => root.unmount());
+          },
         }),
       ] as unknown as Extensions
   );
@@ -303,6 +325,12 @@ export function ScratchpadEditor({
   const [initialContent] = useState(() =>
     documentForEditor(initialValue, initialDocument, "notebook"));
   const [editor, setEditor] = useState<Editor | null>(null);
+  // The buttons are drawn by the editor: redraw them when the prompt's
+  // destination, and so their icon and label, changes.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    editor.view.dispatch(editor.state.tr.setMeta(SECTION_COPY_REFRESH, true));
+  }, [editor, promptTarget, copySectionLabel]);
   const imageUploads = useAttachmentImageUploads(editorRef, uploadScope ?? "");
   const [canUpload] = useState(() => !!uploadScope);
 

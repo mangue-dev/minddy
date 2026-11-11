@@ -22,7 +22,7 @@ import {
   clampImageWidth,
 } from "@/components/pages/blocks/image";
 import { FileViewer } from "@/components/file-viewer";
-import { IMAGE_HERO_TRANSITION } from "@/components/image-viewer";
+import { heroThumbnailMotion } from "@/components/image-viewer";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { fileDownloadHref } from "@/lib/page-files";
 import { usePageUploadsContext } from "@/components/pages/page-uploads";
@@ -154,8 +154,7 @@ export function ImageView({ node, editor, updateAttributes, getPos, deleteNode }
               closes, never when the width changes — a resize animated every
               step, so the image trailed behind the handle. */}
           <motion.span layoutId={layoutId} layoutDependency={zoomed} className="block"
-            animate={{ opacity: zoomed ? 0 : 1 }}
-            transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}>
+            {...heroThumbnailMotion(zoomed, reducedMotion, layoutId)}>
           <img
             src={displayed}
             alt={alt}

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { TooltipPortalContainer } from "@/components/ui/tooltip";
 import { useTranslations } from "next-intl";
@@ -12,6 +12,33 @@ export const IMAGE_HERO_TRANSITION = {
 };
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+/** When the flight back has come close enough to hand over to the thumbnail. */
+const HERO_LANDING = 0.85;
+
+/**
+ * The motion of a hero image's thumbnail. Both flights are the reader's own
+ * copy, in the top layer where no side panel or sheet crops it: the thumbnail
+ * hides the moment its image opens, and comes back as the copy lands on it.
+ * Crossfading the two, Framer Motion's default, showed the thumbnail for much
+ * of the flight, cut off at the edge of its panel (a desktop side panel, from
+ * which the image flies to the middle of the screen). `data-hero-thumbnail`
+ * is how the reader finds where to fly back to.
+ */
+export function heroThumbnailMotion(open: boolean, reducedMotion: boolean | null, layoutId?: string) {
+  return {
+    "data-hero-thumbnail": layoutId,
+    layoutCrossfade: false,
+    animate: { opacity: open ? 0 : 1 },
+    transition: {
+      ...IMAGE_HERO_TRANSITION,
+      opacity: {
+        duration: 0,
+        delay: open || reducedMotion ? 0 : IMAGE_HERO_TRANSITION.layout.duration * HERO_LANDING,
+      },
+    },
+  } as const;
+}
+
 const ENTER_DURATION = 0.3;
 const EXIT_DURATION = 0.18;
 
@@ -162,7 +189,12 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
             the viewer covers the whole screen, status bar included. */}
         <motion.div className="relative flex min-h-0 flex-1 items-center justify-center pt-[max(1rem,env(safe-area-inset-top))] pr-[max(0.5rem,env(safe-area-inset-right))] pl-[max(0.5rem,env(safe-area-inset-left))] sm:pt-[max(2rem,env(safe-area-inset-top))] sm:pr-[max(2rem,env(safe-area-inset-right))] sm:pl-[max(2rem,env(safe-area-inset-left))]"
           variants={hero
-            ? { initial: { opacity: 1 }, visible: { opacity: 1 }, exit: { opacity: 0 } }
+            // The copy stays on screen for its flight back (ImageViewer), then
+            // dissolves into the thumbnail that reappears under it.
+            ? { initial: { opacity: 1 }, visible: { opacity: 1 }, exit: {
+                opacity: [1, 1, 0],
+                transition: { duration: IMAGE_HERO_TRANSITION.layout.duration, times: [0, HERO_LANDING, 1] },
+              } }
             : { initial: { opacity: 0, scale: 0.98, y: 8 }, visible: { opacity: 1, scale: 1, y: 0 }, exit: { opacity: 0, scale: 0.98, y: 0 } }}
           transition={timing(ENTER_DURATION, EXIT_DURATION)}>
           {children}
@@ -180,15 +212,65 @@ export function PreviewViewer({ label, open, onOpenChange, children, action, clo
 }
 
 /** An image reader; with a `layoutId`, the image flies from and back to its thumbnail. */
-export function ImageViewer({ src, alt, layoutId, closeOnContentClick = false, ...props }: Omit<PreviewViewerProps, "children" | "hero"> & {
+export function ImageViewer({ src, alt, layoutId, closeOnContentClick = false, onOpenChange, ...props }: Omit<PreviewViewerProps, "children" | "hero"> & {
   src: string;
   alt: string;
   layoutId?: string;
 }) {
   const reducedMotion = useReducedMotion();
   const hero = !reducedMotion && !!layoutId;
-  return <PreviewViewer {...props} closeOnContentClick={closeOnContentClick} hero={hero}>
-    <motion.div layoutId={hero ? layoutId : undefined}
+  const flight = useRef<HTMLDivElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const scaleX = useMotionValue(1);
+  const scaleY = useMotionValue(1);
+  // The flight in is Framer Motion's shared layout, from the thumbnail. The
+  // flight back is the copy's own: as a shared layout it crossfaded into the
+  // thumbnail, cropped by its panel, and without the crossfade it no longer
+  // moved. So the copy first drops its layout id, then flies to where the
+  // thumbnail sits on screen while the reader closes around it.
+  const [returning, setReturning] = useState(false);
+  const launched = useRef(false);
+  const requestOpenChange = (next: boolean) => {
+    if (next || !hero || returning) {
+      onOpenChange(next);
+      return;
+    }
+    setReturning(true);
+  };
+  useLayoutEffect(() => {
+    if (!returning || launched.current) return;
+    launched.current = true;
+    const element = flight.current;
+    const thumbnail = layoutId
+      ? document.querySelector(`[data-hero-thumbnail="${CSS.escape(layoutId)}"]`)
+      : null;
+    if (element && thumbnail) {
+      const from = element.getBoundingClientRect();
+      const to = thumbnail.getBoundingClientRect();
+      if (from.width > 0 && from.height > 0 && to.width > 0) {
+        const transition = IMAGE_HERO_TRANSITION.layout;
+        void animate(x, to.left + to.width / 2 - (from.left + from.width / 2), transition);
+        void animate(y, to.top + to.height / 2 - (from.top + from.height / 2), transition);
+        void animate(scaleX, to.width / from.width, transition);
+        void animate(scaleY, to.height / from.height, transition);
+      }
+    }
+    onOpenChange(false);
+  }, [returning, layoutId, onOpenChange, x, y, scaleX, scaleY]);
+  useEffect(() => {
+    if (!props.open) return;
+    launched.current = false;
+    setReturning(false);
+    x.set(0);
+    y.set(0);
+    scaleX.set(1);
+    scaleY.set(1);
+  }, [props.open, x, y, scaleX, scaleY]);
+
+  return <PreviewViewer {...props} onOpenChange={requestOpenChange} closeOnContentClick={closeOnContentClick} hero={hero}>
+    <motion.div ref={flight} layoutId={hero && !returning ? layoutId : undefined} layoutCrossfade={false}
+      style={{ x, y, scaleX, scaleY }}
       transition={hero ? IMAGE_HERO_TRANSITION : { duration: 0 }}
       className={closeOnContentClick ? "cursor-zoom-out overflow-hidden" : "overflow-hidden"}>
       <img src={src} alt={alt} draggable={false}

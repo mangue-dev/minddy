@@ -124,6 +124,10 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
         <MobileCreateButton />
         <button ref={menuTrigger} data-mobile-menu-trigger data-nav-slot="menu" type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className={NAV_SLOT}><UserAvatar seed={avatar} alt="" className="size-[26px]" /></button>
       </div>
+      {/* The progressive blur behind the pill, over what scrolls under it.
+          After the pill: the native bar reads the pill as the first child
+          (lib/mobile/native-navigation.ts). */}
+      <div data-mobile-nav-blur aria-hidden />
     </nav>
     <MobileSidebarReveal open={menuOpen} onOpenChange={onOpenChange} trigger={menuTrigger} focusTarget={focusTarget} label={t("goTo")}>
       <SidebarFrame id={sidebarId} mobile onNavigate={onNavigate} focusRef={focusTarget}>
