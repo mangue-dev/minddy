@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useEffect, useState } from "react";
@@ -17,7 +17,8 @@ import { WizardStepper } from "@/components/wizard/wizard-stepper";
 import { UserAvatarPicker } from "@/components/user-avatar-picker";
 import {
   AuthColumn,
-  AuthSeparator,
+  AuthBackButton,
+  AuthMethodsSkeleton,
   Field,
   MailGlyph,
   OAuthButtons,
@@ -80,7 +81,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
   const tCommon = useTranslations("Common");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, oauthProviders, signUpWithPassword, signInWithOAuth } = useAuth();
+  const { user, oauthProviders, oauthProvidersResolved, signUpWithPassword, signInWithOAuth } = useAuth();
   const { track } = useAnalytics();
   const inDesktopApp = useInDesktopApp();
 
@@ -139,6 +140,19 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
 
   const busy = loading || oauthPending !== null;
 
+  /**
+   * The first step lists the ways to create an account (the providers, then
+   * email) before it asks for an address: see the same choice in
+   * [login-form.tsx](login-form.tsx). A server without providers goes
+   * straight to the address.
+   */
+  const [emailChosen, setEmailChosen] = useState(false);
+  const hasProviders = oauthProviders.length > 0;
+  useEffect(() => {
+    if (oauthProvidersResolved && !hasProviders) setEmailChosen(true);
+  }, [oauthProvidersResolved, hasProviders]);
+  const choosingMethod = step === "account" && !emailChosen;
+
   // Already authenticated (session restored, return from a provider): there is no more
   // account to create. No MFA challenge here — a newly created account
   // does not have a second factor, and a restored session that expects one will
@@ -158,11 +172,19 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
 
   const handleBack = () => {
     const previous = previousSignupStep(step);
-    if (previous) goTo(previous, -1);
+    if (previous) {
+      goTo(previous, -1);
+      return;
+    }
+    // From the address, back to the list of methods.
+    setDirection(-1);
+    setError(null);
+    setEmailChosen(false);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (choosingMethod) return;
     if (issue) {
       // The button is grayed out as long as the step is invalid; this path
       // is that of the Enter key, which does not concern him.
@@ -332,7 +354,7 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
           <div className="relative -mx-1.5 overflow-hidden px-1.5 py-1.5">
             <AnimatePresence initial={false} mode="wait" custom={direction}>
               <motion.div
-                key={step}
+                key={choosingMethod ? "methods" : step}
                 custom={direction}
                 initial={{ opacity: 0, x: direction * 16 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -340,17 +362,25 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
                 transition={{ duration: 0.18, ease: "easeOut" }}
                 className="space-y-4"
               >
-                {step === "account" && (
-                  <>
+                {choosingMethod &&
+                  (oauthProvidersResolved ? (
                     <OAuthButtons
                       providers={oauthProviders}
                       pending={oauthPending}
                       disabled={busy}
                       onSelect={(provider) => void handleOAuth(provider)}
+                      onEmail={() => {
+                        setDirection(1);
+                        setError(null);
+                        setEmailChosen(true);
+                      }}
                     />
-                    {oauthProviders.length > 0 && (
-                      <AuthSeparator label={t("orContinueWithEmail")} />
-                    )}
+                  ) : (
+                    <AuthMethodsSkeleton />
+                  ))}
+
+                {step === "account" && emailChosen && (
+                  <>
                     <Field id="email" label={t("email")}>
                       <Input
                         id="email"
@@ -461,28 +491,23 @@ export function SignupWizard({ invite }: { invite: InvitationPreview | null }) {
           {error && <p id="signup-error" role="alert" className="text-sm text-destructive">{error}</p>}
 
           <div className="space-y-3">
-            <Button
-              type="submit"
-              disabled={busy || issue !== null}
-              className={AUTH_SUBMIT_CLASS}
-            >
-              {loading && <Spinner />}
-              {step === "password" ? t("createAccount") : tCommon("continue")}
-              {!loading && <SubmitArrow />}
-            </Button>
+            {/* The list of methods is its own set of buttons: nothing to submit. */}
+            {!choosingMethod && (
+              <Button
+                type="submit"
+                disabled={busy || issue !== null}
+                className={AUTH_SUBMIT_CLASS}
+              >
+                {loading && <Spinner />}
+                {step === "password" ? t("createAccount") : tCommon("continue")}
+                {!loading && <SubmitArrow />}
+              </Button>
+            )}
 
             {step === "password" && <SignupLegalNotice external={inDesktopApp} />}
 
-            {stepIndex > 0 && (
-              <button
-                type="button"
-                onClick={handleBack}
-                disabled={busy}
-                className="mx-auto flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-60"
-              >
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
-                {tCommon("back")}
-              </button>
+            {(stepIndex > 0 || (emailChosen && hasProviders)) && (
+              <AuthBackButton onClick={handleBack} disabled={busy} />
             )}
           </div>
         </form>

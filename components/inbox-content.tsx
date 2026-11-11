@@ -397,7 +397,7 @@ export default function InboxContent({
           <div className="w-full py-3">
             {showInvitations && (
               <section>
-                <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground">
+                <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground app-mobile:px-3">
                   {t("groupInvitations")}
                 </h2>
                 <ul
@@ -477,7 +477,7 @@ export default function InboxContent({
                     index > 0 || showInvitations ? "mt-6" : undefined,
                   )}
                 >
-                  <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground">
+                  <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground app-mobile:px-3">
                     {t(GROUP_KEYS[group] as Parameters<typeof t>[0])}
                   </h2>
                   <ul
@@ -511,7 +511,7 @@ export default function InboxContent({
                             data-sidebar-filter-result
                             onClick={() => open(notification)}
                             className={cn(
-                              "relative flex w-full items-center gap-3 px-4 py-3 pr-20 text-left sm:pr-4 transition-colors",
+                              "relative flex w-full items-center gap-3 px-4 py-3 pr-20 text-left sm:pr-4 app-mobile:pl-3 transition-colors",
                               "focus-visible:outline-none",
                             )}
                           >

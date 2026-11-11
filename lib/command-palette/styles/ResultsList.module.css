@@ -153,14 +153,23 @@
 }
 
 /* Mobile adjustments */
-:global(html[data-app-layout="mobile"]) .header {
-  padding: 8px 16px;
+/* Rows, headings and the search field above them start on the same line, 16px
+   from the sheet's edge: no inset of the list's own. */
+:global(html[data-app-layout="mobile"]) .container {
+  margin: 0;
+  border-radius: 0;
 }
+/* On a phone, the bottom sheets' section names (app/globals.css), in a row
+   MOBILE_HEADER_HEIGHT (34px) tall: 12px above, 4px below an 18px line. */
+:global(html[data-app-layout="mobile"]) .header,
 :global(html[data-app-layout="mobile"]) .headerNotFirst {
-  padding-top: 14px;
+  align-items: flex-end;
+  padding: 12px var(--mobile-sheet-row-inline, 12px) 4px;
 }
 :global(html[data-app-layout="mobile"]) .headerText {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  font-weight: 500;
 }
 
 /* Reduced motion - disable animations for accessibility */

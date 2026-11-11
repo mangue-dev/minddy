@@ -361,7 +361,7 @@ function useQueryNotice(query: string, onQueryChange?: (query: string) => void) 
   React.useEffect(() => { notify.current?.(query); }, [query]);
 }
 
-/** Mobile actions stay in one searchable sheet, including nested groups. */
+/** Mobile actions stay in one searchable sheet; nested groups are accordions. */
 function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: {
   actions: ContextMenuActions;
   onSelect: (action: ContextMenuAction) => void;
@@ -373,27 +373,59 @@ function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: 
   React.useEffect(() => { if (!open) setQuery(""); }, [open]);
   useQueryNotice(query, onQueryChange);
   const all = resolveActions(actions, query);
-  const row = (action: ContextMenuAction, keywords: string[], disabled: boolean, forceMount?: boolean) =>
+  // An action inside an unfolded section steps in by one icon column, so it
+  // reads as belonging to the section above it.
+  const row = (action: ContextMenuAction, keywords: string[], disabled: boolean, forceMount?: boolean, depth = 0) =>
     <CommandItem key={action.id} value={action.id} keywords={keywords} forceMount={forceMount}
       disabled={disabled} onSelect={() => onSelect(action)}
+      style={depth > 0 ? { paddingInlineStart: `calc(0.5rem + ${depth} * 1.75rem)` } : undefined}
       {...(action.checked ? { "data-checked": "true" } : {})}>
-      <span className={action.variant === "destructive" ? "flex min-w-0 flex-1 items-center gap-2 text-destructive [&_svg]:text-destructive" : "flex min-w-0 flex-1 items-center gap-2"}>
+      <span className={action.variant === "destructive" ? "flex min-w-0 flex-1 items-center gap-[var(--mobile-sheet-row-gap)] text-destructive [&_svg]:text-destructive" : "flex min-w-0 flex-1 items-center gap-[var(--mobile-sheet-row-gap)]"}>
         {action.icon}<span className="truncate">{action.labelNode ?? action.label}</span>
         {action.trailing != null && <span className="ml-auto flex shrink-0 items-center text-xs tabular-nums text-muted-foreground">{action.trailing}</span>}
       </span>
     </CommandItem>;
-  const rows = (items: ContextMenuAction[], parentLabel = "", parentDisabled = false): React.ReactNode =>
-    items.map((action) => action.children?.length ? <CommandGroup key={action.id} heading={
-      action.trailing != null ? <span className="flex items-center gap-2">{action.label}<span className="tabular-nums">{action.trailing}</span></span> : action.label
-    }>
-      {rows(action.children, action.label, parentDisabled || !!action.disabled)}
-    </CommandGroup> : row(action, [action.label, parentLabel, ...(action.keywords ?? [])], parentDisabled || !!action.disabled));
+  // A group of actions (a submenu on a desktop) is an accordion here: the
+  // sheet opens on its sections' names and each one unfolds its actions on a
+  // tap, instead of laying every action of every section out at once.
+  const [expanded, setExpanded] = React.useState<ReadonlySet<string>>(new Set());
+  React.useEffect(() => { if (!open) setExpanded(new Set()); }, [open]);
+  const toggle = (id: string) => setExpanded((previous) => {
+    const next = new Set(previous);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
+  const searching = query.trim() !== "";
+  const section = (action: ContextMenuAction, parentLabel: string, disabled: boolean, depth: number): React.ReactNode => {
+    const children = action.children ?? [];
+    // A query looks inside every section: they all show, under their names.
+    if (searching) return <CommandGroup key={action.id} heading={action.label}>
+      {rows(children, action.label, disabled, depth)}
+    </CommandGroup>;
+    const isOpen = expanded.has(action.id);
+    return <React.Fragment key={action.id}>
+      <CommandItem value={action.id} keywords={[action.label, parentLabel]} disabled={disabled}
+        aria-expanded={isOpen} data-action-section={isOpen ? "open" : "closed"}
+        style={depth > 0 ? { paddingInlineStart: `calc(0.5rem + ${depth} * 1.75rem)` } : undefined}
+        onSelect={() => toggle(action.id)}>
+        <span className="flex min-w-0 flex-1 items-center gap-[var(--mobile-sheet-row-gap)]">
+          {action.icon}<span className="truncate">{action.label}</span>
+          {action.trailing != null && <span className="flex shrink-0 items-center text-xs tabular-nums text-muted-foreground">{action.trailing}</span>}
+        </span>
+        <ChevronRightIcon aria-hidden className={isOpen ? "size-4 shrink-0 rotate-90 text-muted-foreground transition-transform" : "size-4 shrink-0 text-muted-foreground transition-transform"} />
+      </CommandItem>
+      {isOpen && rows(children, action.label, disabled, depth + 1)}
+    </React.Fragment>;
+  };
+  const rows = (items: ContextMenuAction[], parentLabel = "", parentDisabled = false, depth = 0): React.ReactNode =>
+    items.map((action) => action.children?.length
+      ? section(action, parentLabel, parentDisabled || !!action.disabled, depth)
+      : row(action, [action.label, parentLabel, ...(action.keywords ?? [])], parentDisabled || !!action.disabled, false, searching ? 0 : depth));
   // A fallback entry answers any query: first while nothing is typed, then
   // after every match (cmdk would otherwise filter it out).
   const fallbacks = all.filter((action) => action.searchFallback);
   const fallbackGroup = fallbacks.length > 0 &&
     <CommandGroup forceMount>{fallbacks.map((action) => row(action, [], !!action.disabled, true))}</CommandGroup>;
-  const searching = query.trim() !== "";
   // With a fallback, an unmatched query still has its answer: no “No results”.
   return <SearchMenu {...props} open={open} searchValue={query} onSearchValueChange={setQuery}
     hideEmpty={props.hideEmpty || fallbacks.length > 0}>

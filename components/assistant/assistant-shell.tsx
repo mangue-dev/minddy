@@ -804,7 +804,7 @@ export const AssistantShell = forwardRef<
           <div data-sheet-search className="flex h-11 shrink-0 items-center border-b border-border px-3">
             <SidebarFilterField {...sidebarFilter} />
           </div>
-          <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto p-1.5">
+          <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto p-1.5 app-mobile:p-0">
             <ConversationList
               activeConversationId={state.conversationId}
               onSelect={(id, convProjectId) => {

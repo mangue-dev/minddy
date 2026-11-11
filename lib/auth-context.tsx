@@ -34,6 +34,12 @@ interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   oauthProviders: OAuthProvider[];
+  /**
+   * True once the server has said which providers it offers. Until then the
+   * auth screens do not know whether to offer a choice of methods or the
+   * email form alone, and show neither.
+   */
+  oauthProvidersResolved: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (
     email: string,
@@ -153,6 +159,7 @@ export function AuthProvider({
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([]);
+  const [oauthProvidersResolved, setOauthProvidersResolved] = useState(!discoverOAuthProviders);
   const { track, identify, reset } = useAnalytics();
 
   // Snapshot of freshest user, read by updateUserMetadata to merge on
@@ -195,18 +202,25 @@ export function AuthProvider({
           typeof body === "object" && body !== null && "external" in body
             ? (body as { external?: unknown }).external
             : null;
-        if (!external || typeof external !== "object") return;
-        setOauthProviders(
-          (["google", "github"] as const).filter(
-            (provider) => (external as Record<string, unknown>)[provider] === true,
-          ),
-        );
+        if (external && typeof external === "object") {
+          setOauthProviders(
+            (["google", "github"] as const).filter(
+              (provider) => (external as Record<string, unknown>)[provider] === true,
+            ),
+          );
+        }
+        setOauthProvidersResolved(true);
       } catch (error) {
+        if (disposed) return;
         // Keep provider buttons hidden until the server confirms availability,
         // but allow an offline desktop startup to recover without a reload.
-        if (!disposed && isBackendUnavailableError(error)) {
+        if (isBackendUnavailableError(error)) {
           retryTimer = window.setTimeout(() => { void checkProviders(); }, AUTH_INIT_TIMEOUT_MS);
         }
+        // Without an answer the email form is the one method known to exist:
+        // the screen shows it rather than wait. Providers join it if a retry
+        // finds them.
+        setOauthProvidersResolved(true);
       } finally {
         checking = false;
       }
@@ -664,6 +678,7 @@ export function AuthProvider({
       session,
       loading,
       oauthProviders,
+      oauthProvidersResolved,
       signInWithPassword,
       signUpWithPassword,
       sendPasswordReset,
@@ -685,6 +700,7 @@ export function AuthProvider({
       session,
       loading,
       oauthProviders,
+      oauthProvidersResolved,
       signInWithPassword,
       signUpWithPassword,
       sendPasswordReset,

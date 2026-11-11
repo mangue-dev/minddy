@@ -4,6 +4,8 @@ import { useEffect, useSyncExternalStore } from "react";
 
 import { isMobileLayout, subscribeAppLayout } from "./app-layout";
 import { isKeyboardOpen, keyboardInset, revealDelta } from "./mobile-keyboard";
+import { getMobileBridge, type MobileKeyboardMove } from "./mobile/bridge";
+import { visibleBand } from "./visible-band";
 const serverSnapshot = () => undefined;
 
 /** Resolve the viewport before mounting anything that writes desktop tabs. */
@@ -80,13 +82,16 @@ function scrollParent(element: HTMLElement): HTMLElement | null {
  * field's own scroll area once the document is pinned: bring the field (or
  * the caret of a rich text field) above the keyboard.
  */
-function revealField(field: HTMLElement, viewport: VisualViewport) {
+function revealField(field: HTMLElement) {
   const container = scrollParent(field);
   if (!container) return;
   const box = container.getBoundingClientRect();
+  // The band the keyboard leaves as laid out, which is ahead of the visual
+  // viewport while the keyboard is still on its way.
+  const band = visibleBand();
   const area = {
-    top: Math.max(box.top, viewport.offsetTop),
-    bottom: Math.min(box.bottom, viewport.offsetTop + viewport.height),
+    top: Math.max(box.top, band.top),
+    bottom: Math.min(box.bottom, band.bottom),
   };
   const rect = fieldRect(field);
   const delta = revealDelta(rect, area);
@@ -146,6 +151,8 @@ const PREDICTION_MS = 800;
  * not crawl over 380 ms.
  */
 const MOVING_MS = 450;
+/** What the movement window keeps past the keyboard's own duration. */
+const MOVING_MARGIN_MS = 70;
 // A mobile sheet, alert or drawer is open: what lies under it is its color.
 const SURFACE_SELECTOR = '[data-slot="sheet-content"], [data-slot="alert-dialog-content"], [data-vaul-drawer]';
 
@@ -163,6 +170,12 @@ const SURFACE_SELECTOR = '[data-slot="sheet-content"], [data-slot="alert-dialog-
  * bar. The pin cancels that scroll; the shell or the sheet then makes room
  * itself, and the field is revealed inside its own scroll area. Pages that
  * scroll the window (documentation) leave it off.
+ *
+ * In the mobile app the shell reports the keyboard itself, as it starts to
+ * move, with its height and its duration (`lib/mobile/bridge.ts`): WebKit
+ * tells the page only once the keyboard has stopped. That report replaces the
+ * visual viewport and the remembered heights, and everything that makes room
+ * moves with the keyboard, over its own duration.
  */
 export function useMobileViewport({ pinDocument = false }: { pinDocument?: boolean } = {}) {
   useEffect(() => {
@@ -176,6 +189,19 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
     let wasOpen = false;
     let moving = 0;
     const baselines = new Map<number, number>();
+    // The keyboard as the mobile app's shell reports it: `null` until its
+    // first report, and always outside the app.
+    const shell = pinDocument ? getMobileBridge()?.shell : null;
+    const fromShell = Boolean(shell?.addListener);
+    let shellKeyboard: number | null = null;
+    // The duration of its last movement, for one the page sees first.
+    let shellDuration = MOVING_MS - MOVING_MARGIN_MS;
+
+    const startMoving = (duration: number) => {
+      root.setAttribute("data-mobile-keyboard-moving", "");
+      window.clearTimeout(moving);
+      moving = window.setTimeout(() => root.removeAttribute("data-mobile-keyboard-moving"), duration + MOVING_MARGIN_MS);
+    };
 
     const pin = () => {
       if (!pinDocument || viewport.scale > 1.01) return;
@@ -194,7 +220,12 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
         baselineHeight,
       };
       const focused = focusedTextField();
-      if (isKeyboardOpen(sample)) {
+      if (shellKeyboard !== null && sample.scale <= 1.01) {
+        // No field holds it any more: the keyboard is on its way down, and the
+        // page knows it a few frames before the shell's report reaches it.
+        const height = focused ? shellKeyboard : 0;
+        sample = { ...sample, viewportHeight: sample.layoutHeight - height, offsetTop: 0, baselineHeight: sample.layoutHeight };
+      } else if (isKeyboardOpen(sample)) {
         predicted = null;
         const inset = keyboardInset(sample);
         if (pinDocument && focused && sample.offsetTop === 0 && inset) rememberKeyboard(root, focused, inset);
@@ -216,9 +247,7 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
       root.toggleAttribute("data-mobile-surface", Boolean(document.querySelector(SURFACE_SELECTOR)));
       if (Boolean(field) !== wasOpen) {
         wasOpen = Boolean(field);
-        root.setAttribute("data-mobile-keyboard-moving", "");
-        window.clearTimeout(moving);
-        moving = window.setTimeout(() => root.removeAttribute("data-mobile-keyboard-moving"), MOVING_MS);
+        startMoving(shellKeyboard === null ? MOVING_MS - MOVING_MARGIN_MS : shellDuration);
       }
       // Once per field: afterwards, the caret is the editor's business. In
       // the next frame, once a tapped field is back from its off-screen focus.
@@ -226,7 +255,7 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
       // (components/editor/mobile-editor-toolbar.tsx): two scrolls aiming at
       // two places made the text jump.
       if (pinDocument && field && field !== revealed && !field.closest(".ProseMirror")) {
-        requestAnimationFrame(() => revealField(field, viewport));
+        requestAnimationFrame(() => revealField(field));
       }
       revealed = field;
     };
@@ -244,7 +273,7 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
     // A field takes the focus with the keyboard still closed: start moving
     // with the keyboard, at the height it had last time on this screen.
     const onFocusIn = (event: FocusEvent) => {
-      if (pinDocument && isMobileLayout() && isTextField(event.target) && !predicted) {
+      if (!fromShell && pinDocument && isMobileLayout() && isTextField(event.target) && !predicted) {
         const keyboardClosed = root.clientHeight - viewport.height < 80;
         const known = keyboardClosed ? readKnownKeyboard(root, event.target) : null;
         if (known) {
@@ -285,6 +314,27 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
       if (isMobileLayout() && isTextField(event.target)) focusWithoutScroll(event.target, false);
     };
 
+    // The shell's report comes before the keyboard moves: lay out for where
+    // it is going at once, and move over the same time it does.
+    const onShellKeyboard = ({ height, duration }: MobileKeyboardMove) => {
+      if (!Number.isFinite(height)) return;
+      const next = Math.max(0, Math.round(height));
+      if (next === shellKeyboard) return;
+      shellKeyboard = next;
+      const ms = Number.isFinite(duration) ? Math.max(0, Math.round(duration)) : MOVING_MS - MOVING_MARGIN_MS;
+      shellDuration = ms;
+      // Reduced motion keeps its 0ms (app/globals.css): the keyboard's own
+      // duration only replaces the default one.
+      if (!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+        root.style.setProperty("--mobile-keyboard-duration", `${ms}ms`);
+      }
+      startMoving(ms);
+      cancelAnimationFrame(frame);
+      update();
+    };
+    const listener = fromShell ? shell?.addListener?.("keyboard", onShellKeyboard) : null;
+    if (listener) root.setAttribute("data-shell-keyboard", "");
+
     update();
     viewport.addEventListener("resize", onViewportChange);
     viewport.addEventListener("scroll", onViewportChange);
@@ -314,6 +364,9 @@ export function useMobileViewport({ pinDocument = false }: { pinDocument?: boole
       root.removeAttribute("data-mobile-keyboard");
       root.removeAttribute("data-mobile-keyboard-moving");
       root.removeAttribute("data-mobile-surface");
+      root.removeAttribute("data-shell-keyboard");
+      root.style.removeProperty("--mobile-keyboard-duration");
+      void Promise.resolve(listener).then((handle) => handle?.remove(), () => {});
     };
   }, [pinDocument]);
 }

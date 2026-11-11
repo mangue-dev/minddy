@@ -8,7 +8,8 @@ agent reads the same rules. Edit both files together;
 
 Minddy is a Next.js App Router application with React, Tailwind CSS, and its
 own UI components. Supabase provides Postgres, Auth, Storage, and Realtime. The
-optional Electron shell has a separate package and build under `desktop/`.
+optional Electron shell has a separate package and build under `desktop/`, and
+the Capacitor mobile shell under `mobile/`.
 
 | Area | Source of truth |
 | --- | --- |
@@ -24,6 +25,7 @@ optional Electron shell has a separate package and build under `desktop/`.
 | Numo conversations and tools | `lib/server/numo/`, `lib/server/assistant/` |
 | Pull requests and forge integration | `lib/server/agent/`, `lib/server/git/` |
 | External MCP tools and authentication | `lib/server/mcp/` |
+| Mobile shell bridge and bundled pages | `lib/mobile/`, `components/mobile/`, `mobile/README.md` |
 | Database schema and policies | `supabase/migrations/` |
 | Locale catalogs and configuration | `messages/`, `i18n/config.ts` |
 | Release and maintenance tooling | `scripts/`, `.github/workflows/` |
@@ -42,8 +44,9 @@ reading or writing protected content rather than accessing its raw columns.
 `npm run dev` and `npm run build` first generate the page-Markdown bundle
 through their lifecycle hooks. Vitest also builds the page projection
 through `test/build-pages-md-setup.ts`. The root TypeScript configuration excludes
-`desktop/`; CI checks the Electron bundle separately with
-`node scripts/build-desktop.mjs`.
+`desktop/` and `mobile/`; CI checks the Electron bundle separately with
+`node scripts/build-desktop.mjs`, and the pages bundled in the mobile app with
+`node scripts/build-mobile.mjs`.
 
 See [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and
 [the edition guide](docs/editions.md) for setup and supported deployment modes.

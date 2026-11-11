@@ -57,6 +57,7 @@ import { composeSidebarContextActions } from "@/lib/sidebar-context-actions";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { useBillingSummary } from "@/lib/use-billing-query";
 import { type BillingPlanId } from "@/lib/billing-plans";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
@@ -658,7 +659,7 @@ export function ProjectContextRow({
           <MobileSheetScrollArea>
             {projects.map((project) => <button key={project.id} type="button"
               onClick={() => { setPickerOpen(false); onProjectSelect(project); }}
-              className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
+              data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
               <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-[18px] rounded-[5px]" />
               <span className="min-w-0 flex-1 truncate">{project.name}</span>
               {project.id === currentProject.id && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
@@ -691,6 +692,11 @@ function AccountButton({
   const { user, signOut } = useAuth();
   const { capabilities } = useRuntimeConfig();
   const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
+  // The mobile apps sell nothing, so their menus do not lead to the billing
+  // page (MIN-907). The plan's name under the account stays: the app
+  // recognizes a subscription bought on the web.
+  const purchasesHidden = usePurchasesHidden();
+  const showBilling = Boolean(hasManagedService) && !purchasesHidden;
   const { status } = useBillingSummary();
   const mobileIdentity = useMobileAccountIdentity();
   const tBilling = useTranslations("Billing");
@@ -735,7 +741,7 @@ function AccountButton({
   if (mobile) {
     const destinations = [
       { href: "/settings?tab=profile", label: name, icon: null },
-      ...(hasManagedService ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
+      ...(showBilling ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
       { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
       { href: "/trash", label: t("trash"), icon: Delete02Icon },
       ...(isAdmin ? [{ href: "/admin", label: t("adminDashboard"), icon: Shield01Icon }] : []),
@@ -750,10 +756,10 @@ function AccountButton({
         <DialogContent aria-describedby={undefined} onCloseAutoFocus={finishOpeningSignOutConfirmation}>
           <DialogTitle>{t("account")}</DialogTitle>
           <MobileSheetScrollArea>
-            {destinations.map(({ href, label, icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
+            {destinations.map(({ href, label, icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} data-mobile-sheet-row className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
               {icon ? <AppIcon icon={icon} className="size-[18px] shrink-0" /> : <UserAvatar seed={seed} className="size-[22px] shrink-0" />}<span className="min-w-0 truncate">{label}</span>
             </Link>)}
-            <button type="button" onClick={openSignOutConfirmation} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-destructive hover:bg-muted">
+            <button type="button" onClick={openSignOutConfirmation} data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-destructive hover:bg-muted">
               <AppIcon icon={LogOutIcon} className="size-[18px]" />{t("signOut")}
             </button>
           </MobileSheetScrollArea>
@@ -804,7 +810,7 @@ function AccountButton({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {hasManagedService && (
+              {showBilling && (
                 <DropdownMenuItem asChild>
                   <Link href="/billing">
                     <HugeiconsIcon icon={CreditCardIcon} />
@@ -937,14 +943,14 @@ function ChangelogButton({
         <DialogTitle>{t("whatsNew")}</DialogTitle>
         <MobileSheetScrollArea>
           <a href={documentationHref} target="_blank" rel="noopener noreferrer" onClick={() => handleMenuOpenChange(false)}
-            className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
+            data-mobile-sheet-row className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
             <AppIcon icon={Book02Icon} className="size-[18px] shrink-0" />
             <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
             <AppIcon icon={ArrowUpRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
           </a>
           <button
             type="button"
-            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted"
+            data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted"
             onClick={() => {
               handleMenuOpenChange(false);
               setDialogMounted(true);
@@ -954,7 +960,7 @@ function ChangelogButton({
             <AppIcon icon={NewspaperIcon} className="size-[18px] shrink-0" />
             <span className="min-w-0 truncate">{t("changelog")}</span>
           </button>
-          {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
+          {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
             handleMenuOpenChange(false);
             if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
             else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");

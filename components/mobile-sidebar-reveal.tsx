@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
-import { mobileSidebarWidth, sidebarGestureIntent, sidebarGestureSettlesOpen, sidebarRevealRadius, sidebarGestureIsReserved } from "@/lib/mobile-sidebar-reveal";
+import { mobileSidebarWidth, sidebarGestureIntent, sidebarGestureSettlesOpen, sidebarPageIsRounded, sidebarGestureIsReserved } from "@/lib/mobile-sidebar-reveal";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]';
 
@@ -42,7 +42,7 @@ export function MobileSidebarReveal({ open, onOpenChange, trigger, focusTarget, 
     surface.setAttribute("data-mobile-sidebar-open", String(shown));
     surface.setAttribute("data-mobile-sidebar-dragging", String(drag !== null));
     surface.style.setProperty("--mobile-sidebar-offset", `${offset}px`);
-    surface.style.setProperty("--mobile-sidebar-radius", `${sidebarRevealRadius(offset, width)}px`);
+    surface.style.setProperty("--mobile-sidebar-radius", sidebarPageIsRounded(offset, width) ? "var(--mobile-page-radius)" : "0px");
     surface.inert = shown;
     return () => { surface.inert = false; };
   }, [mobile, surface, offset, shown, drag, width]);

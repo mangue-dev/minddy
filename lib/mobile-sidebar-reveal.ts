@@ -14,9 +14,14 @@ export function sidebarGestureSettlesOpen(offset: number, width: number, velocit
   return offset >= width * 0.5;
 }
 
-/** Curvature follows the exposed sidebar fraction, including interrupted drags. */
-export function sidebarRevealRadius(offset: number, width: number): number {
-  return width > 0 ? Math.max(0, Math.min(1, offset / width)) * 24 : 0;
+/**
+ * The page set aside for the sidebar has rounded corners on its left edge, of
+ * one fixed radius for the whole gesture: the device's own
+ * (`--mobile-page-radius`, app/globals.css). A radius growing with the slide
+ * read as the page changing shape under the finger.
+ */
+export function sidebarPageIsRounded(offset: number, width: number): boolean {
+  return width > 0 && offset > 0;
 }
 
 /** Editors, native horizontal scrollers and app-owned gestures retain their input. */

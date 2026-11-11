@@ -16,7 +16,8 @@ import { toast } from "sonner";
 import { MfaChallenge } from "@/components/auth/mfa-challenge";
 import {
   AuthColumn,
-  AuthSeparator,
+  AuthBackButton,
+  AuthMethodsSkeleton,
   Field,
   OAuthButtons,
   useInDesktopApp,
@@ -54,6 +55,7 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
     user,
     loading: authLoading,
     oauthProviders,
+    oauthProvidersResolved,
     signInWithPassword,
     signInWithOAuth,
     needsMfaChallenge,
@@ -115,6 +117,19 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
 
   // Only one connection attempt at a time (email OR provider).
   const busy = loading || oauthPending !== null;
+
+  /**
+   * One thing at a time: the screen first lists the ways in (the providers,
+   * then email), and the email form takes the list's place once chosen. A
+   * server without providers has a single way in, so its form shows at once.
+   * That choice is then kept: providers found by a later retry add the way
+   * back to the list, they do not replace a form someone is typing in.
+   */
+  const [emailChosen, setEmailChosen] = useState(false);
+  const hasProviders = oauthProviders.length > 0;
+  useEffect(() => {
+    if (oauthProvidersResolved && !hasProviders) setEmailChosen(true);
+  }, [oauthProvidersResolved, hasProviders]);
 
   /**
    * Second factor (MIN-132). `unknown` = we haven't watched yet — so we
@@ -253,15 +268,25 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
             </p>
           </div>
 
-          <OAuthButtons
-            providers={oauthProviders}
-            pending={oauthPending}
-            disabled={busy}
-            onSelect={(provider) => void handleOAuth(provider)}
-          />
+          {!emailChosen && !oauthProvidersResolved && <AuthMethodsSkeleton />}
 
-          {oauthProviders.length > 0 && <AuthSeparator label={t("orContinueWithEmail")} />}
+          {!emailChosen && oauthProvidersResolved && (
+            <div className="space-y-4">
+              <OAuthButtons
+                providers={oauthProviders}
+                pending={oauthPending}
+                disabled={busy}
+                onSelect={(provider) => void handleOAuth(provider)}
+                onEmail={() => {
+                  setError(null);
+                  setEmailChosen(true);
+                }}
+              />
+              {error && <p id="login-error" role="alert" className="text-sm text-destructive">{error}</p>}
+            </div>
+          )}
 
+          {emailChosen && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <Field id="email" label={t("email")}>
               <Input
@@ -271,6 +296,8 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
                 type="email"
                 className="h-10 bg-control"
                 autoComplete="email"
+                // Arriving from the list of methods, the next gesture is to type.
+                autoFocus={hasProviders}
                 required
                 placeholder={t("emailPlaceholder")}
                 value={email}
@@ -316,7 +343,18 @@ export function LoginForm({ invite }: { invite: InvitationPreview | null }) {
               {t("signIn")}
               {!loading && <SubmitArrow />}
             </Button>
+
+            {hasProviders && (
+              <AuthBackButton
+                disabled={busy}
+                onClick={() => {
+                  setError(null);
+                  setEmailChosen(false);
+                }}
+              />
+            )}
           </form>
+          )}
 
           {signupOpen && (
             <p className="text-center text-sm text-muted-foreground">

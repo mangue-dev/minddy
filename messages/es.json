@@ -472,6 +472,7 @@
     "historyFeatureNumoHomeBrief": "Numo · resumen de inicio",
     "agentsGateTitle": "El trabajo con Numo no está disponible",
     "agentsGateDescription": "El trabajo con Numo no está activado en esta cuenta.",
+    "notOnPlan": "Tu plan no incluye esta función.",
     "agentsGateCta": "Ver los planes",
     "membersGateCta": "Ver los planes",
     "checkoutSuccess": "Suscripción activa.",
@@ -976,7 +977,7 @@
     "sessionExpired": "Tu sesión ha caducado. Vuelve a iniciar sesión para continuar.",
     "continueWithGoogle": "Continuar con Google",
     "continueWithGitHub": "Continuar con GitHub",
-    "orContinueWithEmail": "o continuar con el correo electrónico",
+    "continueWithEmail": "Continuar con el correo electrónico",
     "fullName": "Nombre de usuario",
     "fullNamePlaceholder": "Tu nombre de usuario",
     "email": "Correo electrónico",
@@ -7025,6 +7026,14 @@
     "cardRole": "tarjeta de incidencia",
     "tabInstructions": "Alt+Mayús+Flecha izquierda o derecha mueve la pestaña.",
     "viewInstructions": "Arrastra con el ratón para reordenar las vistas."
+  },
+  "MobileShell": {
+    "serverHeading": "Conéctate a tu servidor",
+    "serverLead": "Usa minddy desde un servidor que alojas tú. Tu cuenta y tus datos se quedan en él.",
+    "serverHelp": "Escribe la dirección completa, empezando por https://.",
+    "changeServer": "Cambiar de servidor",
+    "offlineTitle": "No tienes conexión",
+    "offlineBody": "Comprueba tu conexión y vuelve a intentarlo."
   },
   "DesktopWelcome": {
     "back": "Volver",

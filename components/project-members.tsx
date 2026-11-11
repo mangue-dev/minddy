@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { usePlanGates } from "@/lib/use-billing-query";
 import {
   SettingsGroup,
@@ -157,6 +158,7 @@ export function ProjectMembers({
   const t = useTranslations("Members");
   const tc = useTranslations("Common");
   const tb = useTranslations("Billing");
+  const purchasesHidden = usePurchasesHidden();
   const {
     members,
     invitations,
@@ -358,13 +360,18 @@ export function ProjectMembers({
             <p className="mt-1 text-xs text-muted-foreground">
               {limitReached ? (
                 <>
-                  {t("inviteLimitReached", { limit: maxMembersPerProject })}{" "}
-                  <Link
-                    href="/billing"
-                    className="font-medium text-foreground underline underline-offset-2"
-                  >
-                    {tb("membersGateCta")}
-                  </Link>
+                  {t("inviteLimitReached", { limit: maxMembersPerProject })}
+                  {!purchasesHidden && (
+                    <>
+                      {" "}
+                      <Link
+                        href="/billing"
+                        className="font-medium text-foreground underline underline-offset-2"
+                      >
+                        {tb("membersGateCta")}
+                      </Link>
+                    </>
+                  )}
                 </>
               ) : (
                 <span className="tabular-nums">

@@ -155,6 +155,23 @@ export function SearchView({
 
   const isTouchDevice = useIsTouchDevice();
   const mobileLayout = useMobileLayout() === true;
+  // On a phone the palette is a sheet of a set height: the list takes all the
+  // room under the search field, instead of the desktop's cap, which left
+  // the bottom of the sheet empty while more results waited below the fold.
+  const [resultsContainer, setResultsContainer] = useState<HTMLDivElement | null>(null);
+  const [resultsHeight, setResultsHeight] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (!mobileLayout || !resultsContainer) {
+      setResultsHeight(undefined);
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      const height = Math.floor(entry.contentRect.height);
+      setResultsHeight(height > 0 ? height : undefined);
+    });
+    observer.observe(resultsContainer);
+    return () => observer.disconnect();
+  }, [mobileLayout, resultsContainer]);
 
   // Manual expansion in compact mode (ArrowDown)
   const [isManuallyExpanded, setIsManuallyExpanded] = useState(false);
@@ -519,9 +536,10 @@ export function SearchView({
       {isExpanded && groups.length > 0 && (
         <>
           {/* Results */}
-          <div className={styles.resultsContainer}>
+          <div ref={setResultsContainer} className={styles.resultsContainer}>
             <ResultsList
               groups={groups}
+              height={resultsHeight}
               activeIndex={activeIndex}
               onSelect={handleSelect}
               onOpenActions={handleOpenActions}

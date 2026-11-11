@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Mail01Icon, CheckIcon, ServerStack01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, Mail01Icon, CheckIcon, ServerStack01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -17,6 +17,7 @@ import type { Locale } from "@/i18n/config";
 import { getAppEnv, ENV_LOGO_TINT } from "@/lib/env";
 import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/password-policy";
 import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
+import { getMobileBridge } from "@/lib/mobile/bridge";
 import type { OAuthProvider } from "@/lib/auth-context";
 
 /**
@@ -259,19 +260,24 @@ export function SignupLegalNotice({ external }: { external: boolean }) {
 }
 
 /**
- * Google and GitHub, the same button to connect and register: Supabase
- * creates the account on the first pass.
+ * The ways into an account, one button each: the providers the server offers,
+ * then email. The same buttons sign in and register, since Supabase creates
+ * the account on a provider's first pass. Email opens its own form in place
+ * of this list (`onEmail`), so the screen never stacks a form under the
+ * providers.
  */
 export function OAuthButtons({
   providers,
   pending,
   disabled,
   onSelect,
+  onEmail,
 }: {
   providers: OAuthProvider[];
   pending: OAuthProvider | null;
   disabled: boolean;
   onSelect: (provider: OAuthProvider) => void;
+  onEmail: () => void;
 }) {
   const t = useTranslations("Auth");
   if (providers.length === 0) return null;
@@ -301,24 +307,46 @@ export function OAuthButtons({
           {t("continueWithGitHub")}
         </Button>
       )}
+      <Button
+        type="button"
+        variant="outline"
+        className="h-11 w-full justify-center gap-2.5"
+        disabled={disabled}
+        onClick={onEmail}
+      >
+        <HugeiconsIcon icon={Mail01Icon} className="size-4" />
+        {t("continueWithEmail")}
+      </Button>
     </div>
   );
 }
 
-/**
- * The “or by e-mail” line between the providers and the form.
- *
- * Two lines and a word between them, and not a word on an opaque background PLACED on a
- * continuous line: since the shell paints a colored halo, a `bg-background`
- * in the middle of the screen you can see — it's a gray dot on a green gradient.
- */
-export function AuthSeparator({ label }: { label: string }) {
+/** The list of methods while the server has not said which it offers. */
+export function AuthMethodsSkeleton() {
+  const t = useTranslations("Common");
   return (
-    <div className="flex items-center gap-3">
-      <div className="h-px flex-1 bg-border" />
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="h-px flex-1 bg-border" />
+    <div role="status" aria-busy="true" className="space-y-2.5">
+      <span className="sr-only">{t("loading")}</span>
+      <Skeleton aria-hidden className="h-11 w-full rounded-lg" />
+      <Skeleton aria-hidden className="h-11 w-full rounded-lg" />
+      <Skeleton aria-hidden className="h-11 w-full rounded-lg" />
     </div>
+  );
+}
+
+/** Returns from the email form to the list of methods. */
+export function AuthBackButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+  const t = useTranslations("Common");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="mx-auto flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-60"
+    >
+      <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+      {t("back")}
+    </button>
   );
 }
 
@@ -389,6 +417,9 @@ export function AuthColumn({
  * opens the app's bundled self-hosting page (install on this computer or a
  * server, or use an existing installation), which works offline. Builds whose
  * bridge cannot open it show nothing.
+ *
+ * The mobile app (MIN-907) shows the same button: it opens the app's bundled
+ * page to connect to a self-hosted server.
  */
 function DesktopServerFooter() {
   const t = useTranslations("DesktopWelcome");
@@ -396,10 +427,13 @@ function DesktopServerFooter() {
   // pre-paint script), not after an effect: arriving late, it would push the
   // vertically centred form up mid-entrance.
   return (
-    <div className="hidden justify-center [html[data-desktop-app]_&]:flex">
+    <div className="hidden justify-center [html[data-desktop-app]_&]:flex [html[data-native-mobile]_&]:flex">
       <button
         type="button"
-        onClick={() => getDesktopBridge()?.openServerPicker?.()}
+        onClick={() => {
+          getDesktopBridge()?.openServerPicker?.();
+          void getMobileBridge()?.shell?.openServerPicker();
+        }}
         className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <HugeiconsIcon icon={ServerStack01Icon} className="size-4" />

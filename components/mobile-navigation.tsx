@@ -3,7 +3,7 @@
 import { memo, useRef, useState, useLayoutEffect, useCallback, useEffect, useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LayoutAlignLeftIcon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Home01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
@@ -11,7 +11,10 @@ import { transitions } from "@/lib/motion";
 import { PANEL_OFFSET, SidebarPanelTransition, usePanelDirection } from "./sidebar-panel-transition";
 import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
-import { MobileCreateButton, MobileNotebookButton, MobileNumoButton } from "./mobile-nav-actions";
+import { MobileCreateButton, MobileNumoButton } from "./mobile-nav-actions";
+import Link from "@/components/app-link";
+import { UserAvatar } from "@/components/user-avatar";
+import { useMyAvatarSource } from "@/lib/use-my-avatar";
 import { MobileSidebarReveal } from "./mobile-sidebar-reveal";
 import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow, type SidebarBackBadge } from "./app-sidebar";
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
@@ -19,6 +22,8 @@ import type { NavSection, NavItem } from "@/components/nav-types";
 import type { Project } from "@/lib/types";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useMobileSecondarySidebar } from "@/lib/secondary-sidebar-context";
+import { getMobileBridge } from "@/lib/mobile/bridge";
+import { syncNativeNavigationBar } from "@/lib/mobile/native-navigation";
 
 export type MobileMenuPanel = {
   key: string;
@@ -99,14 +104,25 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
   };
   useLayoutEffect(() => { if (menuOpen) focusTarget.current?.focus({ preventScroll: true }); }, [panel?.key, menuOpen]);
   const typing = useTypingInField();
+  const avatar = useMyAvatarSource();
+  // In the mobile app the shell draws this bar natively, over this one
+  // (lib/mobile/native-navigation.ts).
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const shell = getMobileBridge()?.shell;
+    if (!shell || !navRef.current) return;
+    return syncNativeNavigationBar(navRef.current, shell) ?? undefined;
+  }, []);
   return <>
-    <nav aria-label={t("mainNavigation")} data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
+    <nav ref={navRef} aria-label={t("mainNavigation")} data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
       <div className="grid h-12 w-[min(100%-2rem,320px)] grid-cols-5 grid-rows-1 items-center rounded-full border border-border bg-background shadow-lg">
-        <button ref={menuTrigger} data-mobile-menu-trigger type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className={NAV_SLOT}><AppIcon icon={LayoutAlignLeftIcon} className="size-[22px]" /></button>
+        {/* Home first, the account last: the avatar opens the sidebar, where
+            the account and every destination live. */}
+        <Link href="/home" data-nav-slot="home" aria-label={t("home")} aria-current={pathname.startsWith("/home") ? "page" : undefined} className={NAV_SLOT}><AppIcon icon={Home01Icon} className="size-[22px]" /></Link>
         <MobileNumoButton />
-        <button type="button" aria-label={t("searchPlaceholder")} onClick={onSearch} className={NAV_SLOT}><AppIcon icon={Search01Icon} className="size-[22px]" /></button>
-        <MobileNotebookButton />
+        <button type="button" data-nav-slot="search" aria-label={t("searchPlaceholder")} onClick={onSearch} className={NAV_SLOT}><AppIcon icon={Search01Icon} className="size-[22px]" /></button>
         <MobileCreateButton />
+        <button ref={menuTrigger} data-mobile-menu-trigger data-nav-slot="menu" type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className={NAV_SLOT}><UserAvatar seed={avatar} alt="" className="size-[26px]" /></button>
       </div>
     </nav>
     <MobileSidebarReveal open={menuOpen} onOpenChange={onOpenChange} trigger={menuTrigger} focusTarget={focusTarget} label={t("goTo")}>

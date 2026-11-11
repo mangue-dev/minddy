@@ -14,10 +14,15 @@ const MARKETING_PATHS = [
   /^app\/(?:sitemap\.ts|robots\.txt|llms(?:-full)?\.txt)/,
 ];
 const RELEASE_METADATA_PATHS = new Set(["desktop/released.json"]);
+// The mobile shell ships through the app stores, on its own schedule: a change
+// under `mobile/` releases neither the web app nor a public version. The pages
+// bundled in the app live in `components/mobile/` and count as web code.
+const MOBILE_PATHS = [/^mobile\//];
+const isMobileFile = (file) => MOBILE_PATHS.some((pattern) => pattern.test(file));
 
 export function classifyReleaseFiles(coreFiles, webFiles, desktopChanged) {
-  const meaningfulCoreFiles = coreFiles.filter((file) => !RELEASE_METADATA_PATHS.has(file));
-  const meaningfulWebFiles = webFiles.filter((file) => !RELEASE_METADATA_PATHS.has(file));
+  const meaningfulCoreFiles = coreFiles.filter((file) => !RELEASE_METADATA_PATHS.has(file) && !isMobileFile(file));
+  const meaningfulWebFiles = webFiles.filter((file) => !RELEASE_METADATA_PATHS.has(file) && !isMobileFile(file));
   const marketingFiles = meaningfulWebFiles.filter((file) => MARKETING_PATHS.some((pattern) => pattern.test(file)));
   const nonMarketingCoreFiles = meaningfulCoreFiles.filter(
     (file) => !MARKETING_PATHS.some((pattern) => pattern.test(file)),
@@ -27,6 +32,7 @@ export function classifyReleaseFiles(coreFiles, webFiles, desktopChanged) {
     web: meaningfulWebFiles.length > 0,
     marketing: marketingFiles.length > 0,
     desktop: desktopChanged,
+    mobile: coreFiles.some(isMobileFile),
     coreFiles: meaningfulCoreFiles,
     webFiles: meaningfulWebFiles,
     marketingFiles,

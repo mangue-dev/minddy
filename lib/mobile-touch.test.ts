@@ -107,25 +107,35 @@ describe("bottom sheets on wide screens (MIN-841)", () => {
     expect(wide).toContain("[data-slot=\"alert-dialog-content\"]");
     expect(wide).toMatch(/width: min\(100% - 2 \* max\(1rem, env\(safe-area-inset-left\), env\(safe-area-inset-right\)\), 40rem\);/);
     expect(wide).toContain("margin-inline: auto;");
-    expect(wide).toContain("border-radius: 24px;");
+    expect(wide).toContain("border-radius: var(--mobile-sheet-radius);");
     expect(wide).not.toMatch(/\btop:|translate/);
   });
 
   it("overrides the full-width sheet rule rather than losing the cascade to it", () => {
     // Same specificity as the base rule: the wide one must come after it.
     expect(sheetSection.indexOf("@media (min-width: 640px) {"))
-      .toBeGreaterThan(sheetSection.indexOf("border-radius: 24px 24px 0 0;"));
+      .toBeGreaterThan(sheetSection.indexOf("border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-radius) var(--mobile-sheet-bottom-radius);"));
+    expect(sheetSection).toContain("border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-radius) var(--mobile-sheet-bottom-radius);");
   });
 
   it("sizes every mobile sheet through the shared budget", () => {
     // A sheet that measured the viewport or the home indicator itself would
     // overflow the top, or pad twice, once it floats.
-    expect(sheetSection).toContain("inset: auto 0 calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float));");
+    expect(sheetSection).toContain("inset: auto calc(var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)) calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float) - var(--mobile-sheet-attach));");
     const rules = sheetSection.slice(sheetSection.indexOf(":root[data-app-layout=\"mobile\"] {\n  .app-workspace"));
-    // Caps measure what the keyboard and the editor's strip leave (MIN-870).
+    // One ceiling for every sheet: what the keyboard and the editor's strip
+    // leave (MIN-870), under the status bar with a margin. Only the shared
+    // room measures the visible height; each sheet caps itself with it.
     const viewportCaps = css.split("\n").filter((line) => line.includes("var(--mobile-visible-height) -"));
-    expect(viewportCaps.length).toBeGreaterThan(5);
-    for (const line of viewportCaps) expect(line).toContain("var(--mobile-sheet-float)");
+    expect(viewportCaps.map((line) => line.trim())).toEqual([
+      "--mobile-sheet-room: calc(var(--mobile-visible-height) - var(--mobile-sheet-top-gap) - var(--mobile-sheet-float) + var(--mobile-sheet-attach));",
+    ]);
+    expect(css).toContain("--mobile-sheet-top-gap: max(1rem, calc(env(safe-area-inset-top) + 0.625rem));");
+    // Sheets size themselves from that room, never from the visible height
+    // directly: a sheet whose `height` and `max-height` both followed the
+    // keyboard had them move apart, and its top dipped and came back.
+    const roomUses = css.split("\n").filter((line) => line.includes("var(--mobile-sheet-room") && !line.includes("--mobile-sheet-room:"));
+    expect(roomUses.length).toBeGreaterThan(5);
     const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
     // Only the sidebar footer and the float gap itself read the raw inset.
     expect(bottomInsets.map((line) => line.trim())).toEqual([
@@ -142,14 +152,19 @@ describe("touch targets", () => {
     // The day one of them reaches 11 (44px), the extended target becomes
     // unnecessary for that size: it is time to revisit the rule, not keep it
     // out of habit.
+    // The phone layout raises text buttons to 44px itself (PHONE_TEXT_BUTTON);
+    // the target is still needed for its 40px icon buttons and for a touch
+    // screen in the desktop layout, where these heights apply.
     const heights = [
-      /default:\s*\n?\s*"h-9 /, // 36
-      /sm: "h-8 /, // 32
-      /lg: "h-10 /, // 40
-      /icon: "size-9 p-0"/, // 36
-      /"icon-sm": "size-8 p-0"/, // 32
-      /"icon-lg": "size-10 p-0"/, // 40
+      /default:\s*\n?\s*`\$\{PHONE_TEXT_BUTTON\} h-9 /, // 36
+      /sm: `\$\{PHONE_TEXT_BUTTON\} h-8 /, // 32
+      /lg: `\$\{PHONE_TEXT_BUTTON\} h-10 /, // 40
+      /icon: `\$\{PHONE_ICON_BUTTON\} size-9 p-0`/, // 36
+      /"icon-sm": `\$\{PHONE_ICON_BUTTON\} size-8 p-0`/, // 32
+      /"icon-lg": `\$\{PHONE_ICON_BUTTON\} size-10 p-0`/, // 40
     ];
+    expect(button).toContain("app-mobile:not-data-[variant=link]:min-h-11");
+    expect(button).toContain("app-mobile:min-h-10 app-mobile:min-w-10");
     for (const height of heights) expect(button).toMatch(height);
   });
 

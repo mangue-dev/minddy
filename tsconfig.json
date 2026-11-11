@@ -25,5 +25,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "desktop", "tools/oxlint", "output"]
+  "exclude": ["node_modules", "desktop", "mobile", "tools/oxlint", "output"]
 }

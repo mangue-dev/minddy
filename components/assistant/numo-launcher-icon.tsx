@@ -9,15 +9,18 @@ import { NumoIcon } from "@/components/numo-icon";
 export function NumoLauncherIcon({
   unread,
   question = false,
+  outlineWidth,
   className,
 }: {
   unread: boolean;
   question?: boolean;
+  /** See `NumoFace`: `3` beside icons of the icon set. */
+  outlineWidth?: number;
   className?: string;
 }) {
   return (
     <span className={cn("relative inline-flex shrink-0", className)}>
-      <NumoIcon animated={false} className="size-full" />
+      <NumoIcon animated={false} outlineWidth={outlineWidth} className="size-full" />
       {unread && (
         <span
           aria-hidden="true"

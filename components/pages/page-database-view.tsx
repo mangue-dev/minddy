@@ -168,6 +168,7 @@ function SortablePropertyRow({ property, sortable, children }: {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
+      data-mobile-sheet-row
       className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-md" : ""}`}
     >
       <AppTooltip label={t("reorderColumnHint")}>
@@ -272,7 +273,7 @@ function PropertySettings({
                   property={property}
                   sortable={!pending && schema.length > 1 && editing !== property.id}
                 >
-                  <AppIcon icon={Icon} className="mr-1 size-4 shrink-0 text-muted-foreground" />
+                  <AppIcon icon={Icon} className="mr-1 size-4 shrink-0 text-muted-foreground app-mobile:mr-0" />
                   {editing === property.id ? (
                     <form
                       className="flex min-w-0 flex-1 gap-1"
@@ -407,7 +408,7 @@ function PropertySettings({
       {sheet ? (
         <Sheet open={open} onOpenChange={setOpen}>
           <MobileSheetContent side="bottom" aria-describedby={undefined}
-            className="gap-2 p-2 pt-12 [&_button]:rounded-md [&_input]:rounded-md">
+            className="gap-2 p-2 px-[var(--mobile-sheet-inset)] pt-12 [&_button]:rounded-md [&_input]:rounded-md">
             <SheetTitle className="mobile-picker-title truncate">{t("properties")}</SheetTitle>
             {columnsBody}
           </MobileSheetContent>
@@ -1077,7 +1078,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
       {mobile && (
         <>
           <Sheet open={mobileSheet === "settings"} onOpenChange={(open) => setMobileSheet(open ? "settings" : null)}>
-            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-1 p-2 pt-12">
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-1 p-2 px-[var(--mobile-sheet-inset)] pt-12">
               <SheetTitle className="mobile-picker-title truncate">{t("viewSettings")}</SheetTitle>
               {([
                 { key: "sort", icon: ArrowUpDownIcon, label: t("sort"),
@@ -1086,7 +1087,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                 { key: "columns", icon: Settings02Icon, label: t("properties"),
                   detail: t("visibleColumns", { count: visible.length + 1 }) },
               ] as const).map((row) => (
-                <button key={row.key} type="button" onClick={() => setMobileSheet(row.key)}
+                <button key={row.key} type="button" onClick={() => setMobileSheet(row.key)} data-mobile-sheet-row
                   className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-sm active:bg-control">
                   <HugeiconsIcon icon={row.icon} className="size-5 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{row.label}</span>
@@ -1097,13 +1098,13 @@ export const PageDatabaseView = memo(function PageDatabaseView({
             </MobileSheetContent>
           </Sheet>
           <Sheet open={mobileSheet === "sort"} onOpenChange={(open) => setMobileSheet(open ? "sort" : null)}>
-            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 pt-12">
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 px-[var(--mobile-sheet-inline)] pt-12">
               <SheetTitle className="mobile-picker-title truncate">{t("sort")}</SheetTitle>
               {sortControls}
             </MobileSheetContent>
           </Sheet>
           <Sheet open={mobileSheet === "filter"} onOpenChange={(open) => setMobileSheet(open ? "filter" : null)}>
-            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 pt-12">
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 px-[var(--mobile-sheet-inline)] pt-12">
               <SheetTitle className="mobile-picker-title truncate">{t("filter")}</SheetTitle>
               <div className="max-h-[60dvh] overflow-y-auto">{filterEditor}</div>
             </MobileSheetContent>

@@ -472,6 +472,7 @@
     "historyFeatureNumoHomeBrief": "Numo · home summary",
     "agentsGateTitle": "Numo work is unavailable",
     "agentsGateDescription": "Numo work is not enabled for this account.",
+    "notOnPlan": "Your plan doesn't include this feature.",
     "agentsGateCta": "View plans",
     "membersGateCta": "View plans",
     "checkoutSuccess": "Subscription active.",
@@ -976,7 +977,7 @@
     "sessionExpired": "Your session has expired. Sign in again to continue.",
     "continueWithGoogle": "Continue with Google",
     "continueWithGitHub": "Continue with GitHub",
-    "orContinueWithEmail": "or continue with email",
+    "continueWithEmail": "Continue with email",
     "fullName": "Username",
     "fullNamePlaceholder": "Your username",
     "email": "Email",
@@ -7025,6 +7026,14 @@
     "cardRole": "issue card",
     "tabInstructions": "Alt+Shift+Left or Right Arrow moves the tab.",
     "viewInstructions": "Drag with the mouse to reorder the views."
+  },
+  "MobileShell": {
+    "serverHeading": "Connect to your server",
+    "serverLead": "Use minddy from a server you host. Your account and your data stay on it.",
+    "serverHelp": "Enter the full address, starting with https://.",
+    "changeServer": "Change server",
+    "offlineTitle": "You're offline",
+    "offlineBody": "Check your connection, then try again."
   },
   "DesktopWelcome": {
     "back": "Back",

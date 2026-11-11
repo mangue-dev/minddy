@@ -4,10 +4,11 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { resolveDocumentationPath } from "@/lib/documentation-core.mjs";
 
-import { isDesktop } from "@/lib/desktop/bridge";
+import { isNativeApp } from "@/lib/native-app";
 
 /**
- * The desktop app never displays the public site (MIN-291).
+ * The desktop app never displays the public site (MIN-291), and neither does
+ * the mobile app (MIN-907).
  *
  * The argument is aimed at someone who has not yet decided; In
  * the app installed, this person does not exist. She has already downloaded,
@@ -30,7 +31,7 @@ export function DesktopMarketingRedirect() {
   const pathname = usePathname();
   useEffect(() => {
     if (resolveDocumentationPath(pathname)) return;
-    if (!isDesktop()) return;
+    if (!isNativeApp()) return;
     window.location.replace("/home");
   }, [pathname]);
 

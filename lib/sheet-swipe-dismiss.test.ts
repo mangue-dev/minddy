@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { attachSheetSwipeDismiss, canDragSheetFrom, shouldDismissSheet } from "./sheet-swipe-dismiss";
+import { SHEET_STRETCH_LIMIT, attachSheetSwipeDismiss, canDragSheetFrom, canStretchSheetFrom, sheetStretch, shouldDismissSheet } from "./sheet-swipe-dismiss";
 
 describe("shouldDismissSheet", () => {
   it("closes past a quarter of the sheet's height", () => {
@@ -43,6 +43,35 @@ afterEach(() => {
   sheet.remove();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+});
+
+describe("sheetStretch", () => {
+  it("follows the finger at first, then resists towards its limit", () => {
+    expect(sheetStretch(0)).toBe(0);
+    expect(sheetStretch(-20)).toBe(0);
+    expect(sheetStretch(10)).toBeGreaterThan(4);
+    expect(sheetStretch(100)).toBeLessThan(30);
+    expect(sheetStretch(10_000)).toBeLessThan(SHEET_STRETCH_LIMIT);
+  });
+});
+
+describe("canStretchSheetFrom", () => {
+  it("stretches from content that does not scroll", () => {
+    expect(canStretchSheetFrom(row, sheet)).toBe(true);
+  });
+
+  it("leaves the upward swipe to anything that scrolls, and editors their gestures", () => {
+    const list = document.createElement("div");
+    const item = document.createElement("div");
+    list.append(item);
+    sheet.append(list);
+    scrollable(list, 0);
+    expect(canStretchSheetFrom(item, sheet)).toBe(false);
+    const editor = document.createElement("div");
+    editor.setAttribute("contenteditable", "true");
+    sheet.append(editor);
+    expect(canStretchSheetFrom(editor, sheet)).toBe(false);
+  });
 });
 
 describe("canDragSheetFrom", () => {
@@ -128,7 +157,29 @@ describe("attachSheetSwipeDismiss", () => {
     detach();
   });
 
+  it("stretches when pulled up, with resistance, and springs back to its own size", () => {
+    const detach = attachSheetSwipeDismiss(sheet, vi.fn());
+    touch("touchstart", row, 300, 0);
+    touch("touchmove", row, 290, 50);
+    const pull = touch("touchmove", row, 190, 300);
+    expect(pull.defaultPrevented).toBe(true);
+    // Its foot stays put: it grows instead of moving.
+    expect(sheet.style.transform).toBe("");
+    expect(sheet.style.maxHeight).toBe("none");
+    const grown = Number.parseFloat(sheet.style.height) - 400;
+    expect(grown).toBeGreaterThan(0);
+    expect(grown).toBeLessThan(100);
+    touch("touchend", row, 190, 600);
+    expect(sheet.style.height).toBe("400px");
+    vi.advanceTimersByTime(500);
+    expect(sheet.style.height).toBe("");
+    expect(sheet.style.maxHeight).toBe("");
+    detach();
+  });
+
   it("leaves upward scrolls and sideways swipes to the content", () => {
+    // A sheet whose content scrolls: the upward swipe is the list's.
+    scrollable(sheet, 0);
     const close = vi.fn();
     const detach = attachSheetSwipeDismiss(sheet, close);
     touch("touchstart", row, 300, 0);

@@ -22,6 +22,8 @@ const state = vi.hoisted(() => ({
   signInWithOAuth: vi.fn(),
   signOut: vi.fn(),
   track: vi.fn(),
+  oauthProviders: ["google"] as "google"[],
+  oauthProvidersResolved: true,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -32,18 +34,28 @@ vi.mock("next/link", () => ({
   default: (props: ComponentProps<"a">) => <a {...props} />,
 }));
 vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({ ...state, oauthProviders: ["google"] }),
+  useAuth: () => state,
 }));
 vi.mock("@/lib/desktop/bridge", () => ({ isDesktop: () => state.desktop }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: state.track }) }));
 vi.mock("@/components/auth/auth-chrome", () => ({
   AuthColumn: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  AuthSeparator: () => null,
+  AuthBackButton: ({ onClick }: { onClick: () => void }) => <button type="button" data-back onClick={onClick}>Back</button>,
+  AuthMethodsSkeleton: () => <div data-methods-loading />,
   AUTH_SUBMIT_CLASS: "",
   SubmitArrow: () => null,
   Field: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  OAuthButtons: ({ disabled, onSelect }: { disabled: boolean; onSelect: (provider: "google") => void }) =>
-    <button type="button" data-oauth disabled={disabled} onClick={() => onSelect("google")}>Google</button>,
+  OAuthButtons: ({ providers, disabled, onSelect, onEmail }: {
+    providers: string[];
+    disabled: boolean;
+    onSelect: (provider: "google") => void;
+    onEmail: () => void;
+  }) => providers.length === 0 ? null : (
+    <>
+      <button type="button" data-oauth disabled={disabled} onClick={() => onSelect("google")}>Google</button>
+      <button type="button" data-email-method disabled={disabled} onClick={onEmail}>Email</button>
+    </>
+  ),
   MailGlyph: () => null,
   PasswordRules: () => null,
   SignupLegalNotice: () => null,
@@ -100,6 +112,8 @@ beforeEach(() => {
   state.loading = true;
   state.desktop = true;
   state.params = new URLSearchParams("redirect=%2Fhome");
+  state.oauthProviders = ["google"];
+  state.oauthProvidersResolved = true;
   state.needsMfaChallenge.mockResolvedValue(true);
   state.firstTotpFactorId.mockResolvedValue("totp-factor");
   host = document.createElement("div");
@@ -235,20 +249,19 @@ describe("desktop login routing", () => {
     state.params = new URLSearchParams(query);
     await render();
 
-    expect(host.querySelector("#email")).not.toBeNull();
-    expect(host.querySelector("#password")).not.toBeNull();
+    expect(host.querySelector("[data-email-method]")).not.toBeNull();
     expect(host.textContent).not.toContain(messages.Auth.redirecting);
     expect(state.router.replace).not.toHaveBeenCalled();
     if (query.includes("error=")) expect(host.textContent).toContain(messages.Auth.oauthDenied);
 
     // No INITIAL_SESSION event arrives during the provider's timeout window.
     await act(async () => { await vi.advanceTimersByTimeAsync(7_999); });
-    expect(host.querySelector("#email")).not.toBeNull();
+    expect(host.querySelector("[data-email-method]")).not.toBeNull();
     expect(state.router.replace).not.toHaveBeenCalled();
 
     state.loading = false;
     await render();
-    expect(host.querySelector("#email")).not.toBeNull();
+    expect(host.querySelector("[data-email-method]")).not.toBeNull();
     expect(state.router.replace).not.toHaveBeenCalled();
   });
 
@@ -259,7 +272,7 @@ describe("desktop login routing", () => {
       await render();
 
       expect(state.router.replace).not.toHaveBeenCalled();
-      expect(host.querySelector("#email")).not.toBeNull();
+      expect(host.querySelector("[data-email-method]")).not.toBeNull();
     },
   );
 
@@ -279,6 +292,64 @@ describe("desktop login routing", () => {
     await render();
 
     expect(state.router.replace).not.toHaveBeenCalled();
-    expect(host.querySelector("#email")).not.toBeNull();
+    expect(host.querySelector("[data-email-method]")).not.toBeNull();
+  });
+});
+
+describe("sign-in methods", () => {
+  beforeEach(() => {
+    state.desktop = false;
+    state.loading = false;
+  });
+
+  it.each([
+    { label: "login", screen: LoginForm },
+    { label: "signup", screen: SignupWizard },
+  ])("lists the methods on $label and opens the email form in their place", async ({ screen }) => {
+    await render(screen);
+    expect(host.querySelector("[data-oauth]")).not.toBeNull();
+    expect(host.querySelector('input[type="email"]:not([hidden])')).toBeNull();
+
+    await act(() => host.querySelector<HTMLButtonElement>("[data-email-method]")!.click());
+    expect(host.querySelector("[data-oauth]")).toBeNull();
+    expect(host.querySelector('input[type="email"]')).not.toBeNull();
+
+    await act(() => host.querySelector<HTMLButtonElement>("[data-back]")!.click());
+    expect(host.querySelector("[data-oauth]")).not.toBeNull();
+    expect(host.querySelector('input[type="email"]')).toBeNull();
+  });
+
+  it.each([
+    { label: "login", screen: LoginForm },
+    { label: "signup", screen: SignupWizard },
+  ])("shows the email form at once on $label when the server has no provider", async ({ screen }) => {
+    state.oauthProviders = [];
+    await render(screen);
+    expect(host.querySelector('input[type="email"]')).not.toBeNull();
+    // Nothing to go back to.
+    expect(host.querySelector("[data-back]")).toBeNull();
+  });
+
+  it.each([
+    { label: "login", screen: LoginForm },
+    { label: "signup", screen: SignupWizard },
+  ])("waits on $label for the server to say which methods it offers", async ({ screen }) => {
+    state.oauthProviders = [];
+    state.oauthProvidersResolved = false;
+    await render(screen);
+    expect(host.querySelector("[data-methods-loading]")).not.toBeNull();
+    expect(host.querySelector('input[type="email"]')).toBeNull();
+  });
+
+  it("signs in with a password from the email form", async () => {
+    state.needsMfaChallenge.mockResolvedValue(false);
+    state.signInWithPassword.mockResolvedValue(undefined);
+    await render(LoginForm);
+    await act(() => host.querySelector<HTMLButtonElement>("[data-email-method]")!.click());
+    await act(async () => {
+      host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+    expect(state.signInWithPassword).toHaveBeenCalledOnce();
+    expect(state.router.push).toHaveBeenCalledWith("/home");
   });
 });

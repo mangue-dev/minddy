@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useAppRouter } from "@/lib/use-app-router";
 import type { IconComponent } from "@/components/icon";
 import { useAuth } from "@/lib/auth-context";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { useIsAdmin } from "@/lib/use-is-admin";
 import { useAccountTheme } from "@/lib/use-account-theme";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
@@ -41,6 +42,9 @@ export function useAccountActions(): {
   // follows the account to every device (lib/use-account-theme.ts).
   const { theme, setTheme } = useAccountTheme();
   const isAdmin = useIsAdmin();
+  // The mobile apps sell nothing, so they do not lead to the billing page
+  // (MIN-907).
+  const purchasesHidden = usePurchasesHidden();
 
   // Memorized: the “count” group is concatenated to the palette groups, and
   // a new identity on each rendering would rebuild all the lines
@@ -52,7 +56,9 @@ export function useAccountActions(): {
         label: t("account"),
         items: [
           { key: "m-trash", label: t("trash"), icon: dataIcon(Delete02Icon), href: "/trash" },
-          { key: "m-billing", label: t("billing"), icon: dataIcon(CreditCardIcon), href: "/billing" },
+          ...(purchasesHidden
+            ? []
+            : [{ key: "m-billing", label: t("billing"), icon: dataIcon(CreditCardIcon), href: "/billing" }]),
           { key: "m-settings", label: t("accountSettings"), icon: dataIcon(Settings01Icon), href: "/settings" },
           ...(isAdmin
             ? [{ key: "m-admin", label: t("adminDashboard"), icon: dataIcon(Shield01Icon), href: "/admin" }]
@@ -76,14 +82,18 @@ export function useAccountActions(): {
         keywords: ["trash", "corbeille", "deleted", "supprimé", "supprime", "restore", "restaurer"],
         onSelect: () => router.push("/trash"),
       },
-      {
-        key: "cmd-billing",
-        label: t("billing"),
-        icon: dataIcon(CreditCardIcon),
-        href: "/billing",
-        keywords: ["billing", "facturation", "plan", "abonnement", "subscription", "usage"],
-        onSelect: () => router.push("/billing"),
-      },
+      ...(purchasesHidden
+        ? []
+        : [
+            {
+              key: "cmd-billing",
+              label: t("billing"),
+              icon: dataIcon(CreditCardIcon),
+              href: "/billing",
+              keywords: ["billing", "facturation", "plan", "abonnement", "subscription", "usage"],
+              onSelect: () => router.push("/billing"),
+            },
+          ]),
       ...(isAdmin
         ? [
             {
@@ -118,7 +128,7 @@ export function useAccountActions(): {
       menuSections,
       commandGroup: { key: "account", heading: t("account"), items: commandItems },
     };
-  }, [t, router, signOut, theme, setTheme, isAdmin]);
+  }, [t, router, signOut, theme, setTheme, isAdmin, purchasesHidden]);
 }
 
 /** Shared mobile identity never falls back to an email. */

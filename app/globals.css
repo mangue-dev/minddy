@@ -121,6 +121,12 @@ html[data-desktop-platform="darwin"] .auth-logo-row {
   padding-left: 64px;
 }
 
+/* In the mobile app (MIN-907) the page reaches under the status bar, so the
+   brand starts below it. Marked before the first paint, like the desktop. */
+html[data-native-mobile] .auth-logo-row {
+  padding-top: env(safe-area-inset-top);
+}
+
 /* The auth screens' first appearance (MIN-781): the form's blocks (heading,
    providers, separator, fields, button, footer link) arrive one after the
    other, and the showcase pane eases in from the side behind them. The
@@ -3080,6 +3086,12 @@ html[data-desktop-platform="darwin"]
   padding-top: 0;
 }
 .app-workspace { padding-top: env(safe-area-inset-top); }
+/* On a phone the inset belongs to the page, not to the workspace behind it:
+   the status bar then sits on the page's own color instead of a band of the
+   workspace's gray, and the inset slides aside with the page when the sidebar
+   opens (MIN-907). Every page header starts below it. */
+:root[data-app-layout="mobile"] .app-workspace { padding-top: 0; }
+:root[data-app-layout="mobile"] .app-workspace > .app-shell { padding-top: env(safe-area-inset-top); }
 .app-titlebar-safe-area { height: 44px; }
 /* The workspace fills the viewport at every screen size. */
 html:not([data-desktop-app]) .ultrawide-canvas {
@@ -3283,8 +3295,28 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
    - `--mobile-visible-height`, the height they leave: the cap of anything
      that measures the screen. */
 :root[data-app-layout="mobile"] {
+  /* One type scale on a phone. The interface is written for a desktop, where
+     most text is 14px and its secondary text 12px; on a phone those sat
+     beside surfaces already raised to 16px, so no two screens had the same
+     size and much of the text was too small to read at arm's length. Here
+     every "small" text is body text, 16px, and what was smaller still steps
+     up with it: two sizes carry nearly everything, 16px and 13px. */
+  --text-sm: 1rem;
+  --text-sm--line-height: 1.4;
+  --text-md: 0.9375rem;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-3xs: 0.75rem;
+  --text-2xs: 0.6875rem;
   --mobile-keyboard-duration: 380ms;
   --mobile-keyboard-ease: cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* In the mobile app the shell reports the keyboard as it starts to move,
+     with its duration (lib/use-mobile-layout.ts writes it over the one
+     above): what makes room follows the keyboard's own curve, iOS's, so the
+     two move as one. */
+  &[data-shell-keyboard] {
+    --mobile-keyboard-ease: cubic-bezier(0.38, 0.7, 0.125, 1);
+  }
   @media (prefers-reduced-motion: reduce) {
     --mobile-keyboard-duration: 0ms;
   }
@@ -3293,17 +3325,80 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   --mobile-keyboard-strip: 0px;
   --mobile-keyboard-room: calc(var(--mobile-keyboard-inset, 0px) + var(--mobile-keyboard-strip));
   --mobile-visible-height: calc(var(--mobile-viewport-height, 100dvh) - var(--mobile-keyboard-strip));
-  --mobile-sheet-float: 0px;
+  /* A sheet does not touch the screen: it floats a few pixels from the sides
+     and the bottom, as native sheets do. */
+  --mobile-sheet-gutter: 4px;
+  --mobile-sheet-float: var(--mobile-sheet-gutter);
+  /* How much of that gutter an attached sheet covers: none while it floats,
+     all of it above an open keyboard. */
+  --mobile-sheet-attach: 0px;
+  /* The radius of what the phone's screen frames: the page set aside for the
+     sidebar and the bottom sheets. The mobile app publishes the device's own
+     (`--device-corner-radius`, components/mobile/native-appearance.tsx), so
+     they are concentric with the screen like native sheets; elsewhere, 24px. */
+  --mobile-page-radius: var(--device-corner-radius, 24px);
+  /* A sheet is rounder than a card and tighter than the screen: about six
+     tenths of the screen's corner, as measured on iOS sheets (38pt under a
+     62pt corner). 24px where the device does not say. */
+  --mobile-sheet-radius: calc(var(--device-corner-radius, 40px) * 0.6);
+  /* Its bottom corners follow the screen's, one gutter inside them. Above an
+     open keyboard there is no screen corner to follow. */
+  --mobile-sheet-bottom-radius: max(0px, var(--device-corner-radius, 24px) - var(--mobile-sheet-gutter));
+  /* Where a sheet's own chrome starts: its 44px title bar and close button
+     are centred on the centre of the sheet's corner, one radius from the top
+     and one radius from the side, so the round button is concentric with
+     the corner. */
+  --mobile-sheet-top: max(8px, calc(var(--mobile-sheet-radius) - 22px));
   --mobile-sheet-safe-bottom: env(safe-area-inset-bottom);
   /* A sheet's own bottom padding: clear of the home indicator, and tight
      above an open keyboard, where the field typed in sits right on it. */
   --mobile-sheet-bottom: max(1rem, var(--mobile-sheet-safe-bottom));
-  --mobile-sheet-room: calc(var(--mobile-visible-height) - max(1rem, env(safe-area-inset-top)) - var(--mobile-sheet-float));
+  /* The highest a sheet may reach: under the status bar, with a margin, so
+     it never touches the screen's top edge. */
+  --mobile-sheet-top-gap: max(1rem, calc(env(safe-area-inset-top) + 0.625rem));
+  /* What sits inside a sheet shares one set of measures, whatever the sheet
+     (a picker, the command palette, a menu, an issue's panel):
+     - `--mobile-sheet-inline`, where content starts from the sheet's side:
+       icons, text, section names, form fields and search icons all on it;
+     - a row's highlight starts `--mobile-sheet-inset` from that side, and its
+       content `--mobile-sheet-row-inline` further in, which adds up to the
+       content line;
+     - rows are `--mobile-sheet-row` tall, their icon `--mobile-sheet-icon`,
+       `--mobile-sheet-row-gap` from their text;
+     - the search field is a capsule `--mobile-sheet-search` tall; at a
+       sheet's top it leaves `--mobile-sheet-close-room` to the close button. */
+  --mobile-sheet-inset: 8px;
+  --mobile-sheet-row-inline: 12px;
+  --mobile-sheet-inline: calc(var(--mobile-sheet-inset) + var(--mobile-sheet-row-inline));
+  --mobile-sheet-row: 48px;
+  --mobile-sheet-row-gap: 12px;
+  --mobile-sheet-row-radius: 12px;
+  --mobile-sheet-icon: 20px;
+  --mobile-sheet-search: 44px;
+  --mobile-sheet-close-room: calc(var(--mobile-sheet-top) + 44px + 8px);
+  /* Every sheet's height stays within this. An attached sheet (above an open
+     keyboard) gets back the gap it no longer floats at, so its top stays where
+     it was when the keyboard rises under it. */
+  --mobile-sheet-room: calc(var(--mobile-visible-height) - var(--mobile-sheet-top-gap) - var(--mobile-sheet-float) + var(--mobile-sheet-attach));
+}
+/* Sizes written as one-off pixel values follow the same steps as the scale
+   above. */
+:root[data-app-layout="mobile"] {
+  .text-\[13px\], .text-\[13\.5px\], .text-\[12\.5px\], .text-\[0\.8rem\] { font-size: 0.9375rem; }
+  .text-\[12px\], .text-\[11px\], .text-\[0\.7rem\] { font-size: 0.75rem; }
+  .text-\[10px\], .text-\[9px\] { font-size: 0.6875rem; }
 }
 /* The keyboard covers the home indicator: nothing steps back from it. */
 :root[data-app-layout="mobile"][data-mobile-keyboard] {
   --mobile-sheet-safe-bottom: 0px;
-  --mobile-sheet-bottom: 0.5rem;
+  /* Every field typed in sits 0.5rem above the keyboard, as the editor's
+     strip does (components/editor/mobile-editor-toolbar.tsx). An attached
+     sheet's bottom border already covers part of that gap. */
+  --mobile-sheet-bottom: calc(0.5rem - var(--mobile-sheet-attach));
+  /* Above an open keyboard a sheet is attached: edge to edge and flat on
+     the keyboard, with no gap for the page to show through. */
+  --mobile-sheet-attach: var(--mobile-sheet-gutter);
+  --mobile-sheet-bottom-radius: 0px;
   --mobile-keyboard-strip: var(--mobile-editor-toolbar, 0px);
 }
 /* No keyboard, no keyboard strip: the editor keeps the focus when Safari
@@ -3330,15 +3425,44 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet[data-slot="sheet-content"],
   .mobile-assistant-sheet[data-slot="sheet-content"],
   [data-slot="alert-dialog-content"] {
-    inset: auto 0 calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float));
-    width: 100%;
+    /* An attached sheet grows over its gutter with a border of its own
+       color, not by moving its edges: its content box keeps the same place
+       and width, so nothing inside shifts or reflows while the sheet
+       extends to the screen's edges. */
+    inset: auto calc(var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)) calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float) - var(--mobile-sheet-attach));
+    width: calc(100% - 2 * (var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)));
     max-width: none;
     max-height: var(--mobile-sheet-room);
     height: auto;
     margin: 0;
     translate: none;
     transform: none;
-    border-radius: 24px 24px 0 0;
+    border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-radius) var(--mobile-sheet-bottom-radius);
+    /* A phone's screen corners are not arcs of a circle but continuous
+       curves, which leave the straight edge earlier and turn more gently. A
+       sheet drawn with plain radii beside them has an uneven gap around the
+       corner. Where the browser can clip to a drawn shape, the sheet takes
+       the same kind of corner: each one starts 1.3 radii from the corner and
+       is pulled toward it. `corner-shape` would say this in one word once
+       the WebView knows it. */
+    --sheet-top-reach: calc(var(--mobile-sheet-radius) * 1.3);
+    --sheet-top-pull: calc(var(--mobile-sheet-radius) * 0.31);
+    --sheet-bottom-reach: calc(var(--mobile-sheet-bottom-radius) * 1.3);
+    --sheet-bottom-pull: calc(var(--mobile-sheet-bottom-radius) * 0.31);
+    @supports (clip-path: shape(from 0 0, line to 1px 1px)) {
+      clip-path: shape(
+        from var(--sheet-top-reach) 0,
+        line to calc(100% - var(--sheet-top-reach)) 0,
+        curve to 100% var(--sheet-top-reach) with calc(100% - var(--sheet-top-pull)) 0 / 100% var(--sheet-top-pull),
+        line to 100% calc(100% - var(--sheet-bottom-reach)),
+        curve to calc(100% - var(--sheet-bottom-reach)) 100% with 100% calc(100% - var(--sheet-bottom-pull)) / calc(100% - var(--sheet-bottom-pull)) 100%,
+        line to var(--sheet-bottom-reach) 100%,
+        curve to 0 calc(100% - var(--sheet-bottom-reach)) with var(--sheet-bottom-pull) 100% / 0 calc(100% - var(--sheet-bottom-pull)),
+        line to 0 var(--sheet-top-reach),
+        curve to var(--sheet-top-reach) 0 with 0 var(--sheet-top-pull) / var(--sheet-top-pull) 0,
+        close
+      );
+    }
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -3357,9 +3481,33 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
 
   .mobile-bottom-sheet[data-slot="sheet-content"] {
-    padding-top: 8px;
+    padding-top: var(--mobile-sheet-top);
     border: 0;
     background: var(--card);
+  }
+  /* A picker sheet is a floating surface on a desktop, where it must rise
+     above the dialog that opened it. On a phone it is a sheet among sheets:
+     at the floating layer it stayed above a dialog or a confirmation opened
+     from one of its rows, which then looked as if nothing had opened. Sheets
+     stack in the order they open. */
+  .mobile-bottom-sheet[data-floating-surface] {
+    z-index: 50 !important;
+    backdrop-filter: none;
+  }
+  /* The grab handle of a native sheet: it says the sheet can be swiped down
+     (lib/sheet-swipe-dismiss.ts). Every sheet has the same one. */
+  .mobile-bottom-sheet[data-slot="sheet-content"]::before {
+    content: "";
+    position: absolute;
+    z-index: 31;
+    top: 6px;
+    left: 50%;
+    width: 36px;
+    height: 5px;
+    margin-left: -18px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--foreground) 22%, transparent);
+    pointer-events: none;
   }
   .mobile-bottom-sheet [data-calendar] { width: 100%; }
   .mobile-bottom-sheet [data-calendar] :is(.rdp-weekday, .rdp-day) {
@@ -3371,17 +3519,46 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet [data-calendar] button[data-day] { width: 100%; }
   .mobile-bottom-sheet [data-calendar] :is(.rdp-button_previous, .rdp-button_next) { width: 44px; height: 44px; }
   .mobile-bottom-sheet [data-calendar] .rdp-month_caption { height: 44px; }
+  /* The top of a sheet is a title bar, as on a native sheet: the title in
+     the middle, the close button at the side, the content below. Both sides
+     keep the close button's room so the title is centred on the sheet. */
   .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]),
   .mobile-bottom-sheet > [data-slot="sheet-title"]:not(.sr-only) {
     min-height: 44px;
     justify-content: center;
-    padding-right: 44px;
+    padding-inline: 60px;
+    text-align: center;
+  }
+  .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]) { align-items: center; }
+  .mobile-bottom-sheet :is([data-slot="dialog-title"], [data-slot="sheet-title"]):not(.sr-only) {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
   }
   .mobile-bottom-sheet > [data-slot="sheet-title"]:not(.sr-only) {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
     flex-shrink: 0;
+  }
+  /* A sheet goes straight to its content: a title, no paragraph explaining
+     it. The description stays in the accessibility tree, where it is the
+     dialog's description. Confirmations are not sheets of this kind and keep
+     theirs: what a deletion removes has to be read. */
+  .mobile-bottom-sheet :is([data-slot="dialog-description"], [data-slot="sheet-description"]) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* In a header that also carries a description, the title alone takes the
+     title bar's height, so it sits on the close button's line. */
+  .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]) > :is([data-slot="dialog-title"], [data-slot="sheet-title"]):not(.sr-only) {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
   }
   .mobile-bottom-sheet [data-mobile-sheet-header] {
     min-height: 44px;
@@ -3395,14 +3572,21 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     width: 44px;
     height: 44px;
     min-width: 44px;
-    top: 8px;
-    right: 8px;
+    top: var(--mobile-sheet-top);
+    /* The same distance from the top and from the side: the disc is
+       concentric with the sheet's corner. */
+    right: var(--mobile-sheet-top);
     margin: 0;
     padding: 0;
     border: 0;
     border-radius: 50%;
+    /* A quiet round button, in the search field's colours and at its height:
+       the two sit side by side at the top of a sheet. */
     color: var(--muted-foreground);
-    background: transparent;
+    background: var(--control);
+  }
+  .mobile-bottom-sheet :is([data-mobile-sheet-close], [data-slot="sheet-close"], [data-slot="side-panel-close"]):active {
+    background: var(--control-hover);
   }
   .mobile-bottom-sheet :is([data-mobile-sheet-header], [data-mobile-sheet-toolbar], [data-slot="dialog-header"], [data-slot="sheet-header"], [data-slot="side-panel-header"]) button {
     min-height: 44px;
@@ -3410,21 +3594,18 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-bottom-sheet [data-mobile-sheet-header-actions] { margin: 0; gap: 8px; flex-shrink: 0; }
   .mobile-bottom-sheet [data-mobile-sheet-toolbar] { gap: 8px; }
-  /* Icon buttons in a pane header or a sheet are aimed with a thumb: they
-     grow to 40px, their icon to 20px. `min-*` so a button that is already
-     larger (a sheet's 44px close) keeps its size. */
-  :is(.app-content-header, .mobile-bottom-sheet) :is([data-size="icon-sm"], [data-size="icon"]) {
-    min-width: 40px;
-    min-height: 40px;
-  }
-  :is(.app-content-header, .mobile-bottom-sheet) :is([data-size="icon-sm"], [data-size="icon"]) > svg {
-    width: 20px;
-    height: 20px;
+  /* Buttons take their phone sizes in the component itself
+     (components/ui/button.tsx). This covers what is not that component: a
+     plain button holding a single icon, named by its `aria-label`, gets the
+     same 20px icon. `min-*`, so a larger icon keeps its size. */
+  :is(button, a, [role="button"])[aria-label]:not([data-size], [role="checkbox"], [role="switch"]) > svg:only-child {
+    min-width: 20px;
+    min-height: 20px;
   }
   /* A split button's chevron is one of those icon buttons: its action grows
      with it, or the chevron stood taller than the button it opens. */
-  :is(.app-content-header, .mobile-bottom-sheet) [data-slot="split-button"] > * {
-    min-height: 40px;
+  [data-slot="split-button"] > * {
+    min-height: 44px;
   }
   .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
   .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
@@ -3437,7 +3618,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      `--overlay-scrim` tint, on a phone as on a desktop (MIN-931). */
   .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
   .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
-  .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: 8px; right: 60px; min-height: 44px; }
+  .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: var(--mobile-sheet-top); right: 60px; min-height: 44px; }
   [data-mobile-sidebar-workspace] { background: var(--sidebar); }
   .mobile-sidebar-reveal :is([data-sidebar-navigation-item], [data-sidebar-filter-result], [data-navigation-href], [data-sidebar-back]) { min-height: 44px; }
   .mobile-sidebar-reveal [data-sidebar-filter-result] { min-width: 44px; }
@@ -3485,6 +3666,17 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     will-change: transform;
     touch-action: pan-y pinch-zoom;
   }
+  /* The radius is one value for the whole slide, the settling included: it
+     appears with the first pixel of the gesture and, on the way back, goes
+     only once the page is home again (the delay is the slide's duration). At
+     rest the page is square, so nothing of the workspace shows in the
+     screen's corners. */
+  .app-shell[data-mobile-sidebar-surface] {
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 0s linear 260ms;
+  }
+  .app-shell[data-mobile-sidebar-open="true"] {
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 0s;
+  }
   &:has([data-mobile-sidebar-surface]) { overscroll-behavior-x: none; }
   .app-shell[data-mobile-sidebar-open="true"] { box-shadow: -8px 0 32px rgb(0 0 0 / 0.08); }
   .app-shell[data-mobile-sidebar-dragging="true"] { transition: none; }
@@ -3504,28 +3696,119 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-bottom-sheet :is([data-slot="side-panel-header"], [data-slot="side-panel-footer"]) {
     border: 0;
-    padding: 8px 16px;
+    padding: 8px var(--mobile-sheet-inline);
   }
   .mobile-bottom-sheet [data-slot="side-panel-header"] { padding-right: 60px; }
   .mobile-bottom-sheet [data-slot="side-panel-header"] { min-height: 44px; align-items: center; padding-top: 0; }
   .mobile-bottom-sheet :is([cmdk-separator], [data-slot="separator"], hr) { display: none; }
-  .mobile-bottom-sheet :is([cmdk-root], [data-slot="command"]) {
+  /* The anatomy every sheet shares (the measures are defined with the sheet
+     tokens above). Rows: the cmdk rows of pickers and action menus, and any
+     row marked as one. */
+  .mobile-bottom-sheet :is([cmdk-item], [data-mobile-sheet-row]) {
+    min-height: var(--mobile-sheet-row);
+    padding-block: 6px;
+    padding-inline: var(--mobile-sheet-row-inline);
+    gap: var(--mobile-sheet-row-gap);
+    border-radius: var(--mobile-sheet-row-radius);
+    font-size: 1rem;
+  }
+  .mobile-bottom-sheet :is([cmdk-item], [data-mobile-sheet-row]) svg:is(.size-4, .size-5, .size-\[18px\]) {
+    width: var(--mobile-sheet-icon);
+    height: var(--mobile-sheet-icon);
+  }
+  /* A row in a sheet whose own padding is the content line (a menu laid out
+     in a dialog): its highlight reaches out to the rows' inset. */
+  .mobile-bottom-sheet[data-mobile-dialog] [data-mobile-sheet-row] {
+    width: calc(100% + 2 * var(--mobile-sheet-row-inline));
+    margin-inline: calc(-1 * var(--mobile-sheet-row-inline));
+  }
+  /* A dialog that is a menu lists its rows edge to edge, as other sheets do:
+     the dialog's own gap stays under its title only. */
+  .mobile-bottom-sheet[data-mobile-dialog]:has(> [data-mobile-sheet-row]) {
+    row-gap: 0;
+  }
+  .mobile-bottom-sheet[data-mobile-dialog]:has(> [data-mobile-sheet-row]) > [data-slot="dialog-title"] {
+    margin-bottom: 8px;
+  }
+  /* Section names start on the content line, as the rows' text does. */
+  .mobile-bottom-sheet :is([cmdk-group-heading], [data-mobile-sheet-heading]) {
+    padding: 12px var(--mobile-sheet-row-inline) 4px;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    font-weight: 500;
+    color: var(--muted-foreground);
+  }
+  /* One search field: a capsule in the close button's colours. Under a
+     title its magnifier sits on the rows' icon line; at a sheet's top it is
+     placed by the corner instead (see `.mobile-picker-sheet` below). */
+  .mobile-bottom-sheet :is([data-sheet-search], [data-slot="command-input-wrapper"], [data-mobile-sheet-search]) {
+    display: flex;
+    align-items: center;
+    gap: var(--mobile-sheet-row-gap);
+    min-height: var(--mobile-sheet-search);
+    padding: 0 var(--mobile-sheet-row-inline);
+    flex-shrink: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--control);
+  }
+  .mobile-bottom-sheet :is([data-sheet-search], [data-slot="command-input-wrapper"], [data-mobile-sheet-search]) svg {
+    width: var(--mobile-sheet-icon);
+    height: var(--mobile-sheet-icon);
+    opacity: 1;
+    color: var(--muted-foreground);
+  }
+  .mobile-bottom-sheet :is([data-sheet-search], [data-slot="command-input-wrapper"], [data-mobile-sheet-search]) input {
+    height: var(--mobile-sheet-search);
+    font-size: 1rem;
+    background: transparent;
+  }
+  .mobile-bottom-sheet :is([data-sheet-search], [data-slot="command-input-wrapper"]) [data-slot="input-group"] {
+    flex: 1;
+    height: auto !important;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  /* Sheets whose content is not a list start it on the content line. */
+  .mobile-bottom-sheet[data-mobile-dialog] {
+    padding-inline: var(--mobile-sheet-inline);
+  }
+  /* Sheets laid out edge to edge, whose header and body pad themselves. */
+  :is(.mobile-side-panel-sheet, .mobile-assistant-sheet) [data-mobile-sheet-header] {
+    padding-left: var(--mobile-sheet-inline);
+  }
+  .mobile-side-panel-sheet [data-slot="side-panel-body"] {
+    padding-inline: var(--mobile-sheet-inline);
+  }
+  .mobile-bottom-sheet[data-slot="sheet-content"] :is([cmdk-root], [data-slot="command"]) {
     background: var(--card);
     border-radius: 0;
     padding: 0;
   }
   .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"]),
   [data-slot="alert-dialog-footer"] {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* On a phone the actions of a sheet are stacked, each the full width,
+       never side by side: the main action on top, then the way out, then
+       any side action. The markup lists them in the desktop's order, main
+       action last, hence the reversed column. */
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: stretch;
     gap: 8px;
     border: 0;
   }
-  .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"]) > :last-child:only-child,
-  [data-slot="alert-dialog-footer"] > :last-child:only-child {
-    grid-column: 1 / -1;
+  /* A form's side action (dictation) is a button like the others, with its
+     label, under the main one. */
+  .mobile-bottom-sheet [data-sheet-auxiliary-action] { margin: 0; }
+  .mobile-bottom-sheet [data-sheet-auxiliary-action] > button {
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    justify-content: center;
+    border-radius: 999px;
+    color: var(--foreground);
   }
-  .mobile-bottom-sheet [data-sheet-auxiliary-action] { grid-column: 1 / -1; }
   .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"]) > button,
   [data-slot="alert-dialog-footer"] > button {
     min-height: 44px;
@@ -3535,25 +3818,26 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     white-space: normal;
     margin: 0;
   }
-  [data-slot="alert-dialog-footer"]:has(> :nth-child(3)) > :last-child { grid-column: 1 / -1; }
   [data-slot="alert-dialog-footer"] > * { order: 0; min-width: 0; }
   [data-slot="alert-dialog-cancel"] { border: 0; background: transparent; box-shadow: none; }
   [data-slot="alert-dialog-content"] {
     border: 0;
-    padding: 16px;
+    padding: 16px var(--mobile-sheet-inline);
     translate: 0 0 !important;
   }
   [data-slot="alert-dialog-header"] { text-align: left; place-items: start; }
   .mobile-bottom-sheet [data-mobile-sheet-actions] {
     position: sticky;
     bottom: 0;
-    flex-direction: row-reverse;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
     padding-block: 16px 0;
     background: var(--card);
   }
   .mobile-bottom-sheet [data-mobile-sheet-actions] > button {
-    flex: 1;
+    flex: none;
+    width: 100%;
     min-height: 44px;
     height: auto;
   }
@@ -3566,16 +3850,17 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     background: linear-gradient(to bottom, transparent, var(--card));
   }
   .mobile-picker-sheet[data-slot="sheet-content"] {
-    max-height: min(75dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
+    max-height: min(75dvh, var(--mobile-sheet-room));
     overflow: hidden;
-    padding: 52px 16px var(--mobile-sheet-bottom);
+    padding: calc(var(--mobile-sheet-top) + 44px) var(--mobile-sheet-inset) var(--mobile-sheet-bottom);
   }
   .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"])[data-slot="sheet-content"] {
-    padding-top: 8px;
+    padding-top: var(--mobile-sheet-top);
   }
   .mobile-picker-sheet > .mobile-picker-title {
     position: absolute;
-    inset: 8px 60px auto 16px;
+    inset: var(--mobile-sheet-top) 60px auto 60px;
+    padding-inline: 0;
   }
   .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"]) > .mobile-picker-title {
     position: absolute;
@@ -3588,19 +3873,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     white-space: nowrap;
   }
   .mobile-bottom-sheet :is([data-sheet-note], [data-sheet-section]) { border: 0; }
+  /* A picker's search field is its top row, beside the close button, and
+     like it concentric with the sheet's corner: as far from the side as from
+     the top, so its round end turns around the same centre as the corner. */
   .mobile-picker-sheet :is([data-sheet-search], [data-slot="command-input-wrapper"]) {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0 44px 0 0;
-    flex-shrink: 0;
-    border: 0;
-  }
-  .mobile-picker-sheet [data-slot="input-group"] {
-    flex: 1;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
+    margin: 0 calc(var(--mobile-sheet-close-room) - var(--mobile-sheet-inset)) 8px calc(var(--mobile-sheet-top) - var(--mobile-sheet-inset));
   }
   .mobile-picker-sheet [cmdk-root] {
     display: flex;
@@ -3610,13 +3887,25 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-picker-sheet [cmdk-list] {
     min-height: 0;
-    max-height: min(50dvh, calc(var(--mobile-visible-height) - 7rem - var(--mobile-sheet-float)));
+    /* The sheet's room, less its search field and paddings. */
+    max-height: min(50dvh, calc(var(--mobile-sheet-room) - 6rem));
     overflow-y: auto;
     overscroll-behavior: contain;
   }
-  .mobile-picker-sheet [cmdk-item] {
-    min-height: 44px;
+
+  /* A group inside a group (a section of an action sheet) kept its own
+     inset: its rows started 4px to the right of the rows around it. Every
+     row and heading of a sheet starts on the same line. */
+  .mobile-picker-sheet [cmdk-group] [cmdk-group] {
+    padding-inline: 0;
   }
+  /* Rows and section names start under the search field's icon: a group has
+     no side inset of its own in a sheet (its rows keep theirs, the same 8px
+     as the search row's). */
+  .mobile-picker-sheet [cmdk-group] {
+    padding-inline: 0;
+  }
+
   .mobile-assistant-sheet[data-slot="sheet-content"] {
     height: var(--mobile-sheet-room);
     overflow: hidden;
@@ -3627,15 +3916,53 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     min-height: 0;
   }
   .mobile-assistant-sheet [data-mobile-sheet-close]:not([data-slot="sheet-close"]) { display: none; }
+  /* A sheet with a height of its own leaves the keyboard to its `max-height`
+     alone (the shared `--mobile-sheet-room`). With the keyboard in its
+     `height` too, the two moved apart while the keyboard went: one, then the
+     other held the sheet, and its top dipped and came back. */
   .mobile-command-palette[data-slot="sheet-content"] {
-    height: min(85dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
-    padding: 8px 0 var(--mobile-sheet-bottom);
+    height: 85dvh;
+    padding: var(--mobile-sheet-top) var(--mobile-sheet-inset) var(--mobile-sheet-bottom);
     gap: 0;
     overflow: hidden;
     --cp-bg: var(--card);
   }
+  /* The bar stays at the foot of the screen, under the keyboard, which covers
+     it and uncovers it as it goes, as a native tab bar is. It is laid out
+     from the top, over the screen's height: its containing block is the page
+     (`.app-shell`, translated for the sidebar), which the keyboard shortens
+     while one of its fields types, and a bar anchored to that page's bottom
+     reappeared mid-screen and slid down with it. What the shortened page
+     clips of it is out of sight, under the keyboard. */
   [data-mobile-navigation] {
-    bottom: var(--mobile-keyboard-inset, 0px);
+    top: 0;
+    bottom: auto;
+    height: 100dvh;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+  [data-mobile-navigation] > div {
+    pointer-events: auto;
+  }
+  /* A bottom sheet enters from under the screen's edge, and leaves under it.
+     Its own height is not enough: it rests above the keyboard and its gap,
+     so a sheet opened with the keyboard (the command palette) started its
+     slide halfway up the screen, and seemed to pop in. */
+  :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"] {
+    --tw-enter-translate-y: calc(100% + var(--mobile-keyboard-room) + var(--mobile-sheet-float));
+    --tw-exit-translate-y: calc(100% + var(--mobile-keyboard-room) + var(--mobile-sheet-float));
+  }
+  /* Until it is first painted, its slide waits on its first frame
+     (components/ui/mobile-sheet.tsx). */
+  [data-sheet-entering] {
+    animation-play-state: paused;
+  }
+  /* The mobile app draws this bar natively, in the same place
+     (lib/mobile/native-navigation.ts). The web bar stays laid out and
+     hit-testable, which is how the shell learns where it is and whether a
+     sheet covers it. */
+  &[data-native-navigation] [data-mobile-navigation] > div {
+    opacity: 0;
   }
   /* Typing in the workspace itself (a composer, a page): the shell shrinks to
      the visible height, so what sits at its bottom rises above the keyboard
@@ -3644,6 +3971,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      (MIN-870). */
   &[data-mobile-keyboard="shell"] :is(.app-workspace, .app-workspace .app-shell) {
     height: var(--mobile-visible-height);
+  }
+  /* The border an attached sheet grows over its gutter with (see the shared
+     sheet rule). After the rules that clear a sheet's borders, so it holds. */
+  :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"],
+  [data-slot="alert-dialog-content"] {
+    border: solid var(--card);
+    border-width: 0 var(--mobile-sheet-attach) var(--mobile-sheet-attach);
   }
   /* What makes room for the keyboard moves with it: the hook announces the
      keyboard as soon as a field takes the focus, and these follow it over
@@ -3661,14 +3995,37 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     transition-duration: var(--mobile-keyboard-duration);
     transition-timing-function: var(--mobile-keyboard-ease);
   }
+  /* The reserve under the page for the bottom bar goes while a field of the
+     page types, and the composer's own padding tightens. At once, they made
+     what sits at the page's foot (the Numo composer) drop before rising
+     with the keyboard, and leap up before going down with it. */
+  &[data-mobile-keyboard-moving] :is(.app-shell main, [data-keyboard-dock]) {
+    transition-property: padding-bottom;
+    transition-duration: var(--mobile-keyboard-duration);
+    transition-timing-function: var(--mobile-keyboard-ease);
+  }
+  /* A sheet attaching to the screen's edges, or leaving them, does it over
+     the same movement: it widens and its bottom corners square off. */
+  &[data-mobile-keyboard-moving] :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"],
+  &[data-mobile-keyboard-moving] [data-slot="alert-dialog-content"] {
+    /* The padding too: its foot steps back from the home indicator without
+       the keyboard and hugs the keyboard with it, and that change, made at
+       once, resized the sheet in the middle of the movement. */
+    transition-property: bottom, height, max-height, left, right, width, border-width, border-radius, clip-path, padding-bottom;
+  }
   /* A docked comment composer gives its room to the field being typed in,
      and comes back with the keyboard down. */
   &[data-mobile-keyboard] [data-keyboard-dock]:not(:focus-within) {
     display: none;
   }
-  /* The one in use sits right above the keyboard: no home indicator to clear. */
+  /* The one in use sits right above the keyboard: no home indicator to
+     clear, and the same gap as every other field (see `--mobile-sheet-bottom`),
+     its sheet's bottom border included. */
   &[data-mobile-keyboard] [data-keyboard-dock] {
     padding-bottom: 0.5rem;
+  }
+  &[data-mobile-keyboard] :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"] [data-keyboard-dock] {
+    padding-bottom: calc(0.5rem - var(--mobile-sheet-attach));
   }
   /* The navigation pill hides while typing (components/mobile-navigation.tsx):
      its reserve under the content goes back to the field. */
@@ -3717,9 +4074,9 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 :root[data-app-layout="mobile"] {
   .mobile-inbox-sheet[data-slot="sheet-content"] {
-    height: min(85dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
-    max-height: calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float));
-    padding-top: 3rem;
+    height: 85dvh;
+    max-height: var(--mobile-sheet-room);
+    padding-top: calc(var(--mobile-sheet-top) + 44px);
   }
   .mobile-inbox-sheet .divide-y > :not(:last-child) { border-bottom-width: 0; }
 }
@@ -3729,8 +4086,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
 :root[data-app-layout="mobile"] {
   .creation-sheet[data-slot="sheet-content"] {
-    height: min(92dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
-    padding: 8px 1rem var(--mobile-sheet-bottom);
+    height: 92dvh;
+    padding: var(--mobile-sheet-top) var(--mobile-sheet-inline) var(--mobile-sheet-bottom);
     gap: 1rem;
     overflow: hidden;
   }
@@ -3854,7 +4211,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     [data-slot="alert-dialog-content"] {
       width: min(100% - 2 * max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)), 40rem);
       margin-inline: auto;
-      border-radius: 24px;
+      border-radius: var(--mobile-sheet-radius);
     }
   }
 }
@@ -3887,7 +4244,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 }
 
 :root[data-app-layout="mobile"] .documentation-numo-sheet[data-slot="sheet-content"] {
-  height: min(85dvh, calc(var(--mobile-visible-height) - 1rem - var(--mobile-sheet-float)));
+  height: 85dvh;
+  max-height: var(--mobile-sheet-room, 85dvh);
   overflow: hidden;
   padding: 0;
 }

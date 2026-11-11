@@ -23,11 +23,12 @@ vi.mock("./app-sidebar", () => ({
 }));
 vi.mock("./mobile-nav-actions", () => ({
   MobileNumoButton: () => <button aria-label="Numo" />,
-  MobileNotebookButton: () => <button aria-label="Task notebook" />,
   MobileCreateButton: () => <button aria-label="New" />,
 }));
 vi.mock("@/components/icon", () => ({ AppIcon: (props: { className?: string }) => <svg aria-hidden className={props.className} /> }));
 vi.mock("@/lib/use-mobile-layout", () => ({ useMobileLayout: () => navigation.mobile }));
+vi.mock("@/components/user-avatar", () => ({ UserAvatar: ({ seed }: { seed: string }) => <span data-avatar={seed} /> }));
+vi.mock("@/lib/use-my-avatar", () => ({ useMyAvatarSource: () => "seed-me" }));
 const activeElement = <T extends HTMLElement>(selector: string) => [...document.querySelectorAll<T>(selector)].find((node) => !node.closest("[inert]"))!;
 const activePanel = () => activeElement<HTMLElement>("[data-mobile-sidebar-panel]");
 let root: ReturnType<typeof createRoot>;
@@ -158,13 +159,15 @@ it("keeps route-owned portal controls mounted while browsing other levels and sh
   expect(navigation.visit).not.toHaveBeenCalled();
 });
 
-it("orders the bottom bar as sidebar, Numo, search, task notebook and New, without a Home link", async () => {
+it("orders the bottom bar as Home, Numo, search, New and the account, which opens the sidebar", async () => {
   await act(() => root.render(<NextIntlClientProvider locale="en" messages={{ Nav: { goTo: "Go to", home: "Home", searchPlaceholder: "Search" }, Common: { back: "Back", close: "Close", clearFilter: "Clear filter" }, Settings: { filterPlaceholder: "Filter {count} items" } }}>
     <MobileNavigation sections={[]} onSearch={() => {}} />
   </NextIntlClientProvider>));
   const bar = container.querySelector("[data-mobile-navigation]")!;
   expect([...bar.querySelectorAll("a, button")].map((control) => control.getAttribute("aria-label")))
-    .toEqual(["Go to", "Numo", "Search", "Task notebook", "New"]);
+    .toEqual(["Home", "Numo", "Search", "New", "Go to"]);
+  expect(bar.querySelector('a[href="/home"]')).not.toBeNull();
+  expect(bar.querySelector("[data-mobile-menu-trigger] [data-avatar]")).not.toBeNull();
 });
 
 it("gives the focus back to the menu button without a focus style of its own", async () => {

@@ -166,6 +166,11 @@ jobs:
       - name: Install desktop test dependencies
         run: npm --prefix desktop ci --ignore-scripts
 
+      # The mobile shell has its own lockfile too. Only its TypeScript and
+      # Capacitor's project sync run here; the iOS build needs macOS.
+      - name: Install mobile dependencies
+        run: npm --prefix mobile ci --ignore-scripts
+
       # The linter goes first: 2 s, and it catches a class of errors that
       # the typecheck does not see (unsafe optional chaining, dead variable,
       # invalid `fetch` options). `--deny-warnings` makes it a barrier —
@@ -189,12 +194,23 @@ jobs:
         run: |
           pnpm run typecheck
           npm --prefix desktop run typecheck
+          npm --prefix mobile run typecheck
 
       # The root tsconfig excludes the Electron shell, which has its own build.
       # The bundle nevertheless resolves all its local imports: it therefore catches a
       # API moved to launcher before releasing a broken binary.
       - name: Desktop bundle
         run: node scripts/build-desktop.mjs
+
+      # The pages bundled in the mobile app resolve their imports the same way.
+      # `cap sync` then regenerates the committed Swift package manifest: a
+      # difference means a plugin was added without committing the result.
+      - name: Mobile bundle
+        working-directory: mobile
+        run: |
+          npm run build
+          npx cap sync ios
+          git diff --exit-code -- ios
 
       - name: Tooling tests
         run: pnpm run test:tooling

@@ -23,8 +23,9 @@ import {
   Add01Icon,
   AtIcon,
   CheckIcon,
+  ChevronDownIcon,
   CodeSimpleIcon,
-  KeyboardOffIcon,
+  Search01Icon,
   Link02Icon,
   MessageAdd01Icon,
   TextBoldIcon,
@@ -41,7 +42,7 @@ import type { Editor } from "@tiptap/core";
 import type { EditorView } from "@tiptap/pm/view";
 import { useEditorState } from "@tiptap/react";
 import { AppIcon } from "@/components/icon";
-import { Input } from "@/components/ui/input";
+import { searchInputClass } from "@/components/search-menu";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent, MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import { cn } from "@/lib/utils";
@@ -72,10 +73,16 @@ import {
   type PageSlashItem,
 } from "@/components/pages/page-slash-command";
 import { useWeekStart } from "@/lib/use-week-start";
+import { useScrollFade } from "@/lib/use-scroll-fade";
+import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
+import { useMergedRef } from "@/components/ui/menu-scroll-fade";
 import { visibleBand } from "@/lib/visible-band";
 
-/** The island's height, and the gap it keeps around itself. */
-const TOOLBAR_HEIGHT = 44;
+/**
+ * The island's height, and the gap it keeps around itself. Every field typed
+ * in sits the same gap above the keyboard (app/globals.css, `[data-keyboard-dock]`).
+ */
+const TOOLBAR_HEIGHT = 52;
 const TOOLBAR_GAP = 8;
 /** What the sheets above the keyboard reserve for it (app/globals.css). */
 const TOOLBAR_RESERVE = TOOLBAR_HEIGHT + TOOLBAR_GAP * 2;
@@ -126,7 +133,7 @@ export function revealCaret(editor: Editor) {
 
 /** A section's header in a sheet, as in the “/” and “@” menus. */
 function SheetSectionHeader({ label }: { label: string }) {
-  return <div role="presentation" className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground group-first/section:pt-1">{label}</div>;
+  return <div role="presentation" data-mobile-sheet-heading className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground group-first/section:pt-1">{label}</div>;
 }
 
 /** A row of the two sheets: the blocks' list sets the size for both. */
@@ -135,6 +142,7 @@ function SheetRow({ onPick, children }: { onPick: () => void; children: ReactNod
     <button
       type="button"
       onClick={onPick}
+      data-mobile-sheet-row
       className="flex min-h-12 w-full min-w-0 items-center gap-3 rounded-lg px-3 text-left text-sm active:bg-control"
     >
       {children}
@@ -142,10 +150,25 @@ function SheetRow({ onPick, children }: { onPick: () => void; children: ReactNod
   );
 }
 
-function ToolbarButton({ label, active = false, disabled = false, onPress, children }: {
+/**
+ * Lets the tools scroll inside a modal sheet. A Radix dialog locks scrolling
+ * outside its content (react-remove-scroll, listening on the document), and
+ * the strip is rendered on the body: every swipe on it was cancelled.
+ * Stopping the move on the strip keeps it from that lock.
+ */
+function scrollableOutsideDialogs(node: HTMLDivElement | null) {
+  if (!node) return;
+  const keep = (event: TouchEvent) => event.stopPropagation();
+  node.addEventListener("touchmove", keep, { passive: true });
+  return () => node.removeEventListener("touchmove", keep);
+}
+
+function ToolbarButton({ label, active = false, disabled = false, pinned = false, onPress, children }: {
   label: string;
   active?: boolean;
   disabled?: boolean;
+  /** Outside the carousel, at the strip's end. */
+  pinned?: boolean;
   onPress: () => void;
   children: ReactNode;
 }) {
@@ -158,12 +181,17 @@ function ToolbarButton({ label, active = false, disabled = false, onPress, child
       onPointerDown={(event) => event.preventDefault()}
       onMouseDown={(event) => event.preventDefault()}
       onClick={onPress}
-      className="group/tool flex size-11 shrink-0 touch-manipulation items-center justify-center text-foreground/80 disabled:opacity-40"
+      className={cn(
+        "group/tool flex h-full shrink-0 touch-manipulation items-center justify-center text-foreground/80 disabled:opacity-40",
+        // A carousel slot: four and a half fit the strip, the half one at the
+        // edge saying there are more, and each snaps to its start.
+        pinned ? "w-16" : "grow-0 basis-[calc(100%/4.5)] snap-start",
+      )}
     >
       {/* The highlight sits inside the touch target, with room around it. */}
       <span
         className={cn(
-          "flex size-9 items-center justify-center rounded-lg group-active/tool:bg-control",
+          "flex h-10 w-14 items-center justify-center rounded-full group-active/tool:bg-control",
           active && "bg-control text-foreground",
         )}
       >
@@ -204,6 +232,9 @@ export function MobileEditorToolbar({
   // click arrives, whatever `pointerdown` prevents: the strip must stay for
   // that click instead of hiding with the editor's blur.
   const pressing = useRef(false);
+  // The carousel's edges fade where more tools hide, and only there.
+  const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>("x");
+  const carouselRef = useMergedRef(fadeRef, scrollableOutsideDialogs);
 
   useEffect(() => {
     let frame = 0;
@@ -358,59 +389,63 @@ export function MobileEditorToolbar({
           // tools scroll inside it, and hiding the keyboard stays pinned on the
           // right. `pointer-events-auto`: on the body, under a modal sheet (the
           // notebook) that sets `pointer-events: none` on everything else.
-          className="pointer-events-auto fixed inset-x-2 z-[80] flex items-center overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-lg"
+          className="pointer-events-auto fixed inset-x-2 z-[80] flex items-center overflow-hidden rounded-full border border-border bg-popover text-popover-foreground shadow-lg"
           style={{ height: TOOLBAR_HEIGHT, bottom: `calc(var(--mobile-keyboard-inset, 0px) + ${TOOLBAR_GAP}px)` }}
         >
-          <div className="no-scrollbar flex h-full min-w-0 flex-1 items-center gap-0.5 overflow-x-auto overflow-y-hidden overscroll-none px-1"
-            style={{ touchAction: "pan-x" }}>
-            <ToolbarButton label={t("mobileInsertBlock")} onPress={() => open("blocks")}>
-              <HugeiconsIcon icon={Add01Icon} className="size-5" />
-            </ToolbarButton>
-            {mentionItems && (
-              <ToolbarButton label={t("mobileMention")} onPress={() => open("mentions")}>
-                <HugeiconsIcon icon={AtIcon} className="size-5" />
+          {/* A carousel, as in Apple Notes: wide slots that snap one by one,
+              not a free scroll. */}
+          <div className="relative flex h-full min-w-0 flex-1">
+            <div ref={carouselRef} onScroll={scrollProps.onScroll}
+              className="no-scrollbar flex h-full min-w-0 flex-1 snap-x snap-mandatory items-center overflow-x-auto overflow-y-hidden overscroll-x-contain"
+              style={{ touchAction: "pan-x" }}>
+              <ToolbarButton label={t("mobileInsertBlock")} onPress={() => open("blocks")}>
+                <HugeiconsIcon icon={Add01Icon} className="size-6" />
               </ToolbarButton>
-            )}
-            <span aria-hidden className="mx-0.5 h-6 w-px shrink-0 bg-border" />
-            <ToolbarButton label={t("selectionBold")} active={active?.bold}
-              onPress={() => editor.chain().focus().toggleBold().run()}>
-              <HugeiconsIcon icon={TextBoldIcon} className="size-5" />
-            </ToolbarButton>
-            <ToolbarButton label={t("selectionItalic")} active={active?.italic}
-              onPress={() => editor.chain().focus().toggleItalic().run()}>
-              <HugeiconsIcon icon={TextItalicIcon} className="size-5" />
-            </ToolbarButton>
-            <ToolbarButton label={t("selectionStrike")} active={active?.strike}
-              onPress={() => editor.chain().focus().toggleStrike().run()}>
-              <HugeiconsIcon icon={TextStrikethroughIcon} className="size-5" />
-            </ToolbarButton>
-            <ToolbarButton label={t("selectionCode")} active={active?.code}
-              onPress={() => editor.chain().focus().toggleCode().run()}>
-              <AppIcon icon={CodeSimpleIcon} className="size-5" />
-            </ToolbarButton>
-            <ToolbarButton label={t("color")} active={!!(active?.text || active?.background)}
-              onPress={() => open("color")}>
-              <HugeiconsIcon icon={TextColorIcon} className="size-5" />
-            </ToolbarButton>
-            <ToolbarButton label={active?.link ? t("selectionEditLink") : t("selectionAddLink")}
-              active={active?.link} onPress={() => setLinkOpen(true)}>
-              <HugeiconsIcon icon={Link02Icon} className="size-5" />
-            </ToolbarButton>
-            <ToolbarButton label={t("mobileOutdent")} disabled={!active?.canOutdent} onPress={outdent}>
-              <HugeiconsIcon icon={TextIndentLessIcon} className="size-5" />
-            </ToolbarButton>
-            <ToolbarButton label={t("mobileIndent")} disabled={!active?.canIndent} onPress={indent}>
-              <HugeiconsIcon icon={TextIndentMoreIcon} className="size-5" />
-            </ToolbarButton>
-            {onComment && (
-              <ToolbarButton label={t("commentSelection")} onPress={onComment}>
-                <HugeiconsIcon icon={MessageAdd01Icon} className="size-5" />
+              {mentionItems && (
+                <ToolbarButton label={t("mobileMention")} onPress={() => open("mentions")}>
+                  <HugeiconsIcon icon={AtIcon} className="size-6" />
+                </ToolbarButton>
+              )}
+              <ToolbarButton label={t("selectionBold")} active={active?.bold}
+                onPress={() => editor.chain().focus().toggleBold().run()}>
+                <HugeiconsIcon icon={TextBoldIcon} className="size-6" />
               </ToolbarButton>
-            )}
+              <ToolbarButton label={t("selectionItalic")} active={active?.italic}
+                onPress={() => editor.chain().focus().toggleItalic().run()}>
+                <HugeiconsIcon icon={TextItalicIcon} className="size-6" />
+              </ToolbarButton>
+              <ToolbarButton label={t("selectionStrike")} active={active?.strike}
+                onPress={() => editor.chain().focus().toggleStrike().run()}>
+                <HugeiconsIcon icon={TextStrikethroughIcon} className="size-6" />
+              </ToolbarButton>
+              <ToolbarButton label={t("selectionCode")} active={active?.code}
+                onPress={() => editor.chain().focus().toggleCode().run()}>
+                <AppIcon icon={CodeSimpleIcon} className="size-6" />
+              </ToolbarButton>
+              <ToolbarButton label={t("color")} active={!!(active?.text || active?.background)}
+                onPress={() => open("color")}>
+                <HugeiconsIcon icon={TextColorIcon} className="size-6" />
+              </ToolbarButton>
+              <ToolbarButton label={active?.link ? t("selectionEditLink") : t("selectionAddLink")}
+                active={active?.link} onPress={() => setLinkOpen(true)}>
+                <HugeiconsIcon icon={Link02Icon} className="size-6" />
+              </ToolbarButton>
+              <ToolbarButton label={t("mobileOutdent")} disabled={!active?.canOutdent} onPress={outdent}>
+                <HugeiconsIcon icon={TextIndentLessIcon} className="size-6" />
+              </ToolbarButton>
+              <ToolbarButton label={t("mobileIndent")} disabled={!active?.canIndent} onPress={indent}>
+                <HugeiconsIcon icon={TextIndentMoreIcon} className="size-6" />
+              </ToolbarButton>
+              {onComment && (
+                <ToolbarButton label={t("commentSelection")} onPress={onComment}>
+                  <HugeiconsIcon icon={MessageAdd01Icon} className="size-6" />
+                </ToolbarButton>
+              )}
+            </div>
+            <ScrollFadeEdges edges={edges} axis="x" from="from-popover" className="w-10" />
           </div>
-          <span aria-hidden className="h-6 w-px shrink-0 bg-border" />
-          <ToolbarButton label={t("mobileHideKeyboard")} onPress={() => editor.commands.blur()}>
-            <HugeiconsIcon icon={KeyboardOffIcon} className="size-5" />
+          <ToolbarButton pinned label={t("mobileHideKeyboard")} onPress={() => editor.commands.blur()}>
+            <HugeiconsIcon icon={ChevronDownIcon} className="size-6" />
           </ToolbarButton>
         </div>,
         document.body,
@@ -435,14 +470,18 @@ export function MobileEditorToolbar({
           <SheetTitle className="mobile-picker-title truncate">
             {sheet === "mentions" ? t("mobileMention") : sheet === "color" ? t("color") : t("mobileInsertBlock")}
           </SheetTitle>
-          {sheet !== "color" && <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={tPicker("search")}
-            aria-label={tPicker("search")}
-            className="h-11"
-          />}
-          <MobileSheetScrollArea className="max-h-[min(50dvh,calc(var(--mobile-viewport-height,100dvh)-9rem))]">
+          {/* The sheets' search field (app/globals.css), under the title. */}
+          {sheet !== "color" && <div data-mobile-sheet-search>
+            <HugeiconsIcon icon={Search01Icon} className="shrink-0" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={tPicker("search")}
+              aria-label={tPicker("search")}
+              className={searchInputClass}
+            />
+          </div>}
+          <MobileSheetScrollArea className="max-h-[min(50dvh,calc(var(--mobile-sheet-room,100dvh)-6rem))]">
             {sheet === "blocks" && blockSections.map((section) => (
               <div key={section.id ?? "none"} role="group" className="group/section" aria-label={section.items[0]?.section?.label}>
                 {section.items[0]?.section && <SheetSectionHeader label={section.items[0].section.label} />}

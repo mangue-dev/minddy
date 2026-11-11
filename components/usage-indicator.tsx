@@ -19,6 +19,7 @@ import {
   useBillingSummary,
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 import {
@@ -148,6 +149,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations("Billing");
   const { status, planId } = useBillingSummary();
   const [redirecting, setRedirecting] = useState(false);
+  const purchasesHidden = usePurchasesHidden();
 
   const nextPlanId: BillingPlanId | null =
     planId === "free" ? "go" : planId === "go" ? "pro" : null;
@@ -167,6 +169,10 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
       setRedirecting(false);
     }
   }, [nextPlanId, redirecting, status?.subscription]);
+
+  // The mobile apps keep the usage figures and drop the way to a purchase
+  // (MIN-907).
+  if (purchasesHidden) return null;
 
   return (
     <div className="shrink-0 space-y-1 p-2">
