@@ -255,7 +255,12 @@ describe("touch feedback", () => {
     // Under `pointer: coarse` only, so the mouse experience is unchanged, and
     // never when the user requests reduced motion (`motion-safe`).
     expect(read(TOUCH)).toContain(
-      '"data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:active:[scale:0.97]"',
+      'data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:active:[scale:0.97]',
+    );
+    // And while a finger holds it, which `:active` alone misses in the iOS
+    // WebView (lib/press-state.ts).
+    expect(read(TOUCH)).toContain(
+      'data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:data-pressed:[scale:0.97]',
     );
   });
 

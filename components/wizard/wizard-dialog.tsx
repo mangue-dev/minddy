@@ -177,7 +177,7 @@ export function WizardDialog<Id extends string>({
         {/* Header: only where we are. Progression is the only
             thing that does not move from one stage to the next — it holds the top of
             the modal, at the height of the closing button. */}
-        <div className="flex shrink-0 justify-center px-6 pt-5 pb-2">
+        <div className="flex shrink-0 justify-center px-6 pt-5 pb-2 app-mobile:px-[var(--mobile-sheet-inline)]">
           <WizardStepper
             className="pt-2.5"
             currentStep={index + 1}
@@ -195,7 +195,7 @@ export function WizardDialog<Id extends string>({
             that there is room left, and fall back to zero as soon as there is none
             more: the form then starts from the top and is browsed in
             entier. */}
-        <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-4 pb-12">
+        <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-4 pb-12 app-mobile:px-[var(--mobile-sheet-inline)]">
           <form
             {...submitShortcut}
             onSubmit={(e) => {

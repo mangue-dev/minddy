@@ -74,6 +74,7 @@ import {
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useMobileLayout, useMobileViewport } from "@/lib/use-mobile-layout";
+import { trackPressState } from "@/lib/press-state";
 import { primeMobileKeyboard } from "@/lib/mobile-sheet-focus";
 import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSettingsMenu } from "@/components/mobile-project-menu";
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
@@ -281,6 +282,8 @@ function AppTabChangeEffect({ onChange }: { onChange: () => void }) {
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   useMobileViewport({ pinDocument: true });
   useCanonicalProjectUrl();
+  // A held control shows it is pressed (lib/press-state.ts).
+  useEffect(() => trackPressState(), []);
   // A root marker keeps application typography scoped without repeatedly
   // matching relational :has() selectors against the entire workspace DOM.
   useLayoutEffect(() => {

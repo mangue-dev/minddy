@@ -104,15 +104,18 @@ export function DesktopAnalyticsPrompt() {
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
         className="max-w-[calc(100%-2rem)] sm:max-w-[420px]"
+        // A consent is read before it is given: on a phone this sheet keeps
+        // its description, which other sheets leave to screen readers.
+        data-sheet-keeps-description
       >
-        <div className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <div className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground app-mobile:hidden">
           <HugeiconsIcon icon={Analytics01Icon} className="size-4" />
         </div>
-        <DialogTitle className="mt-3 text-base">{t("promptTitle")}</DialogTitle>
+        <DialogTitle className="mt-3 text-base app-mobile:mt-0">{t("promptTitle")}</DialogTitle>
         <DialogDescription className="leading-relaxed">
           {t("description")} {t("promptSettingsHint")}
         </DialogDescription>
-        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div data-mobile-sheet-actions className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => choose("declined")}>
             {t("promptDecline")}
           </Button>

@@ -53,7 +53,7 @@ export const COARSE_BUTTON_HIT_AREA =
  * is `:disabled`, or rendered as a link with `aria-disabled`, does not move.
  */
 export const COARSE_BUTTON_PRESS =
-  "data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:active:[scale:0.97]"
+  "data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:active:[scale:0.97] data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:data-pressed:[scale:0.97]"
 export const COARSE_BUTTON_TOUCH_ACTION = "data-[slot=button]:pointer-coarse:touch-manipulation"
 
 /**

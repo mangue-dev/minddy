@@ -156,6 +156,9 @@ export function FeedbackComposerDialog({
           when it uses the key itself (exiting a code block). */}
       <DialogContent
         className="top-24 translate-y-0 gap-0 sm:max-w-xl"
+        // A short form: on a phone the sheet keeps its content's height while
+        // its editor types, instead of taking the whole room (app/globals.css).
+        data-sheet-fit
         // Without a description, say so explicitly (Radix warns otherwise).
         {...(srDescription ? {} : { "aria-describedby": undefined })}
         onKeyDown={(e) => {

@@ -94,6 +94,9 @@ export type SearchMenuProps = {
   /** Where the focus goes once the menu closes; `preventDefault` keeps it off
    *  the trigger (a menu opened by a shortcut while typing returns to the text). */
   onCloseAutoFocus?: (event: Event) => void;
+  /** Buttons beside the search field, as round icons: on a phone, the top
+   *  row of the sheet holds them between the field and the close button. */
+  searchActions?: { id: string; label: string; icon?: React.ReactNode; onSelect: () => void }[];
   /** cmdk groups/items (each caller wraps its options in a CommandGroup). */
   children: React.ReactNode;
 };
@@ -120,6 +123,7 @@ export function SearchMenu({
   stopPropagation,
   deferTrigger,
   onCloseAutoFocus,
+  searchActions,
   children,
 }: SearchMenuProps) {
   const t = useTranslations("Picker");
@@ -156,16 +160,25 @@ export function SearchMenu({
       } : undefined)}
     >
       <Command shouldFilter={shouldFilter} filter={searchMenuFilter} onValueChange={onHighlight}>
-        <DropdownSearchRow>
-          <CommandPrimitive.Input
-            ref={inputRef}
-            placeholder={searchPlaceholder ?? t("search")}
-            className={searchInputClass}
-            {...(searchValue !== undefined
-              ? { value: searchValue, onValueChange: onSearchValueChange }
-              : {})}
-          />
-        </DropdownSearchRow>
+        <div data-sheet-search-row className="flex items-center gap-2">
+          <DropdownSearchRow>
+            <CommandPrimitive.Input
+              ref={inputRef}
+              placeholder={searchPlaceholder ?? t("search")}
+              className={searchInputClass}
+              {...(searchValue !== undefined
+                ? { value: searchValue, onValueChange: onSearchValueChange }
+                : {})}
+            />
+          </DropdownSearchRow>
+          {searchActions?.map((action) => (
+            <button key={action.id} type="button" data-sheet-search-action aria-label={action.label}
+              className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-control-hover"
+              onClick={action.onSelect}>
+              {action.icon}
+            </button>
+          ))}
+        </div>
         <CommandSeparator className="my-1" />
         <CommandList>
           {!hideEmpty && <CommandEmpty>{emptyText ?? t("noResults")}</CommandEmpty>}

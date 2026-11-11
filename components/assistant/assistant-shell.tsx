@@ -784,6 +784,7 @@ export const AssistantShell = forwardRef<
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("conversations")}
+                data-mobile-sheet-lead
               >
                 <HugeiconsIcon icon={Clock01Icon} className="h-4 w-4" />
               </Button>

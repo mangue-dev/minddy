@@ -203,7 +203,7 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   if (mobile || compact) {
     const actions = canWrite ? [
       ...(views.length < MAX_DATABASE_VIEWS ? [{
-        id: "create-view", label: tBoard("newView"),
+        id: "create-view", label: tBoard("newView"), inSearchRow: true,
         icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />, onSelect: () => setCreateOpen(true),
       }] : []),
       { id: "rename-view", label: tBoard("renameView"),

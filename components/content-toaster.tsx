@@ -4,12 +4,16 @@ import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Toaster } from "sonner";
 import { isTextCut } from "@/components/ui/truncated-text";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 /** One toast surface for both breakpoints, anchored outside the scrolling main. */
 // Memoized (MIN-875): the shell re-renders for every query it reads.
 export const ContentToaster = memo(function ContentToaster() {
   const anchor = useRef<HTMLSpanElement>(null);
   const [pane, setPane] = useState<HTMLElement | null>(null);
+  // On a phone a toast drops from the top, as a native banner does: the
+  // bottom belongs to the navigation bar and the keyboard.
+  const mobile = useMobileLayout() === true;
 
   useLayoutEffect(() => {
     setPane(anchor.current?.closest("main")?.parentElement ?? null);
@@ -27,7 +31,7 @@ export const ContentToaster = memo(function ContentToaster() {
       {pane && createPortal(
         <Toaster
           className="content-toaster"
-          position="bottom-center"
+          position={mobile ? "top-center" : "bottom-center"}
           visibleToasts={1}
           closeButton
         />,

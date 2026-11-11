@@ -849,7 +849,7 @@ export function BoardToolbar({
             stays fixed at the end. */}
         <div className="flex min-w-0 flex-1 items-center gap-1 app-desktop:hidden">
           <SearchSelect
-            menuActions={[{ id: "create-view", label: t("newView"), icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />, onSelect: () => setCreateOpen(true) }]}
+            menuActions={[{ id: "create-view", label: t("newView"), icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />, onSelect: () => setCreateOpen(true), inSearchRow: true }]}
             value={cycleTab?.active ? CYCLE_TAB_KEY : activeViewId}
             onChange={(id) => { if (id === CYCLE_TAB_KEY) cycleTab?.onSelect(); else if (id) onSelectView(id); }}
             options={tabKeys.flatMap((key) => {

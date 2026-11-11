@@ -12,6 +12,7 @@ import { CheckIcon } from "@hugeicons/core-free-icons"
 import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-padding"
 import { useMenuScrollFade, useMergedRef } from "@/components/ui/menu-scroll-fade"
 import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
+import { Unfold, useAnimatedWidth } from "@/components/ui/unfold"
 
 // Below 768px, side-opening flyout submenus can't fit on narrow screens (Radix
 // only flips them left/right and can't shift them horizontally to overlap the
@@ -178,7 +179,10 @@ function DropdownMenuContent({
   const defaultCollisionPadding = useOverlayCollisionPadding()
   // Rows hidden past an edge fade out there (useMenuScrollFade).
   const fade = useMenuScrollFade<HTMLDivElement>()
-  const mergedRef = useMergedRef(ref, fade.ref)
+  // Below 768px submenus unfold inline (DropdownMenuSub): the menu's width
+  // follows them as smoothly as its height.
+  const widthRef = useAnimatedWidth<HTMLDivElement>("(max-width: 767px)")
+  const mergedRef = useMergedRef(ref, fade.ref, widthRef)
   // A closing menu keeps its rows (components/ui/overlay-freeze.tsx).
   const shown = useFrozenWhileClosed(children)
   return (
@@ -189,7 +193,7 @@ function DropdownMenuContent({
         align={align}
         collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
-                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-max min-w-[max(var(--radix-dropdown-menu-trigger-width),12rem)] max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-10 p-2 text-popover-foreground shadow-md ring-1 ring-border duration-150 ease-out data-closed:duration-120 data-closed:ease-in data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                                  "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-max min-w-[max(var(--radix-dropdown-menu-trigger-width),12rem)] max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl app-mobile:rounded-[26px] bg-popover scroll-py-10 p-2 text-popover-foreground shadow-md ring-1 ring-border duration-150 ease-out data-closed:duration-120 data-closed:ease-in data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                                   className
                                 )}
         ref={mergedRef}
@@ -231,7 +235,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-highlight data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
+        `group/dropdown-menu-item relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm app-mobile:rounded-[18px] px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent active:bg-accent data-pressed:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-[variant=destructive]:text-destructive data-[variant=destructive]:data-highlighted:bg-destructive-highlight data-[variant=destructive]:data-highlighted:text-destructive data-[variant=destructive]:data-highlighted:**:text-destructive data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive`,
         searchScope && SEARCH_SCOPE_HOVER,
         className
       )}
@@ -255,7 +259,7 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm app-mobile:rounded-[18px] py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent active:bg-accent data-pressed:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className
       )}
       checked={checked}
@@ -299,7 +303,7 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm app-mobile:rounded-[18px] py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent active:bg-accent data-pressed:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className
       )}
       {...props}
@@ -402,7 +406,7 @@ function DropdownMenuSub({
 // highlight with the pointer AND the keyboard, and ignores the rows crossed on
 // the way to a submenu, so a hover style would light a second row.
 const SUB_TRIGGER_CLASS =
-  `flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`
+  `flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} app-desktop:py-1.5! cursor-default items-center gap-1.5 rounded-sm app-mobile:rounded-[18px] px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent active:bg-accent data-pressed:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-inset:pl-8 data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`
 
 function DropdownMenuSubTrigger({
   className,
@@ -470,14 +474,15 @@ function DropdownMenuSubContent({
   // Inline (mobile): render the items in place, indented under the trigger,
   // only while expanded. No portal/flyout — so it can never spill off screen.
   if (ctx?.inline) {
-    if (!ctx.open) return null
     return (
-      <div
-        data-slot="dropdown-menu-sub-content"
-        className={cn("ml-2.5 border-l border-border/60 pl-1", className)}
-      >
-        {children}
-      </div>
+      <Unfold open={ctx.open}>
+        <div
+          data-slot="dropdown-menu-sub-content"
+          className={cn("ml-2.5 border-l border-border/60 pl-1", className)}
+        >
+          {children}
+        </div>
+      </Unfold>
     )
   }
 
@@ -496,7 +501,7 @@ function DropdownMenuSubContent({
         sticky="always"
         collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
-                          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-40 max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover scroll-py-10 p-2 text-popover-foreground shadow-lg ring-1 ring-border duration-150 ease-out data-closed:duration-120 data-closed:ease-in data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-40 max-w-[calc(100vw-1rem)] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl app-mobile:rounded-[26px] bg-popover scroll-py-10 p-2 text-popover-foreground shadow-lg ring-1 ring-border duration-150 ease-out data-closed:duration-120 data-closed:ease-in data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                           className
                         )}
         ref={mergedRef}

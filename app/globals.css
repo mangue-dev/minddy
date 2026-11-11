@@ -512,6 +512,11 @@ a.markdown-link[data-documentation-citation]::before {
 button[data-variant="ghost"] {
   background-color: transparent;
 }
+/* The one fill a ghost button takes: while it is pressed, so a click or a
+   held finger (lib/press-state.ts) shows it landed. */
+button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
+  background-color: var(--control-hover);
+}
 
 
 
@@ -3068,8 +3073,10 @@ html[data-desktop-platform="darwin"]
 }
 
 :root[data-app-layout="mobile"] {
+  /* It drops from the top of the page, under the status bar. */
   .content-toaster[data-sonner-toaster][data-x-position="center"] {
-    bottom: calc(var(--mobile-nav-clearance) + 1rem);
+    top: 0.5rem;
+    bottom: auto;
   }
 }
 
@@ -3475,7 +3482,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   /* `:focus-within`, not the editor's own focus: tapping the sheet's send
      button moves the focus to it, and the sheet must not shrink under the
      finger before the tap lands. */
-  .mobile-bottom-sheet[data-slot="sheet-content"]:has(.ProseMirror):focus-within,
+  .mobile-bottom-sheet[data-slot="sheet-content"]:not([data-sheet-fit]):has(.ProseMirror):focus-within,
   [data-slot="alert-dialog-content"]:has(.ProseMirror):focus-within {
     height: var(--mobile-sheet-room);
   }
@@ -3552,6 +3559,19 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     clip-path: inset(50%);
     white-space: nowrap;
   }
+  /* A sheet whose text must be read first (a consent) shows its
+     description under the title bar, centred like it. */
+  .mobile-bottom-sheet[data-sheet-keeps-description] :is([data-slot="dialog-description"], [data-slot="sheet-description"]) {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    text-align: center;
+    font-size: 1rem;
+    color: var(--muted-foreground);
+  }
   /* In a header that also carries a description, the title alone takes the
      title bar's height, so it sits on the close button's line. */
   .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]) > :is([data-slot="dialog-title"], [data-slot="sheet-title"]):not(.sr-only) {
@@ -3585,7 +3605,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     color: var(--muted-foreground);
     background: var(--control);
   }
-  .mobile-bottom-sheet :is([data-mobile-sheet-close], [data-slot="sheet-close"], [data-slot="side-panel-close"]):active {
+  .mobile-bottom-sheet :is([data-mobile-sheet-close], [data-slot="sheet-close"], [data-slot="side-panel-close"]):is(:active, [data-pressed]) {
     background: var(--control-hover);
   }
   .mobile-bottom-sheet :is([data-mobile-sheet-header], [data-mobile-sheet-toolbar], [data-slot="dialog-header"], [data-slot="sheet-header"], [data-slot="side-panel-header"]) button {
@@ -3730,6 +3750,10 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet[data-mobile-dialog]:has(> [data-mobile-sheet-row]) > [data-slot="dialog-title"] {
     margin-bottom: 8px;
   }
+  /* A pressed row answers the finger with the control's fill. */
+  .mobile-bottom-sheet :is([cmdk-item], [data-mobile-sheet-row]):is(:active, [data-pressed]):not([data-disabled="true"], :disabled) {
+    background: var(--control);
+  }
   /* Section names start on the content line, as the rows' text does. */
   .mobile-bottom-sheet :is([cmdk-group-heading], [data-mobile-sheet-heading]) {
     padding: 12px var(--mobile-sheet-row-inline) 4px;
@@ -3774,6 +3798,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet[data-mobile-dialog] {
     padding-inline: var(--mobile-sheet-inline);
   }
+  /* A pane-sized dialog (a wizard, the changelog) pads its own scrolling
+     column, on the same content line. */
+  .mobile-bottom-sheet.dialog-pane-mirror[data-mobile-dialog] {
+    padding-inline: 0;
+  }
   /* Sheets laid out edge to edge, whose header and body pad themselves. */
   :is(.mobile-side-panel-sheet, .mobile-assistant-sheet) [data-mobile-sheet-header] {
     padding-left: var(--mobile-sheet-inline);
@@ -3808,6 +3837,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     justify-content: center;
     border-radius: 999px;
     color: var(--foreground);
+    /* Stacked with the others, it is filled like them. */
+    background: var(--control);
+  }
+  .mobile-bottom-sheet [data-sheet-auxiliary-action] > button:is(:active, [data-pressed]) {
+    background: var(--control-hover);
   }
   .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"]) > button,
   [data-slot="alert-dialog-footer"] > button {
@@ -3819,7 +3853,25 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     margin: 0;
   }
   [data-slot="alert-dialog-footer"] > * { order: 0; min-width: 0; }
-  [data-slot="alert-dialog-cancel"] { border: 0; background: transparent; box-shadow: none; }
+  [data-slot="alert-dialog-cancel"] { border: 0; box-shadow: none; }
+  /* A stacked action is a filled button, never a bare line of text: the way
+     out of a sheet (cancel, back) takes the control's fill, under the main
+     action's accent. */
+  .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"], [data-mobile-sheet-actions]) > :is(button, a):is([data-variant="ghost"], [data-variant="link"]),
+  [data-slot="alert-dialog-footer"] > :is(button, a):is([data-variant="ghost"], [data-variant="link"]),
+  [data-slot="alert-dialog-cancel"] {
+    width: 100%;
+    min-height: 44px;
+    background: var(--control);
+    color: var(--foreground);
+    font-size: 1rem;
+    text-decoration: none;
+  }
+  .mobile-bottom-sheet :is([data-slot="dialog-footer"], [data-slot="side-panel-footer"], [data-mobile-sheet-actions]) > :is(button, a):is([data-variant="ghost"], [data-variant="link"]):is(:active, [data-pressed]),
+  [data-slot="alert-dialog-footer"] > :is(button, a):is([data-variant="ghost"], [data-variant="link"]):is(:active, [data-pressed]),
+  [data-slot="alert-dialog-cancel"]:is(:active, [data-pressed]) {
+    background: var(--control-hover);
+  }
   [data-slot="alert-dialog-content"] {
     border: 0;
     padding: 16px var(--mobile-sheet-inline);
@@ -3876,8 +3928,48 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   /* A picker's search field is its top row, beside the close button, and
      like it concentric with the sheet's corner: as far from the side as from
      the top, so its round end turns around the same centre as the corner. */
-  .mobile-picker-sheet :is([data-sheet-search], [data-slot="command-input-wrapper"]) {
+  .mobile-picker-sheet :is([data-sheet-search-row], [data-sheet-search]:not([data-sheet-search-row] > *), [data-slot="command-input-wrapper"]) {
     margin: 0 calc(var(--mobile-sheet-close-room) - var(--mobile-sheet-inset)) 8px calc(var(--mobile-sheet-top) - var(--mobile-sheet-inset));
+  }
+  .mobile-picker-sheet [data-sheet-search-row] > [data-sheet-search] {
+    flex: 1;
+    min-width: 0;
+  }
+  /* The button that leads a sheet's top row (Numo's conversations) mirrors
+     the close button's place: as far from the side as from the top,
+     concentric with the sheet's corner. It stays a ghost button: only a
+     press fills it. */
+  .mobile-bottom-sheet [data-mobile-sheet-lead] {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    margin-left: calc(var(--mobile-sheet-top) - var(--mobile-sheet-inline));
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted-foreground);
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-lead]:is(:active, [data-pressed]) {
+    background: var(--control-hover);
+  }
+  .mobile-bottom-sheet [data-mobile-sheet-lead] svg {
+    width: var(--mobile-sheet-icon);
+    height: var(--mobile-sheet-icon);
+  }
+  /* A sheet's main action (a new view) sits in its top row, between the
+     search field and the close button, drawn like the close button. */
+  .mobile-bottom-sheet [data-sheet-search-action] {
+    width: var(--mobile-sheet-search);
+    height: var(--mobile-sheet-search);
+    border-radius: 999px;
+    background: var(--control);
+    color: var(--muted-foreground);
+  }
+  .mobile-bottom-sheet [data-sheet-search-action]:is(:active, [data-pressed]) {
+    background: var(--control-hover);
+  }
+  .mobile-bottom-sheet [data-sheet-search-action] svg {
+    width: var(--mobile-sheet-icon);
+    height: var(--mobile-sheet-icon);
   }
   .mobile-picker-sheet [cmdk-root] {
     display: flex;

@@ -43,6 +43,7 @@ import { CheckIcon } from "@hugeicons/core-free-icons";
 import { Kbd } from "@/components/ui/kbd";
 import { DropdownSearchRow, searchInputClass } from "@/components/search-menu";
 import { searchActionTree } from "@/lib/action-menu-search";
+import { Unfold } from "@/components/ui/unfold";
 
 export interface ContextMenuAction {
   id: string;
@@ -414,7 +415,7 @@ function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: 
         </span>
         <ChevronRightIcon aria-hidden className={isOpen ? "size-4 shrink-0 rotate-90 text-muted-foreground transition-transform" : "size-4 shrink-0 text-muted-foreground transition-transform"} />
       </CommandItem>
-      {isOpen && rows(children, action.label, disabled, depth + 1)}
+      <Unfold open={isOpen}>{rows(children, action.label, disabled, depth + 1)}</Unfold>
     </React.Fragment>;
   };
   const rows = (items: ContextMenuAction[], parentLabel = "", parentDisabled = false, depth = 0): React.ReactNode =>

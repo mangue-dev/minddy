@@ -55,7 +55,7 @@ export function WhatsNewDialog({
         <div
           ref={fadeRef}
           {...scrollProps}
-          className="flex flex-1 flex-col overflow-y-auto px-6 pt-14 pb-12 sm:pt-20"
+          className="flex flex-1 flex-col overflow-y-auto px-6 pt-14 pb-12 sm:pt-20 app-mobile:px-[var(--mobile-sheet-inline)]"
         >
           <div className="mx-auto w-full max-w-4xl">
             <DialogTitle className="mb-10 text-3xl leading-[1.05] font-semibold tracking-tighter text-balance">
