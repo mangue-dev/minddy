@@ -157,6 +157,16 @@ checks the refresh token a web round returns, and seals it with the user's key
 (`lib/server/apple-sign-in.ts`). This needs the optional `APPLE_SIGN_IN_*`
 variables of `.env.example`; without them nothing is kept or revoked.
 
+A person can hide their address from minddy: Apple then gives a
+`@privaterelay.appleid.com` address that forwards to theirs, but only mail
+from sources registered with Apple. Under **Certificates, Identifiers &
+Profiles → Services → Sign in with Apple for Email Communication**, the team
+registers `minddy.app` and `mail.minddy.app` (the From domains, which pass
+DKIM) and `send.minddy.app` and `send.mail.minddy.app` (Resend's bounce
+domains, which pass SPF). Apple shows `mail.minddy.app` failing SPF, which is
+expected: it is never a bounce domain. Mail from any other sender, a new
+Resend domain included, bounces until it is registered there.
+
 ## Push notifications
 
 The app receives the same notifications as the web and the macOS app, through
@@ -227,7 +237,6 @@ the updated `ios/App/CapApp-SPM/Package.swift`.
 ## What is not done here yet
 
 - Signing, TestFlight and the App Store release workflow.
-- Apple's private email relay for accounts that hide their address.
 - Email links (confirmation, password reset) open in Safari, not in the app,
   until universal links exist.
 - Universal links.
