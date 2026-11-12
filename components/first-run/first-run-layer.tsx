@@ -30,7 +30,7 @@ export function FirstRunLayer({ label, children, footer }: { label: string; chil
       aria-label={label}
       data-first-run
       style={keyboardFrameStyle(keyboard)}
-      className="fixed inset-0 z-[45] flex flex-col overflow-y-auto overscroll-contain bg-background px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      className="fixed inset-0 z-[45] flex flex-col overflow-y-auto overscroll-contain bg-background ps-[max(1.5rem,var(--safe-inline-start))] pe-[max(1.5rem,var(--safe-inline-end))] pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]"
     >
       <div className={cn("mx-auto flex w-full max-w-[380px] flex-1 flex-col items-center", typing ? "justify-start" : "justify-center")}>
         <div className="auth-stagger w-full">{children}</div>

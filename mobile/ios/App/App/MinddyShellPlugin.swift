@@ -37,13 +37,16 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
     private var appleSignIn: AppleSignIn?
 
     @objc func state(_ call: CAPPluginCall) {
-        call.resolve([
-            "origin": ServerStore.origin,
-            "cloudOrigin": ServerStore.cloudOrigin,
-            "isCustomServer": ServerStore.customOrigin != nil,
-            "version": MinddyViewController.version,
-            "cornerRadius": MinddyViewController.screenCornerRadius
-        ])
+        // The corner radius reads the window, which belongs to the main thread.
+        DispatchQueue.main.async { [weak self] in
+            call.resolve([
+                "origin": ServerStore.origin,
+                "cloudOrigin": ServerStore.cloudOrigin,
+                "isCustomServer": ServerStore.customOrigin != nil,
+                "version": MinddyViewController.version,
+                "cornerRadius": self?.controller?.screenCornerRadius ?? 0
+            ])
+        }
     }
 
     @objc func connect(_ call: CAPPluginCall) {
@@ -271,6 +274,12 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
     /// it takes, in milliseconds.
     func keyboardWillMove(height: CGFloat, duration: TimeInterval) {
         notifyListeners("keyboard", data: ["height": Double(height), "duration": duration * 1000])
+    }
+
+    /// The app now shows on another display, or in another size of it: the
+    /// radius of that display's corners, in points.
+    func displayDidChange(cornerRadius: CGFloat) {
+        notifyListeners("display", data: ["cornerRadius": Double(cornerRadius)])
     }
 
     /// Runs `action` on the main thread when the calling document is one of

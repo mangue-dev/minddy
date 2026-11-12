@@ -118,6 +118,39 @@ WebKit asks its UI delegate before showing the keyboard for a focus that no tap
 gave, and the shell answers yes (`letFocusRaiseKeyboard`). The page focuses a
 field on its own only where a tap asked for one (Reply, opening Numo).
 
+## iPhone Duo
+
+iPhone Duo, Apple's foldable, shows the app on its outer display folded
+(466 × 678 points in portrait) and on its inner display open (669 × 951). On
+both, the status bar and the system controls stand on the right side of the
+screen instead of at its top, so `env(safe-area-inset-right)` is 84px and the
+left inset is 0. The app is built with the iOS 27.1 SDK or later to run full
+screen there.
+
+- The app shell clears each side by its own inset (`.app-shell`). A screen
+  whose content is centred (sign-in, the welcome, the server choice, the
+  getting-started tour) uses `--safe-inline-start` and `--safe-inline-end`
+  (`app/tokens.css`). From 640px wide both take the larger inset, so the
+  content stays in the middle of the screen. Below that, each side keeps its
+  own inset and the content keeps its width. A column fixed above the keyboard
+  (`keyboardFrameStyle`) passes the same insets. Without them it left its
+  parent's padding and moved sideways when the keyboard opened.
+- WebKit zooms a double-tapped block to the width of the screen. The insets
+  make the sign-in column narrower than the screen, so two taps zoomed it.
+  Fields and the sign-in screens therefore take `touch-action: manipulation`
+  (`app/globals.css`, "Finger").
+- The inner display does not honor supported orientations. An app that leaves
+  one out is scaled there, so the iPhone list in `Info.plist` names all four.
+- The shell reads the corner radius from its window's screen, never from
+  `UIScreen.main`, which cannot say which display the app is on. It sends the
+  new radius to the page (the `display` event of `MinddyShell`) after the app
+  moves between displays.
+
+In the simulator, Device Hub (Xcode 27.1) folds and unfolds the device with
+its Closed, Partially Open and Open buttons.
+`xcrun simctl io <udid> screenshot --display=1` captures the display in use
+when the simulator tool only shows the other one.
+
 ## Signing in with Google and GitHub
 
 Google refuses OAuth inside a WebView, so the provider's pages open in the

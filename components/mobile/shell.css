@@ -34,6 +34,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* No double-tap zoom, as in the product (`app/globals.css`, "Finger"). */
+html {
+  touch-action: manipulation;
+}
+
 /* The landing's load-time cascade (`app/globals.css`, `.hero-reveal`). */
 @keyframes hero-fade-up {
   from {

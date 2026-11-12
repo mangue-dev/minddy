@@ -277,6 +277,13 @@ describe("touch feedback", () => {
     expect(read(GLOBALS)).not.toMatch(/^(html|body)[^{]*\{[^}]*touch-action/m);
   });
 
+  it("does not zoom on a double tap in a field or on the sign-in screens", () => {
+    // On iPhone Duo two taps in the sign-in email field zoomed the page by a
+    // third: the side insets leave the column narrower than the screen.
+    const rule = read(GLOBALS).match(/\n\s*input,\n\s*textarea,\n\s*select,\n[^{]*\.auth-shell \{\s*touch-action: manipulation;/);
+    expect(rule?.[0]).toContain('[contenteditable]:not([contenteditable="false"])');
+  });
+
   it("leaves the primitives' touch behavior to the primitives", () => {
     // globals.css must not patch these slots from the outside again: change
     // the component instead.

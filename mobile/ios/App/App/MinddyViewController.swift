@@ -203,14 +203,31 @@ final class MinddyViewController: CAPBridgeViewController {
         URL(string: origin)?.appendingPathComponent(ServerStore.entryPath)
     }
 
-    /// The radius of the screen's own corners, in points, or 0 when the system
-    /// does not say. UIKit has no public reading of it; the screen answers a
-    /// private key, asked for only when it responds to it. The page uses it to
-    /// round what it slides or raises to the shape of the device.
-    static var screenCornerRadius: CGFloat {
+    /// The radius of the corners of the screen showing the app, in points, or
+    /// 0 when the system does not say. UIKit has no public reading of it; the
+    /// screen answers a private key, asked for only when it responds to it.
+    /// The page uses it to round what it slides or raises to the shape of the
+    /// device.
+    ///
+    /// The screen is the window's, not `UIScreen.main`: iPhone Duo has two
+    /// displays with corners of their own, and `UIScreen.main` does not say
+    /// which one the app is on.
+    var screenCornerRadius: CGFloat {
+        guard let screen = view.window?.windowScene?.screen else { return 0 }
         let key = ["_display", "Corner", "Radius"].joined()
-        guard UIScreen.main.responds(to: NSSelectorFromString(key)) else { return 0 }
-        return UIScreen.main.value(forKey: key) as? CGFloat ?? 0
+        guard screen.responds(to: NSSelectorFromString(key)) else { return 0 }
+        return screen.value(forKey: key) as? CGFloat ?? 0
+    }
+
+    /// iPhone Duo moves the app between its displays as it folds and unfolds,
+    /// and each has its own corners: the page hears the new radius once the
+    /// app has moved.
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        coordinator.animate(alongsideTransition: nil) { [weak self] _ in
+            guard let self else { return }
+            self.shellPlugin?.displayDidChange(cornerRadius: self.screenCornerRadius)
+        }
     }
 
     static var version: String {

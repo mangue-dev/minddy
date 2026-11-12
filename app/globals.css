@@ -1361,9 +1361,12 @@ div:has(> [data-streamdown="table"]) {
 
 /* The sign-in and sign-up screens clear the same edges: in the mobile app
    their first line sat under the clock. The bottom too, under the home
-   indicator, since no navigation reserves it there. */
+   indicator, since no navigation reserves it there. Their content is
+   centred, so the sides take `--safe-inline-start` and `--safe-inline-end`
+   (app/tokens.css); the column that rises above the keyboard (`AuthColumn`)
+   takes the same, or it jumped sideways as the keyboard opened. */
 .auth-shell {
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  padding: env(safe-area-inset-top) var(--safe-inline-end) env(safe-area-inset-bottom) var(--safe-inline-start);
 }
 
 /* The drawers are GLUED to their edge — `inset-y-0 h-full` on the left and
@@ -1395,14 +1398,33 @@ div:has(> [data-streamdown="table"]) {
 /* ─── Finger (MIN-284) ─────────────────────────────────────────────────────
    The touch targets, press feedback and tap delay of the primitives live in
    the primitives themselves (components/ui/touch-target.ts). What remains here
-   is page-wide: the tap highlight, and the zoom-on-focus guard of hand-written
-   fields. */
+   is page-wide: the tap highlight, double-tap zoom, and the zoom-on-focus
+   guard of hand-written fields. */
 @layer base {
   /* The gray halo that WebKit and Chrome Android paints over anything you type.
      It arrives late, overflows the border radius, and has nothing left to say
      now that a press has its own feedback (components/ui/touch-target.ts). */
   html {
     -webkit-tap-highlight-color: transparent;
+  }
+  /* No double-tap zoom where it only gets in the way: in a field, where two
+     taps place the caret or select a word, and on the sign-in screens, which
+     hold nothing to read up close. WebKit zooms a double-tapped block to the
+     width of the screen. On a phone a block is already about that wide, so
+     the zoom hardly shows. On iPhone Duo the side insets leave the sign-in
+     column at 350px of a 466px screen: two taps zoomed the page by a third
+     and left it there, and WebKit held every first tap to see whether a
+     second one followed. The controls already opted out
+     (components/ui/touch-target.ts); content keeps double-tap zoom, and
+     `manipulation` keeps scrolling and pinch-zoom everywhere. */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select,
+    [contenteditable]:not([contenteditable="false"]),
+    .auth-shell {
+      touch-action: manipulation;
+    }
   }
 }
 

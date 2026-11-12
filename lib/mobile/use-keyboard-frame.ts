@@ -64,12 +64,23 @@ export function useKeyboardFrame(): KeyboardFrame {
 /**
  * Lays a full-screen column over the part the keyboard leaves: its content,
  * centered, rises with the keyboard and comes back down with it.
+ *
+ * `insetInline` is where the column's sides stand once it is fixed, which
+ * takes it out of its parent's padding: a column whose parent clears the side
+ * insets passes the same clearance, or it moves sideways as the keyboard
+ * opens.
  */
-export function keyboardFrameStyle(frame: KeyboardFrame): CSSProperties | undefined {
+export function keyboardFrameStyle(
+  frame: KeyboardFrame,
+  insetInline: CSSProperties["insetInline"] = 0,
+): CSSProperties | undefined {
   if (frame.height === null) return undefined;
   return {
     position: "fixed",
-    insetInline: 0,
+    insetInline,
+    // Between those sides: a `w-full` column kept its full width and moved
+    // right by its left inset.
+    width: "auto",
     top: frame.top,
     height: frame.height,
     minHeight: 0,

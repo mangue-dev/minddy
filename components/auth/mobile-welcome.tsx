@@ -20,7 +20,7 @@ export function MobileWelcome({ onStart }: { onStart: () => void }) {
   const [current, setCurrent] = useState(0);
 
   return (
-    <div className="fixed inset-0 z-10 flex touch-none flex-col overflow-hidden bg-background pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+    <div className="fixed inset-0 z-10 flex touch-none flex-col overflow-hidden bg-background ps-(--safe-inline-start) pe-(--safe-inline-end) pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <MinddyLogo className="mx-auto h-8 shrink-0" />
       <div
         ref={track}

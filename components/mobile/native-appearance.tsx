@@ -13,18 +13,25 @@ import { getMobileBridge } from "@/lib/mobile/bridge";
  *
  * The shell tells the page the radius of the screen's corners, published as
  * `--device-corner-radius`: the page sliding aside for the sidebar and the
- * bottom sheets take the shape of the device (app/globals.css).
+ * bottom sheets take the shape of the device (app/globals.css). It says it
+ * again when the app moves to another display: iPhone Duo's outer and inner
+ * displays have corners of their own.
  */
 export function NativeMobileAppearance() {
   useEffect(() => {
     const shell = getMobileBridge()?.shell;
     if (!shell?.setAppearance) return;
     const root = document.documentElement;
-    void shell.state().then((state) => {
-      if (state.cornerRadius && state.cornerRadius > 0) {
-        root.style.setProperty("--device-corner-radius", `${state.cornerRadius}px`);
+    const setCornerRadius = (radius: number | undefined) => {
+      if (radius && radius > 0) {
+        root.style.setProperty("--device-corner-radius", `${radius}px`);
+      } else {
+        root.style.removeProperty("--device-corner-radius");
       }
-    }, () => {});
+    };
+    void shell.state().then((state) => setCornerRadius(state.cornerRadius), () => {});
+    // iPhone Duo: folding or unfolding moves the app to the other display.
+    const display = shell.addListener?.("display", ({ cornerRadius }) => setCornerRadius(cornerRadius));
     let last: boolean | null = null;
     const report = () => {
       const dark = root.classList.contains("dark");
@@ -35,7 +42,10 @@ export function NativeMobileAppearance() {
     report();
     const observer = new MutationObserver(report);
     observer.observe(root, { attributes: true, attributeFilter: ["class"] });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (display) void Promise.resolve(display).then((listener) => listener.remove(), () => {});
+    };
   }, []);
 
   return null;

@@ -423,7 +423,8 @@ export function AuthColumn({
   const typing = keyboard.height !== null;
   return (
     <div
-      style={keyboardFrameStyle(keyboard)}
+      // `.auth-shell` pads its sides by these insets (app/tokens.css).
+      style={keyboardFrameStyle(keyboard, "var(--safe-inline-start) var(--safe-inline-end)")}
       className={cn(
         "auth-column flex w-full flex-1 flex-col p-8",
         typing && "overflow-y-auto overscroll-contain bg-background",

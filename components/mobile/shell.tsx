@@ -37,7 +37,7 @@ function Frame({ centered = false, children }: { centered?: boolean; children: R
   return (
     <main
       style={keyboardFrameStyle(keyboard)}
-      className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      className="mx-auto flex min-h-dvh w-full max-w-md flex-col ps-[max(1.5rem,var(--safe-inline-start))] pe-[max(1.5rem,var(--safe-inline-end))] pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]"
     >
       {!centered && <MinddyLogo className="h-7 self-start" />}
       <div className={cn("flex flex-1 flex-col justify-center py-10", centered && "items-center text-center")}>

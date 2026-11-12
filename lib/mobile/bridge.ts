@@ -99,6 +99,15 @@ export interface MobileShellPlugin {
     event: "keyboard",
     handler: (keyboard: MobileKeyboardMove) => void,
   ): MobileListenerHandle | Promise<MobileListenerHandle>;
+  /**
+   * The app moved to another display or another size of it: iPhone Duo
+   * shows it on its outer display folded and on its inner one open, each
+   * with its own corners. Absent in older shells.
+   */
+  addListener?(
+    event: "display",
+    handler: (display: { cornerRadius: number }) => void,
+  ): MobileListenerHandle | Promise<MobileListenerHandle>;
   // Last: `bind` keeps the last signature (lib/mobile/native-navigation.ts).
   /** A tap on the native bar carries the identifier of its item. */
   addListener?(
