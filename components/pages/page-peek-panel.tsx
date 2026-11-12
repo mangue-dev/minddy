@@ -61,7 +61,7 @@ export function PagePeekPanel({
   return (
     <SidePanel open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <SidePanelContent
-        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0 data-[vaul-drawer-direction=bottom]:w-full"
+        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0"
         onInteractOutside={keepOverlayOpenForPopper}
         onEscapeKeyDown={(event) => {
           if (event.target instanceof HTMLElement && event.target.closest("[data-database-cell-editor]"))

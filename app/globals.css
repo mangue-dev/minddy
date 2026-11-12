@@ -3142,6 +3142,22 @@ html[data-desktop-platform="darwin"]
    opens (MIN-907). Every page header starts below it. */
 :root[data-app-layout="mobile"] .app-workspace { padding-top: 0; }
 :root[data-app-layout="mobile"] .app-workspace > .app-shell { padding-top: env(safe-area-inset-top); }
+/* With the status bar in a side column (iPhone Duo: lib/mobile/side-chrome.ts)
+   the top inset and the inset opposite the column are 0, and the header met
+   the screen's top edge and its rounded corner: the view picker of a board
+   stood in the curve. It steps back from the top by a share of that corner's
+   radius, never less than a few pixels (8px folded, where the corner beside
+   it is nearly square; 22px open, where its middle then stands about where
+   Safari's top bar does), and from the free side by a few pixels, which puts
+   its first control about as far from the edge as Safari's. */
+:root[data-app-layout="mobile"][data-side-chrome="right"] .app-workspace > .app-shell {
+  padding-top: max(env(safe-area-inset-top), 0.5rem, var(--device-corner-top-left, 0px) * 0.4);
+  padding-left: max(env(safe-area-inset-left), 0.5rem);
+}
+:root[data-app-layout="mobile"][data-side-chrome="left"] .app-workspace > .app-shell {
+  padding-top: max(env(safe-area-inset-top), 0.5rem, var(--device-corner-top-right, 0px) * 0.4);
+  padding-right: max(env(safe-area-inset-right), 0.5rem);
+}
 .app-titlebar-safe-area { height: 44px; }
 /* The workspace fills the viewport at every screen size. */
 html:not([data-desktop-app]) .ultrawide-canvas {
@@ -3315,16 +3331,6 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .review-logo-shimmer { animation: none; }
 }
 
-/* vaul's bottom drawers (<Dialog> and <SidePanel> below 480px) sit above the
-   software keyboard like every other sheet. vaul's own `repositionInputs`
-   measured the keyboard as `innerHeight - visualViewport.height`, which iOS
-   Safari now reports as 0, so it is off and the drawers read the same
-   tokens as the sheets below (MIN-870). */
-[data-vaul-drawer][data-vaul-drawer-direction="bottom"] {
-  bottom: var(--mobile-keyboard-room, 0px);
-  max-height: min(92dvh, var(--mobile-sheet-room, 92dvh));
-}
-
 /* Mobile sheets share one breakpoint and viewport budget. Wide data surfaces
    (boards, tables, code and diffs) retain their own intentional scroll areas.
 
@@ -3394,6 +3400,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   /* Its bottom corners follow the screen's, one gutter inside them. Above an
      open keyboard there is no screen corner to follow. */
   --mobile-sheet-bottom-radius: max(0px, var(--device-corner-radius, 24px) - var(--mobile-sheet-gutter));
+  /* Each bottom corner follows its own screen corner when the app knows them
+     (components/mobile/native-appearance.tsx): iPhone Duo's outer display is
+     a D, square on the hinge side, and a sheet rounded like an iPhone's
+     showed a round corner against a square one. What squares the bottom
+     corners off sets all three. */
+  --mobile-sheet-bottom-left-radius: max(0px, var(--device-corner-bottom-left, var(--device-corner-radius, 24px)) - var(--mobile-sheet-gutter));
+  --mobile-sheet-bottom-right-radius: max(0px, var(--device-corner-bottom-right, var(--device-corner-radius, 24px)) - var(--mobile-sheet-gutter));
   /* Where a sheet's own chrome starts: its 44px title bar and close button
      are centred on the centre of the sheet's corner, one radius from the top
      and one radius from the side, so the round button is concentric with
@@ -3426,6 +3439,11 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   --mobile-sheet-icon: 20px;
   --mobile-sheet-search: 44px;
   --mobile-sheet-close-room: calc(var(--mobile-sheet-top) + 44px + 8px);
+  /* The same room where a header's own padding keeps it, and the strip a
+     sheet leaves free on its side (none here; see the side-column sheets at
+     the end of this file). */
+  --mobile-sheet-close-inset: 60px;
+  --mobile-sheet-column: 0px;
   /* Every sheet's height stays within this. An attached sheet (above an open
      keyboard) gets back the gap it no longer floats at, so its top stays where
      it was when the keyboard rises under it. */
@@ -3449,6 +3467,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      the keyboard, with no gap for the page to show through. */
   --mobile-sheet-attach: var(--mobile-sheet-gutter);
   --mobile-sheet-bottom-radius: 0px;
+  --mobile-sheet-bottom-left-radius: 0px;
+  --mobile-sheet-bottom-right-radius: 0px;
   --mobile-keyboard-strip: var(--mobile-editor-toolbar, 0px);
 }
 /* No keyboard, no keyboard strip: the editor keeps the focus when Safari
@@ -3487,7 +3507,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     margin: 0;
     translate: none;
     transform: none;
-    border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-radius) var(--mobile-sheet-bottom-radius);
+    border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-right-radius) var(--mobile-sheet-bottom-left-radius);
     /* A phone's screen corners are not arcs of a circle but continuous
        curves, which leave the straight edge earlier and turn more gently. A
        sheet drawn with plain radii beside them has an uneven gap around the
@@ -3497,17 +3517,19 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
        the WebView knows it. */
     --sheet-top-reach: calc(var(--mobile-sheet-radius) * 1.3);
     --sheet-top-pull: calc(var(--mobile-sheet-radius) * 0.31);
-    --sheet-bottom-reach: calc(var(--mobile-sheet-bottom-radius) * 1.3);
-    --sheet-bottom-pull: calc(var(--mobile-sheet-bottom-radius) * 0.31);
+    --sheet-bottom-right-reach: calc(var(--mobile-sheet-bottom-right-radius) * 1.3);
+    --sheet-bottom-right-pull: calc(var(--mobile-sheet-bottom-right-radius) * 0.31);
+    --sheet-bottom-left-reach: calc(var(--mobile-sheet-bottom-left-radius) * 1.3);
+    --sheet-bottom-left-pull: calc(var(--mobile-sheet-bottom-left-radius) * 0.31);
     @supports (clip-path: shape(from 0 0, line to 1px 1px)) {
       clip-path: shape(
         from var(--sheet-top-reach) 0,
         line to calc(100% - var(--sheet-top-reach)) 0,
         curve to 100% var(--sheet-top-reach) with calc(100% - var(--sheet-top-pull)) 0 / 100% var(--sheet-top-pull),
-        line to 100% calc(100% - var(--sheet-bottom-reach)),
-        curve to calc(100% - var(--sheet-bottom-reach)) 100% with 100% calc(100% - var(--sheet-bottom-pull)) / calc(100% - var(--sheet-bottom-pull)) 100%,
-        line to var(--sheet-bottom-reach) 100%,
-        curve to 0 calc(100% - var(--sheet-bottom-reach)) with var(--sheet-bottom-pull) 100% / 0 calc(100% - var(--sheet-bottom-pull)),
+        line to 100% calc(100% - var(--sheet-bottom-right-reach)),
+        curve to calc(100% - var(--sheet-bottom-right-reach)) 100% with 100% calc(100% - var(--sheet-bottom-right-pull)) / calc(100% - var(--sheet-bottom-right-pull)) 100%,
+        line to var(--sheet-bottom-left-reach) 100%,
+        curve to 0 calc(100% - var(--sheet-bottom-left-reach)) with var(--sheet-bottom-left-pull) 100% / 0 calc(100% - var(--sheet-bottom-left-pull)),
         line to 0 var(--sheet-top-reach),
         curve to var(--sheet-top-reach) 0 with 0 var(--sheet-top-pull) / var(--sheet-top-pull) 0,
         close
@@ -3532,6 +3554,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 
   .mobile-bottom-sheet[data-slot="sheet-content"] {
     padding-top: var(--mobile-sheet-top);
+    padding-right: var(--mobile-sheet-column);
     border: 0;
     background: var(--card);
   }
@@ -3545,16 +3568,17 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     backdrop-filter: none;
   }
   /* The grab handle of a native sheet: it says the sheet can be swiped down
-     (lib/sheet-swipe-dismiss.ts). Every sheet has the same one. */
+     (lib/sheet-swipe-dismiss.ts). Every sheet has the same one, half as
+     tall and wide again as iOS's (36 by 5), to be found at a glance. */
   .mobile-bottom-sheet[data-slot="sheet-content"]::before {
     content: "";
     position: absolute;
     z-index: 31;
     top: 6px;
     left: 50%;
-    width: 36px;
-    height: 5px;
-    margin-left: -18px;
+    width: 54px;
+    height: 7.5px;
+    margin-left: -27px;
     border-radius: 999px;
     background: color-mix(in oklab, var(--foreground) 22%, transparent);
     pointer-events: none;
@@ -3591,7 +3615,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet > [data-slot="sheet-title"]:not(.sr-only) {
     min-height: 44px;
     justify-content: center;
-    padding-inline: 60px;
+    padding-inline: var(--mobile-sheet-close-inset);
     text-align: center;
   }
   .mobile-bottom-sheet :is([data-slot="dialog-header"], [data-slot="sheet-header"]) { align-items: center; }
@@ -3640,7 +3664,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-bottom-sheet [data-mobile-sheet-header] {
     min-height: 44px;
-    padding-right: 60px;
+    padding-right: var(--mobile-sheet-close-inset);
     padding-top: 0;
     padding-bottom: 0;
   }
@@ -3685,7 +3709,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   [data-slot="split-button"] > * {
     min-height: 44px;
   }
-  .mobile-assistant-sheet .app-content-header > div { padding-right: 60px; }
+  .mobile-assistant-sheet .app-content-header > div { padding-right: var(--mobile-sheet-close-inset); }
   .mobile-assistant-sheet .app-content-header button { min-height: 44px; min-width: 44px; }
   [data-property-row] { min-height: 52px; }
   /* A checkbox is a button too, but it keeps its box: its touch area is its
@@ -3696,7 +3720,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      `--overlay-scrim` tint, on a phone as on a desktop (MIN-931). */
   .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
   .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
-  .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: var(--mobile-sheet-top); right: 60px; min-height: 44px; }
+  .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: var(--mobile-sheet-top); right: calc(var(--mobile-sheet-column) + var(--mobile-sheet-close-inset)); min-height: 44px; }
   .mobile-nav-sheet :is([data-sidebar-navigation-item], [data-sidebar-filter-result], [data-navigation-href], [data-sidebar-back]) { min-height: 44px; }
   .mobile-nav-sheet [data-sidebar-filter-result] { min-width: 44px; }
   .mobile-nav-sheet :is([data-mobile-collection-navigation], [data-sidebar-browse-collection]) button { min-height: 44px; }
@@ -3727,7 +3751,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     border: 0;
     padding: 8px var(--mobile-sheet-inline);
   }
-  .mobile-bottom-sheet [data-slot="side-panel-header"] { padding-right: 60px; }
+  .mobile-bottom-sheet [data-slot="side-panel-header"] { padding-right: var(--mobile-sheet-close-inset); }
   .mobile-bottom-sheet [data-slot="side-panel-header"] { min-height: 44px; align-items: center; padding-top: 0; }
   .mobile-bottom-sheet :is([cmdk-separator], [data-slot="separator"], hr) { display: none; }
   /* The anatomy every sheet shares (the measures are defined with the sheet
@@ -3829,14 +3853,25 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     background: transparent;
     box-shadow: none;
   }
-  /* Sheets whose content is not a list start it on the content line. */
+  /* Sheets whose content is not a list start it on the content line. The
+     side column of iPhone Duo stays free (`--mobile-sheet-column`): this
+     rule comes after the sheet's own and used to give its padding back. */
   .mobile-bottom-sheet[data-mobile-dialog] {
-    padding-inline: var(--mobile-sheet-inline);
+    padding-inline: var(--mobile-sheet-inline) calc(var(--mobile-sheet-inline) + var(--mobile-sheet-column));
   }
-  /* A pane-sized dialog (a wizard, the changelog) pads its own scrolling
-     column, on the same content line. */
+  /* A pane-sized dialog (a wizard, the changelog, a skill's preview) pads
+     its own scrolling column, on the same content line. On a desktop it is
+     as tall as the pane; here it takes the sheet's whole room and scrolls
+     inside, so its close button stays put and its height does not jump as
+     its content loads. Its columns may shrink below their content, or the
+     sheet scrolled as a whole instead. */
   .mobile-bottom-sheet.dialog-pane-mirror[data-mobile-dialog] {
-    padding-inline: 0;
+    padding-inline: 0 var(--mobile-sheet-column);
+    height: var(--mobile-sheet-room);
+    overflow: hidden;
+  }
+  .mobile-bottom-sheet.dialog-pane-mirror[data-mobile-dialog] > :not([data-mobile-sheet-close-wrapper]) {
+    min-height: 0;
   }
   /* Sheets laid out edge to edge, whose header and body pad themselves. */
   :is(.mobile-side-panel-sheet, .mobile-assistant-sheet) [data-mobile-sheet-header] {
@@ -3909,7 +3944,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   [data-slot="alert-dialog-content"] {
     border: 0;
-    padding: 16px var(--mobile-sheet-inline);
+    padding: 16px calc(var(--mobile-sheet-inline) + var(--mobile-sheet-column)) 16px var(--mobile-sheet-inline);
     translate: 0 0 !important;
   }
   [data-slot="alert-dialog-header"] { text-align: left; place-items: start; }
@@ -3939,7 +3974,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-picker-sheet[data-slot="sheet-content"] {
     max-height: min(75dvh, var(--mobile-sheet-room));
     overflow: hidden;
-    padding: calc(var(--mobile-sheet-top) + 44px) var(--mobile-sheet-inset) var(--mobile-sheet-bottom);
+    padding: calc(var(--mobile-sheet-top) + 44px) calc(var(--mobile-sheet-inset) + var(--mobile-sheet-column)) var(--mobile-sheet-bottom) var(--mobile-sheet-inset);
   }
   .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"])[data-slot="sheet-content"] {
     padding-top: var(--mobile-sheet-top);
@@ -3962,7 +3997,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
   .mobile-picker-sheet > .mobile-picker-title {
     position: absolute;
-    inset: var(--mobile-sheet-top) 60px auto 60px;
+    inset: var(--mobile-sheet-top) calc(var(--mobile-sheet-column) + var(--mobile-sheet-close-inset)) auto var(--mobile-sheet-close-inset);
     padding-inline: 0;
   }
   .mobile-picker-sheet:has([data-sheet-search], [data-slot="command-input-wrapper"]) > .mobile-picker-title {
@@ -4054,6 +4089,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     overflow: hidden;
     transition: none;
     border: 0;
+    padding-right: var(--mobile-sheet-column);
   }
   .mobile-assistant-sheet > div {
     min-height: 0;
@@ -4065,7 +4101,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      other held the sheet, and its top dipped and came back. */
   .mobile-command-palette[data-slot="sheet-content"] {
     height: 85dvh;
-    padding: var(--mobile-sheet-top) var(--mobile-sheet-inset) var(--mobile-sheet-bottom);
+    padding: var(--mobile-sheet-top) calc(var(--mobile-sheet-inset) + var(--mobile-sheet-column)) var(--mobile-sheet-bottom) var(--mobile-sheet-inset);
     gap: 0;
     overflow: hidden;
     --cp-bg: var(--card);
@@ -4102,6 +4138,41 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     -webkit-mask-image: linear-gradient(to bottom, transparent, black 60%);
     mask-image: linear-gradient(to bottom, transparent, black 60%);
     pointer-events: none;
+  }
+  /* Where the system's controls stand on a side of the screen (iPhone Duo
+     folded, or open in landscape: lib/mobile/side-chrome.ts), the bar stands
+     in that column too, as Apple moves tab bars there: a vertical capsule at
+     the column's foot, under the status bar. The page already clears the
+     column (`.app-shell`), so nothing runs under the bar: no blur, and no
+     room kept at the foot of the content. */
+  &[data-side-chrome] {
+    --mobile-nav-clearance: 0px;
+    [data-mobile-navigation] {
+      width: max(env(safe-area-inset-left), env(safe-area-inset-right));
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    /* Safari's side controls on iPhone Duo: 48px across, about 52px per
+       button along the column. */
+    [data-mobile-navigation] > div:not([data-mobile-nav-blur]) {
+      width: 3rem;
+      height: calc(5 * 3.25rem);
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(5, 1fr);
+      grid-auto-flow: row;
+    }
+    [data-mobile-nav-blur] {
+      display: none;
+    }
+  }
+  &[data-side-chrome="right"] [data-mobile-navigation] {
+    left: auto;
+    right: 0;
+  }
+  &[data-side-chrome="left"] [data-mobile-navigation] {
+    left: 0;
+    right: auto;
   }
   /* A bottom sheet enters from under the screen's edge, and leaves under it.
      Its own height is not enough: it rests above the keyboard and its gap,
@@ -4265,7 +4336,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
 :root[data-app-layout="mobile"] {
   .creation-sheet[data-slot="sheet-content"] {
     height: 92dvh;
-    padding: var(--mobile-sheet-top) var(--mobile-sheet-inline) var(--mobile-sheet-bottom);
+    padding: var(--mobile-sheet-top) calc(var(--mobile-sheet-inline) + var(--mobile-sheet-column)) var(--mobile-sheet-bottom) var(--mobile-sheet-inline);
     gap: 1rem;
     overflow: hidden;
   }
@@ -4340,25 +4411,87 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
    unfolded phone, a tablet in portrait and a phone in landscape
    (lib/app-layout.ts), where a sheet spanning the whole width reads as a slab.
    Like the sheets of iPadOS, it stays a bottom sheet — anchored at the
-   bottom, sliding up, never a centered dialog — but floats: a width that
-   follows the screen up to a reading measure, side gutters that also clear
-   the landscape notch, a gap above the home indicator and four rounded
-   corners. Below 640 px, a phone in portrait keeps its full-width sheet.
+   bottom, sliding up, never a centered dialog — with a width that follows the
+   screen up to a reading measure and side gutters that also clear the
+   landscape notch and iPhone Duo's side column. It runs on past the screen's
+   bottom edge instead of floating above it: floating, its bottom edge and
+   corners sat in the middle of an open iPhone Duo, where the sheet seemed to
+   start from nowhere. Below 640 px, a phone in portrait keeps its full-width
+   sheet.
 
    One rule for every bottom sheet: they all go through `MobileSheetContent`
-   (components/ui/mobile-sheet.tsx) or carry one of the two other selectors.
-   The vaul drawers of components/ui/dialog.tsx and side-panel.tsx only exist
-   under 480 px, so they never reach this width. */
+   (components/ui/mobile-sheet.tsx), dialogs, side panels and confirmations
+   included, or carry one of the two other selectors. */
 @media (min-width: 640px) {
   :root[data-app-layout="mobile"] {
-    --mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));
-    --mobile-sheet-safe-bottom: 0px;
+    --mobile-sheet-float: 0px;
+    --mobile-sheet-bottom-radius: 0px;
+    --mobile-sheet-bottom-left-radius: 0px;
+    --mobile-sheet-bottom-right-radius: 0px;
 
     :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"],
     [data-slot="alert-dialog-content"] {
-      width: min(100% - 2 * max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)), 40rem);
-      margin-inline: auto;
-      border-radius: var(--mobile-sheet-radius);
+      --sheet-wide-width: min(100% - 2 * max(1rem, env(safe-area-inset-left), env(safe-area-inset-right)), 40rem);
+      width: var(--sheet-wide-width);
+      /* Centred between its side insets. Written out rather than `auto`,
+         which does not animate: the sheet slides when its place changes
+         (iPhone Duo half opened or opened again, below). */
+      margin-left: calc((100% - 2 * (var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)) - var(--sheet-wide-width)) / 2);
+      margin-right: auto;
+      transition: margin-left 350ms cubic-bezier(0.32, 0.72, 0, 1), width 350ms cubic-bezier(0.32, 0.72, 0, 1);
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+    /* iPhone Duo half open, its fold running down the middle
+       (components/mobile/native-appearance.tsx publishes it): a sheet keeps
+       to the left half, as Safari's bookmarks do, instead of bending across
+       the fold. */
+    &[data-fold="vertical"] {
+      :is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot="sheet-content"],
+      [data-slot="alert-dialog-content"] {
+        --sheet-wide-width: min(var(--fold-start) - 2 * max(1rem, env(safe-area-inset-left)), 40rem);
+        margin-left: max(1rem, env(safe-area-inset-left));
+      }
+    }
+  }
+}
+
+/* A bottom sheet beside iPhone Duo's side column (lib/mobile/side-chrome.ts):
+   folded, the status bar and the app's bar stand in a column on one side of
+   the screen, and a sheet's top corner, where its close button sits, ran
+   under the clock. The sheet still spans the screen, but its content stops
+   at the column (`--mobile-sheet-column`, a padding on that side), and the
+   close button moves to the foot of the column, where the thumb reaches it
+   and nothing covers it. The top rows no longer keep its room. Wider, the
+   sheet is narrower than the screen and already clear of the column. */
+@media (max-width: 639.98px) {
+  :root[data-app-layout="mobile"][data-side-chrome="right"] {
+    --mobile-sheet-column: env(safe-area-inset-right);
+    --mobile-sheet-close-room: var(--mobile-sheet-top);
+    --mobile-sheet-close-inset: var(--mobile-sheet-top);
+
+    /* In the column, centred across it, and as far from the bottom as from
+       the side, so the disc turns around the corner's centre. The corner is a
+       continuous curve (`--sheet-bottom-*-reach` above), which runs closer to
+       the corner than an arc of the same radius: the gap stays even with the
+       disc nearer the corner than one radius, never farther than 0.95. */
+    .mobile-bottom-sheet :is([data-mobile-sheet-close], [data-slot="sheet-close"], [data-slot="side-panel-close"]) {
+      top: auto;
+      bottom: max(4px, min(var(--mobile-sheet-bottom-right-radius) * 0.95 - 22px, (var(--mobile-sheet-column) - 44px) / 2));
+      right: max(4px, min(var(--mobile-sheet-bottom-right-radius) * 0.95 - 22px, (var(--mobile-sheet-column) - 44px) / 2));
+    }
+    /* The navigation sheet's account row kept the top close button's room
+       (`pr-16`, components/app-sidebar.tsx): it now runs to the column, its
+       right padding the same as its left. */
+    .mobile-nav-sheet [data-sidebar-footer] {
+      padding-right: 0.5rem;
+    }
+    /* Above an open keyboard the corner is square: the button sits at the
+       content's foot, centred in the column. */
+    &[data-mobile-keyboard] .mobile-bottom-sheet :is([data-mobile-sheet-close], [data-slot="sheet-close"], [data-slot="side-panel-close"]) {
+      bottom: var(--mobile-sheet-bottom);
+      right: calc((var(--mobile-sheet-column) - 44px) / 2);
     }
   }
 }
@@ -4394,7 +4527,8 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   height: 85dvh;
   max-height: var(--mobile-sheet-room, 85dvh);
   overflow: hidden;
-  padding: 0;
+  /* Edge to edge, but clear of iPhone Duo's side column. */
+  padding: 0 var(--mobile-sheet-column, 0px) 0 0;
 }
 
 @media (min-width: 1024px) {

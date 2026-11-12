@@ -1,6 +1,8 @@
 import UIKit
 
 /// The app's bottom bar: a capsule of Liquid Glass with one button per action.
+/// On iPhone Duo, folded or open in landscape, it stands vertically on the
+/// side of the screen where the status bar is.
 ///
 /// The web app owns what the bar holds and where it sits. It keeps its own bar
 /// in the page, invisible, and reports that bar's place, its buttons and
@@ -67,10 +69,13 @@ final class NavigationBar: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // The page stands the bar on a side of the screen where the system's
+        // controls are (iPhone Duo): taller than wide, it stacks its buttons.
+        stack.axis = bounds.height > bounds.width ? .vertical : .horizontal
         if #available(iOS 26.0, *) {
             background.cornerConfiguration = .capsule()
         } else {
-            background.layer.cornerRadius = bounds.height / 2
+            background.layer.cornerRadius = min(bounds.width, bounds.height) / 2
             background.layer.cornerCurve = .continuous
             background.clipsToBounds = true
         }

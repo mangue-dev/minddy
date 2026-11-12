@@ -166,6 +166,7 @@ final class MinddyViewController: CAPBridgeViewController {
         // replaces that one before it answers.
         super.viewDidLoad()
         AppNavigator.shared.controller = self
+        observeHinge()
         // A notification tapped or a link followed while the app was closed
         // opens its own page.
         let asked = AppNavigator.shared.takePendingPath().flatMap(url(forPath:))
@@ -219,14 +220,83 @@ final class MinddyViewController: CAPBridgeViewController {
         return screen.value(forKey: key) as? CGFloat ?? 0
     }
 
+    /// A view over the whole window whose corners follow its container's,
+    /// read for the radius of each corner of the screen.
+    private lazy var cornerProbe: UIView = {
+        let probe = UIView()
+        probe.isUserInteractionEnabled = false
+        probe.isHidden = true
+        probe.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        if #available(iOS 26.0, *) {
+            probe.cornerConfiguration = .corners(radius: .containerConcentric())
+        }
+        return probe
+    }()
+
+    /// The radius of each corner of the screen showing the app, in points, or
+    /// nil when the system does not say. The corners are not all alike:
+    /// iPhone Duo's outer display is a D, square on the hinge side and round
+    /// on the other.
+    var screenCornerRadii: [String: Double]? {
+        guard #available(iOS 26.0, *), view.window != nil else { return nil }
+        if cornerProbe.superview !== view {
+            view.insertSubview(cornerProbe, at: 0)
+        }
+        cornerProbe.frame = view.bounds
+        let radius = { (corner: UIRectCorner) in Double(self.cornerProbe.effectiveRadius(corner: corner)) }
+        let radii = [
+            "topLeft": radius(.topLeft),
+            "topRight": radius(.topRight),
+            "bottomLeft": radius(.bottomLeft),
+            "bottomRight": radius(.bottomRight)
+        ]
+        return radii.values.contains { $0 > 0 } ? radii : nil
+    }
+
+    /// Whether the hinge last reported itself partially open; false on a
+    /// device without one.
+    private var hingePartiallyOpen = false
+
+    /// iPhone Duo half open, like a laptop or a book: the inner display
+    /// bends at the fold, and Safari keeps its sheets on one side of it. The
+    /// page hears where the fold runs while the hinge is partially open, and
+    /// that there is none otherwise (`fold` of the `display` event).
+    private func observeHinge() {
+        guard #available(iOS 27.1, *) else { return }
+        let interaction = UIHingeInteraction { [weak self] _, update in
+            guard let self else { return }
+            self.hingePartiallyOpen = update.hinge?.status == .partiallyOpen
+            self.reportDisplay()
+        }
+        view.addInteraction(interaction)
+    }
+
+    /// The fold of the display, in the view's points, while the hinge is
+    /// partially open: the system's division region.
+    var screenFold: [String: Double]? {
+        guard #available(iOS 27.1, *), hingePartiallyOpen else { return nil }
+        guard let fold = view.reservedRegions(kind: .division).first(where: { $0.isActive }) ?? view.reservedRegions(kind: .division).first
+        else { return nil }
+        return [
+            "x": Double(fold.frame.minX),
+            "y": Double(fold.frame.minY),
+            "width": Double(fold.frame.width),
+            "height": Double(fold.frame.height)
+        ]
+    }
+
+    private func reportDisplay() {
+        shellPlugin?.displayDidChange(cornerRadius: screenCornerRadius, cornerRadii: screenCornerRadii, fold: screenFold)
+    }
+
     /// iPhone Duo moves the app between its displays as it folds and unfolds,
-    /// and each has its own corners: the page hears the new radius once the
-    /// app has moved.
+    /// and each has its own corners: the page hears the new radii once the
+    /// app has moved or turned.
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
         coordinator.animate(alongsideTransition: nil) { [weak self] _ in
             guard let self else { return }
-            self.shellPlugin?.displayDidChange(cornerRadius: self.screenCornerRadius)
+            self.reportDisplay()
         }
     }
 
@@ -281,8 +351,10 @@ final class MinddyViewController: CAPBridgeViewController {
             navigationBar.setVisible(false)
             return
         }
-        // The page places its bar: the frame is taken as given.
-        navigationBar.frame = frame
+        // The page places its bar, and the shell moves it off what the page
+        // cannot see: the camera of iPhone Duo's outer display.
+        requestedBarFrame = frame
+        navigationBar.frame = placeBar(frame)
         // Under the launch cover while the first page loads.
         if let cover = launchCover {
             view.insertSubview(navigationBar, belowSubview: cover)
@@ -290,6 +362,112 @@ final class MinddyViewController: CAPBridgeViewController {
             view.bringSubviewToFront(navigationBar)
         }
         navigationBar.setVisible(true)
+    }
+
+    /// The frame the page last asked for the bar, before `placeBar`.
+    private var requestedBarFrame: CGRect?
+
+    /// Where the bar goes, from the frame the page asks for. A vertical bar
+    /// stands in iPhone Duo's side column, where Apple keeps the side
+    /// controls "aligned with the hardware" ("Designing for iPhone Duo").
+    /// The page only knows the column's width, so the shell centres the bar
+    /// across on the camera's axis, read from its reserved region, as
+    /// Safari's side controls are. The page keeps its foot above the home
+    /// indicator, where Safari's stands too. Then off the camera, wherever it
+    /// is.
+    /// How far from the side column's middle, toward the screen's middle,
+    /// its status items stand.
+    private static let sideColumnAxisShift: CGFloat = 6
+
+    private func placeBar(_ frame: CGRect) -> CGRect {
+        var placed = frame
+        if #available(iOS 27.1, *), frame.height > frame.width {
+            let bounds = view.bounds
+            let onRight = frame.midX > bounds.midX
+            let camera = view.reservedRegions(kind: .occlusion, options: .includeInactive)
+                // The camera itself, not the blocks that span the column.
+                .filter { abs($0.frame.midX - frame.midX) < frame.width * 1.5 && $0.frame.width < frame.width }
+                .min { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
+            if let camera {
+                placed.origin.x = camera.frame.midX - placed.width / 2
+            } else {
+                // No camera in the column (the inner display): the status
+                // bar's clock and icons stand on the same axis as the outer
+                // camera, 6 points from the column's middle toward the
+                // screen's, as measured on both displays.
+                let column = onRight ? view.safeAreaInsets.right : view.safeAreaInsets.left
+                if column > 0 {
+                    let axis = column / 2 + Self.sideColumnAxisShift
+                    placed.origin.x = (onRight ? bounds.maxX - axis : bounds.minX + axis) - placed.width / 2
+                }
+            }
+        }
+        return clearOfReservedRegions(placed)
+    }
+
+    /// `frame` moved off the regions the system reserves for hardware. On
+    /// iPhone Duo's outer display the camera stands in the column the side bar
+    /// shares with the status bar; turned with the camera at the foot of that
+    /// column, the bar sat on it. Web content has no reading of these regions
+    /// (the safe areas only say the column is there), so the shell moves the
+    /// bar itself: above the region, or below it when there is no room above.
+    private func clearOfReservedRegions(_ frame: CGRect) -> CGRect {
+        guard #available(iOS 27.1, *) else { return frame }
+        var placed = frame
+        let bounds = view.bounds.inset(by: view.safeAreaInsets.with(left: 0, right: 0))
+        for region in view.reservedRegions(kind: .occlusion) where region.isActive {
+            let obstacle = region.frame
+            guard obstacle.intersects(placed) else { continue }
+            let above = obstacle.minY - placed.height
+            let below = obstacle.maxY
+            if above >= bounds.minY {
+                placed.origin.y = above
+            } else if below + placed.height <= bounds.maxY {
+                placed.origin.y = below
+            }
+        }
+        return placed
+    }
+
+    /// Reserved regions move with the device: the bar follows them even when
+    /// the page's own frame for it has not changed.
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if let requestedBarFrame {
+            navigationBar.frame = placeBar(requestedBarFrame)
+        }
+        updateSideChromeScript()
+    }
+
+    /// The side the system's controls stand on (iPhone Duo folded, or open
+    /// in landscape), the rule of `lib/mobile/side-chrome.ts`.
+    private var sideChrome: String? {
+        let insets = webView?.safeAreaInsets ?? view.safeAreaInsets
+        guard insets.top == 0 else { return nil }
+        if insets.right >= 24 && insets.left == 0 { return "right" }
+        if insets.left >= 24 && insets.right == 0 { return "left" }
+        return nil
+    }
+
+    /// What the last side-chrome script set, so a layout adds one only when
+    /// the side changes.
+    private var scriptedSideChrome: String??
+
+    /// Tells every page where the side column is before its first line runs.
+    /// The WebView reports its safe areas to the page only after the first
+    /// paint, so the page drew its bottom bar there and moved it to the side
+    /// a moment later. A script runs at the start of each document instead,
+    /// with what the shell knows. User scripts cannot be replaced one by
+    /// one, and Capacitor's own must stay: each change adds one, and the last
+    /// added runs last, so it is the one that holds.
+    private func updateSideChromeScript() {
+        guard let contentController = webView?.configuration.userContentController else { return }
+        let side = sideChrome
+        if let scripted = scriptedSideChrome, scripted == side { return }
+        scriptedSideChrome = .some(side)
+        let source = side.map { "document.documentElement.setAttribute('data-side-chrome', '\($0)');" }
+            ?? "document.documentElement.removeAttribute('data-side-chrome');"
+        contentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
 
     /// The product has its own theme, which may differ from the system's. The
@@ -404,5 +582,11 @@ final class NavigationGuard: NSObject, WKNavigationDelegate {
             failedURL = url
         }
         controller.showOffline()
+    }
+}
+
+private extension UIEdgeInsets {
+    func with(left: CGFloat, right: CGFloat) -> UIEdgeInsets {
+        UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
     }
 }

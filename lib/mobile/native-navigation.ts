@@ -218,11 +218,17 @@ export function syncNativeNavigationBar(
     attributes: true,
     attributeFilter: WATCHED_ATTRIBUTES,
   });
-  const settled = ["resize", "transitionend", "animationend"] as const;
-  const started = ["transitionrun", "animationstart"] as const;
+  const settled = ["transitionend", "animationend"] as const;
+  // A resize too: iPhone Duo folding or unfolding resizes the window before
+  // the page has laid the bar out again, and a single measurement then found
+  // it off the screen and hid it for good.
+  const started = ["resize", "transitionrun", "animationstart"] as const;
   for (const event of settled) view.addEventListener(event, schedule, true);
   for (const event of started) view.addEventListener(event, follow, true);
   view.visualViewport?.addEventListener("resize", schedule);
+  // Turning the device half a turn keeps the window's size, so no resize
+  // comes, yet the bar may change sides (lib/mobile/side-chrome.ts).
+  view.screen.orientation?.addEventListener("change", follow);
   schedule();
 
   const handle = addListener("navigationAction", ({ id }) => {
@@ -237,6 +243,7 @@ export function syncNativeNavigationBar(
     for (const event of settled) view.removeEventListener(event, schedule, true);
     for (const event of started) view.removeEventListener(event, follow, true);
     view.visualViewport?.removeEventListener("resize", schedule);
+    view.screen.orientation?.removeEventListener("change", follow);
     if (frame) view.cancelAnimationFrame(frame);
     root.removeAttribute("data-native-navigation");
     void Promise.resolve(handle).then((listener) => listener.remove(), () => {});

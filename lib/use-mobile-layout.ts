@@ -162,7 +162,7 @@ const MOVING_MS = 450;
 /** What the movement window keeps past the keyboard's own duration. */
 const MOVING_MARGIN_MS = 70;
 // A mobile sheet, alert or drawer is open: what lies under it is its color.
-const SURFACE_SELECTOR = '[data-slot="sheet-content"], [data-slot="alert-dialog-content"], [data-vaul-drawer]';
+const SURFACE_SELECTOR = '[data-slot="sheet-content"], [data-slot="alert-dialog-content"]';
 
 /**
  * Keep sheets above the software keyboard on browsers with a visual viewport.

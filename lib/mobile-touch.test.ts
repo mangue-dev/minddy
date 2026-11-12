@@ -81,38 +81,69 @@ describe("safe areas", () => {
   });
 });
 
-describe("bottom sheets on wide screens (MIN-841)", () => {
+describe("bottom sheets on wide screens (MIN-841) and beside a side column", () => {
   const css = read(GLOBALS);
   const sheetSection = css.slice(
     css.indexOf("/* Mobile sheets share one breakpoint and viewport budget."),
     css.indexOf("/* Single-column boards snap from column to column"),
   );
-  const wide = sheetSection.slice(sheetSection.indexOf("@media (min-width: 640px) {"));
+  const wide = sheetSection.slice(
+    sheetSection.indexOf("@media (min-width: 640px) {"),
+    sheetSection.indexOf("/* A bottom sheet beside iPhone Duo's side column"),
+  );
 
-  it("floats every bottom sheet above the bottom edge from 640 px", () => {
-    // Anchored at the bottom with a gap, a width that follows the screen up
-    // to a reading measure, side gutters that clear a landscape notch, and four
-    // rounded corners: a floating bottom sheet, never a centered dialog.
-    expect(wide).toContain("--mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));");
-    expect(wide).toContain("--mobile-sheet-safe-bottom: 0px;");
+  it("anchors every bottom sheet to the bottom edge from 640 px", () => {
+    // A width that follows the screen up to a reading measure and side
+    // gutters that clear a landscape notch, but no gap under it: floating, an
+    // open iPhone Duo showed its bottom edge in mid-screen. Never a centered
+    // dialog.
+    expect(wide).toContain("--mobile-sheet-float: 0px;");
+    expect(wide).toContain("--mobile-sheet-bottom-radius: 0px;");
     expect(wide).toContain(":is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot=\"sheet-content\"]");
     expect(wide).toContain("[data-slot=\"alert-dialog-content\"]");
     expect(wide).toMatch(/width: min\(100% - 2 \* max\(1rem, env\(safe-area-inset-left\), env\(safe-area-inset-right\)\), 40rem\);/);
-    expect(wide).toContain("margin-inline: auto;");
-    expect(wide).toContain("border-radius: var(--mobile-sheet-radius);");
+    // Centred with a margin written out, so a change of place can slide.
+    expect(wide).toContain("margin-left: calc((100% - 2 * (var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)) - var(--sheet-wide-width)) / 2);");
+    expect(wide).toContain("transition: margin-left 350ms");
     expect(wide).not.toMatch(/\btop:|translate/);
   });
 
   it("overrides the full-width sheet rule rather than losing the cascade to it", () => {
     // Same specificity as the base rule: the wide one must come after it.
-    expect(sheetSection.indexOf("@media (min-width: 640px) {"))
-      .toBeGreaterThan(sheetSection.indexOf("border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-radius) var(--mobile-sheet-bottom-radius);"));
-    expect(sheetSection).toContain("border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-radius) var(--mobile-sheet-bottom-radius);");
+    const base = "border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-right-radius) var(--mobile-sheet-bottom-left-radius);";
+    expect(sheetSection).toContain(base);
+    expect(sheetSection.indexOf("@media (min-width: 640px) {")).toBeGreaterThan(sheetSection.indexOf(base));
+  });
+
+  it("moves the close button to the foot of iPhone Duo's side column", () => {
+    const side = sheetSection.slice(sheetSection.indexOf("/* A bottom sheet beside iPhone Duo's side column"));
+    expect(side).toContain("@media (max-width: 639.98px) {");
+    expect(side).toContain("--mobile-sheet-column: env(safe-area-inset-right);");
+    expect(side).toContain("bottom: max(4px, min(var(--mobile-sheet-bottom-right-radius) * 0.95 - 22px, (var(--mobile-sheet-column) - 44px) / 2));");
+    // Every sheet that sets its own padding keeps the column free.
+    for (const sheet of [".mobile-picker-sheet", ".mobile-command-palette", ".creation-sheet", ".mobile-assistant-sheet", ".mobile-bottom-sheet"]) {
+      const start = css.indexOf(`${sheet}[data-slot="sheet-content"] {`);
+      expect(start, sheet).toBeGreaterThan(-1);
+      const rule = css.slice(start, css.indexOf("}", start));
+      expect(rule, sheet).toContain("var(--mobile-sheet-column)");
+    }
+    // Sheets built on `Dialog`, pane-sized ones (the changelog, the project
+    // wizard) and confirmations reset their sides later in the file: they
+    // used to give the column back.
+    for (const selector of [
+      ".mobile-bottom-sheet[data-mobile-dialog] {",
+      ".mobile-bottom-sheet.dialog-pane-mirror[data-mobile-dialog] {",
+      "  [data-slot=\"alert-dialog-content\"] {\n    border: 0;",
+    ]) {
+      const start = css.indexOf(selector);
+      expect(start, selector).toBeGreaterThan(-1);
+      expect(css.slice(start, css.indexOf("}", start)), selector).toContain("var(--mobile-sheet-column)");
+    }
   });
 
   it("sizes every mobile sheet through the shared budget", () => {
     // A sheet that measured the viewport or the home indicator itself would
-    // overflow the top, or pad twice, once it floats.
+    // overflow the top, or pad twice.
     expect(sheetSection).toContain("inset: auto calc(var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)) calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float) - var(--mobile-sheet-attach));");
     const rules = sheetSection.slice(sheetSection.indexOf(":root[data-app-layout=\"mobile\"] {\n  .app-workspace"));
     // One ceiling for every sheet: what the keyboard and the editor's strip
@@ -128,11 +159,9 @@ describe("bottom sheets on wide screens (MIN-841)", () => {
     // keyboard had them move apart, and its top dipped and came back.
     const roomUses = css.split("\n").filter((line) => line.includes("var(--mobile-sheet-room") && !line.includes("--mobile-sheet-room:"));
     expect(roomUses.length).toBeGreaterThan(5);
+    // The sheets read the home indicator through the shared tokens only.
     const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
-    // Only the float gap itself reads the raw inset.
-    expect(bottomInsets.map((line) => line.trim())).toEqual([
-      "--mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));",
-    ]);
+    expect(bottomInsets).toEqual([]);
   });
 });
 
@@ -455,15 +484,14 @@ describe("other touch pitfalls", () => {
 });
 
 describe("software keyboard (MIN-870)", () => {
-  it("anchors vaul's drawers on the shared keyboard inset, with vaul's own handling off", () => {
-    // vaul measured the keyboard as `innerHeight - visualViewport.height`,
-    // which iOS Safari reports as 0: its drawers stayed under the keyboard.
-    for (const name of ["dialog", "side-panel"]) {
-      expect(read(UI(name))).toContain("repositionInputs: false");
+  it("hands every dialog, side panel and confirmation to the shared sheet on a phone", () => {
+    // The vaul drawers they fell back to below 480 px had no close button,
+    // corners or keyboard tokens of their own; the shared sheet has them all.
+    for (const name of ["dialog", "side-panel", "alert-dialog"]) {
+      const source = read(UI(name));
+      expect(source, name).not.toContain("vaul");
+      expect(source, name).toContain("MobileSheetContent");
     }
-    const css = read(GLOBALS);
-    const drawer = css.slice(css.indexOf('[data-vaul-drawer][data-vaul-drawer-direction="bottom"] {'));
-    expect(drawer.slice(0, drawer.indexOf("}"))).toContain("bottom: var(--mobile-keyboard-room, 0px);");
   });
 
   it("lifts a workspace field by shrinking the shell, not by scrolling the document", () => {

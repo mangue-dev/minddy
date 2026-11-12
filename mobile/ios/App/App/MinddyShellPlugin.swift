@@ -39,13 +39,16 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func state(_ call: CAPPluginCall) {
         // The corner radius reads the window, which belongs to the main thread.
         DispatchQueue.main.async { [weak self] in
-            call.resolve([
+            var state: [String: Any] = [
                 "origin": ServerStore.origin,
                 "cloudOrigin": ServerStore.cloudOrigin,
                 "isCustomServer": ServerStore.customOrigin != nil,
                 "version": MinddyViewController.version,
                 "cornerRadius": self?.controller?.screenCornerRadius ?? 0
-            ])
+            ]
+            if let radii = self?.controller?.screenCornerRadii { state["cornerRadii"] = radii }
+            if let fold = self?.controller?.screenFold { state["fold"] = fold }
+            call.resolve(state)
         }
     }
 
@@ -276,10 +279,16 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         notifyListeners("keyboard", data: ["height": Double(height), "duration": duration * 1000])
     }
 
-    /// The app now shows on another display, or in another size of it: the
-    /// radius of that display's corners, in points.
-    func displayDidChange(cornerRadius: CGFloat) {
-        notifyListeners("display", data: ["cornerRadius": Double(cornerRadius)])
+    /// The app now shows on another display, or in another size or
+    /// orientation of it, or the hinge moved: the radius of that display's
+    /// corners, in points, of each corner when the system says, and where
+    /// the fold runs while the hinge is partially open.
+    func displayDidChange(cornerRadius: CGFloat, cornerRadii: [String: Double]?, fold: [String: Double]?) {
+        var data: [String: Any] = ["cornerRadius": Double(cornerRadius)]
+        if let cornerRadii { data["cornerRadii"] = cornerRadii }
+        // Always present, null without a fold, so the page drops a stale one.
+        data["fold"] = fold ?? NSNull()
+        notifyListeners("display", data: data)
     }
 
     /// Runs `action` on the main thread when the calling document is one of

@@ -26,6 +26,29 @@ export interface MobileShellState {
   version: string;
   /** The radius of the screen's corners in CSS pixels; 0 or absent when unknown. */
   cornerRadius?: number;
+  /**
+   * The radius of each corner, when they differ: iPhone Duo's outer display
+   * is square on the hinge side. Absent in older shells.
+   */
+  cornerRadii?: MobileCornerRadii;
+  /** Where the display folds while iPhone Duo is half open; absent otherwise. */
+  fold?: MobileFold | null;
+}
+
+/** The band where the display folds, in CSS pixels from the viewport's corner. */
+export interface MobileFold {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** The radius of each corner of the screen, in CSS pixels. */
+export interface MobileCornerRadii {
+  topLeft: number;
+  topRight: number;
+  bottomLeft: number;
+  bottomRight: number;
 }
 
 /**
@@ -106,7 +129,7 @@ export interface MobileShellPlugin {
    */
   addListener?(
     event: "display",
-    handler: (display: { cornerRadius: number }) => void,
+    handler: (display: { cornerRadius: number; cornerRadii?: MobileCornerRadii; fold?: MobileFold | null }) => void,
   ): MobileListenerHandle | Promise<MobileListenerHandle>;
   // Last: `bind` keeps the last signature (lib/mobile/native-navigation.ts).
   /** A tap on the native bar carries the identifier of its item. */

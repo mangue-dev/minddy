@@ -23,6 +23,7 @@ import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { useMobileSecondarySidebar } from "@/lib/secondary-sidebar-context";
 import { getMobileBridge } from "@/lib/mobile/bridge";
 import { syncNativeNavigationBar } from "@/lib/mobile/native-navigation";
+import { watchSideChrome } from "@/lib/mobile/side-chrome";
 
 export type MobileMenuPanel = {
   key: string;
@@ -113,6 +114,9 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
     if (!shell || !navRef.current) return;
     return syncNativeNavigationBar(navRef.current, shell) ?? undefined;
   }, []);
+  // Where the system's controls stand on a side (iPhone Duo), the bar stands
+  // there too, vertical (lib/mobile/side-chrome.ts, app/globals.css).
+  useEffect(() => watchSideChrome(document), []);
   const inboxLabel = inboxCount > 0 && inboxBadgeLabel ? `${t("inbox")} — ${inboxBadgeLabel}` : t("inbox");
   return <>
     <nav ref={navRef} aria-label={t("mainNavigation")} data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">

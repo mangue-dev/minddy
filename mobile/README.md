@@ -135,6 +135,59 @@ screen there.
   own inset and the content keeps its width. A column fixed above the keyboard
   (`keyboardFrameStyle`) passes the same insets. Without them it left its
   parent's padding and moved sideways when the keyboard opened.
+- The page learns the side column before its first line runs. The WebView
+  reports its safe areas to the page only after the first paint, so the
+  page drew its bar at the bottom, then moved it. The shell adds a document
+  start script (`updateSideChromeScript`) that sets `data-side-chrome` from
+  its own safe areas, and the page leaves it alone while it reads no inset at
+  all. With the status bar on the side the top inset is 0: the page's shell
+  steps back from the top by a share of the top corner's radius (8px folded,
+  22px open) and from the free side by 8px, so headers clear the edge.
+- The bottom bar follows Apple's tab bars. Folded, or open in landscape, it
+  stands as a vertical capsule at the foot of the status bar's column, and the
+  content keeps no room under it. Open in portrait, the status bar is back at
+  the top and so is the horizontal bar at the bottom. The page sets
+  `data-side-chrome` from the safe areas (`lib/mobile/side-chrome.ts`): an
+  inset on one side only and none at the top. `app/globals.css` lays its
+  invisible bar out from that attribute, and the native bar stacks its buttons
+  when the frame it receives is taller than wide. Folding resizes the window
+  before the page has laid the bar out again, so the page follows the bar
+  frame by frame after a resize or an orientation change (a half turn keeps
+  the window's size), as it does through a transition.
+- The page only knows the column's width; the shell finishes placing the
+  vertical bar (`placeBar`). Apple keeps the side controls "aligned with the
+  hardware" without giving numbers, so the bar follows Safari's side
+  controls, measured on the outer display: 48pt across, about 52pt per
+  button, centred on the camera's axis (47.8pt from the edge, read from the
+  camera's reserved region), its foot above the home indicator. The inner
+  display has no camera in the column; its clock and icons stand 6pt from
+  the column's middle toward the screen's, the same axis, which the shell
+  uses there.
+- The outer display's camera stands in that column. Turned with the camera at
+  the foot of the column, it covered the bar. The safe areas do not say where
+  it is, so the shell moves its bar off the active occlusion regions
+  (`reservedRegions(kind: .occlusion)`, iOS 27.1): above the camera, or below
+  it when there is no room above.
+- Bottom sheets. Folded, a sheet spans the screen but its content stops at
+  the side column (`--mobile-sheet-column`), and its close button moves to
+  the foot of the column instead of the top corner, under the clock. From
+  640px wide (open, or landscape) a sheet keeps its reading width but runs on
+  past the bottom edge instead of floating above it. Its bottom corners
+  follow the screen's own: the shell reads each corner's radius with
+  `effectiveRadius(corner:)` on a container-concentric view and publishes
+  them as `--device-corner-bottom-left` and the like, since the outer display
+  is a D, square on the hinge side. Device Hub's own capture shows the
+  display's shape; `simctl io screenshot` does not. Every sheet reads the
+  same tokens, including those built on `Dialog` (the help menu, the
+  changelog, the project wizard), the confirmations and the documentation's
+  Numo: a sheet that sets its own side padding adds `--mobile-sheet-column`
+  to it.
+- Half open (the hinge partially open, the fold running down the middle of
+  the inner display), a sheet keeps to the left half, as Safari's bookmarks
+  do. The shell watches the hinge (`UIHingeInteraction`) and sends the fold,
+  the active division region, in the `display` event; the page publishes it
+  as `data-fold` with `--fold-start` and `--fold-end`. A fold across the
+  screen (`data-fold="horizontal"`) is published but not laid out yet.
 - WebKit zooms a double-tapped block to the width of the screen. The insets
   make the sign-in column narrower than the screen, so two taps zoomed it.
   Fields and the sign-in screens therefore take `touch-action: manipulation`

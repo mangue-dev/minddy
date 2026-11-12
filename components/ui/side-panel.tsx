@@ -2,11 +2,9 @@
 
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
-import { Drawer } from "vaul"
 
 import { cn } from "@/lib/utils"
 import { escapeClosesMenusFirst } from "@/lib/escape-layers"
-import { useMediaQuery } from "@/lib/use-media-query"
 import { releasePoppersBelow } from "@/lib/overlay-dismiss"
 import { CloseButton } from "./close-button"
 import { Sheet } from "./sheet"
@@ -20,9 +18,7 @@ import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/com
  * `SidePanelBody` at the end hand it to the shared mobile sheet when the app
  * uses its mobile layout. Call sites only use the exported components.
  *
- * The modal primitive slides in from the edge and becomes a draggable bottom
- * sheet (vaul) below 480px — the same mode swap the <Dialog> uses. Compose it
- * with SidePanelHeader (which carries the close button), SidePanelBody (the
+ * The modal primitive slides in from the edge. Compose it with SidePanelHeader (which carries the close button), SidePanelBody (the
  * scrollable zone) and an optional SidePanelFooter.
  *
  *   <SidePanel open={open} onOpenChange={setOpen}>
@@ -35,81 +31,48 @@ import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/com
  *     </SidePanelContent>
  *   </SidePanel>
  */
-const SidePanelModeContext = React.createContext<{
-  drawer: boolean
-  onOpenChange?: (open: boolean) => void
-}>({ drawer: false })
-
-function useSidePanelMode() {
-  return React.useContext(SidePanelModeContext).drawer
-}
-
 function ModalSidePanel({
   open,
   defaultOpen,
   onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  const drawer = useMediaQuery("(max-width: 479px)")
   const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
-  const Root = (drawer ? Drawer.Root : DialogPrimitive.Root) as React.ElementType
-  // vaul's keyboard handling misreads iOS Safari; app/globals.css anchors the
-  // drawer above the keyboard instead (MIN-870).
-  const drawerProps = drawer ? { repositionInputs: false } : {}
   return (
-    <SidePanelModeContext.Provider value={{ drawer, onOpenChange: tracked.onOpenChange }}>
-      <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
-        <Root data-slot="side-panel" {...drawerProps} open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
-      </OverlayOpenProvider>
-    </SidePanelModeContext.Provider>
+    <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
+      <DialogPrimitive.Root data-slot="side-panel" open={open} defaultOpen={defaultOpen} onOpenChange={tracked.onOpenChange} {...props} />
+    </OverlayOpenProvider>
   )
 }
 
 function SidePanelTrigger({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-  const drawer = useSidePanelMode()
-  const Trigger = (drawer ? Drawer.Trigger : DialogPrimitive.Trigger) as React.ElementType
-  return <Trigger data-slot="side-panel-trigger" {...props} />
+  return <DialogPrimitive.Trigger data-slot="side-panel-trigger" {...props} />
 }
 
 function SidePanelPortal({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-  const drawer = useSidePanelMode()
-  const Portal = (drawer ? Drawer.Portal : DialogPrimitive.Portal) as React.ElementType
-  return <Portal data-slot="side-panel-portal" {...props} />
+  return <DialogPrimitive.Portal data-slot="side-panel-portal" {...props} />
 }
 
 function SidePanelClose({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Close>) {
-  const drawer = useSidePanelMode()
-  const Close = (drawer ? Drawer.Close : DialogPrimitive.Close) as React.ElementType
-  return <Close data-slot="side-panel-close" {...props} />
+  return <DialogPrimitive.Close data-slot="side-panel-close" {...props} />
 }
 
 function SidePanelOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-  const { drawer, onOpenChange } = React.useContext(SidePanelModeContext)
-  const Overlay = (drawer ? Drawer.Overlay : DialogPrimitive.Overlay) as React.ElementType
   return (
-    <Overlay
+    <DialogPrimitive.Overlay
       data-slot="side-panel-overlay"
-      // In drawer mode vaul's overlay-tap dismiss is a no-op without snap
-      // points, so close explicitly on a genuine scrim press (mirrors Dialog).
-      onPointerDown={
-        drawer
-          ? (e: React.PointerEvent) => {
-              if (e.target === e.currentTarget) onOpenChange?.(false)
-            }
-          : undefined
-      }
       className={cn(
         // The one modal scrim (`--overlay-scrim`, MIN-931), docked panel and
-        // bottom sheet alike. No `backdrop-filter`: a full-viewport blur
+        // sheet alike. No `backdrop-filter`: a full-viewport blur
         // re-composites the page on every frame something moves behind the
         // scrim. The tint alone costs nothing per repaint.
         "fixed inset-0 isolate z-50 bg-scrim duration-200 data-closed:duration-150 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
@@ -117,17 +80,6 @@ function SidePanelOverlay({
       )}
       {...props}
     />
-  )
-}
-
-// Radix portals popover/dropdown/select content OUTSIDE the drawer's DOM; keep
-// the sheet open when a pointer-down lands inside that floating content.
-function isInsidePopperContent(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    !!target.closest(
-      '[data-radix-popper-content-wrapper],[data-slot="dropdown-menu-content"],[data-slot="select-content"],[role="menu"],[role="listbox"]',
-    )
   )
 }
 
@@ -145,7 +97,7 @@ function ModalSidePanelContent({
   onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  /** Edge the panel docks to on desktop. Ignored in bottom-sheet mode. */
+  /** Edge the panel docks to on desktop. */
   side?: "left" | "right"
   /**
    * Let Radix move focus into the panel on open (its native behaviour). Off by
@@ -155,8 +107,6 @@ function ModalSidePanelContent({
    */
   autoFocusOnOpen?: boolean
 }) {
-  const drawer = useSidePanelMode()
-
   // Suppress Radix's open-focus by default; still forward the consumer's handler.
   const handleOpenAutoFocus = (event: Event) => {
     if (!autoFocusOnOpen) event.preventDefault()
@@ -165,32 +115,6 @@ function ModalSidePanelContent({
   }
   // A closing panel keeps what it showed (components/ui/overlay-freeze.tsx).
   const shown = useFrozenWhileClosed(children)
-
-  if (drawer) {
-    return (
-      <SidePanelPortal>
-        <SidePanelOverlay />
-        <Drawer.Content
-          data-slot="side-panel-content"
-          onOpenAutoFocus={handleOpenAutoFocus}
-          onPointerDownOutside={(e) => {
-            if (isInsidePopperContent(e.detail.originalEvent.target)) {
-              e.preventDefault()
-            }
-          }}
-          className={cn(
-            "fixed inset-x-0 bottom-0 z-50 mt-24 flex max-h-[92dvh] flex-col rounded-t-2xl border-t border-border bg-card text-sm shadow-lg ring-1 ring-border outline-none",
-            className
-          )}
-          {...props}
-        >
-          {/* Drag handle */}
-          <div className="mx-auto mt-2.5 mb-1 h-1.5 w-10 shrink-0 rounded-full bg-muted-foreground/25" />
-          {shown}
-        </Drawer.Content>
-      </SidePanelPortal>
-    )
-  }
 
   return (
     <SidePanelPortal>
@@ -267,10 +191,8 @@ function SidePanelTitle({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  const drawer = useSidePanelMode()
-  const Title = (drawer ? Drawer.Title : DialogPrimitive.Title) as React.ElementType
   return (
-    <Title
+    <DialogPrimitive.Title
       data-slot="side-panel-title"
       className={cn("text-base leading-tight font-medium", className)}
       {...props}
@@ -282,10 +204,8 @@ function SidePanelDescription({
   className,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  const drawer = useSidePanelMode()
-  const Description = (drawer ? Drawer.Description : DialogPrimitive.Description) as React.ElementType
   return (
-    <Description
+    <DialogPrimitive.Description
       data-slot="side-panel-description"
       className={cn("text-sm text-muted-foreground", className)}
       {...props}
