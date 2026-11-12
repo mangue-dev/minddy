@@ -7113,6 +7113,22 @@
     "numoBody": "Numo planifie le travail, retrouve un ticket ou résume un projet en une phrase.",
     "agentsTitle": "Votre agent de code, toujours à jour",
     "agentsBody": "Il lit vos tickets et met son plan à jour au fil de son travail.",
-    "start": "Commencer"
+    "start": "Commencer",
+    "art": {
+      "issueOffline": "Mode hors ligne pour l’app mobile",
+      "issueCheckout": "Le paiement échoue quand le panier est vide",
+      "issueSettings": "Refondre la page des paramètres",
+      "askBlocking": "Qu’est-ce qui bloque la prochaine version ?",
+      "answerBlocking": "MIN-38 : le paiement échoue quand le panier est vide. Tom s’en occupe.",
+      "askCreate": "Nouveau ticket : l’export CSV sort vide",
+      "answerCreate": "Créé et assigné à Tom, en priorité haute.",
+      "issueExport": "L’export CSV produit un fichier vide",
+      "taskStore": "Garder les tickets ouverts sur l’appareil",
+      "taskQueue": "Mettre en file les modifications hors ligne",
+      "taskSync": "Synchroniser la file au retour du réseau",
+      "taskBanner": "Afficher un bandeau hors ligne",
+      "taskTest": "Tester les modifications en conflit",
+      "prDraft": "Pull request en brouillon"
+    }
   }
 }

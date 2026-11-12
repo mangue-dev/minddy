@@ -7113,6 +7113,22 @@
     "numoBody": "Numo plans work, finds an issue or sums up a project in one sentence.",
     "agentsTitle": "Your coding agent, kept in step",
     "agentsBody": "It reads your issues and updates its plan as it works.",
-    "start": "Get started"
+    "start": "Get started",
+    "art": {
+      "issueOffline": "Offline mode for the mobile app",
+      "issueCheckout": "Checkout fails when the cart is empty",
+      "issueSettings": "Redesign the settings page",
+      "askBlocking": "What's blocking the next release?",
+      "answerBlocking": "MIN-38: checkout fails when the cart is empty. Tom is on it.",
+      "askCreate": "New issue: the CSV export comes out empty",
+      "answerCreate": "Created and assigned to Tom, with high priority.",
+      "issueExport": "CSV export returns an empty file",
+      "taskStore": "Keep open issues on the device",
+      "taskQueue": "Queue edits made offline",
+      "taskSync": "Sync the queue when the connection returns",
+      "taskBanner": "Show an offline banner",
+      "taskTest": "Test conflicting edits",
+      "prDraft": "Draft pull request"
+    }
   }
 }

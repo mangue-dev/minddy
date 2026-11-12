@@ -7113,6 +7113,22 @@
     "numoBody": "Numo plant Arbeit, findet ein Ticket oder fasst ein Projekt in einem Satz zusammen.",
     "agentsTitle": "Dein Coding-Agent, immer auf dem Laufenden",
     "agentsBody": "Er liest deine Tickets und aktualisiert seinen Plan, während er arbeitet.",
-    "start": "Loslegen"
+    "start": "Loslegen",
+    "art": {
+      "issueOffline": "Offline-Modus für die mobile App",
+      "issueCheckout": "Checkout schlägt bei leerem Warenkorb fehl",
+      "issueSettings": "Einstellungsseite neu gestalten",
+      "askBlocking": "Was blockiert das nächste Release?",
+      "answerBlocking": "MIN-38: Der Checkout schlägt bei leerem Warenkorb fehl. Tom kümmert sich darum.",
+      "askCreate": "Neues Ticket: Der CSV-Export ist leer",
+      "answerCreate": "Erstellt und Tom zugewiesen, mit hoher Priorität.",
+      "issueExport": "CSV-Export liefert eine leere Datei",
+      "taskStore": "Offene Tickets auf dem Gerät speichern",
+      "taskQueue": "Offline-Änderungen in eine Warteschlange stellen",
+      "taskSync": "Warteschlange synchronisieren, sobald das Netz zurück ist",
+      "taskBanner": "Offline-Hinweis anzeigen",
+      "taskTest": "Konflikte bei Änderungen testen",
+      "prDraft": "Pull Request als Entwurf"
+    }
   }
 }

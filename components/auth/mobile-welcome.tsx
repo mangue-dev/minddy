@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { AUTH_SUBMIT_CLASS } from "@/components/auth/auth-chrome";
+import { WELCOME_ART } from "@/components/auth/mobile-welcome-art";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { cn } from "@/lib/utils";
 
@@ -11,8 +12,8 @@ const SLIDES = ["issues", "numo", "agents"] as const;
 
 /**
  * The mobile app's first screen when nobody is signed in (MIN-907): what
- * minddy does, in a few slides, and the way in. The slides hold placeholders
- * until the captures exist.
+ * minddy does, in a few slides, and the way in. Each slide's picture is
+ * drawn in code (`mobile-welcome-art.tsx`).
  */
 export function MobileWelcome({ onStart }: { onStart: () => void }) {
   const t = useTranslations("MobileWelcome");
@@ -25,29 +26,40 @@ export function MobileWelcome({ onStart }: { onStart: () => void }) {
       <div
         ref={track}
         aria-roledescription="carousel"
-        className="mt-8 flex min-h-0 flex-1 touch-pan-x snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-contain [scrollbar-width:none]"
+        className="mt-2 flex min-h-0 flex-1 touch-pan-x snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-contain [scrollbar-width:none]"
         onScroll={(event) => {
           const { scrollLeft, clientWidth } = event.currentTarget;
           setCurrent(Math.round(scrollLeft / Math.max(clientWidth, 1)));
         }}
       >
-        {SLIDES.map((slide, index) => (
-          <section
-            key={slide}
-            aria-roledescription="slide"
-            aria-label={t("slideLabel", { current: index + 1, total: SLIDES.length })}
-            className="flex w-full shrink-0 snap-center flex-col items-center px-6"
-          >
-            {/* Where the capture will go. */}
-            <div aria-hidden className="w-full max-w-[320px] flex-1 rounded-[28px] bg-muted" />
-            {/* One height for every slide's text, so the picture above keeps
-                its size from slide to slide. */}
-            <div className="mt-8 flex h-36 max-w-[320px] flex-col items-center">
-              <h2 className="text-center font-display text-2xl font-semibold tracking-tight text-balance">{t(`${slide}Title`)}</h2>
-              <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground text-pretty">{t(`${slide}Body`)}</p>
-            </div>
-          </section>
-        ))}
+        {SLIDES.map((slide, index) => {
+          const Art = WELCOME_ART[slide];
+          return (
+            <section
+              key={slide}
+              aria-roledescription="slide"
+              aria-label={t("slideLabel", { current: index + 1, total: SLIDES.length })}
+              className="flex w-full shrink-0 snap-center flex-col items-center px-6"
+            >
+              {/* The picture is decoration: the title and sentence below say
+                  what it shows. It sits on the page, its top and bottom
+                  fading out, so a scene taller than the room left by the
+                  phone dissolves at the edge instead of being cut. */}
+              <div
+                aria-hidden
+                className="flex min-h-0 w-full max-w-[320px] flex-1 overflow-hidden px-1 py-8 [mask-image:linear-gradient(to_bottom,transparent,black_2rem,black_calc(100%-2.5rem),transparent)]"
+              >
+                <Art />
+              </div>
+              {/* One height for every slide's text, so the picture above keeps
+                  its size from slide to slide. */}
+              <div className="mt-2 flex h-40 max-w-[320px] flex-col items-center">
+                <h2 className="text-center font-display text-2xl font-semibold tracking-tight text-balance">{t(`${slide}Title`)}</h2>
+                <p className="mt-2 text-center text-sm leading-relaxed text-muted-foreground text-pretty">{t(`${slide}Body`)}</p>
+              </div>
+            </section>
+          );
+        })}
       </div>
       <div className="mt-6 flex justify-center gap-1.5" aria-hidden>
         {SLIDES.map((slide, index) => (

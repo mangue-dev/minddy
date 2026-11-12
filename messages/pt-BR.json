@@ -7113,6 +7113,22 @@
     "numoBody": "O Numo planeja o trabalho, encontra um ticket ou resume um projeto em uma frase.",
     "agentsTitle": "Seu agente de código, sempre em dia",
     "agentsBody": "Ele lê seus tickets e atualiza o plano enquanto trabalha.",
-    "start": "Começar"
+    "start": "Começar",
+    "art": {
+      "issueOffline": "Modo offline para o app móvel",
+      "issueCheckout": "O pagamento falha com o carrinho vazio",
+      "issueSettings": "Redesenhar a página de configurações",
+      "askBlocking": "O que está bloqueando a próxima versão?",
+      "answerBlocking": "MIN-38: o pagamento falha com o carrinho vazio. O Tom está cuidando disso.",
+      "askCreate": "Novo ticket: a exportação CSV sai vazia",
+      "answerCreate": "Criado e atribuído ao Tom, com prioridade alta.",
+      "issueExport": "A exportação CSV gera um arquivo vazio",
+      "taskStore": "Guardar os tickets abertos no dispositivo",
+      "taskQueue": "Enfileirar as edições feitas offline",
+      "taskSync": "Sincronizar a fila quando a rede voltar",
+      "taskBanner": "Mostrar um aviso de modo offline",
+      "taskTest": "Testar edições em conflito",
+      "prDraft": "Pull request em rascunho"
+    }
   }
 }

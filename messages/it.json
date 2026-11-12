@@ -7113,6 +7113,22 @@
     "numoBody": "Numo pianifica il lavoro, trova un ticket o riassume un progetto in una frase.",
     "agentsTitle": "Il tuo agente di codice, sempre aggiornato",
     "agentsBody": "Legge i tuoi ticket e aggiorna il suo piano mentre lavora.",
-    "start": "Inizia"
+    "start": "Inizia",
+    "art": {
+      "issueOffline": "Modalità offline per l’app mobile",
+      "issueCheckout": "Il pagamento non va a buon fine con il carrello vuoto",
+      "issueSettings": "Ridisegnare la pagina delle impostazioni",
+      "askBlocking": "Cosa blocca la prossima versione?",
+      "answerBlocking": "MIN-38: il pagamento non va a buon fine con il carrello vuoto. Se ne occupa Tom.",
+      "askCreate": "Nuovo ticket: l’esportazione CSV è vuota",
+      "answerCreate": "Creato e assegnato a Tom, con priorità alta.",
+      "issueExport": "L’esportazione CSV produce un file vuoto",
+      "taskStore": "Salvare i ticket aperti sul dispositivo",
+      "taskQueue": "Mettere in coda le modifiche offline",
+      "taskSync": "Sincronizzare la coda quando torna la rete",
+      "taskBanner": "Mostrare un avviso offline",
+      "taskTest": "Testare le modifiche in conflitto",
+      "prDraft": "Pull request in bozza"
+    }
   }
 }

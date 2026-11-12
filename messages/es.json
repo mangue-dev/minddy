@@ -7113,6 +7113,22 @@
     "numoBody": "Numo planifica el trabajo, encuentra una incidencia o resume un proyecto en una frase.",
     "agentsTitle": "Tu agente de código, siempre al día",
     "agentsBody": "Lee tus incidencias y actualiza su plan mientras trabaja.",
-    "start": "Empezar"
+    "start": "Empezar",
+    "art": {
+      "issueOffline": "Modo sin conexión para la app móvil",
+      "issueCheckout": "El pago falla cuando el carrito está vacío",
+      "issueSettings": "Rediseñar la página de ajustes",
+      "askBlocking": "¿Qué está bloqueando la próxima versión?",
+      "answerBlocking": "MIN-38: el pago falla cuando el carrito está vacío. Tom se está encargando.",
+      "askCreate": "Nueva incidencia: la exportación CSV sale vacía",
+      "answerCreate": "Creada y asignada a Tom, con prioridad alta.",
+      "issueExport": "La exportación CSV genera un archivo vacío",
+      "taskStore": "Guardar las incidencias abiertas en el dispositivo",
+      "taskQueue": "Poner en cola los cambios sin conexión",
+      "taskSync": "Sincronizar la cola al recuperar la red",
+      "taskBanner": "Mostrar un aviso sin conexión",
+      "taskTest": "Probar cambios en conflicto",
+      "prDraft": "Pull request en borrador"
+    }
   }
 }
