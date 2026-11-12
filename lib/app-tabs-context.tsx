@@ -66,12 +66,16 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
     let pending = false;
     return {
       registerDeparture: (guard: () => Promise<boolean>) => { guards.add(guard); return () => { guards.delete(guard); }; },
-      open: (navigate: () => void) => {
+      open: (navigate: () => void, href?: string) => {
         if (pending) return;
         pending = true;
         startNavigation(async () => {
           try {
             for (const guard of guards) if (!(await guard())) return;
+            // The page being left gives way to the destination's skeleton at
+            // once, as on desktop (MIN-843): a phone loads slower, and the
+            // old page staying put read as a tap that did nothing.
+            if (href) beginPendingNavigation(href);
             startNavigation(navigate);
           } catch (error) { console.error("Unable to save before navigation", error); }
           finally { pending = false; }
@@ -101,7 +105,7 @@ export function AppTabsProvider({ children }: { children: ReactNode }) {
       {session ? <PrBackgroundSync /> : null}
       {session ? <Suspense fallback={null}><AppTabRouteSync /></Suspense> : null}
       {owner && mobile && navigationPending && <div role="progressbar" aria-label={tc("loading")}
-        className="mobile-navigation-progress fixed inset-x-0 top-0 z-[150] h-0.5 overflow-hidden bg-primary/15">
+        className="mobile-navigation-progress fixed inset-x-0 top-[env(safe-area-inset-top)] z-[150] h-0.5 overflow-hidden bg-primary/15">
         <div className="h-full w-1/3 bg-primary" />
       </div>}
       {children}

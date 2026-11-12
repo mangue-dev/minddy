@@ -11,6 +11,8 @@ import {
   useOptionalAppTabSession,
 } from "./app-tabs-context";
 import { createHomeTab } from "./app-tabs";
+import { useMobileNavigation, type MobileNavigation } from "./mobile-navigation-context";
+import { clearPendingNavigation } from "./pending-navigation";
 import type { AppTabsSession } from "./app-tabs-session";
 
 const query = vi.hoisted(() => ({ isPending: false, isError: false, refetch: vi.fn() }));
@@ -19,6 +21,14 @@ const preparations = vi.hoisted(() => [] as { intend: (href: string) => void }[]
 const viewport = vi.hoisted(() => ({ mobile: false as boolean | undefined }));
 const queryCalls = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ user: { id: "owner" } as { id: string } | null, loading: false }));
+const pendingStarts = vi.hoisted(() => vi.fn());
+vi.mock("./pending-navigation", async (original) => {
+  const actual = await original<typeof import("./pending-navigation")>();
+  return { ...actual, beginPendingNavigation: (href: string) => {
+    pendingStarts(href);
+    actual.beginPendingNavigation(href);
+  } };
+});
 vi.mock("./use-mobile-layout", () => ({ useMobileLayout: () => viewport.mobile }));
 vi.mock("./auth-context", () => ({ useAuth: () => auth }));
 vi.mock("./use-app-tabs-query", () => ({
@@ -265,4 +275,30 @@ it("navigates to a stored full-id destination through its short codes", () => {
   session.navigate("/projects/9e3d0c35-c1d7-4d2a-983d-8190638cc887?objective=71384d77-1fc9-4227-b045-56ff2c8e29e4");
   expect(router.push).toHaveBeenCalledWith("/projects/9e3d0c35?objective=71384d77", { scroll: false });
   history.mockRestore();
+});
+
+it("shows a mobile destination ahead of the router only once the departure guards pass", async () => {
+  viewport.mobile = true;
+  let mobile: MobileNavigation | null = null;
+  function Consumer() { mobile = useMobileNavigation(); return null; }
+  await act(() => root.render(createElement(QueryClientProvider, { client },
+    createElement(AppTabsProvider, { children: createElement(Consumer) }),
+  )));
+  let allow!: (allowed: boolean) => void;
+  const unregister = mobile!.registerDeparture(() => new Promise((resolve) => { allow = resolve; }));
+  const navigate = vi.fn();
+  pendingStarts.mockClear();
+
+  await act(async () => { mobile!.open(navigate, "/all"); await Promise.resolve(); });
+  expect(pendingStarts).not.toHaveBeenCalled();
+  await act(async () => { allow(false); });
+  expect(pendingStarts).not.toHaveBeenCalled();
+  expect(navigate).not.toHaveBeenCalled();
+
+  await act(async () => { mobile!.open(navigate, "/all"); await Promise.resolve(); });
+  await act(async () => { allow(true); });
+  expect(pendingStarts).toHaveBeenCalledExactlyOnceWith("/all");
+  expect(navigate).toHaveBeenCalledOnce();
+  unregister();
+  clearPendingNavigation();
 });

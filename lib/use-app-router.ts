@@ -11,7 +11,7 @@ export function useAppNavigation() {
   const session = useOptionalAppTabSession();
   const mobile = useMobileNavigation();
   return useCallback((href: string, open: () => void) => {
-    if (mobile) mobile.open(open);
+    if (mobile) mobile.open(open, href);
     else if (!session?.reuseDestination(href)) {
       // Desktop shell: the destination shows before the router commits it.
       if (session) beginPendingNavigation(href);

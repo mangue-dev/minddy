@@ -1882,8 +1882,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               "relative max-h-[180px] min-h-0 self-stretch overflow-y-auto [grid-area:text]",
               // Compact: one pixel lower than the box's centre, since the font's
               // ascent is taller than its descent and the text otherwise rides
-              // above the "+" beside it.
-              expandedLayout ? "px-4 pb-1 pt-3" : "px-1 pt-[15px] pb-[13px]",
+              // above the "+" beside it. The line is centred in the row rather
+              // than placed by its padding alone: on a touch screen the
+              // buttons beside it grow to 40px and the row gets taller than
+              // the text box, which then sat near the top. There the text is
+              // 16px (iOS zooms into smaller fields), whose taller line
+              // already sits low: the padding goes back to even.
+              expandedLayout
+                ? "px-4 pb-1 pt-3"
+                : "flex flex-col justify-center-safe px-1 pt-[15px] pb-[13px] pointer-coarse:py-[14px]",
             )}
           >
             <div

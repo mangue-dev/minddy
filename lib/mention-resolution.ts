@@ -135,6 +135,25 @@ export function useResolvedMentionLabel(
 }
 
 /**
+ * Resolves once no mention is waiting for the server: every request queued
+ * by the pills on screen has been answered. A view that reveals its content
+ * in one step (the home page) awaits it so its pills appear with their names
+ * rather than resolving one after the other.
+ */
+export function mentionsSettled(): Promise<void> {
+  const idle = () => queued.size === 0 && inFlight.size === 0;
+  if (idle()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const check = () => {
+      if (!idle()) return;
+      listeners.delete(check);
+      resolve();
+    };
+    listeners.add(check);
+  });
+}
+
+/**
  * What the server returned with a resolved mention besides its label, read
  * from the same cache and in ONE subscription: an objective's status for the
  * glyph of its pill (MIN-785), an MCP connection's service for its logo, a
