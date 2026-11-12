@@ -370,6 +370,31 @@ cards, upgrade buttons and links to plans. A feature the plan lacks says so and
 stops there. `components/billing/purchases-hidden.test.tsx` holds that rule;
 extend it when a new surface links to billing.
 
+The public website stays out of the app as well. The WebView keeps every page
+of its server, and the landing, pricing, the manual and the legal pages are
+pages of it, whose header and footer lead to pricing. A tapped link to one of
+them opens in Safari's sheet over the app instead
+(`lib/mobile/public-links.ts`, `MinddyShell.openBrowser`):
+`lib/public-routes.ts` says which paths are the public site.
+
+## Store metadata
+
+- `App/PrivacyInfo.xcprivacy` is the shell's privacy manifest. The shell's
+  own code reads `UserDefaults` only (the chosen server, the push
+  installation identifier), declared with reason `CA92.1`; its data types
+  match the App Store privacy labels. Capacitor ships its own manifest.
+- `CFBundleLocalizations` in `App/Info.plist` lists the six locales of the
+  web app, which is what the App Store shows as the app's languages.
+  `App/InfoPlist.xcstrings` translates the permission prompts (camera,
+  microphone, photos); the English source stays in `Info.plist`.
+- The app's version follows the web's: `npm run release:prepare` (and
+  `scripts/prepare-release.mjs`) writes it into `mobile/package.json` and the
+  Xcode project's `MARKETING_VERSION`, numbers only (the App Store reads no
+  pre-release suffix), and the release preflight refuses a mismatch. The
+  build number (`CURRENT_PROJECT_VERSION`) goes up by hand for a second upload
+  of the same version. The app's menu (What's new) lists this version beside
+  the web's.
+
 ## Develop
 
 Requirements: macOS, Xcode with an iOS simulator, Node.js 24.

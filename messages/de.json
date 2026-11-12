@@ -6380,7 +6380,7 @@
     "availabilityBody": "Öffne minddy in Safari auf dem iPhone oder iPad oder in Chrome auf Android. Wenn du einem Link in einer anderen App gefolgt bist, öffne ihn zuerst im Browser.",
     "installTitle": "Wähle dein Gerät",
     "noteTitle": "Über den Browser installieren",
-    "noteBody": "minddy ist eine Progressive Web App: Dein Browser installiert sie auf deinem Home-Bildschirm. Es ist keine native Mobil-App. minddy ist weder im iOS App Store noch bei Google Play verfügbar.",
+    "noteBody": "Dein Browser installiert minddy als Web-App mit eigenem Symbol auf deinem Home-Bildschirm.",
     "secondaryCta": "Im Browser starten",
     "openSourceTitle": "minddy auf deinem eigenen Server nutzen",
     "openSourceBody": "Wenn du minddy selbst hostest, öffne die Adresse deines Servers im mobilen Browser und folge denselben Installationsschritten. Der öffentliche Quellcode von minddy steht unter GNU AGPL v3.0 bereit.",

@@ -6380,7 +6380,7 @@
     "availabilityBody": "Ouvrez minddy dans Safari sur iPhone ou iPad, ou dans Chrome sur Android. Si vous avez suivi un lien dans une autre app, ouvrez-le d’abord dans votre navigateur.",
     "installTitle": "Choisissez votre appareil",
     "noteTitle": "Installez depuis votre navigateur",
-    "noteBody": "minddy est une app web que votre navigateur installe sur l’écran d’accueil, aussi appelée PWA. Elle n’est pas distribuée dans l’App Store iOS ni dans Google Play.",
+    "noteBody": "Votre navigateur installe minddy sur l’écran d’accueil comme une app web, avec sa propre icône.",
     "secondaryCta": "Commencer dans le navigateur",
     "openSourceTitle": "Utilisez votre propre serveur minddy",
     "openSourceBody": "Si vous hébergez minddy, ouvrez l’adresse de votre serveur dans votre navigateur mobile et suivez les mêmes étapes d’installation. Le code source public de minddy est disponible sous licence GNU AGPL v3.0.",

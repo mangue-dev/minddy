@@ -104,6 +104,12 @@ export interface MobileShellPlugin {
   /** Opens minddy's notification settings in the Settings app. */
   openNotificationSettings?(): Promise<void>;
   /**
+   * Shows `url` in Safari's sheet over the app (`SFSafariViewController`):
+   * the public website, which stays out of the app's WebView. See
+   * `lib/mobile/public-links.ts`. Absent in older shells.
+   */
+  openBrowser?(options: { url: string }): Promise<void>;
+  /**
    * Plays one haptic: `selection` is light, `success` and `error` are
    * stronger. See `lib/mobile/haptics.ts`. Absent in older shells.
    */

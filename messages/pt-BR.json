@@ -6380,7 +6380,7 @@
     "availabilityBody": "Abra o minddy no Safari no iPhone ou iPad, ou no Chrome no Android. Se você seguiu um link dentro de outro app, abra-o primeiro no navegador.",
     "installTitle": "Escolha seu dispositivo",
     "noteTitle": "Instale pelo navegador",
-    "noteBody": "O minddy é um aplicativo web progressivo: seu navegador o instala na tela inicial. Não é um aplicativo móvel nativo. Não há aplicativo minddy na App Store do iOS nem no Google Play.",
+    "noteBody": "Seu navegador instala o minddy na tela inicial como um app web, com o próprio ícone.",
     "secondaryCta": "Começar no navegador",
     "openSourceTitle": "Use o minddy no seu servidor",
     "openSourceBody": "Se você hospeda o minddy, abra o endereço do seu servidor no navegador do celular e siga as mesmas etapas de instalação. O código-fonte público do minddy está disponível sob a licença GNU AGPL v3.0.",

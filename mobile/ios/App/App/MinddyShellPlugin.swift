@@ -1,6 +1,7 @@
 import AuthenticationServices
 import Capacitor
 import Foundation
+import SafariServices
 import UIKit
 
 /// The shell's own plugin, `MinddyShell` in JavaScript. Its contract is
@@ -22,6 +23,7 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "reload", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAppearance", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "haptic", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openBrowser", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setHaptics", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setNavigationBar", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise),
@@ -97,6 +99,28 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         let dark = call.getBool("dark") ?? false
         DispatchQueue.main.async { [weak self] in
             self?.controller?.setAppearance(dark: dark)
+            call.resolve()
+        }
+    }
+
+    /// Shows a page of the public website in Safari's sheet, over the app
+    /// (`lib/mobile/public-links.ts`): pricing, the manual and the legal
+    /// pages stay out of the WebView. Only web pages: a page cannot use this
+    /// to open another app's scheme.
+    @objc func openBrowser(_ call: CAPPluginCall) {
+        guard let raw = call.getString("url"), let url = URL(string: raw),
+              let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http" else {
+            call.reject("Only a web page can open in the browser.")
+            return
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let controller = self?.controller else {
+                call.resolve()
+                return
+            }
+            let safari = SFSafariViewController(url: url)
+            safari.dismissButtonStyle = .close
+            (controller.presentedViewController ?? controller).present(safari, animated: true)
             call.resolve()
         }
     }

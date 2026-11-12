@@ -14,6 +14,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { BrowserIntlProvider } from "@/components/browser-intl-provider";
 import { CookieBanner } from "@/components/cookie-banner";
 import { NativeMobileAppearance } from "@/components/mobile/native-appearance";
+import { PublicLinksOutside } from "@/components/mobile/public-links-outside";
 import { DesktopChrome } from "@/components/desktop-chrome";
 import { KeyboardModality } from "@/components/keyboard-modality";
 import { PostHogInit } from "@/components/posthog-init";
@@ -267,6 +268,7 @@ export default async function RootLayout({
             <DesktopChrome />
             <KeyboardModality />
             <NativeMobileAppearance />
+            <PublicLinksOutside />
             <CookieBanner />
             {/* PostHog covers public pages and the app. The SDK loads after idle
                 outside the initial bundle. Device consent controls anonymous,

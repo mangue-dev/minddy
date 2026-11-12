@@ -23,6 +23,7 @@ import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { getMobileBridge } from "@/lib/mobile/bridge";
 import { useDisplayedPathname, useDisplayedSearchParam } from "@/lib/pending-navigation";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { animate, motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -918,11 +919,21 @@ function ChangelogButton({
   const [dialogMounted, setDialogMounted] = useState(false);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [feedbackDialogMounted, setFeedbackDialogMounted] = useState(false);
-  const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
+  // The native app's own version, beside the web's: the desktop app's, or
+  // the iPhone shell's (MIN-907). Both follow the web's version at release.
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
     const bridge = getDesktopBridge();
-    if (bridge) setDesktopVersion(bridge.version);
+    if (bridge) {
+      setAppVersion(bridge.version);
+      return;
+    }
+    const shell = getMobileBridge()?.shell;
+    if (!shell) return;
+    let live = true;
+    void shell.state().then((state) => { if (live && state.version) setAppVersion(state.version); }, () => {});
+    return () => { live = false; };
   }, []);
 
   const handleMenuOpenChange = (nextOpen: boolean) => {
@@ -972,8 +983,8 @@ function ChangelogButton({
           <AppVersions
             className="px-3 pt-3"
             web={t("webVersion")}
-            app={desktopVersion ? t("appVersion") : null}
-            desktopVersion={desktopVersion}
+            app={appVersion ? t("appVersion") : null}
+            appVersion={appVersion}
           />
         </MobileSheetScrollArea>
       </DialogContent>
@@ -1047,8 +1058,8 @@ function ChangelogButton({
           <AppVersions
             className="px-2.5 py-1.5"
             web={t("webVersion")}
-            app={desktopVersion ? t("appVersion") : null}
-            desktopVersion={desktopVersion}
+            app={appVersion ? t("appVersion") : null}
+            appVersion={appVersion}
           />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1166,12 +1177,12 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
 function AppVersions({
   web,
   app,
-  desktopVersion,
+  appVersion,
   className,
 }: {
   web: string;
   app: string | null;
-  desktopVersion: string | null | undefined;
+  appVersion: string | null | undefined;
   className?: string;
 }) {
   return (
@@ -1179,10 +1190,10 @@ function AppVersions({
       <MinddyLogo className={cn("h-3.5 w-3.5 shrink-0 text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
       <span className="truncate">{web}</span>
       <span className="tabular-nums">{APP_VERSION}</span>
-      {app && desktopVersion ? (
+      {app && appVersion ? (
         <>
           <span className="col-start-2 truncate">{app}</span>
-          <span className="tabular-nums">{desktopVersion}</span>
+          <span className="tabular-nums">{appVersion}</span>
         </>
       ) : null}
     </div>
