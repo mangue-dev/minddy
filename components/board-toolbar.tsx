@@ -75,6 +75,7 @@ import { useStatusFilterActions } from "@/components/status-filter-menu";
 import { CYCLE_TAB_KEY, mergeTabOrder } from "@/lib/tab-order";
 import { useTabOrderQuery } from "@/lib/use-tab-order-query";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { displayName } from "@/lib/display-name";
 import { useSubmitShortcut } from "@/lib/keyboard/use-submit-shortcut";
 import type {
@@ -700,6 +701,9 @@ export function BoardToolbar({
   const tApi = useTranslations("ApiErrors");
   const tActions = useTranslations("CommandPaletteActions");
   const appTabs = useOptionalAppTabSession();
+  // The phone has no tab strip, and a browser tab opened from the mobile
+  // shell leaves the app (MIN-967): no "Open in a new tab" there.
+  const mobile = useMobileLayout() === true;
   // The "Mes tickets" pill wears MY avatar, not a generic person glyph.
   const myAvatarSource = useMyAvatarSource();
 
@@ -803,12 +807,12 @@ export function BoardToolbar({
     // are not deleted; the system view is shared, the “Cycle” pill is not.
     const editable = view !== null && view.kind !== "my";
     const actions: ContextMenuAction[] = [
-      {
+      ...(mobile ? [] : [{
         id: "open-new-tab",
         label: tActions("openInNewTab"),
         icon: <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />,
         onSelect: () => openViewInNewTab(view),
-      },
+      }]),
       {
         id: "rename",
         label: t("renameView"),
@@ -837,7 +841,7 @@ export function BoardToolbar({
       onSelect: () => view && setDeleteTarget(view),
     });
     return actions;
-  }, [viewMenu, withShare, customCount, t, tActions, openViewInNewTab]);
+  }, [viewMenu, withShare, customCount, t, tActions, openViewInNewTab, mobile]);
 
   return (
     <>
@@ -1043,13 +1047,13 @@ export function BoardToolbar({
               </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end">
-              {activeView && (
+              {activeView && !mobile && (
                 <DropdownMenuItem onSelect={() => openViewInNewTab(activeView)}>
                   <HugeiconsIcon icon={LinkSquare01Icon} />
                   {tActions("openInNewTab")}
                 </DropdownMenuItem>
               )}
-              {activeView && (!isSystem || withShare) && <DropdownMenuSeparator />}
+              {activeView && !mobile && (!isSystem || withShare) && <DropdownMenuSeparator />}
               {!isSystem && (
                 <DropdownMenuItem
                   onSelect={() => activeView && setRenameTarget(activeView)}

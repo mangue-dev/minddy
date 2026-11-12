@@ -933,7 +933,9 @@ export function CommandPalette({
           openLinkedObjective: tAction("openLinkedObjective"),
         },
         navigate: (href) => router.push(href),
-        openInNewTab: (href) => { void appTabs?.create(href); },
+        // Only the desktop tab session opens tabs; the mobile layout has
+        // none, and the action is then left out (MIN-967).
+        openInNewTab: appTabs ? (href) => { void appTabs.create(href); } : undefined,
         copyText: async (value, confirmation, resolveHref) => {
           const text = resolveHref
             ? new URL(value, window.location.origin).href

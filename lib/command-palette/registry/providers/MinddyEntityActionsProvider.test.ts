@@ -198,6 +198,19 @@ describe("Minddy entity palette actions", () => {
     expect(context.openInNewTab).toHaveBeenCalledWith(navigation.href);
   });
 
+  it("leaves out the new-tab action where there are no tabs, keeping the copy-link one", () => {
+    const provider = createMinddyEntityActionsProvider({
+      labels,
+      navigate: vi.fn(),
+      copyText: vi.fn(async () => undefined),
+      openCreateIssue: vi.fn(),
+      openCreateObjective: vi.fn(),
+    });
+    const ids = provider.getActions(item("navigation"), {} as never).map((action) => action.id);
+    expect(ids).not.toContain("entity.open-new-tab");
+    expect(ids).toContain("entity.copy-link");
+  });
+
   it("does not treat a slash-prefixed title as an application link", async () => {
     const context = setup();
     const page = {
