@@ -21,6 +21,11 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* The app's layout, set before the first paint (lib/app-layout.ts): the
+   primitives take their compact desktop sizes from it, never from the width,
+   so an unfolded phone or a tablet in the mobile layout keeps finger sizes. */
+@custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
+@custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
 
 /* ── State variants ──────────────────────────────────────────────────────────
    Restored from the shadcn base (lost on extraction). They map short names to

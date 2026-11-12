@@ -18,8 +18,8 @@
   --breakpoint-desktop: 1024px;
   --breakpoint-wide: 1200px;
 }
-@custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
-@custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
+/* `app-mobile:` and `app-desktop:` are declared in app/tokens.css, which the
+   pages bundled in the mobile app compile too. */
 
 /* Hover belongs to a fine pointer that hovers (MIN-836). A finger has no
    hover: the browser fakes one on tap and keeps it until the next tap

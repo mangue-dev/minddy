@@ -329,7 +329,12 @@ describe("other touch pitfalls", () => {
     // ends. The primitives handle this for their fields; the rule covers fields in the
     // handwritten product and any future ones.
     expect(read(UI("input"))).toContain("text-base");
-    expect(read(UI("input"))).toContain("md:text-sm");
+    // Compact in the desktop layout only, never from a width: an unfolded
+    // iPhone Duo is 951px wide and still lays the app out for a finger.
+    for (const name of ["input", "textarea", "select", "input-group", "combobox", "color-input", "slider"]) {
+      expect(read(UI(name)), name).not.toMatch(/(^|[\s"`:])md:/);
+    }
+    expect(read(UI("input"))).toContain("app-desktop:text-sm");
     const css = read(GLOBALS);
     expect(css).toMatch(/textarea:not\(\.title-field\),\s*select,\s*\[contenteditable\]:not\(\[contenteditable="false"\], \.title-field\) \{\s*font-size: 16px;/);
     // iOS zooms into any focused editable element, not only form fields: the
