@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fetchSeeded } from "./server-seed";
+import { refreshResolvedMention } from "./mention-resolution";
 
 type AvatarResponse = { avatar: string };
 
@@ -48,6 +49,8 @@ function useAvatarMutation(
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      // Pills naming the account, as Numo's intro does, take the new portrait.
+      if (user) refreshResolvedMention("member", user.id);
     },
   });
 }
@@ -87,6 +90,8 @@ export function useUploadAvatar() {
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      // Pills naming the account, as Numo's intro does, take the new portrait.
+      if (user) refreshResolvedMention("member", user.id);
     },
   });
 }

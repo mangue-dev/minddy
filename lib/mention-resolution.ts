@@ -117,6 +117,20 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+/**
+ * Asks the server again for a target whose label or figure just changed,
+ * keeping the pill as it is until the answer: a member who renamed
+ * themselves or changed their avatar (MIN-964). A pill resolved behind the
+ * profile screen otherwise kept the account's first name for a minute.
+ */
+export function refreshResolvedMention(type: MentionLinkType, id: string): void {
+  const key = keyOf(type, id);
+  const entry = cache.get(key);
+  if (!entry) return;
+  cache.set(key, { ...entry, at: 0 });
+  notify();
+}
+
 /** The resolution of one mention: `undefined` while it loads. */
 export function useResolvedMentionLabel(
   type: MentionLinkType | null,

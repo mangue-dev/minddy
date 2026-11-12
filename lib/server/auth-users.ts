@@ -51,10 +51,15 @@ const identityCache = new Map<string, { user: User; expires: number }>();
  * Resolve auth users by id (best-effort; missing ids are skipped), served from
  * a short TTL memory cache. Only missing or expired ids affect the API
  * admin, and in parallel — instead of a round-trip per id on each call.
+ *
+ * `fresh` ids skip the cache: the reader's own account, whose name changes in
+ * the browser straight through Supabase Auth, out of this cache's sight
+ * (MIN-964).
  */
 export async function fetchAuthUsersById(
   service: SupabaseClient,
-  ids: string[]
+  ids: string[],
+  fresh: readonly string[] = [],
 ): Promise<Map<string, User>> {
   const unique = [...new Set(ids)].filter(Boolean);
   if (unique.length === 0) return new Map();
@@ -63,7 +68,7 @@ export async function fetchAuthUsersById(
   const result = new Map<string, User>();
   const misses: string[] = [];
   for (const id of unique) {
-    const hit = identityCache.get(id);
+    const hit = fresh.includes(id) ? undefined : identityCache.get(id);
     if (hit && hit.expires > now) {
       result.set(id, hit.user);
     } else {

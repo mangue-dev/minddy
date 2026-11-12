@@ -233,7 +233,8 @@ export async function resolveMentionTargets(
     // A connection is read under its owner's id: another account's reads as none.
     Promise.all(idsOf("mcp")
       .map(async (id) => [id, await getMcpConnection(userId, id).catch(() => null)] as const)),
-    visibleMembers.size ? fetchAuthUsersById(service, [...visibleMembers]) : null,
+    // The reader's own name is read fresh: they may have just changed it.
+    visibleMembers.size ? fetchAuthUsersById(service, [...visibleMembers], [userId]) : null,
   ]);
   // A member's portrait: Markdown names a member by id alone, and the id is
   // not the seed of their avatar (MIN-964).

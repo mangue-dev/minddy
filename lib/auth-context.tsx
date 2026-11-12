@@ -35,6 +35,7 @@ import { signalRealtimeRekey } from "./realtime-topic";
 import { HttpResponseError, isBackendUnavailableError } from "./backend-availability";
 import { withClientRequestDeadline } from "./client-request-deadline";
 import type { User, Session } from "@supabase/supabase-js";
+import { refreshResolvedMention } from "./mention-resolution";
 
 /**
  * Opens the session an app's authentication round brought back: an OAuth
@@ -199,6 +200,9 @@ function sameUser(prev: User | null, next: User | null): boolean {
   if (!prev || !next || prev.id !== next.id) return false;
   return JSON.stringify(prev) === JSON.stringify(next);
 }
+
+/** Metadata fields a display name is read from (lib/display-name.ts). */
+const NAME_KEYS = ["display_name", "full_name", "name"];
 
 export function AuthProvider({
   children,
@@ -621,6 +625,8 @@ export function AuthProvider({
       if (data.user) {
         userRef.current = data.user;
         setUser(data.user);
+        // The pills naming this account show the new name (MIN-964).
+        if (NAME_KEYS.some((key) => key in patch)) refreshResolvedMention("member", data.user.id);
       }
     });
     metaWriteChain.current = run.catch(() => {});

@@ -2,7 +2,7 @@
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { mentionsSettled, useResolvedMentionLabel } from "./mention-resolution";
+import { mentionsSettled, refreshResolvedMention, useResolvedMentionLabel } from "./mention-resolution";
 
 let root: Root;
 let container: HTMLDivElement;
@@ -38,4 +38,25 @@ it("settles once the mentions on screen have their answer", async () => {
   expect(settled).toHaveBeenCalledOnce();
   expect(container.textContent).toBe("MIN-1");
   await expect(mentionsSettled()).resolves.toBeUndefined();
+});
+
+// MIN-964: Numo's intro on Home resolves the account's own mention behind the
+// profile screen; saving a name there must show the new one, not the old.
+it("asks again for a member who renamed themselves, keeping the old name meanwhile", async () => {
+  const names = ["verify-bot", "Titeuf"];
+  const fetch = vi.fn(async () =>
+    new Response(JSON.stringify({ mentions: [{ type: "member", id: "me-renamed", label: names.shift() }] })));
+  vi.stubGlobal("fetch", fetch);
+  function Pill() {
+    return createElement("span", null, useResolvedMentionLabel("member", "me-renamed") ?? "…");
+  }
+  await act(() => root.render(createElement(Pill)));
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+  expect(container.textContent).toBe("verify-bot");
+
+  act(() => refreshResolvedMention("member", "me-renamed"));
+  expect(container.textContent).toBe("verify-bot");
+  await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+  expect(fetch).toHaveBeenCalledTimes(2);
+  expect(container.textContent).toBe("Titeuf");
 });
