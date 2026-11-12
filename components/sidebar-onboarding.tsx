@@ -26,10 +26,6 @@ import type { OnboardingStepId } from "@/lib/onboarding";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
 import { useAnalytics } from "@/lib/use-analytics";
-import { CYCLES_ENABLED_META_KEY } from "@/lib/cycle-prefs";
-import { useQueryClient } from "@tanstack/react-query";
-import { HOME_SUMMARY_KEY } from "@/lib/use-home-summary-query";
-import { GLOBAL_BOARD_KEY } from "@/lib/use-global-board-query";
 import dynamic from "next/dynamic";
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 
@@ -55,12 +51,11 @@ export function SidebarOnboarding({ mobile = false, onLayerOpenChange }: Sidebar
   const detailId = useId();
   const checklistRef = useRef<HTMLDivElement>(null);
   const t = useTranslations("Onboarding");
-  const { user, updateUserMetadata } = useAuth();
+  const { user } = useAuth();
   const { projects, openCreateProject } = useProjects();
   const { openCreateIssue } = useCreate();
   const { open } = useAssistantPanelActions();
   const { track } = useAnalytics();
-  const queryClient = useQueryClient();
   const { invitations, busyId, answer } = useInvitationResponder();
   const [expanded, setExpanded] = useState(true);
   const [selected, setSelected] = useState<OnboardingStepId | null>(null);
@@ -74,11 +69,11 @@ export function SidebarOnboarding({ mobile = false, onLayerOpenChange }: Sidebar
 
   const titles: Record<OnboardingStepId, string> = {
     project: t("projectTitle"), tickets: t("ticketsTitle"), numo: t("numoTitle"),
-    mcp: t("mcpTitle"), cycles: t("cyclesTitle"),
+    mcp: t("mcpTitle"),
   };
   const descriptions: Record<OnboardingStepId, string> = {
     project: t("projectDesc"), tickets: t("ticketsDesc"), numo: t("numoDesc"),
-    mcp: t("mcpDesc"), cycles: t("cyclesDesc"),
+    mcp: t("mcpDesc"),
   };
   const invitation = invitations[0];
   const ownedProject = projects.some((project) => project.owner_id === user?.id);
@@ -96,11 +91,6 @@ export function SidebarOnboarding({ mobile = false, onLayerOpenChange }: Sidebar
     }
   };
 
-  const enableCycles = async () => {
-    await updateUserMetadata({ [CYCLES_ENABLED_META_KEY]: true });
-    void queryClient.invalidateQueries({ queryKey: HOME_SUMMARY_KEY });
-    void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
-  };
 
   const selectStep = (step: OnboardingStepId, next: boolean) => {
     setSelected(next ? step : null);
@@ -228,7 +218,6 @@ export function SidebarOnboarding({ mobile = false, onLayerOpenChange }: Sidebar
                                 <Button size="sm" variant="outline" disabled={busy} onClick={() => void run(() => onboarding.acknowledgeStep("mcp"))}>{t("markDone")}</Button>
                               </>
                             )}
-                            {step.id === "cycles" && <Button size="sm" disabled={busy} onClick={() => void run(enableCycles)}>{t("cyclesToggle")}</Button>}
                           </div>
 
                           {step.id === "tickets" && projects.length === 0 && <p className="text-sm text-muted-foreground">{t("ticketsNeedProject")}</p>}

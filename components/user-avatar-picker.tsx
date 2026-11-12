@@ -8,10 +8,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 
-/** Shared Lorelei-or-upload control used during signup and in profile settings. */
+/**
+ * The account's picture and the two ways to change it: a generated Lorelei
+ * face or an image of one's own. Used by the profile screen of a new account
+ * (components/first-run/profile-setup-screen.tsx).
+ */
 export function UserAvatarPicker({
   source,
-  previewUrl,
   onUpload,
   onGenerate,
   uploadLabel,
@@ -21,8 +24,6 @@ export function UserAvatarPicker({
   className,
 }: {
   source: string | null;
-  /** Local object URL used before a signup image has been stored. */
-  previewUrl?: string | null;
   onUpload: (file: File) => void | Promise<void>;
   onGenerate: () => void;
   uploadLabel: string;
@@ -35,10 +36,8 @@ export function UserAvatarPicker({
   const busy = uploading || generating;
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-3", className)}>
-      <div className="size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-border">
-        <UserAvatar url={previewUrl} seed={source} className="size-full" />
-      </div>
+    <div className={cn("flex w-full flex-col items-center gap-4", className)}>
+      <UserAvatar seed={source} className="size-24 ring-1 ring-border" />
       <input
         ref={inputRef}
         type="file"
@@ -51,28 +50,16 @@ export function UserAvatarPicker({
           event.target.value = "";
         }}
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-2"
-        disabled={busy}
-        onClick={() => inputRef.current?.click()}
-      >
-        {uploading ? <Spinner /> : <HugeiconsIcon icon={ImageUploadIcon} className="size-3.5" />}
-        {uploadLabel}
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-2"
-        disabled={busy}
-        onClick={onGenerate}
-      >
-        {generating ? <Spinner /> : <HugeiconsIcon icon={ShuffleIcon} className="size-3.5" />}
-        {generateLabel}
-      </Button>
+      <div className="grid w-full gap-2">
+        <Button type="button" variant="outline" className="h-12 w-full gap-2 rounded-full" disabled={busy} onClick={() => inputRef.current?.click()}>
+          {uploading ? <Spinner /> : <HugeiconsIcon icon={ImageUploadIcon} className="size-4" />}
+          <span className="truncate">{uploadLabel}</span>
+        </Button>
+        <Button type="button" variant="outline" className="h-12 w-full gap-2 rounded-full" disabled={busy} onClick={onGenerate}>
+          {generating ? <Spinner /> : <HugeiconsIcon icon={ShuffleIcon} className="size-4" />}
+          <span className="truncate">{generateLabel}</span>
+        </Button>
+      </div>
     </div>
   );
 }

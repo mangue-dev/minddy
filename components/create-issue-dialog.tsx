@@ -31,6 +31,9 @@ import { useArrowField } from "@/lib/use-arrow-field";
 import { useTitleBodyLink } from "@/lib/use-title-body-link";
 import { CreationCarousel, CreationDictation } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { useDescriptionArea } from "@/components/use-description-area";
+import { announceIssueSubmitted } from "@/lib/issue-submitted-event";
+import { cn } from "@/lib/utils";
 import {
   AddResourceButton,
   ComposerResourcePills,
@@ -191,6 +194,7 @@ export function CreateIssueDialog({
 }) {
   const t = useTranslations("IssueUI");
   const mobile = useMobileLayout() === true;
+  const descriptionArea = useDescriptionArea();
   const tField = useTranslations("Field");
   const tDrafts = useTranslations("Drafts");
   const { user } = useAuth();
@@ -712,6 +716,7 @@ export function CreateIssueDialog({
         // validated against it server-side.
         await onCreateInProject(activeProjectId, { ...input, copy_resources: uploads.inputs });
       }
+      announceIssueSubmitted();
       // Smart-fill: the card is not yet there (the server fills before
       // inserting), and the toast is the only thing that says it's coming.
       // Without it, we close a form on a board that has not moved.
@@ -1101,8 +1106,9 @@ export function CreateIssueDialog({
               <div className="creation-field-label">{tField("description")}</div>
               {/* The title's gap: the description is this wrapper's first child,
                   where its own margin does not apply. */}
-              <div ref={titleBody.bodyRef} className={showsTitle ? "app-desktop:mt-3" : undefined}>
+              <div ref={titleBody.bodyRef} onClick={descriptionArea.onClick} className={cn("creation-description-area", showsTitle && "app-desktop:mt-3")}>
               <LazyDocumentEditor
+                apiRef={descriptionArea.bind}
                 mentions={mentions}
                 key={editorKey}
                 onLeaveTop={titleBody.leaveBody}

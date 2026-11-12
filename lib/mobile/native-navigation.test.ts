@@ -71,26 +71,12 @@ describe("reading the web bar for the shell", () => {
     expect(readNavigationBar(nav, () => undefined)).toEqual({ visible: false });
   });
 
-  it("sends a picture, such as the account's avatar, to be shown in its own colors", () => {
+  it("sends a picture to be shown in its own colors", () => {
     const menu = nav.querySelector('[data-nav-slot="menu"]')!;
     menu.innerHTML = '<img src="data:image/svg+xml,avatar" alt="">';
     const items = readNavigationBar(nav, (icon) => `png:${icon.tagName.toLowerCase()}`).items!;
     expect(items[0]).toMatchObject({ id: "menu", icon: "png:img", iconTinted: false });
     expect(items[1]).toMatchObject({ id: "assistant", icon: "png:svg", iconTinted: true });
-  });
-
-  it("keeps the bar while its page slides aside for the sidebar, until it has left the screen", () => {
-    const pill = nav.firstElementChild as HTMLElement;
-    // The page is not hit-testable then: the layer that closes the sidebar answers.
-    const dismiss = document.body.appendChild(document.createElement("button"));
-    dismiss.setAttribute("data-mobile-sidebar-dismiss", "");
-    onTop = dismiss;
-
-    pill.getBoundingClientRect = () => new DOMRect(241, 792, 320, 48);
-    expect(readNavigationBar(nav)).toMatchObject({ visible: true, frame: { x: 241, y: 792, width: 320, height: 48 } });
-
-    pill.getBoundingClientRect = () => new DOMRect(402, 792, 320, 48);
-    expect(readNavigationBar(nav)).toEqual({ visible: false });
   });
 
   it("hides the bar when a sheet or a dialog covers it", () => {
@@ -102,7 +88,7 @@ describe("reading the web bar for the shell", () => {
     // The page, shortened for the keyboard, ends above the bar and clips it:
     // what answers at the bar's centre is outside the page.
     const page = document.createElement("div");
-    page.setAttribute("data-mobile-sidebar-surface", "");
+    page.className = "app-shell";
     page.getBoundingClientRect = () => new DOMRect(0, 0, 402, 546);
     page.append(nav);
     document.body.append(page);
@@ -169,23 +155,6 @@ describe("keeping the shell's bar in step", () => {
     expect(sent.at(-1)).toEqual({ visible: false });
     expect(remove).toHaveBeenCalledOnce();
     expect(document.documentElement.hasAttribute("data-native-navigation")).toBe(false);
-  });
-
-  it("closes the sidebar on a native tap while the page is set aside", async () => {
-    const { plugin, tap } = shell();
-    const clicked = vi.fn();
-    const dismissed = vi.fn();
-    nav.querySelector('[data-nav-slot="create"]')!.addEventListener("click", clicked);
-    const dismiss = document.body.appendChild(document.createElement("button"));
-    dismiss.setAttribute("data-mobile-sidebar-dismiss", "");
-    dismiss.addEventListener("click", dismissed);
-    const stop = syncNativeNavigationBar(nav, plugin, async () => null)!;
-
-    nav.setAttribute("inert", "");
-    tap("create");
-    expect(clicked).not.toHaveBeenCalled();
-    expect(dismissed).toHaveBeenCalledOnce();
-    stop();
   });
 
   it("sends the buttons once, then only the bar's place while it moves", async () => {

@@ -1,4 +1,5 @@
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
+import { isMarketingRouteKey, isMobileAppUserAgent } from "@/lib/mobile/app-request";
 import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -358,6 +359,17 @@ async function routeRequest(request: NextRequest) {
       }
     }
     return serveLocalizedPublicRoute(request, pathname);
+  }
+
+  // The mobile app never shows the marketing site (MIN-907): its reader has
+  // already installed the product. The client redirect in the marketing
+  // layout still covers an older app that does not announce itself.
+  if (
+    PUBLIC_ROUTE_PATHS.has(pathname) &&
+    isMobileAppUserAgent(request.headers.get("user-agent")) &&
+    isMarketingRouteKey(routeByPath(pathname)?.key)
+  ) {
+    return NextResponse.redirect(new URL("/home", process.env.MINDDY_PUBLIC_APP_URL || request.url), 307);
   }
 
   const markdownDelivery = resolvePublicMarkdownDelivery(pathname);

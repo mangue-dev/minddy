@@ -486,6 +486,7 @@ export function ProjectMembers({
               return (
                 <div key={inv.id} className="flex flex-col">
                   <SettingsListRow
+                    stackOnPhone
                     title={inv.invited_email}
                     action={
                       <>

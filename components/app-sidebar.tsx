@@ -751,8 +751,9 @@ function AccountButton({
     ];
     return <>
       <button type="button" data-mobile-sidebar-account aria-haspopup="dialog" aria-expanded={menuOpen}
-        onClick={() => setMenuOpen(true)} className={cn("flex h-10 w-full items-center gap-3 rounded-lg pr-3 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent", AVATAR_PL)}>
-        <UserAvatar seed={seed} className="size-[22px] shrink-0" />
+        onClick={() => setMenuOpen(true)} className="flex h-11 w-full items-center gap-2.5 rounded-full pr-3 pl-1.5 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent">
+        {/* 32px avatar, 6px inset, 44px pill: the two curves share a center. */}
+        <UserAvatar seed={seed} className="size-8 shrink-0" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
       </button>
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
@@ -1100,15 +1101,25 @@ export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, 
   id: string; mobile?: boolean; children: ReactNode;
   onLayerOpenChange?: (open: boolean) => void; onNavigate?: () => void; focusRef?: Ref<HTMLElement>;
 }) {
+  // On a phone the row's pill keeps the sheet's top inset on its left too,
+  // so its curve follows the sheet's corner; the right inset clears the
+  // close button with a gap.
+  const footer = <div data-sidebar-footer className={cn("shrink-0", mobile ? "pb-2 pl-2 pr-16" : cn("pt-2 pb-2.5", GUTTER))}>
+    <SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} />
+  </div>;
   return <aside ref={focusRef} tabIndex={mobile ? -1 : undefined} id={id} data-sidebar-navigation data-mobile-sidebar={mobile || undefined}
     style={{ width: mobile ? "100%" : EXPANDED_WIDTH }}
     className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-none"
     onClickCapture={mobile ? (event) => { if (isPlainNavigationClick(event) && event.target instanceof Element && event.target.closest("a[href]")) onNavigate?.(); } : undefined}>
+    {/* On a phone the account, the usage and what's new head the sheet, on
+        the row of its close button (MIN-907); the sidebar's own header band
+        follows under them. */}
+    {mobile && footer}
     {children}
     {/* The getting-started checklist is a desktop affair: on a phone the
         sidebar keeps to navigation. */}
     {!mobile && <SidebarOnboarding onLayerOpenChange={onLayerOpenChange} />}
-    <div data-sidebar-footer className={cn("shrink-0 pt-2 pb-2.5", GUTTER)}><SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} /></div>
+    {!mobile && footer}
   </aside>;
 }
 

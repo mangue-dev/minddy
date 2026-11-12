@@ -67,8 +67,11 @@ export interface OpenAssistantOptions {
    */
   displayMode?: PanelDisplayMode;
   /**
-   * Put the caret in the composer once the panel is ready, without sending or
-   * filling anything: the opener hands the user a context to ask about.
+   * `true`: put the caret in the composer once the panel is ready, without
+   * sending or filling anything: the opener hands the user a context to ask
+   * about. `false`: leave the composer alone, keyboard down, even on a phone
+   * where the panel otherwise opens to write (the getting-started tour shows
+   * Numo, MIN-907).
    */
   focusComposer?: boolean;
 }

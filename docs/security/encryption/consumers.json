@@ -143,35 +143,35 @@
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "rpc",
     "resource": "register_protected_push",
-    "line": 148,
+    "line": 150,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 172,
+    "line": 176,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 193,
+    "line": 197,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 225,
+    "line": 231,
     "storage": false
   },
   {
     "file": "app/api/account/push-subscriptions/route.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 239,
+    "line": 245,
     "storage": false
   },
   {
@@ -396,6 +396,13 @@
     "operation": "rpc",
     "resource": "account_storage_quota_allows",
     "line": 47,
+    "storage": false
+  },
+  {
+    "file": "app/api/auth/lookup/route.ts",
+    "operation": "rpc",
+    "resource": "auth_account_status",
+    "line": 39,
     "storage": false
   },
   {
@@ -3013,49 +3020,42 @@
     "file": "lib/server/avatar-seeds.ts",
     "operation": "from",
     "resource": null,
-    "line": 243,
+    "line": 249,
     "storage": true
   },
   {
     "file": "lib/server/avatar-seeds.ts",
     "operation": "from",
     "resource": null,
-    "line": 267,
-    "storage": true
-  },
-  {
-    "file": "lib/server/avatar-seeds.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 274,
+    "line": 256,
     "storage": true
   },
   {
     "file": "lib/server/avatar-seeds.ts",
     "operation": "from",
     "resource": "user_avatars",
-    "line": 279,
+    "line": 261,
     "storage": false
   },
   {
     "file": "lib/server/avatar-seeds.ts",
     "operation": "from",
     "resource": null,
-    "line": 289,
+    "line": 271,
     "storage": true
   },
   {
     "file": "lib/server/avatar-seeds.ts",
     "operation": "from",
     "resource": "user_avatars",
-    "line": 314,
+    "line": 296,
     "storage": false
   },
   {
     "file": "lib/server/avatar-seeds.ts",
     "operation": "from",
     "resource": null,
-    "line": 331,
+    "line": 313,
     "storage": true
   },
   {
@@ -10335,21 +10335,14 @@
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 80,
+    "line": 87,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 91,
-    "storage": false
-  },
-  {
-    "file": "lib/server/push/send.ts",
-    "operation": "from",
-    "resource": "push_subscriptions",
-    "line": 104,
+    "line": 98,
     "storage": false
   },
   {
@@ -10363,35 +10356,42 @@
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 131,
+    "line": 118,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 142,
+    "line": 138,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 165,
+    "line": 149,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 171,
+    "line": 172,
     "storage": false
   },
   {
     "file": "lib/server/push/send.ts",
     "operation": "from",
     "resource": "push_subscriptions",
-    "line": 197,
+    "line": 178,
+    "storage": false
+  },
+  {
+    "file": "lib/server/push/send.ts",
+    "operation": "from",
+    "resource": "push_subscriptions",
+    "line": 204,
     "storage": false
   },
   {

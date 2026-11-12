@@ -1,7 +1,7 @@
 "use client";
 
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { CloseButton } from "@/components/ui/close-button";
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -66,6 +66,11 @@ export interface WizardStep<Id extends string = string> {
   hideSubmit?: boolean;
   /** Default: “Continue”. To pass for “Finish”, “Skip”, “Generate”… */
   submitLabel?: string;
+  /**
+   * Another way out of the step, between the main button and Back: a filled
+   * button of its own (the project wizard's "Join a project", MIN-907).
+   */
+  secondaryAction?: { label: string; icon?: IconSvgElement; onClick: () => void };
   submitDisabled?: boolean;
   /**
    * Stage of no return: what precedes it has produced effects that a step in
@@ -195,7 +200,9 @@ export function WizardDialog<Id extends string>({
             that there is room left, and fall back to zero as soon as there is none
             more: the form then starts from the top and is browsed in
             entier. */}
-        <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-4 pb-12 app-mobile:px-[var(--mobile-sheet-inline)]">
+        {/* On a phone the buttons stick to the bottom of this box: a bottom
+            padding here held them that far above the keyboard (MIN-907). */}
+        <div className="flex flex-1 flex-col items-center overflow-y-auto px-6 pt-4 pb-12 app-mobile:px-[var(--mobile-sheet-inline)] app-mobile:pb-0">
           <form
             {...submitShortcut}
             onSubmit={(e) => {
@@ -264,16 +271,28 @@ export function WizardDialog<Id extends string>({
                   </Button>
                 </SendShortcutTooltip>
               )}
+              {step.secondaryAction && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 w-full"
+                  onClick={step.secondaryAction.onClick}
+                  disabled={submitting}
+                >
+                  {step.secondaryAction.icon && <HugeiconsIcon icon={step.secondaryAction.icon} />}
+                  {step.secondaryAction.label}
+                </Button>
+              )}
+              {/* A filled button like the others: a wizard's ways out are
+                  all buttons (MIN-907). */}
               {index > 0 && !step.lockBack && (
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground disabled:opacity-50"
+                  variant="outline"
+                  className="h-10 w-full"
                   onClick={() => goToStep(index - 1)}
                   disabled={submitting}
                 >
-                  <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
                   {tCommon("back")}
                 </Button>
               )}

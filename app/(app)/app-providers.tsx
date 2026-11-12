@@ -32,6 +32,7 @@ import { MentionHoverProvider } from "@/components/mention-hover";
 import { MentionHoverCard } from "@/components/mention-hover-card";
 import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { AppShellChrome } from "@/components/app-shell-chrome";
+import { FirstRunGate } from "@/components/first-run/first-run-gate";
 import { AssistantFab } from "@/components/assistant-fab";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { PushServiceWorker } from "@/components/push-service-worker";
@@ -159,6 +160,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                                 <PrUnlinkConfirmationProvider>
                                   <OnboardingProvider>
                                     <AppShellChrome>{children}</AppShellChrome>
+                                    {/* A page of its own over the app for a new
+                                        account: profile, then the phone tour. */}
+                                    <FirstRunGate />
                                     <ResourcePreviewHost />
                                   </OnboardingProvider>
                                 </PrUnlinkConfirmationProvider>

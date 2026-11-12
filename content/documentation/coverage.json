@@ -903,7 +903,7 @@
       "member"
     ],
     "type": "guide",
-    "source": "`components/mobile-sidebar-reveal.tsx`; `components/issue-side-panel.tsx`; `components/assistant-panel.tsx`",
+    "source": "`components/mobile-navigation.tsx`; `components/issue-side-panel.tsx`; `components/assistant-panel.tsx`",
     "gaps": "Touch navigation/panels, keyboard alternatives, viewport-dependent controls, connectivity limitations",
     "illustration": "New current mobile issue/page/Numo entry points",
     "requiresFigures": true,

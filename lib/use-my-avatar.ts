@@ -90,18 +90,3 @@ export function useUploadAvatar() {
     },
   });
 }
-
-/** Stages a signup image and returns the token to place in auth metadata. */
-export async function stageSignupAvatarFile(file: File): Promise<string> {
-  const body = new FormData();
-  body.append("file", file, file.name || "avatar");
-  const response = await fetch("/api/signup/avatar", { method: "POST", body });
-  const data = (await response.json().catch(() => ({}))) as {
-    error?: string;
-    token?: string;
-  };
-  if (!response.ok || !data.token) {
-    throw new Error(data.error ?? "Avatar upload failed");
-  }
-  return data.token;
-}

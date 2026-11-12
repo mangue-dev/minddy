@@ -1,6 +1,5 @@
 "use client";
 
-import { BoardColumnDots } from "@/components/board-column-dots";
 
 import {
   memo,
@@ -668,7 +667,6 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
                 ))}
               </div>
               <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
-              <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
             </div>
 
             <MarqueeOverlay overlayRef={marqueeOverlayRef} />

@@ -3,7 +3,7 @@
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
@@ -21,6 +21,8 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import { updateConversation } from "@/lib/assistant-api";
 import { useProjects } from "@/lib/projects-context";
+import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
+import { NumoIntro } from "@/components/assistant/numo-intro";
 
 type DisplayMode = PanelDisplayMode;
 
@@ -55,7 +57,16 @@ export function AssistantPanel() {
     setDisplayMode((prev) => (prev === "compact" ? "expanded" : "compact"));
   }, []);
 
+  // Numo introduces itself in an empty panel until it has a word of its own
+  // (MIN-907); the query is the one Home already keeps warm.
+  const { brief, loading: briefLoading } = useHomeBriefQuery(isOpen);
+  const introduceNumo = !brief && !briefLoading;
   const shellRef = useRef<AssistantShellHandle | null>(null);
+  // An opening that asked to leave the composer alone (`focusComposer: false`).
+  const skipComposerFocus = useRef(false);
+  useLayoutEffect(() => {
+    if (pendingOptions?.focusComposer === false) skipComposerFocus.current = true;
+  }, [pendingOptions]);
   // Tracks whether AssistantShell is actually mounted and its imperative
   // handle is attached. Radix Sheet defers content mount via animation, so
   // a naive setTimeout would race against an unattached ref.
@@ -174,6 +185,10 @@ export function AssistantPanel() {
         // opened to write to Numo.
         onOpenAutoFocus={mobile ? (event) => {
           event.preventDefault();
+          if (skipComposerFocus.current) {
+            skipComposerFocus.current = false;
+            return;
+          }
           // The composer mounts a few frames after the sheet: try until it
           // has the focus, for at most half a second.
           const until = performance.now() + 500;
@@ -231,6 +246,7 @@ export function AssistantPanel() {
             onToggleDisplayMode={mobile ? undefined : toggleDisplayMode}
             onClose={close}
             pageContext={effectivePageContext}
+            intro={introduceNumo ? <NumoIntro /> : null}
           />
         </div>
       </MobileSheetContent>

@@ -47,7 +47,7 @@ beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   mocks.projects = [];
   mocks.checklist = {
-    ...resolveOnboardingState({ meta: { onboarding_started: true, onboarding_version: 2 }, projectCount: 0, issueCount: 0, cyclesEnabled: false }),
+    ...resolveOnboardingState({ meta: { onboarding_started: true, onboarding_version: 2 }, projectCount: 0, issueCount: 0 }),
     loading: false, finalScreen: false, showChecklist: true,
     acknowledgeStep: mocks.acknowledge, dismiss: mocks.dismiss, finish: mocks.finish,
   };
@@ -101,10 +101,8 @@ describe("sidebar onboarding interactions", () => {
     expect(mocks.acknowledge).toHaveBeenCalledWith("mcp");
   });
 
-  it("enables cycles through the account preference", async () => {
-    await click("Plan with cycles");
-    await click("Enable cycles");
-    expect(mocks.updateMetadata).toHaveBeenCalledWith({ cycles_enabled: true });
+  it("leaves cycles out of the checklist", () => {
+    expect(document.body.textContent).not.toContain("Plan with cycles");
   });
 
   it("closes the mobile menu when opening another surface", async () => {

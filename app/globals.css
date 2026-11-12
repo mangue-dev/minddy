@@ -108,23 +108,12 @@
    and become a web zone again; otherwise a hover of the top-left corner cannot
    never recall navigation. Once opened, it goes back under the panel
    itself and does not block any controls. */
-/* The auth screens' brand clears the macOS window buttons (MIN-781): top
-   left, centred on the buttons' row (trafficLightPosition 15,15; the group of
-   three 14px buttons spans about 15-75px across and is centred at 22px down)
-   with the breathing room of a toolbar item after them, at 96px. The column's
-   32px padding is the reference. Read from the attribute
-   the pre-paint script sets, so it is placed once. The desktop app's bundled
-   self-hosting page (`components/desktop/server-choice.css`) repeats this
-   rule, so the mark stays put between the two. */
-html[data-desktop-platform="darwin"] .auth-logo-row {
-  margin-top: -24px;
-  padding-left: 64px;
-}
-
-/* In the mobile app (MIN-907) the page reaches under the status bar, so the
-   brand starts below it. Marked before the first paint, like the desktop. */
-html[data-native-mobile] .auth-logo-row {
-  padding-top: env(safe-area-inset-top);
+/* In the mobile app (MIN-907) the auth screens reach under the status bar
+   and the home indicator: their column starts below the one and ends above
+   the other. Marked before the first paint. */
+html[data-native-mobile] .auth-column {
+  padding-top: max(2rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
 }
 
 /* The auth screens' first appearance (MIN-781): the form's blocks (heading,
@@ -3102,9 +3091,12 @@ html[data-desktop-platform="darwin"]
 }
 
 :root[data-app-layout="mobile"] {
-  /* It drops from the top of the page, under the status bar. */
+  /* It drops from the top of the screen, under the status bar, from the
+     document rather than the pane (components/content-toaster.tsx), so it
+     shows above the bottom sheets too. */
   .content-toaster[data-sonner-toaster][data-x-position="center"] {
-    top: 0.5rem;
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 0.5rem);
     bottom: auto;
   }
 }
@@ -3683,80 +3675,31 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-bottom-sheet [data-mobile-sheet-close-wrapper] { display: contents; }
   .mobile-bottom-sheet [data-mobile-sheet-close-legacy] { display: none; }
   .mobile-bottom-sheet [data-mobile-sheet-toolbar] { top: var(--mobile-sheet-top); right: 60px; min-height: 44px; }
-  [data-mobile-sidebar-workspace] { background: var(--sidebar); }
-  .mobile-sidebar-reveal :is([data-sidebar-navigation-item], [data-sidebar-filter-result], [data-navigation-href], [data-sidebar-back]) { min-height: 44px; }
-  .mobile-sidebar-reveal [data-sidebar-filter-result] { min-width: 44px; }
-  .mobile-sidebar-reveal :is([data-mobile-collection-navigation], [data-sidebar-browse-collection]) button { min-height: 44px; }
-  .mobile-sidebar-reveal [class~="group/project"] button { min-height: 44px; min-width: 44px; opacity: 1; pointer-events: auto; }
-  .mobile-sidebar-reveal :is([data-sidebar-footer], [data-sidebar-project-context], .secondary-sidebar-header) button { min-height: 44px; min-width: 44px; }
-  .mobile-sidebar-reveal [data-sidebar-page-row] button { min-height: 44px; min-width: 44px; }
-  .mobile-sidebar-reveal [data-sidebar-page-row-actions] { opacity: 1; }
-  .mobile-sidebar-reveal .sidebar-brand-row button { min-height: 44px; }
-  .mobile-sidebar-reveal [data-sidebar-footer] {
-    padding-bottom: max(10px, env(safe-area-inset-bottom));
-  }
-  .mobile-sidebar-reveal [data-mobile-sheet-scroll] > div { touch-action: pan-y; }
-  .mobile-sidebar-reveal [data-mobile-sidebar] { touch-action: pan-y; }
-  .mobile-sidebar-reveal [data-scroll-fade] { --card: var(--sidebar); }
-  .mobile-sidebar-reveal [data-mobile-sheet-scroll] { --card: var(--sidebar); }
-  .mobile-sidebar-reveal {
-    position: absolute;
-    inset: 0 auto auto 0;
-    height: var(--mobile-viewport-height, 100dvh);
-    /* The sidebar is glued to the left edge: in landscape the notch (or the
-       rounded corner of an unfolded screen) sits there and covered the start
-       of every row, the New issue button among them (MIN-841). The footer
-       clears the bottom inset itself. */
-    padding-top: env(safe-area-inset-top);
-    padding-left: env(safe-area-inset-left);
-    z-index: 0;
-    touch-action: pan-y;
+  .mobile-nav-sheet :is([data-sidebar-navigation-item], [data-sidebar-filter-result], [data-navigation-href], [data-sidebar-back]) { min-height: 44px; }
+  .mobile-nav-sheet [data-sidebar-filter-result] { min-width: 44px; }
+  .mobile-nav-sheet :is([data-mobile-collection-navigation], [data-sidebar-browse-collection]) button { min-height: 44px; }
+  .mobile-nav-sheet [class~="group/project"] button { min-height: 44px; min-width: 44px; opacity: 1; pointer-events: auto; }
+  .mobile-nav-sheet :is([data-sidebar-footer], [data-sidebar-project-context], .secondary-sidebar-header) button { min-height: 44px; min-width: 44px; }
+  .mobile-nav-sheet [data-sidebar-page-row] button { min-height: 44px; min-width: 44px; }
+  .mobile-nav-sheet [data-sidebar-page-row-actions] { opacity: 1; }
+  .mobile-nav-sheet .sidebar-brand-row button { min-height: 44px; }
+  /* The navigation sheet (components/mobile-navigation.tsx): the desktop
+     sidebar's panels in a bottom sheet of a fixed height, which its sliding
+     panels need to lay out. The sidebar takes the sheet's own surface. */
+  .mobile-nav-sheet[data-slot="sheet-content"] {
+    height: var(--mobile-sheet-room);
+    gap: 0;
     overflow: hidden;
-    transform-origin: center;
-    transform: scale(calc(0.94 + var(--mobile-sidebar-progress, 0) * 0.06));
-    opacity: calc(0.65 + var(--mobile-sidebar-progress, 0) * 0.35);
-    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 260ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform, opacity;
+    display: flex;
+    flex-direction: column;
   }
-  .mobile-sidebar-reveal[data-mobile-sidebar-dragging="true"] { transition: none; }
-  .app-shell[data-mobile-sidebar-surface] {
-    position: relative;
-    z-index: 1;
-    transform: translate3d(var(--mobile-sidebar-offset, 0px), 0, 0);
-    background: var(--background);
-    overflow: hidden;
-    border-radius: var(--mobile-sidebar-radius, 0px) 0 0 var(--mobile-sidebar-radius, 0px);
-    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
-    touch-action: pan-y pinch-zoom;
-  }
-  /* The radius is one value for the whole slide, the settling included: it
-     appears with the first pixel of the gesture and, on the way back, goes
-     only once the page is home again (the delay is the slide's duration). At
-     rest the page is square, so nothing of the workspace shows in the
-     screen's corners. */
-  .app-shell[data-mobile-sidebar-surface] {
-    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 0s linear 260ms;
-  }
-  .app-shell[data-mobile-sidebar-open="true"] {
-    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 0s;
-  }
-  &:has([data-mobile-sidebar-surface]) { overscroll-behavior-x: none; }
-  .app-shell[data-mobile-sidebar-open="true"] { box-shadow: -8px 0 32px rgb(0 0 0 / 0.08); }
-  .app-shell[data-mobile-sidebar-dragging="true"] { transition: none; }
-  [data-mobile-sidebar-dismiss] {
-    position: absolute;
-    inset: 0 0 0 auto;
-    z-index: 2;
-    width: auto;
-    border: 0;
-    padding: 0;
-    background: transparent;
-    touch-action: pan-y;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .app-shell[data-mobile-sidebar-surface] { transition: none; }
-    .mobile-sidebar-reveal { transform: none; opacity: 1; transition: none; }
+  .mobile-nav-sheet [data-mobile-sidebar] { flex: 1; min-height: 0; background: transparent; }
+  /* The account row heads the sheet, level with its close button: every
+     control there is a 44px pill, the usage in the rows' type size. */
+  .mobile-nav-sheet [data-sidebar-footer] button {
+    min-height: 44px;
+    border-radius: 9999px;
+    font-size: 0.875rem;
   }
   .mobile-bottom-sheet :is([data-slot="side-panel-header"], [data-slot="side-panel-footer"]) {
     border: 0;
@@ -4328,6 +4271,13 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      size forced on it alone left its line height and the task checkboxes
      set for the other size, the caret below the placeholder. */
   .creation-description { min-height: 6rem; }
+  /* The description owns the empty area down to the buttons: a tap there
+     writes in it (components/use-description-area.ts). */
+  .creation-form-body {
+    display: flex;
+    flex-direction: column;
+  }
+  .creation-description-area { flex: 1 0 auto; }
   /* The property buttons, a carousel above the create button: the row
      scrolls sideways under a finger, each button its desktop self. */
   .creation-carousel > *, .creation-carousel button {
@@ -4391,7 +4341,7 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   }
 }
 
-/* Single-column boards use persistent pagination instead of a scrollbar. */
+/* Single-column boards snap from column to column without a scrollbar. */
 @media (width < 640px) {
   .mobile-kanban-scroller { scrollbar-width: none; }
   .mobile-kanban-scroller::-webkit-scrollbar { display: none; }

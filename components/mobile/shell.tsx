@@ -5,9 +5,9 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MinddyLogo } from "@/components/minddy-logo";
-import { CARD_TONES } from "@/components/marketing/card-tones";
 import { normalizeDesktopServerOrigin } from "@/lib/desktop/server-origin";
 import { getMobileBridge, type MobileShellPlugin, type MobileShellState } from "@/lib/mobile/bridge";
+import { keyboardFrameStyle, useKeyboardFrame } from "@/lib/mobile/use-keyboard-frame";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,24 +30,39 @@ function Enter({ index, className, children }: { index: number; className?: stri
   );
 }
 
-function Frame({ children }: { children: ReactNode }) {
+function Frame({ centered = false, children }: { centered?: boolean; children: ReactNode }) {
+  // The column fits the part of the screen the keyboard leaves, so the field
+  // and its buttons rise above the keyboard together.
+  const keyboard = useKeyboardFrame();
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <MinddyLogo className="h-7 self-start" />
-      <div className="flex flex-1 flex-col justify-center py-10">{children}</div>
+    <main
+      style={keyboardFrameStyle(keyboard)}
+      className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+    >
+      {!centered && <MinddyLogo className="h-7 self-start" />}
+      <div className={cn("flex flex-1 flex-col justify-center py-10", centered && "items-center text-center")}>
+        {centered && (
+          <Enter index={0}>
+            <MinddyLogo className="mb-6 h-9" />
+          </Enter>
+        )}
+        {children}
+      </div>
     </main>
   );
 }
 
-function Heading({ title, lead }: { title: string; lead: string }) {
+function Heading({ title, lead }: { title: string; lead?: string }) {
   return (
     <>
       <Enter index={0}>
         <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
       </Enter>
-      <Enter index={1}>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">{lead}</p>
-      </Enter>
+      {lead ? (
+        <Enter index={1}>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground text-pretty">{lead}</p>
+        </Enter>
+      ) : null}
     </>
   );
 }
@@ -94,17 +109,17 @@ function ServerChoice({ shell, state }: { shell: MobileShellPlugin; state: Mobil
     });
 
   return (
-    <Frame>
-      <Heading title={t("serverHeading")} lead={t("serverLead")} />
-      <Enter index={2}>
+    <Frame centered>
+      <Heading title={t("serverHeading")} />
+      <Enter index={1} className="w-full">
         <form
-          className={cn("mt-8 rounded-lg p-5", CARD_TONES.sky)}
+          className="mt-8 flex w-full flex-col gap-3 text-left"
           onSubmit={(event) => {
             event.preventDefault();
             void connect();
           }}
         >
-          <label htmlFor="server-address" className="text-sm font-semibold">
+          <label htmlFor="server-address" className="sr-only">
             {td("serverLabel")}
           </label>
           <Input
@@ -115,34 +130,31 @@ function ServerChoice({ shell, state }: { shell: MobileShellPlugin; state: Mobil
             autoCorrect="off"
             spellCheck={false}
             required
-            className="mt-2 h-11 bg-background/80 text-foreground"
+            placeholder={td("serverLabel")}
+            className="h-12 bg-control text-base"
             value={address}
             onChange={(event) => setAddress(event.target.value)}
             aria-invalid={invalid}
-            aria-describedby="server-help server-message"
+            aria-describedby="server-message"
           />
-          <p id="server-help" className="mt-2 text-xs opacity-70">
-            {t("serverHelp")}
-          </p>
-          <Button type="submit" disabled={pending} className="mt-4 h-11 w-full rounded-full">
+          {invalid ? (
+            <p id="server-message" role="alert" className="text-xs text-destructive">
+              {td("serverInvalid")}
+            </p>
+          ) : null}
+          {/* The three ways out, stacked: connect, minddy Cloud, back. */}
+          <Button type="submit" disabled={pending} className="h-12 w-full rounded-full">
             {td("connect")}
           </Button>
-        </form>
-      </Enter>
-      <p id="server-message" role="alert" className="mt-2 min-h-4 text-xs text-destructive">
-        {invalid ? td("serverInvalid") : ""}
-      </p>
-      <Enter index={3}>
-        <div className="mt-2 flex flex-col gap-1">
           {state?.isCustomServer ? (
-            <Button variant="ghost" className="h-11 rounded-full" disabled={pending} onClick={() => void run(() => shell.useCloud())}>
+            <Button type="button" variant="outline" className="h-12 w-full rounded-full" disabled={pending} onClick={() => void run(() => shell.useCloud())}>
               {td("useCloud")}
             </Button>
           ) : null}
-          <Button variant="ghost" className="h-11 rounded-full" disabled={pending} onClick={() => void run(() => shell.reload())}>
+          <Button type="button" variant="outline" className="h-12 w-full rounded-full" disabled={pending} onClick={() => void run(() => shell.reload())}>
             {td("back")}
           </Button>
-        </div>
+        </form>
       </Enter>
     </Frame>
   );

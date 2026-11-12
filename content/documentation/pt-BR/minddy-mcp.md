@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -56,14 +56,15 @@
       "components/settings/account-settings-page.tsx",
       "lib/server/project-stats.ts",
       "lib/project-stats.ts",
-      "lib/server/database-view-tools.ts"
+      "lib/server/database-view-tools.ts",
+      "components/first-run/mobile-onboarding-screen.tsx"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (pt-BR passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (pt-BR paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (pt-BR paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance); agent:claude-code (pt-BR MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 21,
+    "fact": "agent:claude-code (MIN-951: short prompts, the brief and sending to an agent app described from lib/issue-prompt.ts, lib/prompt-delivery.ts, lib/server/mcp/tools.ts and components/settings/account-issues-section.tsx; quoted labels checked against messages/*.json; not checked in the running app; no figure recaptured); agent:claude (MIN-878: minddy_get_project_stats paragraph checked against lib/server/mcp/tools.ts, lib/server/project-stats.ts and lib/project-stats.ts; existing figures unaffected and kept); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude (MIN-898: saved database views paragraph checked against lib/server/mcp/page-tools.ts and lib/server/database-view-tools.ts; existing figures unaffected and kept); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 connection wizard: the install step's Copy the prompt action and the collapsible Set it up by hand section checked against components/settings/mcp-connect-panel.tsx and messages/*.json; no browser walkthrough; the client-picker figure caption updated; the install-step figure still shows the former layout and needs recapture); agent:claude-code (MIN-907 Other client: the Other entry copying the general prompt with the instance's /api/mcp address, and the two-column cards in the phone tour's sheet, checked against components/settings/mcp-connect-panel.tsx, components/first-run/mobile-onboarding-screen.tsx and messages/*.json; no browser walkthrough; the client-picker figure does not show the Other entry and needs recapture)",
+    "language": "agent:claude-code (pt-BR passage added for MIN-951; self-reviewed; agent review, not human acceptance); agent:claude (pt-BR paragraph translated from en revision 16 with the glossary register; agent self-review, not human acceptance); agent:claude (pt-BR paragraph translated from en revision 17 for MIN-898 with the glossary register; agent self-review, not human acceptance); agent:claude-code (pt-BR MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 connection wizard paragraph and figure caption with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 Other client paragraph with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "numo",
@@ -84,8 +85,8 @@
       "kind": "screenshot",
       "src": "/documentation/pt-BR/external-minddy-mcp-workflow.png",
       "alt": "Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.",
-      "caption": "Selecione seu cliente para exibir o comando ou a configuração de instalação.",
-      "revision": 20,
+      "caption": "Selecione seu cliente para abrir as duas etapas de conexão.",
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -102,7 +103,7 @@
       "src": "/documentation/pt-BR/external-minddy-mcp-install-workflow.png",
       "alt": "Etapa de instalação do Codex no assistente de conexão ao MCP do minddy, mostrando o endpoint minddy Cloud.",
       "caption": "Este exemplo se conecta ao minddy Cloud. Para uma instância autogerenciada, use a origem da sua própria instância; o comando exibido não foi executado para esta captura.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -129,7 +130,9 @@ Abra a página pública MCP da instância e escolha as instruções do cliente. 
 
 Entre pelo navegador e confira a autorização antes de concedê-la. A conexão age como sua conta minddy, sem acesso a projetos fora das suas permissões. Comece lendo um ticket que você já consegue abrir e confira o projeto retornado.
 
-Nas configurações da conta, a seção MCP do minddy abre um assistente de duas etapas para cada cliente: copie o comando de instalação, a configuração ou a URL do servidor e depois autorize o login do cliente. A segunda etapa indica quando o minddy recebe esse acesso; até lá, fechá-la apenas adia o login.
+Nas configurações da conta, a seção MCP do minddy abre um assistente de duas etapas para cada cliente. Na primeira etapa, **Copiar o prompt** copia um pedido para colar no cliente: ele pede que o cliente adicione o servidor MCP do minddy com a configuração desse cliente, incluída no prompt. Para fazer isso você mesmo, abra **Configurar manualmente**: ali aparecem o comando de instalação, a configuração ou a URL do servidor, com um botão para copiá-los. A segunda etapa autoriza o login do cliente. Ela indica quando o minddy recebe esse acesso; até lá, fechá-la apenas adia o login.
+
+A lista de clientes termina com **Outro**, para um cliente que não está na lista. Ele não abre nenhum assistente: copia um prompt geral que pede ao cliente para adicionar o servidor MCP do minddy, um servidor remoto via HTTP no endereço desta instância terminado em `/api/mcp`, com login OAuth. Cole no cliente; na primeira vez que o cliente usar o minddy, autorize o login dele no navegador. Nos primeiros passos no celular, **Conectar um agente de código** abre a mesma lista em uma folha, com os clientes como cartões quadrados em duas colunas; as configurações da conta mantêm a lista compacta.
 
 ![Seletor de clientes MCP minddy com Claude, Codex e outros assistentes.](/documentation/pt-BR/external-minddy-mcp-workflow.png)
 

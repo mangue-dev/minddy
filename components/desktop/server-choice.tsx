@@ -548,10 +548,9 @@ interface Crumb {
 }
 
 /**
- * The page around the steps. The brand sits where the sign-in screen puts it
- * (`.auth-logo-row`: top left, after the macOS window buttons), in the
- * environment's colour, so moving between the two never moves the mark. The
- * breadcrumb grows from it: the mark leads back to the app, each crumb to its
+ * The page around the steps. The brand sits top left, after the macOS window
+ * buttons (`.auth-logo-row`), in the environment's colour. The breadcrumb
+ * grows from it: the mark leads back to the app, each crumb to its
  * step. The colour of the page is in the choices, in minddy's pastels.
  */
 function Frame({ env, crumbs, onHome, children }: { env: AppEnv; crumbs: Crumb[]; onHome?: () => void; children: ReactNode }) {

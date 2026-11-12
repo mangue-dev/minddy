@@ -3,7 +3,7 @@
 import { projectPath } from "@/lib/app-urls";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, FileUploadIcon, Mail01Icon, InformationCircleIcon, Layers01Icon, Refresh01Icon, SparklesIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, FileUploadIcon, Mail01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { createUuid } from "@/lib/create-uuid";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -15,8 +15,6 @@ import { Input } from "@/components/ui/input";
 import { LoadingRegion } from "@/components/loading-skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useAuth } from "@/lib/auth-context";
@@ -26,7 +24,6 @@ import {
   normalizeKey,
   suggestKeyFromName,
 } from "@/lib/project-key";
-import { suggestProjectName } from "@/lib/project-name";
 import {
   bindGitRepoApi,
   fetchAccountGitCandidatesApi,
@@ -37,7 +34,6 @@ import {
   importProjectIconApi,
   uploadProjectIconDataUrlApi,
 } from "@/lib/projects-api";
-import { createPageApi, prepareInitialBriefApi } from "@/lib/pages-api";
 import { inviteCollaboratorApi, inviteMemberApi } from "@/lib/members-api";
 import { useCollaboratorsQuery } from "@/lib/use-collaborators-query";
 import { matchCollaborators } from "@/lib/collaborator-search";
@@ -48,16 +44,15 @@ import {
   CollaboratorSuggestions,
 } from "@/components/collaborator-suggestions";
 import { usePlanGates } from "@/lib/use-billing-query";
-import { isValidEmail } from "@/lib/signup-wizard";
+import { isValidEmail } from "@/lib/auth-entry";
 import {
   clearPendingDraftId,
-  MAX_INITIAL_BRIEF_CHARS,
   normalizeInviteEmail,
   normalizeInvitees,
   normalizeInviteeUsers,
   setPendingDraftId,
   stepIndexOf,
-  stepsFor,
+  PROJECT_WIZARD_STEPS,
   type DraftInviteeUser,
   type DraftRepo,
   type DraftSeed,
@@ -81,17 +76,12 @@ import {
   type WizardStep,
 } from "@/components/wizard/wizard-dialog";
 import { ImportGuideBlock } from "@/components/import/import-guide";
-import { WizardChoiceCard } from "@/components/wizard/wizard-choice-card";
+import { HelpHint } from "@/components/settings/help-hint";
 import { CloseProjectDraftDialog } from "@/components/close-project-draft-dialog";
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 import { useAnalytics } from "@/lib/use-analytics";
 import { useTrackView } from "@/lib/use-track-view";
 import type { CandidateRepo, Collaborator } from "@/lib/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
@@ -123,9 +113,10 @@ import { TruncatedText } from "@/components/ui/truncated-text";
  * the id, and the callback returns to `/home?setup=git` where `ProjectDraftResume`
  * reopens the wizard to the “Deposit” step.
  *
- * The seed step collects a pasted brief or CSV without writing anything.
- * After project creation, the brief becomes a wiki page and CSV imports
- * continue on the new project board through `?setup=import`.
+ * The import step collects a CSV without writing anything; after project
+ * creation the import continues on the new project board through
+ * `?setup=import`. It comes after the members step (MIN-907): the team is
+ * invited before its issues arrive.
  *
  * The members step only queues people: an address, or someone who already
  * joined another of the owner's projects, found by name. The invitations go
@@ -198,7 +189,9 @@ export function CreateProjectWizard({
   // Step “Where do we start from?” » — the answer decides what the bootstrap step
   // request, and nothing else: the project is created in the same way from both
   // sides.
-  const [origin, setOrigin] = useState<ProjectOrigin | null>(null);
+  // One route since MIN-907: the project carries existing work over, its
+  // issues imported from a CSV when there are any. The draft keeps the field.
+  const [origin, setOrigin] = useState<ProjectOrigin | null>("existing");
 
   // “Project” stage. `draftId` is the id of the future project: the seed of the orb
   // must be known before creation, otherwise the preview lies.
@@ -213,7 +206,6 @@ export function CreateProjectWizard({
   // The last PROPOSED name. What distinguishes “the field carries a proposition”
   // of “the field bears a chosen name”: as long as it holds, we offer to draw from it
   // another ; as soon as the user writes, the name is theirs.
-  const [suggestedName, setSuggestedName] = useState("");
 
   // “Icon” step: nothing is stored until the project exists — we
   // keep enough to replay the choice at creation (favicon to re-import, or
@@ -234,17 +226,14 @@ export function CreateProjectWizard({
   const candidatesLoading = !!activeConnectionId && candidates === null;
   const [repo, setRepo] = useState<DraftRepo | null>(null);
 
-  // “Prime” stage. She collects, she does not write: the brief remains a
-  // text, the CSV remains a `File` in memory — no network calls here, the
-  // project does not yet exist.
-  const [brief, setBrief] = useState("");
+  // “Import” stage. It collects, it does not write: the CSV remains a `File`
+  // in memory, no network call here, the project does not exist yet.
   const [csvFile, setCsvFile] = useState<File | null>(null);
   // A CSV does not fit in sessionStorage: the detour via the git provider
   // forget it. We ask it again, and we SAY it — otherwise the empty drop zone
   // looks like a bug.
   const [csvLost, setCsvLost] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
-  const [dragOver, setDragOver] = useState(false);
 
   // “Finishing” stage. Smart Assign is proposed ENABLED: this is the setting
   // that we want by default on a new project, and unchecking it remains one click away.
@@ -265,19 +254,12 @@ export function CreateProjectWizard({
   // picking one sends nothing until Finish, where the server checks again.
   const collaborators = useCollaboratorsQuery(open);
 
-  const steps = useMemo(() => stepsFor(origin), [origin]);
+  const steps = PROJECT_WIZARD_STEPS;
   const step: ProjectWizardStep = steps[Math.min(stepIndex, steps.length - 1)];
 
   /** The primer as it is at this moment — deduced, never stored two
    * times: this is what the draft carries and what `finish()` replays. */
-  const seed: DraftSeed | null = useMemo(() => {
-    if (origin === "existing") return csvFile ? { kind: "import" } : null;
-    return brief.trim() ? { kind: "brief", text: brief.trim() } : null;
-  }, [origin, csvFile, brief]);
-
-  // Validate the page brief before the project is created.
-  const initialBriefTooLong = origin === "new" && brief.length > MAX_INITIAL_BRIEF_CHARS;
-  const briefTooLong = step === "seed" && initialBriefTooLong;
+  const seed: DraftSeed | null = useMemo(() => (csvFile ? { kind: "import" } : null), [csvFile]);
 
   /** An OPTIONAL step where nothing has been placed says "Skip", not
    * " Continue ". Both progress the same — but “Continue” on one step
@@ -296,17 +278,15 @@ export function CreateProjectWizard({
     setJoinOpen(false);
     setDraftId(createUuid());
     setOrbSeed(null);
-    setOrigin(null);
+    setOrigin("existing");
     setName("");
     setKey("");
     setKeyTouched(false);
-    setSuggestedName("");
     setIcon({ kind: "none" });
     setConnecting(null);
     setActiveConnectionId(null);
     setCandidates(null);
     setRepo(null);
-    setBrief("");
     setCsvFile(null);
     setCsvLost(false);
     setSmartAssignEnabled(true);
@@ -326,13 +306,12 @@ export function CreateProjectWizard({
     createdProjectRef.current = null;
     setDraftId(draft.id);
     setOrbSeed(draft.orbSeed);
-    setOrigin(draft.origin);
+    setOrigin("existing");
     setName(draft.name);
     setKey(draft.key);
     setKeyTouched(draft.keyTouched);
     setIcon(draft.icon);
     setRepo(draft.repo);
-    setBrief(draft.seed?.kind === "brief" ? draft.seed.text : "");
     // The CSV did not make the trip (see `DraftSeed`): the drop zone
     // leaves empty, with the note that explains why.
     setCsvFile(null);
@@ -345,7 +324,7 @@ export function CreateProjectWizard({
     setDraftExists(true);
     setStepIndex(
       resume.fromGit
-        ? stepsFor(draft.origin).indexOf("git")
+        ? PROJECT_WIZARD_STEPS.indexOf("git")
         : stepIndexOf(draft),
     );
     setActiveConnectionId(resume.connectionId);
@@ -435,20 +414,6 @@ export function CreateProjectWizard({
     if (target >= 0 && target < stepIndex) setStepIndex(target);
   };
 
-  // ── “Where do we start from?” step » ─────────────────────── ───────────────────────
-  // A binary choice that requires two gestures is an ill-posed binary choice: the
-  // Clicked card poses the answer AND moves forward.
-  const chooseOrigin = (next: ProjectOrigin) => {
-    setOrigin(next);
-    // Changing your mind does not drag the beginning of the other branch behind you.
-    if (next !== origin) {
-      setBrief("");
-      setCsvFile(null);
-      setCsvLost(false);
-    }
-    track("project_wizard_origin_chosen", { origin: next });
-    setStepIndex((i) => i + 1);
-  };
 
   // ── “Prime” step ─────────────────────────── ───────────────────────────
   const handleCsvFile = (file: File) => {
@@ -549,32 +514,6 @@ export function CreateProjectWizard({
     if (!keyTouched) setKey(suggestKeyFromName(value));
   };
 
-  /**
-   * A suggested name, for those who don't have one yet (MIN-170, “all
-   * new project"). It fills the field like a keystroke: the key follows,
-   * and everything remains editable — the project is only created at the last step.
-   *
-   * We exclude anything that would cause the validation to fail three lines below (a name
-   * or a key already taken from home) and the name displayed at the moment, otherwise the
-   * bouton « en proposer un autre » peut ne rien changer.
-   */
-  const suggestName = () => {
-    const mine = projects.filter((p) => p.owner_id === user?.id);
-    const next = suggestProjectName(
-      (candidate) =>
-        candidate.toLowerCase() === name.trim().toLowerCase() ||
-        mine.some(
-          (p) =>
-            p.name.toLowerCase() === candidate.toLowerCase() ||
-            p.key === suggestKeyFromName(candidate),
-        ),
-    );
-    setSuggestedName(next);
-    handleNameChange(next);
-  };
-
-  /** The field still bears the proposition — no one has rewritten it since. */
-  const showsSuggestion = suggestedName !== "" && name === suggestedName;
 
   /**
    * The emergency exit of the “name” step, on the existing project side: this is not
@@ -692,10 +631,6 @@ export function CreateProjectWizard({
   // ── Creation (last step) ────────────────────── ───────────────────────
   const finish = async () => {
     if (submitting) return;
-    if (initialBriefTooLong) {
-      setStepIndex(steps.indexOf("seed"));
-      return;
-    }
     /**
      * Closing the wizard while this runs (its close button stays live) ends
      * this opening: nothing below may write into the fresh wizard. What still
@@ -711,18 +646,6 @@ export function CreateProjectWizard({
     setSubmitting(true);
     setError(null);
 
-    let briefContent: unknown;
-    if (seed?.kind === "brief") {
-      try {
-        briefContent = await prepareInitialBriefApi(seed.text);
-      } catch (err) {
-        if (stale()) return;
-        setStepIndex(steps.indexOf("seed"));
-        setError((err as Error).message);
-        setSubmitting(false);
-        return;
-      }
-    }
 
     // A failed page write may be retried here or resumed from its saved draft.
     let created = createdProjectRef.current ?? projects.find((p) => p.id === draftId);
@@ -759,33 +682,7 @@ export function CreateProjectWizard({
       return;
     }
 
-    if (seed?.kind === "brief") {
-      try {
-        await createPageApi(created.id, {
-          title: t("wizardBriefPageTitle"),
-          icon: "📝",
-          content: briefContent,
-        });
-      } catch (err) {
-        // The user discarded the wizard: there is no form left to keep.
-        if (stale()) {
-          toast.error((err as Error).message);
-          return;
-        }
-        setError((err as Error).message);
-        // Keep the form even if the same outage also prevents saving its draft.
-        try {
-          await saveProjectDraft(snapshot());
-          setDraftExists(true);
-        } catch (draftError) {
-          console.error("[create-project-wizard] brief draft save failed:", draftError);
-        }
-        setSubmitting(false);
-        return;
-      }
-    }
-
-    // Delete the draft only once its brief page has been saved successfully.
+    // The project exists: its draft has nothing left to keep.
     clearPendingDraftId();
     if (draftExists) {
       void deleteProjectDraft(draftId).catch((err: Error) => {
@@ -913,58 +810,19 @@ export function CreateProjectWizard({
     ProjectWizardStep,
     WizardStep<ProjectWizardStep>
   > = {
-    // Minddy's very first gesture: two doors side by side, of the same weight,
-    // which can be read at a glance. Each shows its scene — a bare field where
-    // a card is placed, a pile of cards already there — and a line for the
-    // name: it is the drawing that makes the choice, the wording confirms.
-    origin: {
-      id: "origin",
-      title: t("wizardOriginTitle"),
-      subtitle: t("wizardOriginDesc"),
-      // The two doors breathe wider than the fields of steps
-      // following: this is the only screen where you look before reading.
-      wide: true,
-      // A binary choice that requires two gestures is an ill-posed binary choice:
-      // the clicked card poses the answer AND moves forward, a CTA would only
-      // ask again for confirmation of what has just been said.
-      hideSubmit: true,
-      content: (
-        <div
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-          role="radiogroup"
-          aria-label={t("wizardOriginTitle")}
-        >
-          {(
-            [
-              { id: "new", icon: SparklesIcon, label: t("wizardOriginNewLabel") },
-              {
-                id: "existing",
-                icon: Layers01Icon,
-                label: t("wizardOriginExistingLabel"),
-              },
-            ] as const
-          ).map(({ id, icon, label }) => (
-            <WizardChoiceCard
-              key={id}
-              icon={icon}
-              label={label}
-              selected={origin === id}
-              onSelect={() => chooseOrigin(id)}
-            />
-          ))}
-        </div>
-      ),
-    },
-
     project: {
       id: "project",
       title: t("wizardProjectTitle"),
+      // Not a project to create but a team to join: the way there sits with
+      // the step's buttons, between Continue and Back (MIN-907).
+      secondaryAction: { label: t("wizardJoinLink"), icon: UserAdd01Icon, onClick: openJoin },
       subtitle: t("dialogDescription", {
         entityPlural: tIssue("entityPlural").toLowerCase(),
       }),
       content: (
         <div className="flex flex-col gap-2">
-          <div className="flex items-end gap-3">
+          {/* Side by side on a computer, stacked on a phone (MIN-907). */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <label htmlFor="project-name" className="text-sm font-medium">
                 {t("nameLabel")}
@@ -978,7 +836,7 @@ export function CreateProjectWizard({
                 placeholder={t("namePlaceholder")}
               />
             </div>
-            <div className="flex w-28 shrink-0 flex-col gap-1.5">
+            <div className="flex w-full shrink-0 flex-col gap-1.5 sm:w-28">
               {/* The key requires an explanation, not a permanent hint under the
  field: it fits in a tooltip when hovering over the "i", and the
  subtitle of the step talks about the project. */}
@@ -986,23 +844,14 @@ export function CreateProjectWizard({
                 <label htmlFor="project-key" className="text-sm font-medium">
                   {t("keyLabel")}
                 </label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={t("keyTooltipLabel")}
-                      className="flex size-4 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:text-foreground"
-                    >
-                      <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs text-left">
-                    {t("keyTooltip", {
-                      entityPlural: tIssue("entityPlural").toLowerCase(),
-                      key: key || "MIND",
-                    })}
-                  </TooltipContent>
-                </Tooltip>
+                {/* A tap opens it as well as a hover: a tooltip never opened on
+                    a phone (MIN-907). */}
+                <HelpHint label={t("keyTooltipLabel")}>
+                  {t("keyTooltip", {
+                    entityPlural: tIssue("entityPlural").toLowerCase(),
+                    key: key || "MIND",
+                  })}
+                </HelpHint>
               </div>
               <Input
                 id="project-key"
@@ -1018,62 +867,6 @@ export function CreateProjectWizard({
             </div>
           </div>
 
-          {/* A project that does not yet exist does not necessarily have a name, and the
- wizard cannot advance without it. Rather than blocking on an empty field: a code name, drawn at random, which we replay as many times as we want — and which is renamed like any other.
- Nothing to offer to anyone taking over an existing project: this one already has
- its name. */}
-          {origin === "new" &&
-            (showsSuggestion ? (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={suggestName}
-                      aria-label={t("wizardNameSuggestAnother")}
-                      className="flex size-6 shrink-0 items-center justify-center rounded-md outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground"
-                    >
-                      <HugeiconsIcon icon={Refresh01Icon} className="size-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {t("wizardNameSuggestAnother")}
-                  </TooltipContent>
-                </Tooltip>
-                <span>{t("wizardNameSuggestHint")}</span>
-              </div>
-            ) : name.trim() === "" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={suggestName}
-                className="h-auto self-start bg-transparent px-0 py-1 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
-              >
-                <HugeiconsIcon icon={SparklesIcon} className="size-3.5" />
-                {t("wizardNameSuggest")}
-              </Button>
-            ) : null)}
-
-          {/* The other thing we can want here, and that nothing said: don't
- not create a project at all. Who arrives through “an existing project”
- because his team is already on minddy was preparing to create a DOUBLON
- — when all you have to do is be invited. The link
- only opens an explanation, the wizard remains there below: we do not join
- on our own in minddy, it is the owner
- of the project who invites. */}
-          {origin === "existing" && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={openJoin}
-              className="h-auto self-start bg-transparent px-0 py-1 text-xs font-normal text-muted-foreground hover:bg-transparent hover:text-foreground"
-            >
-              <HugeiconsIcon icon={UserAdd01Icon} className="size-3.5" />
-              {t("wizardJoinLink")}
-            </Button>
-          )}
         </div>
       ),
     },
@@ -1182,139 +975,60 @@ export function CreateProjectWizard({
 
     seed: {
       id: "seed",
-      title:
-        origin === "existing"
-          ? t("wizardSeedImportTitle")
-          : t("wizardSeedBriefTitle"),
-      subtitle:
-        origin === "existing"
-          ? t("wizardSeedImportDesc")
-          : t("wizardSeedBriefDesc"),
+      title: t("wizardSeedImportTitle"),
+      subtitle: t("wizardSeedImportDesc"),
       submitLabel: skipLabel(!seed),
-      submitDisabled: briefTooLong,
-      content:
-        origin === "existing" ? (
-          <div className="flex flex-col gap-3">
-            {/* Where to find the CSV, tool by tool — the same procedure as
- settings and onboarding. Requesting an export without saying where it
- is taken is to go back to looking in the docs of the tool that you
- is leaving. The file deposited, she finished her work. */}
-            {!csvFile && <ImportGuideBlock />}
-            <input
-              ref={csvInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleCsvFile(file);
-              }}
-            />
-            {csvFile ? (
-              <>
-                <div className="flex items-center gap-3 rounded-2xl border border-border p-4">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
-                    <HugeiconsIcon icon={FileUploadIcon} className="size-5" strokeWidth={1.5} />
-                  </span>
-                  <div className="min-w-0 flex-1 text-left">
-                    <TruncatedText text={csvFile.name} className="truncate text-sm font-medium" />
-                    <p className="truncate text-xs text-muted-foreground">
-                      {t("wizardSeedFileReady")}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="self-center bg-transparent text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
-                  onClick={() => {
-                    setCsvFile(null);
-                    if (csvInputRef.current) csvInputRef.current.value = "";
-                  }}
-                >
-                  {tCommon("remove")}
-                </Button>
-              </>
-            ) : (
-              <>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => csvInputRef.current?.click()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      csvInputRef.current?.click();
-                    }
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOver(true);
-                  }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setDragOver(false);
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) handleCsvFile(file);
-                  }}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-2xl border border-dashed px-6 py-10 text-center outline-none transition-colors",
-                    dragOver
-                      ? "border-ring bg-accent/40"
-                      : "border-border hover:border-ring/60 focus-visible:border-ring",
-                  )}
-                >
-                  <HugeiconsIcon icon={FileUploadIcon} className="size-5 text-muted-foreground" aria-hidden />
-                  <p className="text-sm font-medium">
-                    {tSettings("importDropTitle")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {tSettings("importDropHint")}
-                  </p>
-                </div>
-                {csvLost && (
-                  <p className="text-center text-xs text-muted-foreground">
-                    {t("wizardSeedFileLost")}
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <Textarea
-              autoFocus={allowInputAutoFocus()}
-              value={brief}
-              onChange={(e) => {
-                setBrief(e.target.value);
-                setError(null);
-              }}
-              placeholder={t("wizardSeedPlaceholder")}
-              aria-label={t("wizardSeedBriefTitle")}
-              rows={8}
-              className="max-h-[40vh] min-h-40 overflow-y-auto"
-            />
-            {/* The counter only appears near the ceiling: before, it
- learns nothing and puts a limit before the eyes of who will never reach it. */}
-            {brief.length > MAX_INITIAL_BRIEF_CHARS * 0.75 && (
-              <span
-                className={cn(
-                  "self-end font-mono text-xs tabular-nums",
-                  brief.length > MAX_INITIAL_BRIEF_CHARS
-                    ? "text-destructive"
-                    : "text-muted-foreground",
-                )}
-              >
-                {t("wizardSeedCounter", {
-                  count: brief.length,
-                  max: MAX_INITIAL_BRIEF_CHARS,
-                })}
+      content: (
+        <div className="flex flex-col gap-3">
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleCsvFile(file);
+            }}
+          />
+          {csvFile ? (
+            // Second time: the file is here, and imported once the project exists.
+            <div className="flex items-center gap-3 rounded-2xl border border-border p-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                <HugeiconsIcon icon={FileUploadIcon} className="size-5" strokeWidth={1.5} />
               </span>
-            )}
-          </div>
-        ),
+              <div className="min-w-0 flex-1 text-left">
+                <TruncatedText text={csvFile.name} className="truncate text-sm font-medium" />
+                <p className="truncate text-xs text-muted-foreground">{t("wizardSeedFileReady")}</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={tCommon("remove")}
+                onClick={() => {
+                  setCsvFile(null);
+                  if (csvInputRef.current) csvInputRef.current.value = "";
+                }}
+              >
+                <HugeiconsIcon icon={Cancel01Icon} />
+              </Button>
+            </div>
+          ) : (
+            // First time: where the issues come from, how to export them
+            // there, and the file.
+            <>
+              <ImportGuideBlock foldSteps />
+              <Button type="button" variant="outline" className="h-11 w-full gap-2" onClick={() => csvInputRef.current?.click()}>
+                <HugeiconsIcon icon={FileUploadIcon} />
+                {t("wizardSeedChooseFile")}
+              </Button>
+              {csvLost && (
+                <p className="text-center text-xs text-muted-foreground">{t("wizardSeedFileLost")}</p>
+              )}
+            </>
+          )}
+        </div>
+      ),
     },
 
     members: {
@@ -1503,12 +1217,7 @@ export function CreateProjectWizard({
         stepIndex={stepIndex}
         onStepIndexChange={goToStep}
         submitting={submitting}
-        error={
-          error ??
-          (briefTooLong
-            ? t("wizardSeedTooLong", { max: MAX_INITIAL_BRIEF_CHARS })
-            : null)
-        }
+        error={error}
         onSubmit={(id) => {
           if (id === "project") submitProjectStep();
           else if (id === "seed") leaveSeedStep(seed);

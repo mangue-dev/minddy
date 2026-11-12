@@ -3,7 +3,7 @@
 import { memo, useRef, useState, useLayoutEffect, useCallback, useEffect, useId, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Home01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { InboxIcon, Menu09Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
@@ -12,12 +12,11 @@ import { PANEL_OFFSET, SidebarPanelTransition, usePanelDirection } from "./sideb
 import { SecondarySidebarHeader } from "@/components/secondary-sidebar";
 import { matchesFilter } from "@/components/sidebar-filter-field";
 import { MobileCreateButton, MobileNumoButton } from "./mobile-nav-actions";
-import Link from "@/components/app-link";
-import { UserAvatar } from "@/components/user-avatar";
-import { useMyAvatarSource } from "@/lib/use-my-avatar";
-import { MobileSidebarReveal } from "./mobile-sidebar-reveal";
-import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow, type SidebarBackBadge } from "./app-sidebar";
+import { Sheet, SheetTitle } from "@/components/ui/sheet";
+import { MobileSheetContent } from "@/components/ui/mobile-sheet";
+import { openInbox } from "@/lib/inbox-launcher";
 import { MobileSheetScrollArea } from "./ui/mobile-sheet";
+import { SidebarFrame, SidebarRows, SidebarTopBand, SidebarBackRow, ProjectContextRow, type SidebarBackBadge } from "./app-sidebar";
 import type { NavSection, NavItem } from "@/components/nav-types";
 import type { Project } from "@/lib/types";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -57,7 +56,7 @@ export function MobileMenuRows({ sections, onBrowse, onNavigate }: { sections: M
  */
 const NAV_SLOT = "flex h-full min-w-0 items-center justify-center rounded-full outline-none";
 
-export const MobileNavigation = memo(function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], homeBadge, homeBadgeLabel, onSearch }: {
+export const MobileNavigation = memo(function MobileNavigation({ sections, initialPanel, initialPanels, projects = [], homeBadge, homeBadgeLabel, inboxCount = 0, inboxBadgeLabel, onSearch }: {
   sections: MobileMenuSection[];
   initialPanel?: MobileMenuPanel;
   initialPanels?: MobileMenuPanel[];
@@ -65,13 +64,15 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
   /** Home's aggregate badge and its scope, for the project panels' back control. */
   homeBadge?: ReactNode;
   homeBadgeLabel?: string;
+  /** What waits in the inbox: unread notifications and pending invitations. */
+  inboxCount?: number;
+  inboxBadgeLabel?: string;
   onSearch: () => void;
 }) {
   const t = useTranslations("Nav");
   const tc = useTranslations("Common");
   const pathname = usePathname();
   const sidebarId = useId();
-  const menuTrigger = useRef<HTMLButtonElement>(null);
   const focusTarget = useRef<HTMLElement>(null);
   const [headerHost, setHeaderHost] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -104,7 +105,6 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
   };
   useLayoutEffect(() => { if (menuOpen) focusTarget.current?.focus({ preventScroll: true }); }, [panel?.key, menuOpen]);
   const typing = useTypingInField();
-  const avatar = useMyAvatarSource();
   // In the mobile app the shell draws this bar natively, over this one
   // (lib/mobile/native-navigation.ts).
   const navRef = useRef<HTMLElement>(null);
@@ -113,51 +113,60 @@ export const MobileNavigation = memo(function MobileNavigation({ sections, initi
     if (!shell || !navRef.current) return;
     return syncNativeNavigationBar(navRef.current, shell) ?? undefined;
   }, []);
+  const inboxLabel = inboxCount > 0 && inboxBadgeLabel ? `${t("inbox")} — ${inboxBadgeLabel}` : t("inbox");
   return <>
     <nav ref={navRef} aria-label={t("mainNavigation")} data-mobile-navigation data-typing={typing ? "" : undefined} className="fixed inset-x-0 bottom-0 z-40 flex justify-center pb-[max(1rem,env(safe-area-inset-bottom))] app-desktop:hidden">
       <div className="grid h-12 w-[min(100%-2rem,320px)] grid-cols-5 grid-rows-1 items-center rounded-full border border-border bg-background shadow-lg">
-        {/* Home first, the account last: the avatar opens the sidebar, where
-            the account and every destination live. */}
-        <Link href="/home" data-nav-slot="home" aria-label={t("home")} aria-current={pathname.startsWith("/home") ? "page" : undefined} className={NAV_SLOT}><AppIcon icon={Home01Icon} className="size-[22px]" /></Link>
-        <MobileNumoButton />
+        {/* The menu first: it opens the navigation sheet, where the account
+            and every destination live. The inbox takes Home's former slot. */}
+        <button data-mobile-menu-trigger data-nav-slot="menu" type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className={NAV_SLOT}><AppIcon icon={Menu09Icon} className="size-[22px]" /></button>
         <button type="button" data-nav-slot="search" aria-label={t("searchPlaceholder")} onClick={onSearch} className={NAV_SLOT}><AppIcon icon={Search01Icon} className="size-[22px]" /></button>
+        <button type="button" data-nav-slot="inbox" data-nav-badge={inboxCount > 0 ? "" : undefined} aria-label={inboxLabel} onClick={openInbox} className={`${NAV_SLOT} relative`}>
+          <AppIcon icon={InboxIcon} className="size-[22px]" />
+          {inboxCount > 0 && <span aria-hidden className="absolute top-2.5 right-[calc(50%-14px)] size-2 rounded-full bg-primary ring-2 ring-background" />}
+        </button>
+        <MobileNumoButton />
         <MobileCreateButton />
-        <button ref={menuTrigger} data-mobile-menu-trigger data-nav-slot="menu" type="button" aria-label={t("goTo")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => onOpenChange(true)} className={NAV_SLOT}><UserAvatar seed={avatar} alt="" className="size-[26px]" /></button>
       </div>
       {/* The progressive blur behind the pill, over what scrolls under it.
           After the pill: the native bar reads the pill as the first child
           (lib/mobile/native-navigation.ts). */}
       <div data-mobile-nav-blur aria-hidden />
     </nav>
-    <MobileSidebarReveal open={menuOpen} onOpenChange={onOpenChange} trigger={menuTrigger} focusTarget={focusTarget} label={t("goTo")}>
-      <SidebarFrame id={sidebarId} mobile onNavigate={onNavigate} focusRef={focusTarget}>
-        <SidebarTopBand secondary={!!panel && !panel.project} headerRef={setHeaderHost} onCreate={onNavigate} />
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-          {collectionPanel && secondary?.present && <motion.div
-            data-mobile-sidebar-panel={collectionPanel.key}
-            className="absolute inset-0 flex min-h-0 flex-col"
-            inert={!showCollection} aria-hidden={!showCollection}
-            initial={false}
-            animate={{ opacity: showCollection ? 1 : 0, x: showCollection ? 0 : PANEL_OFFSET }}
-            transition={panelTransition}
-            style={{ pointerEvents: showCollection ? "auto" : "none" }}>
-            <SidebarBackRow label={collectionPanel.title} ariaLabel={tc("back")} onBack={onBack} badge={collectionPanel.backBadge} />
-            <MobileCollectionMenu route={pathname} active={showCollection} onNavigate={onNavigate} headerHost={headerHost} />
-          </motion.div>}
-          <AnimatePresence mode="sync" initial={false} custom={direction}>
-            {!showCollection && <SidebarPanelTransition key={panel?.key ?? "home"}
-              className="absolute inset-0 flex min-h-0 flex-col" direction={direction} transition={panelTransition}>
-              <MobileBrowsePanel panel={panel} sections={sections} projects={projects} navigation={navigation} onBack={onBack}
-                homeBadge={homeBadge} homeBadgeLabel={homeBadgeLabel}
-                onProjectSelect={(project) => {
-                  const next = sections.flatMap((section) => section.items).find((item) => item.panel?.project?.id === project.id)?.panel;
-                  if (next) { browsing.current = true; setPanels([next]); }
-                }} />
-            </SidebarPanelTransition>}
-          </AnimatePresence>
-        </div>
-      </SidebarFrame>
-    </MobileSidebarReveal>
+    {/* The navigation is a bottom sheet, like every other menu on a phone
+        (MIN-907): the same panels the desktop sidebar holds. */}
+    <Sheet open={menuOpen} onOpenChange={onOpenChange}>
+      <MobileSheetContent side="bottom" aria-describedby={undefined} className="mobile-nav-sheet">
+        <SheetTitle className="sr-only">{t("goTo")}</SheetTitle>
+        <SidebarFrame id={sidebarId} mobile onNavigate={onNavigate} focusRef={focusTarget}>
+          <SidebarTopBand secondary={!!panel && !panel.project} headerRef={setHeaderHost} onCreate={onNavigate} />
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            {collectionPanel && secondary?.present && <motion.div
+              data-mobile-sidebar-panel={collectionPanel.key}
+              className="absolute inset-0 flex min-h-0 flex-col"
+              inert={!showCollection} aria-hidden={!showCollection}
+              initial={false}
+              animate={{ opacity: showCollection ? 1 : 0, x: showCollection ? 0 : PANEL_OFFSET }}
+              transition={panelTransition}
+              style={{ pointerEvents: showCollection ? "auto" : "none" }}>
+              <SidebarBackRow label={collectionPanel.title} ariaLabel={tc("back")} onBack={onBack} badge={collectionPanel.backBadge} />
+              <MobileCollectionMenu route={pathname} active={showCollection} onNavigate={onNavigate} headerHost={headerHost} />
+            </motion.div>}
+            <AnimatePresence mode="sync" initial={false} custom={direction}>
+              {!showCollection && <SidebarPanelTransition key={panel?.key ?? "home"}
+                className="absolute inset-0 flex min-h-0 flex-col" direction={direction} transition={panelTransition}>
+                <MobileBrowsePanel panel={panel} sections={sections} projects={projects} navigation={navigation} onBack={onBack}
+                  homeBadge={homeBadge} homeBadgeLabel={homeBadgeLabel}
+                  onProjectSelect={(project) => {
+                    const next = sections.flatMap((section) => section.items).find((item) => item.panel?.project?.id === project.id)?.panel;
+                    if (next) { browsing.current = true; setPanels([next]); }
+                  }} />
+              </SidebarPanelTransition>}
+            </AnimatePresence>
+          </div>
+        </SidebarFrame>
+      </MobileSheetContent>
+    </Sheet>
   </>;
 });
 
@@ -239,9 +248,15 @@ function useTypingInField(): boolean {
     update();
     document.addEventListener("focusin", update);
     document.addEventListener("focusout", update);
+    // A focused field removed with its sheet (the palette swiped away) sends
+    // no focusout in WebKit: the bar stayed hidden until the next tap
+    // (MIN-907). Layers mount and leave as children of the body.
+    const layers = new MutationObserver(update);
+    layers.observe(document.body, { childList: true });
     return () => {
       document.removeEventListener("focusin", update);
       document.removeEventListener("focusout", update);
+      layers.disconnect();
     };
   }, []);
   return typing;

@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-11",
   "compatibility": {
@@ -35,8 +35,14 @@
     ],
     "evidence": [
       "app/(auth)/signup/page.tsx",
-      "components/auth/signup-wizard.tsx",
-      "lib/signup-wizard.ts",
+      "components/auth/auth-entry.tsx",
+      "components/auth/auth-chrome.tsx",
+      "lib/auth-entry.ts",
+      "app/api/auth/lookup/route.ts",
+      "components/first-run/first-run-gate.tsx",
+      "components/first-run/profile-setup-screen.tsx",
+      "components/first-run/mobile-onboarding-screen.tsx",
+      "lib/first-run.ts",
       "lib/password-policy.ts",
       "app/(auth)/login/page.tsx",
       "app/auth/confirm/page.tsx",
@@ -72,14 +78,16 @@
       "desktop/src/local-installer.ts",
       "desktop/src/local-account.ts",
       "lib/week-start.ts",
-      "components/settings/account-numo-section.tsx"
+      "components/settings/account-numo-section.tsx",
+      "lib/use-onboarding.ts",
+      "lib/onboarding.ts"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 20,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 single sign-in and sign-up screen, first-run profile page and phone getting-started tour: checked against components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx, lib/auth-entry.ts, app/api/auth/lookup/route.ts, components/first-run/first-run-gate.tsx, components/first-run/profile-setup-screen.tsx, components/first-run/mobile-onboarding-screen.tsx, lib/first-run.ts and messages/*.json; no browser walkthrough; existing figures do not show these screens and were kept); agent:claude-code (MIN-907 tour follow-up: skip confirmation, final screen with confetti, Home after the tour and the issue step completed on creation, checked against components/first-run/mobile-onboarding-screen.tsx, lib/use-onboarding.ts and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-907 four-step tour: the cycles step left the getting-started steps (lib/onboarding.ts ONBOARDING_STEPS, components/sidebar-onboarding.tsx); the phone tour's Back and Skip row, Back from the first step returning to the profile page, and the skip confirmation checked against components/first-run/mobile-onboarding-screen.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:/root (en MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-907 account-access section rewritten for the single sign-in and sign-up screen and the first-run screens, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-907 tour follow-up tour passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-907 four-step tour passage with Back and Skip, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "choose-an-instance",
@@ -111,7 +119,7 @@
       "src": "/documentation/en/account-security-workflow.png",
       "alt": "Two-factor authentication card with the Turn on button.",
       "caption": "Start enrollment here, then verify the authenticator and store recovery codes privately.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -128,7 +136,7 @@
       "src": "/documentation/en/profile-and-preferences-workflow.png",
       "alt": "Profile header with the avatar and its edit badge, the name and the read-only email.",
       "caption": "Select the avatar to generate or upload one, or the name to rename yourself; the email address stays read-only.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -145,7 +153,7 @@
       "src": "/documentation/en/profile-and-preferences-preferences-workflow.png",
       "alt": "Language selector, light, dark and system theme controls, the light and dark mode palette selectors and the transparency switch.",
       "caption": "Account appearance preferences are separate from the public website language.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -162,7 +170,7 @@
       "src": "/documentation/en/privacy-and-account-deletion-workflow.png",
       "alt": "Deletion preview listing owned projects, issues and members who lose access.",
       "caption": "Read the preview and export wanted data before opening the deletion confirmation.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -187,17 +195,22 @@ Your account belongs to the instance where you signed up. Manage sign-in, two-fa
 
 ## Create an account and sign in {#account-access}
 
-Open the login or signup screen on the instance you intend to use. Cloud and another self-hosted instance have separate accounts. Available sign-in methods and signup access depend on the instance's authentication configuration. A local instance installed by the desktop app has no signup: the app creates your account and signs you in. See [local instances](/docs/install-locally#install-locally).
+Open the sign-in screen of the instance you intend to use. **Log in or sign up** is one screen for both, at `/login` and `/signup`. Cloud and another self-hosted instance have separate accounts. Available sign-in services and sign-up access depend on the instance's authentication configuration. A local instance installed by the desktop app has no sign-up: the app creates your account and signs you in. See [local instances](/docs/install-locally#install-locally).
 
-For email signup:
+The screen starts with your email address and **Continue**. Under **or**, it lists the sign-in services the instance offers, in this order: Apple, Google and GitHub. In the desktop app, **Self-host minddy** follows them. After **Continue**, minddy checks what the address holds and shows one of these steps. **Change**, next to the address, returns to it.
 
-1. Enter your address and continue to the identity step.
-2. Enter a nonempty full name and optionally choose an avatar.
-3. Continue to the password step. Enter at least eight characters with a lowercase letter (a–z), an uppercase letter (A–Z) and a digit, then repeat the password in the confirmation field.
-4. Submit this last step to create the account. Leaving the earlier steps does not create an account.
-5. If email confirmation is required, open the message sent by this instance. Follow its link and activate the confirmation button on the page. Opening the link alone does not confirm the account or consume the email token.
+- **Enter your password**: the address has an account with a password. Enter it and choose **Sign in**. **Forgot your password?** starts [password recovery](#account-recovery).
+- **Choose a password**: the address has no account yet. Enter at least eight characters with a lowercase letter (a–z), an uppercase letter (A–Z) and a digit; the requirements are checked as you type. Choose **Create my account**. This step asks for no name, picture or password confirmation.
+- **This account has no password**: the account was created through a sign-in service. Continue with the same service, or choose **Set a password**, which opens password recovery for this address.
+- **Sign-ups are closed here**: minddy's preview instance creates no accounts. Its button leads to sign-up on minddy.app.
 
-Return to the intended application and sign in. A newly authenticated account can create its own project or accept a project invitation. Knowing a project URL does not grant membership.
+If email confirmation is required, **Check your inbox** follows account creation. Open the message sent by this instance. Follow its link and activate the confirmation button on the page. Opening the link alone does not confirm the account or consume the email token. Then return to the intended application and sign in. Too many address checks in a short time are refused for a while: wait before trying again.
+
+After the first sign-in, a new account opens on **What should we call you?** before the app. Choose **Upload image** or **New Lorelei avatar** for your picture, then enter your username; a name given by a sign-in service is already filled in. Choose **Continue**. This page appears once, on every platform; accounts created before it existed never see it. You can change both later in your [profile](#profile-and-preferences).
+
+On a phone, a new account then goes through the getting-started steps, one per page, with progress dots: **Create or join a project**, **Add your first issue**, **Discover Numo** and **Connect a coding agent**. Each step's button opens the same sheet as in the app over the page: project or issue creation, Numo or the agent connection. The issue step is complete as soon as you create the issue, even while Smart Fill is still writing it. Under the step's buttons, **Back** shows the previous step again; from the first step, it returns to **What should we call you?**, whose **Continue** brings you back to the steps. **Skip** moves to the next step. **Skip onboarding** asks for confirmation first, because skipped steps don't come back; confirm with **Skip onboarding**. After the last step, **You're all set.** appears with a short confetti animation, and **Continue** leads to Home. Skipping the tour also leads to Home. On a computer, the same steps form the **Getting started** checklist in the sidebar.
+
+A newly authenticated account can create its own project or accept a project invitation. Knowing a project URL does not grant membership.
 
 
 ### Sign out and handle missing mail {#session-and-mail}

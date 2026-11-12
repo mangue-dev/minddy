@@ -230,27 +230,6 @@ export async function uploadAvatarImage(
 }
 
 /**
- * Stores a pre-authenticated signup image under an opaque, single-use token.
- * Only that token enters auth metadata; image bytes never inflate a session JWT.
- */
-export async function stageSignupAvatar(
-  service: SupabaseClient,
-  bytes: Buffer,
-): Promise<string> {
-  const webp = await compressAvatarFile(bytes);
-  await cleanupExpiredPendingAvatars(service);
-  const token = crypto.randomUUID();
-  const { error } = await service.storage
-    .from(USER_AVATAR_BUCKET)
-    .upload(pendingAvatarPath(token), webp, {
-      contentType: "image/webp",
-      upsert: false,
-    });
-  if (error) throw new Error(error.message);
-  return token;
-}
-
-/**
  * Claims a staged signup image for an authenticated account.
  *
  * Removing the pending object makes the token single-use. A replay on a later
@@ -263,6 +242,9 @@ export async function claimPendingAvatar(
   token: string | null | undefined,
 ): Promise<boolean> {
   if (!userId || !token || !UUID_RE.test(token)) return false;
+  // Sign-up no longer stages images (MIN-907): what accounts created before
+  // then left behind is claimed here, and what nobody came back for expires.
+  await cleanupExpiredPendingAvatars(service).catch(() => {});
   const pendingPath = pendingAvatarPath(token);
   const { data: pending, error: downloadError } = await service.storage
     .from(USER_AVATAR_BUCKET)

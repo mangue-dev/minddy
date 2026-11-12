@@ -44,8 +44,8 @@ final class MinddyViewController: CAPBridgeViewController {
         let guardDelegate = NavigationGuard(forwardingTo: capacitorDelegate, controller: self)
         navigationGuard = guardDelegate
         webView.navigationDelegate = guardDelegate
-        // No edge swipe for history: the product owns the horizontal swipe from
-        // the left, which opens its sidebar.
+        // No edge swipe for history: a single-page app has no history the
+        // reader would recognize, and the product's sheets own the gestures.
         webView.allowsBackForwardNavigationGestures = false
         Self.hideFormAccessoryBar
         letFocusRaiseKeyboard()
@@ -180,6 +180,12 @@ final class MinddyViewController: CAPBridgeViewController {
     /// or a universal link's.
     func open(path: String) {
         guard let url = url(forPath: path) else { return }
+        // The product is on screen: it opens the path itself, without
+        // reloading. The inbox, for one, is a sheet over the current page.
+        if !showsLocalPage, let plugin = shellPlugin, plugin.hasListeners("openPath") {
+            plugin.openPath(path)
+            return
+        }
         webView?.load(URLRequest(url: url))
     }
 
@@ -258,8 +264,7 @@ final class MinddyViewController: CAPBridgeViewController {
             navigationBar.setVisible(false)
             return
         }
-        // The page moves its bar with itself, off the screen's edge when it
-        // slides aside for the sidebar: the frame is taken as given.
+        // The page places its bar: the frame is taken as given.
         navigationBar.frame = frame
         // Under the launch cover while the first page loads.
         if let cover = launchCover {

@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -34,7 +34,8 @@
       "desktop"
     ],
     "evidence": [
-      "components/mobile-sidebar-reveal.tsx",
+      "components/mobile-navigation.tsx",
+      "components/auth/auth-entry.tsx",
       "components/issue-side-panel.tsx",
       "components/assistant-panel.tsx",
       "public/sw.js",
@@ -73,10 +74,10 @@
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (en changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 19,
+    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone menu opened from the bottom bar as a sheet, and the desktop app's first launch on the single sign-in and sign-up screen: checked against components/mobile-navigation.tsx, components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no browser walkthrough; existing figures do not show the bottom bar or the sign-in screen and were kept)",
+    "language": "agent:claude-code (en changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-907 phone menu and desktop first-launch passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "issues"
@@ -101,7 +102,7 @@
       "src": "/documentation/en/web-and-mobile-workflow.png",
       "alt": "Mobile issue panel with localized title, description, properties and comment composer.",
       "caption": "On a narrow screen, issue details occupy a responsive panel. Use the close button to return to the project; Numo remains reachable through its floating button.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +119,7 @@
       "src": "/documentation/en/install-the-pwa-workflow.png",
       "alt": "minddy’s illustrated Safari installation guide: Share, Add to Home Screen and confirm.",
       "caption": "The public guide illustrates the three Safari steps and keeping Open as Web App enabled. These are instructional illustrations rendered by minddy, not screenshots of a completed iOS installation.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -135,7 +136,7 @@
       "src": "/documentation/en/devices-and-notifications-workflow.png",
       "alt": "Push settings showing browser permission blocked and no registered device.",
       "caption": "This browser blocks notifications. Restore site permission before trying to register this device.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -152,7 +153,7 @@
       "src": "/documentation/en/devices-and-notifications-registered.png",
       "alt": "An active browser push device registered to the account, with its actual last-send date.",
       "caption": "The account has an active registered browser device. The list shows its registration and last-send dates. Browser permission and operating-system settings still determine whether a banner appears.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -169,7 +170,7 @@
       "src": "/documentation/en/desktop-renderer-recovery.png",
       "alt": "Local recovery page after a forced renderer crash, with Reload window and Check server settings controls.",
       "caption": "Recovery page in the macOS development app with an isolated profile and demonstration server. The native shell uses English labels in every language.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -195,7 +196,7 @@ Access the same instance from a browser, an installed web app or the desktop app
 
 ## Work in a browser or on a small screen {#web-and-mobile}
 
-Open your instance address and sign in to that instance. On a narrow viewport, reveal the sidebar to choose a project, then open an issue from its list or board. Read details in the responsive panel, change the intended field or add a comment, and wait for the save result before closing it. Close the detail panel to return to the list; its mobile presentation differs from a wide desktop layout.
+Open your instance address and sign in to that instance. On a narrow viewport, open the menu at the left end of the bar at the bottom of the screen to choose a project, then open an issue from its list or board. Read details in the responsive panel, change the intended field or add a comment, and wait for the save result before closing it. Close the detail panel to return to the list; its mobile presentation differs from a wide desktop layout.
 
 On a phone, menus, pickers and dialogs open in a bottom sheet. Close one with its close button or by swiping it down; when its list is scrolled, the swipe first scrolls it back to the top.
 
@@ -227,9 +228,9 @@ Installation does not create an offline project copy. minddy's service worker ha
 
 Use the public download page. Choose Apple silicon or Intel on macOS; install through Microsoft Store on Windows; choose an AppImage or signed `deb`/`rpm` matching x64 or ARM64 on Linux. Follow the platform guide and verification instructions for the package. Windows does not provide an `exe` installer. The macOS app requires macOS 13 (Ventura) or later; on an older version, an installed app keeps its current version and receives no further updates.
 
-On the first launch, the app opens the minddy Cloud sign-up screen, where you create your account. To use your own instance instead, click **Self-host minddy** at the bottom of the sign-in and sign-up screens. It opens **Self-host minddy**, with three choices: **Install on this computer** sets up a [local instance](/docs/install-locally#install-locally), **Install on a server** opens the public server installation guide in your browser, and **Use an existing installation** opens a screen that groups the installations you already have. There, **On this computer** opens a minddy folder already on this computer and the app starts it; below it, **Server address** with **Connect** joins a server you run. Remote servers require HTTPS; `localhost` can use HTTP.
+On the first launch, the app opens minddy Cloud's **Log in or sign up** screen, where you sign in or create your account. To use your own instance instead, click **Self-host minddy** at the bottom of that screen. It opens **Self-host minddy**, with three choices: **Install on this computer** sets up a [local instance](/docs/install-locally#install-locally), **Install on a server** opens the public server installation guide in your browser, and **Use an existing installation** opens a screen that groups the installations you already have. There, **On this computer** opens a minddy folder already on this computer and the app starts it; below it, **Server address** with **Connect** joins a server you run. Remote servers require HTTPS; `localhost` can use HTTP.
 
-To change server later, choose **Connect to a Server…** in the native minddy menu (press Alt on Windows and Linux to show the menu bar), **Change…** next to **Connected server** in **Account settings** → **Preferences** → **Desktop app**, or **Self-host minddy** at the bottom of the sign-in and sign-up screens. Each brings the app window to **Self-host minddy**; when a self-hosted server is connected, **Use minddy Cloud** in **Use an existing installation** returns to Cloud. The path at the top of the page leads back to each step, and the minddy logo returns to the app. This screen is built into the desktop app and opens without an Internet connection. Check the destination before signing in: accounts belong to their instance. OAuth uses the system browser and returns to desktop.
+To change server later, choose **Connect to a Server…** in the native minddy menu (press Alt on Windows and Linux to show the menu bar), **Change…** next to **Connected server** in **Account settings** → **Preferences** → **Desktop app**, or **Self-host minddy** at the bottom of the **Log in or sign up** screen. Each brings the app window to **Self-host minddy**; when a self-hosted server is connected, **Use minddy Cloud** in **Use an existing installation** returns to Cloud. The path at the top of the page leads back to each step, and the minddy logo returns to the app. This screen is built into the desktop app and opens without an Internet connection. Check the destination before signing in: accounts belong to their instance. OAuth uses the system browser and returns to desktop.
 
 On macOS and Windows 11, the sidebar, tabs and window edges show your desktop, blurred, behind the opaque content. A window in full screen stays opaque, and the transparency returns when it leaves full screen. To keep the window opaque on this device, turn off **Desktop app transparency** in **Account settings** → **Preferences** → [Appearance](/docs/accounts#preferences).
 

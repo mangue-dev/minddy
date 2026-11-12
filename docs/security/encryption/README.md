@@ -2918,3 +2918,16 @@ sent as the macOS app in production. The token itself stays in the sealed
 content. Migration `20270109200120` is additive: `register_protected_push`
 gains two optional parameters, so the previous release keeps registering
 devices unchanged.
+
+## Account status for the single sign-in screen (MIN-907)
+
+`public.auth_account_status(text)` answers whether an address holds no
+account (`new`), one that signs in with a password (`password`), or one
+created through a sign-in service (`oauth`). It reads `auth.users` only,
+returns one of those three words and no identifier, and only `service_role`
+may execute it. `/api/auth/lookup` calls it after rate-limiting per client and
+per address. The answer reveals whether an address is registered, as the
+sign-in screen has to; nothing encrypted is read. Sign-up no longer stages an
+avatar image before the account exists: `stageSignupAvatar` and its storage
+write are gone, and images staged earlier are still claimed or expired on the
+first authenticated arrival. Migration `20270109200121` is additive.

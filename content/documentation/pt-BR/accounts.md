@@ -18,8 +18,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 19,
+  "revision": 22,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-11",
   "compatibility": {
@@ -35,8 +35,14 @@
     ],
     "evidence": [
       "app/(auth)/signup/page.tsx",
-      "components/auth/signup-wizard.tsx",
-      "lib/signup-wizard.ts",
+      "components/auth/auth-entry.tsx",
+      "components/auth/auth-chrome.tsx",
+      "lib/auth-entry.ts",
+      "app/api/auth/lookup/route.ts",
+      "components/first-run/first-run-gate.tsx",
+      "components/first-run/profile-setup-screen.tsx",
+      "components/first-run/mobile-onboarding-screen.tsx",
+      "lib/first-run.ts",
       "lib/password-policy.ts",
       "app/(auth)/login/page.tsx",
       "app/auth/confirm/page.tsx",
@@ -72,14 +78,16 @@
       "desktop/src/local-installer.ts",
       "desktop/src/local-account.ts",
       "lib/week-start.ts",
-      "components/settings/account-numo-section.tsx"
+      "components/settings/account-numo-section.tsx",
+      "lib/use-onboarding.ts",
+      "lib/onboarding.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 22,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 single sign-in and sign-up screen, first-run profile page and phone getting-started tour: checked against components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx, lib/auth-entry.ts, app/api/auth/lookup/route.ts, components/first-run/first-run-gate.tsx, components/first-run/profile-setup-screen.tsx, components/first-run/mobile-onboarding-screen.tsx, lib/first-run.ts and messages/*.json; no browser walkthrough; existing figures do not show these screens and were kept); agent:claude-code (MIN-907 tour follow-up: skip confirmation, final screen with confetti, Home after the tour and the issue step completed on creation, checked against components/first-run/mobile-onboarding-screen.tsx, lib/use-onboarding.ts and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-907 four-step tour: the cycles step left the getting-started steps (lib/onboarding.ts ONBOARDING_STEPS, components/sidebar-onboarding.tsx); the phone tour's Back and Skip row, Back from the first step returning to the profile page, and the skip confirmation checked against components/first-run/mobile-onboarding-screen.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 account-access section rewritten for the single sign-in and sign-up screen and the first-run screens, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 tour follow-up tour passage with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 four-step tour passage with Back and Skip, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "choose-an-instance",
@@ -111,7 +119,7 @@
       "src": "/documentation/pt-BR/account-security-workflow.png",
       "alt": "Cartão de autenticação de dois fatores com botão de ativação.",
       "caption": "Comece aqui, depois verifique o autenticador e guarde os códigos de recuperação em local protegido.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -128,7 +136,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-workflow.png",
       "alt": "Cabeçalho do perfil com o avatar e seu selo de edição, o nome e o email somente leitura.",
       "caption": "Selecione o avatar para gerar ou enviar um, ou o nome para alterá-lo; o endereço de email continua somente leitura.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -145,7 +153,7 @@
       "src": "/documentation/pt-BR/profile-and-preferences-preferences-workflow.png",
       "alt": "Seletor de idioma, controles de tema claro, escuro e do sistema, seletores de paleta dos modos claro e escuro e o interruptor de transparência.",
       "caption": "O idioma da conta e o do site público são configurados separadamente.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -162,7 +170,7 @@
       "src": "/documentation/pt-BR/privacy-and-account-deletion-workflow.png",
       "alt": "Prévia de exclusão com projetos próprios, tickets e membros que perderão acesso.",
       "caption": "Leia a prévia e exporte os dados que deseja manter antes de abrir a confirmação.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -187,13 +195,22 @@ Sua conta pertence à instância em que você se cadastra. Você pode gerenciar 
 
 ## Criar uma conta e entrar {#account-access}
 
-Abra a tela de entrada ou cadastro na instância que pretende usar. O Cloud e outra instância auto-hospedada têm contas separadas. Os métodos de entrada disponíveis e a possibilidade de cadastro dependem da configuração de autenticação da instância. Uma instância local instalada pelo aplicativo desktop não tem cadastro: o aplicativo cria a sua conta e faz o seu login. Consulte [Instâncias locais](/pt-br/documentacao/install-locally#install-locally).
+Abra a tela de entrada da instância que pretende usar. **Entre ou crie sua conta** é uma única tela para as duas coisas, em `/login` e em `/signup`. O Cloud e outra instância auto-hospedada têm contas separadas. Os serviços de login disponíveis e a possibilidade de cadastro dependem da configuração de autenticação da instância. Uma instância local instalada pelo aplicativo desktop não tem cadastro: o aplicativo cria a sua conta e faz o seu login. Consulte [Instâncias locais](/pt-br/documentacao/install-locally#install-locally).
 
-Para se cadastrar por email, informe seu endereço e avance para a etapa de identidade. Informe seu nome completo; ele não pode estar vazio nem conter apenas espaços. Você também pode escolher um avatar. Avance para a etapa de senha, informe uma senha com pelo menos oito caracteres, uma letra minúscula (a–z), uma maiúscula (A–Z) e um dígito, e repita-a no campo de confirmação. Envie essa última etapa para criar a conta. Abandonar as etapas anteriores não cria uma conta.
+A tela começa pelo seu endereço de email e **Continuar**. Abaixo de **ou**, ela lista os serviços de login que a instância oferece, nesta ordem: Apple, Google e GitHub. No aplicativo desktop, **Auto-hospedar o minddy** vem em seguida. Depois de **Continuar**, o minddy verifica o que corresponde ao endereço e mostra uma destas etapas. **Alterar**, ao lado do endereço, volta para ele.
 
-Quando a confirmação de email for necessária, abra a mensagem enviada pela instância. Siga o link e acione o botão de confirmação na página. Abrir o link não é suficiente: o minddy exige essa ação deliberada antes de consumir o token de email.
+- **Digite sua senha**: o endereço tem uma conta com senha. Digite-a e escolha **Entrar**. **Esqueceu sua senha?** inicia a [recuperação da senha](#account-recovery).
+- **Escolha uma senha**: o endereço ainda não tem conta. Informe pelo menos oito caracteres com uma letra minúscula (a–z), uma maiúscula (A–Z) e um dígito; os requisitos são verificados enquanto você digita. Escolha **Criar minha conta**. Esta etapa não pede nome, imagem nem confirmação da senha.
+- **Esta conta não tem senha**: a conta foi criada com um serviço de login. Continue com o mesmo serviço ou escolha **Definir senha**, que abre a recuperação da senha para esse endereço.
+- **Os cadastros estão fechados aqui**: a instância de pré-visualização do minddy não cria contas. O botão dela leva ao cadastro no minddy.app.
 
-Volte à aplicação desejada e entre. Uma conta recém-autenticada pode criar seu próprio projeto ou aceitar um convite. Saber a URL de um projeto não concede participação nele.
+Quando a confirmação de email for necessária, **Verifique sua caixa de entrada** aparece depois da criação da conta. Abra a mensagem enviada pela instância. Siga o link e acione o botão de confirmação na página. Abrir o link não é suficiente: isso não confirma a conta nem consome o token de email. Depois, volte à aplicação desejada e entre. Verificações de endereço demais em pouco tempo são recusadas por um tempo: aguarde antes de tentar de novo.
+
+Depois do primeiro login, uma conta nova abre em **Como devemos chamar você?** antes do aplicativo. Escolha **Enviar imagem** ou **Novo avatar de Lorelei** para a sua imagem e informe seu nome de usuário; o nome fornecido por um serviço de login já vem preenchido. Escolha **Continuar**. Esta página aparece uma única vez, em todas as plataformas; contas criadas antes dela nunca a veem. Você pode alterar os dois depois no seu [perfil](#profile-and-preferences).
+
+No celular, uma conta nova percorre em seguida os primeiros passos, um por página, com pontos de progresso: **Criar ou entrar em um projeto**, **Adicionar o primeiro ticket**, **Conhecer o Numo** e **Conectar um agente de código**. O botão de cada etapa abre sobre a página a mesma folha do aplicativo: criação de projeto ou de ticket, o Numo ou a conexão do agente. A etapa do ticket fica concluída assim que você cria o ticket, mesmo que o Smart Fill ainda esteja preenchendo. Abaixo dos botões da etapa, **Voltar** mostra de novo a etapa anterior; na primeira etapa, volta para **Como devemos chamar você?**, onde **Continuar** traz você de volta às etapas. **Pular** passa para a etapa seguinte. **Pular introdução** pede uma confirmação antes, porque as etapas puladas não voltam: confirme com **Pular introdução**. Depois da última etapa, **Está tudo pronto.** aparece com uma breve animação de confete, e **Continuar** leva à página inicial. Pular o percurso também leva à página inicial. No computador, as mesmas etapas formam a lista **Primeiros passos** da barra lateral.
+
+Uma conta recém-autenticada pode criar seu próprio projeto ou aceitar um convite. Saber a URL de um projeto não concede participação nele.
 
 
 ### Sair e verificar mensagens que não chegaram {#session-and-mail}

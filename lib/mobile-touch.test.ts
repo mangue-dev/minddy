@@ -79,21 +79,13 @@ describe("safe areas", () => {
       /\.app-shell \{\s*padding-top: env\(safe-area-inset-top\);/,
     );
   });
-
-  it("clears the notch on the side the mobile sidebar is glued to", () => {
-    // In landscape the notch sits on the left edge, where the sidebar opens:
-    // without this inset it covered the start of every row (MIN-841).
-    const reveal = read(GLOBALS).split("  .mobile-sidebar-reveal {")[1].split("}")[0];
-    expect(reveal).toContain("padding-top: env(safe-area-inset-top);");
-    expect(reveal).toContain("padding-left: env(safe-area-inset-left);");
-  });
 });
 
 describe("bottom sheets on wide screens (MIN-841)", () => {
   const css = read(GLOBALS);
   const sheetSection = css.slice(
     css.indexOf("/* Mobile sheets share one breakpoint and viewport budget."),
-    css.indexOf("/* Single-column boards use persistent pagination"),
+    css.indexOf("/* Single-column boards snap from column to column"),
   );
   const wide = sheetSection.slice(sheetSection.indexOf("@media (min-width: 640px) {"));
 
@@ -137,9 +129,8 @@ describe("bottom sheets on wide screens (MIN-841)", () => {
     const roomUses = css.split("\n").filter((line) => line.includes("var(--mobile-sheet-room") && !line.includes("--mobile-sheet-room:"));
     expect(roomUses.length).toBeGreaterThan(5);
     const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
-    // Only the sidebar footer and the float gap itself read the raw inset.
+    // Only the float gap itself reads the raw inset.
     expect(bottomInsets.map((line) => line.trim())).toEqual([
-      "padding-bottom: max(10px, env(safe-area-inset-bottom));",
       "--mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));",
     ]);
   });

@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowLeft01Icon, ArrowRight01Icon, Mail01Icon, CheckIcon, ServerStack01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Mail01Icon, CheckIcon, ServerStack01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -19,6 +19,7 @@ import { MIN_PASSWORD_LENGTH, checkPassword } from "@/lib/password-policy";
 import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
 import { getMobileBridge } from "@/lib/mobile/bridge";
 import type { OAuthProvider } from "@/lib/auth-context";
+import { keyboardFrameStyle, useKeyboardFrame } from "@/lib/mobile/use-keyboard-frame";
 
 /**
  * What login and registration have in common (MIN-300).
@@ -106,11 +107,11 @@ export function AuthLoading({
   providers?: number;
 } = {}) {
   return (
-    <div className="flex w-full flex-1 flex-col p-8">
-      <div className="auth-logo-row flex">
-        <LogoMark asLink={false} />
-      </div>
-      <div className="flex flex-1 items-center justify-center py-10">
+    <div className="auth-column flex w-full flex-1 flex-col p-8">
+      <div className="flex flex-1 flex-col items-center justify-center py-10">
+        <div className="mb-8 flex justify-center">
+          <LogoMark asLink={false} />
+        </div>
         <div className="w-full max-w-[380px]">
           <AuthFormSkeleton fields={fields} providers={providers} />
         </div>
@@ -272,53 +273,25 @@ export function SignupLegalNotice({ external }: { external: boolean }) {
 }
 
 /**
- * The ways into an account, one button each: the providers the server offers,
- * then email. The same buttons sign in and register, since Supabase creates
- * the account on a provider's first pass. Email opens its own form in place
- * of this list (`onEmail`), so the screen never stacks a form under the
- * providers.
+ * The sign-in services the server offers, one button each, Apple first (it
+ * is the one an iPhone already knows). The same buttons sign in and
+ * register, since Supabase creates the account on a provider's first pass.
  */
 export function OAuthButtons({
   providers,
   pending,
   disabled,
   onSelect,
-  onEmail,
 }: {
   providers: OAuthProvider[];
   pending: OAuthProvider | null;
   disabled: boolean;
   onSelect: (provider: OAuthProvider) => void;
-  onEmail: () => void;
 }) {
   const t = useTranslations("Auth");
   if (providers.length === 0) return null;
   return (
     <div className="space-y-2.5">
-      {providers.includes("google") && (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 w-full justify-center gap-2.5"
-          disabled={disabled}
-          onClick={() => onSelect("google")}
-        >
-          {pending === "google" ? <Spinner /> : <GoogleGlyph />}
-          {t("continueWithGoogle")}
-        </Button>
-      )}
-      {providers.includes("github") && (
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 w-full justify-center gap-2.5"
-          disabled={disabled}
-          onClick={() => onSelect("github")}
-        >
-          {pending === "github" ? <Spinner /> : <Github className="size-4" />}
-          {t("continueWithGitHub")}
-        </Button>
-      )}
       {providers.includes("apple") && (
         // Apple's guidelines allow a white button with an outline on a light
         // page and a white one on a dark page, never a dark outlined one: the
@@ -326,24 +299,57 @@ export function OAuthButtons({
         <Button
           type="button"
           variant="outline"
-          className="h-11 w-full justify-center gap-2.5 dark:border-white dark:bg-white dark:text-black dark:hover:bg-white/90 dark:hover:text-black"
+          className="h-12 w-full justify-center gap-2.5 dark:border-white dark:bg-white dark:text-black dark:hover:bg-white/90 dark:hover:text-black"
           disabled={disabled}
           onClick={() => onSelect("apple")}
         >
-          {pending === "apple" ? <Spinner /> : <AppleGlyph />}
-          {t("continueWithApple")}
+          <ServiceLabel glyph={pending === "apple" ? <Spinner /> : <AppleGlyph />}>{t("continueWithApple")}</ServiceLabel>
         </Button>
       )}
-      <Button
-        type="button"
-        variant="outline"
-        className="h-11 w-full justify-center gap-2.5"
-        disabled={disabled}
-        onClick={onEmail}
-      >
-        <HugeiconsIcon icon={Mail01Icon} className="size-4" />
-        {t("continueWithEmail")}
-      </Button>
+      {providers.includes("google") && (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 w-full justify-center gap-2.5"
+          disabled={disabled}
+          onClick={() => onSelect("google")}
+        >
+          <ServiceLabel glyph={pending === "google" ? <Spinner /> : <GoogleGlyph />}>{t("continueWithGoogle")}</ServiceLabel>
+        </Button>
+      )}
+      {providers.includes("github") && (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 w-full justify-center gap-2.5"
+          disabled={disabled}
+          onClick={() => onSelect("github")}
+        >
+          <ServiceLabel glyph={pending === "github" ? <Spinner /> : <Github className="size-4" />}>{t("continueWithGitHub")}</ServiceLabel>
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** A service's logo and name, centered together in its button. */
+function ServiceLabel({ glyph, children }: { glyph: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex min-w-0 items-center justify-center gap-2.5">
+      <span className="flex size-4 shrink-0 items-center justify-center">{glyph}</span>
+      <span className="truncate">{children}</span>
+    </span>
+  );
+}
+
+/** The line between the address and the sign-in services. */
+export function OrDivider() {
+  const t = useTranslations("Common");
+  return (
+    <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden>
+      <span className="h-px flex-1 bg-border" />
+      {t("or")}
+      <span className="h-px flex-1 bg-border" />
     </div>
   );
 }
@@ -354,26 +360,19 @@ export function AuthMethodsSkeleton() {
   return (
     <div role="status" aria-busy="true" className="space-y-2.5">
       <span className="sr-only">{t("loading")}</span>
-      <Skeleton aria-hidden className="h-11 w-full rounded-lg" />
-      <Skeleton aria-hidden className="h-11 w-full rounded-lg" />
-      <Skeleton aria-hidden className="h-11 w-full rounded-lg" />
+      <Skeleton aria-hidden className="h-12 w-full rounded-full" />
+      <Skeleton aria-hidden className="h-12 w-full rounded-full" />
     </div>
   );
 }
 
-/** Returns from the email form to the list of methods. */
+/** Returns to the previous step: a filled button, like every other action of these screens. */
 export function AuthBackButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   const t = useTranslations("Common");
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="mx-auto flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-60"
-    >
-      <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
+    <Button type="button" variant="outline" onClick={onClick} disabled={disabled} className="h-12 w-full justify-center rounded-full">
       {t("back")}
-    </button>
+    </Button>
   );
 }
 
@@ -398,42 +397,47 @@ export function Field({
 }
 
 /**
- * The column of auth screens: the mark at the top left, the content at
- * center, filling the height the shell's column leaves it. The bottom belongs to the shell
- * (`app/(auth)/auth-shell.tsx`) — both screens share it.
+ * The column of auth screens: the mark centered above the content, both in
+ * the middle of the height the shell's column leaves (MIN-907). The bottom
+ * belongs to the shell (`app/(auth)/auth-shell.tsx`).
  *
- * In the desktop app, the logo does not lead anywhere: the public site is not there
- * space, and a link that immediately bounces back to here is worth less than a
- * mark installed (MIN-291).
+ * In the desktop app, the logo does not lead anywhere: the public site is not
+ * there, and a link that immediately bounces back here is worth less than a
+ * mark (MIN-291).
  *
- * **On macOS it shifts to the RIGHT.** macOS buttons are drawn by the system
- * above the web view, in the top left corner, and no `z-index` passes
- * in front: placed at `p-8`, the mark fell below. These screens do not have
- * sidebar to make a place for them in its brand line, therefore the corner
- * comes back to them in full and it is the brand that moves. Windows and Linux
- * keep their window buttons on the right, so the mark stays on the left there.
+ * **While the software keyboard is up** the column fits the part of the
+ * screen it leaves and starts at its top, so the field being typed in and the
+ * button under it stay in sight together; what follows scrolls.
  */
 export function AuthColumn({
   inDesktopApp,
+  footer = <SelfHostButton />,
   children,
 }: {
   inDesktopApp: boolean;
+  /** Under the content; the self-hosting way in by default. */
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const keyboard = useKeyboardFrame();
+  const typing = keyboard.height !== null;
   return (
-    <div className="flex w-full flex-1 flex-col p-8">
-      {/* Placed by CSS (`.auth-logo-row`, globals.css), not by this
-          component: `data-desktop-platform` is set before the first paint,
-          so the mark never jumps once React knows it is in the app. */}
-      <div className="auth-logo-row flex">
-        <LogoMark asLink={!inDesktopApp} />
-      </div>
-      <div className="flex flex-1 items-center justify-center py-10">
+    <div
+      style={keyboardFrameStyle(keyboard)}
+      className={cn(
+        "auth-column flex w-full flex-1 flex-col p-8",
+        typing && "overflow-y-auto overscroll-contain bg-background",
+      )}
+    >
+      <div className={cn("flex flex-1 flex-col items-center py-10", typing ? "justify-start py-4" : "justify-center")}>
+        <div className="mb-8 flex justify-center">
+          <LogoMark asLink={!inDesktopApp} />
+        </div>
         {/* Each block of the form arrives in turn, with a short blur and fade
             (`.auth-stagger`, globals.css); the brand above never moves. */}
         <div className="auth-stagger w-full max-w-[380px]">{children}</div>
       </div>
-      <DesktopServerFooter />
+      {footer}
     </div>
   );
 }
@@ -448,7 +452,7 @@ export function AuthColumn({
  * The mobile app (MIN-907) shows the same button: it opens the app's bundled
  * page to connect to a self-hosted server.
  */
-function DesktopServerFooter() {
+export function SelfHostButton() {
   const t = useTranslations("DesktopWelcome");
   // Shown by CSS from the first paint (`data-desktop-app`, set by the
   // pre-paint script), not after an effect: arriving late, it would push the

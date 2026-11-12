@@ -260,6 +260,12 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         notifyListeners("navigationAction", data: ["id": id])
     }
 
+    /// Asks the page to open a path of its server in place: a tapped
+    /// notification or a universal link while the product is on screen.
+    func openPath(_ path: String) {
+        notifyListeners("openPath", data: ["path": path])
+    }
+
     /// The keyboard starts to move: the height it will cover at the bottom of
     /// the WebView once it stops, 0 when it leaves, in points, and how long
     /// it takes, in milliseconds.

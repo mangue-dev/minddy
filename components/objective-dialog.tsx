@@ -46,6 +46,7 @@ import { useAuth } from "@/lib/auth-context";
 import { capabilitiesForProject } from "@/lib/use-project-capabilities";
 import { CreationCarousel, CreationDictation } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { useDescriptionArea } from "@/components/use-description-area";
 import {
   AddResourceButton,
   ComposerResourcePills,
@@ -217,6 +218,7 @@ export function ObjectiveDialog({
 }) {
   const t = useTranslations("Objectives");
   const mobile = useMobileLayout() === true;
+  const descriptionArea = useDescriptionArea();
   const tField = useTranslations("Field");
   const titleId = useId();
   // Title and description read as one text on the keyboard (MIN-756).
@@ -843,7 +845,7 @@ export function ObjectiveDialog({
               <div className="creation-field-label">{tField("description")}</div>
               {/* The title's gap: the description is this wrapper's first child,
                   where its own margin does not apply. */}
-              <div ref={titleBody.bodyRef} className={showsName ? "app-desktop:mt-3" : undefined}>
+              <div ref={titleBody.bodyRef} onClick={descriptionArea.onClick} className={cn("creation-description-area", showsName && "app-desktop:mt-3")}>
               {objective && storedDocument === undefined ? (
                 <DocumentEditorFallback
                   value={form.description}
@@ -851,6 +853,7 @@ export function ObjectiveDialog({
                 />
               ) : (
               <LazyDocumentEditor
+                apiRef={descriptionArea.bind}
                 key={editorKey}
                 mentions={mentions}
                 onLeaveTop={titleBody.leaveBody}

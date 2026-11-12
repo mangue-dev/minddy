@@ -100,6 +100,7 @@ export const ACCOUNT_METADATA_COVERAGE: Readonly<Record<string, AccountKeyCovera
   onboarding_dismissed: { humanOnly: "Onboarding checklist state, not a setting." },
   onboarding_version: { humanOnly: "Onboarding checklist state, not a setting." },
   onboarding_started: { humanOnly: "Onboarding checklist state, not a setting." },
+  profile_setup_done: { humanOnly: "Whether a new account confirmed its name and picture on the first-run screen: interface state." },
   desktop_prompt_dismissed: { humanOnly: "Whether the desktop app banner was dismissed: interface state." },
   pwa_prompt_dismissed: { humanOnly: "Whether the install hint was dismissed: interface state." },
   tab_orders: { humanOnly: "Order of the view tabs, set by dragging them: interface state." },

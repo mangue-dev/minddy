@@ -83,6 +83,15 @@ export interface MobileShellPlugin {
    */
   setNavigationBar?(options: MobileNavigationBarState): Promise<void>;
   /**
+   * A notification was tapped or a universal link followed while a page of
+   * the server is on screen: the page opens `path` itself, in place. See
+   * `lib/mobile/open-path.ts`. Absent in older shells.
+   */
+  addListener?(
+    event: "openPath",
+    handler: (request: { path: string }) => void,
+  ): MobileListenerHandle | Promise<MobileListenerHandle>;
+  /**
    * The software keyboard starts to move. Sent before it moves, where the
    * WebView reports it only once it has stopped. Absent in older shells.
    */
@@ -135,7 +144,7 @@ export interface MobileListenerHandle {
 }
 
 export interface MobileNavigationItem {
-  /** `home`, `assistant`, `search`, `create` or `menu`. */
+  /** `menu`, `search`, `inbox`, `assistant` or `create`. */
   id: string;
   /** The accessible name of the web button it stands for. */
   label: string;

@@ -1,7 +1,9 @@
 // Account onboarding combines real project/issue signals with optional acknowledgments.
 // Metadata remains compatible with the previous home onboarding; no migration is needed.
 
-export const ONBOARDING_STEPS = ["project", "tickets", "numo", "mcp", "cycles"] as const;
+// Cycles left the journey (MIN-907): they are a planning habit to find later,
+// not a first step. A stored "cycles" acknowledgment is ignored.
+export const ONBOARDING_STEPS = ["project", "tickets", "numo", "mcp"] as const;
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
 
 export const ONBOARDING_STEPS_META_KEY = "onboarding_steps";
@@ -15,7 +17,6 @@ export interface OnboardingSignals {
   issueCount: number;
   /** Accepted for callers resolving historical account signals. Numo needs no BYOK key. */
   hasAiKey?: boolean;
-  cyclesEnabled: boolean;
 }
 
 export interface OnboardingStep {
@@ -74,7 +75,7 @@ export function onboardingNeedsIssueCount(
 }
 
 export function resolveOnboardingState({
-  meta, projectCount, issueCount, cyclesEnabled,
+  meta, projectCount, issueCount,
 }: OnboardingSignals & { meta: Record<string, unknown> | null | undefined }): OnboardingState {
   const acknowledged = readAcknowledgedSteps(meta);
   const completed: Record<OnboardingStepId, boolean> = {
@@ -82,10 +83,9 @@ export function resolveOnboardingState({
     tickets: acknowledged.has("tickets") || issueCount > 0,
     numo: acknowledged.has("numo"),
     mcp: acknowledged.has("mcp"),
-    cycles: acknowledged.has("cycles") || cyclesEnabled,
   };
   // Accounts that finished the old four- or five-step journey stay finished.
-  const legacySteps: OnboardingStepId[] = ["project", "tickets", "mcp", "cycles"];
+  const legacySteps: OnboardingStepId[] = ["project", "tickets", "mcp"];
   if (meta?.[ONBOARDING_VERSION_META_KEY] !== ONBOARDING_CURRENT_VERSION && legacySteps.every((id) => completed[id])) {
     completed.numo = true;
   }

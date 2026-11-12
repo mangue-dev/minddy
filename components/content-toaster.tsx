@@ -16,7 +16,13 @@ export const ContentToaster = memo(function ContentToaster() {
   const mobile = useMobileLayout() === true;
 
   useLayoutEffect(() => {
-    setPane(anchor.current?.closest("main")?.parentElement ?? null);
+    // On a phone the pane sits in the workspace's stacking context, so a
+    // toast inside it fell under every bottom sheet, which portals to the
+    // document. There it hangs from the document too, above the sheets.
+    setPane(mobile ? document.body : anchor.current?.closest("main")?.parentElement ?? null);
+  }, [mobile]);
+
+  useLayoutEffect(() => {
     // Retire snapshots left by the removed error-history feature without opening them.
     try {
       window.localStorage.removeItem("minddy:status-errors");

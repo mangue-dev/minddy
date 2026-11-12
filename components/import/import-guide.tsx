@@ -1,10 +1,12 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Copy01Icon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, Copy01Icon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { IMPORT_GUIDES, type ImportGuide } from "@/lib/import-guides";
@@ -29,9 +31,15 @@ import { ImportSourceLogo } from "@/components/import-source-logo";
  */
 export function ImportGuideBlock({
   className,
+  foldSteps = false,
   onProviderSelected,
 }: {
   className?: string;
+  /**
+   * The procedure folds under "How to export from …" (the creation wizard,
+   * MIN-907): the tool and the file come first, the steps on request.
+   */
+  foldSteps?: boolean;
   /** Which tool does the account come from — onboarding makes it an event. */
   onProviderSelected?: (guide: ImportGuide) => void;
 }) {
@@ -54,40 +62,8 @@ export function ImportGuideBlock({
     toast.success(tc("copied"));
   };
 
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3",
-        className
-      )}
-    >
-      <div
-        className="flex flex-wrap gap-1.5"
-        role="group"
-        aria-label={t("importProviderPicker")}
-      >
-        {IMPORT_GUIDES.map((item) => {
-          const active = item.id === guide.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => selectGuide(item)}
-              aria-pressed={active}
-              className={cn(
-                "flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors",
-                active
-                  ? "border-brand/40 bg-brand/10 text-foreground"
-                  : "border-border bg-background text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <ImportSourceLogo source={item.id} className="size-4" />
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-
+  const procedureContent = (
+    <>
       {/* All three lines ALL receive `shortcut`, even those that don't.
  are not useful: it is the same key assembled at runtime, and next-intl
  ignores one value too many — whereas a missing value would display
@@ -124,6 +100,47 @@ export function ImportGuideBlock({
           {t("importGuideDoc", { name: guide.label })}
           <HugeiconsIcon icon={LinkSquare01Icon} className="size-3" aria-hidden />
         </a>
+      )}
+    </>
+  );
+
+  return (
+    <div className={cn("flex min-w-0 flex-col gap-3", className)}>
+      {/* One select rather than a row of tabs (MIN-907): it reads the same
+          on a phone, and the procedure under it is the only thing that
+          changes. */}
+      <Select
+        value={guide.id}
+        onValueChange={(id) => {
+          const next = IMPORT_GUIDES.find((item) => item.id === id);
+          if (next) selectGuide(next);
+        }}
+      >
+        <SelectTrigger aria-label={t("importProviderPicker")} className="h-11 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {IMPORT_GUIDES.map((item) => (
+            <SelectItem key={item.id} value={item.id}>
+              <span className="flex items-center gap-2">
+                <ImportSourceLogo source={item.id} className="size-4" />
+                {item.label}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {foldSteps ? (
+        <Collapsible className="min-w-0">
+          <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 rounded-lg py-1 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+            {t("importHowTo", { name: guide.label })}
+            <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 transition-transform group-data-[state=open]:rotate-180" aria-hidden />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="flex min-w-0 flex-col gap-3 pt-2">{procedureContent}</CollapsibleContent>
+        </Collapsible>
+      ) : (
+        procedureContent
       )}
     </div>
   );

@@ -15,7 +15,7 @@ final class NavigationBar: UIView {
         /// The web button's own icon, as PNG data, with its pixels per point.
         var icon: Data?
         var iconScale: CGFloat = 1
-        /// False for a picture (the account's avatar), which keeps its colors.
+        /// False for a picture, which keeps its colors.
         var iconTinted = true
     }
 
@@ -29,11 +29,11 @@ final class NavigationBar: UIView {
 
     /// What stands in for an item whose icon the page did not send.
     private static let fallbackSymbols: [String: String] = [
-        "home": "house",
-        "assistant": "sparkles",
+        "menu": "line.2.horizontal",
         "search": "magnifyingglass",
-        "create": "plus",
-        "menu": "person.crop.circle"
+        "inbox": "tray",
+        "assistant": "sparkles",
+        "create": "plus"
     ]
 
     override init(frame: CGRect) {
@@ -87,14 +87,22 @@ final class NavigationBar: UIView {
         }
     }
 
+    /// The state last asked for, which an animation may still be reaching.
+    private var shown = false
+
     func setVisible(_ visible: Bool) {
-        guard visible == isHidden else { return }
+        // Compared with what was asked, not with `isHidden`: while the bar
+        // fades out it is not hidden yet, and a show asked for then used to
+        // be dropped, leaving the bar gone until the page changed again
+        // (MIN-907: the bar missing after launch until a tap).
+        guard visible != shown else { return }
+        shown = visible
         if visible { isHidden = false }
         UIView.animate(withDuration: 0.18, delay: 0, options: [.beginFromCurrentState, .curveEaseOut], animations: {
             self.alpha = visible ? 1 : 0
         }, completion: { _ in
             // A newer change may have reversed this one while it ran.
-            if self.alpha == 0 { self.isHidden = true }
+            if !self.shown { self.isHidden = true }
         })
     }
 

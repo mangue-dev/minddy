@@ -13,10 +13,6 @@ import type { MobileNavigationBarState, MobileNavigationItem, MobileShellPlugin 
  * shell must be told when something covers the bar. Rather than list every
  * overlay of the product, this asks the browser what is on top of the bar:
  * when it is not the bar, the native one hides.
- *
- * The page that slides aside for the sidebar is the exception: the bar belongs
- * to that page and travels with it, so the native bar follows it off the
- * screen instead of vanishing.
  */
 
 /** Attribute changes that can move, cover or relabel the bar. */
@@ -33,11 +29,8 @@ const WATCHED_ATTRIBUTES = [
   "aria-hidden",
 ];
 
-/** The layer over the page while the sidebar is open: a tap on it closes the sidebar. */
-const SIDEBAR_DISMISS = "[data-mobile-sidebar-dismiss]";
-
-/** The page the bar belongs to, translated for the sidebar and shortened for the keyboard. */
-const PAGE = "[data-mobile-sidebar-surface]";
+/** The page the bar belongs to, shortened for the keyboard. */
+const PAGE = ".app-shell";
 
 /** How long the bar is followed frame by frame once a transition starts. */
 const FOLLOW_MS = 600;
@@ -69,13 +62,10 @@ export function readNavigationBar(nav: HTMLElement, iconOf: IconSource = () => n
   const bottom = Math.min(rect.bottom, view.innerHeight);
   if (right - left < 1 || bottom - top < 1) return { visible: false };
 
-  // A sheet, a dialog or a full-screen panel is on top of the bar. The page
-  // set aside for the sidebar is not hit-testable, and what answers in its
-  // place is the layer that closes the sidebar: the bar is still the top of
-  // its own page.
+  // A sheet, a dialog or a full-screen panel is on top of the bar.
   const centerY = (top + bottom) / 2;
   const hit = nav.ownerDocument.elementFromPoint((left + right) / 2, centerY);
-  if (!hit || !(nav.contains(hit) || hit.matches(SIDEBAR_DISMISS))) {
+  if (!hit || !nav.contains(hit)) {
     // The page the bar belongs to is shortened while the keyboard is up
     // (app/globals.css) and clips the bar, which stays at the screen's foot,
     // under the keyboard. With no sheet over the page, the bar is still
@@ -96,8 +86,7 @@ export function readNavigationBar(nav: HTMLElement, iconOf: IconSource = () => n
       id: slot.dataset.navSlot ?? "",
       label: slot.getAttribute("aria-label") ?? "",
       badge: slot.hasAttribute("data-nav-badge"),
-      // A line icon takes the bar's color; a picture (the account's avatar)
-      // keeps its own.
+      // A line icon takes the bar's color; a picture keeps its own.
       ...(icon ? { icon, iconScale: ICON_SCALE, iconTinted: !(drawing instanceof HTMLImageElement) } : {}),
     });
   }
@@ -215,9 +204,8 @@ export function syncNativeNavigationBar(
   function schedule() {
     if (!frame) frame = view!.requestAnimationFrame(measure);
   }
-  // A CSS transition moves the bar without touching the DOM (the page
-  // settling beside the sidebar, a sheet sliding in): follow it frame by
-  // frame while it runs.
+  // A CSS transition moves or covers the bar without touching the DOM (a
+  // sheet sliding in): follow it frame by frame while it runs.
   const follow = () => {
     followUntil = view.performance.now() + FOLLOW_MS;
     schedule();
@@ -238,12 +226,6 @@ export function syncNativeNavigationBar(
   schedule();
 
   const handle = addListener("navigationAction", ({ id }) => {
-    // Beside the open sidebar the page is set aside: a tap on it, bar
-    // included, closes the sidebar, as a tap on the page does.
-    if (nav.closest("[inert]")) {
-      nav.ownerDocument.querySelector<HTMLElement>(SIDEBAR_DISMISS)?.click();
-      return;
-    }
     for (const slot of nav.querySelectorAll<HTMLElement>("[data-nav-slot]")) {
       if (slot.dataset.navSlot === id) slot.click();
     }

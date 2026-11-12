@@ -1,10 +1,11 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckmarkCircle02Icon, Copy01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, CheckmarkCircle02Icon, Copy01Icon, McpServerIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { WizardDialog, type WizardStep } from "@/components/wizard/wizard-dialog";
@@ -21,10 +22,17 @@ type StepId = "install" | "authorize";
  */
 export function McpConnectPanel({
   className,
+  layout = "list",
   onSelect,
   onConnected,
 }: {
   className?: string;
+  /**
+   * `cards`: square cards in two columns, logo in the middle and name under
+   * it, for the phone's getting-started sheet. `list`: compact rows, for the
+   * settings page.
+   */
+  layout?: "list" | "cards";
   /** Called when an agent is selected. */
   onSelect?: (agent: McpAgent) => void;
   /** The wizard finished. */
@@ -33,6 +41,7 @@ export function McpConnectPanel({
   const t = useTranslations("Account");
   const [agent, setAgent] = useState<McpAgent | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  const cards = layout === "cards";
 
   const select = (next: McpAgent) => {
     onSelect?.(next);
@@ -40,24 +49,35 @@ export function McpConnectPanel({
     setStepIndex(0);
   };
 
+  // Any other MCP client: no setup of its own to show, only a prompt that
+  // names the server and how it signs in.
+  const copyGenericPrompt = async () => {
+    await navigator.clipboard.writeText(t("agentPromptGeneric", { url: `${window.location.origin}/api/mcp` }));
+    toast.success(t("agentPromptGenericCopied"));
+  };
+
+  const itemClass = cards
+    ? "flex aspect-square flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-background p-3 text-sm font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-brand/8 focus-visible:border-ring focus-visible:outline-none"
+    : "flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-brand/8 focus-visible:border-ring focus-visible:outline-none";
+  const logoClass = cards ? "size-9" : "size-4";
+
   return (
     <div className={cn("flex min-w-0 flex-col gap-3", className)}>
       <div
-        className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+        className={cn("grid grid-cols-2 gap-2", !cards && "sm:grid-cols-3")}
         role="group"
         aria-label={t("mcpAgentPicker")}
       >
         {MCP_AGENTS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => select(item)}
-            className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-brand/40 hover:bg-brand/8 focus-visible:border-ring focus-visible:outline-none"
-          >
-            <McpAgentLogo agent={item.id} className="size-4" />
-            <span className="min-w-0 truncate">{item.label}</span>
+          <button key={item.id} type="button" onClick={() => select(item)} className={itemClass}>
+            <McpAgentLogo agent={item.id} size={cards ? 36 : 16} className={logoClass} />
+            <span className={cn("min-w-0 truncate", cards && "max-w-full text-center")}>{item.label}</span>
           </button>
         ))}
+        <button type="button" onClick={() => void copyGenericPrompt()} className={itemClass}>
+          <HugeiconsIcon icon={McpServerIcon} className={cn(logoClass, "text-muted-foreground")} aria-hidden />
+          <span className={cn("min-w-0 truncate", cards && "max-w-full text-center")}>{t("mcpOtherAgent")}</span>
+        </button>
       </div>
 
       {agent && (
@@ -100,7 +120,7 @@ function McpAgentWizard({
     {
       id: "install",
       title: t("mcpInstallTitle", { name: agent.label }),
-      subtitle: t(agent.hint),
+      subtitle: t("mcpInstallPromptHint", { name: agent.label }),
       content: <McpAgentInstall agent={agent} />,
     },
     {
@@ -158,8 +178,17 @@ function McpAgentInstall({ agent }: { agent: McpAgent }) {
   if (!origin) return null;
   const endpoint = `${origin}/api/mcp`;
 
+  const setup = agent.build(endpoint);
+
+  // The quickest way: the agent installs minddy itself from a prompt that
+  // carries the same setup as the manual instructions below.
+  const copyPrompt = async () => {
+    await navigator.clipboard.writeText(t("agentPrompt", { name: agent.label, setup }));
+    toast.success(t("agentPromptCopied", { name: agent.label }));
+  };
+
   const act = async () => {
-    await navigator.clipboard.writeText(agent.build(endpoint));
+    await navigator.clipboard.writeText(setup);
     toast.success(
       agent.kind === "config"
         ? t("configCopied")
@@ -178,16 +207,29 @@ function McpAgentInstall({ agent }: { agent: McpAgent }) {
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {/* `w-full min-w-0`: without them, `whitespace-pre` imposes on the block its
- min-content width — that of the entire command, on one line —
- and the dialog is expanded by its own content instead of letting it scroll. */}
-      <code className="max-h-48 w-full min-w-0 overflow-auto whitespace-pre rounded-lg border border-border bg-muted/40 px-3 py-2.5 font-mono text-xs">
-        {agent.build(endpoint)}
-      </code>
-      <Button type="button" variant="outline" className="self-start" onClick={() => void act()}>
+      <Button type="button" className="h-11 w-full rounded-full" onClick={() => void copyPrompt()}>
         <HugeiconsIcon icon={Copy01Icon} />
-        {actionLabel}
+        {t("copyAgentPrompt")}
       </Button>
+      <Collapsible className="min-w-0">
+        <CollapsibleTrigger className="group flex w-full items-center justify-between gap-2 rounded-lg py-2 text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+          {t("manualSetup")}
+          <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 transition-transform group-data-[state=open]:rotate-180" aria-hidden />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="flex min-w-0 flex-col gap-3 pt-1">
+          <p className="text-sm text-muted-foreground">{t(agent.hint)}</p>
+          {/* `w-full min-w-0`: without them, `whitespace-pre` imposes on the
+              block its min-content width, that of the whole command on one
+              line, and the dialog grows instead of letting it scroll. */}
+          <code className="max-h-48 w-full min-w-0 overflow-auto whitespace-pre rounded-lg border border-border bg-muted/40 px-3 py-2.5 font-mono text-xs">
+            {setup}
+          </code>
+          <Button type="button" variant="outline" className="self-start" onClick={() => void act()}>
+            <HugeiconsIcon icon={Copy01Icon} />
+            {actionLabel}
+          </Button>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

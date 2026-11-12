@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { toast } from "sonner";
 import { ProjectOrb } from "@/components/project-orb";
 import { DropOverlay, useFileDrop } from "@/components/resources";
@@ -218,6 +219,7 @@ export function ProjectIconPicker({
 }) {
   const t = useTranslations("Projects");
   const tCommon = useTranslations("Common");
+  const mobile = useMobileLayout() === true;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [siteUrl, setSiteUrl] = useState("");
   const {
@@ -376,6 +378,40 @@ export function ProjectIconPicker({
       className="bg-background/85"
     />
   );
+
+  // Wizard on a phone (MIN-907): the profile screen's layout, the picture
+  // above full-width buttons, then the site field and its button.
+  if (centered && mobile) {
+    return (
+      <div {...handlers} className="relative flex w-full flex-col items-center gap-4 rounded-2xl">
+        {fileInput}
+        {preview}
+        <div className="grid w-full gap-2">
+          <Button type="button" variant="outline" className="h-12 w-full gap-2 rounded-full" disabled={busy} onClick={() => fileInputRef.current?.click()}>
+            {uploading ? <Spinner /> : <HugeiconsIcon icon={ImageUploadIcon} />}
+            {t("iconUploadLabel")}
+          </Button>
+          {iconUrl ? (
+            <Button type="button" variant="outline" className="h-12 w-full gap-2 rounded-full text-destructive hover:text-destructive" disabled={busy} onClick={() => void handleRemove()}>
+              {removing ? <Spinner /> : <HugeiconsIcon icon={Delete02Icon} />}
+              {tCommon("remove")}
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" className="h-12 w-full gap-2 rounded-full" disabled={busy} onClick={() => void handleReroll()}>
+              {rerolling ? <Spinner /> : <HugeiconsIcon icon={ShuffleIcon} />}
+              {t("orbRerollLabel")}
+            </Button>
+          )}
+          {input}
+          <Button type="button" variant="outline" className="h-12 w-full rounded-full" disabled={busy || !siteUrl.trim()} onClick={() => void handleImport()}>
+            {importing && <Spinner />}
+            {t("iconImportButton")}
+          </Button>
+        </div>
+        {dropOverlay}
+      </div>
+    );
+  }
 
   // Wizard: large thumbnail centered above the field, like AutoKap.
   if (centered) {

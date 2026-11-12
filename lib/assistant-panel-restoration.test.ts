@@ -36,6 +36,9 @@ vi.mock("@tanstack/react-query", async () => {
   };
 });
 vi.mock("./auth-context", () => ({ useAuth: () => h.auth }));
+// The panel's Numo introduction reads Home's word; none here.
+vi.mock("./use-home-brief-query", () => ({ useHomeBriefQuery: () => ({ brief: null, loading: false }) }));
+vi.mock("@/components/assistant/numo-intro", () => ({ NumoIntro: () => null }));
 vi.mock("./projects-context", () => ({ useProjects: () => ({ projects: h.projects }) }));
 vi.mock("next-intl", () => ({ useLocale: () => "en", useTranslations: () => (key: string) => key }));
 vi.mock("next/navigation", () => ({ useRouter: () => h.router }));

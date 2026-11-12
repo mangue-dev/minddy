@@ -43,7 +43,12 @@ export const InboxPopover = memo(function InboxPopover({ open, onOpenChange: set
   useEffect(() => {
     const launch = (event: Event) => {
       returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      const notificationId = (event as CustomEvent<OpenInboxDetail | null>).detail?.notificationId;
+      const detail = (event as CustomEvent<OpenInboxDetail | null>).detail;
+      const notificationId = detail?.notificationId;
+      if (detail?.show) {
+        setOpen(true);
+        return;
+      }
       if (notificationId) {
         setFocus((current) => ({ id: notificationId, seq: (current?.seq ?? 0) + 1 }));
         setOpen(true);

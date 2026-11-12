@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 20,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -34,7 +34,8 @@
       "desktop"
     ],
     "evidence": [
-      "components/mobile-sidebar-reveal.tsx",
+      "components/mobile-navigation.tsx",
+      "components/auth/auth-entry.tsx",
       "components/issue-side-panel.tsx",
       "components/assistant-panel.tsx",
       "public/sw.js",
@@ -73,10 +74,10 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (pt-BR changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 20,
+    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone menu opened from the bottom bar as a sheet, and the desktop app's first launch on the single sign-in and sign-up screen: checked against components/mobile-navigation.tsx, components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no browser walkthrough; existing figures do not show the bottom bar or the sign-in screen and were kept)",
+    "language": "agent:claude-code (pt-BR changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 phone menu and desktop first-launch passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "issues"
@@ -101,7 +102,7 @@
       "src": "/documentation/pt-BR/web-and-mobile-workflow.png",
       "alt": "Painel móvel de um ticket com título, descrição, propriedades e campo de comentário.",
       "caption": "Em uma tela estreita, os detalhes do ticket ocupam um painel adaptável. Use o botão de fechar para voltar ao projeto; Numo continua acessível pelo botão flutuante.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +119,7 @@
       "src": "/documentation/pt-BR/install-the-pwa-workflow.png",
       "alt": "Guia ilustrado de instalação pelo Safari no minddy: Compartilhar, adicionar à Tela de Início e confirmar.",
       "caption": "O guia público ilustra as três etapas do Safari e a opção Abrir como App da Web que deve permanecer ativada. São ilustrações de instruções exibidas pelo minddy, não capturas de uma instalação do iOS concluída.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -135,7 +136,7 @@
       "src": "/documentation/pt-BR/devices-and-notifications-workflow.png",
       "alt": "Configurações push com permissão bloqueada no navegador e nenhum dispositivo registrado.",
       "caption": "Este navegador bloqueia notificações. Restaure a permissão do site antes de registrar este dispositivo.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -152,7 +153,7 @@
       "src": "/documentation/pt-BR/devices-and-notifications-registered.png",
       "alt": "Dispositivo de navegador registrado e ativo na conta, com a data real do último envio.",
       "caption": "A conta tem um dispositivo de navegador registrado e ativo. A lista mostra as datas de registro e do último envio. A exibição de um alerta continua dependendo da permissão do navegador e das configurações do sistema operacional.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -169,7 +170,7 @@
       "src": "/documentation/pt-BR/desktop-renderer-recovery.png",
       "alt": "Página local de recuperação após uma falha forçada do processo de renderização, com os controles Reload window e Check server settings.",
       "caption": "Página de recuperação no aplicativo de desenvolvimento para macOS, com um perfil isolado e um servidor de demonstração. A interface nativa usa rótulos em inglês em todos os idiomas.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -195,7 +196,7 @@ Você pode acessar a mesma instância minddy pelo navegador, pelo app web instal
 
 ## Trabalhar no navegador e no celular {#web-and-mobile}
 
-Abra o endereço da sua instância e entre nessa mesma instância. Em uma tela estreita, mostre a barra lateral para escolher um projeto e abra um ticket pela lista ou pelo quadro. Leia os detalhes no painel adaptado à tela, altere o campo desejado ou adicione um comentário e aguarde o resultado do salvamento antes de fechar. Feche o painel de detalhes para voltar à lista; sua apresentação no celular difere da de uma tela ampla.
+Abra o endereço da sua instância e entre nessa mesma instância. Em uma tela estreita, abra o menu, à esquerda da barra na parte inferior da tela, para escolher um projeto e abra um ticket pela lista ou pelo quadro. Leia os detalhes no painel adaptado à tela, altere o campo desejado ou adicione um comentário e aguarde o resultado do salvamento antes de fechar. Feche o painel de detalhes para voltar à lista; sua apresentação no celular difere da de uma tela ampla.
 
 No celular, menus, seletores e diálogos abrem em uma folha inferior. Feche-a com o botão de fechar ou deslizando-a para baixo; se a lista dela estiver rolada, o gesto primeiro a leva de volta ao topo.
 
@@ -227,9 +228,9 @@ A instalação não cria uma cópia offline do projeto. O service worker do mind
 
 Abra a página pública de downloads. No macOS, escolha o pacote para Apple silicon ou Intel. No Windows, instale o aplicativo pela Microsoft Store. No Linux, escolha uma AppImage ou um pacote `deb`/`rpm` assinado para x64 ou ARM64. Siga o guia da plataforma e as instruções de verificação do pacote. O Windows não oferece um instalador `exe`. O aplicativo para macOS requer o macOS 13 (Ventura) ou posterior; em uma versão anterior, um aplicativo já instalado mantém a versão atual e não recebe novas atualizações.
 
-Na primeira inicialização, o aplicativo abre a tela de cadastro do minddy Cloud, onde você cria sua conta. Para usar sua própria instância, clique em **Auto-hospedar o minddy**, na parte inferior das telas de login e cadastro. Isso abre **Auto-hospedar o minddy**, com três opções: **Instalar neste computador** prepara uma [instância local](/pt-br/documentacao/install-locally#install-locally), **Instalar em um servidor** abre no navegador o guia público de instalação de um servidor, e **Usar uma instalação existente** abre uma tela que reúne as instalações que você já tem. Ali, **Neste computador** abre uma pasta do minddy que já está neste computador, e o app a inicia; abaixo, **Endereço do servidor** com **Conectar** conecta você a um servidor que você administra. Servidores remotos exigem HTTPS; `localhost` pode usar HTTP.
+Na primeira inicialização, o aplicativo abre a tela **Entre ou crie sua conta** do minddy Cloud, onde você entra ou cria sua conta. Para usar sua própria instância, clique em **Auto-hospedar o minddy**, na parte inferior dessa tela. Isso abre **Auto-hospedar o minddy**, com três opções: **Instalar neste computador** prepara uma [instância local](/pt-br/documentacao/install-locally#install-locally), **Instalar em um servidor** abre no navegador o guia público de instalação de um servidor, e **Usar uma instalação existente** abre uma tela que reúne as instalações que você já tem. Ali, **Neste computador** abre uma pasta do minddy que já está neste computador, e o app a inicia; abaixo, **Endereço do servidor** com **Conectar** conecta você a um servidor que você administra. Servidores remotos exigem HTTPS; `localhost` pode usar HTTP.
 
-Para trocar de servidor depois, escolha **Connect to a Server…** no menu nativo minddy (o menu nativo é em inglês; no Windows e no Linux, pressione Alt para mostrar a barra de menus), **Alterar…** ao lado de **Servidor conectado** em **Configurações da conta** → **Preferências** → **Aplicativo de desktop**, ou **Auto-hospedar o minddy** na parte inferior das telas de login e cadastro. Cada opção leva a janela do aplicativo para **Auto-hospedar o minddy**; quando um servidor self-hosted está conectado, **Usar minddy Cloud**, em **Usar uma instalação existente**, volta para o Cloud. O caminho no topo da página leva de volta a cada etapa, e o logo do minddy retorna ao aplicativo. Esta tela faz parte do app para desktop e abre sem conexão com a Internet. Confira o destino antes de entrar: cada conta pertence à sua instância. O OAuth usa o navegador do sistema e retorna depois ao aplicativo desktop.
+Para trocar de servidor depois, escolha **Connect to a Server…** no menu nativo minddy (o menu nativo é em inglês; no Windows e no Linux, pressione Alt para mostrar a barra de menus), **Alterar…** ao lado de **Servidor conectado** em **Configurações da conta** → **Preferências** → **Aplicativo de desktop**, ou **Auto-hospedar o minddy** na parte inferior da tela **Entre ou crie sua conta**. Cada opção leva a janela do aplicativo para **Auto-hospedar o minddy**; quando um servidor self-hosted está conectado, **Usar minddy Cloud**, em **Usar uma instalação existente**, volta para o Cloud. O caminho no topo da página leva de volta a cada etapa, e o logo do minddy retorna ao aplicativo. Esta tela faz parte do app para desktop e abre sem conexão com a Internet. Confira o destino antes de entrar: cada conta pertence à sua instância. O OAuth usa o navegador do sistema e retorna depois ao aplicativo desktop.
 
 No macOS e no Windows 11, a barra lateral, as abas e as bordas da janela mostram sua área de trabalho, desfocada, atrás do conteúdo opaco. Uma janela em tela cheia fica opaca, e a transparência volta quando ela sai da tela cheia. Para manter a janela opaca neste dispositivo, desative **Transparência do aplicativo de desktop** em **Configurações da conta** → **Preferências** → [Aparência](/docs/accounts#preferences).
 

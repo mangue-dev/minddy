@@ -7,7 +7,7 @@ import {
   projectDraftFromRow,
   projectDraftToRow,
   stepIndexOf,
-  stepsFor,
+  PROJECT_WIZARD_STEPS,
   type ProjectDraftInput,
 } from "./project-draft";
 
@@ -149,34 +149,34 @@ describe("normalizeInviteeUsers", () => {
   });
 });
 
-describe("stepsFor", () => {
-  it("asks for members right before the finishing touches, whatever the origin", () => {
-    for (const origin of ["new", "existing", null] as const) {
-      const steps = stepsFor(origin);
-      expect(steps.at(-2)).toBe("members");
-      expect(steps.at(-1)).toBe("finish");
-    }
+describe("PROJECT_WIZARD_STEPS", () => {
+  it("invites the team before importing its issues, right before the finishing touches", () => {
+    expect(PROJECT_WIZARD_STEPS.indexOf("members")).toBeLessThan(PROJECT_WIZARD_STEPS.indexOf("seed"));
+    expect(PROJECT_WIZARD_STEPS.at(-1)).toBe("finish");
+  });
+
+  it("no longer asks where the project starts from", () => {
+    expect(PROJECT_WIZARD_STEPS).not.toContain("origin");
   });
 });
 
 describe("stepIndexOf", () => {
   it("reopens at the stored step", () => {
     expect(stepIndexOf({ ...draft, step: "seed", updatedAt: "" })).toBe(
-      stepsFor("new").indexOf("seed"),
+      PROJECT_WIZARD_STEPS.indexOf("seed"),
     );
   });
 
-  it("falls back to the beginning when the step is not in this flow", () => {
-    // Without an origin, the seed does not exist: a bare `indexOf` would return -1, and the
-    // wizard would reopen on the last step (upper limit of `WizardDialog`).
-    expect(stepIndexOf({ ...draft, origin: null, step: "seed", updatedAt: "" })).toBe(0);
+  it("falls back to the beginning for a step the wizard no longer has", () => {
+    // A bare `indexOf` would return -1, and the wizard would reopen on the
+    // last step (upper limit of `WizardDialog`).
+    expect(stepIndexOf({ ...draft, step: "origin" as never, updatedAt: "" })).toBe(0);
   });
 
   it("still reopens a draft saved at the final step on the final step", () => {
     // Drafts saved before the members step existed point at `finish` by name:
     // they keep landing there, now one index further.
-    const steps = stepsFor("new");
-    expect(stepIndexOf({ ...draft, step: "finish", updatedAt: "" })).toBe(steps.length - 1);
+    expect(stepIndexOf({ ...draft, step: "finish", updatedAt: "" })).toBe(PROJECT_WIZARD_STEPS.length - 1);
   });
 });
 
