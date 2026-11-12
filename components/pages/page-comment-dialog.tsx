@@ -143,11 +143,6 @@ export function PageCommentDialog({
               projectId={projectId}
               allowAttachments={false}
               autoFocus
-              placeholder={
-                target.quote
-                  ? t("commentOnSelectionPlaceholder")
-                  : t("commentOnBlockPlaceholder")
-              }
               submitLabel={tTimeline("comment")}
               onSubmit={async (body, mentionedUserIds) => {
                 await onAdd({

@@ -46,9 +46,11 @@ import {
 } from "@/components/editor/document-editor";
 import { forgeMentionScanner } from "@/lib/mention-scan";
 import { NUMO_MENTION_ID } from "@/lib/mention-attributes";
-import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { SendShortcutKeys, SendShortcutTooltip } from "@/components/send-shortcut";
+import { SendButtonWithCost } from "@/components/ui/send-button-with-cost";
 import { usePrMembersQuery } from "@/lib/use-pr-members-query";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
+import { useComposerFold } from "@/lib/use-composer-fold";
 import type { PrEndpoint } from "@/lib/agent-api";
 
 export function PrCommentComposer({
@@ -121,20 +123,30 @@ export function PrCommentComposer({
   // published: we wait until it has landed, as the ticket composer waits
   // its uploads.
   const canPost = !!body && !posting && !uploads.uploading;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const trailRef = useRef<HTMLDivElement>(null);
+  // A line remark stays a card: it is opened on purpose, with its Cancel.
+  const expanded = useComposerFold({
+    gridRef,
+    textRef,
+    controlRefs: [trailRef],
+    value,
+    forceExpanded: line,
+  });
 
   return (
     <div ref={composerRef} className="flex min-w-0 max-w-full flex-col gap-2 font-sans">
       <div
+        data-composer-layout={expanded ? "expanded" : "compact"}
         className={cn(
-          "relative min-w-0 w-full max-w-full transition-colors",
-          // The wire dial carries the radius of the Numo field on the page
-          // Agents (`chat-input`, rounded-2xl): it's the same gesture, the same
-          // space on the screen, there was no reason for it to have another
-          // silhouette. That of a LINE remark keeps a radius more
-          // tight — it is anchored in the diff, at the size of a line of code,
-          // and 24px of corners would weigh more than the box itself. Like the
-          // Numo composer, it is a borderless `bg-control`.
-          line ? "rounded-lg bg-control" : "rounded-2xl bg-control",
+          "relative min-w-0 w-full max-w-full bg-control transition-colors",
+          // The thread composer has the silhouette of Numo's (`chat-input`):
+          // a pill on one line, a card once the text needs its own row
+          // (lib/use-composer-fold). A LINE remark keeps a tighter radius: it
+          // is anchored in the diff, at the size of a line of code, and
+          // large corners would weigh more than the box itself.
+          line ? "rounded-lg" : expanded ? "rounded-[1.625rem]" : "rounded-full",
           drop.dragging && "ring-2 ring-brand/20",
         )}
         onClick={focusFieldIn}
@@ -143,66 +155,99 @@ export function PrCommentComposer({
       >
         <DropOverlay show={drop.dragging} />
 
-        {/* WYSIWYG (MIN-548): the surface IS the preview — like the
-            scratchpad, what is typed reads rendered, and there is no mode to
-            switch. Markdown still flows in (quote, dictation, pasted upload
-            links) and the forge accounts carry their own portrait in the
-            pills. */}
-        <ForgeMarkdownField
-          endpoint={endpoint}
-          value={value}
-          onChange={onChange}
-          onSubmit={() => {
-            if (canPost) onSubmit();
-          }}
-          focusSignal={focusSignal}
-          autoFocus={autoFocus}
-          placeholder={placeholder}
-          // Paddings live on the CONTENT, not on the editor envelope: the
-          // placeholder is pinned at its top-left corner and must sit on the
-          // first line, not on the box corner.
-          className={cn("min-w-0 max-w-full", line && "max-h-40 overflow-y-auto")}
-          contentClassName={cn(
-            "[&_p]:my-0",
-            line ? "px-3 py-2" : "px-3.5 py-2.5",
-          )}
-        />
-
         <div
+          ref={gridRef}
           className={cn(
-            "flex items-center justify-end gap-1.5",
-            line ? "px-2 pb-2" : "px-2.5 pb-2.5",
+            "grid grid-cols-[minmax(0,1fr)_auto] items-end",
+            expanded
+              ? "[grid-template-areas:'text_text'_'._trail']"
+              : "items-center [grid-template-areas:'text_trail']",
           )}
         >
-          <AttachButton onFiles={uploads.addFiles} disabled={posting} />
-          <DictateButton
-            context="pull_request_comment"
-            onTranscription={(text) =>
-              onChange((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
-            }
-            disabled={posting}
-          />
-          {/* The thread only shows its submit button once there is something to send; a line remark keeps it, because it was OPENED on purpose and has its Cancel next to it. */}
-          {line || body || posting ? (
-            <>
-              {onCancel ? (
-                <Button variant="ghost" size="sm" onClick={onCancel} disabled={posting}>
-                  {tCommon("cancel")}
-                </Button>
-              ) : null}
-              <SendShortcutTooltip label={submitLabel}>
-                <Button
-                  size="sm"
-                  className={cn(!line && "rounded-full px-4")}
-                  disabled={!canPost}
-                  onClick={onSubmit}
-                >
-                  {posting ? <Spinner /> : null}
-                  {submitLabel}
-                </Button>
-              </SendShortcutTooltip>
-            </>
-          ) : null}
+          {/* WYSIWYG (MIN-548): the surface IS the preview — like the
+              scratchpad, what is typed reads rendered, and there is no mode to
+              switch. Markdown still flows in (quote, dictation, pasted upload
+              links) and the forge accounts carry their own portrait in the
+              pills. */}
+          <div
+            ref={textRef}
+            className={cn(
+              "min-w-0 self-stretch [grid-area:text]",
+              !expanded && "flex flex-col justify-center-safe",
+            )}
+          >
+            <ForgeMarkdownField
+              endpoint={endpoint}
+              value={value}
+              onChange={onChange}
+              onSubmit={() => {
+                if (canPost) onSubmit();
+              }}
+              focusSignal={focusSignal}
+              autoFocus={autoFocus}
+              placeholder={placeholder}
+              // Paddings live on the CONTENT, not on the editor envelope: the
+              // placeholder is pinned at its top-left corner and must sit on the
+              // first line, not on the box corner.
+              className={cn("min-w-0 max-w-full", line ? "max-h-40 overflow-y-auto" : "max-h-48 overflow-y-auto")}
+              contentClassName={cn(
+                "[&_p]:my-0",
+                line ? "px-3 py-2" : expanded ? "px-4 pt-3 pb-1" : "pt-[9px] pb-[7px] pl-4 pointer-coarse:py-2",
+              )}
+            />
+          </div>
+
+          <div
+            ref={trailRef}
+            className={cn(
+              "flex items-center justify-end gap-1.5 [grid-area:trail]",
+              // Same side paddings in both thread layouts: folding back weighs
+              // the controls as they are now against the room the text wrapped in.
+              line ? "px-2 pb-2" : cn("pl-1 pr-2.5", expanded ? "pb-2.5 pt-1" : "py-2.5"),
+            )}
+          >
+            <AttachButton onFiles={uploads.addFiles} disabled={posting} />
+            <DictateButton
+              context="pull_request_comment"
+              onTranscription={(text) =>
+                onChange((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+              }
+              disabled={posting}
+            />
+            {/* The thread only shows its submit button once there is
+                something to send, round like Numo's; a line remark keeps a
+                labelled one, because it was OPENED on purpose and has its
+                Cancel next to it. */}
+            {line ? (
+              <>
+                {onCancel ? (
+                  <Button variant="ghost" size="sm" onClick={onCancel} disabled={posting}>
+                    {tCommon("cancel")}
+                  </Button>
+                ) : null}
+                <SendShortcutTooltip label={submitLabel}>
+                  <Button size="sm" disabled={!canPost} onClick={onSubmit}>
+                    {posting ? <Spinner /> : null}
+                    {submitLabel}
+                  </Button>
+                </SendShortcutTooltip>
+              </>
+            ) : body || posting ? (
+              <SendButtonWithCost
+                cost={null}
+                isLoading={posting}
+                disabled={!canPost}
+                onClick={onSubmit}
+                ariaLabel={submitLabel}
+                tooltipLabel={
+                  <span className="inline-flex items-center gap-1.5">
+                    {submitLabel}
+                    <SendShortcutKeys />
+                  </span>
+                }
+              />
+            ) : null}
+          </div>
         </div>
       </div>
     </div>
