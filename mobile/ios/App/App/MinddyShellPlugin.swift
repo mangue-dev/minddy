@@ -56,6 +56,10 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
             ]
             if let radii = self?.controller?.screenCornerRadii { state["cornerRadii"] = radii }
             if let fold = self?.controller?.screenFold { state["fold"] = fold }
+            state["windowControlsInset"] = self?.controller?.windowControlsInset ?? 0
+            state["windowControlsHeight"] = self?.controller?.windowControlsHeight ?? 0
+            // An iPad, whatever the size of the app's window.
+            state["tablet"] = UIDevice.current.userInterfaceIdiom == .pad
             call.resolve(state)
         }
     }
@@ -348,8 +352,8 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
     /// orientation of it, or the hinge moved: the radius of that display's
     /// corners, in points, of each corner when the system says, and where
     /// the fold runs while the hinge is partially open.
-    func displayDidChange(cornerRadius: CGFloat, cornerRadii: [String: Double]?, fold: [String: Double]?) {
-        var data: [String: Any] = ["cornerRadius": Double(cornerRadius)]
+    func displayDidChange(cornerRadius: CGFloat, cornerRadii: [String: Double]?, fold: [String: Double]?, windowControlsInset: Double, windowControlsHeight: Double) {
+        var data: [String: Any] = ["cornerRadius": Double(cornerRadius), "windowControlsInset": windowControlsInset, "windowControlsHeight": windowControlsHeight]
         if let cornerRadii { data["cornerRadii"] = cornerRadii }
         // Always present, null without a fold, so the page drops a stale one.
         data["fold"] = fold ?? NSNull()

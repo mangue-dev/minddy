@@ -153,7 +153,7 @@ describe("bottom sheets on wide screens (MIN-841) and beside a side column", () 
     expect(viewportCaps.map((line) => line.trim())).toEqual([
       "--mobile-sheet-room: calc(var(--mobile-visible-height) - var(--mobile-sheet-top-gap) - var(--mobile-sheet-float) + var(--mobile-sheet-attach));",
     ]);
-    expect(css).toContain("--mobile-sheet-top-gap: max(1rem, calc(env(safe-area-inset-top) + 0.625rem));");
+    expect(css).toContain("--mobile-sheet-top-gap: max(1rem, calc(env(safe-area-inset-top) + 0.625rem), calc(var(--window-controls-block-end, 0px) + 0.625rem));");
     // Sheets size themselves from that room, never from the visible height
     // directly: a sheet whose `height` and `max-height` both followed the
     // keyboard had them move apart, and its top dipped and came back.

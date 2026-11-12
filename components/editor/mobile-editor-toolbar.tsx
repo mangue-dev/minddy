@@ -193,9 +193,11 @@ function ToolbarButton({ label, active = false, disabled = false, pinned = false
       onClick={onPress}
       className={cn(
         "group/tool flex h-full shrink-0 touch-manipulation items-center justify-center text-foreground/80 disabled:opacity-40",
-        // A carousel slot: four and a half fit the strip, the half one at the
-        // edge saying there are more, and each snaps to its start.
-        pinned ? "w-16" : "grow-0 basis-[calc(100%/4.5)] snap-start",
+        // A carousel slot: four and a half fit a phone's strip, the half one
+        // at the edge saying there are more, and each snaps to its start. On
+        // a tablet a fixed slot instead: the strip is wide enough for every
+        // tool at once, and a share of its width made each slot 300px wide.
+        pinned ? "w-16" : "grow-0 basis-[calc(100%/4.5)] snap-start min-[744px]:basis-[4.5rem]",
       )}
     >
       {/* The highlight sits inside the touch target, with room around it. */}

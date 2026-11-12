@@ -1138,6 +1138,21 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [textWraps, setTextWraps] = useState(false);
     const [surfaceHeight, setSurfaceHeight] = useState<number | null>(null);
     const expandedLayout = textWraps;
+    // The pill is for one row. With badges above the text (context chips,
+    // attachments) the surface holds two rows, and a pill's half-circle ends
+    // cut into them: it takes the card's corners, as wrapped text does.
+    const [hasTopRow, setHasTopRow] = useState(false);
+    useLayoutEffect(() => {
+      const row = surfaceTopRef.current;
+      if (!row) return;
+      const update = () => setHasTopRow(row.offsetHeight > 0);
+      update();
+      if (typeof ResizeObserver === "undefined") return;
+      const observer = new ResizeObserver(update);
+      observer.observe(row);
+      return () => observer.disconnect();
+    }, []);
+    const cardShape = expandedLayout || hasTopRow;
     const expandedLayoutRef = useRef(expandedLayout);
     expandedLayoutRef.current = expandedLayout;
     // What the compact row takes from the grid's width besides the text and
@@ -1846,7 +1861,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             {mergedContext}
           </div>
         ) : null}
-        <AgentBeam active={!!beam} keepMounted className={cn("relative z-10", expandedLayout ? "rounded-[1.625rem]" : "rounded-full")}>
+        <AgentBeam active={!!beam} keepMounted className={cn("relative z-10", cardShape ? "rounded-[1.625rem]" : "rounded-full")}>
         <div
           data-composer-layout={expandedLayout ? "expanded" : "compact"}
           className={cn(
@@ -1856,8 +1871,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             "chat-input-surface relative overflow-hidden bg-control",
             // One line is a pill at any height: on a phone the row's 44px
             // targets make it taller than on a desktop, where 26px already
-            // rounded it whole. Several lines keep a card's corners.
-            expandedLayout ? "rounded-[1.625rem]" : "rounded-full",
+            // rounded it whole. Several lines, or a row of badges above the
+            // text, keep a card's corners.
+            cardShape ? "rounded-[1.625rem]" : "rounded-full",
             // The context row is pinned to the top and the controls row to
             // the bottom: while the height animates, both keep their gutter
             // to their edge, and only the text between them moves.

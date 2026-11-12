@@ -116,6 +116,16 @@ html[data-native-mobile] .auth-column {
   padding-bottom: max(2rem, env(safe-area-inset-bottom));
 }
 
+/* In a window of iPadOS 26 the window's close, minimize and full-screen
+   buttons sit over the app's top leading corner, where the content header
+   starts. The shell reports the room they take (`--window-controls-inline-
+   start`, components/mobile/native-appearance.tsx), 0 in full screen: the
+   header's first control starts after them. The app's own pages only: a
+   sheet is centred on a tablet, away from that corner. */
+html[data-native-mobile] .app-shell .app-content-header > div {
+  padding-inline-start: calc(var(--app-content-header-pad-x) + var(--window-controls-inline-start, 0px));
+}
+
 /* The auth screens' first appearance (MIN-781): the form's blocks (heading,
    providers, separator, fields, button, footer link) arrive one after the
    other, and the showcase pane eases in from the side behind them. The
@@ -676,8 +686,11 @@ button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
 
   .app-shell > div.flex.min-h-0.min-w-0.flex-1.flex-col {
     margin-right: 12px;
-    /* The bottom band is deep enough to host the Numo chrome button. */
-    margin-bottom: 36px;
+    /* The bottom band is deep enough to host the Numo chrome button, plus the
+       home indicator's inset on a tablet: the button group adds that inset
+       below itself (components/assistant-fab.tsx), and a band without it left
+       Numo, the drafts and the notebook above the band, over the pane. */
+    margin-bottom: calc(36px + env(safe-area-inset-bottom));
     border-radius: var(--app-pane-radius);
     /* Real 1px border on the card itself: children are clipped to the padding
        box, so the line can't be repainted or anti-aliased away by the
@@ -3417,8 +3430,10 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      above an open keyboard, where the field typed in sits right on it. */
   --mobile-sheet-bottom: max(1rem, var(--mobile-sheet-safe-bottom));
   /* The highest a sheet may reach: under the status bar, with a margin, so
-     it never touches the screen's top edge. */
-  --mobile-sheet-top-gap: max(1rem, calc(env(safe-area-inset-top) + 0.625rem));
+     it never touches the screen's top edge; in a window of iPadOS 26, under
+     the window's own controls (`--window-controls-block-end`,
+     components/mobile/native-appearance.tsx). */
+  --mobile-sheet-top-gap: max(1rem, calc(env(safe-area-inset-top) + 0.625rem), calc(var(--window-controls-block-end, 0px) + 0.625rem));
   /* What sits inside a sheet shares one set of measures, whatever the sheet
      (a picker, the command palette, a menu, an issue's panel):
      - `--mobile-sheet-inline`, where content starts from the sheet's side:
@@ -3448,6 +3463,15 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
      keyboard) gets back the gap it no longer floats at, so its top stays where
      it was when the keyboard rises under it. */
   --mobile-sheet-room: calc(var(--mobile-visible-height) - var(--mobile-sheet-top-gap) - var(--mobile-sheet-float) + var(--mobile-sheet-attach));
+}
+/* On a tablet the screen's corner is small, and six tenths of it left the
+   sheet's top corners nearly square, the close button off their curve. The
+   radius is the button's own instead: its 8px inset plus its 22px half, so
+   the round button is concentric with the corner, as on a phone. The device
+   decides, not the window: an iPad app in a narrow window is still on an
+   iPad (`data-native-tablet`, components/mobile/native-appearance.tsx). */
+:root[data-app-layout="mobile"][data-native-tablet] {
+  --mobile-sheet-radius: 30px;
 }
 /* Sizes written as one-off pixel values follow the same steps as the scale
    above. */

@@ -48,6 +48,17 @@ describe("adaptive application layout", () => {
     expect(document.documentElement.dataset.appLayout).toBe(mobile ? "mobile" : "desktop");
   });
 
+  it("keeps the phone layout on any screen inside the native app", () => {
+    for (const value of [input(1376, 1032), input(1200, 1600), input(1024, 768)]) {
+      expect(resolveMobileLayout({ ...value, nativeMobile: true }, APP_LAYOUT_POLICY)).toBe(true);
+      emulate(value);
+      vi.stubGlobal("Capacitor", { isNativePlatform: () => true, getPlatform: () => "ios" });
+      expect(isMobileLayout()).toBe(true);
+      new Function(APP_LAYOUT_BOOTSTRAP)();
+      expect(document.documentElement.dataset.appLayout).toBe("mobile");
+    }
+  });
+
   it("keeps tablet orientation stable when a keyboard changes viewport shape", () => {
     const portrait = { ...input(1032, 1376), height: 620 };
     expect(resolveMobileLayout(portrait, APP_LAYOUT_POLICY)).toBe(true);

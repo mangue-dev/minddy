@@ -20,6 +20,10 @@ import { getDesktopBridge, isDesktop } from "@/lib/desktop/bridge";
 import { getMobileBridge } from "@/lib/mobile/bridge";
 import type { OAuthProvider } from "@/lib/auth-context";
 import { keyboardFrameStyle, useKeyboardFrame } from "@/lib/mobile/use-keyboard-frame";
+import { useMediaQuery } from "@/lib/use-media-query";
+
+/** A tablet: both sides at least an iPad mini's short side. */
+const LARGE_TOUCH_SCREEN = "(min-width: 744px) and (min-height: 744px)";
 
 /**
  * What login and registration have in common (MIN-300).
@@ -419,12 +423,18 @@ export function AuthColumn({
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  // On a phone the column rises above the keyboard: what it covers would be
+  // most of the form. A tablet keeps room for the form above the keyboard,
+  // and the rise made it jump: fixed to the whole window, the column left
+  // the side of the screen it shares with the showcase and moved to the
+  // middle. There the form stays where it is (MIN-907).
+  const largeScreen = useMediaQuery(LARGE_TOUCH_SCREEN);
   const keyboard = useKeyboardFrame();
-  const typing = keyboard.height !== null;
+  const typing = !largeScreen && keyboard.height !== null;
   return (
     <div
       // `.auth-shell` pads its sides by these insets (app/tokens.css).
-      style={keyboardFrameStyle(keyboard, "var(--safe-inline-start) var(--safe-inline-end)")}
+      style={largeScreen ? undefined : keyboardFrameStyle(keyboard, "var(--safe-inline-start) var(--safe-inline-end)")}
       className={cn(
         "auth-column flex w-full flex-1 flex-col p-8",
         typing && "overflow-y-auto overscroll-contain bg-background",

@@ -317,8 +317,33 @@ final class MinddyViewController: CAPBridgeViewController {
     }
 
     private func reportDisplay() {
-        shellPlugin?.displayDidChange(cornerRadius: screenCornerRadius, cornerRadii: screenCornerRadii, fold: screenFold)
+        reportedWindowControls = [windowControlsInset, windowControlsHeight]
+        shellPlugin?.displayDidChange(cornerRadius: screenCornerRadius, cornerRadii: screenCornerRadii, fold: screenFold, windowControlsInset: windowControlsInset, windowControlsHeight: windowControlsHeight)
     }
+
+    /// The room the window's own controls take at the top leading corner, in
+    /// points (MIN-907): in a window of iPadOS 26, the close, minimize and
+    /// full-screen buttons sit over the app, where the page's header starts.
+    /// The safe area adapted to the corners steps around them; the plain one
+    /// does not. 0 in full screen, on iPhone, and before iOS 26.
+    var windowControlsInset: Double {
+        guard #available(iOS 26.0, *) else { return 0 }
+        let adapted = view.edgeInsets(for: .safeArea(cornerAdaptation: .horizontal))
+        return Double(max(0, adapted.left - view.safeAreaInsets.left))
+    }
+
+    /// How far down those controls reach from the window's top edge, in
+    /// points (the page measures from there): the safe area adapted
+    /// vertically steps below them. A sheet keeps under it. 0 when there are
+    /// no controls, where the adapted top is the plain one.
+    var windowControlsHeight: Double {
+        guard #available(iOS 26.0, *) else { return 0 }
+        let adapted = view.edgeInsets(for: .safeArea(cornerAdaptation: .vertical))
+        return adapted.top > view.safeAreaInsets.top ? Double(adapted.top) : 0
+    }
+
+    /// What the page last heard, so a layout tells it only of a change.
+    private var reportedWindowControls: [Double]?
 
     /// iPhone Duo moves the app between its displays as it folds and unfolds,
     /// and each has its own corners: the page hears the new radii once the
@@ -468,6 +493,15 @@ final class MinddyViewController: CAPBridgeViewController {
             navigationBar.frame = placeBar(requestedBarFrame)
         }
         updateSideChromeScript()
+        // A window resized, moved to full screen or back: its controls come
+        // and go without a size transition of the view controller.
+        // The first layout only records it: the page reads it with `state()`.
+        let controls = [windowControlsInset, windowControlsHeight]
+        if let reported = reportedWindowControls {
+            if reported != controls { reportDisplay() }
+        } else {
+            reportedWindowControls = controls
+        }
     }
 
     /// The side the system's controls stand on (iPhone Duo folded, or open

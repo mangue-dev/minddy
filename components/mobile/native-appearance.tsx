@@ -26,14 +26,23 @@ const CORNER_PROPERTIES = [
  * iPhone Duo's outer display is a D, square on the hinge side. It says them
  * again when the app moves to another display or turns, since a half turn
  * swaps the D's square and round corners.
+ *
+ * In a window of iPadOS 26, the shell also reports the room the window's
+ * controls take at the top leading corner, published as
+ * `--window-controls-inline-start` and `--window-controls-block-end`.
  */
 export function NativeMobileAppearance() {
   useEffect(() => {
     const shell = getMobileBridge()?.shell;
     if (!shell?.setAppearance) return;
     const root = document.documentElement;
-    const setCorners = ({ cornerRadius, cornerRadii, fold }: { cornerRadius?: number; cornerRadii?: MobileCornerRadii; fold?: MobileFold | null }) => {
+    const setCorners = ({ cornerRadius, cornerRadii, fold, windowControlsInset, windowControlsHeight }: { cornerRadius?: number; cornerRadii?: MobileCornerRadii; fold?: MobileFold | null; windowControlsInset?: number; windowControlsHeight?: number }) => {
       setPixels("--device-corner-radius", cornerRadius);
+      // iPadOS 26 draws a window's controls over the app's top leading
+      // corner: the content header leaves them this room (app/globals.css).
+      setPixels("--window-controls-inline-start", windowControlsInset);
+      // And how far down they reach: a bottom sheet stops below them.
+      setPixels("--window-controls-block-end", windowControlsHeight);
       for (const [corner, property] of CORNER_PROPERTIES) setPixels(property, cornerRadii?.[corner]);
       setFold(fold ?? null);
     };
@@ -55,7 +64,13 @@ export function NativeMobileAppearance() {
       if (value !== undefined && value > 0) root.style.setProperty(property, `${value}px`);
       else root.style.removeProperty(property);
     };
-    const readCorners = () => void shell.state().then(setCorners, () => {});
+    const readCorners = () => void shell.state().then((state) => {
+      setCorners(state);
+      // An iPad, whatever the size of the app's window (the page sees only
+      // the window): its sheets take the close button's radius
+      // (app/globals.css).
+      if (state.tablet) root.setAttribute("data-native-tablet", "");
+    }, () => {});
     readCorners();
     // iPhone Duo: folding or unfolding moves the app to the other display.
     const display = shell.addListener?.("display", setCorners);
@@ -82,6 +97,7 @@ export function NativeMobileAppearance() {
       window.clearTimeout(turnTimer);
       screen.orientation?.removeEventListener("change", turned);
       setFold(null);
+      root.removeAttribute("data-native-tablet");
       if (display) void Promise.resolve(display).then((listener) => listener.remove(), () => {});
     };
   }, []);

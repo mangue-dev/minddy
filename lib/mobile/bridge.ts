@@ -36,6 +36,15 @@ export interface MobileShellState {
   cornerRadii?: MobileCornerRadii;
   /** Where the display folds while iPhone Duo is half open; absent otherwise. */
   fold?: MobileFold | null;
+  /**
+   * The room the window's controls take at the top leading corner, in CSS
+   * pixels: an iPad app in a window of iPadOS 26. 0 or absent otherwise.
+   */
+  windowControlsInset?: number;
+  /** How far down those controls reach from the top, in CSS pixels. */
+  windowControlsHeight?: number;
+  /** An iPad, whatever the size of the app's window. Absent in older shells. */
+  tablet?: boolean;
 }
 
 /** The band where the display folds, in CSS pixels from the viewport's corner. */
@@ -148,7 +157,7 @@ export interface MobileShellPlugin {
    */
   addListener?(
     event: "display",
-    handler: (display: { cornerRadius: number; cornerRadii?: MobileCornerRadii; fold?: MobileFold | null }) => void,
+    handler: (display: { cornerRadius: number; cornerRadii?: MobileCornerRadii; fold?: MobileFold | null; windowControlsInset?: number; windowControlsHeight?: number }) => void,
   ): MobileListenerHandle | Promise<MobileListenerHandle>;
   // Last: `bind` keeps the last signature (lib/mobile/native-navigation.ts).
   /** A tap on the native bar carries the identifier of its item. */

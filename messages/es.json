@@ -7109,7 +7109,7 @@
   "MobileWelcome": {
     "slideLabel": "{current} de {total}",
     "issuesTitle": "Tus incidencias, estés donde estés",
-    "issuesBody": "Apunta una idea, ordena tu tablero y cierra lo terminado desde el móvil.",
+    "issuesBody": "Apunta una idea, ordena tu tablero y cierra lo terminado en unos pocos toques.",
     "numoTitle": "Pregunta a Numo",
     "numoBody": "Numo planifica el trabajo, encuentra una incidencia o resume un proyecto en una frase.",
     "agentsTitle": "Tu agente de código, siempre al día",
