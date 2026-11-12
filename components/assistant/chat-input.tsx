@@ -1828,14 +1828,18 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             {mergedContext}
           </div>
         ) : null}
-        <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-[1.625rem]">
+        <AgentBeam active={!!beam} keepMounted className={cn("relative z-10", expandedLayout ? "rounded-[1.625rem]" : "rounded-full")}>
         <div
           data-composer-layout={expandedLayout ? "expanded" : "compact"}
           className={cn(
             // No focus ring, no border: the Numo composer
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
-            "chat-input-surface relative overflow-hidden rounded-[1.625rem] bg-control",
+            "chat-input-surface relative overflow-hidden bg-control",
+            // One line is a pill at any height: on a phone the row's 44px
+            // targets make it taller than on a desktop, where 26px already
+            // rounded it whole. Several lines keep a card's corners.
+            expandedLayout ? "rounded-[1.625rem]" : "rounded-full",
             // The context row is pinned to the top and the controls row to
             // the bottom: while the height animates, both keep their gutter
             // to their edge, and only the text between them moves.

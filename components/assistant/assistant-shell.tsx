@@ -171,6 +171,12 @@ export interface AssistantShellProps {
   starterItems?: ReadonlyArray<{ label: string; prompt: string }> | null;
   /** The written rows are still loading: show no row yet. */
   startersPending?: boolean;
+  /**
+   * On a phone, hide the suggestion rows while the composer has the focus
+   * (Home): with the keyboard up they took the room right above it, between
+   * the field and the conversation.
+   */
+  hideStartersWhileComposing?: boolean;
   /** Shown instead of the "no AI provider" screen (Home keeps its greeting). */
   unavailableFallback?: ReactNode;
 }
@@ -197,6 +203,7 @@ export const AssistantShell = forwardRef<
     openingBriefId = null,
     starterItems = null,
     startersPending = false,
+    hideStartersWhileComposing = false,
     unavailableFallback = null,
   },
   ref
@@ -557,7 +564,11 @@ export const AssistantShell = forwardRef<
   const starterPage = assistantStarterPage(pathname, pageContext);
   const [composerEmpty, setComposerEmpty] = useState(true);
   // On a phone only in the Numo sheet: Home keeps its page clear.
-  const showStarters = !hasMessages && (!mobile || compact) && composerEmpty && !embeddedConversationId && !startersPending;
+  // Whether the composer holds the focus: with `hideStartersWhileComposing`,
+  // a phone hides the rows as soon as the keyboard is up, before a letter.
+  const [composing, setComposing] = useState(false);
+  const hiddenWhileComposing = hideStartersWhileComposing && mobile && composing;
+  const showStarters = !hasMessages && (!mobile || compact) && composerEmpty && !hiddenWhileComposing && !embeddedConversationId && !startersPending;
 
   // Question ask_user ACTIVE: the last visible message is a message
   // assistant carrying a tool-call ask_user and Numo is at rest (he is waiting for the
@@ -1258,6 +1269,12 @@ export const AssistantShell = forwardRef<
             fixed bottom padding keeps it off the edge of the content zone. */}
             <div
               data-keyboard-dock
+              // Only a field counts: a suggestion row is in this dock too.
+              onFocus={(event) => setComposing(isTextEntry(event.target))}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                setComposing(next instanceof Node && event.currentTarget.contains(next) && isTextEntry(next));
+              }}
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
                 compact ? "px-4" : "px-2 app-desktop:px-0",
@@ -1333,3 +1350,9 @@ export const AssistantShell = forwardRef<
   // has no destinations: you write there, and a click places the cursor there.
   return <MentionLinksProvider value={links}>{shell}</MentionLinksProvider>;
 });
+
+/** A field one writes in: the composer's editor, or any text input. */
+function isTextEntry(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement;
+}

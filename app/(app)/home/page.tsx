@@ -200,6 +200,8 @@ function HomeConversation() {
           starterItems={brief ? brief.suggestions : null}
           // The suggestions come in with the rest of the page.
           startersPending={briefLoading || !revealed}
+          // On a phone the rows give their room to the keyboard while you write.
+          hideStartersWhileComposing
           unavailableFallback={
             <div className="flex h-full items-center justify-center overflow-y-auto px-4">
               <div className={cn("mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-3", reveal)}>
