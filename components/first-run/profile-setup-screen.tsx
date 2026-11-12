@@ -21,7 +21,7 @@ import { useMyAvatarSource, useRegenerateAvatar, useUploadAvatar } from "@/lib/u
  * the service's name in the field.
  */
 export function ProfileSetupScreen({ onDone }: {
-  /** Back from the phone tour: saving returns to it instead of the gate. */
+  /** Back from the tour: saving returns to it instead of the gate. */
   onDone?: () => void;
 } = {}) {
   const t = useTranslations("Auth");
@@ -33,9 +33,9 @@ export function ProfileSetupScreen({ onDone }: {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const avatar = useMyAvatarSource();
-  // The tour follows on a phone: its code loads while the name is typed.
+  // The tour follows: its code loads while the name is typed.
   useEffect(() => {
-    void import("@/components/first-run/mobile-onboarding-screen");
+    void import("@/components/first-run/onboarding-screen");
   }, []);
   const regenerate = useRegenerateAvatar();
   const upload = useUploadAvatar();
@@ -91,7 +91,7 @@ export function ProfileSetupScreen({ onDone }: {
             aria-label={t("fullName")}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "profile-error" : undefined}
-            className="h-12 bg-control text-base"
+            className="h-12 app-desktop:h-12 bg-control text-base"
             autoComplete="nickname"
             enterKeyHint="done"
             placeholder={t("fullNamePlaceholder")}

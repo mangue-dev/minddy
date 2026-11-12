@@ -750,6 +750,16 @@ button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
   body[data-sidebar-hidden="true"] .dialog-pane-mirror {
     left: 12px !important;
   }
+
+  /* Over a first-run page (MIN-964) there is no content pane to mirror: the
+     page covers the window, so the wizards it opens (project creation, the
+     agent connection) center on the window, at the dialog size. */
+  &[data-first-run-open] .dialog-pane-mirror {
+    inset: 0 !important;
+    margin: auto !important;
+    width: var(--spacing-dialog-w) !important;
+    height: var(--spacing-dialog-h) !important;
+  }
 }
 
 
@@ -3084,6 +3094,11 @@ html[data-desktop-platform="darwin"]
   /* Keep action feedback readable above elevated dialogs and menus. */
   z-index: 1200;
 }
+/* Over a first-run page the toaster hangs from the document and centers on
+   the window (MIN-964). */
+html[data-first-run-open] .content-toaster[data-sonner-toaster][data-x-position="center"] {
+  position: fixed;
+}
 
 .content-toaster[data-sonner-toaster] [data-sonner-toast][data-styled="true"] {
   left: 50%;
@@ -3207,6 +3222,40 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   height: 44px;
   z-index: 30;
   -webkit-app-region: drag;
+}
+/* Until the first-run gate has decided, a new account's session gets a blank
+   page over the app (MIN-964), under the first-run pages (z-index 45) and
+   the dialogs. Set before paint by components/first-run/first-run-cover-script.tsx
+   and by the gate, which lifts it. */
+html[data-first-run-pending] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  background: var(--background);
+}
+
+/* The first-run pages cover the whole window, the app's bar included
+   (MIN-964): the macOS traffic lights or the integrated caption controls
+   still sit over them, so the page keeps their 44 px clear and gives the
+   window a band to move by. The page is a `role="dialog"`, which the rule
+   above marks no-drag; the band is its first child, so it digs its own drag
+   region back, and the buttons after it dig theirs out again. */
+.first-run-drag-band {
+  display: none;
+}
+html[data-desktop-platform="darwin"],
+html[data-integrated-caption-controls] {
+  & [data-first-run] {
+    padding-top: max(56px, env(safe-area-inset-top));
+  }
+  & .first-run-drag-band {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto;
+    height: 44px;
+    -webkit-app-region: drag;
+  }
 }
 :root[data-app-layout="mobile"] {
   &[data-integrated-caption-controls]:not([data-desktop-platform="darwin"]) .app-workspace::before {

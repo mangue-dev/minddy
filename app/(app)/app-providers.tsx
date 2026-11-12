@@ -33,6 +33,7 @@ import { MentionHoverCard } from "@/components/mention-hover-card";
 import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { AppShellChrome } from "@/components/app-shell-chrome";
 import { FirstRunGate } from "@/components/first-run/first-run-gate";
+import { FirstRunCoverScript } from "@/components/first-run/first-run-cover-script";
 import { AssistantFab } from "@/components/assistant-fab";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { PushServiceWorker } from "@/components/push-service-worker";
@@ -112,6 +113,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     // framer-motion animates from script: "user" drops its transform and layout
     // animations for the whole signed-in app when the system asks (MIN-783).
     <MotionConfig reducedMotion="user">
+    {/* Before the first paint: a new account never sees the app before its
+        first-run screens (MIN-964). */}
+    <FirstRunCoverScript />
     {/* Provider buttons only appear on the auth screens, which mount their own
         AuthProvider. */}
     <AuthProvider discoverOAuthProviders={false}>

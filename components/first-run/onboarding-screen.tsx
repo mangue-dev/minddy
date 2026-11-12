@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -15,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent, MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
 import { Spinner } from "@/components/ui/spinner";
@@ -25,22 +27,30 @@ import { ProfileSetupScreen } from "@/components/first-run/profile-setup-screen"
 import { OnboardingJoinDialog } from "@/components/home/onboarding-join-dialog";
 import { McpConnectPanel } from "@/components/settings/mcp-connect-panel";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
+import { useAuth } from "@/lib/auth-context";
 import { useCreate } from "@/lib/create-context";
 import type { OnboardingStepId } from "@/lib/onboarding";
 import { useProjects } from "@/lib/projects-context";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { useOnboardingChecklist } from "@/lib/use-onboarding";
 import { cn } from "@/lib/utils";
 
+// The import wizard (CSV parsing, column mapping) loads on its first opening.
+const OnboardingImportDialog = dynamic(
+  () => import("@/components/home/onboarding-import-dialog").then((m) => m.OnboardingImportDialog),
+  { ssr: false },
+);
+
 /**
- * The getting-started steps on a phone (MIN-907): the desktop sidebar's
- * checklist, as a full-screen page that shows one step at a time. Each step's
- * action opens the same sheet the app uses (a project, an issue, Numo, the
- * agent connection) over this page, never a navigation; the step completes
- * from what was created, as on desktop. Every step can be skipped, and so can
- * the whole tour.
+ * The getting-started steps of a new account (MIN-907), on a phone and on a
+ * computer alike (MIN-964): a full-screen page that shows one step at a time.
+ * Each step's action opens the same dialog the app uses (a project, an issue,
+ * Numo, the agent connection) over this page, never a navigation; the step
+ * completes from what was created. Every step can be skipped, and so can the
+ * whole tour.
  */
-export function MobileOnboardingScreen() {
+export function OnboardingScreen() {
   const t = useTranslations("Onboarding");
   const tCommon = useTranslations("Common");
   const onboarding = useOnboardingChecklist();
@@ -49,10 +59,17 @@ export function MobileOnboardingScreen() {
   const { open: openAssistant } = useAssistantPanelActions();
   const { invitations, busyId, answer } = useInvitationResponder();
   const router = useRouter();
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const mobile = useMobileLayout() === true;
   const [busy, setBusy] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [skipOpen, setSkipOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  // Mounted on first opening, then kept so it can animate out.
+  const [importMounted, setImportMounted] = useState(false);
+  if (importOpen && !importMounted) setImportMounted(true);
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
@@ -84,6 +101,33 @@ export function MobileOnboardingScreen() {
   const step = viewing ?? onboarding.currentStepId;
   const stepIndex = step ? onboarding.steps.findIndex((item) => item.id === step) : -1;
   const invitation = invitations[0];
+  // Importing writes into a project of one's own; a computer has the CSV.
+  const canImport = !mobile && projects.some((project) => project.owner_id === user?.id);
+
+  /*
+   * The tour ends on Home, whatever page creating a project opened under it.
+   * Home loads under the last screen, or under the skip confirmation, so the
+   * app shows up ready when the tour closes, with no loading in between
+   * (MIN-964).
+   */
+  const onHome = pathname === "/home";
+  const ending = onboarding.finalScreen || !step || skipOpen;
+  useEffect(() => {
+    if (ending && !onHome) router.push("/home");
+  }, [ending, onHome, router]);
+  const homeWaiters = useRef<Array<() => void>>([]);
+  useEffect(() => {
+    if (onHome) for (const resolve of homeWaiters.current.splice(0)) resolve();
+  }, [onHome]);
+  const reachHome = () => {
+    if (onHome) return Promise.resolve();
+    router.push("/home");
+    // A navigation that never lands must not keep the tour open.
+    return new Promise<void>((resolve) => {
+      homeWaiters.current.push(resolve);
+      setTimeout(resolve, 5000);
+    });
+  };
 
   const goBack = () => {
     if (stepIndex <= 0) {
@@ -122,10 +166,9 @@ export function MobileOnboardingScreen() {
     </ol>
   );
 
-  // The tour ends on Home, whatever page creating a project opened under it.
   const leave = (action: () => Promise<void>) => run(async () => {
+    await reachHome();
     await action();
-    router.push("/home");
   });
 
   if (editingProfile) {
@@ -149,6 +192,17 @@ export function MobileOnboardingScreen() {
       </FirstRunLayer>
     );
   }
+
+  const mcpPanel = (
+    <McpConnectPanel
+      layout="cards"
+      onConnected={() => {
+        setMcpOpen(false);
+        setViewing(null);
+        void run(() => onboarding.acknowledgeStep("mcp"));
+      }}
+    />
+  );
 
   const primary = (label: string, onClick: () => void) => (
     <Button className={AUTH_SUBMIT_CLASS} disabled={busy} onClick={onClick}>
@@ -198,7 +252,12 @@ export function MobileOnboardingScreen() {
           )}
           {step === "tickets" && (projects.length === 0
             ? primary(t("projectCta"), openCreateProject)
-            : primary(t("ticketsCreateCta"), () => openCreateIssue()))}
+            : (
+              <>
+                {primary(t("ticketsCreateCta"), () => openCreateIssue())}
+                {canImport && secondary(t("ticketsImportCta"), () => setImportOpen(true))}
+              </>
+            ))}
           {step === "numo" && primary(t("numoCta"), () => {
             openAssistant({ projectId: null, focusComposer: false });
             setViewing(null);
@@ -230,25 +289,37 @@ export function MobileOnboardingScreen() {
         </AlertDialogContent>
       </AlertDialog>
       <OnboardingJoinDialog open={joinOpen} onOpenChange={setJoinOpen} outro="inbox" />
+      {importMounted && (
+        <OnboardingImportDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onImported={() => {
+            setImportOpen(false);
+            setViewing(null);
+            void run(() => onboarding.acknowledgeStep("tickets"));
+          }}
+        />
+      )}
       {/* The agent connection opens here rather than in the settings: the
-          tour never navigates (MIN-907). */}
-      <Sheet open={mcpOpen} onOpenChange={setMcpOpen}>
-        <MobileSheetContent side="bottom" aria-describedby={undefined}>
-          {/* A visible title row keeps the sheet's close button off the
-              agent list. */}
-          <SheetTitle className="flex min-h-11 shrink-0 items-center pr-14 text-lg font-semibold">{t("mcpTitle")}</SheetTitle>
-          <MobileSheetScrollArea className="px-1 pb-2">
-            <McpConnectPanel
-              layout="cards"
-              onConnected={() => {
-                setMcpOpen(false);
-                setViewing(null);
-                void run(() => onboarding.acknowledgeStep("mcp"));
-              }}
-            />
-          </MobileSheetScrollArea>
-        </MobileSheetContent>
-      </Sheet>
+          tour never navigates (MIN-907). A sheet on a phone, a dialog on a
+          computer. */}
+      {mobile ? (
+        <Sheet open={mcpOpen} onOpenChange={setMcpOpen}>
+          <MobileSheetContent side="bottom" aria-describedby={undefined}>
+            {/* A visible title row keeps the sheet's close button off the
+                agent list. */}
+            <SheetTitle className="flex min-h-11 shrink-0 items-center pr-14 text-lg font-semibold">{t("mcpTitle")}</SheetTitle>
+            <MobileSheetScrollArea className="px-1 pb-2">{mcpPanel}</MobileSheetScrollArea>
+          </MobileSheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
+          <DialogContent aria-describedby={undefined} className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
+            <DialogTitle>{t("mcpTitle")}</DialogTitle>
+            {mcpPanel}
+          </DialogContent>
+        </Dialog>
+      )}
     </FirstRunLayer>
   );
 }

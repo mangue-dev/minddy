@@ -7,7 +7,7 @@
       "member"
     ],
     "type": "tutorial",
-    "source": "K/core-tracker; `components/sidebar-onboarding.tsx`; `app/(app)/home/page.tsx`",
+    "source": "K/core-tracker; `components/first-run/onboarding-screen.tsx`; `app/(app)/home/page.tsx`",
     "gaps": "Ordered journey, account/instance prerequisite, join versus create, assignment, done state, first-use recovery",
     "illustration": "New onboarding; reuse workflowIssue and heroBoard",
     "requiresFigures": true,

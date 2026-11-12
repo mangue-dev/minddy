@@ -444,7 +444,6 @@ describe("other touch pitfalls", () => {
     // touch screen. Each reveal carries a `touch:` counterpart, or is
     // decoration listed here.
     const decorative = new Set([
-      "components/sidebar-onboarding.tsx", // a trailing arrow on a link row
       "components/project-icon-picker.tsx", // a veil over a preview the row taps
       "components/pages/page-toc.tsx", // focus opens the panel on touch
     ]);

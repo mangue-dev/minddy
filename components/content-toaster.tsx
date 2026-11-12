@@ -4,6 +4,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Toaster } from "sonner";
 import { isTextCut } from "@/components/ui/truncated-text";
+import { useFirstRunOpen } from "@/lib/first-run-open";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 /** One toast surface for both breakpoints, anchored outside the scrolling main. */
@@ -14,13 +15,16 @@ export const ContentToaster = memo(function ContentToaster() {
   // On a phone a toast drops from the top, as a native banner does: the
   // bottom belongs to the navigation bar and the keyboard.
   const mobile = useMobileLayout() === true;
+  // A first-run page covers the pane and sets the app inert (MIN-964): its
+  // toasts center on the window instead, over the page.
+  const firstRunOpen = useFirstRunOpen();
 
   useLayoutEffect(() => {
     // On a phone the pane sits in the workspace's stacking context, so a
     // toast inside it fell under every bottom sheet, which portals to the
     // document. There it hangs from the document too, above the sheets.
-    setPane(mobile ? document.body : anchor.current?.closest("main")?.parentElement ?? null);
-  }, [mobile]);
+    setPane(mobile || firstRunOpen ? document.body : anchor.current?.closest("main")?.parentElement ?? null);
+  }, [mobile, firstRunOpen]);
 
   useLayoutEffect(() => {
     // Retire snapshots left by the removed error-history feature without opening them.

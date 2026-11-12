@@ -88,7 +88,6 @@ import {
 import { useSidebarScrollEdges } from "@/lib/use-sidebar-scroll-edges";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
-import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -1127,9 +1126,6 @@ export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, 
         follows under them. */}
     {mobile && footer}
     {children}
-    {/* The getting-started checklist is a desktop affair: on a phone the
-        sidebar keeps to navigation. */}
-    {!mobile && <SidebarOnboarding onLayerOpenChange={onLayerOpenChange} />}
     {!mobile && footer}
   </aside>;
 }

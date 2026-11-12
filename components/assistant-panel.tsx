@@ -23,6 +23,7 @@ import { updateConversation } from "@/lib/assistant-api";
 import { useProjects } from "@/lib/projects-context";
 import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
 import { NumoIntro } from "@/components/assistant/numo-intro";
+import { useFirstRunOpen } from "@/lib/first-run-open";
 
 type DisplayMode = PanelDisplayMode;
 
@@ -52,10 +53,15 @@ export function AssistantPanel() {
 
   // Display mode: session-local, defaults to compact. (No persisted user
   // setting yet — comes with account preferences later.)
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("compact");
+  const [chosenMode, setDisplayMode] = useState<DisplayMode>("compact");
   const toggleDisplayMode = useCallback(() => {
     setDisplayMode((prev) => (prev === "compact" ? "expanded" : "compact"));
   }, []);
+  // Over the getting-started tour the panel stays compact, without its
+  // expand button: the expanded panel mirrors a content pane the tour
+  // covers (MIN-964).
+  const firstRunOpen = useFirstRunOpen();
+  const displayMode: DisplayMode = firstRunOpen ? "compact" : chosenMode;
 
   // Numo introduces itself in an empty panel until it has a word of its own
   // (MIN-907); the query is the one Home already keeps warm.
@@ -244,7 +250,7 @@ export function AssistantPanel() {
             compact
             visible={isOpen && (!requestedConversationId || requestedConversationId === state.conversationId)}
             displayMode={displayMode}
-            onToggleDisplayMode={mobile ? undefined : toggleDisplayMode}
+            onToggleDisplayMode={mobile || firstRunOpen ? undefined : toggleDisplayMode}
             onClose={close}
             pageContext={effectivePageContext}
             intro={introduceNumo ? <NumoIntro /> : null}
