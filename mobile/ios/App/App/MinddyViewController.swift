@@ -31,6 +31,37 @@ final class MinddyViewController: CAPBridgeViewController {
         return descriptor
     }
 
+    override func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
+        let configuration = super.webViewConfiguration(for: instanceConfiguration)
+        Self.drawAtDisplayRate(configuration.preferences)
+        return configuration
+    }
+
+    /// Lets the page draw at the display's rate, 120 Hz on a ProMotion
+    /// iPhone. WebKit holds a page's rendering updates (CSS animations and
+    /// transitions, `requestAnimationFrame`) near 60 fps behind a feature flag
+    /// that is on by default, while the native scroll around them runs at
+    /// 120 Hz: every animation of the product looked uneven next to it.
+    /// WebKit offers no public setting for it; this turns the flag off
+    /// through `WKPreferences`'s private feature list, the one behind Safari's
+    /// "Prefer Page Rendering Updates near 60fps". A WebKit without the flag
+    /// is left as it is. `CADisableMinimumFrameDurationOnPhone` in Info.plist
+    /// lets the app ask for more than 60 Hz at all.
+    private static func drawAtDisplayRate(_ preferences: WKPreferences) {
+        let featuresSelector = NSSelectorFromString(["_", "features"].joined())
+        let setSelector = NSSelectorFromString(["_setEnabled", ":forFeature:"].joined())
+        guard WKPreferences.responds(to: featuresSelector),
+              preferences.responds(to: setSelector),
+              let features = WKPreferences.perform(featuresSelector)?.takeUnretainedValue() as? [NSObject],
+              let feature = features.first(where: {
+                  ($0.value(forKey: "key") as? String) == "PreferPageRenderingUpdatesNear60FPSEnabled"
+              }),
+              let method = class_getInstanceMethod(WKPreferences.self, setSelector) else { return }
+        typealias SetEnabled = @convention(c) (AnyObject, Selector, Bool, AnyObject) -> Void
+        let setEnabled = unsafeBitCast(method_getImplementation(method), to: SetEnabled.self)
+        setEnabled(preferences, setSelector, false, feature)
+    }
+
     override func capacitorDidLoad() {
         let plugin = MinddyShellPlugin()
         plugin.controller = self

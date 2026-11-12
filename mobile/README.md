@@ -16,14 +16,14 @@ shell lives with the rest of the web app:
 | | |
 | --- | --- |
 | `capacitor.config.ts` | app id, name, and the folder of bundled pages |
-| `ios/App/App/MinddyViewController.swift` | the WebView on the selected server, the navigation guard, the launch cover, the keyboard without its form bar, and its reports of the keyboard's movements |
+| `ios/App/App/MinddyViewController.swift` | the WebView on the selected server, the navigation guard, the launch cover, the keyboard without its form bar, its reports of the keyboard's movements, and page drawing at the display's rate (120 Hz on ProMotion) |
 | `ios/App/App/NavigationBar.swift` | the bottom bar, drawn natively in Liquid Glass |
 | `ios/App/App/MinddyShellPlugin.swift` | the shell's own plugin, `MinddyShell` in JavaScript |
 | `ios/App/App/ServerStore.swift` | the selected server and the rules for a server address |
 | `ios/App/App/AppNavigator.swift`, `UniversalLink.swift` | the pages a notification or a universal link opens, and which links stay in the browser |
 | `ios/App/App/App.entitlements` | the capabilities: Sign in with Apple, push, and the associated domains of universal links |
 | `ios/Tests/` | the runner of `test:ios` |
-| `ios/App/App/Info.plist` | minddy Cloud's origin and the camera, photo and microphone usage texts |
+| `ios/App/App/Info.plist` | minddy Cloud's origin, the camera, photo and microphone usage texts, and the opt-in to frame rates above 60 Hz on iPhone |
 | `ios/App/CapApp-SPM/` | the Swift package Capacitor generates; committed, never edited by hand |
 | `lib/mobile/bridge.ts` (outside) | the contract of `MinddyShell` and the detection the web app uses |
 | `lib/mobile/native-navigation.ts` (outside) | tells the shell where the web bar is, what it holds and whether it is covered |
