@@ -54,6 +54,9 @@ vi.mock("@/lib/server/project-content", () => ({
 vi.mock("@/lib/server/project-access", () => ({
   accessibleProjectIds: async (_user: string, ids: string[]) => new Set(ids.filter((id) => id === ALLOWED)),
 }));
+vi.mock("@/lib/server/avatar-seeds", () => ({
+  fetchAvatarSeeds: async (_service: unknown, ids: string[]) => new Map(ids.map((id) => [id, `seed-${id}`])),
+}));
 vi.mock("@/lib/server/auth-users", () => ({
   fetchAuthUsersById: async (_service: unknown, ids: string[]) =>
     new Map(ids.map((id) => [id, { id, user_metadata: { display_name: id === MEMBER ? "Jean Dupont" : "Someone" } }])),
@@ -178,6 +181,15 @@ describe("resolving mention targets", () => {
       [`member:${OWNER}`]: "Someone",
       "issue:not-a-uuid": null,
     });
+  });
+
+  it("gives the avatar seed of the members the reader can see, not their id", async () => {
+    const seeds = new Map<string, string>();
+    await resolveMentionTargets("reader", [
+      { type: "member", id: MEMBER },
+      { type: "member", id: STRANGER },
+    ], undefined, undefined, undefined, undefined, undefined, seeds);
+    expect(Object.fromEntries(seeds)).toEqual({ [`member:${MEMBER}`]: `seed-${MEMBER}` });
   });
 
   it("follows renames and hides inaccessible names in what agents read", async () => {

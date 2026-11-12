@@ -26,7 +26,8 @@ const RESOLVES_PER_MINUTE = 600;
  * objective the reader may see also carries its `status`, and an MCP
  * connection of a known service its `service`, for its logo, and a page its
  * `icon` and whether it is a `database`, for its glyph (MIN-879), and a
- * pull request its `prState`, for the color of its pill (MIN-906). See
+ * pull request its `prState`, for the color of its pill (MIN-906), and a
+ * member the `seed` of their avatar, for their portrait (MIN-964). See
  * lib/server/mention-access.ts.
  */
 export async function POST(request: NextRequest) {
@@ -60,13 +61,15 @@ export async function POST(request: NextRequest) {
   const services = new Map<string, string>();
   const pages = new Map<string, { icon: string | null; database: boolean }>();
   const prStates = new Map<string, PullRequestState>();
-  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses, services, pages, prStates);
+  const seeds = new Map<string, string>();
+  const resolution = await resolveMentionTargets(auth.user.id, refs, undefined, statuses, services, pages, prStates, seeds);
   return NextResponse.json({
     mentions: refs.map((ref) => {
       const status = statuses.get(mentionKey(ref));
       const service = services.get(mentionKey(ref));
       const page = pages.get(mentionKey(ref));
       const prState = prStates.get(mentionKey(ref));
+      const seed = seeds.get(mentionKey(ref));
       return {
         ...ref,
         label: resolution.get(mentionKey(ref)) ?? null,
@@ -74,6 +77,7 @@ export async function POST(request: NextRequest) {
         ...(service ? { service } : {}),
         ...(page ? { icon: page.icon, database: page.database } : {}),
         ...(prState ? { prState } : {}),
+        ...(seed ? { seed } : {}),
       };
     }),
   }, { headers: NO_STORE });

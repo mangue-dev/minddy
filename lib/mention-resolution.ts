@@ -26,12 +26,14 @@ type Entry = {
   page?: { icon: string | null; database: boolean };
   /** A pull request's state, for the color of its pill (MIN-906). */
   prState?: PullRequestState;
+  /** A member's avatar seed, for their portrait (MIN-964). */
+  seed?: string;
   at: number;
 };
 
 const TTL_MS = 60_000;
 /** Types whose pill shows something only the resolution answers. */
-const SERVER_FIGURES: ReadonlySet<MentionLinkType> = new Set(["mcp", "page", "pull_request"]);
+const SERVER_FIGURES: ReadonlySet<MentionLinkType> = new Set(["mcp", "page", "pull_request", "member"]);
 const BATCH = 200;
 
 const cache = new Map<string, Entry>();
@@ -70,6 +72,7 @@ async function flush() {
           mentions: Array<{
             type: string; id: string; label: string | null;
             status?: unknown; service?: unknown; icon?: unknown; database?: unknown; prState?: unknown;
+            seed?: unknown;
           }>;
         };
         for (const [index, mention] of mentions.entries()) {
@@ -82,6 +85,7 @@ async function flush() {
               ? { page: { icon: typeof mention.icon === "string" ? mention.icon : null, database: mention.database } }
               : {}),
             ...(isPullRequestState(mention.prState) ? { prState: mention.prState } : {}),
+            ...(typeof mention.seed === "string" ? { seed: mention.seed } : {}),
             at: now,
           });
         }
@@ -158,13 +162,14 @@ export function mentionsSettled(): Promise<void> {
  * from the same cache and in ONE subscription: an objective's status for the
  * glyph of its pill (MIN-785), an MCP connection's service for its logo, a
  * page's emoji and database flag for its glyph (MIN-879), a pull request's
- * state for its color (MIN-906). `undefined` until
+ * state for its color (MIN-906), a member's avatar seed for their portrait
+ * (MIN-964). `undefined` until
  * it is known. It never requests: the label hook beside it does.
  */
 export function useResolvedMentionDetails(
   type: MentionLinkType | null,
   id: string | null,
-): Pick<Entry, "status" | "service" | "page" | "prState"> | undefined {
+): Pick<Entry, "status" | "service" | "page" | "prState" | "seed"> | undefined {
   const current = useSyncExternalStore(subscribe, () => version, () => -1);
   if (!type || !id || current === -1) return undefined;
   return cache.get(keyOf(type, id));
