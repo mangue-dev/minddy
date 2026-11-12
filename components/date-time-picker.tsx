@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { Locale } from "@/i18n/config";
 import { DATE_ICON } from "@/components/feature-icons";
+import { haptic } from "@/lib/mobile/haptics";
 
 /** Default time applied when the time toggle is switched on. */
 const DEFAULT_HOUR = 9;
@@ -303,6 +304,8 @@ export function DateTimePicker({
 
   const handleDaySelect = (day: Date | undefined) => {
     if (!day) return;
+    // A light tick in the mobile app (MIN-959); nothing elsewhere.
+    haptic("selection");
     const next = new Date(day);
     if (timeEnabled && !dateOnly) {
       next.setHours(

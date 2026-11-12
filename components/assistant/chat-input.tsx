@@ -117,6 +117,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useWeekStart } from "@/lib/use-week-start";
+import { keepFieldFocusOnPress } from "@/lib/keep-field-focus";
+import { haptic } from "@/lib/mobile/haptics";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
     text-ish) — MIN-24 scope. */
@@ -1303,6 +1305,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         collectSkills(),
       );
       if (accepted === false) return;
+      // A message sent to Numo ticks lightly in the mobile app (MIN-959): it
+      // happens often, and the stronger pattern felt heavy for it.
+      haptic("selection");
       clearEditor();
       uploads.clear();
       // The caret remains in the composer after sending. Without that the focus escapes
@@ -1712,7 +1717,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
         if (editorRef.current?.contains(target)) return;
-        if (target.closest("button, a, input, textarea, select")) return;
+        if (target.closest("button, a, input, textarea, select")) {
+          // On a phone, the first tap on Send, Dictate or Add must be the
+          // button's, not a tap that only hides the keyboard (MIN-959).
+          keepFieldFocusOnPress(e);
+          return;
+        }
         // A menu carried outside of the composer (the context addition popover) remains
         // his CHILD React: his events go back so far. Without this
         // guardrail, clicking a menu entry returned focus to the editor —

@@ -4,6 +4,7 @@ import { useId, useRef, type KeyboardEvent } from "react";
 import { Button } from "./button";
 import { ButtonGroup } from "./button-group";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/mobile/haptics";
 
 export interface SegmentedControlOption<T extends string> {
   value: T;
@@ -44,10 +45,16 @@ export function SegmentedControl<T extends string>({
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const selected = Math.max(0, options.findIndex((option) => option.value === value));
 
+  // A new value ticks in the mobile app (MIN-959); the current one is silent.
+  const pick = (next: T) => {
+    if (next !== value) haptic("selection");
+    onChange(next);
+  };
+
   const choose = (index: number) => {
     const option = options[(index + options.length) % options.length];
     if (!option) return;
-    onChange(option.value);
+    pick(option.value);
     refs.current[options.indexOf(option)]?.focus();
   };
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -87,7 +94,7 @@ export function SegmentedControl<T extends string>({
               variant={active ? "default" : "outline"}
               size="sm"
               className="flex-1"
-              onClick={() => onChange(option.value)}
+              onClick={() => pick(option.value)}
               onKeyDown={(event) => onKeyDown(event, index)}
             >
               {option.label}

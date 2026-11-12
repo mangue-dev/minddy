@@ -3568,16 +3568,17 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
     backdrop-filter: none;
   }
   /* The grab handle of a native sheet: it says the sheet can be swiped down
-     (lib/sheet-swipe-dismiss.ts). Every sheet has the same one, half as
-     tall and wide again as iOS's (36 by 5), to be found at a glance. */
+     (lib/sheet-swipe-dismiss.ts). Every sheet has the same one, wider than
+     iOS's (36 by 5) to be found at a glance, but thin and close to the top
+     edge so it does not weigh on the sheet (MIN-959). */
   .mobile-bottom-sheet[data-slot="sheet-content"]::before {
     content: "";
     position: absolute;
     z-index: 31;
-    top: 6px;
+    top: 4px;
     left: 50%;
     width: 54px;
-    height: 7.5px;
+    height: 3.75px;
     margin-left: -27px;
     border-radius: 999px;
     background: color-mix(in oklab, var(--foreground) 22%, transparent);

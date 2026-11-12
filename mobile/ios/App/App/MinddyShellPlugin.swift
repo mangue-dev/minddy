@@ -1,6 +1,7 @@
 import AuthenticationServices
 import Capacitor
 import Foundation
+import UIKit
 
 /// The shell's own plugin, `MinddyShell` in JavaScript. Its contract is
 /// `MobileShellPlugin` in `lib/mobile/bridge.ts`.
@@ -20,6 +21,8 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "openServerPicker", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "reload", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setAppearance", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "haptic", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setHaptics", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setNavigationBar", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signInWithApple", returnType: CAPPluginReturnPromise),
@@ -35,6 +38,9 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
     private var authSession: ASWebAuthenticationSession?
     /// The Sign in with Apple sheet in progress, held for the same reason.
     private var appleSignIn: AppleSignIn?
+
+    private let selectionFeedback = UISelectionFeedbackGenerator()
+    private let notificationFeedback = UINotificationFeedbackGenerator()
 
     @objc func state(_ call: CAPPluginCall) {
         // The corner radius reads the window, which belongs to the main thread.
@@ -91,6 +97,41 @@ final class MinddyShellPlugin: CAPPlugin, CAPBridgedPlugin {
         let dark = call.getBool("dark") ?? false
         DispatchQueue.main.async { [weak self] in
             self?.controller?.setAppearance(dark: dark)
+            call.resolve()
+        }
+    }
+
+    /// Plays one haptic (MIN-959). `selection` is the light tick of a switch,
+    /// a picked value or a tab; `success` and `error` are the stronger
+    /// notification patterns that close a key action. The page calls it only
+    /// while the account allows vibrations (`lib/mobile/haptics.ts`).
+    @objc func haptic(_ call: CAPPluginCall) {
+        let kind = call.getString("kind") ?? ""
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.controller?.hapticsEnabled ?? true else {
+                call.resolve()
+                return
+            }
+            switch kind {
+            case "selection":
+                self.selectionFeedback.selectionChanged()
+            case "success":
+                self.notificationFeedback.notificationOccurred(.success)
+            case "error":
+                self.notificationFeedback.notificationOccurred(.error)
+            default:
+                break
+            }
+            call.resolve()
+        }
+    }
+
+    /// The account's vibration switch, which the native bar obeys too: its
+    /// taps vibrate in the shell, without a round trip through the page.
+    @objc func setHaptics(_ call: CAPPluginCall) {
+        let enabled = call.getBool("enabled") ?? true
+        DispatchQueue.main.async { [weak self] in
+            self?.controller?.hapticsEnabled = enabled
             call.resolve()
         }
     }

@@ -41,6 +41,7 @@ import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
+import { HapticsAccountSync } from "@/components/mobile/haptics-account-sync";
 import { CommentShortcut } from "@/components/comment-shortcut";
 import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
 import { RememberTimeZone } from "@/components/server-seed";
@@ -117,6 +118,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       {/* Adopts the ACCOUNT theme at sign-in (and migrates legacy accounts):
           renders nothing, sits here to see both Auth and Theme providers. */}
       <ThemeAccountSync />
+      {/* The account's vibration switch, for the mobile app (MIN-959). */}
+      <HapticsAccountSync />
       <RememberTimeZone />
       {/* The sending shortcut chosen by the account, placed high: all
  composers of the app are below, and none need to know

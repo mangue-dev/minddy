@@ -10,6 +10,7 @@ import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { AccountProfileSection } from "@/components/settings/account-profile-section";
 import { AccountSecuritySection } from "@/components/settings/account-security-section";
 import { AccountDesktopSection } from "@/components/settings/account-desktop-section";
+import { AccountMobileSection } from "@/components/settings/account-mobile-section";
 import { AccountPreferencesSection } from "@/components/settings/account-preferences-section";
 import { AccountCyclesSection } from "@/components/settings/account-cycles-section";
 import { AccountHiddenProjectsSection } from "@/components/settings/account-hidden-projects-section";
@@ -76,6 +77,7 @@ export default function AccountSettingsPage({ browse }: { browse?: SidebarBrowse
         <>
           <AccountPreferencesSection />
           <AccountDesktopSection />
+          <AccountMobileSection />
         </>
       ),
     },

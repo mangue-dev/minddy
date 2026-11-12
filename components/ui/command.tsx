@@ -15,6 +15,7 @@ import {
 import { SearchIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CheckIcon } from "@hugeicons/core-free-icons"
+import { haptic } from "@/lib/mobile/haptics"
 
 function Command({
   className,
@@ -150,6 +151,7 @@ const KEYBOARD_HIGHLIGHT = "data-selected:bg-muted data-selected:text-foreground
 function CommandItem({
   className,
   children,
+  onSelect,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Item>) {
   // The mobile layout has no keyboard to move that highlight: a lit first row
@@ -169,6 +171,11 @@ function CommandItem({
         className
       )}
       {...props}
+      onSelect={(value) => {
+        // A chosen option ticks in the mobile app (MIN-959).
+        haptic("selection")
+        onSelect?.(value)
+      }}
     >
       {children}
       {/* Keep unchecked indicators out of the flex layout: consumers may provide

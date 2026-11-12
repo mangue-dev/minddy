@@ -23,6 +23,8 @@ final class NavigationBar: UIView {
 
     /// Called with the identifier of the tapped item.
     var onSelect: ((String) -> Void)?
+    /// The account's vibration switch (MIN-959): off, a tap is silent.
+    var hapticsEnabled = true
 
     private let background: UIVisualEffectView
     private let stack = UIStackView()
@@ -147,7 +149,7 @@ final class NavigationBar: UIView {
 
     @objc private func itemTapped(_ sender: UIButton) {
         guard items.indices.contains(sender.tag) else { return }
-        feedback.selectionChanged()
+        if hapticsEnabled { feedback.selectionChanged() }
         onSelect?(items[sender.tag].id)
     }
 }

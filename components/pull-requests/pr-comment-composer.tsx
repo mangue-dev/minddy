@@ -52,6 +52,7 @@ import { usePrMembersQuery } from "@/lib/use-pr-members-query";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
 import { useComposerFold } from "@/lib/use-composer-fold";
 import type { PrEndpoint } from "@/lib/agent-api";
+import { keepFieldFocusOnPress } from "@/lib/keep-field-focus";
 
 export function PrCommentComposer({
   endpoint,
@@ -150,6 +151,8 @@ export function PrCommentComposer({
           drop.dragging && "ring-2 ring-brand/20",
         )}
         onClick={focusFieldIn}
+        // The first tap on Send, Dictate or Attach is the button's (MIN-959).
+        onMouseDown={keepFieldFocusOnPress}
         onPaste={pasteFileHandler(uploads.addFiles)}
         {...drop.handlers}
       >

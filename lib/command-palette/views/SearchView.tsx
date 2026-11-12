@@ -38,6 +38,7 @@ import { orderByCategoryRank } from "../category-order";
 import styles from "../styles/SearchView.module.css";
 import type { ActionExecutionContext } from "../registry/types";
 import type { PaletteItem } from "../types";
+import { haptic } from "@/lib/mobile/haptics";
 
 // =============================================================================
 // HOOKS
@@ -381,6 +382,8 @@ export function SearchView({
   // Item select (shared by click and keyboard)
   const handleSelect = useCallback(
     async (item: PaletteItem) => {
+      // A chosen row ticks in the mobile app (MIN-959).
+      haptic("selection");
       const trimmedQuery = query.trim();
       if (trimmedQuery && onQuerySubmit) {
         onQuerySubmit(trimmedQuery);

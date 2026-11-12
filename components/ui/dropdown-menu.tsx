@@ -13,6 +13,7 @@ import { useOverlayCollisionPadding } from "@/components/ui/overlay-collision-pa
 import { useMenuScrollFade, useMergedRef } from "@/components/ui/menu-scroll-fade"
 import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
 import { Unfold, useAnimatedWidth } from "@/components/ui/unfold"
+import { haptic } from "@/lib/mobile/haptics"
 
 // Below 768px, side-opening flyout submenus can't fit on narrow screens (Radix
 // only flips them left/right and can't shift them horizontally to overlap the
@@ -55,6 +56,17 @@ function closingMenuGuards({ onPointerMove, onPointerLeave }: { onPointerMove?: 
 // keys still move the focus through the options. Submenu triggers keep
 // Radix's handling, which is what opens them on hover.
 const DropdownMenuSearchFocusContext = React.createContext(false)
+
+/**
+ * A chosen item ticks in the mobile app (MIN-959); nothing elsewhere. Not the
+ * trigger, nor a sub-menu's own row: opening a menu is not a choice.
+ */
+function withSelectionHaptic(onSelect: ((event: Event) => void) | undefined) {
+  return (event: Event) => {
+    haptic("selection")
+    onSelect?.(event)
+  }
+}
 
 function DropdownMenuSearchScope({ children }: { children: React.ReactNode }) {
   return <DropdownMenuSearchFocusContext.Provider value>{children}</DropdownMenuSearchFocusContext.Provider>
@@ -241,6 +253,7 @@ function DropdownMenuItem({
       )}
       {...props}
       {...itemPointerGuards(props, searchScope)}
+      onSelect={withSelectionHaptic(props.onSelect)}
     />
   )
 }
@@ -265,6 +278,7 @@ function DropdownMenuCheckboxItem({
       checked={checked}
       {...props}
       {...closingMenuGuards(props)}
+      onSelect={withSelectionHaptic(props.onSelect)}
     >
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"
@@ -308,6 +322,7 @@ function DropdownMenuRadioItem({
       )}
       {...props}
       {...closingMenuGuards(props)}
+      onSelect={withSelectionHaptic(props.onSelect)}
     >
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"

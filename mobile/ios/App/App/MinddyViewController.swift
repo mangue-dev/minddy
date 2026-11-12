@@ -501,6 +501,13 @@ final class MinddyViewController: CAPBridgeViewController {
         contentController.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
 
+    /// Whether the account allows vibrations, which the page reports at load
+    /// (`setHaptics`). On until it says otherwise.
+    var hapticsEnabled: Bool {
+        get { navigationBar.hapticsEnabled }
+        set { navigationBar.hapticsEnabled = newValue }
+    }
+
     /// The product has its own theme, which may differ from the system's. The
     /// status bar and the glass follow the product.
     func setAppearance(dark: Bool) {

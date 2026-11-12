@@ -80,6 +80,7 @@ import {
 } from "@/lib/keyboard/send-shortcut";
 import { ANALYTICS_CONSENT_META_KEY, resolveAnalyticsConsent } from "@/lib/cookie-consent";
 import { DICTATION_CLEANUP_META_KEY, resolveDictationCleanup } from "@/lib/dictation-context";
+import { HAPTICS_META_KEY, resolveHaptics } from "@/lib/mobile/haptics";
 import {
   DICTATION_VOCABULARY_META_KEY,
   MAX_VOCABULARY_ENTRIES,
@@ -143,6 +144,8 @@ export interface AccountSettings {
   send_shortcut: SendMode;
   /** Voice dictation cleanup pass (MIN-773); off = raw transcription. */
   dictation_cleanup: boolean;
+  /** Vibrations in the mobile app (MIN-959); on by default. */
+  haptics: boolean;
   /** Dictation vocabulary (MIN-773): spellings and replacements. */
   dictation_vocabulary: VocabularyEntry[];
   /** Coding agent (MIN-951): prompts open in the agent's app instead of being copied. */
@@ -219,6 +222,7 @@ function toSettings(
     send_shortcut: resolveSendMode(meta),
     dictation_cleanup: resolveDictationCleanup(meta),
     dictation_vocabulary: resolveDictationVocabulary(meta),
+    haptics: resolveHaptics(meta),
     prompt_send_to_agent: resolvePromptSend(meta),
     prompt_send_agent: resolvePromptSendAgent(meta),
     week_start: resolveWeekStartPreference(meta),
@@ -462,6 +466,7 @@ export async function updateAccountSettings({
   }
   for (const key of [
     DICTATION_CLEANUP_META_KEY,
+    HAPTICS_META_KEY,
     PROMPT_SEND_META_KEY,
     SMART_FILL_OBJECTIVES_META_KEY,
     SMART_FILL_OBJECTIVE_NAME_META_KEY,
@@ -576,6 +581,7 @@ export async function updateAccountSettings({
     SMART_FILL_OBJECTIVE_NAME_META_KEY,
     DICTATION_CLEANUP_META_KEY,
     DICTATION_VOCABULARY_META_KEY,
+    HAPTICS_META_KEY,
     PROMPT_SEND_META_KEY,
     PROMPT_SEND_AGENT_META_KEY,
     // Without it, a call carrying ONLY the preset came out here as “nothing to

@@ -15,6 +15,9 @@
 
 export type MobilePlatform = "ios" | "android";
 
+/** The light tick of a choice, or the stronger outcome of a key action. */
+export type MobileHapticKind = "selection" | "success" | "error";
+
 export interface MobileShellState {
   /** The origin the shell loads the product from. */
   origin: string;
@@ -100,6 +103,16 @@ export interface MobileShellPlugin {
   unregisterForPushNotifications?(): Promise<void>;
   /** Opens minddy's notification settings in the Settings app. */
   openNotificationSettings?(): Promise<void>;
+  /**
+   * Plays one haptic: `selection` is light, `success` and `error` are
+   * stronger. See `lib/mobile/haptics.ts`. Absent in older shells.
+   */
+  haptic?(options: { kind: MobileHapticKind }): Promise<void>;
+  /**
+   * The account's vibration switch, which the native bar obeys too. Absent
+   * in older shells.
+   */
+  setHaptics?(options: { enabled: boolean }): Promise<void>;
   /**
    * Describes the page's bottom bar for the shell to draw natively: see
    * `lib/mobile/native-navigation.ts`. Absent in older shells.

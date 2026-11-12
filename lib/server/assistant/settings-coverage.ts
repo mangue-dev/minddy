@@ -57,6 +57,8 @@ export const ACCOUNT_METADATA_COVERAGE: Readonly<Record<string, AccountKeyCovera
     read: "dictation_vocabulary",
     sample: [{ term: "minddy" }, { term: "Numo", heardAs: "new mo" }],
   },
+  // Preferences → Mobile app (MIN-959)
+  haptics: { read: "haptics", sample: false },
   // Numo
   numo_memory: { read: "numo_memory", sample: false },
   numo_background: { read: "numo_background", sample: false },

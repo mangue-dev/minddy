@@ -2243,6 +2243,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             description:
               "Clean up voice dictations (punctuation, filler words, self-corrections) before they are inserted. Off inserts the raw transcription.",
           },
+          haptics: {
+            type: "boolean",
+            description:
+              "Account → Preferences → Mobile app → Vibrations: vibrate in the iOS app on switches, picked options, tabs and copies, and when an issue or objective is created, an issue is completed or a comment is sent. Has no effect in a browser or the desktop app.",
+          },
           dictation_vocabulary: {
             type: "array",
             maxItems: MAX_VOCABULARY_ENTRIES,

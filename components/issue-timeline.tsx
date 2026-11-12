@@ -111,6 +111,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ExactTime } from "@/components/exact-time";
+import { keepFieldFocusOnPress } from "@/lib/keep-field-focus";
 
 /**
  * The code excerpt of a review comment mirrored from a pull request (MIN-802),
@@ -1018,6 +1019,8 @@ export function ReplyComposer({
         threadIsPublic && "bg-brand/[0.03]"
       )}
       onClick={focusFieldIn}
+      // The first tap on Send, Dictate or Attach is the button's (MIN-959).
+      onMouseDown={keepFieldFocusOnPress}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
       {...(allowAttachments ? drop.handlers : {})}
     >
@@ -1518,6 +1521,8 @@ export const CommentComposer = memo(function CommentComposer({
         isPublic && "bg-brand/[0.06]"
       )}
       onClick={focusFieldIn}
+      // The first tap on Send, Dictate or Attach is the button's (MIN-959).
+      onMouseDown={keepFieldFocusOnPress}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
       {...(allowAttachments ? drop.handlers : {})}
     >

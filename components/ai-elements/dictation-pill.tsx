@@ -21,6 +21,7 @@ import { useContentPaneAnchor } from "@/lib/use-content-pane-anchor";
 import { cn } from "@/lib/utils";
 import { DictationWave } from "./dictation-wave";
 import type { DictationRecorder } from "./use-dictation-recorder";
+import { haptic } from "@/lib/mobile/haptics";
 
 /**
  * The dictation surface (MIN-773): one blocking pill, centred at the bottom of
@@ -67,6 +68,9 @@ export function DictationPill({ recorder }: { recorder: DictationRecorder }) {
   useEffect(() => {
     if (completedTakes === seenTakes.current) return;
     seenTakes.current = completedTakes;
+    // The checkmark is the take's receipt: the mobile app vibrates with it
+    // (MIN-959).
+    haptic("success");
     setDone(true);
     setHolding(true);
     const timer = window.setTimeout(

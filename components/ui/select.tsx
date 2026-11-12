@@ -4,6 +4,7 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { haptic } from "@/lib/mobile/haptics"
 import { COARSE_INSET_HIT_AREA, COARSE_ROW } from "./touch-target"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -12,9 +13,20 @@ import { useOverlayCollisionPadding, useWindowControlsOverlayPage } from "@/comp
 import { useListScrollFade } from "@/components/ui/menu-scroll-fade"
 
 function Select({
+  onValueChange,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      onValueChange={(value) => {
+        // A light tick in the mobile app (MIN-959); nothing elsewhere.
+        haptic("selection")
+        onValueChange?.(value)
+      }}
+      {...props}
+    />
+  )
 }
 
 function SelectGroup({

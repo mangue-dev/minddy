@@ -96,7 +96,45 @@ to the product, which opens its sidebar with it.
 The product's theme may differ from the system's. `setAppearance` passes it to
 the shell so the status bar and the glass follow the product.
 
+## Haptics
+
+The page asks the shell for a vibration with `haptic({ kind })`
+(`lib/mobile/haptics.ts`), in two intensities:
+
+- `selection`, the light tick of `UISelectionFeedbackGenerator`: a switch
+  flips; a value is picked in a select, a segmented control, the date picker,
+  a dropdown menu, a command list (`CommandItem`, which the pickers and
+  comboboxes use), the ⌘K palette or an editor suggestion (slash menu,
+  mention, link menu); something is copied. Copies are caught once, by
+  wrapping `navigator.clipboard` in the app (`installClipboardHaptics`), so
+  every copy button ticks without knowing it. A message sent to Numo ticks
+  too, as it leaves the composer. The native bottom bar plays the
+  same tick itself on each tap.
+- `success` and `error`, the stronger patterns of
+  `UINotificationFeedbackGenerator`. Creating an issue or an objective plays
+  `success` at once, without waiting for the server or Smart Fill, and
+  `error` if it fails (`hapticOptimistic`). Marking an issue done or sending
+  a comment plays the outcome on the server's answer (`hapticOutcome`). These
+  are wired at the client API functions every surface calls
+  (`lib/issues-api.ts`, `lib/objectives-api.ts`, `lib/comments-api.ts`).
+  A dictation plays `success` with its checkmark (`dictation-pill.tsx`).
+
+A menu's trigger, a sub-menu row and a plain button do not vibrate.
+
+The same kind requested again within 120 ms plays once, so a bulk completion
+vibrates once. **Account settings → Preferences → Mobile app → Vibrations**
+turns everything off; the switch lives in `user_metadata.haptics` (on when
+absent) and is shown only in a shell that can vibrate. The page passes it to
+the shell with `setHaptics`, which the native bar obeys. In a browser, the
+desktop app or an older shell, every call does nothing.
+
 ## The keyboard
+
+A button pressed in a composer (Send, Dictate, Add, Attach) keeps the focus in
+the composer's field (`lib/keep-field-focus.ts`). Otherwise the press hides
+the keyboard first, the composer slides down with it, and the tap is spent
+closing the keyboard instead of pressing the button. Numo's composer and the
+comment composers use it.
 
 WebKit tells the page about the keyboard only once it has stopped moving
 (`visualViewport`). The shell reports each movement as it starts instead: the

@@ -6,6 +6,7 @@ import * as SwitchPrimitive from "@radix-ui/react-switch"
 import { cn } from "@/lib/utils"
 import { COARSE_HIT_AREA, COARSE_TOUCH_ACTION } from "./touch-target"
 import { useMobileLayout } from "@/lib/use-mobile-layout"
+import { haptic } from "@/lib/mobile/haptics"
 
 const TRACK_WIDTH = 34
 const TRACK_HEIGHT = 20
@@ -95,6 +96,8 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         if (checked === undefined) {
           setInternalChecked(nextChecked)
         }
+        // A light tick in the mobile app (MIN-959); nothing elsewhere.
+        haptic("selection")
         onCheckedChange?.(nextChecked)
       },
       [checked, onCheckedChange]
