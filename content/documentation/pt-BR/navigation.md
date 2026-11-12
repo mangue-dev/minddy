@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 25,
+  "revision": 27,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-12",
   "compatibility": {
@@ -77,9 +77,9 @@
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "revision": 27,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-959 flat phone navigation sheet: one level, a project picker over that project's sections as tiles, no project list, the page's own list in a second tab that the sheet opens on, checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx and in a phone viewport; no figure shows the sheet, none recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-959 phone menu passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-12"
   },
   "related": [
@@ -101,7 +101,7 @@
       "src": "/documentation/pt-BR/work-navigation.png",
       "alt": "Navegação do projeto ao lado do quadro de tickets de demonstração.",
       "caption": "A barra do projeto dá acesso aos tickets, objetivos, páginas e triagem.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +118,7 @@
       "src": "/documentation/pt-BR/work-search.png",
       "alt": "Resultados de busca do identificador de um ticket de demonstração.",
       "caption": "A paleta encontra o ticket pelo identificador junto às páginas do projeto; abrir um resultado preserva suas regras de acesso.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -168,7 +168,7 @@ A ação se aplica à linha em que você clicou, mesmo quando outro projeto ou i
 
 Um ticket abre em um painel de detalhes para manter o quadro disponível ao fundo. Uma página aberta por uma menção ou um link abre da mesma forma, em um painel lateral com **Expandir** para chegar à página inteira. O Numo abre pelo botão flutuante em um painel de conversa compartilhado. A caixa de entrada abre como um painel popover da navegação com notificações e convites. Os antigos links para telas da caixa de entrada e do Numo levam aos pontos de acesso atuais; essas telas separadas não existem mais.
 
-No celular, a barra na parte inferior da tela reúne, da esquerda para a direita, o menu, a pesquisa, a caixa de entrada, o Numo e **Novo** (+). Um ponto na caixa de entrada indica uma notificação não lida ou um convite pendente. O menu abre uma folha com os mesmos destinos da barra lateral no computador. A primeira linha, ao lado do botão de fechar, reúne sua conta (avatar e nome), a porcentagem de uso da IA quando o minddy fornece sua IA, e **Novidades**. Em seguida vêm o botão **Novo ticket** e depois a **Página inicial**, seus projetos e as páginas deles. Uma barra de carregamento na parte superior indica que a navegação está em andamento, inclusive enquanto os salvamentos pendentes da página são concluídos. Os painéis usam a largura disponível, então feche ou volte do painel atual para ver a lista novamente. Use os botões visíveis quando um atalho de teclado não estiver disponível.
+No celular, a barra na parte inferior da tela reúne, da esquerda para a direita, o menu, a pesquisa, a caixa de entrada, o Numo e **Novo** (+). Um ponto na caixa de entrada indica uma notificação não lida ou um convite pendente. O menu abre uma folha de um único nível, sem linhas de voltar. A primeira linha, ao lado do botão de fechar, reúne sua conta (avatar e nome), a porcentagem de uso da IA quando o minddy fornece sua IA, e **Novidades**. Em seguida vem um seletor de projeto, definido no projeto da página ou no último em que você criou um ticket, com as seções desse projeto como blocos (**Tickets**, **Objetivos**, **Páginas**, **Triagem**, **Feedback**, **Configurações**). Escolher outro projeto muda os blocos, não a página. Depois vêm a **Página inicial** e seus outros destinos; crie um projeto em **Novo** (+). Quando a página tem uma lista própria, como os objetivos ou as configurações, uma segunda aba no topo da folha mostra essa lista, e a folha abre nessa aba; **Ir para** leva a todo o resto. Uma barra de carregamento na parte superior indica que a navegação está em andamento, inclusive enquanto os salvamentos pendentes da página são concluídos. Os painéis usam a largura disponível, então feche ou volte do painel atual para ver a lista novamente. Use os botões visíveis quando um atalho de teclado não estiver disponível.
 
 ### Abas do desktop {#tabs}
 

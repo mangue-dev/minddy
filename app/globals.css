@@ -3730,9 +3730,10 @@ html[data-integrated-caption-controls]:not([data-app-top-bar]) .desktop-drag-ban
   .mobile-nav-sheet [data-sidebar-page-row] button { min-height: 44px; min-width: 44px; }
   .mobile-nav-sheet [data-sidebar-page-row-actions] { opacity: 1; }
   .mobile-nav-sheet .sidebar-brand-row button { min-height: 44px; }
-  /* The navigation sheet (components/mobile-navigation.tsx): the desktop
-     sidebar's panels in a bottom sheet of a fixed height, which its sliding
-     panels need to lay out. The sidebar takes the sheet's own surface. */
+  /* The navigation sheet (components/mobile-navigation.tsx): one level of
+     destinations in a bottom sheet of a fixed height, so switching to the
+     page's own list does not resize it. The sidebar frame takes the sheet's
+     own surface. */
   .mobile-nav-sheet[data-slot="sheet-content"] {
     height: var(--mobile-sheet-room);
     gap: 0;

@@ -15,8 +15,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 25,
+  "revision": 27,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-12",
   "compatibility": {
@@ -77,9 +77,9 @@
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "revision": 27,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-959 flat phone navigation sheet: one level, a project picker over that project's sections as tiles, no project list, the page's own list in a second tab that the sheet opens on, checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx and in a phone viewport; no figure shows the sheet, none recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-959 phone menu passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-12"
   },
   "related": [
@@ -101,7 +101,7 @@
       "src": "/documentation/de/work-navigation.png",
       "alt": "Projektnavigation neben dem Demo-Ticketboard.",
       "caption": "Über die Projektseitenleiste erreichst du Tickets, Ziele, Seiten und Triage.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +118,7 @@
       "src": "/documentation/de/work-search.png",
       "alt": "Suchergebnisse für die Kennung eines Demo-Tickets.",
       "caption": "Die Palette findet das Ticket über seine Kennung neben Projektseiten; beim Öffnen bleiben die Zugriffsregeln bestehen.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -168,7 +168,7 @@ Die Aktion gilt für die Zeile, auf die du geklickt hast, auch wenn gerade ein a
 
 Ein Ticket öffnet sich in einem Detailpanel, damit das darunterliegende Board verfügbar bleibt. Eine Seite, die über eine Erwähnung oder einen Link geöffnet wird, erscheint ebenso in einem Seitenpanel; **Vergrößern** führt zur ganzen Seite. Numo öffnet über seine schwebende Schaltfläche ein gemeinsames Gesprächspanel. Der Posteingang öffnet sich als Navigations-Popover mit Benachrichtigungen und Einladungen. Ältere eigene Posteingangs- und Numo-Links führen zu den aktuellen Einstiegspunkten; sie bezeichnen keine gesonderten aktuellen Bildschirme.
 
-Auf dem Smartphone stehen in der Leiste unten am Bildschirm von links nach rechts das Menü, die Suche, der Posteingang, Numo und **Neu** (+). Ein Punkt am Posteingang zeigt eine ungelesene Benachrichtigung oder eine wartende Einladung an. Das Menü öffnet ein Sheet mit denselben Zielen wie die Seitenleiste am Computer. Seine oberste Zeile neben der Schaltfläche zum Schließen enthält dein Konto (Avatar und Name), den Prozentsatz deiner KI-Nutzung, wenn minddy deine KI bereitstellt, und **Was ist neu**. Darunter folgen die Schaltfläche **Neues Ticket**, dann die **Startseite**, deine Projekte und ihre Seiten. Eine Ladeleiste am oberen Rand zeigt die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
+Auf dem Smartphone stehen in der Leiste unten am Bildschirm von links nach rechts das Menü, die Suche, der Posteingang, Numo und **Neu** (+). Ein Punkt am Posteingang zeigt eine ungelesene Benachrichtigung oder eine wartende Einladung an. Das Menü öffnet ein Sheet mit nur einer Ebene, ohne Zurück-Zeilen. Seine oberste Zeile neben der Schaltfläche zum Schließen enthält dein Konto (Avatar und Name), den Prozentsatz deiner KI-Nutzung, wenn minddy deine KI bereitstellt, und **Was ist neu**. Darunter folgt eine Projektauswahl, eingestellt auf das Projekt der Seite oder auf das, in dem du zuletzt ein Ticket erstellt hast, mit den Bereichen dieses Projekts als Kacheln (**Tickets**, **Ziele**, **Seiten**, **Triage**, **Feedback**, **Einstellungen**). Wählst du ein anderes Projekt, ändern sich die Kacheln, nicht die Seite. Danach kommen die **Startseite** und deine übrigen Einträge; ein Projekt erstellst du über **Neu** (+). Hat die Seite eine eigene Liste, etwa Ziele oder Einstellungen, zeigt ein zweiter Tab oben im Sheet diese Liste, und das Sheet öffnet sich auf diesem Tab; **Gehe zu** führt überallhin sonst. Eine Ladeleiste am oberen Rand zeigt die laufende Navigation an, auch während ausstehende Seitenspeicherungen abgeschlossen werden. Panels nutzen die verfügbare Bildschirmbreite. Schließe das aktuelle Panel oder gehe zurück, um wieder die Liste zu sehen. Verwende sichtbare Schaltflächen, wenn ein Tastenkürzel nicht verfügbar ist.
 
 ### Desktop-Tabs {#tabs}
 
