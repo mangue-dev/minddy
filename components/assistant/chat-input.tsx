@@ -1296,6 +1296,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
       if (!value || disabled || sendDisabled || uploads.uploading) return;
+      // Read before the editor empties, which drops its focus.
+      const editor = editorRef.current;
+      const hadFocus = !!editor && editor.contains(document.activeElement);
       const accepted = onSend(
         value,
         uploads.inputs,
@@ -1314,7 +1317,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       // (emptying a contentEditable loses it; clicking Send focuses a button which
       // disappears just after), and in the Numo panel the FocusScope of the Sheet the
       // repatriated to the shell — hence a halo of focus around the panel.
-      editorRef.current?.focus();
+      // On a touch screen, only when the field had it: focusing it opens the
+      // keyboard, and a message sent with the keyboard down must leave it
+      // down (MIN-959). Send keeps the field's focus when pressed
+      // (lib/keep-field-focus.ts), so typing then sending keeps the keyboard.
+      const touch = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+      if (hadFocus || !touch) editorRef.current?.focus();
       setMentionQuery(null);
     }, [
       serializeContent,
