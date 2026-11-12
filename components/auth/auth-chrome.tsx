@@ -34,10 +34,10 @@ import { keyboardFrameStyle, useKeyboardFrame } from "@/lib/mobile/use-keyboard-
 export type { OAuthProvider } from "@/lib/auth-context";
 
 /**
- * The main button of every auth screen (MIN-781): taller than the fields so it
- * reads as the step's single action. No shadow: like every button, it sits on
- * the page rather than above it. Shared so sign-in, sign-up, password and 2FA
- * screens keep one button.
+ * The main button of every auth screen (MIN-781), as tall as the fields
+ * (`h-12` in both layouts) so a form stacks one rhythm of controls. No
+ * shadow: like every button, it sits on the page rather than above it. Shared
+ * so sign-in, sign-up, password and 2FA screens keep one button.
  */
 export const AUTH_SUBMIT_CLASS =
   "group/submit h-12 w-full justify-center gap-2 rounded-full text-[15px] font-semibold tracking-tight";
@@ -84,7 +84,7 @@ export function AuthFormSkeleton({
         {Array.from({ length: fields }, (_, index) => (
           <div key={index} className="space-y-1.5">
             <Skeleton className="h-3.5 w-20" />
-            <Skeleton className="h-10 w-full rounded-lg" />
+            <Skeleton className="h-12 w-full rounded-lg" />
           </div>
         ))}
         <Skeleton className="h-12 w-full rounded-full" />

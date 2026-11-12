@@ -368,7 +368,7 @@ export function AuthEntry({ invite }: { invite: InvitationPreview | null }) {
               id="password"
               aria-label={t("password")}
               {...fieldError}
-              className="h-12 bg-control text-base"
+              className="h-12 app-desktop:h-12 bg-control text-base"
               autoComplete={creating ? "new-password" : "current-password"}
               autoFocus
               required
@@ -472,7 +472,7 @@ export function AuthEntry({ invite }: { invite: InvitationPreview | null }) {
             inputMode="email"
             aria-label={t("email")}
             {...fieldError}
-            className="h-12 bg-control text-base"
+            className="h-12 app-desktop:h-12 bg-control text-base"
             autoComplete="email"
             autoCapitalize="none"
             autoCorrect="off"

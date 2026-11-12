@@ -102,7 +102,7 @@ export function ForgotPasswordForm() {
               {t("forgotSentBody", { email: sentTo })}
             </p>
           </div>
-          <Button asChild variant="outline" className="h-10 w-full justify-center">
+          <Button asChild variant="outline" className="h-12 w-full justify-center rounded-full">
             <Link href={backHref}>{t("forgotBackToLogin")}</Link>
           </Button>
         </div>
@@ -129,7 +129,7 @@ export function ForgotPasswordForm() {
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? "forgot-password-error" : undefined}
               type="email"
-              className="h-10 bg-control"
+              className="h-12 app-desktop:h-12 bg-control"
               autoComplete="email"
               autoFocus
               required

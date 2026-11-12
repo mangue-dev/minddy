@@ -158,7 +158,7 @@ export function MfaChallenge({
             </label>
             <Input
               id="mfa-recovery-code"
-              className="h-10 bg-control font-mono uppercase tracking-widest"
+              className="h-12 app-desktop:h-12 bg-control font-mono uppercase tracking-widest"
               autoComplete="off"
               autoFocus
               maxLength={14}
