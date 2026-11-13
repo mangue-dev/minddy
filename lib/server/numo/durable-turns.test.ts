@@ -1028,6 +1028,47 @@ describe("durable Numo execution", () => {
     expect(executionMessages.map((message) => message.role)).toEqual(["system", "user"]);
   });
 
+  it("replays an earlier tool result under its own tool's ceiling (MIN-974)", async () => {
+    // A page read whole in an earlier turn: past the 12,000-character chat
+    // message cap, with indentation the message sanitizer used to collapse.
+    const page = JSON.stringify({ markdown: "```ts\n    indented();\n```\n".repeat(1_600) });
+    const members = JSON.stringify({ members: "m".repeat(40_000) });
+    expect(page.length).toBeGreaterThan(30_000);
+    h.messages.length = 0;
+    const call = (id: string, name: string, args: string) =>
+      ({ id, type: "function", function: { name, arguments: args } });
+    const row = (id: string, fields: Record<string, unknown>) => ({
+      id, turn_id: "older-turn", content: null, tool_calls: null, tool_call_id: null,
+      tool_name: null, metadata: {}, context: null, ...fields,
+    });
+    h.messages.push(
+      row("user-earlier", { role: "user", content: "Read the page and the members" }),
+      row("assistant-earlier", {
+        role: "assistant",
+        content: "",
+        tool_calls: [call("call-page", "get_page", "{\"page_id\":\"p\"}"),
+          call("call-members", "list_members", "{}")],
+      }),
+      row("tool-page", { role: "tool", content: page, tool_call_id: "call-page", tool_name: "get_page" }),
+      row("tool-members", { role: "tool", content: members, tool_call_id: "call-members", tool_name: "list_members" }),
+      row("assistant-answer", { role: "assistant", content: "Done." }),
+      { ...row("user-now", { role: "user", content: "Is the whole page there?" }), turn_id: h.turn!.id },
+    );
+
+    await executeNumoTurn({
+      turnId: h.turn!.id as string,
+      readClient: service,
+      aiRuntime: runtime,
+    });
+
+    const executionMessages = h.processChat.mock.calls[0][0] as Array<{ role: string; name?: string; content: unknown }>;
+    const replayed = (name: string) =>
+      executionMessages.find((message) => message.role === "tool" && message.name === name)?.content;
+    expect(replayed("get_page")).toBe(page);
+    expect(replayed("list_members")).toBe(`${members.slice(0, 16_000)}... [truncated: only the first 16000 of ${
+      members.length} characters of this result were shown]`);
+  });
+
   it("journals replayable activity but never persists a live-only tool secret", async () => {
     const live = { emit: vi.fn(), close: vi.fn(), isClosed: false };
     const emitter = createDurableNumoEmitter(service, h.turn!.id as string, live);

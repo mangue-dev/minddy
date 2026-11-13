@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { MCP_MAX_RESULT_BYTES } from "@/lib/mcp-client-tools";
-import { parsePlan } from "@/lib/plan";
 
 import {
   ROUTINE_LIST_RESULT_CHAR_LIMIT,
   ROUTINE_RUNS_TOOL_RESULT_CHAR_LIMIT,
   ROUTINE_TOOL_RESULT_CHAR_LIMIT,
 } from "./routine-tool-result";
+import { MAX_PLAN_LENGTH, parsePlan } from "@/lib/plan";
+import { MAX_SCRATCHPAD_LENGTH } from "@/lib/scratchpad";
+import { MAX_DESCRIPTION_LENGTH } from "@/lib/server/update-issue";
+import { linkedIssueSummary, planTaskIndex } from "./execute-tool";
 import {
+  DEFAULT_TOOL_RESULT_CHAR_LIMIT,
+  DOCUMENT_READ_RESULT_CHAR_LIMIT,
   getToolResultCharLimit,
+  replayedToolResult,
   serializeToolResult,
+  toolCallArgumentsById,
 } from "./tool-result-serialization";
 
 describe("Numo tool result serialization", () => {
@@ -142,16 +149,108 @@ describe("Numo tool result serialization", () => {
     },
   );
 
+  it("reads a maximum-length plan with its issue whole (MIN-974)", () => {
+    // Markdown with the characters JSON escapes: quotes, backslashes, newlines.
+    const line = '- [ ] Update "lib/plan.ts" \\ keep the `parsePlan` contract\n';
+    const plan = line.repeat(Math.floor(MAX_PLAN_LENGTH / line.length));
+    const subIssue = {
+      id: "sub-1", identifier: "MIN-2", number: 2, title: "Child", status: "todo",
+      priority: "high", effort: "s", assignee_id: null, due_date: null,
+      objective_id: null, completed_at: null,
+      description: "d".repeat(MAX_DESCRIPTION_LENGTH), plan,
+    };
+    const result = {
+      issue: { id: "issue-1", title: "Parent", description: "Short context.", plan },
+      comments: [{ id: "c1", author: "Camille", body: "Looks good." }],
+      sub_issues: [subIssue, { ...subIssue, id: "sub-2" }].map(linkedIssueSummary),
+      relations: [],
+      plan_tasks: parsePlan(plan).tasks.map((task) => ({ task_index: task.index })),
+    };
+    expect(result.sub_issues[0]).toEqual({
+      id: "sub-1", identifier: "MIN-2", number: 2, title: "Child", status: "todo",
+      priority: "high", effort: "s", assignee_id: null, due_date: null,
+      objective_id: null, completed_at: null,
+      plan_progress: parsePlan(plan).progress,
+    });
+    const serialized = serializeToolResult(result, getToolResultCharLimit("get_issue"));
+    expect(serialized).not.toContain("[truncated: only the first");
+    expect(JSON.parse(serialized)).toEqual(result);
+  });
+
+  it("fits a plan of a thousand short tasks without cutting the read (MIN-974)", () => {
+    const line = '- [ ] Update "lib/plan.ts" and keep `parsePlan` stable\n';
+    const plan = line.repeat(Math.floor(60_000 / line.length));
+    const issue = { issue: { id: "issue-1", description: "Context. ".repeat(1_000), plan } };
+    const limit = getToolResultCharLimit("get_issue");
+    const index = planTaskIndex(parsePlan(plan), limit - JSON.stringify(issue).length);
+    const result = { ...issue, ...index };
+
+    const serialized = serializeToolResult(result, limit);
+    expect(serialized).not.toContain("[truncated: only the first");
+    expect(JSON.parse(serialized).issue.plan).toBe(plan);
+    const total = parsePlan(plan).tasks.length;
+    expect(index.plan_tasks.length).toBeGreaterThan(0);
+    expect(index.plan_tasks.length).toBeLessThan(total);
+    expect(index.plan_tasks_note).toContain(`The plan has ${total} tasks`);
+    expect(index.plan_tasks_note).toContain(`the next one is ${index.plan_tasks.length}.`);
+  });
+
+  it("lists every task of an ordinary plan without a note", () => {
+    const plan = "- [x] First\n- [~] Second\n- [ ] Third\n";
+    const index = planTaskIndex(parsePlan(plan), DOCUMENT_READ_RESULT_CHAR_LIMIT);
+    expect(index.plan_tasks.map((task) => task.state)).toEqual(["completed", "in_progress", "pending"]);
+    expect(index).not.toHaveProperty("plan_tasks_note");
+  });
+
+  it("keeps a maximum-length notebook whole", () => {
+    const line = "- [ ] \"Quoted\" task\n";
+    const content = line.repeat(Math.floor(MAX_SCRATCHPAD_LENGTH / line.length));
+    expect(content.length).toBeLessThanOrEqual(MAX_SCRATCHPAD_LENGTH);
+    const serialized = serializeToolResult({ content, rev: 1 }, getToolResultCharLimit("get_scratchpad"));
+    expect(JSON.parse(serialized)).toEqual({ content, rev: 1 });
+  });
+
+  it.each(["get_issue", "get_page", "get_scratchpad", "get_objective", "get_feedback", "get_help"])(
+    "gives %s the document ceiling",
+    (name) => expect(getToolResultCharLimit(name)).toBe(DOCUMENT_READ_RESULT_CHAR_LIMIT),
+  );
+
+  it("keeps a list of a few hundred rows under the default ceiling whole", () => {
+    // list_pages for a wiki of 120 pages used to stop at 4,000 characters.
+    const result = {
+      pages: Array.from({ length: 120 }, (_, index) => ({
+        page_id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        title: `Page ${index}`,
+      })),
+    };
+    expect(JSON.stringify(result).length).toBeGreaterThan(4_000);
+    const serialized = serializeToolResult(result, getToolResultCharLimit("list_pages"));
+    expect(JSON.parse(serialized)).toEqual(result);
+  });
+
+  it("replays a stored result under its own call's ceiling", () => {
+    const routine = JSON.stringify({ routines: [{ id: "r", prompt: "p".repeat(30_000) }] });
+    const args = toolCallArgumentsById([
+      { tool_calls: [{ id: "call-1", function: { arguments: '{"routine_id":"r"}' } }] },
+      { tool_calls: [{ id: "call-2", function: { arguments: "not json" } }] },
+    ]);
+    expect(args.get("call-2")).toEqual({});
+    expect(replayedToolResult(routine, "list_routines", args.get("call-1"))).toBe(routine);
+    expect(replayedToolResult(routine, "list_routines")).toContain("[truncated: only the first");
+    expect(replayedToolResult(null, "get_page")).toBe("");
+  });
+
   it("says how much of a truncated result the model saw", () => {
-    const result = { value: "x".repeat(5_000) };
+    const result = { value: "x".repeat(20_000) };
     const total = JSON.stringify(result).length;
     expect(serializeToolResult(result)).toMatch(
-      new RegExp(`\\[truncated: only the first 4000 of ${total} characters`),
+      new RegExp(`\\[truncated: only the first ${DEFAULT_TOOL_RESULT_CHAR_LIMIT} of ${total} characters`),
     );
   });
 
   it("retains the default ceiling for unrelated tools", () => {
-    expect(serializeToolResult({ value: "x".repeat(5_000) })).toContain(
+    expect(getToolResultCharLimit("list_members")).toBe(DEFAULT_TOOL_RESULT_CHAR_LIMIT);
+    expect(serializeToolResult({ value: "x".repeat(20_000) })).toContain(
       "... [truncated",
     );
   });

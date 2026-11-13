@@ -1,3 +1,4 @@
+import { getToolResultCharLimit } from "./tool-result-serialization";
 import { readProjectStats } from "@/lib/server/project-stats";
 import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
 import { materializePendingDescription } from "@/lib/server/description-collaboration";
@@ -645,6 +646,69 @@ const planTaskList = (parsed: ParsedPlan) =>
         : t.text,
     ...(t.question ? { question: true } : {}),
   }));
+
+/**
+ * get_issue's task index within the room its result leaves: the plan above it
+ * already carries every task's text, so a plan of a thousand short tasks must
+ * not push the result past its ceiling and get the whole read reported as cut
+ * (MIN-974). Tasks that do not fit are named by where the list stops; their
+ * index still follows the checkbox order of the plan.
+ */
+export function planTaskIndex(parsed: ParsedPlan, room: number): {
+  plan_tasks: ReturnType<typeof planTaskList>;
+  plan_progress: ParsedPlan["progress"];
+  plan_tasks_note?: string;
+} {
+  const all = planTaskList(parsed);
+  // Room for the keys, the progress and the note itself.
+  let budget = room - 600;
+  let shown = 0;
+  for (const task of all) {
+    budget -= JSON.stringify(task).length + 1;
+    if (budget < 0) break;
+    shown += 1;
+  }
+  if (shown === all.length) {
+    return { plan_tasks: all, plan_progress: parsed.progress };
+  }
+  return {
+    plan_tasks: all.slice(0, shown),
+    plan_progress: parsed.progress,
+    plan_tasks_note:
+      `The plan has ${all.length} tasks; this index lists the first ${shown}. ` +
+      `The others are in the plan above: task_index counts its checkboxes in order from 0, ` +
+      `so the next one is ${shown}.`,
+  };
+}
+
+/** Fields of an issue that get_issue lists beside the one it reads (its
+ *  sub-issues, its duplicate target): enough to name and triage it, without
+ *  its text. */
+const LINKED_ISSUE_FIELDS = [
+  "id",
+  "identifier",
+  "number",
+  "title",
+  "status",
+  "priority",
+  "effort",
+  "assignee_id",
+  "due_date",
+  "objective_id",
+  "completed_at",
+] as const;
+
+export function linkedIssueSummary(
+  issue: Record<string, unknown>,
+): Record<string, unknown> {
+  const summary: Record<string, unknown> = {};
+  for (const field of LINKED_ISSUE_FIELDS) {
+    if (field in issue) summary[field] = issue[field];
+  }
+  const plan = parsePlan(typeof issue.plan === "string" ? issue.plan : null);
+  if (plan.tasks.length > 0) summary.plan_progress = plan.progress;
+  return summary;
+}
 
 /** The issue's plan and description as stored ("" when it has none). */
 async function readIssueText(
@@ -1686,17 +1750,26 @@ async function executeToolUnlisted(
         const parsed = parsePlan(
           typeof r.issue.plan === "string" ? r.issue.plan : null,
         );
+        const base = {
+          ...r,
+          // Each sub-issue (and the duplicate) as a summary: their own
+          // descriptions and plans crowded the issue's plan out of the
+          // result (MIN-974). get_issue on one of them reads it in full.
+          sub_issues: r.sub_issues.map(linkedIssueSummary),
+          ...(r.duplicate_of
+            ? { duplicate_of: linkedIssueSummary(r.duplicate_of) }
+            : {}),
+          plan_rev:
+            typeof r.issue.updated_at === "string" ? r.issue.updated_at : "",
+        };
+        if (parsed.tasks.length === 0) return { result: base, success: true };
         return {
           result: {
-            ...r,
-            plan_rev:
-              typeof r.issue.updated_at === "string" ? r.issue.updated_at : "",
-            ...(parsed.tasks.length > 0
-              ? {
-                  plan_tasks: planTaskList(parsed),
-                  plan_progress: parsed.progress,
-                }
-              : {}),
+            ...base,
+            ...planTaskIndex(
+              parsed,
+              getToolResultCharLimit("get_issue") - JSON.stringify(base).length,
+            ),
           },
           success: true,
         };
