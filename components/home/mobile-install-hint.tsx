@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Cancel01Icon, ArrowRight01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, SmartPhone01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { AppIcon } from "@/components/icon";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -79,7 +79,6 @@ export function MobileInstallHint() {
         <Button type="button" variant="ghost" className="h-auto min-h-11 min-w-0 flex-1 justify-start gap-2 whitespace-normal px-2 py-2 text-left text-xs text-muted-foreground">
           <AppIcon icon={SmartPhone01Icon} className="size-4 shrink-0" aria-hidden />
           <span className="min-w-0 flex-1">{t("pwaInstallHint")}</span>
-          <AppIcon icon={ArrowRight01Icon} className="size-3.5 shrink-0" aria-hidden />
         </Button>
       </DialogTrigger>
       <Button type="button" variant="ghost" size="icon" className="size-11 shrink-0 text-muted-foreground" aria-label={t("desktopBannerDismiss")} onClick={dismiss}>

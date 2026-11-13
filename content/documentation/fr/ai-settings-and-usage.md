@@ -147,7 +147,7 @@ minddy appelle les modèles d’IA depuis le serveur : il ne peut donc pas utili
 
 ## Comprendre forfaits Cloud et consommation IA {#plans-and-ai-usage}
 
-Cloud propose Free, Go et Pro. Tous incluent MCP, conversations Numo, actions contextuelles et routines. Les capacités, l’utilisation IA incluse, les modèles et le stockage diffèrent. Ouvrez Facturation pour consulter votre budget et votre consommation actuels, puis comparez la page publique des prix avant de choisir un plan ; ses chiffres constituent la référence actuelle.
+Cloud propose Free, Go et Pro. Tous incluent MCP, conversations Numo, actions contextuelles et routines. Les capacités, l’utilisation IA incluse, les modèles et le stockage diffèrent. Ouvrez Usage & facturation pour consulter votre budget et votre consommation actuels, puis comparez la page publique des prix avant de choisir un plan ; ses chiffres constituent la référence actuelle.
 
 Utilisez l’action de paiement ou de gestion d’abonnement proposée à votre compte. Vérifiez le montant, la période de facturation et la confirmation du fournisseur avant d’accepter. Un changement de plan réussi doit apparaître dans la facturation du compte ; vérifiez cet état plutôt que de considérer une fenêtre de paiement fermée comme une preuve.
 
@@ -167,7 +167,7 @@ Ces valeurs par défaut décrivent minddy 0.20.0. Vérifiez la page de prix et l
 | Go | Illimités | Illimités | Illimités | 20 GiB | 5 |
 | Pro | Illimités | Illimités | Illimités | 100 GiB | 15 |
 
-La facturation affiche le budget IA restant et sa prochaine réinitialisation. **Évolution du budget** trace en trait plein ce que vous avez consommé et, en pointillés, où mène le rythme actuel d'ici le renouvellement ; la phrase sous le titre indique si vous êtes en bonne voie ou le jour où le budget sera épuisé. **Qu’est-ce qui consomme ?**, qui répartit la consommation entre **Routines**, **Numo**, **Dictée vocale**, **Retours** et **Automatisations**, en pourcentage du budget inclus. **Usage par jour** montre ce que chaque jour a consommé, par type d'usage ; survolez un graphe pour lire les valeurs d'un jour. **Historique d'usage** liste les actions de la période en cours et leur part du budget. Numo lit les mêmes chiffres et la même prévision quand vous l'interrogez sur votre budget, et vous prévient sur l'**Accueil** quand le budget est en voie d'être épuisé avant son renouvellement.
+Usage & facturation affiche le budget IA restant et sa prochaine réinitialisation. **Évolution du budget** trace en trait plein ce que vous avez consommé et, en pointillés, où mène le rythme actuel d'ici le renouvellement ; la phrase sous le titre indique si vous êtes en bonne voie ou le jour où le budget sera épuisé. **Qu’est-ce qui consomme ?**, qui répartit la consommation entre **Routines**, **Numo**, **Dictée vocale**, **Retours** et **Automatisations**, en pourcentage du budget inclus. **Usage par jour** montre ce que chaque jour a consommé, par type d'usage ; survolez un graphe pour lire les valeurs d'un jour. **Historique d'usage** liste les actions de la période en cours et leur part du budget. Numo lit les mêmes chiffres et la même prévision quand vous l'interrogez sur votre budget, et vous prévient sur l'**Accueil** quand le budget est en voie d'être épuisé avant son renouvellement.
 
 ## Dicter du texte et des modifications {#voice-dictation}
 

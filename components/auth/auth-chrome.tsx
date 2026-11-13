@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, Mail01Icon, CheckIcon, ServerStack01Icon } from "@hugeicons/core-free-icons";
+import { Mail01Icon, CheckIcon, ServerStack01Icon } from "@hugeicons/core-free-icons";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -44,18 +44,7 @@ export type { OAuthProvider } from "@/lib/auth-context";
  * so sign-in, sign-up, password and 2FA screens keep one button.
  */
 export const AUTH_SUBMIT_CLASS =
-  "group/submit h-12 w-full justify-center gap-2 rounded-full text-[15px] font-semibold tracking-tight";
-
-/** The arrow after a submit label; it nudges forward on hover. */
-export function SubmitArrow() {
-  return (
-    <HugeiconsIcon
-      icon={ArrowRight01Icon}
-      aria-hidden
-      className="size-4 transition-transform group-hover/submit:translate-x-0.5"
-    />
-  );
-}
+  "h-12 w-full justify-center gap-2 rounded-full text-[15px] font-semibold tracking-tight";
 
 /**
  * The shape of an auth form while it loads (MIN-868): the heading and its

@@ -1,7 +1,6 @@
 "use client";
 
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { CloseButton } from "@/components/ui/close-button";
 import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -135,7 +134,6 @@ export function WizardDialog<Id extends string>({
   // an answer in advance): we limit rather than creating emptiness.
   const index = Math.min(Math.max(stepIndex, 0), Math.max(steps.length - 1, 0));
   const step = steps[index];
-  const isLast = index >= steps.length - 1;
 
   if (!step) return null;
 
@@ -265,9 +263,6 @@ export function WizardDialog<Id extends string>({
                   >
                     {submitting && <Spinner />}
                     {step.submitLabel ?? tCommon("continue")}
-                    {!submitting && !isLast && (
-                      <HugeiconsIcon icon={ArrowRight01Icon} className="ml-1 h-4 w-4" />
-                    )}
                   </Button>
                 </SendShortcutTooltip>
               )}

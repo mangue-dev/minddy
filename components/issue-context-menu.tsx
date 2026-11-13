@@ -376,13 +376,16 @@ function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: 
   const all = resolveActions(actions, query);
   // An action inside an unfolded section steps in by one icon column, so it
   // reads as belonging to the section above it.
-  const row = (action: ContextMenuAction, keywords: string[], disabled: boolean, forceMount?: boolean, depth = 0) =>
-    <CommandItem key={action.id} value={action.id} keywords={keywords} forceMount={forceMount}
+  const row = (action: ContextMenuAction, keywords: string[], disabled: boolean, forceMount?: boolean, depth = 0, path: readonly string[] = []) =>
+    <CommandItem key={[...path, action.id].join("/")} value={[...path, action.id].join("/")} keywords={keywords} forceMount={forceMount}
       disabled={disabled} onSelect={() => onSelect(action)}
       style={depth > 0 ? { paddingInlineStart: `calc(0.5rem + ${depth} * 1.75rem)` } : undefined}
       {...(action.checked ? { "data-checked": "true" } : {})}>
       <span className={action.variant === "destructive" ? "flex min-w-0 flex-1 items-center gap-[var(--mobile-sheet-row-gap)] text-destructive [&_svg]:text-destructive" : "flex min-w-0 flex-1 items-center gap-[var(--mobile-sheet-row-gap)]"}>
-        {action.icon}<span className="truncate">{action.labelNode ?? action.label}</span>
+        {action.icon}
+        {path.length > 0
+          ? <ActionPathLabel path={path} label={action.labelNode ?? action.label} />
+          : <span className="truncate">{action.labelNode ?? action.label}</span>}
         {action.trailing != null && <span className="ml-auto flex shrink-0 items-center text-xs tabular-nums text-muted-foreground">{action.trailing}</span>}
       </span>
     </CommandItem>;
@@ -399,10 +402,6 @@ function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: 
   const searching = query.trim() !== "";
   const section = (action: ContextMenuAction, parentLabel: string, disabled: boolean, depth: number): React.ReactNode => {
     const children = action.children ?? [];
-    // A query looks inside every section: they all show, under their names.
-    if (searching) return <CommandGroup key={action.id} heading={action.label}>
-      {rows(children, action.label, disabled, depth)}
-    </CommandGroup>;
     const isOpen = expanded.has(action.id);
     return <React.Fragment key={action.id}>
       <CommandItem value={action.id} keywords={[action.label, parentLabel]} disabled={disabled}
@@ -421,7 +420,16 @@ function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: 
   const rows = (items: ContextMenuAction[], parentLabel = "", parentDisabled = false, depth = 0): React.ReactNode =>
     items.map((action) => action.children?.length
       ? section(action, parentLabel, parentDisabled || !!action.disabled, depth)
-      : row(action, [action.label, parentLabel, ...(action.keywords ?? [])], parentDisabled || !!action.disabled, false, searching ? 0 : depth));
+      : row(action, [action.label, parentLabel, ...(action.keywords ?? [])], parentDisabled || !!action.disabled, false, depth));
+  // A query looks inside every section, folded or not, as the desktop menu
+  // does (MIN-845): each match is one row, a nested one behind the path of
+  // the sections that hold it, and a matching section stays foldable. The
+  // list is already filtered, so cmdk does not filter it again — its groups
+  // would hide every match nested in a group of their own.
+  const matches = searching ? searchActionTree(all.filter((action) => !action.searchFallback), query) : null;
+  const results = matches?.map(({ action, path, disabled }) => path.length === 0 && action.children?.length
+    ? section(action, "", disabled, 0)
+    : row(action, [], disabled, false, 0, path));
   // A fallback entry answers any query: first while nothing is typed, then
   // after every match (cmdk would otherwise filter it out).
   const fallbacks = all.filter((action) => action.searchFallback);
@@ -429,9 +437,10 @@ function MobileActionMenu({ actions, onSelect, onQueryChange, open, ...props }: 
     <CommandGroup forceMount>{fallbacks.map((action) => row(action, [], !!action.disabled, true))}</CommandGroup>;
   // With a fallback, an unmatched query still has its answer: no “No results”.
   return <SearchMenu {...props} open={open} searchValue={query} onSearchValueChange={setQuery}
+    shouldFilter={!searching && props.shouldFilter !== false}
     hideEmpty={props.hideEmpty || fallbacks.length > 0}>
     {!searching && fallbackGroup}
-    <CommandGroup>{rows(all.filter((action) => !action.searchFallback))}</CommandGroup>
+    <CommandGroup>{results ?? rows(all.filter((action) => !action.searchFallback))}</CommandGroup>
     {searching && fallbackGroup}
   </SearchMenu>;
 }

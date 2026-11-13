@@ -147,7 +147,7 @@ minddy ruft KI-Modelle vom Server aus auf und kann daher kein Modell nutzen, das
 
 ## Cloud-Pläne und KI-Verbrauch verstehen {#plans-and-ai-usage}
 
-Cloud bietet Free, Go und Pro. Alle enthalten MCP, Numo-Konversationen, Kontextaktionen und Routinen. Kapazität, enthaltene KI, Modelle und Speicher unterscheiden sich. Öffne Abrechnung für dein aktuelles Kontingent und den Verbrauch. Vergleiche vor der Planwahl die öffentliche Preisseite; ihre Angaben bilden die aktuelle Referenz.
+Cloud bietet Free, Go und Pro. Alle enthalten MCP, Numo-Konversationen, Kontextaktionen und Routinen. Kapazität, enthaltene KI, Modelle und Speicher unterscheiden sich. Öffne Nutzung & Abrechnung für dein aktuelles Kontingent und den Verbrauch. Vergleiche vor der Planwahl die öffentliche Preisseite; ihre Angaben bilden die aktuelle Referenz.
 
 Verwende den deinem Konto angebotenen Zahlungs- oder Abonnementverwaltungsbefehl. Prüfe Betrag, Abrechnungszeitraum und Anbieterbestätigung, bevor du zustimmst. Ein erfolgreicher Planwechsel sollte in der Kontoabrechnung erscheinen. Prüfe dies, statt ein geschlossenes Zahlungsfenster als Nachweis zu betrachten.
 
@@ -167,7 +167,7 @@ Diese Standardwerte beschreiben minddy 0.20.0. Prüfe vor einem Kauf die tatsäc
 | Go | Unbegrenzt | Unbegrenzt | Unbegrenzt | 20 GiB | 5 |
 | Pro | Unbegrenzt | Unbegrenzt | Unbegrenzt | 100 GiB | 15 |
 
-Die Abrechnung zeigt das verbleibende KI-Budget und die nächste Zurücksetzung. **Budget im Zeitverlauf** zeichnet deinen bisherigen Verbrauch als durchgezogene Linie und gestrichelt, wohin das aktuelle Tempo bis zur Erneuerung führt; der Satz unter dem Titel sagt, ob du gut im Plan liegst oder an welchem Tag das Budget aufgebraucht ist. **Was verbraucht dein Budget?**, das den Verbrauch als Anteil am enthaltenen Budget auf **Routinen**, **Numo**, **Sprachdiktat**, **Feedback** und **Automatisierungen** aufteilt. **Nutzung pro Tag** zeigt, was jeder Tag verbraucht hat, nach Nutzungsart; fahre mit der Maus über ein Diagramm, um die Werte eines Tages zu lesen. **Nutzungsverlauf** listet die Aktionen des laufenden Zeitraums und ihren Anteil am Budget. Numo liest dieselben Zahlen und dieselbe Prognose, wenn du nach deinem Budget fragst, und warnt dich auf der **Startseite**, wenn das Budget voraussichtlich vor der Erneuerung aufgebraucht ist.
+Nutzung & Abrechnung zeigt das verbleibende KI-Budget und die nächste Zurücksetzung. **Budget im Zeitverlauf** zeichnet deinen bisherigen Verbrauch als durchgezogene Linie und gestrichelt, wohin das aktuelle Tempo bis zur Erneuerung führt; der Satz unter dem Titel sagt, ob du gut im Plan liegst oder an welchem Tag das Budget aufgebraucht ist. **Was verbraucht dein Budget?**, das den Verbrauch als Anteil am enthaltenen Budget auf **Routinen**, **Numo**, **Sprachdiktat**, **Feedback** und **Automatisierungen** aufteilt. **Nutzung pro Tag** zeigt, was jeder Tag verbraucht hat, nach Nutzungsart; fahre mit der Maus über ein Diagramm, um die Werte eines Tages zu lesen. **Nutzungsverlauf** listet die Aktionen des laufenden Zeitraums und ihren Anteil am Budget. Numo liest dieselben Zahlen und dieselbe Prognose, wenn du nach deinem Budget fragst, und warnt dich auf der **Startseite**, wenn das Budget voraussichtlich vor der Erneuerung aufgebraucht ist.
 
 ## Text und Änderungen diktieren {#voice-dictation}
 

@@ -191,11 +191,16 @@ export const PageToc = memo(function PageToc({
  centimeters of space. Only the VISIBLE layers take the mouse again.
  Hovering still goes up to here — that's what unfolds. */
     <div
+      data-page-toc=""
       className={cn(
         // ANCHORED AT THE TOP, and not centered: a centered table moves at
         // the eye when the window changes height, and on a long page it
         // ends in the middle of the text rather than at the top of what we read.
-        "group/toc pointer-events-none absolute top-20 right-2 z-10 w-64",
+        "group/toc pointer-events-none absolute top-20 right-2 w-64",
+        // Above the editor's chrome: the drag handle's wrapper, where the
+        // comment button is placed, is itself `z-index: 10` and comes later
+        // in the document, so at an equal index it painted over the table.
+        "z-20",
         // Under `lg`, the text column and table would compete for the same
         // place: it disappears rather than going over the document.
         "hidden lg:block"

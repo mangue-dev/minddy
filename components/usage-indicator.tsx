@@ -2,7 +2,6 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  ArrowRight01Icon,
   DashboardSpeedIcon,
   LoaderCircleIcon,
 } from "@hugeicons/core-free-icons";
@@ -203,7 +202,6 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Link href="/billing" onClick={onNavigate}>
           {t("viewBilling")}
-          <HugeiconsIcon icon={ArrowRight01Icon} className="size-3.5" />
         </Link>
       </Button>
     </div>

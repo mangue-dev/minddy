@@ -633,3 +633,29 @@ describe("the width of a resized image", () => {
     expect(bodyFromMarkdown(`![](${src} "A tooltip")`).content?.[0]?.attrs?.width).toBeNull();
   });
 });
+
+describe("a markdown table, without a table block", () => {
+  it("reads one bullet per row instead of gluing every cell together", () => {
+    const markdown = [
+      "| | EN | FR |",
+      "| --- | --- | --- |",
+      "| Privacy policy | `https://example.com/privacy` | `https://example.com/fr/confidentialite` |",
+      "| Support | [Docs](https://example.com/docs) | |",
+    ].join("\n");
+    expect(bodyToMarkdown(bodyFromMarkdown(markdown))).toBe(
+      [
+        "- **Privacy policy** — EN: `https://example.com/privacy` · FR: `https://example.com/fr/confidentialite`",
+        "",
+        "- **Support** — EN: [Docs](https://example.com/docs)",
+      ].join("\n")
+    );
+  });
+
+  it("keeps the text around the table", () => {
+    const markdown = "Before\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n\nAfter";
+    const out = bodyToMarkdown(bodyFromMarkdown(markdown));
+    expect(out).toContain("Before");
+    expect(out).toContain("- **1** — B: 2");
+    expect(out).toContain("After");
+  });
+});

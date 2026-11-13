@@ -21,6 +21,7 @@
  * | The block ID (`blockId`) | It only makes sense within a document; a markdown from Numo does not carry any | A NEW ID, added during rereading (`stampBlockIds`) |
  * | The title of a subpage | It is never copied into the parent body, by construction: it is resolved on display (see blocks/subpage.ts) | `[[page:<id>]]`, therefore the target |
  * | The WEIGHT and type of a file | A markdown link only carries its text and address. These are two comfort indications, rereadable from `page_files`: the name and the file itself are there | `[nom](url)`, so the file |
+ * | The GRID of a markdown table | Pages have no table block yet; without a rule the cells were glued into one paragraph (see components/pages/markdown-tables.ts) | One bullet per row: `**first cell** — Header: value · …` |
  * | An EMPTY equation | It says nothing; the editor removes one saved empty, and the projection writes none (see blocks/math.ts) | The text around it |
  *
  * These losses apply to a WHOLE replacement. A targeted agent edit (append,

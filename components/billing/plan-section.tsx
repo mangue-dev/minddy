@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowRight01Icon, GiftIcon, CheckIcon } from "@hugeicons/core-free-icons";
+import { GiftIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -328,7 +328,6 @@ export function PlanSection() {
                 className="inline-flex min-h-12 items-center justify-between gap-3 rounded-lg border border-current/20 px-4 py-3 text-left text-sm font-medium transition-colors enabled:hover:bg-white/40 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-current disabled:cursor-default disabled:opacity-50 dark:enabled:hover:bg-white/10"
               >
                 <span>{submittingPlanId === plan.id ? t("loading") : ctaLabel}</span>
-                {onAction && <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden />}
               </button>
             </article>
           );

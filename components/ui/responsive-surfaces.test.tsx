@@ -202,3 +202,27 @@ it.each([true, false])("paints the keyboard highlight only on desktop (mobile: %
   const first = document.querySelector<HTMLElement>('[cmdk-item][data-selected="true"]')!;
   expect(first.classList.contains("data-selected:bg-muted")).toBe(!mobile);
 });
+
+it("finds an action inside a folded section of a mobile action sheet", async () => {
+  const copied = vi.fn();
+  const actions = [
+    { id: "prompt", label: "Copy prompt", children: [{ id: "plan", label: "Generate a plan", onSelect: copied }] },
+    { id: "trash", label: "Move to trash" },
+  ];
+  await act(() => root.render(createElement(NextIntlClientProvider, { locale: "en", messages: { Common: { close: "Close" }, Picker: { search: "Search", noResults: "No results" } }, children: createElement(TooltipProvider, null,
+    createElement(IssueActionsMenu, { searchable: true, actions, trigger: createElement("button", null, "More") })) })));
+  await act(() => container.querySelector<HTMLButtonElement>("button")!.click());
+  const search = document.querySelector<HTMLInputElement>("[data-mobile-picker] input")!;
+  const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  await act(() => {
+    setValue.call(search, "plan");
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  // cmdk hides a group with `hidden` and unmounts unmatched items: a listed
+  // item counts only when no ancestor hides it.
+  const visible = [...document.querySelectorAll<HTMLElement>("[cmdk-item]")]
+    .filter((node) => !node.closest("[hidden]"))
+    .map((node) => node.textContent);
+  expect(visible.some((text) => text?.includes("Generate a plan"))).toBe(true);
+  expect(visible.some((text) => text?.includes("Move to trash"))).toBe(false);
+});
