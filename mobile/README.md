@@ -474,7 +474,9 @@ lockfile, runs `npm --prefix mobile run typecheck`, bundles the pages and runs
 The iOS build itself needs macOS and does not run in CI yet. The one place
 CI compiles the shell is code scanning: `.github/workflows/codeql-swift.yml`
 builds it on a macOS runner when `mobile/` changes, so CodeQL can analyse the
-Swift. GitHub's images stop at Xcode 26.6, which lacks the iOS 27.1 APIs the
+Swift. Other pull requests get an empty Swift result from a Linux runner
+instead: the `main` ruleset blocks a merge when a code scanning configuration
+of `main` is missing from the pull request. GitHub's images stop at Xcode 26.6, which lacks the iOS 27.1 APIs the
 shell calls, so that build fails on those calls and the analysis is partial
 until a runner ships Xcode 27.1.
 
