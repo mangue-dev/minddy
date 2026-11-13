@@ -144,11 +144,13 @@ export type SendNumoNoteResult =
  * Write a note into the inbox of `userId`, the user Numo is working for.
  * Project access is the caller's to check: this function trusts that
  * `userId` may read `projectId`, and checks the link against the project.
+ * A null `projectId` writes a personal note (MIN-982): it belongs to no
+ * project, so it links to no record.
  */
 export async function sendNumoNote(input: {
   service: SupabaseClient;
   userId: string;
-  projectId: string;
+  projectId: string | null;
   title: unknown;
   body: unknown;
   link: NumoNoteLink | null;
@@ -168,7 +170,10 @@ export async function sendNumoNote(input: {
   if (!title) return { ok: false, error: "title is required." };
   if (!body) return { ok: false, error: "body is required." };
 
-  if (link && !(await linkInProject(service, projectId, link))) {
+  if (link && !projectId) {
+    return { ok: false, error: "A note without a project links to no record: omit link." };
+  }
+  if (link && projectId && !(await linkInProject(service, projectId, link))) {
     return { ok: false, error: `The linked ${link.type.replace("_", " ")} was not found in this project.` };
   }
 
@@ -199,8 +204,9 @@ export async function sendNumoNote(input: {
     const since = new Date(now.getTime() - NUMO_NOTE_DEDUP_WINDOW_MS).toISOString();
     let recent = service.from("notifications")
       .select("numo_note_id")
-      .eq("user_id", userId).eq("project_id", projectId)
+      .eq("user_id", userId)
       .eq("type", "numo_message").gte("created_at", since);
+    recent = projectId ? recent.eq("project_id", projectId) : recent.is("project_id", null);
     for (const [column, value] of Object.entries(targets)) {
       recent = value ? recent.eq(column, value) : recent.is(column, null);
     }

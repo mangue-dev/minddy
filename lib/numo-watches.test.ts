@@ -96,3 +96,13 @@ describe("recurrence and grants as stored", () => {
     expect(parseNumoWatchProposal({ ...proposal, id: "not-an-id" })).toBeNull();
   });
 });
+
+describe("numoWatchGrantsNeedConfirmation (MIN-982)", () => {
+  it("lets a reminder notify the user without a card, and nothing else", async () => {
+    const { numoWatchGrantsNeedConfirmation } = await import("./numo-watches");
+    expect(numoWatchGrantsNeedConfirmation([])).toBe(false);
+    expect(numoWatchGrantsNeedConfirmation(["notification"])).toBe(false);
+    expect(numoWatchGrantsNeedConfirmation(["notification", "external"])).toBe(true);
+    expect(numoWatchGrantsNeedConfirmation(["administration"])).toBe(true);
+  });
+});

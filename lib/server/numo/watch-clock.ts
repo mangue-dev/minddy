@@ -70,6 +70,10 @@ import {
  * for one retry (`claimStrandedNumoWatches`). A watch whose user lost access
  * to the project, or whose target no longer exists, is cancelled; a target in
  * the trash only waits, since it may come back.
+ *
+ * A personal reminder (MIN-982) is a date reminder of no project: it needs no
+ * project access, its turn starts with no project in context, and its notes
+ * are personal notes.
  */
 
 /** Watches read per page. */
@@ -197,7 +201,9 @@ async function subjectOf(service: SupabaseClient, watch: NumoWatchItem): Promise
 export async function watchSubjects(service: SupabaseClient, userId: string,
   watches: readonly NumoWatchItem[]): Promise<Map<string, { subject: string | null; accessible: boolean }>> {
   const access = new Map<string, Promise<boolean>>();
-  const canOpen = (projectId: string) => {
+  const canOpen = (projectId: string | null) => {
+    // A personal reminder belongs to the user alone.
+    if (projectId === null) return Promise.resolve(true);
     if (!access.has(projectId)) {
       access.set(projectId, getProjectAccess(userId, projectId).then((value) => !!value, () => false));
     }
@@ -509,6 +515,8 @@ export async function runNumoWatchClock(options: {
   // Every (user, project) pair is checked once per tick.
   const access = new Map<string, boolean>();
   const canOpen = async (watch: ClockWatch) => {
+    // A personal reminder needs no project: only its user, who owns the row.
+    if (watch.project_id === null) return true;
     const key = `${watch.user_id}:${watch.project_id}`;
     if (!access.has(key)) access.set(key, !!(await getProjectAccess(watch.user_id, watch.project_id)));
     return access.get(key) as boolean;

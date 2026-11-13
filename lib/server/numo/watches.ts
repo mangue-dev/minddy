@@ -61,7 +61,7 @@ const context = (userId: string) => ({
 export class NumoWatchError extends Error {
   constructor(
     readonly code: "invalid_instruction" | "invalid_date" | "invalid_recurrence" | "invalid_grants"
-      | "limit_reached" | "recurring_limit_reached" | "conflict" | "not_found" | "database",
+      | "limit_reached" | "recurring_limit_reached" | "invalid_project" | "conflict" | "not_found" | "database",
     message: string,
   ) {
     super(message);
@@ -98,7 +98,7 @@ export async function decodeNumoWatchRow(row: Row, userId: string): Promise<Numo
   return {
     id: row.id as string,
     user_id: row.user_id as string,
-    project_id: row.project_id as string,
+    project_id: (row.project_id as string | null) ?? null,
     target_type: row.target_type as NumoWatchItem["target_type"],
     target_id: (row.target_id as string | null) ?? null,
     condition: row.condition as NumoWatchItem["condition"],
@@ -258,7 +258,8 @@ export function validateNumoWatchInput(input: {
 export async function createNumoWatch(service: SupabaseClient, userId: string, input: {
   /** Set by the confirmation of a proposal, so confirming twice writes once. */
   id?: string;
-  projectId: string;
+  /** Null for a personal reminder (MIN-982), which can only be a date reminder. */
+  projectId: string | null;
   target: NumoWatchTarget;
   action: NumoWatchAction;
   instruction: unknown;
@@ -268,6 +269,10 @@ export async function createNumoWatch(service: SupabaseClient, userId: string, i
   timezone?: string | null;
   now?: Date;
 }): Promise<NumoWatchItem> {
+  if (input.projectId === null && input.target.type !== "date") {
+    throw new NumoWatchError("invalid_project",
+      "Only a date reminder can be personal: a reminder on an issue or an objective names its project.");
+  }
   const now = input.now ?? new Date();
   const valid = validateNumoWatchInput({
     target: input.target, action: input.action, instruction: input.instruction,
@@ -426,7 +431,8 @@ export async function updateNumoWatch(service: SupabaseClient, userId: string, i
 export interface ClockWatch {
   id: string;
   user_id: string;
-  project_id: string;
+  /** Null for a personal reminder. */
+  project_id: string | null;
   target_type: "issue" | "objective" | "date";
   target_id: string | null;
   condition: NumoWatchItem["condition"];

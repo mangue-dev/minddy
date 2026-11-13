@@ -183,6 +183,33 @@ describe("sendNumoNote", () => {
   });
 });
 
+describe("personal notes (MIN-982)", () => {
+  it("writes a note in no project, to the user's inbox, with no link", async () => {
+    const { service, noteInserts } = fakeService();
+    await expect(send(service, { projectId: null, link: null })).resolves.toMatchObject({ ok: true, delivered: true });
+    expect(noteInserts[0]).toMatchObject({ user_id: USER, project_id: null });
+    expect(H.insertNotifications.mock.calls[0][1]).toEqual([expect.objectContaining({
+      user_id: USER, project_id: null, type: "numo_message", numo_note_id: noteInserts[0].id, issue_id: null,
+    })]);
+  });
+
+  it("refuses a link, since a personal note belongs to no project", async () => {
+    const { service, noteInserts } = fakeService();
+    const result = await send(service, { projectId: null });
+    expect(result).toMatchObject({ ok: false });
+    expect(noteInserts).toHaveLength(0);
+  });
+
+  it("checks duplicates among the personal notes only", async () => {
+    const { service, recentFilters } = fakeService();
+    await send(service, { projectId: null, link: null });
+    expect(recentFilters).toContainEqual(["is", "project_id", null]);
+    const project = fakeService();
+    await send(project.service);
+    expect(project.recentFilters).toContainEqual(["eq", "project_id", PROJECT]);
+  });
+});
+
 describe("parseNumoNoteLink", () => {
   it("accepts the five record types and rejects anything else", () => {
     expect(parseNumoNoteLink(undefined)).toBeNull();

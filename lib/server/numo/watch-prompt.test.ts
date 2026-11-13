@@ -40,3 +40,27 @@ describe("an occurrence of a recurring reminder (MIN-953)", () => {
     expect(occurrence([])).toContain("You cannot set, change or cancel reminders in this turn.");
   });
 });
+
+describe("a personal reminder (MIN-982)", () => {
+  const personal = (recurring: boolean) => buildNumoReminderPromptBlock({
+    watchId: "w1", projectId: null, targetType: "date", targetId: null,
+    ...(recurring ? { recurring: { firedAt: "2026-11-09T08:00:00.000Z", grants: ["notification" as const] } } : {}),
+  });
+
+  it("says the reminder belongs to no project, and how to journal and notify without one", () => {
+    for (const block of [personal(true), personal(false)]) {
+      expect(block).toContain("personal, no project");
+      expect(block).toContain("Write your journal entry with project_id null");
+      expect(block).toContain("notify_me) with project_id null and no link");
+    }
+  });
+
+  it("leaves a project reminder's block unchanged", () => {
+    const project = buildNumoReminderPromptBlock({
+      watchId: "w1", projectId: "p1", targetType: "date", targetId: null,
+      recurring: { firedAt: "2026-11-09T08:00:00.000Z", grants: [] },
+    });
+    expect(project).toContain("project_id: p1");
+    expect(project).not.toContain("This reminder is personal");
+  });
+});

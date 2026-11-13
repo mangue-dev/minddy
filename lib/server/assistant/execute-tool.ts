@@ -293,6 +293,7 @@ import {
   isNumoWatchObjectiveStatus,
   isValidTimeZone,
   parseNumoWatchDate,
+  numoWatchGrantsNeedConfirmation,
   parseNumoWatchGrants,
   parseNumoWatchRecurrence,
   type NumoWatchItem,
@@ -307,6 +308,7 @@ import {
 import { resolveAssistantProjectId, resolveAssistantProjectTarget } from "./project-scope";
 import { smartAssignFromStatusOf } from "@/lib/smart-assign-config";
 import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
+import { PERSONAL_TARGET_TOOLS } from "./tools";
 
 // ── Tool execution ─────────────────────────────────────────────────────
 // Reads go through the user's RLS client (tenant isolation for free); writes
@@ -1245,7 +1247,7 @@ function recurrenceFromArgs(args: Record<string, unknown>): NumoWatchRecurrence 
   };
 }
 
-/** list_watches, cancel_watch and update_watch: the user's own reminders, in every project. */
+/** list_watches, cancel_watch and update_watch: the user's own reminders, in every project and the personal ones. */
 async function executeWatchListTool(
   toolName: "list_watches" | "cancel_watch" | "update_watch",
   args: Record<string, unknown>,
@@ -1276,7 +1278,7 @@ async function executeWatchListTool(
       if (!recurrence && !instruction && paused === null) {
         return toolError("Nothing to change: pass paused, instruction or repeat.");
       }
-      if ((recurrence || instruction) && current.grants.length > 0) {
+      if ((recurrence || instruction) && numoWatchGrantsNeedConfirmation(current.grants)) {
         // The user confirmed these permissions for the reminder as it is.
         return toolError("This reminder holds permissions the user confirmed for it as it is. To change its instruction or cadence, call create_watch with its id in replaces and the same grants: the user confirms again on a card.");
       }
@@ -1314,17 +1316,24 @@ async function executeWatchListTool(
   }
 }
 
-/** create_watch, once the project and the user's read access are resolved. */
+/**
+ * create_watch, once the project and the user's read access are resolved.
+ * A personal reminder (MIN-982) has neither: `projectId` and `access` are
+ * null, and only a date reminder can be personal.
+ */
 async function executeCreateWatch(
   args: Record<string, unknown>,
   ctx: ToolContext,
-  projectId: string,
-  access: ProjectAccess,
+  projectId: string | null,
+  access: ProjectAccess | null,
 ): Promise<ToolExecution> {
   const when = typeof args.when === "string" && (NUMO_WATCH_WHEN as readonly string[]).includes(args.when)
     ? args.when as (typeof NUMO_WATCH_WHEN)[number]
     : null;
   if (!when) return toolError("when must be issue_status, issue_comment, objective_status or date.");
+  if (when !== "date" && (!projectId || !access)) {
+    return toolError("A reminder on an issue or an objective needs its project: pass project_id. Only a date reminder can be personal (project_id null).");
+  }
   if (args.action !== "notify" && args.action !== "act") return toolError("action must be notify or act.");
   const recurrence = recurrenceFromArgs(args);
   if (recurrence && "error" in recurrence) return toolError(recurrence.error);
@@ -1340,7 +1349,8 @@ async function executeCreateWatch(
   const status = args.status === null || args.status === undefined || args.status === "" ? "done" : args.status;
   let target: NumoWatchTarget;
   if (when === "issue_status" || when === "issue_comment") {
-    const resolved = await resolveIssueRef(ctx.supabase, { projectId, projectKey: access.project.key }, args.issue);
+    const resolved = await resolveIssueRef(ctx.supabase,
+      { projectId: projectId as string, projectKey: (access as ProjectAccess).project.key }, args.issue);
     if ("error" in resolved) return toolError(resolved.error);
     if (when === "issue_comment") {
       target = { type: "issue", id: resolved.issue.id, condition: { kind: "comment" } };
@@ -1353,7 +1363,7 @@ async function executeCreateWatch(
       target = { type: "issue", id: resolved.issue.id, condition: { kind: "status", status } };
     }
   } else if (when === "objective_status") {
-    const resolved = await resolveObjectiveRef(ctx.supabase, { projectId }, args.objective_id);
+    const resolved = await resolveObjectiveRef(ctx.supabase, { projectId: projectId as string }, args.objective_id);
     if ("error" in resolved) return toolError(resolved.error);
     if (!isNumoWatchObjectiveStatus(status)) return toolError("status is not an objective status.");
     if (resolved.objective.status === status) {
@@ -1384,10 +1394,11 @@ async function executeCreateWatch(
       target, action: args.action, instruction: args.instruction,
       recurrence, grants, timezone: ctx.timezone || null,
     });
-    if (valid.grants.length > 0 && valid.recurrence) {
+    if (valid.recurrence && numoWatchGrantsNeedConfirmation(valid.grants)) {
       // Permissions are the user's to give: nothing is written here. The
       // conversation shows this proposal as a card, and the user's own
       // confirmation writes the reminder (`confirmNumoWatchProposal`).
+      // `notification` alone needs no card (MIN-982): it only reaches the user.
       if (replaces && !(await listOpenNumoWatches(ctx.service, ctx.userId)).some((watch) => watch.id === replaces)) {
         return toolError("No reminder with the id in replaces. Take ids from list_watches.");
       }
@@ -1421,6 +1432,8 @@ async function executeCreateWatch(
       action: args.action as "notify" | "act",
       instruction: args.instruction,
       recurrence,
+      // Only grants that need no card reach this point (`notification`).
+      grants: valid.grants,
       // Only a conversation the user holds with Numo reaches this point
       // (watchToolRefusal): a one-off reminder's turn runs there later. Each
       // occurrence of a recurring one opens a conversation of its own.
@@ -1439,6 +1452,38 @@ async function executeCreateWatch(
     }
     return toolError("Reminders are unavailable right now.");
   }
+}
+
+/** notify_me: a note in the user's inbox, about a project, or personal when `projectId` is null. */
+async function executeNotifyMe(
+  args: Record<string, unknown>,
+  ctx: ToolContext,
+  projectId: string | null,
+): Promise<ToolExecution> {
+  const link = parseNumoNoteLink(args.link);
+  if (link === "invalid") {
+    return toolError(
+      "link must be { type: issue | objective | page | pull_request | routine, id }.",
+    );
+  }
+  const result = await sendNumoNote({
+    service: ctx.service,
+    userId: ctx.userId,
+    projectId,
+    title: args.title,
+    body: args.body,
+    link,
+    turnId: ctx.turnId ?? null,
+    // Set only by the background guard, once it accepted the urgency.
+    urgent: ctx.proactive === true && args.urgent === true,
+  });
+  if (!result.ok) return toolError(result.error);
+  return {
+    result: result.delivered
+      ? { delivered: true }
+      : { delivered: false, reason: result.reason },
+    success: true,
+  };
 }
 
 async function mentionsForNumo(execution: ToolExecution, userId: string): Promise<ToolExecution> {
@@ -1698,6 +1743,13 @@ async function executeToolUnlisted(
     }
     if (toolName === "view_image") {
       return { result: await viewDocumentImage(ctx, args.src), success: true };
+    }
+
+    // ── A personal reminder or note (MIN-982): it names no project ──────
+    if (PERSONAL_TARGET_TOOLS.has(toolName) && args.project_id === null) {
+      return toolName === "create_watch"
+        ? executeCreateWatch(args, ctx, null, null)
+        : executeNotifyMe(args, ctx, null);
     }
 
     // ── Project scope resolution (all remaining tools) ──────────────────
@@ -2352,32 +2404,8 @@ async function executeToolUnlisted(
       case "create_watch":
         return executeCreateWatch(args, ctx, projectId, access);
 
-      case "notify_me": {
-        const link = parseNumoNoteLink(args.link);
-        if (link === "invalid") {
-          return toolError(
-            "link must be { type: issue | objective | page | pull_request | routine, id }.",
-          );
-        }
-        const result = await sendNumoNote({
-          service: ctx.service,
-          userId: ctx.userId,
-          projectId,
-          title: args.title,
-          body: args.body,
-          link,
-          turnId: ctx.turnId ?? null,
-          // Set only by the background guard, once it accepted the urgency.
-          urgent: ctx.proactive === true && args.urgent === true,
-        });
-        if (!result.ok) return toolError(result.error);
-        return {
-          result: result.delivered
-            ? { delivered: true }
-            : { delivered: false, reason: result.reason },
-          success: true,
-        };
-      }
+      case "notify_me":
+        return executeNotifyMe(args, ctx, projectId);
 
       case "add_objective_comment": {
         const objectiveId = typeof args.objective_id === "string" ? args.objective_id.trim() : "";

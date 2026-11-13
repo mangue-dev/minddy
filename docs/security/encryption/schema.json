@@ -10855,7 +10855,7 @@
       },
       "project_id": {
         "type": "uuid",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "numo_turn_id": {
@@ -11204,7 +11204,7 @@
       },
       "project_id": {
         "type": "uuid",
-        "nullable": false,
+        "nullable": true,
         "generated": false
       },
       "target_type": {

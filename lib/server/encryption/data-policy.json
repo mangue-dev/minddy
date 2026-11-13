@@ -4381,8 +4381,16 @@
   },
   "numo_notes": {
     "scope": {
-      "kind": "project",
-      "column": "project_id"
+      "choices": [
+        {
+          "kind": "project",
+          "column": "project_id"
+        },
+        {
+          "kind": "user",
+          "column": "user_id"
+        }
+      ]
     },
     "encrypted": [
       "body",

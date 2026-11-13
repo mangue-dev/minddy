@@ -64,6 +64,15 @@ describe("confirmNumoWatchProposal (MIN-953)", () => {
     expect(H.createNumoWatch).not.toHaveBeenCalled();
   });
 
+  it("writes a personal reminder, which names no project, without any project check (MIN-982)", async () => {
+    expect(await confirmNumoWatchProposal(service, USER, proposal({ project_id: null, grants: ["notification"] })))
+      .toMatchObject({ ok: true });
+    expect(H.getProjectAccess).not.toHaveBeenCalled();
+    expect(H.createNumoWatch).toHaveBeenCalledWith(service, USER, expect.objectContaining({
+      id: PROPOSAL, projectId: null, grants: ["notification"],
+    }));
+  });
+
   it("refuses a project the user cannot open", async () => {
     H.getProjectAccess.mockResolvedValue(null);
     expect(await confirmNumoWatchProposal(service, USER, proposal()))

@@ -57,6 +57,24 @@ describe("Numo note content", () => {
     expect((await decodeNumoNote(saved)).title).toBe("Release blocked");
   });
 
+  it("seals a personal note under its user's key (MIN-982)", async () => {
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "true");
+    const saved = await encodeNumoNote({ ...note(), project_id: null });
+    expect(saved.encryption_version).toBe(1);
+    expect(JSON.stringify(saved)).not.toContain("migration check");
+    expect((await decodeNumoNote(saved, USER)).title).toBe("Release blocked");
+    // Moved to a project, or to another user, it no longer opens.
+    await expect(decodeNumoNote({ ...saved, project_id: PROJECT }, USER)).rejects.toThrow();
+    await expect(decodeNumoNote({ ...saved,
+      user_id: "44444444-4444-4444-8444-444444444444" }, USER)).rejects.toThrow();
+  });
+
+  it("writes a personal note in clear only while user content encryption is off", async () => {
+    vi.stubEnv("MINDDY_CONTENT_ENCRYPTION_ENABLED", "false");
+    const saved = await encodeNumoNote({ ...note(), project_id: null });
+    expect(saved).toMatchObject({ title: "Release blocked", encryption_version: 0, encrypted_content: null });
+  });
+
   it("rejects an empty note", async () => {
     await expect(encodeNumoNote({ ...note(), body: "  " })).rejects.toThrow();
   });

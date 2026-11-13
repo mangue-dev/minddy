@@ -141,9 +141,11 @@ export function AccountNumoWatchesSection() {
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {[
                       watch.action === "act" ? t("numoWatchActionAct") : t("numoWatchActionNotify"),
-                      watch.accessible
-                        ? projects.find((project) => project.id === watch.project_id)?.name
-                        : t("numoMemoryOtherProject"),
+                      watch.project_id === null
+                        ? t("numoWatchPersonal")
+                        : watch.accessible
+                          ? projects.find((project) => project.id === watch.project_id)?.name
+                          : t("numoMemoryOtherProject"),
                       watch.recurrence
                         ? !paused && watch.fire_at ? t("numoWatchNext", { date: date(watch.fire_at) }) : null
                         // A date reminder fires on its date: its expiry adds nothing.

@@ -19,7 +19,7 @@ import {
  * their session, writes it here. A model cannot confirm in their place.
  *
  * The proposal comes back from the browser, so everything is checked again:
- * the user's access to the project, the instruction, the cadence and the
+ * the user's access to the project (none for a personal reminder), the instruction, the cadence and the
  * grants. Whether the user really holds a granted right (an admin account,
  * a project role) is checked at every occurrence, not here.
  */
@@ -39,7 +39,10 @@ export async function confirmNumoWatchProposal(service: SupabaseClient, userId: 
   body: unknown): Promise<NumoWatchConfirmation> {
   const proposal = parseNumoWatchProposal(body);
   if (!proposal) return refused(400, "invalid");
-  if (!(await getProjectAccess(userId, proposal.project_id))) return refused(404, "project_unavailable");
+  // A personal reminder (MIN-982) names no project.
+  if (proposal.project_id !== null && !(await getProjectAccess(userId, proposal.project_id))) {
+    return refused(404, "project_unavailable");
+  }
   const input = {
     target: { type: "date" as const, id: null, condition: { kind: "date" as const }, fireAt: "" },
     action: "act" as const,

@@ -12,6 +12,11 @@ const H = vi.hoisted(() => ({
   updateNumoWatch: vi.fn(),
   pauseNumoWatch: vi.fn(),
   resumeNumoWatch: vi.fn(),
+  sendNumoNote: vi.fn(),
+}));
+vi.mock("@/lib/server/numo-notes", async (original) => ({
+  ...await original<typeof import("@/lib/server/numo-notes")>(),
+  sendNumoNote: H.sendNumoNote,
 }));
 vi.mock("@/lib/server/project-access", async (original) => ({
   ...await original<typeof import("@/lib/server/project-access")>(),
@@ -99,13 +104,14 @@ beforeEach(() => {
     project: { id: PROJECT, key: "MIN" }, role: "reader", isOwner: false, canWrite: false, canComment: false,
   });
   H.resolveIssueRef.mockResolvedValue({ issue: { id: ISSUE, number: 42, identifier: "MIN-42" } });
+  H.sendNumoNote.mockResolvedValue({ ok: true, delivered: true });
   H.createNumoWatch.mockImplementation(async (_service, userId, input) => ({
     id: WATCH, user_id: userId, project_id: input.projectId, target_type: input.target.type,
     target_id: input.target.id, condition: input.target.condition, action: input.action,
     instruction: input.instruction, conversation_id: input.conversationId, status: "active",
     timezone: input.timezone ?? null,
     fire_at: null, expires_at: "2027-02-06T12:00:00.000Z", fired_at: null, outcome: null,
-    recurrence: input.recurrence ?? null, grants: [], consecutive_failures: 0,
+    recurrence: input.recurrence ?? null, grants: input.grants ?? [], consecutive_failures: 0,
     created_at: "2026-11-08T12:00:00.000Z",
   }));
 });
@@ -326,5 +332,113 @@ describe("recurring reminders (MIN-953)", () => {
     expect(names).not.toContain("create_watch");
     expect(names).not.toContain("update_watch");
     expect(names).not.toContain("ask_user");
+  });
+});
+
+describe("personal reminders (MIN-982)", () => {
+  /** "Every day at 9:00, check the web for a concert by X": no project. */
+  const everyDay = {
+    ...everyMonday, project_id: null, repeat: "daily", time: "09:00", weekday: null,
+    instruction: "Check the web for a concert by X",
+  };
+
+  it("lets create_watch and notify_me take a null project, and no other project tool", () => {
+    for (const name of ["create_watch", "notify_me"]) {
+      expect(tool(name)?.function.parameters.properties.project_id).toMatchObject({ type: ["string", "null"] });
+      expect(tool(name)?.function.parameters.required).toContain("project_id");
+    }
+    expect(tool("create_issue")?.function.parameters.properties.project_id).toMatchObject({ type: "string" });
+    expect(tool("create_watch")?.function.description).toContain("PERSONAL");
+  });
+
+  it("sets a daily 09:00 reminder in no project, without checking any project access", async () => {
+    const result = await executeTool("create_watch", everyDay, context());
+    expect(result).toMatchObject({ success: true, result: { watch: {
+      id: WATCH, project_id: null, when: "date", action: "act", repeat: "daily", time: "09:00",
+      time_zone: "Europe/Paris",
+    } } });
+    expect(H.createNumoWatch).toHaveBeenCalledWith(expect.anything(), "user-1", expect.objectContaining({
+      projectId: null, action: "act", recurrence: { kind: "daily", time: "09:00" },
+      target: { type: "date", id: null, condition: { kind: "date" }, fireAt: "" },
+      conversationId: null, timezone: "Europe/Paris",
+    }));
+    expect(H.getProjectAccess).not.toHaveBeenCalled();
+  });
+
+  it("saves a reminder allowed only to notify at once, with no card", async () => {
+    const result = await executeTool("create_watch", { ...everyDay, grants: ["notification"] }, context());
+    expect(result).toMatchObject({ success: true, result: { watch: { id: WATCH, project_id: null } } });
+    expect(result.result).not.toHaveProperty("confirmation_required");
+    expect(H.createNumoWatch).toHaveBeenCalledWith(expect.anything(), "user-1", expect.objectContaining({
+      projectId: null, grants: ["notification"],
+    }));
+  });
+
+  it("still asks the user to confirm any other permission, on a personal reminder too", async () => {
+    const result = await executeTool("create_watch", { ...everyDay, grants: ["notification", "external"] }, context());
+    expect(result.result).toMatchObject({
+      confirmation_required: true,
+      proposal: { project_id: null, grants: ["notification", "external"], recurrence: { kind: "daily", time: "09:00" } },
+    });
+    expect(H.createNumoWatch).not.toHaveBeenCalled();
+  });
+
+  it("update_watch rewords a reminder allowed only to notify, but not one holding another permission", async () => {
+    const blank = { id: WATCH, paused: null, instruction: "Check twice a day", repeat: null, time: null, weekday: null, day_of_month: null };
+    H.listOpenNumoWatches.mockResolvedValue([kept({ grants: ["notification"] })]);
+    H.updateNumoWatch.mockResolvedValue(kept({ grants: ["notification"] }));
+    expect((await executeTool("update_watch", blank, context())).success).toBe(true);
+    H.listOpenNumoWatches.mockResolvedValue([kept({ grants: ["notification", "trash"] })]);
+    expect((await executeTool("update_watch", blank, context())).success).toBe(false);
+  });
+
+  it("refuses a personal reminder on an issue or an objective", async () => {
+    for (const args of [
+      { ...issueDone, project_id: null },
+      { ...issueDone, project_id: null, when: "objective_status", issue: null, objective_id: ISSUE },
+    ]) {
+      const result = await executeTool("create_watch", args, context());
+      expect(result.success).toBe(false);
+      expect(JSON.stringify(result.result)).toContain("needs its project");
+    }
+    expect(H.createNumoWatch).not.toHaveBeenCalled();
+  });
+
+  it("lists a personal reminder with no project, next to a project one", async () => {
+    H.listOpenNumoWatches.mockResolvedValue([
+      kept({ project_id: null, recurrence: { kind: "daily", time: "09:00" } }),
+      kept({ id: ISSUE }),
+    ]);
+    const result = await executeTool("list_watches", {}, context());
+    expect(result.result).toMatchObject({ watches: [
+      { id: WATCH, project_id: null, repeat: "daily", time: "09:00" },
+      { id: ISSUE, project_id: PROJECT },
+    ] });
+  });
+
+  it("update_watch changes a personal reminder like any other", async () => {
+    H.listOpenNumoWatches.mockResolvedValue([kept({ project_id: null })]);
+    const blank = { id: WATCH, paused: true, instruction: null, repeat: null, time: null, weekday: null, day_of_month: null };
+    expect((await executeTool("update_watch", blank, context())).success).toBe(true);
+    expect(H.pauseNumoWatch).toHaveBeenCalledWith(expect.anything(), "user-1", WATCH);
+  });
+
+  it("notify_me with a null project sends a personal note; with a project, a project note", async () => {
+    const personal = await executeTool("notify_me",
+      { project_id: null, title: "A concert by X is announced", body: "Tickets open on Friday." }, context());
+    expect(personal).toMatchObject({ success: true, result: { delivered: true } });
+    expect(H.sendNumoNote).toHaveBeenLastCalledWith(expect.objectContaining({ projectId: null, link: null }));
+    expect(H.getProjectAccess).not.toHaveBeenCalled();
+
+    await executeTool("notify_me", { project_id: PROJECT, title: "Review this", body: "Before Friday." }, context());
+    expect(H.sendNumoNote).toHaveBeenLastCalledWith(expect.objectContaining({ projectId: PROJECT }));
+  });
+
+  it("a personal occurrence's note passes the guard with the notification grant", async () => {
+    const occurrence = context({ reminder: true, proactive: true, reminderGrants: ["notification"] });
+    const result = await executeTool("notify_me",
+      { project_id: null, title: "A concert by X is announced", body: "Tickets open on Friday." }, occurrence);
+    expect(result.success).toBe(true);
+    expect(H.sendNumoNote).toHaveBeenCalledWith(expect.objectContaining({ projectId: null }));
   });
 });

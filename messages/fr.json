@@ -3096,6 +3096,7 @@
     "numoWatchWhenDate": "Le {date}",
     "numoWatchActionNotify": "Numo vous le rappelle",
     "numoWatchActionAct": "Numo s'en charge",
+    "numoWatchPersonal": "Personnel",
     "numoWatchExpires": "Expire le {date}",
     "numoWatchCancel": "Annuler le rappel",
     "numoWatchCancelTitle": "Annuler ce rappel ?",
