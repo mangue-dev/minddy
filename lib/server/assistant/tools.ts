@@ -461,7 +461,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_objective",
       description:
-        "Read an objective's id, name, description, status, lead_user_id and target_date, its comment thread (comments, with their resources), plus linked_feedback (requests associated with the objective) and its relations to issues and objectives (blocks, blocked_by, related). Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
+        "Read an objective's id, name, description, status, lead_user_id and target_date, its comment thread (comments, with their resources), plus linked_feedback (requests associated with the objective) and its relations to issues and objectives (blocks, blocked_by, related). Also returns forecast, the estimated finish date shown in its Momentum panel: estimated_finish_date (ISO instant), estimated_days from now, and basis ('contributors' = from the assignees' activity and allocation across their projects, 'objective' = from the objective's own pace). forecast is null when there is nothing to estimate (no open work, canceled) or too little history. It is an estimate, not a deadline: compare it with target_date to say whether the objective is on track. Use list_objectives to find its UUID, then read its dependencies before linking or declaring it ready.",
       parameters: {
         type: "object",
         properties: {
