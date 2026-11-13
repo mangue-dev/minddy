@@ -15,7 +15,7 @@ import {
   parseOtpType,
 } from "@/lib/desktop/auth-link";
 import { buildAuthFailureRedirect, completeAuthArrival } from "@/lib/server/auth-arrival";
-import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { SESSION_COOKIE_OPTIONS, serverSupabaseCookieOptions } from "@/lib/session-cookies";
 
 /**
  * Exchanges the auth code (OAuth) for a session, writing the session cookies,
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
       // (MIN-351, lib/session-cookies.ts). Here as in `cookieOptions` —
       // it is this adapter that writes, and it receives its options from the client.
       global: { fetch: supabaseServerFetch },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: serverSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();

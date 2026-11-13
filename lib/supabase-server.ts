@@ -2,7 +2,7 @@ import { supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { serverSupabaseCookieOptions } from "@/lib/session-cookies";
 import { getRuntimeConfig } from "@/lib/runtime-config";
 
 /**
@@ -19,7 +19,7 @@ export async function createServerSupabase() {
     supabaseAnonKey,
     {
       global: { fetch: supabaseServerFetch },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: serverSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();

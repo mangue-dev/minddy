@@ -293,8 +293,13 @@ describe("computeKeyLimit", () => {
 
 describe("keyNamePrefix", () => {
   it("names keys after the database that references them", () => {
-    expect(keyNamePrefix("https://dehkvxlygczjbnbubffn.supabase.co")).toBe("minddy-cloud:dehkvxlygczjbnbubffn:");
-    expect(keyNamePrefix("not a url")).toBe("minddy-cloud:default:");
+    expect(keyNamePrefix("https://dehkvxlygczjbnbubffn.supabase.co", "")).toBe("minddy-cloud:dehkvxlygczjbnbubffn:");
+    expect(keyNamePrefix("not a url", "")).toBe("minddy-cloud:default:");
+  });
+
+  it("keeps the project ref when the API moves to a custom domain", () => {
+    expect(keyNamePrefix("https://auth.minddy.app", "cmzrlbnlytvgnomzgmqf")).toBe("minddy-cloud:cmzrlbnlytvgnomzgmqf:");
+    expect(keyNamePrefix("https://auth.minddy.app", "")).toBe("minddy-cloud:auth:");
   });
 });
 

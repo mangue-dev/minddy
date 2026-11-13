@@ -4,7 +4,7 @@
  * Pure decisions, tested on their own: the scripts that create the capture
  * admin or open its session call them before touching anything.
  */
-import { PRODUCTION_ORIGINS, PRODUCTION_SUPABASE_REFS } from "./config.mjs";
+import { PRODUCTION_ORIGINS, PRODUCTION_SUPABASE_HOSTS, PRODUCTION_SUPABASE_REFS } from "./config.mjs";
 
 /** The project ref of a hosted Supabase URL (`https://<ref>.supabase.co`), or null. */
 export function supabaseProjectRef(rawUrl) {
@@ -16,7 +16,8 @@ export function supabaseProjectRef(rawUrl) {
 /** Throws unless `rawUrl` is a Supabase project other than production. */
 export function assertNonProductionDatabase(rawUrl, purpose) {
   const ref = supabaseProjectRef(rawUrl);
-  if (ref && PRODUCTION_SUPABASE_REFS.includes(ref)) {
+  const host = new URL(rawUrl).hostname.toLowerCase();
+  if ((ref && PRODUCTION_SUPABASE_REFS.includes(ref)) || PRODUCTION_SUPABASE_HOSTS.includes(host)) {
     throw new Error(
       `captures: ${purpose} is preview-only, but MINDDY_PUBLIC_SUPABASE_URL targets the production database. ` +
         "Point .env to the preview database (docs/database-environments.md).",

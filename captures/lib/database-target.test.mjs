@@ -19,6 +19,7 @@ test("reads the project ref of hosted Supabase URLs only", () => {
 test("refuses the production database and accepts preview or local ones", () => {
   assert.throws(() => assertNonProductionDatabase(production, "the capture admin"), /production database/);
   assert.throws(() => assertNonProductionDatabase(production.toUpperCase(), "the capture admin"), /production/);
+  assert.throws(() => assertNonProductionDatabase("https://auth.minddy.app", "the capture admin"), /production database/);
   assert.doesNotThrow(() => assertNonProductionDatabase("https://previewref1234.supabase.co", "the capture admin"));
   assert.doesNotThrow(() => assertNonProductionDatabase("http://127.0.0.1:54321", "the capture admin"));
 });
