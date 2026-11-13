@@ -77,9 +77,9 @@ export interface AnalyticsEventProps {
 
   // ── Auth ──
   login_submitted: { method: "password" };
-  login_failed: { method: "password" | "google" | "github"; reason: string };
+  login_failed: { method: "password" | "google" | "github" | "apple"; reason: string };
   login_succeeded: { method: "password" };
-  oauth_initiated: { provider: "google" | "github"; context: "login" | "signup" };
+  oauth_initiated: { provider: "google" | "github" | "apple"; context: "login" | "signup" };
   signup_submitted: NoProps;
   signup_succeeded: { requires_email_confirmation: boolean };
   signup_failed: { reason: string };
@@ -122,10 +122,6 @@ export interface AnalyticsEventProps {
   /** Closed WHILE KEEPing input — the draft takes its line in the
  * sidebar. The stage says where we stop when we don't give up. */
   project_wizard_draft_saved: { step: string };
-  /** The wizard's first question (MIN-171): where do we start from. This is the measure
- * of which of the two entries is really used — a new project to frame, or
- * a backlog that already exists elsewhere. */
-  project_wizard_origin_chosen: { origin: "new" | "existing" };
   /** “I want to join a project”, from the “name” step: the account
  * did not have a project to create, it needed an invitation. This is a legitimate
  * ABANDONMENT of the wizard — to be removed from those who drop out. */
@@ -583,7 +579,6 @@ const EVENT_NAMES = [
   "project_wizard_step_viewed",
   "project_wizard_abandoned",
   "project_wizard_draft_saved",
-  "project_wizard_origin_chosen",
   "project_wizard_join_opened",
   "project_wizard_seed_chosen",
   "project_wizard_completed",

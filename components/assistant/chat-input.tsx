@@ -117,6 +117,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useWeekStart } from "@/lib/use-week-start";
+import { keepFieldFocusOnPress } from "@/lib/keep-field-focus";
+import { haptic } from "@/lib/mobile/haptics";
 
 /** What the "+" offers Numo: files it can actually read (images, PDF, CSV,
     text-ish) — MIN-24 scope. */
@@ -1136,6 +1138,21 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [textWraps, setTextWraps] = useState(false);
     const [surfaceHeight, setSurfaceHeight] = useState<number | null>(null);
     const expandedLayout = textWraps;
+    // The pill is for one row. With badges above the text (context chips,
+    // attachments) the surface holds two rows, and a pill's half-circle ends
+    // cut into them: it takes the card's corners, as wrapped text does.
+    const [hasTopRow, setHasTopRow] = useState(false);
+    useLayoutEffect(() => {
+      const row = surfaceTopRef.current;
+      if (!row) return;
+      const update = () => setHasTopRow(row.offsetHeight > 0);
+      update();
+      if (typeof ResizeObserver === "undefined") return;
+      const observer = new ResizeObserver(update);
+      observer.observe(row);
+      return () => observer.disconnect();
+    }, []);
+    const cardShape = expandedLayout || hasTopRow;
     const expandedLayoutRef = useRef(expandedLayout);
     expandedLayoutRef.current = expandedLayout;
     // What the compact row takes from the grid's width besides the text and
@@ -1294,6 +1311,9 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const handleSubmit = useCallback(() => {
       const value = serializeContent();
       if (!value || disabled || sendDisabled || uploads.uploading) return;
+      // Read before the editor empties, which drops its focus.
+      const editor = editorRef.current;
+      const hadFocus = !!editor && editor.contains(document.activeElement);
       const accepted = onSend(
         value,
         uploads.inputs,
@@ -1303,13 +1323,21 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
         collectSkills(),
       );
       if (accepted === false) return;
+      // A message sent to Numo ticks lightly in the mobile app (MIN-959): it
+      // happens often, and the stronger pattern felt heavy for it.
+      haptic("selection");
       clearEditor();
       uploads.clear();
       // The caret remains in the composer after sending. Without that the focus escapes
       // (emptying a contentEditable loses it; clicking Send focuses a button which
       // disappears just after), and in the Numo panel the FocusScope of the Sheet the
       // repatriated to the shell — hence a halo of focus around the panel.
-      editorRef.current?.focus();
+      // On a touch screen, only when the field had it: focusing it opens the
+      // keyboard, and a message sent with the keyboard down must leave it
+      // down (MIN-959). Send keeps the field's focus when pressed
+      // (lib/keep-field-focus.ts), so typing then sending keeps the keyboard.
+      const touch = typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+      if (hadFocus || !touch) editorRef.current?.focus();
       setMentionQuery(null);
     }, [
       serializeContent,
@@ -1712,7 +1740,12 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
         if (editorRef.current?.contains(target)) return;
-        if (target.closest("button, a, input, textarea, select")) return;
+        if (target.closest("button, a, input, textarea, select")) {
+          // On a phone, the first tap on Send, Dictate or Add must be the
+          // button's, not a tap that only hides the keyboard (MIN-959).
+          keepFieldFocusOnPress(e);
+          return;
+        }
         // A menu carried outside of the composer (the context addition popover) remains
         // his CHILD React: his events go back so far. Without this
         // guardrail, clicking a menu entry returned focus to the editor —
@@ -1828,14 +1861,19 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             {mergedContext}
           </div>
         ) : null}
-        <AgentBeam active={!!beam} keepMounted className="relative z-10 rounded-[1.625rem]">
+        <AgentBeam active={!!beam} keepMounted className={cn("relative z-10", cardShape ? "rounded-[1.625rem]" : "rounded-full")}>
         <div
           data-composer-layout={expandedLayout ? "expanded" : "compact"}
           className={cn(
             // No focus ring, no border: the Numo composer
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
-            "chat-input-surface relative overflow-hidden rounded-[1.625rem] bg-control",
+            "chat-input-surface relative overflow-hidden bg-control",
+            // One line is a pill at any height: on a phone the row's 44px
+            // targets make it taller than on a desktop, where 26px already
+            // rounded it whole. Several lines, or a row of badges above the
+            // text, keep a card's corners.
+            cardShape ? "rounded-[1.625rem]" : "rounded-full",
             // The context row is pinned to the top and the controls row to
             // the bottom: while the height animates, both keep their gutter
             // to their edge, and only the text between them moves.
@@ -1882,8 +1920,15 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
               "relative max-h-[180px] min-h-0 self-stretch overflow-y-auto [grid-area:text]",
               // Compact: one pixel lower than the box's centre, since the font's
               // ascent is taller than its descent and the text otherwise rides
-              // above the "+" beside it.
-              expandedLayout ? "px-4 pb-1 pt-3" : "px-1 pt-[15px] pb-[13px]",
+              // above the "+" beside it. The line is centred in the row rather
+              // than placed by its padding alone: on a touch screen the
+              // buttons beside it grow to 40px and the row gets taller than
+              // the text box, which then sat near the top. There the text is
+              // 16px (iOS zooms into smaller fields), whose taller line
+              // already sits low: the padding goes back to even.
+              expandedLayout
+                ? "px-4 pb-1 pt-3"
+                : "flex flex-col justify-center-safe px-1 pt-[15px] pb-[13px] pointer-coarse:py-[14px]",
             )}
           >
             <div

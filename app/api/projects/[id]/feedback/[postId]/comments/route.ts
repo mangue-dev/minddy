@@ -17,6 +17,7 @@ import {
   isCommentVisibility,
   type CommentVisibility,
 } from "@/lib/feedback/types";
+import { aiBlockedForAppRequest } from "@/lib/server/ai-consent";
 
 // @Numo replies run in after() once the response is sent — same window as the
 // issue/objective comment routes so the agent loop isn't cut mid-flight.
@@ -139,7 +140,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         : (await replyTargetsNumoFeedback(service, created))
           ? "reply"
           : null;
-  if (trigger) {
+  // In the mobile app, Numo answers only once AI is allowed (MIN-907).
+  if (trigger && !(await aiBlockedForAppRequest())) {
     const locale = await getLocale();
     const { supabase } = guard;
     after(() =>

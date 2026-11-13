@@ -8,6 +8,11 @@
  * was flicked, and springs back otherwise. Closing goes through the sheet's
  * own `onOpenChange`, the same path as its close button, so the guards a
  * caller puts there still apply.
+ *
+ * Pulled up, the sheet stretches a little and springs back, as native sheets
+ * do: its top follows the finger with a growing resistance while its foot
+ * stays put, past its usual ceiling by a few pixels at most. Only when
+ * nothing under the finger scrolls: a list keeps the upward swipe.
  */
 
 /** Share of the sheet's height past which a slow drag closes it. */
@@ -19,6 +24,19 @@ export const SHEET_DISMISS_MIN_FLICK = 16;
 /** Movement before a gesture is read as a drag rather than a tap. */
 const DRAG_SLOP = 8;
 const SPRING_BACK = "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)";
+/** The most a sheet pulled up grows by, however far the finger goes. */
+export const SHEET_STRETCH_LIMIT = 40;
+const STRETCH_BACK = "height 420ms cubic-bezier(0.32, 0.72, 0, 1)";
+
+/**
+ * How much a sheet pulled up by `distance` px grows: UIScrollView's rubber
+ * band, close to the finger at first, then slower and slower towards the
+ * limit.
+ */
+export function sheetStretch(distance: number, limit = SHEET_STRETCH_LIMIT) {
+  if (distance <= 0) return 0;
+  return limit * (1 - 1 / ((distance * 0.55) / limit + 1));
+}
 
 /** Elements that keep their own touch gestures inside a sheet. */
 const OWN_GESTURE_SELECTOR = [
@@ -57,6 +75,28 @@ export function canDragSheetFrom(target: EventTarget | null, sheet: HTMLElement)
   return true;
 }
 
+function scrolls(element: Element) {
+  if (element.scrollHeight <= element.clientHeight) return false;
+  const { overflowY } = getComputedStyle(element);
+  return overflowY === "auto" || overflowY === "scroll";
+}
+
+/**
+ * Whether an upward drag starting on `target` may stretch `sheet`: not from
+ * a control with its own gesture, and not where something between the finger
+ * and the sheet (the sheet included) scrolls, which keeps the swipe and its
+ * own bounce.
+ */
+export function canStretchSheetFrom(target: EventTarget | null, sheet: HTMLElement) {
+  if (!(target instanceof Element) || !sheet.contains(target)) return false;
+  if (target.closest(OWN_GESTURE_SELECTOR)) return false;
+  for (let element: Element | null = target; element; element = element.parentElement) {
+    if (scrolls(element)) return false;
+    if (element === sheet) break;
+  }
+  return true;
+}
+
 function prefersReducedMotion() {
   return typeof window !== "undefined" && typeof window.matchMedia === "function"
     && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -75,11 +115,52 @@ function overlayOf(sheet: HTMLElement): HTMLElement | null {
 export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): () => void {
   let start: { x: number; y: number; time: number } | null = null;
   let dragging = false;
+  // What the touch that started may do: close the sheet, stretch it, or both.
+  let mayDrag = false;
+  let mayStretch = false;
+  // The sheet's height before a stretch, while one is drawn or settling.
+  let restHeight: number | null = null;
+  let stretchTimer: ReturnType<typeof setTimeout> | undefined;
   let last = { y: 0, time: 0 };
   let velocity = 0;
   let restoreTimer: ReturnType<typeof setTimeout> | undefined;
 
+  // Grows the sheet from its top: its foot stays on the screen's edge, where
+  // a translation would have lifted it off. Past its `max-height` too.
+  const stretch = (amount: number) => {
+    clearTimeout(stretchTimer);
+    if (restHeight === null) {
+      if (amount <= 0) return;
+      restHeight = sheet.offsetHeight;
+    }
+    sheet.style.transition = "none";
+    sheet.style.maxHeight = "none";
+    sheet.style.height = `${restHeight + amount}px`;
+  };
+
+  const settleStretch = () => {
+    if (restHeight === null) return;
+    const rest = restHeight;
+    const reduce = prefersReducedMotion();
+    sheet.style.transition = reduce ? "none" : STRETCH_BACK;
+    sheet.style.height = `${rest}px`;
+    clearTimeout(stretchTimer);
+    // Back at its height, the sheet sizes itself again.
+    stretchTimer = setTimeout(() => {
+      restHeight = null;
+      sheet.style.transition = "";
+      sheet.style.height = "";
+      sheet.style.maxHeight = "";
+    }, reduce ? 0 : 440);
+  };
+
   const paint = (offset: number) => {
+    if (offset < 0) {
+      sheet.style.transform = "";
+      stretch(sheetStretch(-offset));
+      return;
+    }
+    if (restHeight !== null) stretch(0);
     sheet.style.transition = "none";
     sheet.style.transform = `translate3d(0, ${offset}px, 0)`;
     const overlay = overlayOf(sheet);
@@ -88,9 +169,10 @@ export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): 
   };
 
   const springBack = () => {
+    settleStretch();
     const overlay = overlayOf(sheet);
     const transition = prefersReducedMotion() ? "none" : SPRING_BACK;
-    sheet.style.transition = transition;
+    sheet.style.transition = restHeight === null || transition === "none" ? transition : `${transition}, ${STRETCH_BACK}`;
     sheet.style.transform = "";
     if (overlay) {
       overlay.style.transition = transition === "none" ? "none" : "opacity 280ms ease";
@@ -99,7 +181,7 @@ export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): 
     clearTimeout(restoreTimer);
     // Hand the sheet's own transitions back once the spring settled.
     restoreTimer = setTimeout(() => {
-      sheet.style.transition = "";
+      if (restHeight === null) sheet.style.transition = "";
       if (overlay) overlay.style.transition = "";
     }, 300);
   };
@@ -113,7 +195,9 @@ export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): 
     reset();
     if (event.touches.length !== 1) return;
     const touch = event.touches[0];
-    if (!canDragSheetFrom(event.target, sheet)) return;
+    mayDrag = canDragSheetFrom(event.target, sheet);
+    mayStretch = canStretchSheetFrom(event.target, sheet);
+    if (!mayDrag && !mayStretch) return;
     start = { x: touch.clientX, y: touch.clientY, time: event.timeStamp };
     last = { y: touch.clientY, time: event.timeStamp };
     velocity = 0;
@@ -131,8 +215,9 @@ export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): 
     if (!dragging) {
       const dx = touch.clientX - start.x;
       if (Math.abs(dx) < DRAG_SLOP && Math.abs(dy) < DRAG_SLOP) return;
-      // Upward or sideways: a scroll or a swipe that belongs to the content.
-      if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) {
+      // Sideways, or a way this touch may not move the sheet: a swipe or a
+      // scroll that belongs to the content.
+      if (Math.abs(dx) > Math.abs(dy) || (dy > 0 ? !mayDrag : !mayStretch)) {
         start = null;
         return;
       }
@@ -145,7 +230,8 @@ export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): 
     const elapsed = event.timeStamp - last.time;
     if (elapsed > 0) velocity = (touch.clientY - last.y) / elapsed;
     last = { y: touch.clientY, time: event.timeStamp };
-    paint(Math.max(0, touch.clientY - start.y));
+    const offset = touch.clientY - start.y;
+    paint(mayStretch ? offset : Math.max(0, offset));
   };
 
   const onTouchEnd = (event: TouchEvent) => {
@@ -179,10 +265,14 @@ export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): 
   // Reopened while its exit animation played, the same element is reused:
   // it shows at its place, not where the finger let it go.
   const reopened = typeof MutationObserver === "undefined" ? null : new MutationObserver(() => {
-    if (sheet.dataset.state !== "open" || !sheet.style.transform) return;
+    if (sheet.dataset.state !== "open" || !(sheet.style.transform || sheet.style.height)) return;
     clearTimeout(restoreTimer);
+    clearTimeout(stretchTimer);
+    restHeight = null;
     sheet.style.transition = "";
     sheet.style.transform = "";
+    sheet.style.height = "";
+    sheet.style.maxHeight = "";
     const overlay = overlayOf(sheet);
     if (overlay) {
       overlay.style.transition = "";
@@ -198,6 +288,7 @@ export function attachSheetSwipeDismiss(sheet: HTMLElement, close: () => void): 
   sheet.addEventListener("touchcancel", onTouchCancel);
   return () => {
     clearTimeout(restoreTimer);
+    clearTimeout(stretchTimer);
     reopened?.disconnect();
     sheet.removeEventListener("touchstart", onTouchStart);
     sheet.removeEventListener("touchmove", onTouchMove);

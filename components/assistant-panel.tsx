@@ -2,9 +2,8 @@
 
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
 
-import { focusMobileSheet } from "@/lib/mobile-sheet-focus";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
@@ -22,6 +21,9 @@ import { useAssistantPanel } from "@/lib/assistant-panel-context";
 import { useAssistantChatContext } from "@/lib/assistant-chat-context";
 import { updateConversation } from "@/lib/assistant-api";
 import { useProjects } from "@/lib/projects-context";
+import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
+import { NumoIntro } from "@/components/assistant/numo-intro";
+import { useFirstRunOpen } from "@/lib/first-run-open";
 
 type DisplayMode = PanelDisplayMode;
 
@@ -51,12 +53,26 @@ export function AssistantPanel() {
 
   // Display mode: session-local, defaults to compact. (No persisted user
   // setting yet — comes with account preferences later.)
-  const [displayMode, setDisplayMode] = useState<DisplayMode>("compact");
+  const [chosenMode, setDisplayMode] = useState<DisplayMode>("compact");
   const toggleDisplayMode = useCallback(() => {
     setDisplayMode((prev) => (prev === "compact" ? "expanded" : "compact"));
   }, []);
+  // Over the getting-started tour the panel stays compact, without its
+  // expand button: the expanded panel mirrors a content pane the tour
+  // covers (MIN-964).
+  const firstRunOpen = useFirstRunOpen();
+  const displayMode: DisplayMode = firstRunOpen ? "compact" : chosenMode;
 
+  // Numo introduces itself in an empty panel until it has a word of its own
+  // (MIN-907); the query is the one Home already keeps warm.
+  const { brief, loading: briefLoading } = useHomeBriefQuery(isOpen);
+  const introduceNumo = !brief && !briefLoading;
   const shellRef = useRef<AssistantShellHandle | null>(null);
+  // An opening that asked to leave the composer alone (`focusComposer: false`).
+  const skipComposerFocus = useRef(false);
+  useLayoutEffect(() => {
+    if (pendingOptions?.focusComposer === false) skipComposerFocus.current = true;
+  }, [pendingOptions]);
   // Tracks whether AssistantShell is actually mounted and its imperative
   // handle is attached. Radix Sheet defers content mount via animation, so
   // a naive setTimeout would race against an unattached ref.
@@ -171,7 +187,25 @@ export function AssistantPanel() {
       <MobileSheetContent
         side={mobile ? "bottom" : "right"}
         showCloseButton={mobile}
-        onOpenAutoFocus={mobile ? focusMobileSheet : undefined}
+        // On a phone the sheet opens on its composer, keyboard up: it is
+        // opened to write to Numo.
+        onOpenAutoFocus={mobile ? (event) => {
+          event.preventDefault();
+          if (skipComposerFocus.current) {
+            skipComposerFocus.current = false;
+            return;
+          }
+          // The composer mounts a few frames after the sheet: try until it
+          // has the focus, for at most half a second.
+          const until = performance.now() + 500;
+          const focusComposer = () => {
+            shellRef.current?.focus();
+            const active = document.activeElement;
+            const typing = active instanceof HTMLElement && active.isContentEditable;
+            if (!typing && performance.now() < until) requestAnimationFrame(focusComposer);
+          };
+          requestAnimationFrame(focusComposer);
+        } : undefined}
         onCloseAutoFocus={mobile ? (event) => {
           event.preventDefault();
           document.querySelector<HTMLElement>("[data-mobile-numo-launcher]")?.focus();
@@ -179,8 +213,9 @@ export function AssistantPanel() {
         // Compact reads as a widget popover (no tint). Expanded keeps a faint
         // tint of its own, lighter than the modal scrim dialogs share
         // (MIN-931). The transition fades it in/out as the panel morphs
-        // between modes.
-        overlayClassName={panelOverlayClassName(mobile ? "expanded" : displayMode)}
+        // between modes. On a phone the panel is a bottom sheet among the
+        // others (navigation, creation…): it dims the app with their scrim.
+        overlayClassName={mobile ? undefined : panelOverlayClassName(displayMode)}
         // Don't close when the user interacts with a nested popover or
         // alert dialog (e.g. the conversation history popover). Radix portals
         // those at the body level so they'd otherwise count as "outside".
@@ -215,9 +250,10 @@ export function AssistantPanel() {
             compact
             visible={isOpen && (!requestedConversationId || requestedConversationId === state.conversationId)}
             displayMode={displayMode}
-            onToggleDisplayMode={mobile ? undefined : toggleDisplayMode}
+            onToggleDisplayMode={mobile || firstRunOpen ? undefined : toggleDisplayMode}
             onClose={close}
             pageContext={effectivePageContext}
+            intro={introduceNumo ? <NumoIntro /> : null}
           />
         </div>
       </MobileSheetContent>

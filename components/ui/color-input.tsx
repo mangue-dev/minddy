@@ -90,10 +90,10 @@ export function ColorInput({
     onChange(next);
   };
 
-  const heightClass = size === "sm" ? "h-7" : "h-11 md:h-9";
+  const heightClass = size === "sm" ? "h-7" : "h-11 app-desktop:h-9";
   const paddingClass = size === "sm" ? "p-0.5 pr-2" : "p-1.5 pr-3.5";
   const swatchRadiusClass = size === "sm" ? "rounded-[5px]" : "rounded-[7px]";
-  const textSizeClass = size === "sm" ? "text-xs" : "text-base md:text-sm";
+  const textSizeClass = size === "sm" ? "text-xs" : "text-base app-desktop:text-sm";
   const textGapClass = size === "sm" ? "pl-1.5" : "pl-3.5";
 
   return (

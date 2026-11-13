@@ -2,6 +2,8 @@ import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 import { detectFromAcceptLanguage } from "../lib/accept-language";
 import { defaultLocale, supportedLocaleForTag, type Locale } from "./config";
+import { isMobileAppUserAgent } from "../lib/mobile/app-request";
+import { inAppMessages } from "./in-app-messages";
 import { loadMessages } from "./messages";
 
 /**
@@ -47,9 +49,10 @@ export default getRequestConfig(async ({ locale: requested }) => {
     detectFromAcceptLanguage(headerStore.get("accept-language")) ??
     defaultLocale;
 
+  const messages = await loadMessages(locale);
   return {
     locale,
-    messages: await loadMessages(locale),
+    messages: isMobileAppUserAgent(headerStore.get("user-agent")) ? inAppMessages(messages) : messages,
   };
 });
 

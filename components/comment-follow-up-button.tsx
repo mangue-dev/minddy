@@ -11,7 +11,8 @@ import type { CommentFollowUp } from "@/lib/comment-follow-up";
  * “Copy prompt for N new comments” (MIN-801), above a ticket's comment
  * composer: shown only while people have commented since the ticket's MCP
  * agent last did. It sits in the panel's fixed footer, outside the scrolling
- * thread, so it never covers a comment.
+ * thread, so it never covers a comment, and stays above the composer on the
+ * mobile layout too (MIN-965).
  */
 export function CommentFollowUpButton({
   followUp,
@@ -27,7 +28,8 @@ export function CommentFollowUpButton({
   return (
     <Button
       type="button"
-      className="w-full"
+      // A long locale wraps on a phone instead of running out of the button.
+      className="h-auto min-h-9 w-full py-2 whitespace-normal text-center"
       disabled={copying}
       onClick={() => {
         setCopying(true);

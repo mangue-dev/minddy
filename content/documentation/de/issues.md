@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 52,
-  "sourceRevision": 52,
+  "revision": 53,
+  "sourceRevision": 53,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-12",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -135,14 +135,17 @@
       "lib/server/smart-fill-objective.ts",
       "lib/smart-assign-config.ts",
       "lib/server/smart-assign.ts",
-      "components/settings/smart-assign-section.tsx"
+      "components/settings/smart-assign-section.tsx",
+      "components/import/import-guide.tsx",
+      "lib/import-guides.ts",
+      "components/settings/import-panel.tsx"
     ]
   },
   "review": {
-    "revision": 52,
-    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls)",
-    "language": "agent:claude-code (de passages changed and added for MIN-957; self-reviewed against the de catalog and glossary; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 53,
+    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls); agent:claude-code (MIN-907 import guide: the settings Import tab now picks the tool being left in a select list (Linear by default) and shows its export steps, the GitHub command and the documentation link below it, without tabs or a grey box; checked against components/import/import-guide.tsx, lib/import-guides.ts, components/settings/import-panel.tsx and messages/*.json; no browser walkthrough; figure import-issues-preview-workflow still shows the former tabs and needs a recapture; kept unchanged)",
+    "language": "agent:claude-code (de passages changed and added for MIN-957; self-reviewed against the de catalog and glossary; agent review, not human acceptance); agent:claude-code (de MIN-907 import paragraph, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-12"
   },
   "related": [
     "feedback",
@@ -187,7 +190,7 @@
       "src": "/documentation/de/new-issue.png",
       "alt": "Noch nicht abgesendeter Ticketentwurf im Projekt Aurora mit Titel, Beschreibung, manuell wählbaren Eigenschaften und der Schaltfläche AUR-21 erstellen.",
       "caption": "Beschreibe das erwartete Ergebnis und wähle vor der Erstellung die passenden Eigenschaften.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -204,7 +207,7 @@
       "src": "/documentation/de/triage-incoming.png",
       "alt": "Eingegangenes Demoticket AUR-19 mit Bericht, Eigenschaften und Funktionen für Duplikat, Ablehnen und Akzeptieren.",
       "caption": "Lies den eingegangenen Bericht, bevor du ihn akzeptierst, ablehnst oder mit einem Duplikat verknüpfst.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -221,7 +224,7 @@
       "src": "/documentation/de/issue-statuses.png",
       "alt": "Die acht Ticketstatus im Auswahlmenü, mit ausgewähltem Backlog-Status.",
       "caption": "Das Häkchen zeigt den aktuellen Status. Wähle den Status, der dem tatsächlichen Arbeitsstand entspricht.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -238,7 +241,7 @@
       "src": "/documentation/de/work-resources.png",
       "alt": "Dialog zum Hinzufügen eines Links mit einer Beispiel-Kontaktadresse.",
       "caption": "Prüfe das Ziel, bevor du die Ressource hinzufügst. Dieser Beispiellink wurde nicht gesendet.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -255,7 +258,7 @@
       "src": "/documentation/de/work-dependencies.png",
       "alt": "Die Befehlspalette zeigt die Tickets, die dieses blockieren können, mit der Frage der Beziehung im Suchfeld.",
       "caption": "Wähle zuerst die Richtung der Beziehung und dann ihr Ziel. Hier wurde keine Beziehung gespeichert.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -272,7 +275,7 @@
       "src": "/documentation/de/work-sub-issues.png",
       "alt": "Unterticket-Bereich eines Demo-Elterntickets mit der Schaltfläche „Unterticket erstellen“ und ihrem Optionspfeil.",
       "caption": "„Unterticket erstellen“ öffnet die Erstellung mit diesem Ticket als Elternticket; jedes Kind behält seinen eigenen Status und Diskussionsverlauf.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -289,7 +292,7 @@
       "src": "/documentation/de/work-implementation-plan.png",
       "alt": "Demo-Plan mit zwei von sechs abgeschlossenen Arbeitsschritten.",
       "caption": "Der gespeicherte Demo-Plan unterscheidet abgeschlossene, laufende und ausstehende Schritte. Der Fortschritt belegt nicht, dass die fiktive Codeaufgabe ausgeführt wurde.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -306,7 +309,7 @@
       "src": "/documentation/de/issue-date-recurrence.png",
       "alt": "Fälligkeitsauswahl im wiederkehrenden Modus mit Sonntagsvorschau und optionaler Uhrzeit.",
       "caption": "Der wiederkehrende Modus zeigt die wöchentliche Folge. Bestätige die erste Fälligkeit vor der Ticketerstellung.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -323,7 +326,7 @@
       "src": "/documentation/de/import-issues-preview-workflow.png",
       "alt": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen.",
       "caption": "CSV-Vorschau mit zwei übersetzten Demonstrationszeilen und erkannten Spaltenzuordnungen. Es wurde nichts importiert; die optionale KI-Planung war für die Aufnahme gesperrt.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -340,7 +343,7 @@
       "src": "/documentation/de/file-preview.png",
       "alt": "Fensterfüllender CSV-Betrachter mit Beispielaufgaben, großer Schaltfläche Schließen und dem Menü Dateiaktionen mit Herunterladen, Umbenennen und Entfernen.",
       "caption": "Der gemeinsame Dateibetrachter zeigt Schließen unter der Vorschau. Das Menü Dateiaktionen bietet Herunterladen und bei entsprechender Berechtigung Umbenennen und Entfernen.",
-      "revision": 52,
+      "revision": 53,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -594,7 +597,7 @@ Das Löschen betrifft jeden ausgewählten Eintrag. Bestätige deshalb die Auswah
 
 ## CSV-Backlog nach Zuordnungsprüfung importieren {#import-issues}
 
-Der Projektinhaber öffnet Import in den Projekteinstellungen und wählt einen CSV-Export aus. Formate von Linear und Jira werden erkannt; andere CSV-Dateien verwenden eine allgemeine Spaltenzuordnung. Pro Import gelten 5 MiB und 5.000 Tickets als Grenze. Teile größere Exporte gezielt auf und halte Elternreferenzen möglichst im selben Stapel.
+Der Projektinhaber öffnet Import in den Projekteinstellungen. Die Liste oben nennt das Tool, das du verlässt, standardmäßig Linear: Wähle deines unter Linear, Jira, Notion, GitHub, Trello und minddy, um darunter seine Exportschritte anzuzeigen. GitHub hat keinen CSV-Export und zeigt zusätzlich einen Befehl zum Kopieren; jedes Tool außer minddy verlinkt seine Dokumentation. Wähle dann den CSV-Export aus. Formate von Linear und Jira werden erkannt; andere CSV-Dateien verwenden eine allgemeine Spaltenzuordnung. Pro Import gelten 5 MiB und 5.000 Tickets als Grenze. Teile größere Exporte gezielt auf und halte Elternreferenzen möglichst im selben Stapel.
 
 Ordne vor dem Import die Titelspalte zu. Prüfe Beschreibung, Status, Priorität, Aufwand, Fälligkeit, Kategorien und zuständige Personen. Ordne Personen tatsächlichen Projektmitgliedern zu und prüfe neue Kategorien. Elternreferenzen entsprechen externen Schlüsseln im Stapel und unterstützen eine Ebene. CSV-Dateien importieren keine Bytes angehängter Dateien.
 

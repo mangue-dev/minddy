@@ -4,7 +4,7 @@ import { useId, useState, type ComponentPropsWithoutRef } from "react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { IMAGE_HERO_TRANSITION, ImageViewer } from "@/components/image-viewer";
+import { ImageViewer, heroThumbnailMotion } from "@/components/image-viewer";
 
 /** Expand forge images in the shared reader, from the same authenticated source as their thumbnail. */
 export function MarkdownImage({
@@ -29,8 +29,7 @@ export function MarkdownImage({
         {...(props as Omit<ComponentPropsWithoutRef<typeof motion.img>, "alt">)}
         layoutId={layoutId}
         layoutDependency={open}
-        animate={{ opacity: open ? 0 : 1 }}
-        transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}
+        {...heroThumbnailMotion(open, reducedMotion, layoutId)}
         alt={alt ?? ""}
         loading="lazy"
         className={cn("inline-block max-w-full", canPreview && "cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", className)}

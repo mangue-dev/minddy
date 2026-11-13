@@ -15,6 +15,8 @@
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { EmojiPicker as Frimousse } from "frimousse";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
 import { cn } from "@/lib/utils";
@@ -76,9 +78,12 @@ export function EmojiPicker({
           }}
         >
           <div data-sheet-search className="flex items-center gap-2 border-b border-border p-2">
+            {/* On a phone the row is the sheets' search capsule (app/globals.css):
+                the magnifier on the rows' icon line, the field inside it. */}
+            <HugeiconsIcon icon={Search01Icon} className="hidden shrink-0 app-mobile:block" />
             <Frimousse.Search
               placeholder={t("searchEmoji")}
-              className="h-8 min-w-0 flex-1 rounded-md bg-control px-2 text-sm outline-none focus-visible:bg-control-hover"
+              className="h-8 min-w-0 flex-1 rounded-md bg-control px-2 text-sm outline-none focus-visible:bg-control-hover app-mobile:px-0"
             />
             {value ? (
               <Button
@@ -117,10 +122,13 @@ export function EmojiPicker({
                     {children}
                   </div>
                 ),
+                // On a phone the nine columns share the sheet's width, each cell
+                // a ninth of the row and square, rather than nine fixed 32px
+                // cells on the left. (frimousse sets the row to flex inline.)
                 Emoji: ({ emoji, ...props }) => (
                   <button
                     type="button"
-                    className="flex size-8 items-center justify-center rounded-md text-lg data-[active]:bg-accent"
+                    className="flex size-8 items-center justify-center rounded-md text-lg data-[active]:bg-accent app-mobile:aspect-square app-mobile:h-auto app-mobile:w-[calc(100%/9)] app-mobile:shrink-0 app-mobile:rounded-xl app-mobile:text-[28px]"
                     {...props}
                   >
                     {emoji.emoji}

@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { MENU_ROW_CLASS, MENU_SURFACE_CLASS } from "@/components/ui/menu-surface";
 import { pageLinkTarget } from "@/lib/page-link";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
+import { haptic } from "@/lib/mobile/haptics";
 
 function shouldShowLinkMenu({ editor }: { editor: Editor }): boolean {
   // A delayed menu update can run while the view is not mounted (an editor
@@ -43,7 +44,11 @@ function MenuItem({
       type="button"
       role="menuitem"
       onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
+      onClick={() => {
+        // A chosen item ticks in the mobile app (MIN-959).
+        haptic("selection");
+        onClick();
+      }}
       // A dropdown item's row and highlight (components/ui/menu-surface.ts).
       className={cn(
         MENU_ROW_CLASS,

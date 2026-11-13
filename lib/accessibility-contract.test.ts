@@ -85,7 +85,7 @@ describe("accessibility contract", () => {
 
   it("lets framer-motion follow the reduced-motion preference (2.3.3)", () => {
     // The CSS rule in app/tokens.css cannot reach animations run from script.
-    for (const file of ["app/(app)/app-providers.tsx", "components/auth/signup-wizard.tsx", "components/marketing/point-card.tsx"]) {
+    for (const file of ["app/(app)/app-providers.tsx", "components/marketing/point-card.tsx"]) {
       expect(readFileSync(file, "utf8"), file).toContain('<MotionConfig reducedMotion="user">');
     }
   });

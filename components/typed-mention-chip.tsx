@@ -120,17 +120,19 @@ export function TypedMentionChip({
     ? projects?.find((project) => project.id === id)
     : undefined;
   const figure = known ? { ...appearance, seed: projectOrbSeed(known), icon: known.icon_url ?? null } : appearance;
+  // A member written as Markdown carries only their id, which is not their
+  // avatar's seed: the server resolution answers it (MIN-964).
   // An MCP pill shows its service's logo, and a page its emoji or the
   // database glyph: the server answers both, so it is asked even when the
   // surface's sources already named the target (MIN-879).
   // A pull request's state colors its pill (MIN-906): the server answers it
   // too, whatever the sources hold.
   const label = useTypedMentionLabel(type, id, meta, links,
-    type === "mcp" || type === "page" || type === "pull_request");
+    type === "mcp" || type === "page" || type === "pull_request" || (type === "member" && !appearance?.seed));
   // An objective's status (MIN-785), an MCP service, a page's figure: one
   // read of what the resolution returned beside the label.
   const details = useResolvedMentionDetails(
-    type === "objective" || type === "mcp" || type === "page" || type === "pull_request" ? type : null, id);
+    type === "objective" || type === "mcp" || type === "page" || type === "pull_request" || type === "member" ? type : null, id);
   const mcpService = type === "mcp" ? details?.service : undefined;
   const pageFigure = type === "page" ? details?.page : undefined;
   // From the sources on screen, else from the server resolution — without
@@ -178,7 +180,7 @@ export function TypedMentionChip({
         // more than the label (MIN-879).
         hoverCard={label === undefined ? undefined : { meta, project: links?.projectId ?? null }}
         mcpService={label === undefined ? null : mcpService ?? null}
-        avatarSeed={label === undefined ? null : figure?.seed ?? null}
+        avatarSeed={label === undefined ? null : figure?.seed ?? (type === "member" ? details?.seed : null) ?? null}
         color={label === undefined ? null : figure?.color ?? null}
         iconUrl={label !== undefined && type === "project" ? figure?.icon ?? null : null}
         icon={label !== undefined && type === "page" ? figure?.icon || pageFigure?.icon || null : null}

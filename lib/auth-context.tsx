@@ -12,6 +12,15 @@ import {
 } from "react";
 import { getSupabase } from "./supabase";
 import { getDesktopBridge } from "./desktop/bridge";
+import { getMobileBridge } from "./mobile/bridge";
+import { mobileAuthShell, runMobileAuthSession } from "./mobile/auth-session";
+import {
+  hasAppleIdentity,
+  nativeAppleShell,
+  saveAppleAuthorization,
+  signInWithNativeApple,
+} from "./apple-sign-in";
+import { sanitizeInternalRedirectPath } from "./auth-redirect";
 import { DESKTOP_CALLBACK_FLAG } from "./desktop/config";
 import { oauthCallbackUrl } from "./oauth-callback-url";
 import { beginDesktopAuthTurn } from "./desktop/auth-turn";
@@ -26,14 +35,71 @@ import { signalRealtimeRekey } from "./realtime-topic";
 import { HttpResponseError, isBackendUnavailableError } from "./backend-availability";
 import { withClientRequestDeadline } from "./client-request-deadline";
 import type { User, Session } from "@supabase/supabase-js";
+import { refreshResolvedMention } from "./mention-resolution";
+import { clearAiConsent } from "@/lib/mobile/ai-consent";
 
-export type OAuthProvider = "google" | "github";
+/**
+ * Opens the session an app's authentication round brought back: an OAuth
+ * code (desktop and mobile) or an email link token (desktop). Returns the
+ * page to land on.
+ */
+async function exchangeAuthLink(link: DesktopAuthLink): Promise<string> {
+  const supabase = getSupabase();
+  if (link.kind === "error") throw new Error(link.error);
+  if (link.kind === "code") {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(link.code);
+    if (error) throw error;
+    // An Apple round returns Apple's refresh token once, here: the server
+    // keeps it to revoke when the account is deleted.
+    const appleToken = data.session?.provider_refresh_token;
+    if (appleToken && hasAppleIdentity(data.user)) {
+      await saveAppleAuthorization(null, appleToken).catch((err: unknown) => {
+        console.error("[auth] apple authorization not saved:", err);
+      });
+    }
+  } else {
+    // The email link was NOT consumed by the callback: it was passed on as
+    // is, precisely so that the session is born here.
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: link.tokenHash,
+      type: link.type,
+    });
+    if (error) throw error;
+  }
+  return link.next;
+}
+
+/**
+ * Ends a mobile OAuth round: exchanges the code and reloads the app on the
+ * new session, or lands on the login page with the same error codes as the
+ * web. Mirrors `DesktopAuthBridge`.
+ */
+async function finishMobileSignIn(link: DesktopAuthLink): Promise<void> {
+  try {
+    window.location.replace(await exchangeAuthLink(link));
+  } catch (err) {
+    console.error("[mobile] sign-in failed:", err);
+    const code = link.kind === "error" ? link.error : "auth_callback_failed";
+    const reason = link.kind === "error" ? link.reason : "exchange_failed";
+    window.location.replace(
+      `/login?error=${encodeURIComponent(code)}&reason=${encodeURIComponent(reason)}`
+    );
+  }
+}
+
+export type OAuthProvider = "google" | "github" | "apple";
 
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
   oauthProviders: OAuthProvider[];
+  /**
+   * True once the server has said which providers it offers. Until then the
+   * auth screens do not know whether to offer a choice of methods or the
+   * email form alone, and show neither.
+   */
+  oauthProvidersResolved: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (
     email: string,
@@ -136,6 +202,9 @@ function sameUser(prev: User | null, next: User | null): boolean {
   return JSON.stringify(prev) === JSON.stringify(next);
 }
 
+/** Metadata fields a display name is read from (lib/display-name.ts). */
+const NAME_KEYS = ["display_name", "full_name", "name"];
+
 export function AuthProvider({
   children,
   discoverOAuthProviders = true,
@@ -153,6 +222,7 @@ export function AuthProvider({
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [oauthProviders, setOauthProviders] = useState<OAuthProvider[]>([]);
+  const [oauthProvidersResolved, setOauthProvidersResolved] = useState(!discoverOAuthProviders);
   const { track, identify, reset } = useAnalytics();
 
   // Snapshot of freshest user, read by updateUserMetadata to merge on
@@ -195,18 +265,25 @@ export function AuthProvider({
           typeof body === "object" && body !== null && "external" in body
             ? (body as { external?: unknown }).external
             : null;
-        if (!external || typeof external !== "object") return;
-        setOauthProviders(
-          (["google", "github"] as const).filter(
-            (provider) => (external as Record<string, unknown>)[provider] === true,
-          ),
-        );
+        if (external && typeof external === "object") {
+          setOauthProviders(
+            (["google", "github", "apple"] as const).filter(
+              (provider) => (external as Record<string, unknown>)[provider] === true,
+            ),
+          );
+        }
+        setOauthProvidersResolved(true);
       } catch (error) {
+        if (disposed) return;
         // Keep provider buttons hidden until the server confirms availability,
         // but allow an offline desktop startup to recover without a reload.
-        if (!disposed && isBackendUnavailableError(error)) {
+        if (isBackendUnavailableError(error)) {
           retryTimer = window.setTimeout(() => { void checkProviders(); }, AUTH_INIT_TIMEOUT_MS);
         }
+        // Without an answer the email form is the one method known to exist:
+        // the screen shows it rather than wait. Providers join it if a retry
+        // finds them.
+        setOauthProvidersResolved(true);
       } finally {
         checking = false;
       }
@@ -457,12 +534,25 @@ export function AuthProvider({
   }, []);
 
   const signInWithOAuth = useCallback(
-    async (provider: "google" | "github", redirectAfter?: string) => {
+    async (provider: OAuthProvider, redirectAfter?: string) => {
+      // The iOS app signs in with Apple in Apple's own sheet, without a
+      // browser round (lib/apple-sign-in.ts).
+      const appleShell = provider === "apple" ? nativeAppleShell(getMobileBridge()?.shell) : null;
+      if (appleShell) {
+        const outcome = await signInWithNativeApple(appleShell, getSupabase());
+        if (outcome.kind === "signed-in") {
+          window.location.replace(sanitizeInternalRedirectPath(redirectAfter));
+        }
+        return;
+      }
       const desktop = getDesktopBridge();
+      // The mobile app runs the round in the system's sign-in sheet, through
+      // the desktop app's callback (lib/mobile/auth-session.ts).
+      const mobile = mobileAuthShell(getMobileBridge()?.shell);
       const callbackUrl = oauthCallbackUrl(
         window.location.origin,
         redirectAfter,
-        desktop ? beginDesktopAuthTurn() : undefined,
+        desktop || mobile ? beginDesktopAuthTurn() : undefined,
       );
 
       const { data, error } = await getSupabase().auth.signInWithOAuth({
@@ -471,32 +561,20 @@ export function AuthProvider({
           redirectTo: callbackUrl.toString(),
           // Google rejects OAuth in embedded browsers. The desktop app requests
           // the URL and opens it in the system browser instead of navigating.
-          ...(desktop ? { skipBrowserRedirect: true } : {}),
+          ...(desktop || mobile ? { skipBrowserRedirect: true } : {}),
         },
       });
       if (error) throw error;
       if (desktop && data?.url) desktop.openExternal(data.url);
+      if (mobile && data?.url) {
+        const outcome = await runMobileAuthSession(mobile, data.url);
+        if (outcome.kind === "link") await finishMobileSignIn(outcome.link);
+      }
     },
     []
   );
 
-  const completeDesktopSignIn = useCallback(async (link: DesktopAuthLink) => {
-    const supabase = getSupabase();
-    if (link.kind === "error") throw new Error(link.error);
-    if (link.kind === "code") {
-      const { error } = await supabase.auth.exchangeCodeForSession(link.code);
-      if (error) throw error;
-    } else {
-      // The email link was NOT consumed by the callback: it transmitted it as
-      // which, precisely so that the session is born here.
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: link.tokenHash,
-        type: link.type,
-      });
-      if (error) throw error;
-    }
-    return link.next;
-  }, []);
+  const completeDesktopSignIn = useCallback(exchangeAuthLink, []);
 
   const signOut = useCallback(async () => {
     explicitSignOut.current = true;
@@ -516,6 +594,8 @@ export function AuthProvider({
     // before his own requests are successful.
     clearPersistedQueryCache();
     clearAppTabsWindowState();
+    // The mobile app asks the next account on this phone again (MIN-907).
+    clearAiConsent();
     window.location.href = "/login";
   }, []);
 
@@ -548,6 +628,8 @@ export function AuthProvider({
       if (data.user) {
         userRef.current = data.user;
         setUser(data.user);
+        // The pills naming this account show the new name (MIN-964).
+        if (NAME_KEYS.some((key) => key in patch)) refreshResolvedMention("member", data.user.id);
       }
     });
     metaWriteChain.current = run.catch(() => {});
@@ -664,6 +746,7 @@ export function AuthProvider({
       session,
       loading,
       oauthProviders,
+      oauthProvidersResolved,
       signInWithPassword,
       signUpWithPassword,
       sendPasswordReset,
@@ -685,6 +768,7 @@ export function AuthProvider({
       session,
       loading,
       oauthProviders,
+      oauthProvidersResolved,
       signInWithPassword,
       signUpWithPassword,
       sendPasswordReset,

@@ -117,18 +117,6 @@ export async function fetchPageMarkdownApi(projectId: string, pageId: string): P
   return response.text();
 }
 
-/** Validate the projected brief before creating its project, and reuse that body when saving. */
-export async function prepareInitialBriefApi(markdown: string): Promise<unknown> {
-  const result = await json<{ content: unknown }>(
-    await fetch("/api/account/project-brief", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markdown }),
-    }),
-    "Brief validation failed"
-  );
-  return result.content;
-}
 
 export interface CreatePageInput {
   /** Optional fractional position for insertion next to an existing entry. */

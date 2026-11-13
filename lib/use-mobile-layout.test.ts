@@ -210,6 +210,70 @@ describe("useMobileViewport", () => {
     }
   });
 
+  it("lays out for the keyboard the mobile app's shell reports, before WebKit does, over its duration", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    let report: ((keyboard: { height: number; duration: number }) => void) | undefined;
+    const remove = vi.fn();
+    vi.stubGlobal("Capacitor", {
+      isNativePlatform: () => true,
+      getPlatform: () => "ios",
+      Plugins: {
+        MinddyShell: {
+          addListener: (event: string, handler: typeof report) => {
+            if (event === "keyboard") report = handler;
+            return { remove };
+          },
+        },
+      },
+    });
+    try {
+      mount();
+      expect(html.hasAttribute("data-shell-keyboard")).toBe(true);
+      workspaceField().focus();
+      flushFrames();
+      // The shell reports the keyboard as it starts to rise: the visual
+      // viewport has not moved yet.
+      report!({ height: KEYBOARD_HEIGHT, duration: 250 });
+      expect(html.style.getPropertyValue("--mobile-keyboard-inset")).toBe(`${KEYBOARD_HEIGHT}px`);
+      expect(html.getAttribute("data-mobile-keyboard")).toBe("shell");
+      expect(html.style.getPropertyValue("--mobile-keyboard-duration")).toBe("250ms");
+      expect(html.hasAttribute("data-mobile-keyboard-moving")).toBe(true);
+      vi.advanceTimersByTime(250 + 100);
+      expect(html.hasAttribute("data-mobile-keyboard-moving")).toBe(false);
+
+      // WebKit's late report changes nothing.
+      openKeyboard();
+      expect(html.style.getPropertyValue("--mobile-keyboard-inset")).toBe(`${KEYBOARD_HEIGHT}px`);
+
+      // The field lets go: the keyboard is leaving, before the shell says so.
+      vi.advanceTimersByTime(500);
+      (document.activeElement as HTMLElement).blur();
+      flushFrames();
+      expect(html.style.getPropertyValue("--mobile-keyboard-inset")).toBe("0px");
+      expect(html.hasAttribute("data-mobile-keyboard")).toBe(false);
+      expect(html.hasAttribute("data-mobile-keyboard-moving")).toBe(true);
+      report!({ height: 0, duration: 250 });
+      vi.advanceTimersByTime(500);
+
+      // Down with the field still focused: room is given back at once.
+      workspaceField().focus();
+      report!({ height: KEYBOARD_HEIGHT, duration: 250 });
+      expect(html.getAttribute("data-mobile-keyboard")).toBe("shell");
+      report!({ height: 0, duration: 250 });
+      expect(html.style.getPropertyValue("--mobile-keyboard-inset")).toBe("0px");
+      expect(html.hasAttribute("data-mobile-keyboard")).toBe(false);
+      expect(html.hasAttribute("data-mobile-keyboard-moving")).toBe(true);
+
+      act(() => root.unmount());
+      await Promise.resolve();
+      expect(remove).toHaveBeenCalled();
+      expect(html.hasAttribute("data-shell-keyboard")).toBe(false);
+      root = createRoot(container);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("marks an open sheet, so the band under it outlives its field's focus", () => {
     mount();
     const sheet = document.createElement("div");

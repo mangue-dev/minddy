@@ -19,6 +19,8 @@ import {
   useBillingSummary,
 } from "@/lib/use-billing-query";
 import { createCheckoutApi, createPortalApi } from "@/lib/billing-api";
+import { usePurchasesHidden } from "@/lib/native-app";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { SIDEBAR_COMPACT_CONTROL_CLASS } from "@/lib/sidebar-control-styles";
 
 import {
@@ -54,6 +56,7 @@ export function UsageIndicator({
     usage,
   } = useBillingSummary();
   const [open, setOpen] = useState(false);
+  const mobile = useMobileLayout() === true;
   const sidebar = variant === "sidebar";
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
@@ -120,7 +123,7 @@ export function UsageIndicator({
         className="w-80 max-w-[calc(100vw-1.25rem)] p-0"
       >
         <MobileSheetScrollArea>
-          <UsageBreakdownBody compact />
+          <UsageBreakdownBody compact touch={mobile} />
         </MobileSheetScrollArea>
         <UsageFooter onNavigate={() => handleOpenChange(false)} />
       </ResponsivePopoverContent>
@@ -129,12 +132,12 @@ export function UsageIndicator({
 }
 
 /** Shared usage content with a compact layout for the real account popover. */
-export function UsageBreakdownBody({ compact = false }: { compact?: boolean }) {
+export function UsageBreakdownBody({ compact = false, touch = false }: { compact?: boolean; touch?: boolean }) {
   return (
     <>
       <UsageBudgetSummary compact={compact} />
-      <div className="space-y-3 border-t border-border px-3 py-3">
-        <UsageSegmentBreakdown compact={compact} />
+      <div className={cn("space-y-3 border-t border-border px-3", touch ? "py-1" : "py-3")}>
+        <UsageSegmentBreakdown compact={compact} touch={touch} />
       </div>
     </>
   );
@@ -148,6 +151,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations("Billing");
   const { status, planId } = useBillingSummary();
   const [redirecting, setRedirecting] = useState(false);
+  const purchasesHidden = usePurchasesHidden();
 
   const nextPlanId: BillingPlanId | null =
     planId === "free" ? "go" : planId === "go" ? "pro" : null;
@@ -167,6 +171,10 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
       setRedirecting(false);
     }
   }, [nextPlanId, redirecting, status?.subscription]);
+
+  // The mobile apps keep the usage figures and drop the way to a purchase
+  // (MIN-907).
+  if (purchasesHidden) return null;
 
   return (
     <div className="shrink-0 space-y-1 p-2">

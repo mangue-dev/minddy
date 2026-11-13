@@ -42,7 +42,9 @@ export function selectImportedAccountMetadata(value: unknown): Record<string, un
     if (typeof source[key] === "string" && source[key].trim() && source[key].length <= 200) result[key] = source[key];
   }
   if (Array.isArray(source.onboarding_steps)) {
-    const allowed: readonly string[] = [...ONBOARDING_STEPS, "key", "issue", "import"];
+    // Retired step ids travel too: they are part of what the account had,
+    // and the onboarding reader ignores or translates them.
+    const allowed: readonly string[] = [...ONBOARDING_STEPS, "key", "issue", "import", "cycles"];
     result.onboarding_steps = [...new Set(source.onboarding_steps.filter((step) => allowed.includes(step)))];
   }
   return result;

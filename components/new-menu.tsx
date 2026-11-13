@@ -124,7 +124,9 @@ export function NewMenu({
               "min-w-0 justify-start text-sm font-medium text-sidebar-foreground/70 shadow-none",
               collapsed
                 ? "w-9 px-[9px]"
-                : "flex-1 gap-3 pr-3 pl-[9px]",
+                // The phone's text-button inset (16px) would push the icon
+                // off the column of the navigation icons below it.
+                : "flex-1 gap-3 pr-3 pl-[9px] app-mobile:pr-3! app-mobile:pl-[9px]!",
             )}
           >
             <HugeiconsIcon icon={Add01Icon} className="size-[18px] shrink-0" />

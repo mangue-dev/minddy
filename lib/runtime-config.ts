@@ -2,6 +2,7 @@ import "server-only";
 
 import { resolveCapabilities } from "@/lib/capabilities";
 import type { PublicRuntimeConfig } from "@/lib/public-runtime-config";
+import { declaredSupabaseProjectRef } from "@/lib/supabase-project-ref";
 
 export type RuntimeConfigEnvironment = Record<string, string | undefined>;
 
@@ -64,6 +65,7 @@ export function resolveRuntimeConfig(env: RuntimeConfigEnvironment): RuntimeConf
     "MINDDY_PUBLIC_SUPABASE_URL",
   );
   const supabaseAnonKey = required(env, "MINDDY_PUBLIC_SUPABASE_ANON_KEY");
+  const supabaseProjectRef = declaredSupabaseProjectRef(env.MINDDY_PUBLIC_SUPABASE_PROJECT_REF);
   const siteName = env.MINDDY_PUBLIC_SITE_NAME?.trim() || "minddy";
   const contactEmail = env.MINDDY_PUBLIC_CONTACT_EMAIL?.trim() || `contact@${new URL(appUrl).hostname}`;
   const capabilities = resolveCapabilities(env);
@@ -73,6 +75,7 @@ export function resolveRuntimeConfig(env: RuntimeConfigEnvironment): RuntimeConf
       appUrl,
       supabaseUrl,
       supabaseAnonKey,
+      supabaseProjectRef,
       siteName,
       contactEmail,
       productFeedbackIntegrationEnabled: !!env.MINDDY_FEEDBACK_KEY?.trim(),

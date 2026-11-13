@@ -144,7 +144,7 @@ export function ResetPasswordForm() {
               {t("resetExpiredBody")}
             </p>
           </div>
-          <Button asChild className="h-10 w-full justify-center">
+          <Button asChild className="h-12 w-full justify-center rounded-full">
             <Link href="/forgot-password">{t("resetExpiredCta")}</Link>
           </Button>
         </div>
@@ -187,7 +187,7 @@ export function ResetPasswordForm() {
               id="password"
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? "reset-password-error" : undefined}
-              className="h-10 bg-control"
+              className="h-12 app-desktop:h-12 bg-control"
               autoComplete="new-password"
               autoFocus
               required
@@ -205,7 +205,7 @@ export function ResetPasswordForm() {
               id="confirmPassword"
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? "reset-password-error" : undefined}
-              className="h-10 bg-control"
+              className="h-12 app-desktop:h-12 bg-control"
               autoComplete="new-password"
               required
               minLength={MIN_PASSWORD_LENGTH}

@@ -39,8 +39,8 @@ body {
   cursor: default;
 }
 
-/* Same place as the sign-in screens' brand (`app/globals.css`,
-   `.auth-logo-row`): the mark does not move between the two pages. */
+/* The brand clears the macOS window buttons: top left, centred on their
+   row, with a toolbar item's breathing room after them. */
 html[data-desktop-platform="darwin"] .auth-logo-row {
   margin-top: -24px;
   padding-left: 64px;

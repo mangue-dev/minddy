@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ONBOARDING_CURRENT_VERSION, resolveOnboardingState } from "@/lib/onboarding";
 import { selectImportedAccountMetadata } from "./account-metadata-import";
 
-const signals = { projectCount: 0, issueCount: 0, cyclesEnabled: false };
+const signals = { projectCount: 0, issueCount: 0 };
 
 describe("imported onboarding metadata", () => {
   it.each([

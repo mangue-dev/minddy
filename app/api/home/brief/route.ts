@@ -16,6 +16,7 @@ import {
   markJournalEntriesSeen,
 } from "@/lib/server/numo/journal-content";
 import { getServiceClient } from "@/lib/supabase-service";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 /**
  * GET /api/home/brief — Numo's word on the home page (MIN-930): the latest
@@ -88,6 +89,9 @@ export async function GET(request: NextRequest) {
  * version: the journal entries it covers are marked seen.
  */
 export async function POST(request: NextRequest) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const body = await request.json().catch(() => null) as { seen?: unknown } | null;

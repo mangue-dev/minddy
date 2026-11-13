@@ -6,6 +6,7 @@ import { resolveIssueRef } from "@/lib/app-urls";
 import { expandParam } from "@/lib/ref-registry";
 import { useGeneratingViews } from "@/lib/use-generating-views";
 import { useOptionalAppTabSession } from "@/lib/app-tabs-context";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context";
 
 import {
@@ -170,6 +171,8 @@ function ProjectBoard() {
   // cleanly (`off` renders no button at all).
   const { open: openAssistant, openIntent } = useAssistantPanelActions();
   const appTabs = useOptionalAppTabSession();
+  // No new tab on the phone (MIN-967): the family entry opens the board here.
+  const mobile = useMobileLayout() === true;
 
   // Right-click "Add to cycle" (MIN-32) — the cycle is canonical on /all, but
   // picking work into your week from a project board must work too. The patch
@@ -200,6 +203,18 @@ function ProjectBoard() {
         parentId,
         searchParams,
       );
+      const openHere = () => openDestination(href, () => window.history.pushState(null, "", href));
+      if (mobile) {
+        return [
+          {
+            id: "issue-family-board",
+            label: tFamily("openHere"),
+            keywords: ["family", "parent", "children", "famille", "sous-ticket"],
+            icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
+            onSelect: openHere,
+          },
+        ];
+      }
       return [
         {
           id: "issue-family-board",
@@ -211,7 +226,7 @@ function ProjectBoard() {
               id: "issue-family-board-current",
               label: tFamily("openHere"),
               icon: <HugeiconsIcon icon={Layout3ColumnIcon} className="size-4" />,
-              onSelect: () => openDestination(href, () => window.history.pushState(null, "", href)),
+              onSelect: openHere,
             },
             {
               id: "issue-family-board-new-tab",
@@ -226,7 +241,7 @@ function ProjectBoard() {
         },
       ];
     },
-    [appTabs, familyParentIds, projectId, searchParams, tFamily, openDestination],
+    [appTabs, familyParentIds, projectId, searchParams, tFamily, openDestination, mobile],
   );
   const buildIssueMenuActions = useCallback(
     (issue: Issue): ContextMenuAction[] => [

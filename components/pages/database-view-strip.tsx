@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Add01Icon, ArrowDown01Icon, Delete02Icon, Edit04Icon } from "@hugeicons/core-free-icons";
@@ -102,7 +102,7 @@ function ViewNameDialog({ open, onOpenChange, title, initialName, onSubmit }: {
  * Without a saved view, the default one stands alone.
  */
 export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, onSelect, onCreate,
-  onRename, onDelete, onMove }: {
+  onRename, onDelete, onMove, renameRequest = 0 }: {
   views: SavedDatabaseView[];
   activeId: string | null;
   canWrite: boolean;
@@ -113,6 +113,8 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onMove: (id: string, overId: string) => void;
+  /** Bumped by the phone's view settings sheet: rename the active view. */
+  renameRequest?: number;
 }) {
   const t = useTranslations("PageDatabase");
   const tBoard = useTranslations("Board");
@@ -130,6 +132,13 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   // `view: null` is the default view of a database that has no saved one yet.
   const [menu, setMenu] = useState<{ view: SavedDatabaseView | null; x: number; y: number } | null>(null);
   const [renameDefault, setRenameDefault] = useState(false);
+  const lastRenameRequest = useRef(renameRequest);
+  useEffect(() => {
+    if (renameRequest === lastRenameRequest.current) return;
+    lastRenameRequest.current = renameRequest;
+    if (active) setRenameTarget(active);
+    else setRenameDefault(true);
+  }, [renameRequest, active]);
   // The order of the last drop, shown until the saved views come back in it
   // (or after a short while, should the save never land).
   const [dropOrder, setDropOrder] = useState<string[] | null>(null);
@@ -203,12 +212,14 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
   if (mobile || compact) {
     const actions = canWrite ? [
       ...(views.length < MAX_DATABASE_VIEWS ? [{
-        id: "create-view", label: tBoard("newView"),
+        id: "create-view", label: tBoard("newView"), inSearchRow: true,
         icon: <HugeiconsIcon icon={Add01Icon} className="size-4" />, onSelect: () => setCreateOpen(true),
       }] : []),
-      { id: "rename-view", label: tBoard("renameView"),
+      // A phone renames from the view's settings sheet, beside its sort and
+      // filters; the narrow side panel keeps it here.
+      ...(mobile ? [] : [{ id: "rename-view", label: tBoard("renameView"),
         icon: <HugeiconsIcon icon={Edit04Icon} className="size-4" />,
-        onSelect: () => (active ? setRenameTarget(active) : setRenameDefault(true)) },
+        onSelect: () => (active ? setRenameTarget(active) : setRenameDefault(true)) }]),
       ...(active && views.length > 1 ? [{ id: "delete-view", label: tBoard("deleteView"),
         icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />, onSelect: () => setDeleteTarget(active) }] : []),
     ] : undefined;
@@ -224,9 +235,9 @@ export function DatabaseViewStrip({ views, activeId, canWrite, compact = false, 
             : [{ value: "__default__", label: name }]}
           menuActions={actions}
           trigger={
-            <Button variant="ghost" aria-label={t("views")}
+            <Button variant={mobile ? "outline" : "ghost"} aria-label={t("views")}
               className={mobile
-                ? "-ml-3 h-11 min-w-0 max-w-full justify-start gap-2 px-3 text-base"
+                ? "h-11 min-w-0 max-w-full justify-start gap-2 px-4 text-base"
                 : "-ml-2 h-8 min-w-0 max-w-full justify-start gap-1.5 px-2 text-sm"}>
               <span className="truncate">{name}</span>
               <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />

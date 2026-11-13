@@ -113,16 +113,16 @@ describe("useOnboarding", () => {
   it("rolls back the completion screen when saving the last step fails", async () => {
     mocks.projects.loading = false;
     mocks.summary.loading = false;
-    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo", "mcp"];
+    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo"];
     let rejectWrite!: (error: Error) => void;
     mocks.auth.updateUserMetadata.mockImplementationOnce(() => new Promise((_, reject) => { rejectWrite = reject; }));
     renderHook();
     let saving!: Promise<void>;
-    act(() => { saving = latest!.acknowledgeStep("cycles"); });
+    act(() => { saving = latest!.acknowledgeStep("mcp"); });
     expect(latest!.finalScreen).toBe(true);
     await act(async () => { rejectWrite(new Error("Save failed")); await saving; });
     expect(latest!.finalScreen).toBe(false);
-    expect(latest!.currentStepId).toBe("cycles");
+    expect(latest!.currentStepId).toBe("mcp");
     expect(latest!.showChecklist).toBe(true);
   });
 
@@ -138,9 +138,9 @@ describe("useOnboarding", () => {
   it("brings the completion screen back if its dismissal cannot be saved", async () => {
     mocks.projects.loading = false;
     mocks.summary.loading = false;
-    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo", "mcp"];
+    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo"];
     renderHook();
-    await act(async () => { await latest!.acknowledgeStep("cycles"); });
+    await act(async () => { await latest!.acknowledgeStep("mcp"); });
     expect(latest!.finalScreen).toBe(true);
     mocks.auth.updateUserMetadata.mockRejectedValueOnce(new Error("Save failed"));
     await act(async () => { await latest!.dismiss(); });
@@ -151,9 +151,9 @@ describe("useOnboarding", () => {
   it("shows completion once and closes it without a dismissal analytics event", async () => {
     mocks.projects.loading = false;
     mocks.summary.loading = false;
-    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo", "mcp"];
+    mocks.auth.user!.user_metadata.onboarding_steps = ["project", "tickets", "numo"];
     renderHook();
-    await act(async () => { await latest!.acknowledgeStep("cycles"); });
+    await act(async () => { await latest!.acknowledgeStep("mcp"); });
     expect(latest!.finalScreen).toBe(true);
     expect(mocks.analytics.track.mock.calls.filter(([event]) => event === "onboarding_completed")).toHaveLength(1);
     await act(async () => { await latest!.finish(); });

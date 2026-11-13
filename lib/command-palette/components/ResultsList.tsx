@@ -70,6 +70,18 @@ export interface ResultsListProps {
 
 const ITEM_HEIGHT = 44;
 const HEADER_HEIGHT = 28;
+/**
+ * On a phone the palette is a bottom sheet and its rows have the sheets' own
+ * measures: `--mobile-sheet-row` (48px), and a section name with 12px above
+ * and 4px below its 18px line (app/globals.css). The list is virtualised, so
+ * the heights live here too.
+ */
+const MOBILE_ITEM_HEIGHT = 48;
+const MOBILE_HEADER_HEIGHT = 34;
+
+type RowHeights = { item: number; header: number };
+const DESKTOP_ROWS: RowHeights = { item: ITEM_HEIGHT, header: HEADER_HEIGHT };
+const MOBILE_ROWS: RowHeights = { item: MOBILE_ITEM_HEIGHT, header: MOBILE_HEADER_HEIGHT };
 const MIN_LIST_HEIGHT = 100;
 const MAX_LIST_HEIGHT = 400;
 /* Equals the total horizontal inset of a row (8px list container margin +
@@ -152,28 +164,28 @@ function flattenGroupsWithPadding(groups: ItemGroup[]): FlatRow[] {
   return rows;
 }
 
-function getRowHeightForRow(row: FlatRow): number {
+function getRowHeightForRow(row: FlatRow, heights: RowHeights = DESKTOP_ROWS): number {
   switch (row.type) {
     case "header":
-      return HEADER_HEIGHT;
+      return heights.header;
     case "padding":
       return row.position === "top" ? SCROLL_PADDING : BOTTOM_SCROLL_PADDING;
     case "item":
     default:
-      return ITEM_HEIGHT;
+      return heights.item;
   }
 }
 
 /**
  * Calculate row offsets for all rows in a single pass (O(1) lookups later).
  */
-function calculateRowOffsets(rows: FlatRow[]): number[] {
+function calculateRowOffsets(rows: FlatRow[], heights: RowHeights): number[] {
   const offsets = new Array<number>(rows.length);
   let currentOffset = 0;
 
   for (let i = 0; i < rows.length; i++) {
     offsets[i] = currentOffset;
-    currentOffset += getRowHeightForRow(rows[i]);
+    currentOffset += getRowHeightForRow(rows[i], heights);
   }
 
   return offsets;
@@ -327,16 +339,17 @@ export function ResultsList({
   const totalItems = useMemo(() => getTotalItems(groups), [groups]);
 
   // Pre-calculated offsets for O(1) lookup during scroll operations
-  const rowOffsets = useMemo(() => calculateRowOffsets(rows), [rows]);
+  const heights = isMobile ? MOBILE_ROWS : DESKTOP_ROWS;
+  const rowOffsets = useMemo(() => calculateRowOffsets(rows, heights), [rows, heights]);
 
   const listHeight = height ?? calculateListHeight(groups);
 
   const getRowHeight = useCallback(
     (index: number) => {
       const row = rows[index];
-      return row ? getRowHeightForRow(row) : ITEM_HEIGHT;
+      return row ? getRowHeightForRow(row, heights) : heights.item;
     },
-    [rows]
+    [rows, heights]
   );
 
   // Scroll active item into view with padding

@@ -35,7 +35,9 @@ export interface MinddyEntityActionLabels {
 export interface MinddyEntityActionsDependencies {
   labels: MinddyEntityActionLabels;
   navigate: (href: string) => void;
-  openInNewTab: (href: string) => void;
+  /** Absent where there are no tabs to open (the mobile layout, MIN-967):
+   *  the "Open in a new tab" action is then left out. */
+  openInNewTab?: (href: string) => void;
   copyText: (
     value: string,
     confirmation: string,
@@ -115,20 +117,21 @@ export function createMinddyEntityActionsProvider(
   // is exactly these two link gestures (see ActionRegistry.hasActionsForItem).
   const linkActions = (item: PaletteItem, basic = true): ContextualAction[] => {
     if (!item.href) return [];
+    const { openInNewTab } = dependencies;
     return [
-      {
+      ...(openInNewTab ? [{
         id: "entity.open-new-tab",
         label: labels.openInNewTab,
         icon: ExternalLinkIcon,
-        category: "navigation",
+        category: "navigation" as const,
         priority: -90,
         basic,
         execute: async () => {
-          dependencies.openInNewTab(item.href as string);
+          openInNewTab(item.href as string);
           // A new tab opened: the palette has served its purpose.
           return { success: true, closeMenu: true };
         },
-      },
+      }] : []),
       {
         id: "entity.copy-link",
         label: labels.copyLink,

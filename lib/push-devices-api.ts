@@ -86,7 +86,12 @@ export async function saveNativePushDeviceApi(
   transport: "apns" | "wns",
   installationId: string,
   locale: string,
-  opts: { track?: boolean; refresh?: boolean } = {}
+  opts: {
+    track?: boolean;
+    refresh?: boolean;
+    /** APNs only: the app and the gateway the token belongs to. */
+    target?: { platform: "ios" | "macos"; environment: "production" | "sandbox" };
+  } = {}
 ): Promise<PushDevice> {
   const { device } = await parseJson<{ device: PushDevice }>(
     await fetch("/api/account/push-subscriptions", {
@@ -98,6 +103,7 @@ export async function saveNativePushDeviceApi(
         installationId,
         locale,
         refresh: opts.refresh,
+        ...opts.target,
       }),
     })
   );

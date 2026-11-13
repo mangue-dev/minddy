@@ -43,6 +43,17 @@
     }
   },
   "functions": {
+    "auth_account_status(text)": {
+      "sha256": "b895b133149dc24cea17f344cb6dac0c49d95a1637f180656d6d622e705996d5",
+      "securityDefiner": true,
+      "configuration": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}",
+      "relations": [],
+      "protectedRelations": [],
+      "functionReferences": []
+    },
     "mfa_aal_ok()": {
       "sha256": "1a2e877e145c5635b966e5ed6adb0add1ad2a9d6c8b749a37ff41af12fe6f45f",
       "securityDefiner": true,
@@ -7063,8 +7074,8 @@
       ],
       "functionReferences": []
     },
-    "register_protected_push(uuid,text,text,text,text,text,text,text,text,text,boolean)": {
-      "sha256": "d5e05c15727a47f7bafe5e05dd9817dad38174e7b040e5a56c65a55afe2d707a",
+    "register_protected_push(uuid,text,text,text,text,text,text,text,text,text,boolean,text,text)": {
+      "sha256": "052fac19046cc4895ab9df795f989b284534177c678704bdcf4f65132af517f7",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

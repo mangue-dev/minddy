@@ -144,3 +144,12 @@ test("a pinned Storage image below the S3 replay fix requires the overlay to dis
     /S3_PROTOCOL_ENABLED/,
   );
 });
+
+test("sets the iOS app's version from the release, in numbers only", async () => {
+  const { appStoreVersion, setXcodeMarketingVersion, xcodeMarketingVersions } = await import("./release-lib.mjs");
+  const project = "a\n\t\t\t\tMARKETING_VERSION = 0.30.1;\nb\n\t\t\t\tMARKETING_VERSION = 0.30.1;\n";
+  assert.equal(appStoreVersion("1.2.3-rc.1"), "1.2.3");
+  assert.deepEqual(xcodeMarketingVersions(setXcodeMarketingVersion(project, "0.40.0")), ["0.40.0", "0.40.0"]);
+  assert.deepEqual(xcodeMarketingVersions(setXcodeMarketingVersion(project, "1.0.0-beta.2")), ["1.0.0", "1.0.0"]);
+  assert.throws(() => setXcodeMarketingVersion(project, "next"));
+});

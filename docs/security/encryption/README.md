@@ -2889,3 +2889,45 @@ A summary that cannot be decrypted is ignored together with its boundary, so the
 turn reloads the messages it covered. `context_summary_through_at` and
 `context_summary_through_id` mark the last message the summary covers; they are
 clear timestamp and routing metadata. Migration `20270109200116` is additive.
+
+## Sign in with Apple revocation tokens (MIN-907)
+
+`apple_sign_in_tokens` holds the Apple refresh token that account deletion
+revokes at `appleid.apple.com/auth/revoke` (App Review guideline 5.1.1(v)).
+Supabase keeps no provider token, so the server stores one per user and Apple
+client: the iOS app's bundle identifier for a code exchanged from the native
+sheet, the web Services ID for the token Supabase returns after a web round.
+Rows are born sealed: the token is a user-key format-3 envelope in
+`encrypted_content`, bound to the user and the client ID, and the table has no
+clear-text column or legacy path. `client_id` is clear operational metadata.
+Only the service role reads or writes it, through `lib/server/apple-sign-in.ts`;
+the rows cascade with the account and are not part of the account export,
+since a revocable credential is not personal content. Sending the token to
+Apple to check, refresh or revoke it is an intentional external transmission.
+Migration `20270109200119` is additive.
+
+## APNs app and gateway of a push device (MIN-907)
+
+`push_subscriptions.apns_platform` (`ios` or `macos`) and `apns_environment`
+(`production` or `sandbox`) record which app and which APNs gateway a token
+belongs to, as the device reports them at registration. They are clear
+operational configuration: they select the `apns-topic` and the gateway, say
+nothing about the person, and stay empty on Web Push and WNS rows (a check
+constraint enforces it). An APNs row without them predates the iOS app and is
+sent as the macOS app in production. The token itself stays in the sealed
+content. Migration `20270109200120` is additive: `register_protected_push`
+gains two optional parameters, so the previous release keeps registering
+devices unchanged.
+
+## Account status for the single sign-in screen (MIN-907)
+
+`public.auth_account_status(text)` answers whether an address holds no
+account (`new`), one that signs in with a password (`password`), or one
+created through a sign-in service (`oauth`). It reads `auth.users` only,
+returns one of those three words and no identifier, and only `service_role`
+may execute it. `/api/auth/lookup` calls it after rate-limiting per client and
+per address. The answer reveals whether an address is registered, as the
+sign-in screen has to; nothing encrypted is read. Sign-up no longer stages an
+avatar image before the account exists: `stageSignupAvatar` and its storage
+write are gone, and images staged earlier are still claimed or expired on the
+first authenticated arrival. Migration `20270109200121` is additive.

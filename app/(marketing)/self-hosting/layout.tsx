@@ -15,7 +15,7 @@ export default async function SelfHostingLayout({ children }: { children: React.
     Auth: messages.Auth, ApiErrors: messages.ApiErrors, Assistant: messages.Assistant }}>
     <DocumentationSession locale={locale} selfHosting>
       <DocumentationHeader articles={articles} locale={locale} currentId="installation" title={t("installWizardTitle")} topic={t("operate")} sections={[]} />
-      <main data-documentation-main className="min-w-0 pt-24 sm:pt-16">{children}</main>
+      <main data-documentation-main className="min-w-0 pt-16">{children}</main>
     </DocumentationSession>
   </InheritedIntlProvider>;
 }

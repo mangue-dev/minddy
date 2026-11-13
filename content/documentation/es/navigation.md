@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 25,
-  "sourceRevision": 24,
+  "revision": 27,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-12",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -72,14 +72,15 @@
       "lib/keyboard/typeahead.ts",
       "components/app-shell.tsx",
       "lib/keyboard-modality.ts",
-      "lib/keyboard/hover-keys.ts"
+      "lib/keyboard/hover-keys.ts",
+      "components/usage-indicator.tsx"
     ]
   },
   "review": {
-    "revision": 25,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 27,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-959 flat phone navigation sheet: one level, a project picker over that project's sections as tiles, no project list, the page's own list in a second tab that the sheet opens on, checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx and in a phone viewport; no figure shows the sheet, none recaptured)",
+    "language": "agent:claude-code (es changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (es MIN-959 phone menu passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-12"
   },
   "related": [
     "views",
@@ -100,7 +101,7 @@
       "src": "/documentation/es/work-navigation.png",
       "alt": "Navegación del proyecto junto al tablero de incidencias de demostración.",
       "caption": "La barra del proyecto da acceso a incidencias, objetivos, páginas y clasificación de entradas.",
-      "revision": 25,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -117,7 +118,7 @@
       "src": "/documentation/es/work-search.png",
       "alt": "Resultados de búsqueda del identificador de una incidencia de demostración.",
       "caption": "La paleta encuentra la incidencia por identificador junto a las páginas del proyecto; abrir un resultado conserva sus reglas de acceso.",
-      "revision": 25,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -167,7 +168,7 @@ La acción se aplica a la fila en la que hiciste clic, aunque haya otro proyecto
 
 Una incidencia se abre en un panel de detalle para mantener disponible el tablero que hay debajo. Una página abierta desde una mención o un enlace se abre del mismo modo, en un panel lateral con **Ampliar** para llegar a la página completa. Numo se abre desde su botón flotante en un panel de conversación compartido. La bandeja de entrada se abre como un panel emergente de navegación con notificaciones e invitaciones. Los antiguos enlaces a pantallas propias de la bandeja de entrada y Numo llevan a los accesos actuales; no representan pantallas independientes actuales.
 
-En el móvil, abre el menú lateral de navegación para elegir los mismos destinos. La barra inferior de la pantalla reúne, de izquierda a derecha, el menú lateral de navegación, Numo, la búsqueda, el cuaderno de tareas y **Nuevo**; **Inicio** está en el menú lateral. Una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
+En el móvil, la barra inferior de la pantalla reúne, de izquierda a derecha, el menú, la búsqueda, la bandeja de entrada, Numo y **Nuevo** (+). Un punto en la bandeja de entrada indica una notificación sin leer o una invitación pendiente. El menú abre una hoja de un solo nivel, sin filas para volver. Su primera fila, junto al botón de cerrar, reúne tu cuenta (avatar y nombre), el porcentaje de uso de la IA cuando minddy proporciona tu IA, y **¿Qué hay de nuevo?**. Sigue un selector de proyecto, con el proyecto de la página o el último en el que creaste una incidencia, y las secciones de ese proyecto como mosaicos (**Incidencias**, **Objetivos**, **Páginas**, **Clasificación**, **Sugerencias**, **Ajustes**). Elegir otro proyecto cambia los mosaicos, no la página. Después vienen **Inicio** y tus otros destinos; crea un proyecto desde **Nuevo** (+). Cuando la página tiene su propia lista, como los objetivos o los ajustes, una segunda pestaña en la parte superior de la hoja la muestra, y la hoja se abre en esa pestaña; **Ir a** lleva a todo lo demás. Una barra de carga en la parte superior indica que la navegación está en curso, también mientras terminan los guardados pendientes de la página. Los paneles usan el ancho disponible, así que ciérralos o vuelve desde el panel actual para ver de nuevo la lista. Utiliza los botones visibles cuando no haya un atajo de teclado disponible.
 
 ### Pestañas de escritorio {#tabs}
 

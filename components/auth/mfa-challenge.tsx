@@ -21,6 +21,8 @@ import { OtpInput } from "@/components/otp-input";
  * 2FA instead of bypassing it for the duration of a session. The screen says it before
  * let's use it, not afterwards.
  */
+const AUTH_SECONDARY_CLASS = "h-12 w-full justify-center rounded-full text-[15px] font-medium";
+
 export function MfaChallenge({
   onVerified,
   onRecovered,
@@ -156,7 +158,7 @@ export function MfaChallenge({
             </label>
             <Input
               id="mfa-recovery-code"
-              className="h-10 bg-control font-mono uppercase tracking-widest"
+              className="h-12 app-desktop:h-12 bg-control font-mono uppercase tracking-widest"
               autoComplete="off"
               autoFocus
               maxLength={14}
@@ -180,30 +182,30 @@ export function MfaChallenge({
         </form>
       )}
 
-      <div className="space-y-2 text-center text-sm text-muted-foreground">
-        <p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              setMode(mode === "totp" ? "recovery" : "totp");
-              setError(null);
-            }}
-            className="font-medium text-foreground underline-offset-4 hover:underline disabled:opacity-60"
-          >
-            {mode === "totp" ? t("mfaLostDevice") : t("mfaBackToCode")}
-          </button>
-        </p>
-        <p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void signOut()}
-            className="underline-offset-4 hover:underline disabled:opacity-60"
-          >
-            {t("mfaUseAnotherAccount")}
-          </button>
-        </p>
+      {/* Two filled secondary actions, stacked at the width of the main
+          button: on a phone, an underlined text link is a small target. */}
+      <div className="flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={() => {
+            setMode(mode === "totp" ? "recovery" : "totp");
+            setError(null);
+          }}
+          className={AUTH_SECONDARY_CLASS}
+        >
+          {mode === "totp" ? t("mfaLostDevice") : t("mfaBackToCode")}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void signOut()}
+          className={AUTH_SECONDARY_CLASS}
+        >
+          {t("mfaUseAnotherAccount")}
+        </Button>
       </div>
     </div>
   );

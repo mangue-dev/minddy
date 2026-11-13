@@ -27,6 +27,7 @@ import {
 } from "@/lib/billing-plans";
 import { planFeatureLabels } from "@/lib/plan-features";
 import { CARD_TONES } from "@/components/marketing/card-tones";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { billingStatusQueryKey, useBillingSummary } from "@/lib/use-billing-query";
 import {
   createCheckoutApi,
@@ -70,6 +71,7 @@ const PLAN_TONES: Record<BillingPlanId, string> = {
 
 export function PlanSection() {
   const t = useTranslations("Billing");
+  const purchasesHidden = usePurchasesHidden();
   const locale = useLocale();
   const { loading, status, planId } = useBillingSummary();
   const queryClient = useQueryClient();
@@ -133,6 +135,8 @@ export function PlanSection() {
   // deactivated cards: they would make it appear as if a purchase was required for the
   // core while only cloud capabilities are optional.
   if (!loading && !status?.managedBilling) return null;
+  // Nothing is sold in the mobile apps (MIN-907).
+  if (purchasesHidden) return null;
 
   const adminOverride = status?.adminOverride ?? null;
   if (adminOverride) {

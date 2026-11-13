@@ -4,8 +4,8 @@
 // database entry previewed from its table (components/pages/pages-shell.tsx)
 // and a page opened from a link anywhere in the app (MIN-777,
 // components/global-page-panel.tsx). Both offer the same ways out: Expand to
-// the full page, open it in a new tab from Expand's menu, or close back to
-// what was underneath.
+// the full page, open it in a new tab from Expand's menu (not on the phone,
+// which has no tabs), or close back to what was underneath.
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft01Icon, Cancel01Icon, ExpandIcon, LinkSquare01Icon } from "@hugeicons/core-free-icons";
@@ -16,6 +16,7 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { SidePanel, SidePanelContent, SidePanelTitle } from "@/components/ui/side-panel";
 import { SplitButton } from "@/components/ui/split-button";
 import { useOptionalAppTabSession } from "@/lib/app-tab-session-context";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 
 export function PagePeekPanel({
@@ -53,6 +54,8 @@ export function PagePeekPanel({
   // A tab of the desktop shell when there is one, a browser tab otherwise,
   // as the board's views open theirs (components/board-toolbar.tsx).
   const appTabs = useOptionalAppTabSession();
+  // The phone has no tabs (MIN-967): Expand stands alone, without its menu.
+  const mobile = useMobileLayout() === true;
   const openInNewTab = async () => {
     if (beforeNewTab && !(await beforeNewTab())) return;
     if (appTabs) void appTabs.create(newTabHref);
@@ -61,7 +64,7 @@ export function PagePeekPanel({
   return (
     <SidePanel open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <SidePanelContent
-        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0 data-[vaul-drawer-direction=bottom]:w-full"
+        className="flex w-[min(760px,calc(100vw-2rem))] flex-col overflow-hidden p-0"
         onInteractOutside={keepOverlayOpenForPopper}
         onEscapeKeyDown={(event) => {
           if (event.target instanceof HTMLElement && event.target.closest("[data-database-cell-editor]"))
@@ -78,21 +81,28 @@ export function PagePeekPanel({
             </Button>
           ) : null}
           <div className="flex-1" />
-          <SplitButton
-            variant="outline"
-            size="sm"
-            onClick={onExpand}
-            menuLabel={tCommon("moreActions")}
-            menu={
-              <DropdownMenuItem onSelect={() => void openInNewTab()}>
-                <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />
-                {tActions("openInNewTab")}
-              </DropdownMenuItem>
-            }
-          >
-            <HugeiconsIcon icon={ExpandIcon} className="size-3.5" />
-            {expandLabel}
-          </SplitButton>
+          {mobile ? (
+            <Button variant="outline" size="sm" onClick={onExpand}>
+              <HugeiconsIcon icon={ExpandIcon} className="size-3.5" />
+              {expandLabel}
+            </Button>
+          ) : (
+            <SplitButton
+              variant="outline"
+              size="sm"
+              onClick={onExpand}
+              menuLabel={tCommon("moreActions")}
+              menu={
+                <DropdownMenuItem onSelect={() => void openInNewTab()}>
+                  <HugeiconsIcon icon={LinkSquare01Icon} className="size-4" />
+                  {tActions("openInNewTab")}
+                </DropdownMenuItem>
+              }
+            >
+              <HugeiconsIcon icon={ExpandIcon} className="size-3.5" />
+              {expandLabel}
+            </SplitButton>
+          )}
           {actionsSlot ? <div ref={actionsSlot} className="flex items-center" /> : null}
           <Button variant="ghost" size="icon-sm" aria-label={tCommon("close")} shortcut={["Esc"]} onClick={onClose}>
             <HugeiconsIcon icon={Cancel01Icon} className="size-4" />

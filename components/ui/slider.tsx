@@ -208,7 +208,7 @@ function Slider({
       <SliderPrimitive.Track
         ref={trackRef}
         data-slot="slider-track"
-        className="relative grow overflow-hidden rounded-2xl bg-control data-horizontal:h-11 data-horizontal:w-full data-vertical:h-full data-vertical:w-11 md:data-horizontal:h-9 md:data-vertical:w-9"
+        className="relative grow overflow-hidden rounded-2xl bg-control data-horizontal:h-11 data-horizontal:w-full data-vertical:h-full data-vertical:w-11 app-desktop:data-horizontal:h-9 app-desktop:data-vertical:w-9"
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
@@ -220,7 +220,7 @@ function Slider({
           <span
             data-slot="slider-labels"
             aria-hidden="true"
-            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-between px-3.5 text-base font-medium leading-none text-foreground data-vertical:hidden md:text-sm"
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-between px-3.5 text-base font-medium leading-none text-foreground data-vertical:hidden app-desktop:text-sm"
           >
             <span
               ref={(node) => {

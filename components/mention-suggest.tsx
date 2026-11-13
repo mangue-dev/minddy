@@ -39,6 +39,7 @@ import { SuggestionMenu } from "@/components/editor/suggestion-menu";
 import type { IssueStatus } from "@/lib/issue-constants";
 import type { ObjectiveStatus } from "@/lib/objective-validation";
 import { isPlanMention, type MentionMeta } from "@/lib/mention-link";
+import { haptic } from "@/lib/mobile/haptics";
 
 export interface MentionOption {
   /** Source project for contextual mentions retained across navigation. */
@@ -308,6 +309,8 @@ export function MentionOptionRow({
       aria-selected={active}
       onMouseDown={(e) => {
         e.preventDefault();
+        // A chosen suggestion ticks in the mobile app (MIN-959).
+        haptic("selection");
         onPick();
       }}
       // A real movement only: arrows scroll the list under a still pointer,

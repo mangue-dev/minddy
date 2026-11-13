@@ -4,14 +4,19 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { readConsent, writeConsent, type CookieConsent } from "@/lib/cookie-consent";
-import { isDesktop } from "@/lib/desktop/bridge";
+import { isNativeApp } from "@/lib/native-app";
 import { useAnalytics } from "@/lib/use-analytics";
 import { localizedHref } from "@/lib/locale-href";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { CARD_TONES } from "@/components/marketing/card-tones";
 import type { Locale } from "@/i18n/config";
 
-/** Show web consent after hydration; desktop consent is managed in account settings. */
+/**
+ * Show web consent after hydration. The installed apps, desktop and mobile,
+ * ask the same question once in a dialog after sign-in
+ * (`desktop-analytics-prompt.tsx`): a banner pinned to the bottom of the page
+ * belongs to a site, not to an app.
+ */
 export function CookieBanner() {
   const t = useTranslations("CookieBanner");
   const locale = useLocale() as Locale;
@@ -20,7 +25,7 @@ export function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    setVisible(readConsent() === null && !isDesktop());
+    setVisible(readConsent() === null && !isNativeApp());
   }, []);
 
   const choose = (consent: CookieConsent) => {

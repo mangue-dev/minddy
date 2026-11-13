@@ -7,7 +7,7 @@ import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IMAGE_HERO_TRANSITION, ImageViewer } from "@/components/image-viewer";
+import { ImageViewer, heroThumbnailMotion } from "@/components/image-viewer";
 import { prFileRawUrl, type PrEndpoint, type PullRequestFile } from "@/lib/agent-api";
 
 /**
@@ -183,8 +183,7 @@ function ImagePane({
                 layoutId={layoutId}
                 layoutDependency={zoomed}
                 className="block"
-                animate={{ opacity: zoomed ? 0 : 1 }}
-                transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}
+                {...heroThumbnailMotion(zoomed, reducedMotion, layoutId)}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- local blob URL, outside the optimizer */}
                 <img

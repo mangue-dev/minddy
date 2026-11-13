@@ -1,5 +1,7 @@
-import type { CookieOptions } from "@supabase/ssr";
+import type { CookieOptions, CookieOptionsWithName } from "@supabase/ssr";
 import type { NextResponse } from "next/server";
+
+import { declaredSupabaseProjectRef, supabaseSessionCookieName } from "@/lib/supabase-project-ref";
 
 /**
  * Cookie options for SESSION Supabase (MIN-351).
@@ -68,6 +70,22 @@ export const SESSION_COOKIE_OPTIONS = {
     production: process.env.NODE_ENV === "production",
   }),
 } as const;
+
+/**
+ * The `cookieOptions` given to a Supabase SSR client. With a declared project
+ * ref (MIN-960), `name` pins the session cookie, so moving the API to a custom
+ * domain keeps every session. `@supabase/ssr` strips `name` from the options it
+ * hands to `setAll`; responses keep spreading `SESSION_COOKIE_OPTIONS` alone.
+ */
+export function supabaseCookieOptions(declaredProjectRef: string | null | undefined): CookieOptionsWithName {
+  const ref = declaredSupabaseProjectRef(declaredProjectRef);
+  return ref ? { ...SESSION_COOKIE_OPTIONS, name: supabaseSessionCookieName(ref) } : SESSION_COOKIE_OPTIONS;
+}
+
+/** `supabaseCookieOptions` for server clients, which read the ref from the environment. */
+export function serverSupabaseCookieOptions(): CookieOptionsWithName {
+  return supabaseCookieOptions(process.env.MINDDY_PUBLIC_SUPABASE_PROJECT_REF);
+}
 
 /**
  * What `@supabase/ssr` gives to write, kept aside then reported on the

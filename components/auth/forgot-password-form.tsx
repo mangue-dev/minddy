@@ -16,7 +16,7 @@ import {
   SubmitArrow,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
-import { isValidEmail, preserveAuthParams } from "@/lib/signup-wizard";
+import { isValidEmail, preserveAuthParams } from "@/lib/auth-entry";
 import { useAnalytics } from "@/lib/use-analytics";
 import { errorReason } from "@/lib/analytics-sanitize";
 import { authErrorMessage } from "@/lib/auth-errors";
@@ -40,6 +40,7 @@ import { authErrorMessage } from "@/lib/auth-errors";
  */
 export function ForgotPasswordForm() {
   const t = useTranslations("Auth");
+  const tCommon = useTranslations("Common");
   const searchParams = useSearchParams();
   const { sendPasswordReset } = useAuth();
   const { track } = useAnalytics();
@@ -54,7 +55,13 @@ export function ForgotPasswordForm() {
   /** The address to which a link just left — the screen then changes. */
   const [sentTo, setSentTo] = useState<string | null>(null);
 
-  const backHref = `/login${preserveAuthParams(searchParams)}`;
+  // Back from the password step, back to it: the address it was about
+  // returns with it (MIN-907).
+  const fromAddress = searchParams.get("email");
+  const backHref = `/login${preserveAuthParams(
+    searchParams,
+    fromAddress ? { email: fromAddress, step: "password" } : undefined,
+  )}`;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -84,7 +91,7 @@ export function ForgotPasswordForm() {
 
   if (sentTo) {
     return (
-      <AuthColumn inDesktopApp={inDesktopApp}>
+      <AuthColumn inDesktopApp={inDesktopApp} footer={null}>
         <div className="space-y-6 text-center">
           <MailGlyph />
           <div className="space-y-2">
@@ -95,7 +102,7 @@ export function ForgotPasswordForm() {
               {t("forgotSentBody", { email: sentTo })}
             </p>
           </div>
-          <Button asChild variant="outline" className="h-10 w-full justify-center">
+          <Button asChild variant="outline" className="h-12 w-full justify-center rounded-full">
             <Link href={backHref}>{t("forgotBackToLogin")}</Link>
           </Button>
         </div>
@@ -104,7 +111,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <AuthColumn inDesktopApp={inDesktopApp}>
+    <AuthColumn inDesktopApp={inDesktopApp} footer={null}>
       <div className="space-y-8">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">
@@ -122,7 +129,7 @@ export function ForgotPasswordForm() {
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? "forgot-password-error" : undefined}
               type="email"
-              className="h-10 bg-control"
+              className="h-12 app-desktop:h-12 bg-control"
               autoComplete="email"
               autoFocus
               required
@@ -143,16 +150,11 @@ export function ForgotPasswordForm() {
             {t("forgotSubmit")}
             {!loading && <SubmitArrow />}
           </Button>
+          {/* Cancelling the request returns to where it started (MIN-907). */}
+          <Button asChild variant="outline" className="h-12 w-full justify-center rounded-full">
+            <Link href={backHref}>{tCommon("cancel")}</Link>
+          </Button>
         </form>
-
-        <p className="text-center text-sm text-muted-foreground">
-          <Link
-            href={backHref}
-            className="font-medium text-foreground underline-offset-4 hover:underline"
-          >
-            {t("forgotBackToLogin")}
-          </Link>
-        </p>
       </div>
     </AuthColumn>
   );

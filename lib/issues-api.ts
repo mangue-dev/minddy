@@ -10,6 +10,7 @@ import { rememberCreateProject } from "./last-create-project";
 import { saveCreationRelations } from "./creation-relations";
 import { applyPendingIssues } from "./optimistic/issue-writes";
 import { reconcileProjectIssuesInGlobalCache } from "./global-issues-api";
+import { hapticOptimistic, hapticOutcome } from "./mobile/haptics";
 import type {
   CreateIssueInput,
   Issue,
@@ -99,12 +100,15 @@ export async function createIssueApi(
   // so the server checks the nesting and inherits the parent's objective.
   const parent = fields.parent_id ? undefined : relations?.find((relation) => relation.type === "sub_issue_of");
   const payload = parent ? { ...fields, parent_id: parent.target_id } : fields;
-  const issue = await parseJson<Issue>(
-    await fetch(`/api/projects/${projectId}/issues`, {
+  // The created issue is a key outcome: the mobile app vibrates for it at
+  // once, since the card is already there and Smart Fill may take seconds,
+  // then again if it fails (MIN-959).
+  const issue = await hapticOptimistic(
+    fetch(`/api/projects/${projectId}/issues`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    })
+    }).then((response) => parseJson<Issue>(response))
   );
   // All client-side creations go through here (project board, board
   // aggregate, global dialog, palette, cancellation): this is therefore the only place to
@@ -205,13 +209,16 @@ export async function updateIssueApi(
   updates: IssueUpdateInput,
   meta?: IssueMutationMeta
 ): Promise<Issue> {
-  const issue = parseJson<Issue>(
-    await fetch(`/api/issues/${issueId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    })
-  );
+  const request = fetch(`/api/issues/${issueId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(updates),
+  }).then((response) => parseJson<Issue>(response));
+  // Completing an issue is a key outcome: the mobile app vibrates for it
+  // (MIN-959). A bulk completion vibrates once (see lib/mobile/haptics.ts).
+  const issue = (updates as { status?: unknown }).status === "done"
+    ? hapticOutcome(request)
+    : request;
   // Tracked only after a successful round trip — an edition rejected by the
   // server (quota, permission) is not an edition.
   void issue.then(

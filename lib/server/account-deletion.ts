@@ -13,6 +13,7 @@ import {
   projectIconPaths,
 } from "@/lib/server/project-storage";
 import { decodeProjectName } from "@/lib/server/project-content";
+import { revokeAppleAuthorizations } from "@/lib/server/apple-sign-in";
 
 /**
  * Account deletion (MIN-119, GDPR art. 17 — right to erasure).
@@ -32,7 +33,9 @@ import { decodeProjectName } from "@/lib/server/project-content";
  * first, otherwise we lose track of what needed to be cleaned.
  * 1. the Stripe subscription (no reason to continue charging);
  * 2. the storage objects (LINES cascade, not FILES);
- * 3. the account itself, which take away the rest.
+ * 3. the managed AI key and the Sign in with Apple authorization, held by
+ *    third parties;
+ * 4. the account itself, which take away the rest.
  */
 
 type Service = ReturnType<typeof getServiceClient>;
@@ -246,6 +249,12 @@ export async function deleteAccount(userId: string): Promise<DeletionResult> {
   } catch (e) {
     warnings.push(`managed AI key: ${(e as Error).message}`);
   }
+
+  // Sign in with Apple (App Review guideline 5.1.1(v)): the authorization
+  // is revoked at Apple while its tokens, which cascade with the account,
+  // still exist. A refusal is reported, not fatal.
+  const apple = await revokeAppleAuthorizations(userId, service);
+  warnings.push(...apple.warnings);
 
   // ── 4. The account ─────────────────────────────────────────────────────
   const { error } = await service.auth.admin.deleteUser(userId);

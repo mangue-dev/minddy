@@ -311,6 +311,29 @@
       ]
     }
   },
+  "apple_sign_in_tokens": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "user_id"
+      ],
+      "operational_configuration": [
+        "client_id"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ]
+    }
+  },
   "assistant_active_conversation": {
     "scope": {
       "kind": "user",
@@ -3325,7 +3348,9 @@
       ],
       "operational_configuration": [
         "locale",
-        "transport"
+        "transport",
+        "apns_platform",
+        "apns_environment"
       ],
       "routing_identity": [
         "id",

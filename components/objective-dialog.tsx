@@ -44,8 +44,9 @@ import { CreationProjectSelect } from "@/components/creation-project-select";
 import { useMembersQuery } from "@/lib/use-members-query";
 import { useAuth } from "@/lib/auth-context";
 import { capabilitiesForProject } from "@/lib/use-project-capabilities";
-import { CreationDictation, CreationProperty } from "@/components/creation-form-layout";
+import { CreationCarousel, CreationDictation } from "@/components/creation-form-layout";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { useDescriptionArea } from "@/components/use-description-area";
 import {
   AddResourceButton,
   ComposerResourcePills,
@@ -217,6 +218,7 @@ export function ObjectiveDialog({
 }) {
   const t = useTranslations("Objectives");
   const mobile = useMobileLayout() === true;
+  const descriptionArea = useDescriptionArea();
   const tField = useTranslations("Field");
   const titleId = useId();
   // Title and description read as one text on the keyboard (MIN-756).
@@ -224,7 +226,6 @@ export function ObjectiveDialog({
   const tCommon = useTranslations("Common");
   const tDrafts = useTranslations("Drafts");
   const tIssue = useTranslations("IssueUI");
-  const tRelations = useTranslations("Relations");
   const { track } = useAnalytics();
   const { user } = useAuth();
   // Closing keeps the form; reopening resumes it (MIN-776). Declared before
@@ -671,6 +672,94 @@ export function ObjectiveDialog({
     },
   ];
 
+  // The property buttons, as on a desktop: in the form there, on a phone a
+  // carousel above the create button, Smart Fill first (as for an issue).
+  const smartFillButton = (
+    <>
+                {smartFillAvailable && (
+                  <SmartFillCompact
+                    fullWidth={false}
+                    shortcut
+                    value={smartFill}
+                    onChange={(value) => {
+                      smartFillTouchedRef.current = true;
+                      setSmartFill(value);
+                    }}
+                    hints={{
+                      on: resolveSmartFillObjectiveName(user?.user_metadata)
+                        ? t("smartFillOnNameHint")
+                        : t("smartFillOnHint"),
+                      off: t("smartFillOffHint"),
+                    }}
+                    // Sets one property by hand without turning Smart Fill
+                    // off: the value wins and its field returns (MIN-809).
+                    actions={smartFillActions}
+                  />
+                )}
+    </>
+  );
+  const propertyButtons = (
+    <>
+                  <ObjectiveStatusCompact
+                    value={form.status}
+                    onChange={(status) => setForm((f) => ({ ...f, status }))}
+                    {...pickerControl("status")}
+                  />
+                  <AssigneeCompact
+                    showValue={false}
+                    value={form.lead_user_id}
+                    onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
+                    members={scopedMembers}
+                    noneLabel={t("noLead")}
+                    // With Smart Assign on, an empty lead is chosen (MIN-919).
+                    smartAssign={objectiveSmartAssignEligible(activeProject?.smart_assign_enabled, form.status)}
+                    {...pickerControl("lead")}
+                  />
+                {/* Relations sit between the lead and the target date: the
+                    picker, then the chosen ones as pills. */}
+                {composerEnabled && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <CreationRelationsCompact
+                        projectId={activeProjectId!}
+                        projectKey={activeProject?.key ?? projectKey ?? ""}
+                        active={open}
+                        value={relations}
+                        onChange={setRelations}
+                        disabled={submitting}
+                        {...pickerControl("relation")}
+                      />
+                      <CreationRelationPills
+                        projectId={activeProjectId!}
+                        projectKey={activeProject?.key ?? projectKey ?? ""}
+                        active={open}
+                        value={relations}
+                        onChange={setRelations}
+                        disabled={submitting}
+                        className="contents"
+                      />
+                    </div>
+                )}
+                {showsSmartFillField("targetDate") && (
+                  <DateTimePicker
+                    variant="ghost"
+                    value={form.target_date}
+                    onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
+                    placeholder={t("targetDatePlaceholder")}
+                    ariaLabel={t("targetDatePlaceholder")}
+                    tooltip={t("targetDatePlaceholder")}
+                    {...pickerControl("targetDate")}
+                  />
+                )}
+                {showsSmartFillField("color") && (
+                  <ColorCompact
+                    value={form.color}
+                    onChange={(color) => setForm((f) => ({ ...f, color }))}
+                    {...pickerControl("color")}
+                  />
+                )}
+    </>
+  );
+
   const dictationControl = <CreationDictation mobile={mobile} busy={numoBusy} busyLabel={t("numoWorking")}
     context="objective_form" onTranscription={(text) => { track("objective_dictation_used", { surface: "create_dialog" }); onTranscript(text); }}
     disabled={submitting} shortcutKey="mod+shift+d" onProcessingChange={setTranscribing} />;
@@ -696,8 +785,9 @@ export function ObjectiveDialog({
           {/* "Create in" (MIN-741): level with the close button on desktop;
               on phones it joins the sheet title instead of adding a row. */}
           {mobile && showProjectSelect ? (
+            // The project alone heads the sheet, as for an issue.
             <div data-mobile-sheet-header className="flex shrink-0 items-center gap-2">
-              <DialogTitle className="shrink-0">{t("newObjective")}</DialogTitle>
+              <DialogTitle className="sr-only">{t("newObjective")}</DialogTitle>
               {projectSelect("sheet")}
             </div>
           ) : (
@@ -755,7 +845,7 @@ export function ObjectiveDialog({
               <div className="creation-field-label">{tField("description")}</div>
               {/* The title's gap: the description is this wrapper's first child,
                   where its own margin does not apply. */}
-              <div ref={titleBody.bodyRef} className={showsName ? "app-desktop:mt-3" : undefined}>
+              <div ref={titleBody.bodyRef} onClick={descriptionArea.onClick} className={cn("creation-description-area", showsName && "app-desktop:mt-3")}>
               {objective && storedDocument === undefined ? (
                 <DocumentEditorFallback
                   value={form.description}
@@ -763,6 +853,7 @@ export function ObjectiveDialog({
                 />
               ) : (
               <LazyDocumentEditor
+                apiRef={descriptionArea.bind}
                 key={editorKey}
                 mentions={mentions}
                 onLeaveTop={titleBody.leaveBody}
@@ -790,101 +881,44 @@ export function ObjectiveDialog({
               )}
               </div>
 
-              {/* Property values stay compact on desktop and receive labels on mobile. */}
-              <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
-                <CreationProperty mobile={mobile} label={t("statusFieldLabel")}>
-                  <ObjectiveStatusCompact
-                    value={form.status}
-                    onChange={(status) => setForm((f) => ({ ...f, status }))}
-                    {...pickerControl("status")}
-                  />
-                </CreationProperty>
-                <CreationProperty mobile={mobile} label={t("leadFieldLabel")}>
-                  <AssigneeCompact
-                    showValue={mobile}
-                    value={form.lead_user_id}
-                    onChange={(lead_user_id) => setForm((f) => ({ ...f, lead_user_id }))}
-                    members={scopedMembers}
-                    noneLabel={t("noLead")}
-                    // With Smart Assign on, an empty lead is chosen (MIN-919).
-                    smartAssign={objectiveSmartAssignEligible(activeProject?.smart_assign_enabled, form.status)}
-                    {...pickerControl("lead")}
-                  />
-                </CreationProperty>
-                {/* Relations sit between the lead and the target date: the
-                    picker, then the chosen ones as pills. */}
-                {composerEnabled && (
-                  <CreationProperty mobile={mobile} label={tRelations("relations")}>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <CreationRelationsCompact
-                        projectId={activeProjectId!}
-                        projectKey={activeProject?.key ?? projectKey ?? ""}
-                        active={open}
-                        value={relations}
-                        onChange={setRelations}
-                        disabled={submitting}
-                        {...pickerControl("relation")}
-                      />
-                      <CreationRelationPills
-                        projectId={activeProjectId!}
-                        projectKey={activeProject?.key ?? projectKey ?? ""}
-                        active={open}
-                        value={relations}
-                        onChange={setRelations}
-                        disabled={submitting}
-                        className="contents"
-                      />
-                    </div>
-                  </CreationProperty>
-                )}
-                {showsSmartFillField("targetDate") && (
-                <CreationProperty mobile={mobile} label={t("targetDatePlaceholder")}>
-                  <DateTimePicker
-                    variant="ghost"
-                    value={form.target_date}
-                    onChange={(target_date) => setForm((f) => ({ ...f, target_date }))}
-                    placeholder={t("targetDatePlaceholder")}
-                    ariaLabel={t("targetDatePlaceholder")}
-                    tooltip={t("targetDatePlaceholder")}
-                    {...pickerControl("targetDate")}
-                  />
-                </CreationProperty>
-                )}
-                {showsSmartFillField("color") && (
-                <CreationProperty mobile={mobile} label={t("colorFieldLabel")}>
-                  <ColorCompact
-                    value={form.color}
-                    onChange={(color) => setForm((f) => ({ ...f, color }))}
-                    {...pickerControl("color")}
-                  />
-                </CreationProperty>
-                )}
-                {smartFillAvailable && (
-                  <SmartFillCompact
-                    fullWidth={mobile}
-                    shortcut
-                    value={smartFill}
-                    onChange={(value) => {
-                      smartFillTouchedRef.current = true;
-                      setSmartFill(value);
-                    }}
-                    hints={{
-                      on: resolveSmartFillObjectiveName(user?.user_metadata)
-                        ? t("smartFillOnNameHint")
-                        : t("smartFillOnHint"),
-                      off: t("smartFillOffHint"),
-                    }}
-                    // Sets one property by hand without turning Smart Fill
-                    // off: the value wins and its field returns (MIN-809).
-                    actions={smartFillActions}
-                  />
-                )}
-              </div>
+              {!mobile && (
+                <div className="creation-properties mt-4 flex flex-wrap items-center gap-x-2 gap-y-1.5 app-desktop:-ml-1.5">
+                  {propertyButtons}
+                  {smartFillButton}
+                </div>
+              )}
 
             </MobileSheetScrollArea>
             {/* Submission stays visible while the mobile form body scrolls. */}
+            {mobile ? (
+              <div className="creation-form-footer flex flex-col gap-2">
+                <CreationCarousel>
+                  {smartFillButton}
+                  {propertyButtons}
+                </CreationCarousel>
+                {/* Resources, the action, dictation: on a phone creating only
+                    creates (no draft). */}
+                <div className="creation-submit flex items-center gap-2">
+                  {composerEnabled && (
+                    <AddResourceButton
+                      onFiles={uploads.addFiles}
+                      onLink={uploads.addLink}
+                      onPage={uploads.addPage}
+                      projectId={activeProjectId}
+                      disabled={submitting}
+                      variant="outline"
+                    />
+                  )}
+                  <Button type="submit" disabled={submitDisabled} className="min-w-0 flex-1">
+                    {submitting && <Spinner />}
+                    <span className="truncate">{submitLabel}</span>
+                  </Button>
+                  {composerEnabled && dictationControl}
+                </div>
+              </div>
+            ) : (
             <div className="creation-form-footer mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
-              {!mobile && composerEnabled && dictationControl}
+              {composerEnabled && dictationControl}
               {composerEnabled && (
                 <AddResourceButton
                   onFiles={uploads.addFiles}
@@ -931,10 +965,9 @@ export function ObjectiveDialog({
                     </Button>
                   )}
                 </SendShortcutTooltip>
-                {/* On phones the recorder sits beside the create button. */}
-                {mobile && composerEnabled && dictationControl}
               </div>
             </div>
+            )}
           </form>
 
           {/* Numo resumes dictation: the border highlights the edge of the modal

@@ -28,7 +28,7 @@ export default function AppLink({ onClick, onNavigate, ...props }: ComponentProp
       mobile.open(() => {
         if (props.replace) router.replace(href, { scroll: props.scroll });
         else router.push(href, { scroll: props.scroll });
-      });
+      }, href);
     } else if (destination.current && session) {
       if (session.reuseDestination(destination.current)) event.preventDefault();
       // The desktop shell shows the destination before the router commits it.

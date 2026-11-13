@@ -153,15 +153,9 @@ export function AppShell({
           id={MAIN_CONTENT_ID}
           // Focusable by script only, for the skip link.
           tabIndex={-1}
-          className={cn(
-            "min-h-0 flex-1 overflow-y-auto outline-none",
-            // Reserve space at the bottom on mobile so page content clears the
-            // floating <MobileNav> pill instead of scrolling under it. Only when
-            // a mobileNav is actually provided, and only below the desktop
-            // breakpoint where the pill is shown.
-            mobileNav &&
-              "max-desktop:pb-[calc(6rem+env(safe-area-inset-bottom))]",
-          )}
+          // No reserve for the mobile pill: content scrolls under it, and each
+          // page's scrolling column ends with its room (app/globals.css).
+          className="min-h-0 flex-1 overflow-y-auto outline-none"
         >
           {children}
         </main>

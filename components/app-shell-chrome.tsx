@@ -40,6 +40,7 @@ import {
   type IconComponent,
 } from "@/components/icon";
 import { InboxPopover } from "@/components/inbox-popover";
+import { MobileOpenPathListener } from "@/components/mobile/open-path-listener";
 import { openInbox, openInboxAtNotification } from "@/lib/inbox-launcher";
 import { buildWorkspaceGroups } from "@/lib/palette-workspace-groups";
 import { useRoutinesQuery } from "@/lib/use-routines-query";
@@ -74,6 +75,7 @@ import {
 } from "@/components/header-search-pill";
 import { usePlanGates } from "@/lib/use-billing-query";
 import { useMobileLayout, useMobileViewport } from "@/lib/use-mobile-layout";
+import { trackPressState } from "@/lib/press-state";
 import { primeMobileKeyboard } from "@/lib/mobile-sheet-focus";
 import { MobileProjectMenu, MobileRoutinesMenu, MobilePullRequestsMenu, MobileSettingsMenu } from "@/components/mobile-project-menu";
 import { MobileNavigation, type MobileMenuSection, type MobileMenuPanel, type MobileMenuNavigation } from "@/components/mobile-navigation";
@@ -281,6 +283,8 @@ function AppTabChangeEffect({ onChange }: { onChange: () => void }) {
 export function AppShellChrome({ children }: { children: React.ReactNode }) {
   useMobileViewport({ pinDocument: true });
   useCanonicalProjectUrl();
+  // A held control shows it is pressed (lib/press-state.ts).
+  useEffect(() => trackPressState(), []);
   // A root marker keeps application typography scoped without repeatedly
   // matching relational :has() selectors against the entire workspace DOM.
   useLayoutEffect(() => {
@@ -1554,8 +1558,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentProject, homeSections, pathname, objectiveBoardId, triageCount, feedbackCount, homeBadge, projectContext.tabActions, t]);
 
-  // Inbox is a compact top control on desktop. Mobile keeps the regular row,
-  // where there is no primary sidebar to host that control.
+  // The inbox is a compact top control on desktop and a slot of the bottom
+  // bar on a phone: neither lists it among the rows.
   const desktopSections = useMemo(
     () =>
       sections.map((section) => ({
@@ -1622,7 +1626,8 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         { key: "settings", label: t("projectSettings"), icon: menuIcon(Settings01Icon), panel: settingsPanel(project), active: pathname.startsWith(`${base}/settings`) },
       ] }] });
     });
-    const root = toMenuSections(homeSections).map((section) => ({ ...section,
+    // The inbox has its own slot in the bottom bar (MIN-907).
+    const root = toMenuSections(homeDesktopSections).map((section) => ({ ...section,
       items: section.items.map((item) => ({ ...item,
         panel: item.key.startsWith("project-") ? panels.get(item.key.slice("project-".length))
           : item.key === "routines" ? { key: "routines", title: t("routines"), sidebarRoute: "/routines", backBadge: homeBackBadge, render: (navigation: MobileMenuNavigation) => <MobileRoutinesMenu {...navigation} /> }
@@ -1634,11 +1639,11 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
     const resourcePanel = projectPanel?.sections?.flatMap((section) => section.items).find((item) => item.panel && item.active)?.panel;
     const globalPanel = root.flatMap((section) => section.items).find((item) => item.panel?.sidebarRoute === pathname)?.panel
       ?? (pathname === "/settings" ? settingsPanel() : pathname === "/trash" || pathname === "/admin" ? { key: pathname, title: t(pathname === "/trash" ? "trash" : "adminDashboard"), sidebarRoute: pathname, backBadge: homeBackBadge } : undefined);
-    return { sections: root, projects: switcherProjects, homeBadge, homeBadgeLabel, initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
+    return { sections: root, projects: switcherProjects, homeBadge, homeBadgeLabel, inboxCount, inboxBadgeLabel: t("inboxBadge", { count: inboxCount }), initialPanels: projectPanel ? [projectPanel, ...(resourcePanel ? [resourcePanel] : [])] : globalPanel ? [globalPanel] : [] };
     // `homeBadge` is a fresh element each render; `toSortEverywhere` and the
     // Smart Assign warnings it is built from are the real dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projects, switcherProjects, homeSections, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t, projectBackBadge, homeBackBadge, homeBadgeLabel, toSortEverywhere, smartAssignWarnings.length]);
+  }, [projects, switcherProjects, homeDesktopSections, inboxCount, currentProject, pathname, objectiveBoardId, triageCounts, projectContext.tabActions, t, projectBackBadge, homeBackBadge, homeBadgeLabel, toSortEverywhere, smartAssignWarnings.length]);
 
   // Opening the palette arms the cross-project index if idle hasn't yet, and
   // revalidates it when the snapshot has aged (no-op while fresh).
@@ -1769,6 +1774,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         />
       ) : null}
       <InboxPopover open={inboxOpen} onOpenChange={setInboxOpen} />
+      <MobileOpenPathListener />
       <UnreadCountAnnouncer count={inboxCount} label={t("inboxBadge", { count: inboxCount })} />
       <GlobalIssuePanelHost />
       <GlobalPagePanelHost />

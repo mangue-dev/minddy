@@ -5,7 +5,7 @@ import {
   ONBOARDING_STEPS, readAcknowledgedSteps, resolveOnboardingState, withAcknowledgedStep,
 } from "@/lib/onboarding";
 
-const FRESH = { meta: null, projectCount: 0, issueCount: 0, cyclesEnabled: false };
+const FRESH = { meta: null, projectCount: 0, issueCount: 0 };
 const STARTED = { [ONBOARDING_STARTED_META_KEY]: true, [ONBOARDING_VERSION_META_KEY]: 2 };
 const resolve = (steps: string[], signals = {}) => resolveOnboardingState({
   ...FRESH, ...signals, meta: { ...STARTED, [ONBOARDING_STEPS_META_KEY]: steps },
@@ -13,9 +13,9 @@ const resolve = (steps: string[], signals = {}) => resolveOnboardingState({
 const completed = (state: ReturnType<typeof resolveOnboardingState>) => state.steps.filter((step) => step.completed).map((step) => step.id);
 
 describe("resolveOnboardingState", () => {
-  it("offers five optional steps to an empty new account", () => {
+  it("offers four optional steps to an empty new account", () => {
     const state = resolveOnboardingState(FRESH);
-    expect(state.steps.map((step) => step.id)).toEqual(["project", "tickets", "numo", "mcp", "cycles"]);
+    expect(state.steps.map((step) => step.id)).toEqual(["project", "tickets", "numo", "mcp"]);
     expect(state.currentStepId).toBe("project");
     expect(state.completedCount).toBe(0);
     expect(state.visible).toBe(true);
@@ -43,7 +43,7 @@ describe("resolveOnboardingState", () => {
   });
 
   it("requires explicit Numo discovery even after completing the other new steps", () => {
-    const state = resolve(["project", "tickets", "mcp", "cycles"]);
+    const state = resolve(["project", "tickets", "mcp"]);
     expect(state.currentStepId).toBe("numo");
     expect(state.allComplete).toBe(false);
   });
@@ -51,13 +51,12 @@ describe("resolveOnboardingState", () => {
   it("does not complete earlier steps when a later step is selected", () => {
     expect(completed(resolve(["mcp"]))).toEqual(["mcp"]);
     expect(completed(resolve(["numo"]))).toEqual(["numo"]);
-    expect(completed(resolve([], { cyclesEnabled: true }))).toEqual(["cycles"]);
   });
 
   it("keeps completed legacy four- and five-step journeys closed", () => {
     for (const steps of [["mcp"], ["import", "mcp"], ["issue", "import", "mcp", "key"], ["project", "tickets", "mcp", "cycles"]]) {
       const state = resolveOnboardingState({
-        ...FRESH, projectCount: 1, issueCount: 12, cyclesEnabled: true,
+        ...FRESH, projectCount: 1, issueCount: 12,
         meta: { onboarding_started: true, onboarding_steps: steps },
       });
       expect(state.allComplete).toBe(true);
@@ -92,7 +91,7 @@ describe("resolveOnboardingState", () => {
   it("reads malformed metadata defensively", () => {
     for (const raw of [null, "mcp", ["unknown", 42, null]]) {
       const state = resolveOnboardingState({ ...FRESH, meta: { onboarding_steps: raw } });
-      expect(state.totalCount).toBe(5);
+      expect(state.totalCount).toBe(4);
       expect(state.completedCount).toBe(0);
       expect(state.visible).toBe(true);
     }
@@ -101,14 +100,14 @@ describe("resolveOnboardingState", () => {
 });
 
 describe("withAcknowledgedStep", () => {
-  it("adds steps in canonical order without duplicates or unknown ids", () => {
+  it("adds steps in canonical order without duplicates, unknown or retired ids", () => {
     const meta = { ...STARTED, onboarding_steps: ["cycles", "mcp", "unknown"] };
-    expect(withAcknowledgedStep(meta, "numo")).toEqual(["numo", "mcp", "cycles"]);
-    expect(withAcknowledgedStep(meta, "mcp")).toEqual(["mcp", "cycles"]);
+    expect(withAcknowledgedStep(meta, "numo")).toEqual(["numo", "mcp"]);
+    expect(withAcknowledgedStep(meta, "mcp")).toEqual(["mcp"]);
   });
 
   it("migrates retired acknowledgments when saving another step", () => {
-    expect(withAcknowledgedStep({ onboarding_steps: ["import", "key"] }, "cycles")).toEqual(["tickets", "numo", "cycles"]);
+    expect(withAcknowledgedStep({ onboarding_steps: ["import", "key"] }, "mcp")).toEqual(["tickets", "numo", "mcp"]);
     expect(withAcknowledgedStep({ onboarding_steps: ["mcp"] }, "numo")).toEqual(["tickets", "numo", "mcp"]);
   });
 });

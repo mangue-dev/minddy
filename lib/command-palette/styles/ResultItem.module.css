@@ -176,18 +176,23 @@
 }
 
 /* Mobile adjustments */
+/* The row's icon sits under the search field's icon: same 16px from the
+   sheet's edge, same 20px size, same 12px gap to the text. */
+/* On a phone, the bottom sheets' rows (app/globals.css). The height is also
+   the list's row height in components/ResultsList.tsx. */
 :global(html[data-app-layout="mobile"]) .item {
-  padding: 10px 12px;
-  min-height: 44px; /* Touch target */
+  margin: 0;
+  padding: 0 var(--mobile-sheet-row-inline, 12px);
+  height: var(--mobile-sheet-row, 48px);
+  min-height: var(--mobile-sheet-row, 48px);
+  gap: var(--mobile-sheet-row-gap, 12px);
+  border-radius: var(--mobile-sheet-row-radius, 12px);
   touch-action: manipulation;
 }
-:global(html[data-app-layout="mobile"]) .icon {
-  width: 24px;
-  height: 24px;
-}
+:global(html[data-app-layout="mobile"]) .icon,
 :global(html[data-app-layout="mobile"]) .icon svg {
-  width: 18px;
-  height: 18px;
+  width: var(--mobile-sheet-icon, 20px);
+  height: var(--mobile-sheet-icon, 20px);
 }
 :global(html[data-app-layout="mobile"]) .title {
   font-size: 1rem;

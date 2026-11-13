@@ -18,6 +18,10 @@ const PROSE_BASE = cn(
   "[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_ul[data-type=taskList]]:list-none [&_ul[data-type=taskList]]:pl-0",
+  // A task's paragraph sits on its checkbox's line: the `my-2` of every
+  // other paragraph pushed the text below the box in descriptions and
+  // comments.
+  "[&_li[data-type=taskItem]_p]:my-0",
   "[&_li]:my-0.5",
   "[&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em]",
   "[&_pre]:my-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3",

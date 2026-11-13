@@ -54,7 +54,12 @@ export interface CommentEditorProps {
   ariaLabel?: string;
   /** Visible height before the first line is typed, in text rows. */
   rows?: number;
-  autoFocus?: boolean;
+  /** Classes for the text itself, inside the field's paddings. */
+  contentClassName?: string;
+  /** Focus once mounted. On a phone `true` is held back, so a surface does
+   *  not raise the keyboard on its own; `"requested"` is for a field a tap
+   *  just opened (Reply), which the keyboard follows. */
+  autoFocus?: boolean | "requested";
   disabled?: boolean;
   className?: string;
 }
@@ -78,6 +83,7 @@ export function CommentEditor({
   placeholder,
   ariaLabel,
   rows = 1,
+  contentClassName,
   autoFocus = false,
   disabled = false,
   className,
@@ -186,7 +192,7 @@ export function CommentEditor({
         disabled && "cursor-not-allowed opacity-60",
         className
       )}
-      contentClassName={ROW_HEIGHT[Math.min(Math.max(rows, 1), 4) as 1 | 2 | 3 | 4]}
+      contentClassName={cn(ROW_HEIGHT[Math.min(Math.max(rows, 1), 4) as 1 | 2 | 3 | 4], contentClassName)}
     />
   );
 }

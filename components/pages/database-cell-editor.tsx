@@ -168,7 +168,7 @@ export function DatabaseCellEditor({
       </button>
       {mobile && (
         <Sheet open={open} onOpenChange={(next) => { if (!next) { closing.current = true; setOpen(false); } }}>
-          <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-3 p-4 pt-12">
+          <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-3 p-4 px-[var(--mobile-sheet-inline)] pt-12">
             <SheetTitle className="mobile-picker-title truncate">{label}</SheetTitle>
             <form
               className="flex flex-col gap-3"

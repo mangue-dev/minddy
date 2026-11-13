@@ -1,5 +1,6 @@
 "use client";
 
+import { focusFieldIn } from "@/lib/focus-field";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowRight01Icon, ArrowTurnDownIcon, CheckIcon, SmilePlusIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useRef, useState } from "react";
@@ -504,7 +505,7 @@ function PlainComposer({
 
   return (
     <div className="flex flex-col gap-2 font-sans">
-      <div className="w-full rounded-lg bg-control transition-colors">
+      <div className="w-full rounded-lg bg-control transition-colors" onClick={focusFieldIn}>
         <DocumentEditor
           value={value}
           onChange={(markdown) => onChange(() => markdown)}

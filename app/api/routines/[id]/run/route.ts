@@ -10,6 +10,7 @@ import {
 } from "@/lib/server/numo/start-intent";
 import { executeNumoTurn } from "@/lib/server/numo/turns";
 import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 /**
  * Start one off-schedule occurrence through the same durable Numo entry used
@@ -24,6 +25,9 @@ export const maxDuration = 300;
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, ctx: RouteContext) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const { id } = await ctx.params;

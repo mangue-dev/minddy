@@ -13,6 +13,8 @@ import Link from "@/components/app-link";
 import {SettingsGroup, SettingsRow} from "@/components/settings/settings-ui";
 import {SETTINGS_SECTIONS} from "@/lib/settings-sections";
 import {useAnalytics} from "@/lib/use-analytics";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
+import { useNativeMobile } from "@/lib/native-app";
 
 /**
  * Account → Preferences: the desktop app, in ONE card everywhere (MIN-737).
@@ -40,6 +42,12 @@ export function AccountDesktopSection() {
   // row would make it flash inside the app.
   const [mounted, setMounted] = useState(false);
   const { track } = useAnalytics();
+  // The mobile app also hides it when the display is wide (iPhone Duo open):
+  // a phone has no use for the desktop app, and its download page is the
+  // public site, which the app does not show (MIN-907).
+  const mobileLayout = useMobileLayout() === true;
+  const nativeMobile = useNativeMobile();
+  const mobile = mobileLayout || nativeMobile;
 
   useEffect(() => {
     setMounted(true);
@@ -49,7 +57,8 @@ export function AccountDesktopSection() {
   }, []);
 
   if (!desktop) {
-    if (!mounted) return null;
+    // A phone has no use for the desktop app's download.
+    if (!mounted || mobile) return null;
     return (
       <SettingsGroup
         anchor={SETTINGS_SECTIONS.accountDesktop}

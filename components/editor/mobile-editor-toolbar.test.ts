@@ -46,8 +46,8 @@ describe("revealSelection", () => {
   it("scrolls a caret hidden by the keyboard smoothly above the strip", () => {
     caretBottom = 500;
     revealSelection(view());
-    // Visible band ends at 714 - 330 = 384; strip reserve 60 and caret room 48.
-    expect(container.scrollTo).toHaveBeenCalledWith({ top: 100 + (500 - (384 - 60 - 48)), behavior: "smooth" });
+    // Visible band ends at 714 - 330 = 384; strip reserve 68 and caret room 48.
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 100 + (500 - (384 - 68 - 48)), behavior: "smooth" });
   });
 
   it("aims at the same place when called again mid-scroll", () => {

@@ -19,10 +19,20 @@
  * In mobile Safari, `PushManager` exists and `subscribe()` fails: you have to
  * test `display-mode: standalone` BEFORE offering anything.
  * • HTTPS required, `localhost` except (hence `next dev --experimental-https`).
+ *
+ * The desktop and iOS apps push natively instead (APNs, WNS), through their
+ * bridge. The iOS app's WKWebView has neither Web Push nor `Notification`:
+ * its permission and its token come from the shell (`lib/mobile/bridge.ts`),
+ * and iOS shows its prompt from the settings switch only.
  */
 
 import { saveNativePushDeviceApi, savePushDeviceApi } from "@/lib/push-devices-api";
 import { getDesktopBridge, type DesktopBridge } from "@/lib/desktop/bridge";
+import {
+  getMobileBridge,
+  type MobilePushRegistration,
+  type MobileShellPlugin,
+} from "@/lib/mobile/bridge";
 import { withClientRequestDeadline } from "@/lib/client-request-deadline";
 import { browserRuntimeConfig } from "@/lib/runtime-config-provider";
 import type { PushDevice } from "@/lib/types";
@@ -44,8 +54,46 @@ type DesktopNativePushBridge = DesktopBridge & {
   >;
 };
 
+/**
+ * The iOS app's own push (MIN-907): APNs through the shell, since WKWebView
+ * has neither Web Push nor `Notification`. Absent in an older shell.
+ */
+type MobilePushShell = MobileShellPlugin & {
+  registerForPushNotifications: NonNullable<MobileShellPlugin["registerForPushNotifications"]>;
+};
+
+function mobilePushShell(): MobilePushShell | null {
+  const shell = getMobileBridge()?.shell;
+  return shell && typeof shell.registerForPushNotifications === "function"
+    ? (shell as MobilePushShell)
+    : null;
+}
+
+/** The permission the shell last reported; `Notification` does not exist there. */
+let mobilePermission: NotificationPermission = "default";
+
+type MobileTokenRegistration = Required<Omit<MobilePushRegistration, "permission">>;
+
+function mobileToken(registration: MobilePushRegistration): MobileTokenRegistration | null {
+  mobilePermission = registration.permission;
+  const { endpoint, installationId, platform, environment } = registration;
+  if (!endpoint || !installationId || !platform || !environment) return null;
+  return { transport: "apns", endpoint, installationId, platform, environment };
+}
+
+const saveMobileToken = (
+  token: MobileTokenRegistration,
+  locale: string,
+  opts: { refresh?: boolean; track?: boolean } = {},
+) =>
+  saveNativePushDeviceApi(token.endpoint, token.transport, token.installationId, locale, {
+    ...opts,
+    target: { platform: token.platform, environment: token.environment },
+  });
+
 /** Does the browser know how to push? (Private Firefox, old Safari, no.) */
 export function isPushSupported(): boolean {
+  if (getMobileBridge()) return mobilePushShell() !== null;
   if (getDesktopBridge()) return nativePushBridge() !== null;
   return (
     typeof window !== "undefined" &&
@@ -59,12 +107,27 @@ export function isPushSupported(): boolean {
  * does not exist — one more state, but one that avoids a `undefined` to process. */
 export function pushPermission(): NotificationPermission | "unsupported" {
   if (!isPushSupported()) return "unsupported";
+  if (getMobileBridge()) return mobilePermission;
   return Notification.permission;
+}
+
+/**
+ * The permission, read again where only an asynchronous answer exists: the
+ * iOS app asks its shell. Elsewhere it is `pushPermission()`.
+ */
+export async function refreshPushPermission(): Promise<NotificationPermission | "unsupported"> {
+  const mobile = mobilePushShell();
+  if (mobile?.pushPermission) {
+    mobilePermission = (await mobile.pushPermission()).permission;
+  }
+  return pushPermission();
 }
 
 /** Does the app run in installed PWA (home screen, standalone window)? */
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
+  // The native app is installed by definition: it never needs the PWA.
+  if (getMobileBridge()) return true;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     // Safari iOS does not speak `display-mode` before 17: it exposes this boolean
@@ -111,6 +174,8 @@ export async function registerPushServiceWorker(): Promise<ServiceWorkerRegistra
 /** The subscription endpoint of THIS device, or null if there is none. Serves
  * to recognize “this device” in the list rendered by the server. */
 export async function currentEndpoint(): Promise<string | null> {
+  const mobile = mobilePushShell();
+  if (mobile) return mobileToken(await mobile.registerForPushNotifications())?.endpoint ?? null;
   const native = nativePushBridge();
   if (native) {
     const registration = await native.registerForPushNotifications();
@@ -211,6 +276,20 @@ export type SubscribeResult =
  * permission request (see file header).
  */
 export async function subscribeThisDevice(locale: string): Promise<SubscribeResult> {
+  const mobile = mobilePushShell();
+  if (mobile) {
+    try {
+      // iOS shows its prompt here, from the switch: never at launch.
+      const registration = await mobile.registerForPushNotifications({ activate: true });
+      const token = mobileToken(registration);
+      if (!token) {
+        return { ok: false, reason: registration.permission === "granted" ? "failed" : "denied" };
+      }
+      return { ok: true, device: await saveMobileToken(token, locale) };
+    } catch (e) {
+      return { ok: false, reason: "failed", message: (e as Error).message };
+    }
+  }
   const native = nativePushBridge();
   if (native) {
     try {
@@ -264,6 +343,12 @@ export async function subscribeThisDevice(locale: string): Promise<SubscribeResu
 export async function refreshThisDeviceSubscription(
   locale: string
 ): Promise<PushDevice | null> {
+  const mobile = mobilePushShell();
+  if (mobile) {
+    // Only an allowed token is renewed: nothing here asks for the permission.
+    const token = mobileToken(await mobile.registerForPushNotifications());
+    return token ? saveMobileToken(token, locale, { refresh: true, track: false }) : null;
+  }
   const native = nativePushBridge();
   if (native) {
     const registration = await native.registerForPushNotifications();
@@ -302,6 +387,15 @@ export async function refreshThisDeviceSubscription(
  * a device that can no longer receive anything.
  */
 export async function unsubscribeThisDevice(): Promise<string | null> {
+  const mobile = mobilePushShell();
+  if (mobile) {
+    const registration = await withClientRequestDeadline(
+      () => mobile.registerForPushNotifications(),
+      8_000,
+    ).catch(() => null);
+    await mobile.unregisterForPushNotifications?.();
+    return registration ? (mobileToken(registration)?.endpoint ?? null) : null;
+  }
   const bridge = nativePushBridge();
   if (bridge) {
     // Reading the endpoint is best-effort. Revoked permissions or an unavailable

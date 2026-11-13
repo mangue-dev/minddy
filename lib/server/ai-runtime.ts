@@ -49,6 +49,7 @@ import {
 } from "@/lib/server/anthropic-messages";
 import { providerSupportsModelKey } from "@/lib/model-catalog-capability";
 import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
+import { assertAiAllowedInBackground } from "@/lib/server/ai-consent";
 
 export type AiKeyMode = "platform" | "byok";
 
@@ -211,6 +212,9 @@ export async function resolveAiRuntime(params: {
    */
   catalogOnly?: boolean;
 }): Promise<ResolvedAiRuntime> {
+  // A cron job runs no AI for an account that declined it in the mobile app
+  // (MIN-907); listing models sends no content.
+  if (!params.catalogOnly) await assertAiAllowedInBackground(params.userId);
   const surface = params.surface ?? surfaceForModelKey(params.modelKey);
   const modelOverride = params.modelOverride?.trim() || null;
   const capability = modelCatalogCapabilityForKey(params.modelKey);

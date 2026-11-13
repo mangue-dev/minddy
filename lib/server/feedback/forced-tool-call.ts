@@ -19,6 +19,7 @@ import {
 } from "@/lib/server/ai-runtime";
 import { getServiceClient } from "@/lib/supabase-service";
 import { getCachedOpenRouterModelInfo, loadOpenRouterIndex } from "@/lib/server/agent/openrouter-index";
+import { aiDeclinedInBackground } from "@/lib/server/ai-consent";
 
 /**
  * OpenRouter call to forced structured output (tools + tool_choice) — the
@@ -153,6 +154,9 @@ export async function forcedToolCall(
     return null;
   })();
 
+  // A cron job runs no AI for an account that declined it in the mobile app
+  // (MIN-907), not even on the platform key below.
+  if (await aiDeclinedInBackground(billedUserId)) return null;
   let runtime: ResolvedAiRuntime | null = null;
   let keyUnavailable = false;
   if (billedUserId && options?.modelKey) {

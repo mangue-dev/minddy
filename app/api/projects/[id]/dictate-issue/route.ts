@@ -33,6 +33,7 @@ import {
 import type { IssueDraftPatch } from "@/lib/types";
 import { responseLanguageInstruction } from "@/lib/locale-language";
 import { normalizeDictationText } from "@/lib/dictation-context";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -367,6 +368,9 @@ type OpenRouterMessage = {
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const { id: projectId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;

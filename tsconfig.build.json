@@ -3,6 +3,7 @@
   "exclude": [
     "node_modules",
     "desktop",
+    "mobile",
     "tools/oxlint",
     "output",
     "**/*.test.ts",

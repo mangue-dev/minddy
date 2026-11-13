@@ -170,7 +170,7 @@ export function Combobox({
               className={cn(
                 COMPACT_CHIP,
                 "pointer-events-none bg-control text-foreground/45",
-                variant === "field" && "h-11 w-full rounded-lg justify-start px-3.5 font-sans font-normal text-base md:h-9 md:text-sm",
+                variant === "field" && "h-11 w-full rounded-lg justify-start px-3.5 font-sans font-normal text-base app-desktop:h-9 app-desktop:text-sm",
               )}
             >
               {triggerIconNode}
@@ -256,7 +256,7 @@ export function Combobox({
             aria-label={ariaLabel}
             disabled={disabled}
             className={cn(
-              "h-11 w-full justify-between rounded-lg bg-control px-3.5 py-1.5 font-sans font-normal text-base focus-visible:outline-none focus-visible:ring-0 md:h-9 md:text-sm",
+              "h-11 w-full justify-between rounded-lg bg-control px-3.5 py-1.5 font-sans font-normal text-base focus-visible:outline-none focus-visible:ring-0 app-desktop:h-9 app-desktop:text-sm",
               className,
             )}
           >

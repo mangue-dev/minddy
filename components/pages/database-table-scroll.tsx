@@ -120,14 +120,15 @@ export function DatabaseTableScroll({
         id={id}
         // `overflow-y-hidden`: an `auto` on one axis turns the other to `auto`
         // too, and the table scrolled vertically by a few pixels for nothing.
-        // On a phone the table runs edge to edge; the gutter's reserve on the
-        // left is a desktop affair.
+        // On a phone the table scrolls edge to edge but starts under the
+        // title, its first column inset by the page's own margin; the
+        // gutter's reserve on the left is a desktop affair.
         className={cn(
-          "-mx-6 overflow-x-auto overflow-y-hidden overscroll-x-none [container-type:inline-size]",
+          "-mx-6 overflow-x-auto overflow-y-hidden overscroll-x-none [container-type:inline-size] app-mobile:px-6",
           // A database in the panel is inset by the gutter and selection
           // columns on the left (page-view.tsx), as on the full page, so its
           // title and toolbar line up with the Name column.
-          panel ? "no-scrollbar app-desktop:-ml-24 app-desktop:-mr-16" : "no-scrollbar md:-ml-24 md:-mr-10",
+          panel ? "no-scrollbar app-desktop:-ml-24 app-desktop:-mr-16" : "no-scrollbar app-desktop:-ml-24 app-desktop:-mr-10",
         )}
         data-database-scroll
       >

@@ -72,7 +72,7 @@ function ChoiceField({ label, value, choices, onChange, loading = false, compact
         </SelectContent>
       </Select> : <ResponsivePopover open={open} onOpenChange={setOpen}>
         <ResponsivePopoverTrigger asChild>
-          <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open} data-missing={missing ? "" : undefined} className={cn("h-11 w-full min-w-0 justify-between bg-control px-3.5 font-normal md:h-9", focusRing, missing && missingRing)}>
+          <Button type="button" variant="outline" role="combobox" aria-label={label} aria-expanded={open} data-missing={missing ? "" : undefined} className={cn("h-11 w-full min-w-0 justify-between bg-control px-3.5 font-normal app-desktop:h-9", focusRing, missing && missingRing)}>
             <ChoiceLabel icon={selected?.icon ?? fallbackIcon} label={unavailable ? t("unavailableSelection") : selected?.label || (loading ? common("loading") : t("chooseTriggerValue"))} />
             <HugeiconsIcon icon={ArrowDown01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground" />
           </Button>

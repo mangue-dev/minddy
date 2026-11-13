@@ -1,4 +1,5 @@
 import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
+import { isMarketingRouteKey, isMobileAppUserAgent } from "@/lib/mobile/app-request";
 import { supabaseServerFetchWithTimeout as supabaseServerFetch } from "@/lib/server/supabase-fetch";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
@@ -25,7 +26,7 @@ import {
   themeAppearanceHeaders,
 } from "@/lib/theme-presets";
 import { supportedLocaleForTag } from "@/i18n/config";
-import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { createCookieSink, SESSION_COOKIE_OPTIONS, serverSupabaseCookieOptions } from "@/lib/session-cookies";
 import { isDocumentRequest, SERVER_SEED_PATH_HEADER } from "@/lib/server-seed";
 import {
   isBackendUnavailableError,
@@ -168,7 +169,7 @@ async function readSession(request: NextRequest, url: string, key: string) {
   const sink = createCookieSink();
   const supabase = createServerClient(url, key, {
     global: { fetch: supabaseServerFetch },
-    cookieOptions: SESSION_COOKIE_OPTIONS,
+    cookieOptions: serverSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -360,6 +361,17 @@ async function routeRequest(request: NextRequest) {
     return serveLocalizedPublicRoute(request, pathname);
   }
 
+  // The mobile app never shows the marketing site (MIN-907): its reader has
+  // already installed the product. The client redirect in the marketing
+  // layout still covers an older app that does not announce itself.
+  if (
+    PUBLIC_ROUTE_PATHS.has(pathname) &&
+    isMobileAppUserAgent(request.headers.get("user-agent")) &&
+    isMarketingRouteKey(routeByPath(pathname)?.key)
+  ) {
+    return NextResponse.redirect(new URL("/home", process.env.MINDDY_PUBLIC_APP_URL || request.url), 307);
+  }
+
   const markdownDelivery = resolvePublicMarkdownDelivery(pathname);
   if (markdownDelivery) {
     return serveLocalizedPublicRoute(request, markdownDelivery.pathname, true);
@@ -490,7 +502,7 @@ async function routeRequest(request: NextRequest) {
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     global: { fetch: supabaseServerFetch },
-    cookieOptions: SESSION_COOKIE_OPTIONS,
+    cookieOptions: serverSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

@@ -39,22 +39,19 @@ async function capture({ locale, theme }) {
 
     // The sidebar button can be clicked before hydration: retry until the
     // wizard's first step answers.
-    const origin = page.getByText(messages.Projects.wizardOriginNewLabel, { exact: true });
-    for (let attempt = 0; attempt < 5 && !(await origin.isVisible()); attempt++) {
+    const nameField = page.locator("#project-name");
+    for (let attempt = 0; attempt < 5 && !(await nameField.isVisible()); attempt++) {
       await page.getByRole("button", { name: messages.Projects.newProject, exact: true }).click();
-      await origin.waitFor({ timeout: 4_000 }).catch(() => {});
+      await nameField.waitFor({ timeout: 4_000 }).catch(() => {});
     }
     const cta = page.locator("[data-wizard-cta]");
 
-    await origin.click();
-    await page.locator("#project-name").fill(NAME);
+    await nameField.fill(NAME);
     await cta.click(); // project → icon
     await page.getByText(messages.Projects.wizardIconTitle, { exact: true }).waitFor();
     await cta.click(); // icon → git
     await page.getByText(messages.Projects.wizardGitTitle, { exact: true }).waitFor();
-    await cta.click(); // git (Skip) → seed
-    await page.getByText(messages.Projects.wizardSeedBriefTitle, { exact: true }).first().waitFor();
-    await cta.click(); // seed (Skip) → members
+    await cta.click(); // git (Skip) → members, before the import (MIN-907)
     await page.getByText(messages.Projects.wizardMembersTitle, { exact: true }).waitFor();
 
     // People from the demo account's other projects are proposed by name:

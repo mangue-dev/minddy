@@ -5,6 +5,7 @@ import { UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { UserAvatar } from "@/components/user-avatar";
 import { displayName } from "@/lib/display-name";
 import type { Collaborator } from "@/lib/types";
+import { haptic } from "@/lib/mobile/haptics";
 
 /**
  * People from my other projects, proposed under an invite field (MIN-689):
@@ -32,7 +33,11 @@ export function CollaboratorSuggestions({
           <li key={c.user_id} role="option" aria-selected={false}>
             <button
               type="button"
-              onClick={() => onPick(c)}
+              onClick={() => {
+                // A chosen suggestion ticks in the mobile app (MIN-959).
+                haptic("selection");
+                onPick(c);
+              }}
               className="flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left outline-none transition-colors hover:bg-accent focus-visible:bg-accent"
             >
               <UserAvatar seed={c.avatar_seed} className="size-7" />

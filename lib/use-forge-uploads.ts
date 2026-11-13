@@ -6,6 +6,7 @@ import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { forgeAttachmentMarkdown } from "@/lib/forge-image-assets";
+import { sendableUpload } from "@/lib/mobile/upload-body";
 import { compressImage } from "@/lib/image-compress";
 import { MAX_ATTACHMENT_UPLOAD_BYTES, MAX_ATTACHMENT_UPLOAD_MB } from
   "@/lib/attachment-upload-limits";
@@ -74,7 +75,7 @@ export function useForgeUploads(
                 : file;
 
             const form = new FormData();
-            form.append("file", blob, name.slice(-200));
+            form.append("file", await sendableUpload(blob), name.slice(-200));
             const res = await fetch(`${endpoint}/attachments`, {
               method: "POST",
               body: form,

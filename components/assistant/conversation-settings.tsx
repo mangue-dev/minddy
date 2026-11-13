@@ -162,6 +162,11 @@ export function ConversationSettings() {
     </span>
   ) : null;
 
+  // Until the account's providers are known, whether there is anything to
+  // choose is unknown: the full picker drawn meanwhile vanished a moment
+  // later on accounts without a personal key.
+  if (defaults.loading) return configError;
+
   if (locked) {
     // Nothing to choose without a personal key; with one, the picker only
     // switches provider.

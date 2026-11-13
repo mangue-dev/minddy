@@ -13,12 +13,8 @@ const GLOBALS = join(REPO, "app/globals.css");
 const read = (path: string) => readFileSync(path, "utf8");
 
 describe("mobile navigation bar clearance", () => {
-  it("the AppShell always reserves a fixed height below the content under `desktop`", () => {
-    // The rule in globals.css only makes sense because there is something to it
-    // correct: a low padding set by the AppShell, and only on mobile.
-    expect(read(APP_SHELL)).toContain(
-      "max-desktop:pb-[calc(6rem+env(safe-area-inset-bottom))]",
-    );
+  it("the AppShell keeps no reserve below <main>: content scrolls under the bar", () => {
+    expect(read(APP_SHELL)).not.toContain("max-desktop:pb-");
   });
 
   it("reserves three rem for buttons plus the safe bottom anchor", () => {
@@ -37,10 +33,13 @@ describe("mobile navigation bar clearance", () => {
     expect(css).toContain(
       "--mobile-nav-clearance: calc(var(--mobile-nav-height) + 0.75rem);",
     );
-    // The AppShell reserve is indeed the one that is overwritten, on the <main> of
-    // shell and under the shared mobile layout attribute.
+    // Each full-height column scrolling in the shell's <main> ends with the
+    // bar's room, and a composer docked under one sits above the bar instead.
     expect(css).toMatch(
-      /:root\[data-app-layout="mobile"\] \{\s*\.app-shell main \{\s*padding-bottom: var\(--mobile-nav-clearance\);/,
+      /\.app-shell main :is\(\.overflow-y-auto, \.overflow-auto\):is\(\.flex-1, \.h-full\)::after \{[^}]*height: var\(--mobile-nav-clearance\);/,
+    );
+    expect(css).toMatch(
+      /\.app-shell main :is\(\.dock-above-nav, \[data-keyboard-dock\]\) \{\s*margin-bottom: var\(--mobile-nav-clearance\);/,
     );
   });
 

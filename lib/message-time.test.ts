@@ -10,8 +10,14 @@ describe("messageTimeLabel", () => {
     expect(messageTimeLabel(iso(2026, 10, 9, 9, 5), "en-GB", now)).toBe("9:05");
   });
 
+  it("names yesterday and the day before, with the time", () => {
+    expect(messageTimeLabel(iso(2026, 10, 8, 23, 40), "fr", now)).toBe("hier, 23:40");
+    expect(messageTimeLabel(iso(2026, 10, 7, 8, 15), "fr", now)).toBe("avant-hier, 8:15");
+    expect(messageTimeLabel(iso(2026, 10, 8, 23, 40), "en-GB", now)).toBe("yesterday, 23:40");
+  });
+
   it("adds the day and month earlier in the same year", () => {
-    expect(messageTimeLabel(iso(2026, 10, 8, 23, 40), "en-GB", now)).toBe("8 Nov, 23:40");
+    expect(messageTimeLabel(iso(2026, 10, 6, 23, 40), "en-GB", now)).toBe("6 Nov, 23:40");
   });
 
   it("adds the year for a message from another year", () => {

@@ -326,6 +326,11 @@ export function TaskItemView({
           label={t("taskCheckboxAria", { text: taskOwnText(node) })}
           onToggle={() => set(toggled)}
           disabled={!editable}
+          // Centered on the line, the box centers on the capitals and read
+          // as set too high: the eye follows the lowercase letters, whose
+          // middle sits about 0.09em lower (Inter's cap and x heights). A
+          // list bullet sits there too.
+          className="translate-y-[0.09em]"
         />
       </span>
 

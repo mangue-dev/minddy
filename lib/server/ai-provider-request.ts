@@ -12,6 +12,7 @@ import {
   type SafeFetchResponseOptions,
   type SafeResponse,
 } from "@/lib/server/safe-fetch";
+import { assertAiConsent } from "@/lib/server/ai-consent";
 
 /** Raised when cloud code attempts to contact a desktop-only model server. */
 export class LocalAiProviderRequestError extends Error {
@@ -31,7 +32,10 @@ function assertServerProvider(provider: AgentProviderId): void {
 /**
  * The single streaming/multipart transport for server-side AI provider calls.
  * It rejects desktop-only providers, validates every DNS answer and redirect,
- * and connects only to the address that passed validation.
+ * and connects only to the address that passed validation. A request from the
+ * mobile app whose person has not allowed AI sends nothing (MIN-907,
+ * `lib/server/ai-consent.ts`); callers already treat a failed call as no
+ * answer.
  */
 export function fetchAiProvider(
   provider: AgentProviderId,
@@ -39,7 +43,7 @@ export function fetchAiProvider(
   options: SafeFetchResponseOptions = {},
 ): Promise<Response> {
   assertServerProvider(provider);
-  return safeFetchResponse(url, options);
+  return assertAiConsent().then(() => safeFetchResponse(url, options));
 }
 
 /** The same provider boundary with a response byte cap for catalogs and probes. */

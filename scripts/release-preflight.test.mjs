@@ -103,6 +103,8 @@ const prepared = {
   version: released,
   packageVersion: released,
   desktopVersion: released,
+  mobileVersion: released,
+  iosVersions: [released.split("-")[0], released.split("-")[0]],
   compatibility,
   envExample: `MINDDY_RELEASE=${released}\nMINDDY_IMAGE=ghcr.io/mangue-dev/minddy:v${released}\n`,
   existingTags: [],
@@ -120,6 +122,13 @@ test("adds nothing to the compatibility verdict for a fully prepared version", (
   assert.deepEqual(findVersionProblems(prepared).map((problem) => problem.message), rowVerdict);
 });
 
+test("requires the iOS app to carry the web's version, in numbers only", () => {
+  const problems = (overrides) => findVersionProblems({ ...prepared, ...overrides }).length - findVersionProblems(prepared).length;
+  assert.equal(problems({ iosVersions: ["0.0.1", released.split("-")[0]] }), 1);
+  assert.equal(problems({ iosVersions: [] }), 1);
+  assert.equal(problems({ mobileVersion: "0.0.1" }), 1);
+});
+
 test("reports every release datum that the version bump left behind", () => {
   const problems = findVersionProblems({
     ...prepared,
@@ -129,7 +138,7 @@ test("reports every release datum that the version bump left behind", () => {
   }).map((problem) => problem.message);
 
   assert.equal(problems.length, 5);
-  assert.match(problems[0], /must both declare 99\.0\.0/);
+  assert.match(problems[0], /must all declare 99\.0\.0/);
   assert.match(problems[1], /tag v99\.0\.0 already exists/);
   assert.match(problems[2], /exactly one row for minddy 99\.0\.0/);
   assert.match(problems[3], /MINDDY_RELEASE=99\.0\.0/);

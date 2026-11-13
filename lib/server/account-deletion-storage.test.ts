@@ -113,6 +113,19 @@ vi.mock("@/lib/server/page-files", () => ({
   pageFilePathsForProjects: async () => [] as string[],
 }));
 
+// Sign in with Apple (App Review 5.1.1(v)): revoked while its tokens, which
+// cascade with the account, still exist.
+const appleRevocation = vi.hoisted(() => ({
+  calls: [] as string[],
+  warnings: [] as string[],
+}));
+vi.mock("@/lib/server/apple-sign-in", () => ({
+  revokeAppleAuthorizations: vi.fn(async (userId: string) => {
+    appleRevocation.calls.push(userId);
+    return { revoked: 1, warnings: appleRevocation.warnings };
+  }),
+}));
+
 const { deleteAccount } = await import("./account-deletion");
 const { GET: readForgeAttachment } = await import("@/app/api/pr-attachments/[...path]/route");
 
@@ -129,6 +142,8 @@ beforeEach(() => {
   for (const key of Object.keys(service.tables)) delete service.tables[key];
   service.deleteUser.mockClear();
   service.rpc.mockClear();
+  appleRevocation.calls.length = 0;
+  appleRevocation.warnings = [];
 
   service.tables.projects = [{ id: PROJECT }];
   service.tables.attachments = [{ storage_path: `projects/${PROJECT}/a/note.pdf` }];
@@ -145,6 +160,24 @@ beforeEach(() => {
   service.objects["project-icons"] = [`${PROJECT}/icon.png`];
   service.objects["forge-attachments"] = [`${PR}/abcd/diagram.png`];
   service.objects["user-avatars"] = [`users/${USER}.webp`];
+});
+
+describe("deleteAccount and Sign in with Apple", () => {
+  it("revokes the Apple authorization before the account is deleted", async () => {
+    service.deleteUser.mockImplementationOnce(async () => {
+      expect(appleRevocation.calls).toEqual([USER]);
+      return { error: null };
+    });
+    await deleteAccount(USER);
+    expect(service.deleteUser).toHaveBeenCalledTimes(1);
+  });
+
+  it("still deletes the account when Apple refuses, and says so", async () => {
+    appleRevocation.warnings = ["apple app.minddy.ios: revocation refused (400)"];
+    const result = await deleteAccount(USER);
+    expect(service.deleteUser).toHaveBeenCalledTimes(1);
+    expect(result.warnings).toContain("apple app.minddy.ios: revocation refused (400)");
+  });
 });
 
 describe("deleteAccount storage cleanup", () => {

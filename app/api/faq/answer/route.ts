@@ -31,6 +31,7 @@ import {
 } from "@/lib/server/faq-answer";
 import { FAQ_KEYS, PRICING_FAQ_KEYS, MCP_FAQ_KEYS } from "@/components/marketing/faq-keys";
 import { providerErrorFromResponse, reportProviderError } from "@/lib/server/ai-provider-errors";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 /**
  * The FAQ ask box (MIN-590): an anonymous visitor types their own question on
@@ -75,6 +76,9 @@ type OpenRouterCompletionData = {
 };
 
 export async function POST(request: NextRequest) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }

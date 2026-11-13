@@ -17,6 +17,7 @@ import {
 import { resolveConfiguredModel } from "@/lib/server/model-config";
 import { getServiceClient } from "@/lib/supabase-service";
 import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/decisions/types";
+import { aiDeclinedInBackground } from "@/lib/server/ai-consent";
 
 /**
  * The decision-model adapter of the decision layer (MIN-562, generalized by
@@ -100,6 +101,8 @@ async function resolveDecisionApiKey(billTo: AiUsageBillTo): Promise<{
       .maybeSingle();
     billedUserId = (data as { owner_id?: string } | null)?.owner_id ?? null;
   }
+  // A cron job runs no AI for an account that declined it in the mobile app (MIN-907).
+  if (await aiDeclinedInBackground(billedUserId)) return null;
   if (billedUserId) {
     const byok = await getUserByok(billedUserId, "automations", "text", "issue_relation_model").catch(() => null);
     if (byok && byok.provider === "openrouter" && byok.apiKey) {

@@ -1,12 +1,12 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { AuthLoading } from "@/components/auth/auth-chrome";
-import { LoginForm } from "@/components/auth/login-form";
+import { AuthEntry } from "@/components/auth/auth-entry";
 import { resolveInvitationToken } from "@/lib/server/invitation-token";
-import { preserveAuthParams } from "@/lib/signup-wizard";
+import { preserveAuthParams } from "@/lib/auth-entry";
 
 /**
- * The login screen is a customer form (`components/auth/login-form`),
+ * Sign-in and sign-up share one screen (`components/auth/auth-entry`, MIN-907),
  * but the PAGE is a server component since MIN-197: the `?invite=<token>`
  * of an invitation email must be resolved in service key — the guest does not have
  * session, and would in any case not have access to the project whose display is displayed.
@@ -37,7 +37,7 @@ export default async function LoginPage({
 
   return (
     <Suspense fallback={<AuthLoading />}>
-      <LoginForm invite={invite} />
+      <AuthEntry invite={invite} />
     </Suspense>
   );
 }

@@ -5,6 +5,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./dialog";
 import { SearchSelect } from "../search-select";
+import { IssueActionsMenu } from "../issue-context-menu";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { MobileSheetScrollArea } from "./mobile-sheet";
 
@@ -24,7 +25,9 @@ let container: HTMLDivElement;
 beforeEach(() => {
   viewport.mobile = true;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  vi.stubGlobal("matchMedia", () => ({ matches: viewport.mobile }));
+  // framer-motion listens to the reduced-motion query (`Unfold`), so the stub
+  // needs the listener methods too.
+  vi.stubGlobal("matchMedia", () => ({ matches: viewport.mobile, addEventListener() {}, removeEventListener() {} }));
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   Element.prototype.scrollIntoView = vi.fn();
   container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);
@@ -121,6 +124,31 @@ it("closes a mobile view picker before opening its creation form", async () => {
   expect(document.querySelector('[data-mobile-picker]')).toBeNull();
   expect(document.querySelector('[data-mobile-dialog]')).not.toBeNull();
   expect(document.activeElement).toBe(document.querySelector('[data-mobile-dialog]'));
+});
+
+it("opens a mobile action sheet on its sections and unfolds one on a tap", async () => {
+  const copied = vi.fn();
+  const actions = [
+    { id: "prompt", label: "Copy prompt", children: [{ id: "plan", label: "Generate a plan", onSelect: copied }] },
+    { id: "trash", label: "Move to trash" },
+  ];
+  await act(() => root.render(createElement(NextIntlClientProvider, { locale: "en", messages: { Common: { close: "Close" }, Picker: { search: "Search", noResults: "No results" } }, children: createElement(TooltipProvider, null,
+    createElement(IssueActionsMenu, { searchable: true, actions, trigger: createElement("button", null, "More") })) })));
+  await act(() => container.querySelector<HTMLButtonElement>("button")!.click());
+  const item = (label: string) => [...document.querySelectorAll<HTMLElement>("[cmdk-item]")].find((node) => node.textContent === label);
+
+  // Sections show by name; their actions wait behind them.
+  expect(item("Copy prompt")?.getAttribute("aria-expanded")).toBe("false");
+  expect(item("Move to trash")).toBeDefined();
+  expect(item("Generate a plan")).toBeUndefined();
+
+  await act(() => item("Copy prompt")!.click());
+  expect(item("Copy prompt")?.getAttribute("aria-expanded")).toBe("true");
+  expect(document.querySelector("[data-mobile-picker]")).not.toBeNull();
+
+  await act(() => item("Generate a plan")!.click());
+  await act(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  expect(copied).toHaveBeenCalledOnce();
 });
 
 it("retains automatic input focus in desktop dialogs", async () => {

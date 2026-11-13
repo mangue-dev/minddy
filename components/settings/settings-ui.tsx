@@ -307,6 +307,7 @@ export function SettingsListRow({
   action,
   /** The state SAYS why a gesture is not offered: truncating it makes it useless. */
   truncateSubtitle = true,
+  stackOnPhone = false,
   className,
 }: {
   icon?: AppIcon;
@@ -315,10 +316,16 @@ export function SettingsListRow({
   subtitle?: ReactNode;
   action?: ReactNode;
   truncateSubtitle?: boolean;
+  /**
+   * On a phone, the title on a line of its own, in full, and the actions
+   * under it: a long address (a pending invitation) no longer shares its
+   * width with a badge, a role and a button (MIN-907).
+   */
+  stackOnPhone?: boolean;
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center gap-3 py-3", className)}>
+    <div className={cn("flex items-center gap-3 py-3", stackOnPhone && "app-mobile:flex-col app-mobile:items-stretch app-mobile:gap-2", className)}>
       {avatar ??
         (Icon && (
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -327,7 +334,12 @@ export function SettingsListRow({
         ))}
       <div className="min-w-0 flex-1">
         {/* A cut name, email or path shows in full on hover. */}
-        {typeof title === "string" ? (
+        {stackOnPhone && typeof title === "string" ? (
+          <>
+            <TruncatedText text={title} className="truncate text-sm font-medium app-mobile:hidden" />
+            <div className="hidden text-sm font-medium break-all app-mobile:block">{title}</div>
+          </>
+        ) : typeof title === "string" ? (
           <TruncatedText text={title} className="truncate text-sm font-medium" />
         ) : (
           <div className="truncate text-sm font-medium">{title}</div>
@@ -345,7 +357,7 @@ export function SettingsListRow({
           </div>
         ))}
       </div>
-      {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
+      {action && <div className={cn("flex shrink-0 items-center gap-2", stackOnPhone && "app-mobile:justify-end")}>{action}</div>}
     </div>
   );
 }

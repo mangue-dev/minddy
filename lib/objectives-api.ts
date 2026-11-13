@@ -5,6 +5,7 @@ import { apiErrorCode, HttpResponseError } from "./backend-availability";
 
 import { saveCreationRelations } from "./creation-relations";
 
+import { hapticOptimistic } from "./mobile/haptics";
 import type {
   CreateObjectiveInput,
   Objective,
@@ -60,12 +61,13 @@ export async function createObjectiveApi(
 ): Promise<Objective> {
   trackEvent("objective_created", {});
   const { relations, ...payload } = input;
-  const objective = await parseJson<Objective>(
-    await fetch(`/api/projects/${projectId}/objectives`, {
+  // Vibrates at once in the mobile app, then again if it fails (MIN-959).
+  const objective = await hapticOptimistic(
+    fetch(`/api/projects/${projectId}/objectives`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    })
+    }).then((response) => parseJson<Objective>(response))
   );
   await saveCreationRelations(projectId, objective.id, "objective", relations);
   return objective;

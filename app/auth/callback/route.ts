@@ -15,7 +15,10 @@ import {
   parseOtpType,
 } from "@/lib/desktop/auth-link";
 import { buildAuthFailureRedirect, completeAuthArrival } from "@/lib/server/auth-arrival";
-import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { SESSION_COOKIE_OPTIONS, serverSupabaseCookieOptions } from "@/lib/session-cookies";
+import { hasAppleIdentity } from "@/lib/apple-sign-in";
+import { saveAppleAuthorization } from "@/lib/server/apple-sign-in";
+import { afterOrNow } from "@/lib/server/after-safe";
 
 /**
  * Exchanges the auth code (OAuth) for a session, writing the session cookies,
@@ -122,7 +125,7 @@ export async function GET(request: NextRequest) {
       // (MIN-351, lib/session-cookies.ts). Here as in `cookieOptions` —
       // it is this adapter that writes, and it receives its options from the client.
       global: { fetch: supabaseServerFetch },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: serverSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -143,6 +146,14 @@ export async function GET(request: NextRequest) {
       return buildAuthFailureRedirect(origin, "exchange_failed");
     }
     await completeAuthArrival(data.user, "oauth");
+    // An Apple round returns Apple's refresh token here, once: keep it so
+    // that deleting the account can revoke it (lib/server/apple-sign-in.ts).
+    const appleToken = data.session?.provider_refresh_token;
+    if (appleToken && hasAppleIdentity(data.user)) {
+      afterOrNow(async () => {
+        await saveAppleAuthorization(data.user.id, "web", { refreshToken: appleToken });
+      });
+    }
 
     return NextResponse.redirect(`${origin}${next}`);
   } catch (err) {

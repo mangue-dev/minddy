@@ -7,6 +7,7 @@ import { DictateButton } from "@/components/ai-elements/dictate-button";
 import { SendShortcutTooltip } from "@/components/send-shortcut";
 import type { DictationContext } from "@/lib/dictation-context";
 import { useValueWhileOpen } from "@/lib/use-dialog-close-content";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 /**
  * The base of small modal forms: same native closure (cross,
@@ -127,6 +128,7 @@ export function FormDialogActions({
   };
   className?: string;
 }) {
+  const mobile = useMobileLayout() === true;
   return (
     <DialogFooter className={className}>
       {dictation ? (
@@ -138,7 +140,10 @@ export function FormDialogActions({
             disabled={dictation.disabled || submitting}
             onProcessingChange={dictation.onProcessingChange}
             autoStart={dictation.autoStart}
-            className="mr-auto -ml-2"
+            // In a phone's sheet the actions are stacked and this one is a
+            // button with its label (app/globals.css).
+            showLabel={mobile}
+            className={mobile ? undefined : "mr-auto -ml-2"}
           />
         </div>
       ) : null}
