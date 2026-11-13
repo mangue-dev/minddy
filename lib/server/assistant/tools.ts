@@ -1386,11 +1386,11 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
         properties: {
           title: {
             type: "string",
-            description: "What it is about, in a few words (120 characters at most). Plain text.",
+            description: "What happened, as a short sentence that names the record as a typed mention: 'Review [@](mention:issue/<id>) before Friday', 'Release blocked in [@](mention:project/<id>)' (120 characters at most, a mention counting as one word). The inbox draws the mention as a pill and a push banner prints its name. No other markdown.",
           },
           body: {
             type: "string",
-            description: "One or two plain sentences: what happened and what it means for the user (600 characters at most). No markdown.",
+            description: "Context the title does not give, in one or two plain sentences: why it matters, what to do, an excerpt (600 characters at most). Never repeat the title. Typed mentions '[@](mention:<type>/<id>)' allowed for records you resolved; no other markdown.",
           },
           link: {
             type: "object",

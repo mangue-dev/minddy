@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
 
 import { useAuth } from "./auth-context";
 import { getDesktopBridge } from "./desktop/bridge";
-import { notificationLineValues, notificationTitle } from "./notification-line";
-import { notificationLineKey, notificationTargetPath } from "./notification-target";
+import { notificationTargetPath } from "./notification-target";
+import { useNotificationPlainText } from "./use-notification-text";
 import { useNotifications } from "./use-notifications";
 import { usePushDevicesQuery } from "./use-push-devices-query";
 import type { MyNotification } from "./types";
@@ -31,9 +30,7 @@ export function useDesktopNotifications(): void {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { capabilities: pushCapabilities } = usePushDevicesQuery();
-  const t = useTranslations("Inbox");
-  const tIssue = useTranslations("Issue");
-  const tTimeline = useTranslations("Timeline");
+  const plainText = useNotificationPlainText();
 
   /** `null` until the first list has arrived (see seeding). */
   const seen = useRef<Set<string> | null>(null);
@@ -106,28 +103,14 @@ export function useDesktopNotifications(): void {
     // The list goes from newest to oldest; the banners are stacking up
     // in the order of issue. We therefore start from the oldest so that the
     // most recent ends up ON TOP of the stack.
-    const labels = {
-      someone: t("someone"),
-      mcpFallback: tTimeline("mcpFallback"),
-      somePageFallback: t("somePageFallback"),
-      someIssueFallback: t("someIssueFallback", {
-        entity: tIssue("entity").toLowerCase(),
-      }),
-      instanceConfigTitle: t("instanceConfigTitle"),
-    };
     for (const n of fresh.reverse()) {
       const target = notificationTargetPath(n);
-      const sentence = t(
-        notificationLineKey(n.type, n.from_numo),
-        notificationLineValues(n, labels),
-      );
+      // The same three lines as the inbox row, the target printed as text.
+      const text = plainText(n);
       bridge.showLocalNotification({
         id: n.id,
-        title: notificationTitle(n, labels) || "minddy",
-        // A Numo note (MIN-914) is shown in its own words.
-        body: n.type === "numo_message" && n.numo_note_body
-          ? n.numo_note_body
-          : n.comment_excerpt ? `${sentence}: ${n.comment_excerpt}` : sentence,
+        title: text.actor,
+        body: text.context ? `${text.title}\n${text.context}` : text.title,
         target,
       });
       shown.current.add(n.id);
@@ -136,5 +119,5 @@ export function useDesktopNotifications(): void {
     // The register follows the list rather than growing indefinitely: one line
     // deleted leaves it, and it won't come back.
     seen.current = new Set(byId.keys());
-  }, [notifications, initialized, userId, pushCapabilities, t, tIssue, tTimeline]);
+  }, [notifications, initialized, userId, pushCapabilities, plainText]);
 }

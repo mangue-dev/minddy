@@ -16,6 +16,7 @@ import { commentStore } from "@/lib/server/comment-store";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { NUMO_NOTE_BODY_MAX, sendNumoNote, type NumoNoteLink } from "@/lib/server/numo-notes";
+import { mentionMarkdown } from "@/lib/mention-link";
 import { getProjectAccess } from "@/lib/server/project-access";
 import { getServiceClient } from "@/lib/supabase-service";
 import { encodeConversationTitle, shouldProtectConversationTitle } from "./conversation-title-content";
@@ -331,8 +332,13 @@ async function watchVoice(service: SupabaseClient, watch: NumoWatchItem) {
   const locale = localeOf(metadata);
   const subject = await subjectOf(service, watch).catch(() => null);
   const title = await watchNoteTitle(watch, subject, locale);
+  // The note names its record as a typed mention (MIN-975): the inbox draws
+  // its pill, a push prints its current name. The conversation and the
+  // prompt keep the plain title.
+  const link = linkOf(watch);
+  const noteTitle = link ? await watchNoteTitle(watch, mentionMarkdown(link.type, link.id), locale) : title;
   const t = createTranslator({ locale, messages: await catalog(locale), namespace: "Account" });
-  return { metadata, locale, title, t };
+  return { metadata, locale, title, noteTitle, t };
 }
 
 /**
@@ -347,7 +353,7 @@ export async function settleNumoWatchOccurrence(watch: NumoWatchItem, result: {
   const { paused } = await recordNumoWatchOccurrence(service,
     { id: watch.id, firedAt: watch.fired_at }, result);
   if (!result.failed) return;
-  const { title, t } = await watchVoice(service, watch);
+  const { noteTitle, t } = await watchVoice(service, watch);
   // The pause note says more around the instruction than the others: a
   // long instruction is cut so the note keeps its last words.
   const room = NUMO_NOTE_BODY_MAX -
@@ -361,7 +367,7 @@ export async function settleNumoWatchOccurrence(watch: NumoWatchItem, result: {
       ? t("numoWatchNoteNoBudget", { instruction: watch.instruction })
       : t("numoWatchNoteActFailed", { instruction: watch.instruction });
   await sendNumoNote({
-    service, userId: watch.user_id, projectId: watch.project_id, title, body, link: linkOf(watch),
+    service, userId: watch.user_id, projectId: watch.project_id, title: noteTitle, body, link: linkOf(watch),
   });
 }
 
@@ -372,10 +378,10 @@ export async function settleNumoWatchOccurrence(watch: NumoWatchItem, result: {
  */
 export async function dispatchNumoWatch(watch: NumoWatchItem,
   service: SupabaseClient = getServiceClient(), options: { retry?: boolean } = {}): Promise<NumoWatchOutcome> {
-  const { metadata, locale, title, t } = await watchVoice(service, watch);
+  const { metadata, locale, title, noteTitle, t } = await watchVoice(service, watch);
   const note = async (body: string): Promise<NumoWatchOutcome | "sent"> => {
     const sent = await sendNumoNote({
-      service, userId: watch.user_id, projectId: watch.project_id, title, body,
+      service, userId: watch.user_id, projectId: watch.project_id, title: noteTitle, body,
       link: linkOf(watch), dedupe: options.retry === true,
     });
     if (!sent.ok) return "failed";
@@ -447,9 +453,9 @@ export function notifyReminderOfNumoTurn(turn: NumoTurn, options: { usageExhaust
       }
       if (watch.outcome !== "acted") return;
       await recordNumoWatchOutcome(service, watch.id, "failed");
-      const { title, t } = await watchVoice(service, watch);
+      const { noteTitle, t } = await watchVoice(service, watch);
       await sendNumoNote({
-        service, userId: watch.user_id, projectId: watch.project_id, title,
+        service, userId: watch.user_id, projectId: watch.project_id, title: noteTitle,
         body: t("numoWatchNoteActFailed", { instruction: watch.instruction }),
         link: linkOf(watch),
       });

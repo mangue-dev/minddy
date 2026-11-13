@@ -17,23 +17,19 @@ import fr from "@/messages/fr.json";
  */
 
 describe("categoryOfNotification", () => {
-  it("range une notification de ROUTINE sous « routine », quel que soit son type", () => {
-    // The trap: a routine announces its end of execution with the types of
-    // the agent. On the type alone, cutting “Routines” would have missed
-    // failure the next morning.
+  it("files a ROUTINE notification under “routine”, whatever its type", () => {
+    // A routine reports its run with the agent's types: on the type alone,
+    // cutting “Routines” would miss the next morning's failure.
     expect(categoryOfNotification({ type: "agent_failed", routine_id: "r1" })).toBe("routine");
-    expect(categoryOfNotification({ type: "agent_done", routine_id: "r1" })).toBe("routine");
-    expect(categoryOfNotification({ type: "routine_done" })).toBe("routine");
+    expect(categoryOfNotification({ type: "agent_question", routine_id: "r1" })).toBe("routine");
 
-    // The same type without a routine remains a hand-launched run.
+    // The same type without a routine stays an agent notification.
     expect(categoryOfNotification({ type: "agent_failed" })).toBe("agent");
-    expect(categoryOfNotification({ type: "agent_done", routine_id: null })).toBe("agent");
+    expect(categoryOfNotification({ type: "agent_question", routine_id: null })).toBe("agent");
   });
 
-  it("range toute la vie d'une pull request sous une seule bascule", () => {
-    for (const type of ["pr_opened", "pr_reviewed", "pr_merged"] as const) {
-      expect(categoryOfNotificationType(type)).toBe("pullRequest");
-    }
+  it("files an opened pull request under the pull request switch", () => {
+    expect(categoryOfNotificationType("pr_opened")).toBe("pullRequest");
   });
 });
 

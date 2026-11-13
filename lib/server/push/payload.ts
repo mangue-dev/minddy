@@ -23,24 +23,20 @@ import {
   type Locale,
 } from "@/i18n/config";
 import { displayName } from "@/lib/display-name";
-import { mcpActorLabel } from "@/lib/mcp-agents";
-import {
-  notificationTargetPath,
-  notificationLineKey,
-} from "@/lib/notification-target";
+import { notificationTargetPath } from "@/lib/notification-target";
+import { notificationPlainText, type NotificationLabels } from "@/lib/notification-line";
+import { markdownForReader } from "@/lib/server/mention-access";
+import type { MyNotification } from "@/lib/types";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
 import { resolveApiKeyActors, type ApiKeyActor,
 } from "@/lib/server/api-key-actors";
 import type { NotificationRow } from "@/lib/server/notifications";
 
 /**
- * What a push notification (MIN-183) says — the SAME words as the corresponding
- * inbox line.
- *
- * That's the point: two surfaces, one wording. Hence the
- * reuse of keys from the namespace `Inbox` via `NOTIFICATION_LINE_KEYS`, and
- * from the actor vocabulary of the timeline (named Smart Assign, a named MCP
- * agent, never “Someone” when we know who it is).
+ * What a push notification (MIN-183) says — the SAME words as the inbox row
+ * (lib/notification-line.ts): the actor as the banner's title, then the
+ * sentence with its target's label and the optional context as its body. A
+ * mention cannot be drawn in a system banner, so it prints its label.
  *
  * ## Why `createTranslator` and not `getTranslations`
  *
@@ -101,13 +97,13 @@ export interface PushContext {
   routines: Map<string, string>;
   /** Number + title of a PULL REQUEST — the banner shows them as the
    * reference and title of a ticket. */
-  pullRequests: Map<string, { number: number; title: string | null }>;
+  pullRequests: Map<string, { number: number; title: string | null; provider: string | null }>;
   /** Title of a wiki PAGE (MIN-278) — the banner only shows it. */
   pages: Map<string, string>;
   /** A Numo note (MIN-914): its own title and body make the banner. */
   numoNotes: Map<string, NumoNoteContent>;
   projectKeys: Map<string, string>;
-  /** Name of the project a backfill line (MIN-903) is about: its title. */
+  /** Name of the project a backfill or feedback line points at. */
   projectNames: Map<string, string>;
   actorNames: Map<string, string>;
   apiKeyActors: Map<string, ApiKeyActor>;
@@ -197,9 +193,9 @@ export async function loadPushContext(
           encryption_version?: number }[] }),
     // A PULL REQUEST: no basket either, the line leaves with it.
     prIds.length
-      ? service.from("pull_requests").select("id, number, title").in("id", prIds)
+      ? service.from("pull_requests").select("id, number, title, provider").in("id", prIds)
       : Promise.resolve({
-          data: [] as { id: string; number: number; title: string | null }[],
+          data: [] as { id: string; number: number; title: string | null; provider: string | null }[],
         }),
     // A PAGE: trashed, it grows nothing — the line would lead to a
     // blank screen (same rule as tickets, MIN-133).
@@ -230,7 +226,7 @@ export async function loadPushContext(
     ctx.routines.set(r.id, await decodeRoutineTitle(r));
   }
   for (const p of pullRequests.data ?? []) {
-    ctx.pullRequests.set(p.id, { number: p.number,
+    ctx.pullRequests.set(p.id, { number: p.number, provider: p.provider ?? null,
       title: await decodePullRequestContent(p.id, "title", p.title) });
   }
   for (const p of pages.data ?? []) {
@@ -246,23 +242,101 @@ export async function loadPushContext(
   ctx.apiKeyActors = keyActors;
   ctx.projectNames = await readProjectNames(
     service,
-    rows.filter((row) => row.type === "smart_assign_batch").map((row) => row.project_id),
+    rows.filter((row) => row.type === "smart_assign_batch" || row.feedback_post_id)
+      .map((row) => row.project_id),
   );
-  // Each note is read for its own recipient, the only user it is sent to.
+  // Each note is read for its own recipient, the only user it is sent to,
+  // and its mentions carry the labels that recipient may see (MIN-975).
   for (const row of rows) {
     if (!row.numo_note_id) continue;
     const notes = await readNumoNotes(service, [row.numo_note_id], row.user_id);
     const note = notes?.get(row.numo_note_id);
-    if (note) ctx.numoNotes.set(row.numo_note_id, note);
+    if (!note) continue;
+    ctx.numoNotes.set(row.numo_note_id, {
+      title: await markdownForReader(row.user_id, note.title, service),
+      body: await markdownForReader(row.user_id, note.body, service),
+    });
   }
 
   return ctx;
 }
 
 /**
- * The payload of a line, in the language of a device — or `null` when
- * the target is no longer there (trash) or the line leads nowhere: better
- * is better than pushing nothing than opening a blank screen.
+ * The row as the inbox would read it, from the batch's context, or `null`
+ * when its target is gone (trash) or unreadable: a banner then says nothing
+ * rather than open a blank screen.
+ */
+function notificationOf(ctx: PushContext, row: NotificationRow): MyNotification | null {
+  const issue = row.issue_id ? ctx.issues.get(row.issue_id) : undefined;
+  const pr = row.pull_request_id ? ctx.pullRequests.get(row.pull_request_id) : undefined;
+  const post = row.feedback_post_id ? ctx.feedbackPosts.get(row.feedback_post_id) : undefined;
+  const note = row.numo_note_id ? ctx.numoNotes.get(row.numo_note_id) : undefined;
+  const projectName = row.project_id ? ctx.projectNames.get(row.project_id) : undefined;
+  if (row.type === "numo_message") {
+    if (!note) return null;
+  } else if (row.type === "smart_assign_batch") {
+    if (!projectName || !row.issue_count) return null;
+  } else if (row.objective_id) {
+    if (!ctx.objectives.has(row.objective_id)) return null;
+  } else if (row.feedback_post_id) {
+    if (!post || post.projectId !== row.project_id) return null;
+  } else if (row.routine_id) {
+    if (!ctx.routines.has(row.routine_id)) return null;
+  } else if (row.pull_request_id) {
+    if (!pr) return null;
+  } else if (row.page_id) {
+    if (!ctx.pages.has(row.page_id)) return null;
+  } else if (row.issue_id) {
+    if (!issue) return null;
+  } else if (row.type !== "instance_config_changed") {
+    return null;
+  }
+  const keyActor = row.via_mcp && row.api_key_id ? ctx.apiKeyActors.get(row.api_key_id) : undefined;
+  return {
+    id: "",
+    type: row.type,
+    read_at: null,
+    created_at: "",
+    issue_id: row.issue_id,
+    issue_number: issue?.number ?? null,
+    issue_title: issue?.title ?? null,
+    issue_status: null,
+    objective_id: row.objective_id ?? null,
+    objective_name: row.objective_id ? ctx.objectives.get(row.objective_id) ?? null : null,
+    feedback_post_id: row.feedback_post_id ?? null,
+    feedback_title: post?.title ?? null,
+    routine_id: row.routine_id ?? null,
+    routine_title: row.routine_id ? ctx.routines.get(row.routine_id) ?? null : null,
+    pull_request_id: row.pull_request_id ?? null,
+    pull_request_number: pr?.number ?? null,
+    pull_request_title: pr?.title ?? null,
+    pull_request_provider: pr?.provider ?? null,
+    page_id: row.page_id ?? null,
+    page_title: row.page_id ? ctx.pages.get(row.page_id) ?? null : null,
+    block_id: row.block_id ?? null,
+    project_id: row.project_id,
+    project_key: row.project_id ? ctx.projectKeys.get(row.project_id) ?? null : null,
+    actor_name: ctx.actorNames.get(row.actor_id ?? "")?.trim() || null,
+    actor_avatar_seed: null,
+    // Our agent outside MCP (MIN-278): the banner names Numo, as the inbox does.
+    from_numo: !row.via_mcp && !!row.via_assistant,
+    via_mcp: !!row.via_mcp,
+    api_key_agent: keyActor?.agent ?? null,
+    api_key_name: keyActor?.name ?? null,
+    via_smart_assign: !!row.via_smart_assign,
+    via_automation: !!row.via_automation,
+    // A comment's excerpt is not pushed: the banner's body stays short.
+    comment_excerpt: null,
+    numo_note_title: note?.title ?? null,
+    numo_note_body: note?.body ?? null,
+    issue_count: row.issue_count ?? null,
+    project_name: projectName ?? null,
+  };
+}
+
+/**
+ * The payload of a row, in the language of a device — or `null` when the
+ * target is no longer there (trash) or the row leads nowhere.
  */
 export function buildPushPayload(
   ctx: PushContext,
@@ -271,101 +345,30 @@ export function buildPushPayload(
 ): PushPayload | null {
   const url = notificationTargetPath(row);
   if (!url) return null;
+  const n = notificationOf(ctx, row);
+  if (!n) return null;
 
   const messages = CATALOGS[locale];
   const t = createTranslator({ locale, messages, namespace: "Inbox" });
-  const tTimeline = createTranslator({ locale, messages, namespace: "Timeline",
-  });
-
-  // A Numo note (MIN-914) is pushed in its own words. Unreadable, it is not
-  // pushed at all: a banner with no content would say nothing.
-  if (row.type === "numo_message") {
-    const note = row.numo_note_id ? ctx.numoNotes.get(row.numo_note_id) : undefined;
-    if (!note) return null;
-    return {
-      title: note.title,
-      body: note.body,
-      lang: intlLocaleByLocale[locale],
-      url,
-      tag: `numo-note:${row.numo_note_id}`,
-    };
-  }
-
-  // The title is WHAT we're talking about — the first line of the inbox. There
-  // reference of the ticket in front: it is she who we recognize at a glance in
-  // a system banner, where there is no room for anything else.
-  let title: string;
-  if (row.type === "instance_config_changed") {
-    title = t("instanceConfigTitle");
-  } else if (row.type === "smart_assign_batch") {
-    const name = row.project_id ? ctx.projectNames.get(row.project_id) : undefined;
-    if (!name || !row.issue_count) return null;
-    title = name;
-  } else if (row.objective_id) {
-    const name = ctx.objectives.get(row.objective_id);
-    if (!name) return null;
-    title = name;
-  } else if (row.feedback_post_id) {
-    const post = ctx.feedbackPosts.get(row.feedback_post_id);
-    if (!post || post.projectId !== row.project_id) return null;
-    title = post.title;
-  } else if (row.routine_id) {
-    const routineTitle = ctx.routines.get(row.routine_id);
-    if (!routineTitle) return null;
-    title = routineTitle;
-  } else if (row.pull_request_id) {
-    const pr = ctx.pullRequests.get(row.pull_request_id);
-    if (!pr) return null;
-    // `#12 · Réparer…` — the exact counterpart of `MIN-42 · …` for a ticket.
-    title = pr.title ? `#${pr.number} · ${pr.title}` : `#${pr.number}`;
-  } else if (row.page_id) {
-    const pageTitle = ctx.pages.get(row.page_id);
-    if (pageTitle === undefined) return null;
-    // A page without a title does have a title: it is the empty string. The banner
-    // system has nothing else to show, hence the explicit fallback — a title
-    // empty would make an anonymous notification there.
-    title = pageTitle || t("somePageFallback");
-  } else if (row.issue_id) {
-    const issue = ctx.issues.get(row.issue_id);
-    if (!issue) return null;
-    const key = row.project_id ? ctx.projectKeys.get(row.project_id) : null;
-    title = key ? `${key}-${issue.number} · ${issue.title}` : issue.title;
-  } else {
-    return null;
-  }
-
-  // The name of the actor, in the terms of the inbox and the timeline: Smart
-  // Assign is named, an MCP agent is named, and “Someone” is only used when
-  // on ne sait vraiment pas.
-  let actor: string;
-  if (row.via_smart_assign) {
-    actor = "Smart Assign";
-  } else if (row.via_mcp) {
-    const keyActor = row.api_key_id
-      ? ctx.apiKeyActors.get(row.api_key_id)
-      : null;
-    actor = mcpActorLabel(
-      keyActor?.agent,
-      keyActor?.name,
-      tTimeline("mcpFallback"),
-    );
-  } else if (row.via_assistant) {
-    // Our agent outside MCP (MIN-278): the cat, the code agent. The same name as
-    // the inbox gives it — otherwise the banner and the line would say two
-    // different actors of the same gesture.
-    actor = "Numo";
-  } else {
-    actor = ctx.actorNames.get(row.actor_id ?? "")?.trim() || t("someone");
-  }
+  const tTimeline = createTranslator({ locale, messages, namespace: "Timeline" });
+  const tIssue = createTranslator({ locale, messages, namespace: "Issue" });
+  const labels: NotificationLabels = {
+    someone: t("someone"),
+    mcpFallback: tTimeline("mcpFallback"),
+    somePageFallback: t("somePageFallback"),
+    someIssueFallback: t("someIssueFallback", { entity: tIssue("entity").toLowerCase() }),
+    automation: t("actorAutomation"),
+    feedbackBoard: t("actorFeedbackBoard"),
+  };
+  const text = notificationPlainText(n, labels, (key, values) => t(key, values));
 
   return {
-    title,
-    body: t(notificationLineKey(row.type, !!row.via_assistant), {
-      actor,
-      count: row.issue_count ?? 0,
-    }),
+    title: text.actor,
+    body: text.context ? `${text.title}\n${text.context}` : text.title,
     lang: intlLocaleByLocale[locale],
     url,
-    tag: url,
+    // Each note is its own banner; any other burst on one target replaces
+    // the previous banner instead of stacking.
+    tag: row.type === "numo_message" ? `numo-note:${row.numo_note_id}` : url,
   };
 }

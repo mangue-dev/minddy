@@ -13,6 +13,7 @@ vi.mock("next-intl", () => ({
     Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
       (en[namespace] as Record<string, string>)[key] ?? key),
   useFormatter: () => ({ dateTime: () => "date" }),
+  useLocale: () => "en",
 }));
 vi.mock("@/lib/use-live-now", () => ({ useTimeAgo: () => () => "now" }));
 vi.mock("@/lib/use-app-router", () => ({ useAppRouter: () => ({ push: vi.fn() }) }));
@@ -36,10 +37,10 @@ import InboxContent, { inboxFilterFor, type InboxFocus } from "./inbox-content";
 function notification(id: string, fields: Partial<MyNotification> = {}): MyNotification {
   return {
     id, type: "comment", read_at: null, created_at: new Date().toISOString(),
-    issue_id: "i1", issue_number: 4, issue_title: `Ticket ${id}`,
+    issue_id: "i1", issue_number: 4, issue_title: `Ticket ${id}`, issue_status: null,
     objective_id: null, objective_name: null, feedback_post_id: null, feedback_title: null,
     routine_id: null, routine_title: null, pull_request_id: null, pull_request_number: null,
-    pull_request_title: null, page_id: null, page_title: null, block_id: null,
+    pull_request_title: null, pull_request_provider: null, page_id: null, page_title: null, block_id: null,
     project_id: "p1", project_key: "MIN", actor_name: "Ana", actor_avatar_seed: null,
     from_numo: false, via_mcp: false, api_key_agent: null, api_key_name: null,
     via_smart_assign: false, via_automation: false, comment_excerpt: null,
@@ -59,7 +60,8 @@ function render(focus: InboxFocus | null) {
   ));
 }
 
-const pressedFilter = () => host.querySelector("[aria-pressed=true]")?.textContent;
+/** The view picker's trigger names the view on screen (MIN-975). */
+const pressedFilter = () => host.querySelector("[data-inbox-sheet-bar] button")?.textContent;
 const pulsing = () =>
   Array.from(host.querySelectorAll<HTMLElement>(".inbox-row-target")).map((row) => row.dataset.notificationId);
 
@@ -131,5 +133,22 @@ describe("InboxContent targeting (MIN-846)", () => {
     render({ id: "unread", seq: 2 });
     expect(pulsing()).toEqual(["unread"]);
     expect(scrolled).toEqual(["unread", "unread"]);
+  });
+});
+
+describe("InboxContent rows (MIN-975)", () => {
+  it("reads who acted, what happened to which record, and the context", () => {
+    mocks.notifications = [notification("mention", {
+      type: "mention", actor_name: "Ana", comment_excerpt: "Can you check this?",
+    })];
+    render(null);
+    const row = host.querySelector<HTMLElement>("[data-notification-id=mention]");
+    expect(row?.textContent).toContain("Ana");
+    expect(row?.textContent).toContain("Mentioned you in");
+    // The target is a pill labeled with the issue's identifier.
+    expect(row?.textContent).toContain("MIN-4");
+    expect(row?.textContent).toContain("Can you check this?");
+    // No date group headers any more.
+    expect(host.textContent).not.toContain("Today");
   });
 });

@@ -14,10 +14,10 @@ import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
 /**
- * The pushed payload must say EXACTLY what the inbox line says — word for word, in both languages. The test therefore goes through the REAL formatter on
- * the real catalogs: it catches both an absent key (which would make
- * "Inbox....") and an unsubstituted `{actor}`, the two faults that the typing
- * lets pass (see CLAUDE.md).
+ * The pushed payload must say what the inbox row says, in every language.
+ * The test goes through the REAL formatter on the real catalogs: it catches
+ * a missing key ("Inbox.…") and an unsubstituted placeholder, the two faults
+ * the typing lets pass (see CLAUDE.md).
  */
 
 const PROJECT = "11111111-1111-1111-1111-111111111111";
@@ -28,26 +28,19 @@ const ALL_TYPES: readonly NotificationType[] = [
   "assigned",
   "mention",
   "comment",
-  "agent_done",
   "agent_question",
   "agent_failed",
   "feedback_new",
-  "pr_reviewed",
-  "pr_merged",
   "pr_opened",
-  "automation_paused",
-  "automation_stopped",
-  "routine_done",
   "page_mention",
-  "page_agent_edit",
   "page_comment",
   "instance_config_changed",
   "numo_message",
   "smart_assign_batch",
 ];
 
-/** The table above should be COMPLETE: a type added to the product without its
- phrase would push "Inbox...." on a locked screen, and nothing here would tell if the list was only "about current". */
+/** The table above must stay COMPLETE: a type added without its sentence
+    would push "Inbox.…" on a locked screen. */
 const _exhaustive: Record<NotificationType, true> = Object.fromEntries(
   ALL_TYPES.map((type) => [type, true])
 ) as Record<NotificationType, true>;
@@ -70,205 +63,157 @@ const issueRow = (type: NotificationType, extra: Partial<NotificationRow> = {}) 
     ...extra,
   }) as NotificationRow;
 
+/** A row of every type, with the target its type needs. */
+function rowOf(type: NotificationType): NotificationRow {
+  switch (type) {
+    case "agent_question":
+    case "agent_failed":
+      return issueRow(type, { issue_id: null, routine_id: "r1", via_assistant: true });
+    case "feedback_new":
+      return issueRow(type, { issue_id: null, feedback_post_id: "fp", actor_id: null });
+    case "pr_opened":
+      return issueRow(type, { issue_id: null, pull_request_id: "pr", actor_id: null });
+    case "page_mention":
+    case "page_comment":
+      return issueRow(type, { issue_id: null, page_id: "pg" });
+    case "instance_config_changed":
+      return issueRow(type, { issue_id: null, project_id: null });
+    case "numo_message":
+      return issueRow(type, { numo_note_id: "note-1", actor_id: null, via_assistant: true });
+    case "smart_assign_batch":
+      return issueRow(type, { issue_id: null, issue_count: 3, via_smart_assign: true, actor_id: null });
+    default:
+      return issueRow(type);
+  }
+}
+
+function fullCtx(): PushContext {
+  const ctx = ctxWithIssue();
+  ctx.routines.set("r1", "Daily triage");
+  ctx.feedbackPosts.set("fp", { projectId: PROJECT, title: "Dark mode please" });
+  ctx.pullRequests.set("pr", { number: 12, title: "Add dark mode", provider: "github" });
+  ctx.pages.set("pg", "Product decisions");
+  ctx.projectNames.set(PROJECT, "Aurora");
+  ctx.numoNotes.set("note-1", { title: "Release blocked", body: "The check failed." });
+  return ctx;
+}
+
 describe("buildPushPayload", () => {
-  // A Numo note is pushed in its own words, not a sentence: tested below.
-  it.each(ALL_TYPES.filter((type) => type !== "numo_message"))("rend une phrase substituée en EN et en FR — %s", (type) => {
-    const ctx = ctxWithIssue();
-    for (const locale of ["en", "fr"] as const) {
-      // A backfill line is about a project and a number of issues.
-      ctx.projectNames.set(PROJECT, "Aurora");
-      const row = issueRow(type, type === "smart_assign_batch" ? { issue_count: 3 } : {});
-      const payload = buildPushPayload(ctx, row, locale);
+  it.each(ALL_TYPES)("renders a complete banner in every locale — %s", (type) => {
+    const ctx = fullCtx();
+    for (const locale of ["en", "fr", "de", "es", "it", "pt-BR"] as const) {
+      const payload = buildPushPayload(ctx, rowOf(type), locale);
       expect(payload).not.toBeNull();
-      expect(payload!.body).not.toContain("Inbox.");
-      expect(payload!.body).not.toContain("{actor}");
-      expect(payload!.body.trim()).not.toBe("");
+      for (const text of [payload!.title, payload!.body]) {
+        expect(text).not.toContain("Inbox.");
+        expect(text).not.toMatch(/[{}]/);
+        expect(text.trim()).not.toBe("");
+      }
     }
   });
 
-  it("pushes an instance variable change with its subject, its actor and the admin tab", () => {
+  it("titles the banner with the actor and prints the target as its label", () => {
+    expect(buildPushPayload(ctxWithIssue(), issueRow("mention"), "en")).toEqual({
+      title: "Alice",
+      body: "Mentioned you in MIN-42\nRéparer le sélecteur de cycle",
+      lang: "en-GB",
+      url: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
+      tag: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
+    });
+    expect(buildPushPayload(ctxWithIssue(), issueRow("comment"), "fr")?.body)
+      .toBe("A commenté MIN-42\nRéparer le sélecteur de cycle");
+  });
+
+  it("falls back to a translated Someone, never an empty title", () => {
+    const anon = ctxWithIssue("");
+    expect(buildPushPayload(anon, issueRow("mention"), "en")!.title).toBe(en.Inbox.someone);
+    expect(buildPushPayload(anon, issueRow("mention"), "fr")!.title).toBe(fr.Inbox.someone);
+  });
+
+  it("names Smart Assign, the MCP agent and Numo rather than the account", () => {
+    const ctx = ctxWithIssue("");
+    ctx.apiKeyActors.set("k1", { name: "Claude Code (mcp)", agent: "claude" });
+    expect(buildPushPayload(ctx, issueRow("assigned", { actor_id: null, via_smart_assign: true }), "fr")!.title)
+      .toBe("Smart Assign");
+    expect(buildPushPayload(ctx, issueRow("comment", { actor_id: null, via_mcp: true, api_key_id: "k1" }), "fr")!.title)
+      .toContain("Claude");
+    // MIN-278: a mention Numo wrote in a page is Numo's, not the account's.
+    ctx.pages.set("pg", "Décisions produit");
+    expect(buildPushPayload(ctx, issueRow("page_mention", {
+      issue_id: null, page_id: "pg", block_id: "b2", via_assistant: true,
+    }), "fr")).toMatchObject({
+      title: "Numo",
+      body: "Vous a mentionné dans Décisions produit",
+      url: `/projects/${PROJECT.slice(0, 8)}/pages/pg#b2`,
+    });
+  });
+
+  it("names the source of a board post and an opened pull request", () => {
+    const ctx = fullCtx();
+    expect(buildPushPayload(ctx, rowOf("feedback_new"), "en")).toMatchObject({
+      title: en.Inbox.actorFeedbackBoard,
+      body: "New feedback in Aurora\nDark mode please",
+      url: `/projects/${PROJECT.slice(0, 8)}/feedback?post=fp`,
+    });
+    expect(buildPushPayload(ctx, rowOf("pr_opened"), "en")).toMatchObject({
+      title: "GitHub",
+      body: "Pull request #12 opened\nAdd dark mode",
+      url: "/pull-requests?pr=pr",
+    });
+    ctx.feedbackPosts.set("fp", { projectId: "foreign-project", title: "Foreign feedback" });
+    expect(buildPushPayload(ctx, rowOf("feedback_new"), "fr")).toBeNull();
+  });
+
+  it("pushes an instance variable change with its actor and the admin tab", () => {
     const ctx = emptyPushContext();
     ctx.actorNames.set(ACTOR, "Alice");
-    const row = { user_id: "u", project_id: null, type: "instance_config_changed", issue_id: null, actor_id: ACTOR } as NotificationRow;
-    expect(buildPushPayload(ctx, row, "en")).toMatchObject({
-      title: en.Inbox.instanceConfigTitle,
-      body: en.Inbox.lineInstanceConfigChanged.replace("{actor}", "Alice"),
+    expect(buildPushPayload(ctx, rowOf("instance_config_changed"), "en")).toMatchObject({
+      title: "Alice",
+      body: en.Inbox.titleInstanceConfigChanged,
       url: "/admin?tab=instance",
     });
   });
 
-  it("pushes a backfill as one line: the project, and how many issues were assigned", () => {
-    const ctx = emptyPushContext();
-    ctx.projectNames.set(PROJECT, "Aurora");
-    const row = { user_id: "u", project_id: PROJECT, type: "smart_assign_batch",
-      issue_id: null, actor_id: null, via_smart_assign: true, issue_count: 12 } as NotificationRow;
-    expect(buildPushPayload(ctx, row, "en")).toMatchObject({
-      title: "Aurora",
-      body: "Smart Assign assigned you 12 issues",
+  it("pushes a backfill as one line with its count and project", () => {
+    const ctx = fullCtx();
+    expect(buildPushPayload(ctx, rowOf("smart_assign_batch"), "en")).toMatchObject({
+      title: "Smart Assign",
+      body: "Assigned you 3 issues in Aurora",
       url: `/projects/${PROJECT.slice(0, 8)}`,
     });
-    expect(buildPushPayload(ctx, { ...row, issue_count: 1 }, "fr")?.body)
-      .toBe("Smart Assign vous a assigné 1 ticket");
+    expect(buildPushPayload(ctx, { ...rowOf("smart_assign_batch"), issue_count: 1 }, "fr")?.body)
+      .toBe("Vous a assigné 1 ticket dans Aurora");
     // An unreadable project name pushes nothing rather than an untitled banner.
-    expect(buildPushPayload(emptyPushContext(), row, "en")).toBeNull();
+    expect(buildPushPayload(emptyPushContext(), rowOf("smart_assign_batch"), "en")).toBeNull();
   });
 
-  it("pushes a Numo note in its own words, and nothing when the note is unreadable", () => {
+  it("pushes a Numo note in its own words, mentions as labels, nothing when unreadable", () => {
     const ctx = ctxWithIssue();
-    ctx.numoNotes.set("note-1", { title: "Release blocked", body: "The check failed." });
-    const row = issueRow("numo_message", { numo_note_id: "note-1", actor_id: null,
-      via_assistant: true });
-    expect(buildPushPayload(ctx, row, "fr")).toMatchObject({
+    ctx.numoNotes.set("note-1", {
       title: "Release blocked",
-      body: "The check failed.",
+      body: "The check failed on [@MIN-42](mention:issue/22222222-2222-2222-2222-222222222222).",
+    });
+    expect(buildPushPayload(ctx, rowOf("numo_message"), "fr")).toMatchObject({
+      title: "Numo",
+      body: "Release blocked\nThe check failed on MIN-42.",
       url: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
       tag: "numo-note:note-1",
     });
-    expect(buildPushPayload(ctx, { ...row, numo_note_id: "missing" }, "en")).toBeNull();
+    expect(buildPushPayload(ctx, { ...rowOf("numo_message"), numo_note_id: "missing" }, "en")).toBeNull();
   });
 
-  it("titre = référence + titre du ticket, destination = le board", () => {
-    const payload = buildPushPayload(ctxWithIssue(), issueRow("comment"), "fr");
-    expect(payload).toEqual({
-      title: "MIN-42 · Réparer le sélecteur de cycle",
-      body: fr.Inbox.lineComment.replace("{actor}", "Alice"),
-      lang: "fr-FR",
-      url: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
-      tag: `/projects/${PROJECT.slice(0, 8)}?issue=${ISSUE.slice(0, 8)}`,
-    });
-  });
-
-  it("nomme l'acteur, et retombe sur « Quelqu'un » / « Someone » sans lui", () => {
-    const withActor = buildPushPayload(ctxWithIssue(), issueRow("mention"), "en");
-    expect(withActor!.body).toBe(en.Inbox.lineMention.replace("{actor}", "Alice"));
-
-    // Actor unknown to context (account deleted): fallback is TRANSLATED.
-    const anonCtx = ctxWithIssue("");
-    expect(buildPushPayload(anonCtx, issueRow("mention"), "en")!.body).toBe(
-      en.Inbox.lineMention.replace("{actor}", en.Inbox.someone)
-    );
-    expect(buildPushPayload(anonCtx, issueRow("mention"), "fr")!.body).toBe(
-      fr.Inbox.lineMention.replace("{actor}", fr.Inbox.someone)
-    );
-  });
-
-  it("nomme Smart Assign et l'agent MCP plutôt que « Quelqu'un »", () => {
-    const ctx = ctxWithIssue("");
-    ctx.apiKeyActors.set("k1", { name: "Claude Code (mcp)", agent: "claude" });
-
-    const smart = buildPushPayload(
-      ctx,
-      issueRow("assigned", { actor_id: null, via_smart_assign: true }),
-      "fr"
-    );
-    expect(smart!.body).toContain("Smart Assign");
-
-    const mcp = buildPushPayload(
-      ctx,
-      issueRow("comment", { actor_id: null, via_mcp: true, api_key_id: "k1" }),
-      "fr"
-    );
-    expect(mcp!.body).toContain("Claude Code");
-    expect(mcp!.body).not.toContain(fr.Inbox.someone);
-  });
-
-  it("nomme Numo d'une citation posée par l'agent dans une page", () => {
-    // MIN-278: the gesture went under the account that allowed it, but it is
-    // the agent who wrote the sentence. Without this flag, the banner would announce to
-    // Bob that Clement mentioned it — which Clement did not do.
-    const ctx = ctxWithIssue();
-    ctx.pages.set("pg", "Décisions produit");
-
-    const numo = buildPushPayload(
-      ctx,
-      issueRow("page_mention", {
-        issue_id: null,
-        page_id: "pg",
-        block_id: "b2",
-        via_assistant: true,
-      }),
-      "fr"
-    );
-    expect(numo).toEqual({
-      title: "Décisions produit",
-      body: fr.Inbox.linePageMention.replace("{actor}", "Numo"),
-      lang: "fr-FR",
-      url: `/projects/${PROJECT.slice(0, 8)}/pages/pg#b2`,
-      tag: `/projects/${PROJECT.slice(0, 8)}/pages/pg#b2`,
-    });
-
-    // Through the MCP, we know his NAME: it is he who is displayed, not “Numo”.
-    ctx.apiKeyActors.set("k1", { name: "Claude Code (mcp)", agent: "claude" });
-    const mcp = buildPushPayload(
-      ctx,
-      issueRow("page_mention", {
-        issue_id: null,
-        page_id: "pg",
-        via_mcp: true,
-        api_key_id: "k1",
-      }),
-      "fr"
-    );
-    expect(mcp!.body).toContain("Claude Code");
-  });
-
-  it("suit la cible : objectif, retour de board, pull request, ticket", () => {
-    const ctx = ctxWithIssue();
-    ctx.objectives.set("obj", "Refonte de l'inbox");
-    ctx.feedbackPosts.set("fp", { projectId: PROJECT, title: "Mode sombre s'il vous plaît" });
-    ctx.pullRequests.set("pr", { number: 12, title: "Ajouter le mode sombre" });
-
-    const objective = buildPushPayload(
-      ctx,
-      issueRow("comment", { issue_id: null, objective_id: "obj" }),
-      "fr"
-    );
-    expect(objective).toMatchObject({
-      title: "Refonte de l'inbox",
-      url: `/projects/${PROJECT.slice(0, 8)}/objectives?open=obj`,
-    });
-
-    const feedback = buildPushPayload(
-      ctx,
-      issueRow("feedback_new", { issue_id: null, feedback_post_id: "fp" }),
-      "fr"
-    );
-    expect(feedback).toMatchObject({
-      title: "Mode sombre s'il vous plaît",
-      url: `/projects/${PROJECT.slice(0, 8)}/feedback?post=fp`,
-    });
-    ctx.feedbackPosts.set("fp", { projectId: "foreign-project", title: "Foreign feedback" });
-    expect(buildPushPayload(ctx,
-      issueRow("feedback_new", { issue_id: null, feedback_post_id: "fp" }), "fr"))
-      .toBeNull();
-
-    // An open PR leads to the Pull requests page, which is not in a project.
-    const pr = buildPushPayload(
-      ctx,
-      issueRow("pr_opened", { issue_id: null, pull_request_id: "pr" }),
-      "fr"
-    );
-    expect(pr).toMatchObject({
-      title: "#12 · Ajouter le mode sombre",
-      url: "/pull-requests?pr=pr",
-    });
-  });
-
-  // Pushing nothing is better than opening a blank screen: the target is focused
-  // corbeille (MIN-133) sort de l'hydratation, donc du push.
-  it("ne pousse rien quand la cible a disparu ou qu'il n'y a pas de projet", () => {
+  // Pushing nothing beats opening a blank screen: a trashed target (MIN-133)
+  // leaves the hydration, and so the push.
+  it("pushes nothing when the target is gone or there is no project", () => {
     expect(buildPushPayload(emptyPushContext(), issueRow("comment"), "fr")).toBeNull();
-    expect(
-      buildPushPayload(ctxWithIssue(), issueRow("comment", { project_id: null }), "fr")
-    ).toBeNull();
+    expect(buildPushPayload(ctxWithIssue(), issueRow("comment", { project_id: null }), "fr")).toBeNull();
   });
 
-  it("tombe sur le titre nu quand la clé de projet manque", () => {
+  it("labels the issue by its title when the project key is missing", () => {
     const ctx = ctxWithIssue();
     ctx.projectKeys.clear();
-    expect(buildPushPayload(ctx, issueRow("comment"), "fr")!.title).toBe(
-      "Réparer le sélecteur de cycle"
-    );
+    expect(buildPushPayload(ctx, issueRow("mention"), "en")!.body)
+      .toBe("Mentioned you in Réparer le sélecteur de cycle\nRéparer le sélecteur de cycle");
   });
 });
 
@@ -313,14 +258,14 @@ describe("loadPushContext", () => {
     } as unknown as SupabaseClient;
   }
 
-  it("ne lit rien sur un lot vide", async () => {
+  it("reads nothing for an empty batch", async () => {
     const seen: string[] = [];
     const ctx = await loadPushContext(stubService({}, seen), []);
     expect(seen).toEqual([]);
     expect(ctx.issues.size).toBe(0);
   });
 
-  it("n'interroge que les tables dont le lot a besoin, une fois chacune", async () => {
+  it("reads only the tables the batch needs, once each", async () => {
     const seen: string[] = [];
     const service = stubService(
       {
@@ -340,7 +285,7 @@ describe("loadPushContext", () => {
 
     // And the payload is built from this context.
     expect(buildPushPayload(ctx, issueRow("mention", { actor_id: null }), "en")).toMatchObject(
-      { title: "MIN-42 · Réparer le sélecteur" }
+      { title: en.Inbox.someone, body: "Mentioned you in MIN-42\nRéparer le sélecteur" }
     );
   });
 });

@@ -46,8 +46,7 @@ import { buildWorkspaceGroups } from "@/lib/palette-workspace-groups";
 import { useRoutinesQuery } from "@/lib/use-routines-query";
 import { allPullRequestsQueryOptions } from "@/lib/use-agent-runs";
 import { fetchViewsApi } from "@/lib/views-api";
-import { notificationActor, notificationTitle } from "@/lib/notification-line";
-import { notificationLineKey } from "@/lib/notification-target";
+import { useNotificationPlainText } from "@/lib/use-notification-text";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
@@ -310,8 +309,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   const tProjects = useTranslations("Projects");
   const tPages = useTranslations("Pages");
   const tCommon = useTranslations("Common");
-  const tInbox = useTranslations("Inbox");
-  const tTimeline = useTranslations("Timeline");
+  const notificationPlainText = useNotificationPlainText();
   const { agentsAllowed, projectLimitReached } = usePlanGates();
   // The sidebar selects a pending destination before the router commits it
   // (MIN-843), so it follows the shown location rather than the committed one.
@@ -1273,13 +1271,6 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   });
   const workspaceGroups = useMemo<PaletteGroup[]>(() => {
     if (!paletteMounted) return [];
-    const labels = {
-      someone: tInbox("someone"),
-      mcpFallback: tTimeline("mcpFallback"),
-      somePageFallback: tInbox("somePageFallback"),
-      someIssueFallback: tInbox("someIssueFallback", { entity: ti("entity").toLowerCase() }),
-      instanceConfigTitle: tInbox("instanceConfigTitle"),
-    };
     return buildWorkspaceGroups({
       routines: agentsAllowed ? paletteRoutines : [],
       pullRequests: agentsAllowed ? (palettePullRequests?.pullRequests ?? []) : [],
@@ -1292,16 +1283,16 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         views: t("boardViews"),
         notifications: t("inbox"),
         globalBoard: t("allIssues"),
-        notificationTitle: (notification) => notificationTitle(notification, labels),
-        notificationLine: (notification) =>
-          tInbox(notificationLineKey(notification.type, notification.from_numo), {
-            actor: notificationActor(notification, labels),
-          }),
+        notificationTitle: (notification) => notificationPlainText(notification).title,
+        notificationLine: (notification) => {
+          const text = notificationPlainText(notification);
+          return text.context ? `${text.actor} · ${text.context}` : text.actor;
+        },
       },
       navigate: (href) => router.push(href),
       openNotification: openInboxAtNotification,
     });
-  }, [paletteMounted, agentsAllowed, paletteRoutines, palettePullRequests, globalViews, projectViews, currentProjectId, notifications, paletteProjectById, router, t, ti, tInbox, tTimeline]);
+  }, [paletteMounted, agentsAllowed, paletteRoutines, palettePullRequests, globalViews, projectViews, currentProjectId, notifications, paletteProjectById, router, t, notificationPlainText]);
 
   const inboxItem = useMemo<AppNavItem>(() => ({
     key: "inbox",

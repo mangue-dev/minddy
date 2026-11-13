@@ -126,6 +126,18 @@ describe("sendNumoNote", () => {
     expect(noteInserts[0].body).toBe("one two");
   });
 
+  it("counts a mention as its pill and never cuts one in half", async () => {
+    const { service, noteInserts } = fakeService();
+    const mention = "[@](mention:issue/22222222-2222-2222-2222-222222222222)";
+    const title = `Review ${mention} and ${mention} before the release freeze`;
+    await send(service, { title, body: `${"b".repeat(590)} ${mention}` });
+    // Over 120 characters stored, under 120 read: kept whole.
+    expect(noteInserts[0].title).toBe(title);
+    // Over 600 read: cut before the mention, which leaves no fragment.
+    expect(noteInserts[0].body).not.toContain("](mention:");
+    expect(noteInserts[0].body).not.toContain("[@");
+  });
+
   it("refuses a link outside the project", async () => {
     H.issueFound = false;
     const { service, noteInserts } = fakeService();

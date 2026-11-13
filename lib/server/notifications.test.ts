@@ -193,7 +193,7 @@ const pullRequestOpenedRow = (userId: string) => ({
 const routineRow = (userId: string) => ({
   user_id: userId,
   project_id: "p1",
-  type: "routine_done" as const,
+  type: "agent_failed" as const,
   issue_id: null,
   routine_id: "routine-1",
   actor_id: null,
@@ -411,7 +411,7 @@ describe("notification failure diagnostics", () => {
     expect(log).toHaveBeenCalledWith("[notifications] insert_failed", expect.objectContaining({
       correlation_id: expect.any(String), code: "23514", kind: "database_constraint",
       constraint: "notifications_type_check", row_count: 1,
-      routine_ids: ["routine-1"], notification_types: ["routine_done"],
+      routine_ids: ["routine-1"], notification_types: ["agent_failed"],
     }));
     expect(inserted.length + upserted.length).toBe(1);
     expect(H.after).not.toHaveBeenCalled();
