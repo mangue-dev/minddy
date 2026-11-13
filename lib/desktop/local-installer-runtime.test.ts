@@ -62,7 +62,7 @@ beforeEach(() => {
   folder = path.join(home, "minddy");
   mocks.runTool.mockImplementation(async (argv: string[]) => ({
     ok: true,
-    stdout: argv[0] === "node" ? "v24.22.1" : "1.0.0",
+    stdout: argv[0] === "node" ? "v24.22.3" : "1.0.0",
     output: "",
   }));
   mocks.startLocalRuntime.mockResolvedValue(undefined);

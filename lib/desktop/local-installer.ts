@@ -59,13 +59,13 @@ export const LOCAL_PREREQUISITE_INFO: Record<
 /** `docker info` answers only when the daemon runs, which `--version` cannot tell. */
 export const DOCKER_DAEMON_PROBE = ["docker", "info", "--format", "{{.ServerVersion}}"];
 
-const MINIMUM_NODE = [24, 22, 1] as const;
+const MINIMUM_NODE = [24, 22, 3] as const;
 
 function firstVersion(text: string): string | undefined {
   return text.match(/\d+\.\d+(?:\.\d+)?/)?.[0];
 }
 
-/** Node.js 24.22.1 or a later 24.x: the release the local profile is tested on. */
+/** Node.js 24.22.3 or a later 24.x: the release the local profile is tested on. */
 export function nodeVersionSupported(version: string): boolean {
   const [major, minor = 0, patch = 0] = version.split(".").map(Number);
   if (major !== MINIMUM_NODE[0]) return false;

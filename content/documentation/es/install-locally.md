@@ -3,7 +3,7 @@
   "id": "install-locally",
   "locale": "es",
   "title": "Instancias locales",
-  "summary": "Instala una instancia local privada desde la aplicación de escritorio o abre un clon preparado, con Node.js 24.22.1 o una versión 24.x posterior, pnpm 10.28.0, Git, Supabase CLI y Docker en ejecución.",
+  "summary": "Instala una instancia local privada desde la aplicación de escritorio o abre un clon preparado, con Node.js 24.22.3 o una versión 24.x posterior, pnpm 10.28.0, Git, Supabase CLI y Docker en ejecución.",
   "topic": "Administrar una instancia",
   "type": "tutorial",
   "audiences": [
@@ -127,7 +127,7 @@
 
 ## Instalar minddy en este equipo {#install-locally}
 
-Una instancia local ejecuta minddy con un Supabase mínimo en Docker en un solo equipo, para evaluarlo o para uso personal. Sus datos se quedan en ese equipo, y la aplicación de escritorio inicia y detiene sus servicios. Usa Git, Node.js 24.22.1 o una versión 24.x posterior, `pnpm` 10.28.0, Supabase CLI y Docker en ejecución. La aplicación de escritorio instala lo que falte; un clon que prepares tú mismo los necesita de antemano. Reserva al menos 4 GB de RAM libre, dos núcleos y 10 GB libres en SSD; se recomiendan 8 GB, cuatro núcleos y 20 GB. Instala primero la aplicación de escritorio firmada desde la página de descargas. En Windows se distribuye mediante Microsoft Store; macOS y Linux tienen sus descargas correspondientes.
+Una instancia local ejecuta minddy con un Supabase mínimo en Docker en un solo equipo, para evaluarlo o para uso personal. Sus datos se quedan en ese equipo, y la aplicación de escritorio inicia y detiene sus servicios. Usa Git, Node.js 24.22.3 o una versión 24.x posterior, `pnpm` 10.28.0, Supabase CLI y Docker en ejecución. La aplicación de escritorio instala lo que falte; un clon que prepares tú mismo los necesita de antemano. Reserva al menos 4 GB de RAM libre, dos núcleos y 10 GB libres en SSD; se recomiendan 8 GB, cuatro núcleos y 20 GB. Instala primero la aplicación de escritorio firmada desde la página de descargas. En Windows se distribuye mediante Microsoft Store; macOS y Linux tienen sus descargas correspondientes.
 
 La aplicación de escritorio incluye un instalador que ejecuta todo el procedimiento por ti:
 

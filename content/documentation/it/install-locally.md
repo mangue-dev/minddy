@@ -3,7 +3,7 @@
   "id": "install-locally",
   "locale": "it",
   "title": "Istanze locali",
-  "summary": "Installa un’istanza locale privata dall’app desktop o apri un clone preparato, con Node.js 24.22.1 o una 24.x successiva, pnpm 10.28.0, Git, Supabase CLI e Docker attivo.",
+  "summary": "Installa un’istanza locale privata dall’app desktop o apri un clone preparato, con Node.js 24.22.3 o una 24.x successiva, pnpm 10.28.0, Git, Supabase CLI e Docker attivo.",
   "topic": "Gestire un’istanza",
   "type": "tutorial",
   "audiences": [
@@ -127,7 +127,7 @@
 
 ## Installare minddy su questo computer {#install-locally}
 
-Un’istanza locale esegue minddy con un Supabase minimo in Docker su un solo computer, per una valutazione o per uso personale. I suoi dati restano su quel computer e l’app desktop ne avvia e arresta i servizi. Usa Git, Node.js 24.22.1 o una versione 24.x successiva, `pnpm` 10.28.0, Supabase CLI e Docker attivo. L’app desktop installa ciò che manca; un clone che prepari tu deve averli già. Servono almeno 4 GB di RAM libera, due core e 10 GB di SSD libero; sono consigliati 8 GB, quattro core e 20 GB. Installa prima l’app desktop firmata dalla pagina download. Windows usa Microsoft Store; macOS e Linux hanno download specifici.
+Un’istanza locale esegue minddy con un Supabase minimo in Docker su un solo computer, per una valutazione o per uso personale. I suoi dati restano su quel computer e l’app desktop ne avvia e arresta i servizi. Usa Git, Node.js 24.22.3 o una versione 24.x successiva, `pnpm` 10.28.0, Supabase CLI e Docker attivo. L’app desktop installa ciò che manca; un clone che prepari tu deve averli già. Servono almeno 4 GB di RAM libera, due core e 10 GB di SSD libero; sono consigliati 8 GB, quattro core e 20 GB. Installa prima l’app desktop firmata dalla pagina download. Windows usa Microsoft Store; macOS e Linux hanno download specifici.
 
 L’app desktop include un programma di installazione che esegue tutta la procedura per te:
 

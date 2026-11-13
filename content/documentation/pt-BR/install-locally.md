@@ -3,7 +3,7 @@
   "id": "install-locally",
   "locale": "pt-BR",
   "title": "Instâncias locais",
-  "summary": "Instale uma instância local privada pelo aplicativo desktop ou abra um clone preparado, com Node.js 24.22.1 ou uma 24.x posterior, pnpm 10.28.0, Git, Supabase CLI e Docker em execução.",
+  "summary": "Instale uma instância local privada pelo aplicativo desktop ou abra um clone preparado, com Node.js 24.22.3 ou uma 24.x posterior, pnpm 10.28.0, Git, Supabase CLI e Docker em execução.",
   "topic": "Operar uma instância",
   "type": "tutorial",
   "audiences": [
@@ -127,7 +127,7 @@
 
 ## Instalar o minddy neste computador {#install-locally}
 
-Uma instância local roda o minddy com um Supabase mínimo no Docker em um único computador, para avaliação ou uso pessoal. Os dados ficam nesse computador, e o aplicativo desktop inicia e encerra os serviços. Ela usa Git, Node.js 24.22.1 ou uma versão 24.x posterior, `pnpm` 10.28.0, Supabase CLI e Docker em execução. O aplicativo desktop instala o que estiver faltando; um clone que você mesmo prepara precisa deles instalados antes. Reserve ao menos 4 GB de RAM livre, dois núcleos e 10 GB livres de SSD; recomendamos 8 GB, quatro núcleos e 20 GB. Instale primeiro o aplicativo desktop assinado pela página de downloads. Windows usa Microsoft Store; macOS e Linux têm downloads próprios.
+Uma instância local roda o minddy com um Supabase mínimo no Docker em um único computador, para avaliação ou uso pessoal. Os dados ficam nesse computador, e o aplicativo desktop inicia e encerra os serviços. Ela usa Git, Node.js 24.22.3 ou uma versão 24.x posterior, `pnpm` 10.28.0, Supabase CLI e Docker em execução. O aplicativo desktop instala o que estiver faltando; um clone que você mesmo prepara precisa deles instalados antes. Reserve ao menos 4 GB de RAM livre, dois núcleos e 10 GB livres de SSD; recomendamos 8 GB, quatro núcleos e 20 GB. Instale primeiro o aplicativo desktop assinado pela página de downloads. Windows usa Microsoft Store; macOS e Linux têm downloads próprios.
 
 O aplicativo desktop inclui um instalador que executa todo o procedimento para você:
 

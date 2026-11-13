@@ -273,7 +273,7 @@ and metadata tests as well.
 
 ## Toolchain and lockfiles
 
-Use Node.js 24 (24.22.1 or later, the October 2026 security release) and
+Use Node.js 24 (24.22.3 or later, the November 2026 security release) and
 pnpm **10.28.0**, as pinned by the `packageManager` field
 of `package.json` and by [the CI workflow](.github/workflows/ci.yml). Keep the
 two identical: `pnpm/action-setup` fails when they differ, and the field is
