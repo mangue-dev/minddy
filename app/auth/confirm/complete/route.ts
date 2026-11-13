@@ -10,7 +10,7 @@ import {
 } from "@/lib/auth-otp-pending";
 import { isSameOriginRequest } from "@/lib/server/same-origin";
 import { buildAuthFailureRedirect, completeAuthArrival } from "@/lib/server/auth-arrival";
-import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { SESSION_COOKIE_OPTIONS, serverSupabaseCookieOptions } from "@/lib/session-cookies";
 
 /**
  * The gesture that opens the session, at the end of the e-mail link (MIN-345).
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       // `Secure` on session cookies (MIN-351, lib/session-cookies.ts):
       // this is where the session opens after an e-mail link.
       global: { fetch: supabaseServerFetch },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: serverSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();

@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { getResolvedBilling } from "@/lib/server/billing-accounts";
 import { getUsagePeriod, getUserUsage } from "@/lib/server/usage";
 import { managedAiKeyMode } from "@/lib/managed-services";
+import { declaredSupabaseProjectRef } from "@/lib/supabase-project-ref";
 import {
   createKey,
   deleteKey,
@@ -49,14 +50,20 @@ export const MANAGED_KEY_NAME_PREFIX = "minddy-cloud:";
  * The prefix of the keys this database references. Preview and production
  * share one OpenRouter account but not their `managed_ai_keys` rows: each
  * names its keys after its Supabase project, so that a sweep never mistakes
- * the other environment's live keys for orphans.
+ * the other environment's live keys for orphans. A custom API domain declares
+ * its project ref (MIN-960), so the prefix outlives the switch of hostname.
  */
-export function keyNamePrefix(supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL): string {
-  let scope = "";
-  try {
-    scope = new URL(supabaseUrl ?? "").hostname.split(".")[0] ?? "";
-  } catch {
-    // An unreadable URL keeps the generic scope below.
+export function keyNamePrefix(
+  supabaseUrl = process.env.MINDDY_PUBLIC_SUPABASE_URL,
+  declaredProjectRef = process.env.MINDDY_PUBLIC_SUPABASE_PROJECT_REF,
+): string {
+  let scope = declaredSupabaseProjectRef(declaredProjectRef) ?? "";
+  if (!scope) {
+    try {
+      scope = new URL(supabaseUrl ?? "").hostname.split(".")[0] ?? "";
+    } catch {
+      // An unreadable URL keeps the generic scope below.
+    }
   }
   return `${MANAGED_KEY_NAME_PREFIX}${scope.replace(/[^a-z0-9-]/gi, "") || "default"}:`;
 }

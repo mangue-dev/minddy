@@ -43,10 +43,13 @@ export const ADMIN_EMAIL_PATTERN = /^captures-admin(\+[a-z0-9-]+)?@minddy\.app$/
 
 /**
  * Minddy Cloud's production database and origins. The capture admin is a
- * preview-only account: its script refuses this Supabase project and its
+ * preview-only account: its script refuses this Supabase project, under
+ * either of its hostnames, and its
  * session refuses these origins.
  */
 export const PRODUCTION_SUPABASE_REFS = ["cmzrlbnlytvgnomzgmqf"];
+/** The custom domain that serves the same production project (MIN-960). */
+export const PRODUCTION_SUPABASE_HOSTS = ["auth.minddy.app"];
 export const PRODUCTION_ORIGINS = ["https://www.minddy.app", "https://minddy.app"];
 
 /**

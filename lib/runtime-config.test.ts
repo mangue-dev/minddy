@@ -19,6 +19,19 @@ const baseEnvironment = {
 } as const;
 
 describe("resolveRuntimeConfig", () => {
+  it("exposes a declared Supabase project ref and rejects a malformed one", () => {
+    expect(resolveRuntimeConfig(baseEnvironment).public.supabaseProjectRef).toBeNull();
+    expect(resolveRuntimeConfig({
+      ...baseEnvironment,
+      MINDDY_PUBLIC_SUPABASE_URL: "https://auth.example.test",
+      MINDDY_PUBLIC_SUPABASE_PROJECT_REF: " abcdefghijklmnop ",
+    }).public.supabaseProjectRef).toBe("abcdefghijklmnop");
+    expect(() => resolveRuntimeConfig({
+      ...baseEnvironment,
+      MINDDY_PUBLIC_SUPABASE_PROJECT_REF: "https://abcdefghijklmnop.supabase.co",
+    })).toThrow("Invalid MINDDY_PUBLIC_SUPABASE_PROJECT_REF");
+  });
+
   it("keeps server-hashed anonymous analytics explicitly opt-in", () => {
     expect(resolveRuntimeConfig(baseEnvironment).public.posthog.cookieless).toBe(false);
     expect(resolveRuntimeConfig({

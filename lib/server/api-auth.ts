@@ -20,6 +20,7 @@ import {
   createCookieSink,
   SESSION_COOKIE_OPTIONS,
   type CookieSink,
+  serverSupabaseCookieOptions,
 } from "@/lib/session-cookies";
 import {
   BACKEND_REQUEST_TIMEOUT_MS,
@@ -44,7 +45,7 @@ export function createSupabaseFromRequest(request: NextRequest): SupabaseClient 
     process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: { fetch: supabaseServerFetch },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: serverSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -83,7 +84,7 @@ export function createSupabaseWithCookieSink(
     process.env.MINDDY_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: { fetch: supabaseServerFetch },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: serverSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return request.cookies.getAll();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cookieRequiresSecure } from "./session-cookies";
+import { cookieRequiresSecure, SESSION_COOKIE_OPTIONS, supabaseCookieOptions } from "./session-cookies";
 
 describe("cookieRequiresSecure", () => {
   it("keeps public and browser HTTPS sessions secure", () => {
@@ -19,5 +19,19 @@ describe("cookieRequiresSecure", () => {
     expect(cookieRequiresSecure({ production: true })).toBe(true);
     expect(cookieRequiresSecure({ production: false })).toBe(false);
     expect(cookieRequiresSecure({ appUrl: "not a URL", production: false })).toBe(true);
+  });
+});
+
+describe("supabaseCookieOptions", () => {
+  it("keeps the SDK's hostname-derived cookie name when no project ref is declared", () => {
+    expect(supabaseCookieOptions(undefined)).toEqual(SESSION_COOKIE_OPTIONS);
+    expect(supabaseCookieOptions("  ")).not.toHaveProperty("name");
+  });
+
+  it("pins the session cookie to the project ref behind a custom domain", () => {
+    expect(supabaseCookieOptions("abcdefghijklmnop")).toEqual({
+      ...SESSION_COOKIE_OPTIONS,
+      name: "sb-abcdefghijklmnop-auth-token",
+    });
   });
 });

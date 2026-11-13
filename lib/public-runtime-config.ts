@@ -3,6 +3,8 @@ export interface PublicRuntimeConfig {
   appUrl: string;
   supabaseUrl: string;
   supabaseAnonKey: string;
+  /** Declared Supabase project ref for a custom API domain (MIN-960), or null. */
+  supabaseProjectRef: string | null;
   siteName: string;
   contactEmail: string;
   productFeedbackIntegrationEnabled: boolean;

@@ -117,6 +117,52 @@ a link requested from a pull request preview falls back to `site_url`
 (GoTrue). This was already true for the registration confirmation; it is also
 for reset.
 
+## Custom API domain (production)
+
+Production serves its Supabase API (Auth, REST, Storage, Realtime) on
+`https://auth.minddy.app`, a Supabase custom domain (MIN-960), so the OAuth
+pages and the iOS sign-in sheet show a minddy hostname instead of
+`cmzrlbnlytvgnomzgmqf.supabase.co`. The `supabase.co` hostname keeps working:
+stored Storage URLs and older clients still reach the same project. Preview
+keeps its `supabase.co` domain.
+
+Switch order, so that no sign-in breaks in between:
+
+1. Supabase dashboard, Project Settings -> Add-ons: enable the custom domain
+   add-on, then register `auth.minddy.app`
+   (`supabase domains create --project-ref cmzrlbnlytvgnomzgmqf --custom-hostname auth.minddy.app`).
+2. DNS for `minddy.app`: add the CNAME `auth` -> `cmzrlbnlytvgnomzgmqf.supabase.co`
+   and the TXT verification record the previous step prints. Wait for
+   `supabase domains reverify` to succeed; do not activate yet.
+3. Add `https://auth.minddy.app/auth/v1/callback` to each provider, keeping the
+   `supabase.co` callback until the switch is verified:
+   - Google Cloud Console: the OAuth client's authorized redirect URIs.
+   - GitHub: the sign-in OAuth app's callback URL. An OAuth app has a single
+     callback URL, but GitHub accepts any redirect under it when the path
+     matches, so replace it only after activation.
+   - Apple Developer: Identifiers -> Services ID `app.minddy.web` -> Sign In
+     with Apple -> Configure: add `auth.minddy.app` under Domains and the
+     callback under Return URLs. Native Sign in with Apple on iOS uses an ID
+     token (`signInWithIdToken`) and needs no callback.
+4. Activate the domain (`supabase domains activate`). Supabase then sends the
+   new callback URL to every provider.
+5. Vercel production: set `MINDDY_PUBLIC_SUPABASE_URL` and
+   `MINDDY_PRODUCTION_SUPABASE_URL` to `https://auth.minddy.app`, and
+   `MINDDY_PUBLIC_SUPABASE_PROJECT_REF` to `cmzrlbnlytvgnomzgmqf`, then
+   redeploy. The `MINDDY_PUBLIC_SUPABASE_URL` secret of the `Promote production`
+   workflow may keep the `supabase.co` URL: both reach the same project.
+6. Verify Google, GitHub and Apple sign-in on the web, the desktop app and the
+   iOS app, and that a session opened before the switch is still signed in.
+   Remove the old GitHub callback once all pass.
+
+`MINDDY_PUBLIC_SUPABASE_PROJECT_REF` is required with a custom domain.
+`@supabase/ssr` names the session cookie after the first label of the API
+hostname (`sb-<ref>-auth-token`), and the managed AI keys carry the same label
+in their prefix (`lib/server/managed-ai-key.ts`). Without the variable the
+switch renames the cookie to `sb-auth-auth-token`, signing out every web,
+desktop and iOS session, and the orphan sweep stops recognizing production's
+live AI keys. The variable pins both names (`lib/supabase-project-ref.ts`).
+
 ## The preview branch
 
 `preview.minddy.app` has its own Auth: the persistent `preview` branch of this

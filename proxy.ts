@@ -26,7 +26,7 @@ import {
   themeAppearanceHeaders,
 } from "@/lib/theme-presets";
 import { supportedLocaleForTag } from "@/i18n/config";
-import { createCookieSink, SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { createCookieSink, SESSION_COOKIE_OPTIONS, serverSupabaseCookieOptions } from "@/lib/session-cookies";
 import { isDocumentRequest, SERVER_SEED_PATH_HEADER } from "@/lib/server-seed";
 import {
   isBackendUnavailableError,
@@ -169,7 +169,7 @@ async function readSession(request: NextRequest, url: string, key: string) {
   const sink = createCookieSink();
   const supabase = createServerClient(url, key, {
     global: { fetch: supabaseServerFetch },
-    cookieOptions: SESSION_COOKIE_OPTIONS,
+    cookieOptions: serverSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -502,7 +502,7 @@ async function routeRequest(request: NextRequest) {
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     global: { fetch: supabaseServerFetch },
-    cookieOptions: SESSION_COOKIE_OPTIONS,
+    cookieOptions: serverSupabaseCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

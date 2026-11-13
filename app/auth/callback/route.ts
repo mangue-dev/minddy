@@ -15,7 +15,7 @@ import {
   parseOtpType,
 } from "@/lib/desktop/auth-link";
 import { buildAuthFailureRedirect, completeAuthArrival } from "@/lib/server/auth-arrival";
-import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { SESSION_COOKIE_OPTIONS, serverSupabaseCookieOptions } from "@/lib/session-cookies";
 import { hasAppleIdentity } from "@/lib/apple-sign-in";
 import { saveAppleAuthorization } from "@/lib/server/apple-sign-in";
 import { afterOrNow } from "@/lib/server/after-safe";
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       // (MIN-351, lib/session-cookies.ts). Here as in `cookieOptions` —
       // it is this adapter that writes, and it receives its options from the client.
       global: { fetch: supabaseServerFetch },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: serverSupabaseCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();

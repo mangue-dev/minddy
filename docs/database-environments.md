@@ -107,6 +107,11 @@ from `supabase branches get preview --project-ref cmzrlbnlytvgnomzgmqf`.
 | `MINDDY_PUBLIC_SUPABASE_URL`, `MINDDY_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | production project | preview branch |
 | `MINDDY_DATA_ROOT_KEY`, `AI_KEY_ENCRYPTION_SECRET`, `FEEDBACK_SSO_ENCRYPTION_SECRET`, `GIT_STATE_SECRET`, `GITLAB_TOKEN_ENCRYPTION_SECRET`, `CRON_SECRET` | production values | independent values |
 | `MINDDY_PRODUCTION_SUPABASE_URL` | production project URL | production project URL |
+| `MINDDY_PUBLIC_SUPABASE_PROJECT_REF` | `cmzrlbnlytvgnomzgmqf` (custom domain) | unset |
+
+Production's project URL is its custom domain, `https://auth.minddy.app`
+([custom API domain](auth-supabase-config.md#custom-api-domain-production)),
+which is why it also declares its project ref.
 
 The encryption secrets protect data stored in one database. Independent preview
 values keep a leaked preview variable from opening production data or backups.
