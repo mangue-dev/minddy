@@ -45,6 +45,7 @@
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/project-order.ts",
       "lib/issue-semantic-query.ts",
       "lib/use-semantic-issue-search.ts",
       "lib/server/issue-semantic-search.ts",
@@ -142,6 +143,8 @@
 ## Persönliche Arbeit finden und Projekte wechseln {#navigation}
 
 Die Hauptnavigation führt zu deiner persönlichen Arbeit und deinen Projekten. Wähle ein Projekt, um dessen Tickets und weitere Bereiche zu sehen, darunter Triage, Ziele, Seiten und Projekteinstellungen. Die Zurück-Zeile führt eine Navigationsebene nach oben; dabei kann sich der Inhalt der Seitenleiste ändern, während die Hauptseite geöffnet bleibt. Am Computer steht auf den weiteren Bereichen eines Projekts sein Name neben der Zurück-Zeile: Wähle dort ein anderes Projekt, um denselben Bereich darin zu öffnen, etwa seine Ziele oder sein Feedback. Command/Strg+Umschalt+P öffnet diese Liste, in der du Projekte nach Namen filtern kannst; es ist dasselbe Kürzel wie bei **Erstellen in** beim Anlegen eines Tickets oder Ziels. Wähle ein Ziel, um dorthin zu navigieren. In einer Liste wie Triage, Ziele, Feedback, Code-Review oder Routinen durchsucht das Filterfeld oben in der Seitenleiste alle Einträge, unabhängig von den Filtern, die die Liste eingrenzen; sein Platzhalter nennt ihre Gesamtzahl.
+
+Am Computer ziehst du ein Projekt in der Hauptnavigation nach oben oder unten, um deine Projekte in die gewünschte Reihenfolge zu bringen, oder du fokussierst seine Zeile und drückst Alt+Umschalt+Pfeil nach oben oder unten. Die Reihenfolge gilt nur für dich und folgt deinem Konto auf jedes Gerät; auch die Projektliste neben der Zurück-Zeile verwendet sie. Ein Projekt, dem du später beitrittst, kommt ans Ende.
 
 Zähler und Warnungen begleiten dich zwischen den Ebenen. Das Element, das zur **Startseite** zurückführt, zeigt die Gesamtzahl der Elemente zur Triage in den Projekten, die die **Startseite** auflistet, einschließlich des aktuellen, sowie die Smart-Assign-Warnung, wenn einem deiner Projekte Regeln fehlen. Eine Zurück-Zeile zeigt den Zähler der Ebene, zu der sie zurückführt, als Badge auf ihrem Pfeil, orange, solange die Smart-Assign-Warnung gilt. Innerhalb eines Projekts behalten **Triage** und **Feedback** die Zähler dieses Projekts. Die Tabs der Desktop-App tragen dasselbe Badge wie ihr Eintrag in der Seitenleiste: die Warnung auf der **Startseite** und die Zähler auf **Posteingang**, **Code-Review** sowie **Triage** und **Feedback** eines Projekts, auch wenn der Tab im Hintergrund ist.
 

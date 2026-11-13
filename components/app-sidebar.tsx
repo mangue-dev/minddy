@@ -13,8 +13,10 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
   type ReactNode,
   type Ref,
@@ -105,6 +107,12 @@ import { AppTooltip } from "@/components/ui/app-tooltip";
 import { MinddyLogo } from "@/components/minddy-logo";
 import { ENV_LOGO_TINT, getAppEnv } from "@/lib/env";
 import { countLabel } from "@/components/nav-badge";
+import { DndContext, MouseSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { DRAG_ACTIVATION_DISTANCE, VERTICAL_DRAG } from "@/lib/drag-feel";
+import { useDragAnnouncements } from "@/lib/use-drag-announcements";
+import { DragCursor } from "@/components/drag-cursor";
 
 /** Expanded width the sidebar keeps on every level — the old secondary
  * column's width (MIN-546): the sidebar never resizes anymore. */
@@ -162,7 +170,20 @@ export type AppNavItem = Omit<NavItem, "icon"> & {
   /** A mobile browse target; selecting it changes levels without navigation. */
   browseKey?: string;
 };
-export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[] };
+/**
+ * Rows of a section that the person can put in their own order (MIN-968):
+ * dragged with the mouse, or moved with Alt+Shift+Up/Down from the focused
+ * row. The other rows of the section stay where they are.
+ */
+export interface AppNavReorder {
+  /** Keys of the movable items, in the order shown. */
+  keys: string[];
+  /** Moves `activeKey` to the place `overKey` holds. */
+  onMove: (activeKey: string, overKey: string) => void;
+  /** What a screen reader says the movable rows offer. */
+  instructions: string;
+}
+export type AppNavSection = Omit<NavSection, "items"> & { items: AppNavItem[]; reorder?: AppNavReorder };
 
 const MotionLink = motion.create(Link);
 
@@ -194,7 +215,7 @@ function SidebarQuickActions({ onCreate }: { onCreate?: () => void }) {
 
 /* ─── Nav ──────────────────────────────────────────────────────────── */
 
-function SidebarRow({ item }: { item: AppNavItem }) {
+function SidebarRow({ item, keyShortcuts }: { item: AppNavItem; keyShortcuts?: string }) {
   const Icon = item.icon;
   const active = item.active;
   const tk = useTranslations("Keyboard");
@@ -283,6 +304,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
         aria-disabled={item.disabled || undefined}
         className={rowClass}
         aria-current={active ? "page" : undefined}
+        aria-keyshortcuts={keyShortcuts}
         onMouseEnter={warm}
         onFocus={warm}
         onPointerDown={warm}
@@ -301,6 +323,7 @@ function SidebarRow({ item }: { item: AppNavItem }) {
         aria-current={active ? "page" : undefined}
         onClick={item.onClick}
         data-mobile-menu-branch={item.browseKey}
+        aria-keyshortcuts={keyShortcuts}
         disabled={item.disabled}
         onContextMenu={openContextMenu}
         className={cn(rowClass, "text-left", "w-full")}
@@ -359,10 +382,117 @@ export function SidebarRows({ sections, renderItem }: { sections: AppNavSection[
   // the panel in, they arrive in reading order. The index runs across
   // sections; -1 under reduced motion appears at once.
   let row = 0;
-  return <>{sections.map((section, index) => <section key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
-    {section.label && <motion.h2 variants={panelRowVariants} custom={reduce ? -1 : row} className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</motion.h2>}
-    <ul className="flex flex-col gap-1">{section.items.map((item) => <motion.li key={item.key} variants={panelRowVariants} custom={reduce ? -1 : row++}>{renderItem?.(item) ?? <SidebarRow item={item} />}</motion.li>)}</ul>
-  </section>)}</>;
+  return <>{sections.map((section, index) => {
+    const reorder = section.reorder && section.reorder.keys.length > 1 ? section.reorder : undefined;
+    const list = <ul className="flex flex-col gap-1">{section.items.map((item) => {
+      const movable = reorder?.keys.includes(item.key);
+      const content = renderItem?.(item) ?? <SidebarRow item={item} keyShortcuts={movable ? REORDER_KEY_SHORTCUTS : undefined} />;
+      return <motion.li key={item.key} variants={panelRowVariants} custom={reduce ? -1 : row++}>
+        {movable && reorder ? <SortableSidebarItem itemKey={item.key} reorder={reorder}>{content}</SortableSidebarItem> : content}
+      </motion.li>;
+    })}</ul>;
+    return <section key={section.key ?? index} className={cn(index > 0 && "mt-4")}>
+      {section.label && <motion.h2 variants={panelRowVariants} custom={reduce ? -1 : row} className={cn("truncate pt-1 pr-3 pb-1 text-[11px] font-medium tracking-wide text-sidebar-foreground/45", ROW_PL)}>{section.label}</motion.h2>}
+      {reorder ? <ReorderableSidebarList items={section.items} reorder={reorder}>{list}</ReorderableSidebarList> : list}
+    </section>;
+  })}</>;
+}
+
+/** Announced on a movable row, as the tabs announce Alt+Shift+Left/Right. */
+const REORDER_KEY_SHORTCUTS = "Alt+Shift+ArrowUp Alt+Shift+ArrowDown";
+
+/** Module-level, so the sensors keep their identity across renders. */
+const SIDEBAR_MOUSE_SENSOR_OPTIONS = { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } };
+
+/**
+ * The drag context of a section's movable rows (MIN-968). Mouse only, like
+ * the app tabs: on a phone, a finger on the list scrolls it.
+ */
+function ReorderableSidebarList({ items, reorder, children }: {
+  items: AppNavItem[];
+  reorder: AppNavReorder;
+  children: ReactNode;
+}) {
+  const sensors = useSensors(useSensor(MouseSensor, SIDEBAR_MOUSE_SENSOR_OPTIONS));
+  const announcements = useDragAnnouncements((id) => items.find((item) => item.key === id)?.label);
+  const accessibility = useMemo(
+    () => ({ announcements, screenReaderInstructions: { draggable: reorder.instructions } }),
+    [announcements, reorder.instructions],
+  );
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    swallowNextClick();
+    if (over && active.id !== over.id) reorder.onMove(String(active.id), String(over.id));
+  };
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={VERTICAL_DRAG}
+      accessibility={accessibility}
+      onDragEnd={onDragEnd}
+      onDragCancel={swallowNextClick}
+    >
+      <DragCursor />
+      <SortableContext items={reorder.keys} strategy={verticalListSortingStrategy}>
+        {children}
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+/** The click that ends a drag must not open the row under the pointer. */
+function swallowNextClick() {
+  const swallow = (event: globalThis.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  window.addEventListener("click", swallow, { capture: true, once: true });
+  window.setTimeout(() => window.removeEventListener("click", swallow, true), 0);
+}
+
+function SortableSidebarItem({ itemKey, reorder, children }: {
+  itemKey: string;
+  reorder: AppNavReorder;
+  children: ReactNode;
+}) {
+  const { setNodeRef, transform, transition, isDragging, listeners } = useSortable({ id: itemKey });
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const setRefs = useCallback((node: HTMLDivElement | null) => {
+    nodeRef.current = node;
+    setNodeRef(node);
+  }, [setNodeRef]);
+
+  // Alt+Shift+Up/Down moves the focused row one place; the focus follows it.
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!event.altKey || !event.shiftKey || event.metaKey || event.ctrlKey) return;
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+    event.preventDefault();
+    event.stopPropagation();
+    const index = reorder.keys.indexOf(itemKey);
+    const neighbor = reorder.keys[event.key === "ArrowUp" ? index - 1 : index + 1];
+    if (index < 0 || !neighbor) return;
+    const focused = document.activeElement;
+    reorder.onMove(itemKey, neighbor);
+    requestAnimationFrame(() => {
+      if (focused instanceof HTMLElement && nodeRef.current?.contains(focused) && document.activeElement !== focused) {
+        focused.focus();
+      }
+    });
+  };
+
+  return (
+    <div
+      ref={setRefs}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={cn("relative", isDragging && "z-10")}
+      {...listeners}
+      onKeyDown={onKeyDown}
+      // A link starts the browser's own drag, which takes the pointer away.
+      onDragStart={(event) => event.preventDefault()}
+    >
+      {children}
+    </div>
+  );
 }
 
 function SidebarNav({

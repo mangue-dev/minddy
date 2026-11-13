@@ -107,6 +107,7 @@ export const ACCOUNT_METADATA_COVERAGE: Readonly<Record<string, AccountKeyCovera
   desktop_prompt_dismissed: { humanOnly: "Whether the desktop app banner was dismissed: interface state." },
   pwa_prompt_dismissed: { humanOnly: "Whether the install hint was dismissed: interface state." },
   tab_orders: { humanOnly: "Order of the view tabs, set by dragging them: interface state." },
+  project_order: { humanOnly: "Order of the projects in the sidebar, set by dragging them: interface state." },
 };
 
 /** A settings tab and the tools that change what it shows. */

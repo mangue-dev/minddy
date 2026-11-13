@@ -45,6 +45,7 @@
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/project-order.ts",
       "lib/issue-semantic-query.ts",
       "lib/use-semantic-issue-search.ts",
       "lib/server/issue-semantic-search.ts",
@@ -142,6 +143,8 @@ La navegación permite acceder a tu trabajo personal o a un proyecto. La paleta 
 ## Encontrar trabajo personal y cambiar de proyecto {#navigation}
 
 La navegación principal da acceso a tu trabajo personal y a tus proyectos. Selecciona un proyecto para ver sus incidencias y destinos secundarios, como clasificación, objetivos, páginas y ajustes del proyecto. La fila de regreso sube un nivel de navegación; puede cambiar el contenido de la barra lateral mientras la página principal permanece abierta. En un ordenador, los destinos secundarios de un proyecto muestran su nombre junto a la fila de regreso: elige ahí otro proyecto para abrir el mismo destino en él, como sus objetivos o sus sugerencias. Command/Ctrl+Mayús+P abre esa lista, donde puedes escribir para filtrar los proyectos por nombre; es el mismo atajo que **Crear en** al crear una incidencia o un objetivo. Selecciona un destino para abrirlo. En una lista como clasificación, objetivos, sugerencias, revisión de código o rutinas, el campo de filtro de la parte superior de la barra lateral busca en todos los elementos, sean cuales sean los filtros que acotan la lista; su texto de ejemplo indica el total.
+
+En un ordenador, arrastra un proyecto hacia arriba o hacia abajo en la navegación principal para poner tus proyectos en el orden que quieras, o enfoca su fila y pulsa Alt+Mayús+Flecha arriba o abajo. El orden es solo tuyo y sigue a tu cuenta en todos tus dispositivos; la lista de proyectos junto a la fila de regreso también lo usa. Un proyecto al que te unas más tarde se añade al final.
 
 Los contadores y las alertas te acompañan entre niveles. El control que vuelve a **Inicio** muestra el total por clasificar en los proyectos que lista **Inicio**, incluido el actual, y la alerta de Smart Assign cuando a uno de tus proyectos le faltan reglas. Una fila de retorno muestra el contador del nivel al que regresa como insignia sobre su flecha, en ámbar mientras se aplique la alerta de Smart Assign. Dentro de un proyecto, **Clasificación** y **Sugerencias** conservan los contadores de ese proyecto. Las pestañas de la app de escritorio llevan la misma insignia que su entrada de la barra lateral: la alerta en **Inicio** y los contadores en **Bandeja de entrada**, **Revisión de código** y en **Clasificación** y **Sugerencias** de un proyecto, actualizados aunque la pestaña esté en segundo plano.
 

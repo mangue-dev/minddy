@@ -3401,6 +3401,7 @@
     "hiddenToast": "« {name} » est masqué de votre barre latérale. Retrouvez-le dans Paramètres du compte → Projets masqués.",
     "shownToast": "« {name} » est de retour dans votre barre latérale.",
     "hideFailed": "Impossible de masquer le projet. Réessayez.",
+    "reorderFailed": "Impossible d’enregistrer l’ordre des projets. Réessayez.",
     "showFailed": "Impossible de réafficher le projet. Réessayez.",
     "wizardSeedChooseFile": "Choisir le fichier CSV"
   },
@@ -7026,7 +7027,8 @@
     "cardInstructions": "Appuyez sur Entrée pour ouvrir le ticket, ou sur Maj+F10 pour son menu. Ses boutons modifient son statut, sa priorité et ses autres champs.",
     "cardRole": "carte de ticket",
     "tabInstructions": "Alt+Maj+Flèche gauche ou droite déplace l’onglet.",
-    "viewInstructions": "Faites glisser avec la souris pour réordonner les vues."
+    "viewInstructions": "Faites glisser avec la souris pour réordonner les vues.",
+    "projectInstructions": "Faites glisser avec la souris, ou appuyez sur Alt+Maj+Flèche haut ou bas, pour déplacer le projet."
   },
   "MobileShell": {
     "serverHeading": "Connectez-vous à votre serveur",

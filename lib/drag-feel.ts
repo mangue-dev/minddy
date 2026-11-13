@@ -26,6 +26,10 @@ export const SETTLE_DROP_ANIMATION: DropAnimation = {
 const restrictToHorizontalAxis: Modifier = ({ transform }) => ({ ...transform, y: 0 });
 export const HORIZONTAL_DRAG: Modifier[] = [restrictToHorizontalAxis];
 
+/** A list of rows reorders up and down only: the sidebar's projects. */
+const restrictToVerticalAxis: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+export const VERTICAL_DRAG: Modifier[] = [restrictToVerticalAxis];
+
 /**
  * The background of a dragged pill that has none at rest (an inactive view):
  * the hover tint, made opaque, so the copy hides what it passes over.
