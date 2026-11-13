@@ -3,7 +3,7 @@
   "id": "applications",
   "locale": "it",
   "title": "App web, mobili e desktop",
-  "summary": "Usa minddy nel browser, installa l’app web su telefono o tablet o l’app desktop e configura le notifiche del dispositivo.",
+  "summary": "Usare minddy nel browser, installare l’app iOS, l’app web o l’app desktop e configurare le notifiche del dispositivo.",
   "topic": "Account e applicazioni",
   "type": "guide",
   "audiences": [
@@ -14,14 +14,15 @@
     "A10",
     "A11",
     "A12",
-    "A03"
+    "A03",
+    "A13"
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-11",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -70,14 +71,24 @@
       "components/auth/auth-chrome.tsx",
       "lib/desktop/window-material.ts",
       "components/ui/mobile-sheet.tsx",
-      "lib/sheet-swipe-dismiss.ts"
+      "lib/sheet-swipe-dismiss.ts",
+      "mobile/README.md",
+      "components/mobile/shell.tsx",
+      "components/mobile/ai-consent-gate.tsx",
+      "lib/mobile/ai-consent.ts",
+      "lib/server/ai-consent.ts",
+      "components/settings/account-mobile-section.tsx",
+      "lib/mobile/haptics.ts",
+      "lib/apple-app-site-association.ts",
+      "lib/mobile/public-links.ts",
+      "lib/native-app.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone menu opened from the bottom bar as a sheet, and the desktop app's first launch on the single sign-in and sign-up screen: checked against components/mobile-navigation.tsx, components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no browser walkthrough; existing figures do not show the bottom bar or the sign-in screen and were kept); agent:claude-code (MIN-907 store submission prep: the browser-install passage no longer states that minddy has no App Store app, ahead of the iOS app; checked against messages/*.json DownloadMobile.noteBody; no figure affected)",
-    "language": "agent:claude-code (it changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 phone menu and desktop first-launch passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 browser-install sentence, in the locale's register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-11"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-973 iOS app: new ios-app section with sign-in, server choice, offline screen, universal links, push, vibrations, purchases hidden and AI consent, and the iOS app in the PWA and notification passages; checked against mobile/README.md, components/mobile/shell.tsx, components/auth/auth-chrome.tsx, components/mobile/ai-consent-gate.tsx, lib/mobile/ai-consent.ts, lib/server/ai-consent.ts, components/settings/account-mobile-section.tsx, lib/apple-app-site-association.ts and the catalogs; not walked through on a device or on the App Store listing; 3 figures captured on 2026-11-13 from the local candidate in a phone-sized page with the shell bridge stubbed, inspected in all six locales; earlier figures kept with their capture dates); agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone menu opened from the bottom bar as a sheet, and the desktop app's first launch on the single sign-in and sign-up screen: checked against components/mobile-navigation.tsx, components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no browser walkthrough; existing figures do not show the bottom bar or the sign-in screen and were kept); agent:claude-code (MIN-907 store submission prep: the browser-install passage no longer states that minddy has no App Store app, ahead of the iOS app; checked against messages/*.json DownloadMobile.noteBody; no figure affected)",
+    "language": "agent:claude-code (it MIN-973 iOS app section and passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 phone menu and desktop first-launch passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 browser-install sentence, in the locale's register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "issues"
@@ -87,10 +98,12 @@
     "install-the-pwa",
     "desktop-app",
     "desktop-and-speed",
-    "devices-and-notifications"
+    "devices-and-notifications",
+    "ios-app"
   ],
   "tags": [
     "Lavorare nel browser e su mobile",
+    "Installare l’app iOS",
     "Installare l’app web su telefono o tablet",
     "Installare e gestire l’app desktop",
     "Attivare notifiche su un dispositivo"
@@ -102,7 +115,7 @@
       "src": "/documentation/it/web-and-mobile-workflow.png",
       "alt": "Pannello mobile di un ticket con titolo, descrizione, proprietà e campo per i commenti.",
       "caption": "Su uno schermo stretto, i dettagli del ticket occupano un pannello adattabile. Usa il pulsante di chiusura per tornare al progetto; Numo resta accessibile dal pulsante mobile.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -114,12 +127,63 @@
       "deviceScaleFactor": 2
     },
     {
+      "id": "ios-app-sign-in",
+      "kind": "screenshot",
+      "src": "/documentation/it/ios-app-sign-in.png",
+      "alt": "La schermata Accedi o registrati dell’app iOS, con il campo email, i pulsanti Apple, Google e GitHub e Ospita minddy in autonomia.",
+      "caption": "Nell’app iOS, Ospita minddy in autonomia segue i servizi di accesso. Le finestre di accesso di Apple e del sistema non compaiono in questa schermata.",
+      "revision": 22,
+      "reviewed": true,
+      "capturedAt": "2026-11-13",
+      "viewport": [
+        386,
+        502
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "ios-app-ai-consent",
+      "kind": "screenshot",
+      "src": "/documentation/it/ios-app-ai-consent.png",
+      "alt": "La finestra Usare le funzioni IA? dell’app iOS, con Non ora e Consenti.",
+      "caption": "La domanda posta una volta su ogni dispositivo prima di qualsiasi funzione IA. Non ora lascia le funzioni IA disattivate nell’app.",
+      "revision": 22,
+      "reviewed": true,
+      "capturedAt": "2026-11-13",
+      "viewport": [
+        442,
+        493
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
+      "id": "ios-app-mobile-preferences",
+      "kind": "screenshot",
+      "src": "/documentation/it/ios-app-mobile-preferences.png",
+      "alt": "Il gruppo App mobile delle preferenze dell’app iOS, con gli interruttori Vibrazione e Funzioni IA.",
+      "caption": "Questo gruppo compare solo nell’app iOS. Funzioni IA cambia la risposta data alla domanda del primo avvio.",
+      "revision": 22,
+      "reviewed": true,
+      "capturedAt": "2026-11-13",
+      "viewport": [
+        418,
+        305
+      ],
+      "theme": "light",
+      "padding": 24,
+      "deviceScaleFactor": 2
+    },
+    {
       "id": "install-the-pwa-workflow",
       "kind": "screenshot",
       "src": "/documentation/it/install-the-pwa-workflow.png",
       "alt": "Guida illustrata di minddy per l’installazione da Safari: Condividi, aggiungi alla schermata Home e conferma.",
       "caption": "La guida pubblica illustra i tre passaggi di Safari e l’opzione Apri come app web da mantenere attiva. Sono illustrazioni didattiche mostrate da minddy, non schermate di un’installazione iOS completata.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -136,7 +200,7 @@
       "src": "/documentation/it/devices-and-notifications-workflow.png",
       "alt": "Impostazioni push con permesso bloccato nel browser e nessun dispositivo registrato.",
       "caption": "Questo browser blocca le notifiche. Ripristina il permesso del sito prima di registrare il dispositivo.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -153,7 +217,7 @@
       "src": "/documentation/it/devices-and-notifications-registered.png",
       "alt": "Dispositivo browser registrato e attivo sull’account, con la data effettiva dell’ultimo invio.",
       "caption": "L’account ha un dispositivo browser registrato e attivo. L’elenco mostra la data di registrazione e quella dell’ultimo invio. La comparsa di un avviso dipende comunque dal permesso del browser e dalle impostazioni del sistema operativo.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -170,7 +234,7 @@
       "src": "/documentation/it/desktop-renderer-recovery.png",
       "alt": "Pagina locale di ripristino dopo un arresto forzato del processo di rendering, con i controlli Reload window e Check server settings.",
       "caption": "Pagina di ripristino nell’app di sviluppo per macOS, con un profilo isolato e un server dimostrativo. L’interfaccia nativa usa etichette in inglese in tutte le lingue.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -184,6 +248,9 @@
   ],
   "requiredFigures": [
     "web-and-mobile-workflow",
+    "ios-app-sign-in",
+    "ios-app-ai-consent",
+    "ios-app-mobile-preferences",
     "install-the-pwa-workflow",
     "devices-and-notifications-workflow",
     "devices-and-notifications-registered-workflow",
@@ -192,7 +259,7 @@
 }
 ---
 
-Puoi accedere alla stessa istanza minddy dal browser, dall’app web installata o dall’app desktop. Segui la procedura per il tuo dispositivo e controlla i requisiti di connessione, gli aggiornamenti e i permessi di notifica della piattaforma.
+Puoi accedere alla stessa istanza minddy dal browser, dall’app iOS, dall’app web installata o dall’app desktop. Segui la procedura per il tuo dispositivo e controlla i requisiti di connessione, gli aggiornamenti e i permessi di notifica della piattaforma.
 
 ## Lavorare nel browser e su mobile {#web-and-mobile}
 
@@ -210,7 +277,43 @@ Il browser e l’app web installata richiedono una connessione di rete per consu
 
 ![Pannello mobile di un ticket con titolo, descrizione, proprietà e campo per i commenti.](/documentation/it/web-and-mobile-workflow.png)
 
+## Installare l’app iOS {#ios-app}
+
+Su iPhone e iPad, installa minddy dall’App Store. L’app richiede iOS 15 o versioni successive. Mostra l’interfaccia del server a cui è collegata, minddy Cloud o la tua istanza, quindi le nuove funzioni di minddy arrivano senza aggiornare l’app.
+
+Al primo avvio, alcune schermate presentano minddy; **Inizia** porta a **Accedi o registrati**. Inserisci il tuo indirizzo email e scegli **Continua**, oppure usa **Continua con Apple**, **Continua con Google** o **Continua con GitHub**. Apple apre la propria finestra di accesso; Google e GitHub aprono la finestra di accesso del sistema sopra l’app e tornano all’app al termine. Il resto segue gli stessi passaggi del web; vedi [Creare un account e accedere](/it/documentazione/accounts#account-access).
+
+Per usare un’istanza ospitata in autonomia, tocca **Ospita minddy in autonomia** sotto le opzioni di accesso. In **Connettiti al tuo server**, inserisci l’indirizzo dell’istanza in **Indirizzo del server** e tocca **Connetti**. I server remoti richiedono HTTPS; un indirizzo scritto senza schema usa HTTPS. **Indietro** torna alla schermata di accesso e, quando l’app è su un server ospitato in autonomia, **Usa minddy Cloud** torna a Cloud. Gli account appartengono alla loro istanza: accedi con l’account del server scelto. **Ospita minddy in autonomia** compare solo nella schermata di accesso, quindi esci prima per cambiare server.
+
+Se il server non risponde, l’app mostra **Impossibile connettersi al server**, oppure **Sei offline** quando il dispositivo non ha rete. **Riprova** ricarica la pagina, e l’app riprova anche da sola quando torna la rete. **Cambia server** apre **Connettiti al tuo server**.
+
+![La schermata Accedi o registrati dell’app iOS, con il campo email, i pulsanti Apple, Google e GitHub e Ospita minddy in autonomia.](/documentation/it/ios-app-sign-in.png)
+
+### Link, notifiche, vibrazione e fatturazione {#ios-app-operation}
+
+Un link a `www.minddy.app` toccato in Mail, Messaggi o Note apre l’app su quella pagina, che fosse aperta o no: un ticket, un progetto, una pagina o un link email che conferma il tuo account, reimposta la password o accetta un invito. I link alla fatturazione, al sito pubblico, a questo manuale e i link di condivisione pubblici si aprono ancora nel browser. I link a un’istanza ospitata in autonomia si aprono nel browser e, finché l’app è collegata a un server ospitato in autonomia, un link di minddy Cloud si apre in Safari. Nell’app, i link al sito pubblico, come i prezzi, il manuale o le pagine legali, si aprono in una finestra di Safari sopra l’app.
+
+Per ricevere le notifiche push, apri **Impostazioni account** → **Notifiche** nell’app e attiva **Avvisa questo dispositivo**. iOS chiede il permesso la prima volta; poi le notifiche arrivano anche quando l’app è chiusa. Toccarne una apre il ticket, la pagina o l’elemento a cui si riferisce. Se iOS blocca le notifiche, **Apri Impostazioni** apre le impostazioni di notifica di minddy nell’app Impostazioni. Vedi [Attivare notifiche su un dispositivo](#devices-and-notifications).
+
+L’app vibra leggermente quando scegli un’opzione, attivi un interruttore o copi qualcosa, e più forte quando crei un ticket o un obiettivo, completi un ticket o invii un commento. Per disattivarla, apri **Impostazioni account** → **Preferenze** → **App mobile** e disattiva **Vibrazione**. L’impostazione appartiene al tuo account, quindi ti segue sugli altri telefoni.
+
+L’app non vende nulla. Non mostra la pagina di fatturazione, i piani né i pulsanti per passare a un piano superiore, e una funzione non inclusa nel tuo piano lo segnala senza proporre un upgrade. Gestisci l’abbonamento in un browser, sul sito di minddy; l’app riconosce il tuo piano appena accedi.
+
+### Consentire o rifiutare le funzioni IA {#ios-app-ai}
+
+Numo, Smart Fill, la dettatura e la ricerca inviano il contenuto su cui lavorano (testo dei ticket, commenti, pagine, registrazioni) al provider del modello IA usato dall’istanza. Prima della prima di queste richieste, l’app chiede **Usare le funzioni IA?** una volta su ogni dispositivo, dopo l’accesso e i primi passi. L’informativa sulla privacy, collegata dalla finestra, indica i provider. Scegli **Consenti** per usare le funzioni IA, oppure **Non ora** per lasciarle disattivate in questa app. Se chiudi la finestra senza scegliere, la domanda torna al prossimo avvio. L’uscita dall’account cancella la risposta, quindi il prossimo account che accede sul dispositivo riceve di nuovo la domanda.
+
+Se rifiuti, l’app non avvia alcun lavoro IA: inviare un messaggio a Numo, dettare o usare un’altra funzione IA mostra di nuovo la finestra, così puoi consentirlo da lì. Un nuovo ticket viene creato senza Smart Fill, la ricerca dei ticket li trova solo per le loro parole, senza la [ricerca per significato](/it/documentazione/navigation#search-by-meaning), e una menzione di Numo in un commento resta senza risposta. Il resto di minddy funziona normalmente. Il web e l’app desktop non pongono mai questa domanda, e rifiutare nell’app non limita ciò che fai lì. La tua ultima risposta vale però per il lavoro IA che minddy svolge in background per il tuo account: dopo **Non ora**, Smart Assign e Smart Fill nei progetti di cui sei proprietario, le tue routine pianificate e i promemoria di Numo non usano più l’IA.
+
+Per cambiare risposta, apri **Impostazioni account** → **Preferenze** → **App mobile** e attiva o disattiva **Funzioni IA**.
+
+![La finestra Usare le funzioni IA? dell’app iOS, con Non ora e Consenti.](/documentation/it/ios-app-ai-consent.png)
+
+![Il gruppo App mobile delle preferenze dell’app iOS, con gli interruttori Vibrazione e Funzioni IA.](/documentation/it/ios-app-mobile-preferences.png)
+
 ## Installare l’app web su telefono o tablet {#install-the-pwa}
+
+Su iPhone e iPad, l’[app iOS](#ios-app) è la scelta abituale. L’app web installata resta disponibile su Android e per chi preferisce il browser.
 
 Apri l’istanza minddy che vuoi usare in Safari su iPhone o iPad oppure in Chrome o in un altro browser Android compatibile. Se il link si è aperto all’interno di un’altra app, aprilo prima nel browser completo. Per un’istanza self-hosted, usa l’indirizzo del tuo server.
 
@@ -254,7 +357,7 @@ Per ridurre l’uso della memoria nelle sessioni lunghe, i dettagli delle PR, i 
 
 ## Attivare notifiche su un dispositivo {#devices-and-notifications}
 
-Apri le notifiche nelle impostazioni dell’account sul dispositivo che vuoi registrare. Attivale e accetta la richiesta di autorizzazione del browser o del sistema operativo. Se hai negato il permesso, devi modificarlo nelle impostazioni del browser o del sistema; azionare ripetutamente il controllo di minddy non può superare quel rifiuto. Su iOS, installa e apri prima l’app web quando l’interfaccia lo richiede.
+Apri le notifiche nelle impostazioni dell’account sul dispositivo che vuoi registrare. Attivale e accetta la richiesta di autorizzazione del browser o del sistema operativo. Se hai negato il permesso, devi modificarlo nelle impostazioni del browser o del sistema; azionare ripetutamente il controllo di minddy non può superare quel rifiuto. L’[app iOS](#ios-app-operation) si registra direttamente. In Safari su iPhone o iPad, installa e apri prima l’app web quando l’interfaccia lo richiede.
 
 Verifica che il dispositivo compaia nell’elenco e usa il suo comando di prova. Controlla le informazioni sull’ultima consegna. Puoi disattivare o rimuovere singole registrazioni senza eliminare l’account. Le categorie di **Impostazioni account** → **Notifiche** determinano quali eventi generano notifiche; la Posta in arrivo resta disponibile anche quando il push non funziona.
 
@@ -262,7 +365,7 @@ Verifica che il dispositivo compaia nell’elenco e usa il suo comando di prova.
 
 ### Condizioni per piattaforma {#platforms}
 
-Il push web richiede un browser supportato e un servizio push configurato sull’istanza. I banner nativi e la consegna in background dipendono dalla piattaforma. L’app macOS firmata e distribuita supporta APNs; il pacchetto Windows richiede il componente WNS opzionale per il trasporto in background. Linux utilizza la sessione in background dell’app distribuita, anziché APNs o WNS.
+Il push web richiede un browser supportato e un servizio push configurato sull’istanza. I banner nativi e la consegna in background dipendono dalla piattaforma. L’app iOS riceve le notifiche tramite APNs, anche quando è chiusa. L’app macOS firmata e distribuita supporta APNs; il pacchetto Windows richiede il componente WNS opzionale per il trasporto in background. Linux utilizza la sessione in background dell’app distribuita, anziché APNs o WNS.
 
 Se il server selezionato non ha una configurazione APNs o WNS, l’app desktop usa notifiche native locali finché rimane aperta o nascosta. Questo metodo non consegna notifiche dopo la chiusura completa dell’app.
 
