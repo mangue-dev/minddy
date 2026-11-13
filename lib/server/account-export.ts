@@ -163,6 +163,8 @@ export interface AccountExport {
   readme: Record<string, string>;
   account: Row;
   numo_preferences?: Row[];
+  /** The account's decision engine, provider and model (MIN-980). */
+  decision_preferences?: Row[];
   /** Numo's memory (MIN-915), decrypted for its owner. */
   numo_memories?: Row[];
   /**
@@ -263,6 +265,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
   await materializePendingProjectPages(service, ownedIds);
   const [
     numoPreferences,
+    decisionPreferences,
     memberships,
     ownedIssues,
     myIssues,
@@ -289,6 +292,8 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     modelKeys,
   ] = await Promise.all([
     service.from("user_numo_preferences").select("provider,model,updated_at").eq("user_id", userId),
+    service.from("user_ai_decision_preferences")
+      .select("engine,provider,model,model_engine,updated_at").eq("user_id", userId),
     Promise.resolve(membershipsResult),
     ownedIds.length
       ? issueStore(service).select(ISSUE_COLUMNS).in("project_id", ownedIds)
@@ -524,6 +529,7 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
       user_metadata: user.user_metadata ?? {},
     },
     numo_preferences: list("user_numo_preferences", numoPreferences),
+    decision_preferences: list("user_ai_decision_preferences", decisionPreferences),
     numo_memories: (await listNumoMemories(service, userId)).map((memory) => ({
       id: memory.id, project_id: memory.project_id, content: memory.content,
       created_at: memory.created_at, updated_at: memory.updated_at,

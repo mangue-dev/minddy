@@ -127,7 +127,7 @@ export const ADMIN_READ_TOOLS = new Set([
 
 const MODEL_KEYS_HINT =
   "Keys come from admin_get_instance_models: a role model (assistant_model, issue_embedding_model, " +
-  "transcription_model, jev_model), assistant_reasoning_level, numo_wake_daily_limit " +
+  "transcription_model, jev_model), decision_engine (model or llm), assistant_reasoning_level, numo_wake_daily_limit " +
   "or a provider default for personal keys (byok_default_*).";
 
 export const ADMIN_ASSISTANT_TOOLS: AssistantToolDef[] = [
@@ -136,7 +136,7 @@ export const ADMIN_ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "admin_get_instance_models",
       description:
-        "INSTANCE ADMIN. Read the AI model configuration of this instance: every setting with its stored value (null = default) and its built-in default, plus the same configuration as the exportable file (format minddy.instance-models). There is one model per role: assistant_model is the LLM that Numo and every text task run (titles, web search, Smart Fill, Smart Assign, voice cleanup, feedback review…), issue_embedding_model serves issue and feedback embeddings alike, transcription_model is speech to text, jev_model the decision model. No task has a model of its own. Read-only.",
+        "INSTANCE ADMIN. Read the AI model configuration of this instance: every setting with its stored value (null = default) and its built-in default, plus the same configuration as the exportable file (format minddy.instance-models). There is one model per role: assistant_model is the LLM that Numo and every text task run (titles, web search, Smart Fill, Smart Assign, voice cleanup, feedback review…), issue_embedding_model serves issue and feedback embeddings alike, transcription_model is speech to text, jev_model the decision model. decision_engine says what answers decisions (Smart Fill, Smart Assign, relations, background screening, feedback review): model = the decision model, llm = the language model; accounts follow it unless they chose their own. No task has a model of its own. Read-only.",
       parameters: { type: "object", properties: {} },
     },
   },

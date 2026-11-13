@@ -119,7 +119,7 @@ function byokCatalogCacheKey(
   provider: AgentProviderId,
   baseUrl: string,
   credentialVersion: string,
-  capability: ModelCatalogCapability,
+  capability: AdminCatalogCapability,
 ): string {
   return `byok|${userId}|${provider}|${baseUrl}|${capability}|${credentialVersion}`;
 }
@@ -264,8 +264,12 @@ async function loadModels(
   provider: AgentProviderId,
   baseUrl: string,
   apiKey: string,
-  capability: ModelCatalogCapability = "text",
+  capability: AdminCatalogCapability = "text",
 ): Promise<AgentModelEntry[]> {
+  // Decision models only exist on OpenRouter (MIN-980).
+  if (capability === "decision") {
+    return provider === "openrouter" ? listOpenRouter(apiKey, capability) : [];
+  }
   if (!providerSupportsModelCapability(provider, capability)) return [];
   const strategy = getAgentProvider(provider)?.listStrategy ?? "openrouter";
   switch (strategy) {
@@ -522,13 +526,16 @@ export function getAssistantModelsForUser(
 /** Capability-aware catalog for the active BYOK settings screen. */
 export async function getActiveByokModelCatalog(
   userId: string,
-  capability: ModelCatalogCapability,
+  /** `decision` lists an OpenRouter key's decision models (MIN-980). */
+  capability: AdminCatalogCapability,
   /** The credential whose models the settings list; the Numo route otherwise. */
   provider?: AgentProviderId,
 ): Promise<AgentModelsCatalog> {
+  // A decision model rides on an OpenRouter key's text access.
+  const keyCapability: ModelCatalogCapability = capability === "decision" ? "text" : capability;
   const byok = provider
-    ? await getUserByokForProvider(userId, provider, { capability })
-    : await getUserByok(userId, undefined, capability);
+    ? await getUserByokForProvider(userId, provider, { capability: keyCapability })
+    : await getUserByok(userId, undefined, keyCapability);
   if (!byok) {
     return {
       provider: DEFAULT_AGENT_PROVIDER,
@@ -544,7 +551,8 @@ export async function getActiveByokModelCatalog(
     recommended: [] as string[],
     maxMultiplier: null,
   };
-  if (!providerSupportsModelCapability(byok.provider, capability)) {
+  if (capability === "decision" ? byok.provider !== "openrouter"
+    : !providerSupportsModelCapability(byok.provider, capability)) {
     return { ...header, models: [] };
   }
   const cacheKey = byokCatalogCacheKey(

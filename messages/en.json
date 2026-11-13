@@ -3176,6 +3176,14 @@
     "aiRoleHint_embedding": "Search by meaning, and related issues and feedback",
     "aiRole_transcription": "Speech to text",
     "aiRoleHint_transcription": "Transcribes your recordings",
+    "aiRole_decision": "Decisions",
+    "aiRoleHint_decision": "Smart Fill, Smart Assign, relations, background screening and the feedback review",
+    "aiDecisionEngineLabel": "Kind of model for decisions",
+    "aiDecisionEngine_model": "Decision model",
+    "aiDecisionEngine_llm": "Language model",
+    "aiDecisionEngineDefault": "{engine} (default)",
+    "aiDecisionHelp": "Decision models are available on minddy Cloud and OpenRouter only.",
+    "aiDecisionLoadError": "Could not load the decision settings. Reload settings.",
     "copyAgentPrompt": "Copy the prompt",
     "agentPromptCopied": "Prompt copied. Paste it into {name}.",
     "manualSetup": "Set it up by hand",
@@ -4789,6 +4797,10 @@
       "transcription_model": {
         "label": "Speech-to-text",
         "desc": "Converts dictation audio into text. The cleanup that follows runs on the language model."
+      },
+      "decision_engine": {
+        "label": "Use a language model for decisions",
+        "desc": "Decisions then run on the language model instead of the decision model. Members can choose otherwise in their AI settings."
       },
       "jev_model": {
         "label": "Decision model",

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { MessageKey } from "@/lib/i18n-keys";
@@ -38,6 +39,7 @@ import {
   type ModelConfigFileError,
 } from "@/lib/ai-model-config-file";
 import {REASONING_LEVELS, toReasoningLevel, type ReasoningLevel} from "@/lib/agent-reasoning";
+import {DECISION_ENGINE_CONFIG_KEY, toDecisionEngine} from "@/lib/decision-engine";
 import {ADMIN_SECTIONS, adminSectionAnchor} from "@/lib/admin-sections";
 import type {AdminSectionId} from "@/lib/admin-sections";
 
@@ -242,7 +244,7 @@ function ModelGroupCard({
       title={t(`groups.${group}.title`)}
       help={t.has(descKey) ? t(descKey) : undefined}
     >
-      {fields.map((field) =>
+      {visibleFields(fields, values).map((field) =>
         values === null ? (
           <RowSkeleton key={field.key} />
         ) : (
@@ -256,6 +258,15 @@ function ModelGroupCard({
       )}
     </SettingsGroup>
   );
+}
+
+/**
+ * The decision model only answers in decision-model mode (MIN-980): with the
+ * language model as the engine, its picker would set a model nothing runs.
+ */
+function visibleFields(fields: AiConfigField[], values: ConfigValues | null): AiConfigField[] {
+  if (toDecisionEngine(values?.[DECISION_ENGINE_CONFIG_KEY]) !== "llm") return fields;
+  return fields.filter((field) => field.catalogCapability !== "decision");
 }
 
 /** Personal-key provider defaults, folded: they only concern BYOK members. */
@@ -673,6 +684,8 @@ function ConfigRow({
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
     case "count":
       return <ModelIdRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} numeric />;
+    case "engine":
+      return <EngineRow field={field} label={label} desc={desc} value={value} onSaved={onSaved} />;
     case "model":
       return (
         <ModelRow
@@ -684,6 +697,63 @@ function ConfigRow({
         />
       );
   }
+}
+
+/**
+ * The instance's decision engine (MIN-980), as a switch: on, the language
+ * model answers decisions; off, the decision model does. Accounts follow it
+ * unless they chose their own.
+ */
+function EngineRow({
+  field,
+  label,
+  desc,
+  value,
+  onSaved,
+}: {
+  field: AiConfigField;
+  label: string;
+  desc: string | null;
+  value: string | null;
+  onSaved: OnSaved;
+}) {
+  const t = useTranslations("Admin");
+  const saved = toDecisionEngine(value ?? field.fallback);
+  const [busy, setBusy] = useState(false);
+
+  const toggle = async (useLlm: boolean) => {
+    const next = useLlm ? "llm" : "model";
+    if (busy || next === saved) return;
+    setBusy(true);
+    try {
+      await patchConfig(field.key, next);
+      onSaved(field.key, next);
+      toast.success(t("saved"));
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <SettingsRow
+      label={label}
+      hint={desc ?? undefined}
+      htmlFor={`cfg-${field.key}`}
+      control={
+        <>
+          {busy ? <Spinner className="shrink-0" /> : null}
+          <Switch
+            id={`cfg-${field.key}`}
+            checked={saved === "llm"}
+            onCheckedChange={(checked) => void toggle(checked)}
+            disabled={busy}
+          />
+        </>
+      }
+    />
+  );
 }
 
 /** The reasoning levels' labels, shared with the composer's picker. */

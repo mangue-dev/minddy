@@ -19,6 +19,8 @@ import { ByokConnectPanel } from "@/components/settings/byok-connect-panel";
 import { SETTINGS_SECTIONS } from "@/lib/settings-sections";
 import { useNumoPreferencesQuery, useSaveNumoPreferences } from "@/lib/use-numo-preferences-query";
 import { useAiRoutesQuery, useSetAiRoute } from "@/lib/use-ai-routes-query";
+import { useAiDecisionsQuery, useSaveAiDecisions } from "@/lib/use-ai-decisions-query";
+import { DECISION_ENGINES, type DecisionEngine } from "@/lib/decision-engine";
 import { aiKeysQueryKey, useAiKeysQuery } from "@/lib/use-ai-keys-query";
 import { updateAiKeyPreferencesApi, type AiKey } from "@/lib/agent-keys-api";
 import {
@@ -34,9 +36,9 @@ import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 /**
  * Minddy's AI settings: the providers the account can use, then a provider
  * for each model ROLE (MIN-954) — the language model that Numo and every
- * text feature run, the embedding model, and speech to text. No feature
- * chooses a provider or a model of its own. Choices apply at once and roll
- * back if the server refuses them.
+ * text feature run, the embedding model, speech to text, and decisions
+ * (MIN-980). No feature chooses a provider or a model of its own. Choices
+ * apply at once and roll back if the server refuses them.
  */
 export function AccountAiKeysSection() {
   const t = useTranslations("Account");
@@ -54,6 +56,7 @@ export function AccountAiKeysSection() {
         <LanguageModelRow />
         <RoleRow role="embedding" />
         <RoleRow role="transcription" />
+        <DecisionRow />
       </SettingsGroup>
     </section>
   );
@@ -197,5 +200,79 @@ function KeyModel({ aiKey, usageKey, label }: { aiKey: AiKey; usageKey: ByokMode
       defaultLabel={t("byokModelDefault")}
       defaultModelId={aiKey.resolved_feature_models?.[usageKey] ?? null}
       {...modelCopy} ariaLabel={t("aiUsageModel", { usage: label })} />
+  );
+}
+
+const ENGINE_LABEL_KEYS: Record<DecisionEngine, "aiDecisionEngine_model" | "aiDecisionEngine_llm"> = {
+  model: "aiDecisionEngine_model",
+  llm: "aiDecisionEngine_llm",
+};
+
+/**
+ * Decisions (MIN-980), as plain choices top to bottom: the kind of model,
+ * the provider, then a personal key's model. The instance's kind is marked
+ * as the default, and choosing it follows the administrator again. Decision
+ * models exist only on OpenRouter, so a decision model lists only an
+ * OpenRouter key; a language model lists every key that serves text. Until
+ * the account chooses, the server shows the provider decisions run on.
+ */
+function DecisionRow() {
+  const t = useTranslations("Account");
+  const modelCopy = useModelCopy();
+  const query = useAiDecisionsQuery();
+  const save = useSaveAiDecisions(() => toast.error(t("aiUsageSaveError")));
+  const data = query.data;
+  const instanceEngine = data?.instance_engine ?? "model";
+  const engine = data?.engine ?? instanceEngine;
+  const provider = data?.provider ?? null;
+  const ownKey = provider && provider !== MINDDY_CLOUD_PROVIDER ? provider : null;
+  const label = t("aiRole_decision");
+  const options = data?.providers ?? [];
+  const engineLabel = (value: DecisionEngine) => value === instanceEngine
+    ? t("aiDecisionEngineDefault", { engine: t(ENGINE_LABEL_KEYS[value]) })
+    : t(ENGINE_LABEL_KEYS[value]);
+  return (
+    <SettingsRow
+      label={label}
+      hint={t("aiRoleHint_decision")}
+      help={t("aiDecisionHelp")}
+      control={
+        <UsageControls
+          provider={
+            <>
+              <Select value={engine} disabled={!data}
+                // The instance's kind follows the administrator rather than pinning it.
+                onValueChange={(next) => save.mutate({ engine: next === instanceEngine ? null : next as DecisionEngine })}>
+                <SelectTrigger className="w-full" aria-label={t("aiDecisionEngineLabel")}>
+                  <SelectValue>{engineLabel(engine)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {DECISION_ENGINES.map((value) => (
+                    <SelectItem key={value} value={value}>{engineLabel(value)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <ProviderSelect value={provider ?? MINDDY_CLOUD_PROVIDER} options={options}
+                ariaLabel={t("aiUsageProvider", { usage: label })} disabled={!data}
+                onChange={(next) => save.mutate({ provider: next })} />
+            </>
+          }
+          model={ownKey ? (
+            <ModelCombobox scope="byok" providerChoice={ownKey}
+              capability={engine === "model" ? "decision" : "text"}
+              value={data?.model ?? ""}
+              onChange={(value) => save.mutate({ model: value || null })}
+              defaultLabel={t("byokModelDefault")}
+              defaultModelId={data?.default_model ?? null}
+              {...modelCopy}
+              // A decision model must be one the key's catalog lists.
+              freeTextLabel={engine === "model" ? undefined : modelCopy.freeTextLabel}
+              ariaLabel={t("aiUsageModel", { usage: label })} />
+          ) : undefined}
+        />
+      }
+    >
+      {query.error && !data && <p role="alert" className="py-2 text-sm text-destructive">{t("aiDecisionLoadError")}</p>}
+    </SettingsRow>
   );
 }

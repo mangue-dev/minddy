@@ -12,6 +12,8 @@ import { selectImportedAccountMetadata } from "./account-metadata-import";
 import { encodeIssue } from "@/lib/server/issue-store";
 
 import { isKnownAgentProvider } from "@/lib/agent-providers";
+import { MINDDY_CLOUD_PROVIDER } from "@/lib/ai-surfaces";
+import { isDecisionEngine } from "@/lib/decision-engine";
 import { randomUUID } from "node:crypto";
 import type { AccountTransferDocument, TransferRow } from "@/lib/account-transfer";
 import { getServiceClient } from "@/lib/supabase-service";
@@ -834,6 +836,28 @@ async function importAccountTransferCore(
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,provider" });
     if (error) throw new Error("Could not import Numo preferences");
+    result.personalData += 1;
+  }
+  // Decision settings (MIN-980). A provider names a credential by provider,
+  // so it applies once the same provider is connected on this account.
+  for (const preference of (document.decision_preferences ?? []).slice(0, 1)) {
+    const engine = preference.engine ?? null;
+    const modelEngine = preference.model_engine ?? null;
+    const provider = preference.provider ?? null;
+    const model = preference.model ?? null;
+    if (!(engine === null || isDecisionEngine(engine)) ||
+      !(modelEngine === null || isDecisionEngine(modelEngine)) ||
+      !(provider === null || provider === MINDDY_CLOUD_PROVIDER ||
+        (typeof provider === "string" && isKnownAgentProvider(provider))) ||
+      !(model === null || typeof model === "string" && /^[\w./:@-]{1,200}$/.test(model)) ||
+      (model === null) !== (modelEngine === null)) {
+      throw new Error("Invalid imported decision preference");
+    }
+    const { error } = await service.from("user_ai_decision_preferences").upsert({
+      user_id: userId, engine, provider, model, model_engine: modelEngine,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_id" });
+    if (error) throw new Error("Could not import decision preferences");
     result.personalData += 1;
   }
   // Numo's memory (MIN-915): a project memory follows its imported project;

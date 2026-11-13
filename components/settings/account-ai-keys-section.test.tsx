@@ -19,6 +19,15 @@ const h = vi.hoisted(() => ({
   numoError: null as Error | null,
   routes: {} as Record<string, string>,
   options: [] as unknown[],
+  saveDecisions: vi.fn(),
+  decisions: null as null | {
+    instance_engine: "model" | "llm"; engine: "model" | "llm" | null; provider: string | null;
+    model: string | null; default_model: string | null; providers: unknown[];
+  },
+}));
+vi.mock("@/lib/use-ai-decisions-query", () => ({
+  useAiDecisionsQuery: () => ({ data: h.decisions ?? undefined, error: null }),
+  useSaveAiDecisions: () => ({ mutate: h.saveDecisions }),
 }));
 vi.mock("@/lib/use-numo-preferences-query", () => ({
   useNumoPreferencesQuery: () => ({ data: h.numo ?? undefined, isPending: false, error: h.numoError }),
@@ -39,8 +48,8 @@ vi.mock("@/lib/use-ai-keys-query", () => ({ aiKeysQueryKey: ["keys"], useAiKeysQ
 vi.mock("@/lib/agent-keys-api", () => ({ updateAiKeyPreferencesApi: vi.fn() }));
 vi.mock("@/components/settings/byok-connect-panel", () => ({ ByokConnectPanel: () => <div>General API credentials</div> }));
 vi.mock("@/components/agent/model-combobox", () => ({
-  ModelCombobox: ({ scope, value, onChange, disabled, providerChoice }: { scope?: string; value: string; onChange: (value: string) => void; disabled: boolean; providerChoice?: string | null }) => (
-    <select aria-label={`Fixture model ${scope}`} data-provider={providerChoice ?? ""} value={value} disabled={disabled}
+  ModelCombobox: ({ scope, value, onChange, disabled, providerChoice, capability }: { scope?: string; value: string; onChange: (value: string) => void; disabled: boolean; providerChoice?: string | null; capability?: string }) => (
+    <select aria-label={`Fixture model ${scope}`} data-provider={providerChoice ?? ""} data-capability={capability ?? ""} value={value} disabled={disabled}
       onChange={(event) => onChange(event.target.value)}>
       <option value="">App default</option><option value="provider/model">Specific model</option>
     </select>
@@ -73,6 +82,7 @@ beforeEach(() => {
   h.numoError = null;
   h.routes = {};
   h.options = [minddy, anthropic];
+  h.decisions = { instance_engine: "model", engine: null, provider: "minddy", model: null, default_model: null, providers: [minddy, anthropic] };
   host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
@@ -100,11 +110,13 @@ it("offers one provider per model role, never one per feature (MIN-954)", async 
   await render();
   const text = host.textContent ?? "";
   expect(text).toContain("General API credentials");
-  for (const role of [messages.Account.aiRole_llm, messages.Account.aiRole_embedding, messages.Account.aiRole_transcription]) {
+  for (const role of [messages.Account.aiRole_llm, messages.Account.aiRole_embedding,
+    messages.Account.aiRole_transcription, messages.Account.aiRole_decision]) {
     expect(text).toContain(role);
   }
-  for (const usage of ["Conversation titles", "Smart Fill", "Numo code work"]) expect(text).not.toContain(usage);
-  expect(providerSelects()).toHaveLength(3);
+  for (const usage of ["Conversation titles", "Numo code work"]) expect(text).not.toContain(usage);
+  // Language model, embeddings, speech to text, then the decisions' kind and provider (MIN-980).
+  expect(providerSelects()).toHaveLength(5);
 });
 
 it("moves Numo conversations to another provider and restarts on that provider's default model", async () => {
@@ -129,7 +141,7 @@ it("offers no Numo model on minddy Cloud, where the instance sets it (MIN-954)",
   await render();
   expect(host.querySelector('select[aria-label="Fixture model assistant"]')).toBeNull();
   // The provider stays a choice: a personal key brings the model back.
-  expect(providerSelects()).toHaveLength(3);
+  expect(providerSelects()).toHaveLength(5);
 });
 
 it("routes the embedding role alone", async () => {
@@ -152,8 +164,10 @@ it("shows a key's model under its provider, and none for minddy Cloud", async ()
 it("shows a single available provider as text rather than a choice", async () => {
   h.numo = { ...h.numo!, providers: [minddy] };
   h.options = [minddy];
+  h.decisions = { ...h.decisions!, providers: [minddy] };
   await render();
-  expect(providerSelects()).toHaveLength(0);
+  // Only the kind of model for decisions stays a choice.
+  expect(providerSelects()).toHaveLength(1);
   expect(host.textContent).toContain("minddy Cloud");
 });
 
@@ -165,4 +179,62 @@ it("reports a preference that never loaded, but keeps a loaded one usable after 
   h.numo = null;
   await render();
   expect(host.querySelector('[role="alert"]')?.textContent).toBe(messages.Account.numoModelLoadError);
+});
+
+const decisionEngine = () => providerSelects()[3]!;
+const decisionProvider = () => providerSelects()[4]!;
+
+it("picks the kind of model for decisions, the instance's kind following the administrator (MIN-980)", async () => {
+  await render();
+  expect(decisionEngine().value).toBe("model");
+  expect([...decisionEngine().options].map((option) => option.textContent))
+    .toEqual(["Decision model (default)", "Language model"]);
+  await change(decisionEngine(), "llm");
+  expect(h.saveDecisions).toHaveBeenCalledWith({ engine: "llm" });
+
+  h.decisions = { ...h.decisions!, engine: "llm" };
+  await render();
+  expect(decisionEngine().value).toBe("llm");
+  await change(decisionEngine(), "model");
+  // Choosing the instance's kind clears the account's own choice.
+  expect(h.saveDecisions).toHaveBeenLastCalledWith({ engine: null });
+});
+
+it("follows an instance that decides with a language model (MIN-980)", async () => {
+  h.decisions = { ...h.decisions!, instance_engine: "llm" };
+  await render();
+  expect(decisionEngine().value).toBe("llm");
+  expect(decisionEngine().selectedOptions[0]!.textContent).toBe("Language model (default)");
+});
+
+it("routes decisions to one of the providers that can answer them (MIN-980)", async () => {
+  const openrouter: AiProviderOption = { id: "openrouter", label: "OpenRouter" };
+  h.decisions = { ...h.decisions!, providers: [minddy, openrouter] };
+  await render();
+  expect(decisionProvider().value).toBe("minddy");
+  expect([...decisionProvider().options].map((option) => option.value)).toEqual(["minddy", "openrouter"]);
+  await change(decisionProvider(), "openrouter");
+  expect(h.saveDecisions).toHaveBeenCalledWith({ provider: "openrouter" });
+});
+
+it("lists a key's decision models, or its language models once the switch is on (MIN-980)", async () => {
+  h.decisions = { ...h.decisions!, provider: "openrouter", model: "typesafe/jev-1.13", default_model: "typesafe/jev-1.13" };
+  await render();
+  let pickers = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label="Fixture model byok"]')];
+  expect(pickers).toHaveLength(1);
+  expect(pickers[0]!.dataset.capability).toBe("decision");
+  expect(pickers[0]!.dataset.provider).toBe("openrouter");
+  await change(pickers[0]!, "");
+  expect(h.saveDecisions).toHaveBeenCalledWith({ model: null });
+
+  h.decisions = { ...h.decisions!, engine: "llm", model: null };
+  await render();
+  pickers = [...host.querySelectorAll<HTMLSelectElement>('select[aria-label="Fixture model byok"]')];
+  expect(pickers[0]!.dataset.capability).toBe("text");
+});
+
+it("offers no decision model on minddy Cloud, where the instance sets it (MIN-980)", async () => {
+  h.decisions = { ...h.decisions!, provider: "minddy" };
+  await render();
+  expect(host.querySelector('select[aria-label="Fixture model byok"]')).toBeNull();
 });

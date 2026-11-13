@@ -57,7 +57,12 @@ export type DecisionFallbackReason =
    * A use case ends up here only when the shadow comparison showed it
    * structurally bad at decision models — a config edit, never a deploy.
    */
-  | "llm_first";
+  | "llm_first"
+  /**
+   * The language model is the decision engine (MIN-980): the instance's
+   * `decision_engine` setting, or the account's own choice, asks it directly.
+   */
+  | "llm_engine";
 
 /**
  * Hard ceiling of the choices engine, taken from the decisions API (MIN-561

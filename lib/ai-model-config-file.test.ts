@@ -36,7 +36,23 @@ describe("model configuration file", () => {
         jev_model: { model: "liquid/d1" },
       },
       reasoningLevel: "high",
+      decisionEngine: null,
       providerDefaults: { byok_default_openai_assistant_model: "gpt-5" },
+    });
+  });
+
+  it("carries the decision engine both ways, and refuses an unknown one (MIN-980)", () => {
+    const file = buildModelConfigFile({ ...STORED, decision_engine: "llm" });
+    expect(file.decisionEngine).toBe("llm");
+    const parsed = parseModelConfigFile(JSON.stringify(file));
+    expect(parsed.ok && parsed.values.decision_engine).toBe("llm");
+    const { decisionEngine: _omitted, ...older } = file;
+    const fromOlder = parseModelConfigFile(older);
+    // A version 2 file written before the setting returns it to its default.
+    expect(fromOlder.ok && fromOlder.values.decision_engine).toBe("");
+    expect(parseModelConfigFile({ ...file, decisionEngine: "oracle" })).toMatchObject({
+      ok: false,
+      error: "invalid_value",
     });
   });
 

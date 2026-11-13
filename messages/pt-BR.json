@@ -3176,6 +3176,14 @@
     "aiRoleHint_embedding": "Busca pelo sentido, tickets e feedbacks relacionados",
     "aiRole_transcription": "Voz para texto",
     "aiRoleHint_transcription": "Transcreve suas gravações",
+    "aiRole_decision": "Decisões",
+    "aiRoleHint_decision": "Smart Fill, Smart Assign, relações, análise de eventos e revisão de feedback",
+    "aiDecisionEngineLabel": "Tipo de modelo para as decisões",
+    "aiDecisionEngine_model": "Modelo de decisão",
+    "aiDecisionEngine_llm": "Modelo de linguagem",
+    "aiDecisionEngineDefault": "{engine} (padrão)",
+    "aiDecisionHelp": "Modelos de decisão só existem no minddy Cloud e no OpenRouter.",
+    "aiDecisionLoadError": "Não foi possível carregar os ajustes das decisões. Recarregue os ajustes.",
     "copyAgentPrompt": "Copiar o prompt",
     "agentPromptCopied": "Prompt copiado. Cole no {name}.",
     "manualSetup": "Configurar manualmente",
@@ -4789,6 +4797,10 @@
       "transcription_model": {
         "label": "Fala para texto",
         "desc": "Converte o áudio do ditado em texto. A limpeza que vem depois usa o modelo de linguagem."
+      },
+      "decision_engine": {
+        "label": "Usar um modelo de linguagem para as decisões",
+        "desc": "As decisões passam então pelo modelo de linguagem em vez do modelo de decisão. Cada membro pode escolher outra opção nos ajustes de IA."
       },
       "jev_model": {
         "label": "Modelo de decisão",

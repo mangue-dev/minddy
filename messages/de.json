@@ -3176,6 +3176,14 @@
     "aiRoleHint_embedding": "Suche nach Bedeutung, verwandte Tickets und verwandtes Feedback",
     "aiRole_transcription": "Sprache zu Text",
     "aiRoleHint_transcription": "Transkribiert deine Aufnahmen",
+    "aiRole_decision": "Entscheidungen",
+    "aiRoleHint_decision": "Smart Fill, Smart Assign, Beziehungen, Ereignisprüfung und die Prüfung von Feedback",
+    "aiDecisionEngineLabel": "Modellart für Entscheidungen",
+    "aiDecisionEngine_model": "Entscheidungsmodell",
+    "aiDecisionEngine_llm": "Sprachmodell",
+    "aiDecisionEngineDefault": "{engine} (Standard)",
+    "aiDecisionHelp": "Entscheidungsmodelle gibt es nur bei minddy Cloud und OpenRouter.",
+    "aiDecisionLoadError": "Die Einstellungen für Entscheidungen konnten nicht geladen werden. Lade die Einstellungen neu.",
     "copyAgentPrompt": "Prompt kopieren",
     "agentPromptCopied": "Prompt kopiert. Füge ihn in {name} ein.",
     "manualSetup": "Manuell einrichten",
@@ -4789,6 +4797,10 @@
       "transcription_model": {
         "label": "Speech-to-Text",
         "desc": "Konvertiert Diktat-Audio in Text. Die anschließende Bereinigung läuft über das Sprachmodell."
+      },
+      "decision_engine": {
+        "label": "Sprachmodell für Entscheidungen verwenden",
+        "desc": "Entscheidungen laufen dann über das Sprachmodell statt über das Entscheidungsmodell. Mitglieder können in ihren KI-Einstellungen etwas anderes wählen."
       },
       "jev_model": {
         "label": "Entscheidungsmodell",

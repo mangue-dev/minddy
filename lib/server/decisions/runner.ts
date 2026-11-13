@@ -17,6 +17,7 @@ import {
 import { runModelDecision, type DecisionCallContext } from "@/lib/server/decisions/decision-model";
 import { runLlmDecision, warmLlmDecision } from "@/lib/server/decisions/llm";
 import { runShadowComparison } from "@/lib/server/decisions/shadow";
+import { billedUserIdOf, resolveDecisionRoute } from "@/lib/server/decisions/engine";
 
 /**
  * The runner of the decision layer (MIN-562) — the ONE path every structured
@@ -30,6 +31,11 @@ import { runShadowComparison } from "@/lib/server/decisions/shadow";
  *     → both failed → `null`, and the use case applies ITS OWN degradation
  *       (empty Smart Fill patch, Smart Assign owner fallback, feedback human
  *       review) — a decision NEVER blocks the user.
+ *
+ * The engine comes first (MIN-980): when the language model is the decision
+ * engine — the instance's `decision_engine` setting, or the account's own
+ * choice — the decision model is skipped and the LLM pass answers, on the
+ * provider and model the account chose for decisions when it chose one.
  *
  * Two knobs ride along (MIN-567), both plain `app_config` keys, both
  * invisible to the caller:
@@ -156,19 +162,25 @@ export async function runDecision(
     console.error(`[decisions] invalid spec for ${spec.useCase} — degrading`);
     return null;
   }
-  const settings = await loadDecisionModelSettings();
+  const [settings, route] = await Promise.all([
+    loadDecisionModelSettings(),
+    billedUserIdOf(input.billTo).then(resolveDecisionRoute).catch(() => undefined),
+  ]);
   const runId = newRunId();
   const ctx: DecisionCallContext = {
     runId,
     billTo: input.billTo,
     projectId: input.projectId ?? null,
+    ...(route ? { route } : {}),
   };
 
   let fallbackReason: DecisionFallbackReason;
   let modelRan = false;
   let discardedModelAnswers: DecisionAnswers | null = null;
   let discardedModel: string | null = null;
-  if (settings.llmFirstUseCases.includes(spec.useCase)) {
+  if (route?.engine === "llm") {
+    fallbackReason = "llm_engine";
+  } else if (settings.llmFirstUseCases.includes(spec.useCase)) {
     fallbackReason = "llm_first";
   } else {
     modelRan = true;

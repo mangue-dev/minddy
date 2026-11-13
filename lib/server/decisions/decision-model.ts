@@ -9,15 +9,19 @@ import {
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
 import { DEFAULT_AGENT_PROVIDER, resolveProviderBaseUrl } from "@/lib/agent-providers";
-import { getUserByok } from "@/lib/server/agent/model";
+import { getUserByokForProvider } from "@/lib/server/agent/model";
 import {
   handleManagedKeyRejection,
   resolvePlatformApiKey,
 } from "@/lib/server/ai-runtime";
 import { resolveConfiguredModel } from "@/lib/server/model-config";
-import { getServiceClient } from "@/lib/supabase-service";
 import { clamp01, type DecisionAnswers, type DecisionSpec } from "@/lib/server/decisions/types";
 import { aiDeclinedInBackground } from "@/lib/server/ai-consent";
+import {
+  billedUserIdOf,
+  resolveDecisionRoute,
+  type DecisionRoute,
+} from "@/lib/server/decisions/engine";
 
 /**
  * The decision-model adapter of the decision layer (MIN-562, generalized by
@@ -74,39 +78,46 @@ export interface DecisionCallContext {
    * from the real LLM passes in finance.
    */
   feature?: AiFeature;
+  /**
+   * The account's decision route (MIN-980), when the runner already read it;
+   * resolved from `billTo` otherwise.
+   */
+  route?: DecisionRoute;
 }
 
 /**
  * Who pays decides whose key carries the call, as everywhere else
- * (`forcedToolCall`). Decision models only exist on OpenRouter, so an
- * OpenRouter BYOK key serves the decision when the payer has one; every other
- * case (no BYOK, a native-provider BYOK that cannot reach the decisions
- * endpoint, a platform-paid call) falls to the platform key. The MODEL is
- * never a per-surface, per-project or per-user choice: every call reads the
- * one global `jev_model` setting.
+ * (`forcedToolCall`). Decision models only exist on OpenRouter, so only an
+ * OpenRouter key of the payer can carry the call: the account's decisions run
+ * on its OpenRouter key (MIN-980), with the model it chose for it or the
+ * instance's; on minddy Cloud, or when no provider of the account can answer,
+ * the platform key carries it. A platform-paid call always uses the platform
+ * key and the instance's model.
  */
-async function resolveDecisionApiKey(billTo: AiUsageBillTo): Promise<{
+async function resolveDecisionApiKey(billTo: AiUsageBillTo, route?: DecisionRoute): Promise<{
   apiKey: string;
   baseUrl: string;
   keyMode: "platform" | "byok";
   managedKeyOwner?: string;
+  /** The account's own decision model, when its key runs one. */
+  model?: string;
 } | null> {
-  let billedUserId: string | null = null;
-  if ("userId" in billTo) billedUserId = billTo.userId || null;
-  else if ("projectOwner" in billTo) {
-    const { data } = await getServiceClient()
-      .from("projects")
-      .select("owner_id")
-      .eq("id", billTo.projectOwner)
-      .maybeSingle();
-    billedUserId = (data as { owner_id?: string } | null)?.owner_id ?? null;
-  }
+  const billedUserId = await billedUserIdOf(billTo);
   // A cron job runs no AI for an account that declined it in the mobile app (MIN-907).
   if (await aiDeclinedInBackground(billedUserId)) return null;
   if (billedUserId) {
-    const byok = await getUserByok(billedUserId, "automations", "text", "issue_relation_model").catch(() => null);
-    if (byok && byok.provider === "openrouter" && byok.apiKey) {
-      return { apiKey: byok.apiKey, baseUrl: byok.baseUrl, keyMode: "byok" };
+    const decisionRoute = route ?? await resolveDecisionRoute(billedUserId);
+    if (decisionRoute.provider === "openrouter") {
+      const byok = await getUserByokForProvider(billedUserId, "openrouter", { surface: "automations" })
+        .catch(() => null);
+      if (byok?.apiKey) {
+        return {
+          apiKey: byok.apiKey,
+          baseUrl: byok.baseUrl,
+          keyMode: "byok",
+          ...(decisionRoute.model ? { model: decisionRoute.model } : {}),
+        };
+      }
     }
   }
   // A call that bills no account pays with the public key on Cloud.
@@ -437,9 +448,9 @@ export async function callDecisionModel(
   ctx: DecisionCallContext,
   options: { model?: string } = {}
 ): Promise<DecisionModelCall> {
-  const key = await resolveDecisionApiKey(ctx.billTo);
+  const key = await resolveDecisionApiKey(ctx.billTo, ctx.route);
   if (!key) return { ok: false, reason: "no_key" };
-  const model = options.model ?? (await resolveConfiguredModel("jev_model")).model;
+  const model = options.model ?? key.model ?? (await resolveConfiguredModel("jev_model")).model;
   try {
     const response = await fetchAiProvider("openrouter", decisionsUrl(key.baseUrl), {
       method: "POST",
