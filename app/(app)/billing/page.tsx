@@ -15,6 +15,7 @@ import { PlanSection } from "@/components/billing/plan-section";
 import { UsageHistorySection } from "@/components/billing/usage-history-section";
 import { useBillingSummary } from "@/lib/use-billing-query";
 import { createPortalApi } from "@/lib/billing-api";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import {
   billingStatusQueryKey,
@@ -44,6 +45,15 @@ export default function BillingPage() {
       setOpeningPortal(false);
     }
   }, []);
+
+  // The mobile apps sell nothing (MIN-907): this page has no place there, so
+  // a link or a restored tab that lands on it continues to the settings.
+  const purchasesHidden = usePurchasesHidden();
+  const router = useRouter();
+  useEffect(() => {
+    if (purchasesHidden) router.replace("/settings");
+  }, [purchasesHidden, router]);
+  if (purchasesHidden) return null;
 
   if (!loading && status && usage && !hasManagedService) {
     return (

@@ -48,7 +48,7 @@ checks and documents safe placeholders.
 
 Short-lived branches target `main`. There is no `develop` branch or persistent
 release branch. CI runs the publication barrier, secret scan, lint, typecheck,
-desktop bundle build, test suite, and dependency audit. Pull-request code runs
+desktop and mobile bundle builds, test suite, and dependency audit. Pull-request code runs
 through `pull_request`, never `pull_request_target`, with a read-only token and
 without repository secrets.
 
@@ -115,8 +115,9 @@ merged changes should reach production.
 
 ## Repository conventions
 
-- Use pnpm for dependencies and keep `pnpm-lock.yaml`, `package-lock.json`, and
-  `desktop/package-lock.json` synchronized when applicable.
+- Use pnpm for dependencies and keep `pnpm-lock.yaml`, `package-lock.json`,
+  `desktop/package-lock.json`, and `mobile/package-lock.json` synchronized when
+  applicable.
 - Add a test for new behavior. Typechecking does not replace tests.
 - Put user-visible strings in the next-intl catalogs and preserve identical
   keys and placeholders across locales. Run the i18n contract test after

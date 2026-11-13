@@ -18,6 +18,25 @@ export function assertVersion(version) {
 // second tenant, which the single-tenant official distribution does not create.
 // Rows published before a floor was raised stay unchanged; the next release
 // adds a row that reaches it.
+/**
+ * The iOS app's version for a release: the App Store reads only one to three
+ * integers (`CFBundleShortVersionString`), so a pre-release keeps its numbers.
+ */
+export function appStoreVersion(version) {
+  return assertVersion(version).split("-")[0];
+}
+
+/** `MARKETING_VERSION` of each build configuration in an Xcode project file. */
+export function xcodeMarketingVersions(project) {
+  return [...project.matchAll(/MARKETING_VERSION = ([^;]+);/gu)].map((match) => match[1].trim());
+}
+
+/** The Xcode project file with every `MARKETING_VERSION` set for `version`. */
+export function setXcodeMarketingVersion(project, version) {
+  const target = appStoreVersion(version);
+  return project.replace(/MARKETING_VERSION = [^;]+;/gu, `MARKETING_VERSION = ${target};`);
+}
+
 export const MINIMUM_OFFICIAL_SUPABASE_RELEASE = "self-hosted/v0.8.4";
 
 // First image versions past those advisories' affected ranges; the pinned

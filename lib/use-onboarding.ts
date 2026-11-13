@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { useAuth } from "./auth-context";
 import { useProjects } from "./projects-context";
 import { useHomeSummaryQuery } from "./use-home-summary-query";
-import { resolveCyclePrefs } from "./cycle-prefs";
 import { useAnalytics } from "./use-analytics";
+import { ISSUE_SUBMITTED_EVENT } from "./issue-submitted-event";
 import {
   ONBOARDING_CURRENT_VERSION,
   ONBOARDING_DISMISSED_META_KEY,
@@ -69,7 +69,6 @@ export function useOnboarding(): UseOnboardingResult {
         meta: effectiveMeta,
         projectCount: projects.length,
         issueCount: counts.total,
-        cyclesEnabled: resolveCyclePrefs(effectiveMeta).enabled,
       }),
     [effectiveMeta, projects.length, counts.total],
   );
@@ -171,6 +170,16 @@ export function useOnboarding(): UseOnboardingResult {
     },
     [user, updateUserMetadata, track, effectiveMeta],
   );
+
+  // An issue created from the form completes its step at once, before a
+  // Smart Fill issue has been written (MIN-907).
+  const ticketsDone = state.steps.find((step) => step.id === "tickets")?.completed ?? true;
+  useEffect(() => {
+    if (!state.visible || ticketsDone) return;
+    const done = () => void acknowledgeStep("tickets");
+    window.addEventListener(ISSUE_SUBMITTED_EVENT, done);
+    return () => window.removeEventListener(ISSUE_SUBMITTED_EVENT, done);
+  }, [state.visible, ticketsDone, acknowledgeStep]);
 
   const dismiss = useCallback(async () => {
     const wasFinalScreen = finalScreen;

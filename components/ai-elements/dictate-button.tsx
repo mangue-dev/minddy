@@ -273,7 +273,7 @@ export function DictateButton({
             aria-label={isRecording ? t("stop") : (tooltipLabel ?? t("start"))}
             aria-pressed={isRecording}
             className={cn(
-              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
+              "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors select-none [-webkit-touch-callout:none] hover:text-foreground active:bg-control-hover data-pressed:bg-control-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50",
               isBusy && "text-foreground",
               showLabel && "h-auto w-auto min-h-11 gap-2 px-3 py-2",
               floating && "absolute bottom-2 right-2 z-10",

@@ -1,0 +1,132 @@
+{
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "strings": {
+    "NSCameraUsageDescription": {
+      "comment": "iOS permission prompt; the English source is in Info.plist.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy uses the camera when you take a photo to attach to an issue, a page or a message."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy utilise l’appareil photo lorsque vous prenez une photo à joindre à un ticket, une page ou un message."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy nutzt die Kamera, wenn du ein Foto aufnimmst, um es an ein Ticket, eine Seite oder eine Nachricht anzuhängen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy usa la cámara cuando haces una foto para adjuntarla a una incidencia, una página o un mensaje."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy usa la fotocamera quando scatti una foto da allegare a un ticket, una pagina o un messaggio."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O minddy usa a câmera quando você tira uma foto para anexar a um ticket, uma página ou uma mensagem."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "comment": "iOS permission prompt; the English source is in Info.plist.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy uses the microphone when you dictate text."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy utilise le micro lorsque vous dictez du texte."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy nutzt das Mikrofon, wenn du Text diktierst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy usa el micrófono cuando dictas texto."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy usa il microfono quando detti del testo."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O minddy usa o microfone quando você dita um texto."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription": {
+      "comment": "iOS permission prompt; the English source is in Info.plist.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy reads the photos you choose to attach to an issue, a page or a message."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy lit les photos que vous choisissez de joindre à un ticket, une page ou un message."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy liest die Fotos, die du an ein Ticket, eine Seite oder eine Nachricht anhängen möchtest."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy lee las fotos que eliges adjuntar a una incidencia, una página o un mensaje."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "minddy legge le foto che scegli di allegare a un ticket, una pagina o un messaggio."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O minddy lê as fotos que você escolhe anexar a um ticket, uma página ou uma mensagem."
+          }
+        }
+      }
+    }
+  }
+}

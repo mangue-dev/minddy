@@ -8,6 +8,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/image-compress";
+import { sendableUpload } from "@/lib/mobile/upload-body";
 import { normalizeResourceName } from "@/lib/resource-name";
 import type { LinkResourceInput, ResourceInput, ResourceKind } from "@/lib/types";
 import { trackEvent } from "./analytics";
@@ -155,12 +156,14 @@ export function useAttachmentUploads(
 
         void (async () => {
           try {
-            const blob = isCompressible(entry.mime_type)
+            const prepared = isCompressible(entry.mime_type)
               ? await compressImage(file, { maxDim: 2048, maxBytes: 2.5 * 1024 * 1024 })
               : file;
+            const compressed = prepared !== file;
+            const blob = await sendableUpload(prepared);
             const mime = blob.type || entry.mime_type;
             const fileName =
-              blob !== file ? renameForType(entry.file_name, mime) : entry.file_name;
+              compressed ? renameForType(entry.file_name, mime) : entry.file_name;
             const form = new FormData();
             form.set("prefix", prefix);
             form.set("file", blob, fileName.slice(0, 200));
@@ -168,7 +171,7 @@ export function useAttachmentUploads(
             const response = await fetch("/api/attachments/upload", {
               method: "POST", body: form, signal,
             });
-            if (!response.ok) throw new Error("Attachment upload failed");
+            if (!response.ok) throw new Error(`Attachment upload failed (${response.status})`);
             const uploaded = await response.json() as {
               storage_path: string; mime_type: string; size_bytes: number;
             };
@@ -199,7 +202,7 @@ export function useAttachmentUploads(
               kind: "file",
               size_bucket: sizeBucket(blob.size),
               mime_kind: mime.split("/")[0] || "unknown",
-              compressed: blob !== file,
+              compressed,
             });
             onUploadedRef.current?.(
               {
@@ -211,9 +214,11 @@ export function useAttachmentUploads(
               },
               localId
             );
-          } catch {
+          } catch (error) {
             if (signal.aborted) return;
             inFlightRef.current.delete(localId);
+            // The toast names the file only; the cause is for whoever debugs it.
+            console.error("[attachments] upload failed:", String(error));
             toast.error(t("uploadFailed", { name: entry.file_name }));
             setPending((prev) => prev.filter((p) => p.localId !== localId));
           }

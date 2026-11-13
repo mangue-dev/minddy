@@ -38,6 +38,10 @@ test("audits only dependency trees installed or packaged by CI", () => {
         label: "desktop — package-lock.json (macOS shell)",
         command: "npm",
       },
+      {
+        label: "mobile — package-lock.json (Capacitor shell)",
+        command: "npm",
+      },
     ],
   );
 });

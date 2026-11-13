@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 24,
+  "revision": 26,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-12",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -72,14 +72,15 @@
       "lib/keyboard/typeahead.ts",
       "components/app-shell.tsx",
       "lib/keyboard-modality.ts",
-      "lib/keyboard/hover-keys.ts"
+      "lib/keyboard/hover-keys.ts",
+      "components/usage-indicator.tsx"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 26,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-959 flat phone navigation sheet: one level, a project picker over that project's sections as tiles, no project list, the page's own list in a second tab that the sheet opens on, checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx and in a phone viewport; no figure shows the sheet, none recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-959 phone menu passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-12"
   },
   "related": [
     "views",
@@ -100,7 +101,7 @@
       "src": "/documentation/fr/work-navigation.png",
       "alt": "Navigation du projet à côté du tableau de tickets de démonstration.",
       "caption": "La barre du projet donne accès aux tickets, objectifs, pages et arrivées en triage.",
-      "revision": 24,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -117,7 +118,7 @@
       "src": "/documentation/fr/work-search.png",
       "alt": "Résultats de recherche pour l’identifiant d’un ticket de démonstration.",
       "caption": "La palette retrouve le ticket par identifiant avec les pages du projet ; ouvrir un résultat conserve ses règles d’accès.",
-      "revision": 24,
+      "revision": 26,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -167,7 +168,7 @@ L’action s’applique à la ligne sur laquelle vous avez cliqué, même lorsqu
 
 Un ticket s’ouvre dans un panneau de détail qui laisse le tableau sous-jacent disponible. Une page ouverte depuis une mention ou un lien s’affiche de la même façon, dans un panneau latéral avec **Agrandir** pour atteindre la page entière. Le bouton flottant Numo ouvre le panneau commun de conversations. La boîte de réception est un volet de navigation avec notifications et invitations. Les anciens liens vers des pages dédiées Numo ou Inbox renvoient vers les accès actuels ; ils n’indiquent pas des écrans distincts.
 
-Sur mobile, ouvrez le tiroir de navigation pour atteindre les mêmes destinations. La barre en bas de l’écran réunit, de gauche à droite, le tiroir de navigation, Numo, la recherche, le carnet de tâches et **Nouveau** ; **Accueil** se trouve dans le tiroir. Une barre de chargement en haut indique qu’un changement de page est en cours, y compris pendant la fin des enregistrements en attente. Les panneaux utilisent la largeur disponible ; fermez le panneau ou revenez en arrière pour retrouver la liste. Utilisez les boutons visibles lorsqu’aucun raccourci clavier n’est disponible.
+Sur téléphone, la barre en bas de l’écran réunit, de gauche à droite, le menu, la recherche, la boîte de réception, Numo et **Nouveau** (+). Un point sur la boîte de réception signale une notification non lue ou une invitation en attente. Le menu ouvre un panneau sur un seul niveau, sans ligne de retour. Sa première ligne, à côté du bouton de fermeture, réunit votre compte (avatar et nom), le pourcentage d’usage de l’IA lorsque minddy fournit votre IA, et **Nouveautés**. Un sélecteur de projet suit, réglé sur le projet de la page ou sur celui où vous avez créé un ticket en dernier, avec les sections de ce projet sous forme de tuiles (**Tickets**, **Objectifs**, **Pages**, **Triage**, **Retours**, **Paramètres**). Choisir un autre projet change les tuiles, pas la page. **Accueil** et vos autres destinations viennent ensuite ; créez un projet depuis **Nouveau** (+). Lorsque la page a sa propre liste, comme les objectifs ou les paramètres, un second onglet en haut du panneau l’affiche, et le panneau s’ouvre sur cet onglet ; **Aller à** mène partout ailleurs. Une barre de chargement en haut indique qu’un changement de page est en cours, y compris pendant la fin des enregistrements en attente. Les panneaux utilisent la largeur disponible ; fermez le panneau ou revenez en arrière pour retrouver la liste. Utilisez les boutons visibles lorsqu’aucun raccourci clavier n’est disponible.
 
 ### Onglets desktop {#tabs}
 

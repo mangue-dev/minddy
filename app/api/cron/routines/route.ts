@@ -17,6 +17,7 @@ import { getServiceClient } from "@/lib/supabase-service";
 import { drainNumoEventBatches } from "@/lib/server/numo/event-batches";
 import { triageNumoEventBatch } from "@/lib/server/numo/wake-triage";
 import { runNumoWatchClock } from "@/lib/server/numo/watch-clock";
+import { aiDeclinedInBackground, runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 
 /**
  * The routines clock (MIN-185). Every five minutes it claims due schedules,
@@ -64,6 +65,9 @@ async function runRoutine(routine: Routine): Promise<{ id: string; outcome: stri
   const scheduledFor = routine.next_run_at;
   const claim = await claimRoutine(routine);
   if (!claim.claimed) return { id: routine.id, outcome: "raced" };
+  // The owner declined AI in the mobile app (MIN-907): this passage is
+  // skipped, with no error to show; the next one runs if they allow it.
+  if (await aiDeclinedInBackground(routine.owner_id)) return { id: routine.id, outcome: "aiDeclined" };
 
   try {
     const started = await startRoutineOccurrence({
@@ -128,5 +132,7 @@ async function handle(request: NextRequest) {
   return NextResponse.json({ ok: true, due: due.length, results, eventWork, watchWork, batchWork: { claimed: batchWork.claimed } });
 }
 
-export const GET = handle;
-export const POST = handle;
+const handleAsBackgroundAiWork = (request: NextRequest) => runAsBackgroundAiWork(() => handle(request));
+
+export const GET = handleAsBackgroundAiWork;
+export const POST = handleAsBackgroundAiWork;

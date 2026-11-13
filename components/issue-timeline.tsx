@@ -1,6 +1,7 @@
 "use client";
 
-import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
+import { primeMobileKeyboard } from "@/lib/mobile-sheet-focus";
+import { focusFieldIn } from "@/lib/focus-field";
 
 import { OneLine } from "@/components/one-line";
 import { MentionHover } from "@/components/mention-hover";
@@ -9,6 +10,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon, Delete02Icon, GlobeIcon, LockIcon, MessageMultiple01Icon, MoreHorizontalIcon, Edit04Icon, Plug01Icon } from "@hugeicons/core-free-icons";
 import { memo, createContext, useContext, useMemo, useRef, useState } from "react";
 import { revealLatestComment, useCommentComposerFocus } from "@/lib/comment-focus";
+import { useComposerFold } from "@/lib/use-composer-fold";
 import dynamic from "next/dynamic";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations, useFormatter } from "next-intl";
@@ -49,7 +51,8 @@ import {
 import type { TimelineItem } from "@/lib/use-issue-timeline";
 import { CommentEditor, extractMentions } from "@/components/editor/comment-editor";
 import type { DocumentEditorMentions } from "@/components/editor/document-editor";
-import { SendShortcutTooltip } from "@/components/send-shortcut";
+import { SendShortcutKeys, SendShortcutTooltip } from "@/components/send-shortcut";
+import { SendButtonWithCost } from "@/components/ui/send-button-with-cost";
 import { toolRunningLabel } from "@/components/assistant/tool-call-display";
 import { DictateButton } from "@/components/ai-elements/dictate-button";
 import {
@@ -108,6 +111,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ExactTime } from "@/components/exact-time";
+import { keepFieldFocusOnPress } from "@/lib/keep-field-focus";
 
 /**
  * The code excerpt of a review comment mirrored from a pull request (MIN-802),
@@ -988,7 +992,11 @@ export function ReplyComposer({
     const affordance = (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={(event) => {
+          // The tap that opens the field brings the keyboard with it.
+          primeMobileKeyboard(event.currentTarget);
+          setOpen(true);
+        }}
         className="flex w-full min-w-0 flex-1 items-center gap-2 rounded-b-lg px-3.5 py-2.5 text-left text-sm text-muted-foreground outline-none transition-colors hover:text-foreground"
       >
         <ActorAvatar members={members} id={currentUserId} name={meName} />
@@ -1010,6 +1018,9 @@ export function ReplyComposer({
         // in the same place, it should look the same.
         threadIsPublic && "bg-brand/[0.03]"
       )}
+      onClick={focusFieldIn}
+      // The first tap on Send, Dictate or Attach is the button's (MIN-959).
+      onMouseDown={keepFieldFocusOnPress}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
       {...(allowAttachments ? drop.handlers : {})}
     >
@@ -1028,7 +1039,8 @@ export function ReplyComposer({
           if (!draft.trim()) close();
         }}
         placeholder={placeholderText}
-        autoFocus={allowInputAutoFocus()}
+        // Opened by a tap on "Reply": the field is what that tap asked for.
+        autoFocus="requested"
         includeNumo
         className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
       />
@@ -1047,6 +1059,14 @@ export function ReplyComposer({
         {allowAttachments && (
           <AttachButton onFiles={uploads.addFiles} disabled={posting} />
         )}
+        {/* Dictation sits with the attachments: what goes into the text. */}
+        <DictateButton
+          context="comment"
+          onTranscription={(text) =>
+            setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+          }
+          disabled={posting}
+        />
         <Button variant="ghost" size="sm" className="rounded-full" onClick={close}>
           {tCommon("cancel")}
         </Button>
@@ -1061,14 +1081,6 @@ export function ReplyComposer({
             {t("reply")}
           </Button>
         </SendShortcutTooltip>
-        {/* Dictate at the far right of the reply row (spec). */}
-        <DictateButton
-          context="comment"
-          onTranscription={(text) =>
-            setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
-          }
-          disabled={posting}
-        />
       </div>
     </div>
   );
@@ -1453,6 +1465,18 @@ export const CommentComposer = memo(function CommentComposer({
   });
 
   const canPost = (draft.trim() || uploads.inputs.length > 0) && !uploads.uploading;
+  const gridRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const leadRef = useRef<HTMLDivElement>(null);
+  const trailRef = useRef<HTMLDivElement>(null);
+  const expanded = useComposerFold({
+    gridRef,
+    textRef,
+    controlRefs: [leadRef, trailRef],
+    value: draft,
+    // Pending attachments sit above the text: a card, not a pill.
+    forceExpanded: allowAttachments && uploads.pending.length > 0,
+  });
 
   const submit = async () => {
     if (!canPost || postingRef.current) return;
@@ -1484,14 +1508,21 @@ export const CommentComposer = memo(function CommentComposer({
   return (
     <div
       ref={rootRef}
+      data-composer-layout={expanded ? "expanded" : "compact"}
       className={cn(
-        "relative w-full rounded-lg bg-control transition-colors",
+        // Numo's silhouette: a pill on one line, a card once the text needs
+        // its own row (lib/use-composer-fold).
+        "relative w-full bg-control transition-colors",
+        expanded ? "rounded-[1.625rem]" : "rounded-full",
         allowAttachments && drop.dragging && "ring-2 ring-brand/20",
         // The composer CHANGES AIR when what we write goes onto the board.
         // A discreet pellet is missed; the surface tint, no — and it is
         // the only thing someone is looking at while typing.
         isPublic && "bg-brand/[0.06]"
       )}
+      onClick={focusFieldIn}
+      // The first tap on Send, Dictate or Attach is the button's (MIN-959).
+      onMouseDown={keepFieldFocusOnPress}
       onPaste={allowAttachments ? pasteFileHandler(uploads.addFiles) : undefined}
       {...(allowAttachments ? drop.handlers : {})}
     >
@@ -1500,56 +1531,103 @@ export const CommentComposer = memo(function CommentComposer({
       {allowAttachments && (
         <ComposerResourcePills uploads={uploads} className="px-3.5 pt-2.5" />
       )}
-      <CommentEditor
-        value={draft}
-        onChange={setDraft}
-        members={members}
-        mentions={mentions}
-        onSubmit={() => void submit()}
-        placeholder={
-          placeholder ??
-          (isPublic ? t("publicCommentPlaceholder") : t("commentPlaceholder"))
-        }
-        autoFocus={autoFocus}
-        focusSignal={focusSignal}
-        includeNumo
-        className="rounded-none border-0 bg-transparent px-3.5 py-2.5 focus-within:border-0 focus-within:ring-0"
-      />
-      {/* Dictate sits where the Comment button lives while the composer is
-          empty, and slides to its left once there is text to post. */}
-      <div className="flex items-center justify-end gap-1.5 px-2.5 pb-2.5">
+      <div
+        ref={gridRef}
+        className={cn(
+          "grid grid-cols-[auto_minmax(0,1fr)_auto] items-end",
+          expanded
+            ? "[grid-template-areas:'text_text_text'_'lead_._trail']"
+            : "items-center [grid-template-areas:'lead_text_trail']"
+        )}
+      >
+        <div
+          ref={textRef}
+          className={cn(
+            "min-w-0 self-stretch [grid-area:text]",
+            expanded
+              ? "px-4 pt-3 pb-1"
+              : cn(
+                  // One pixel below the row's centre on a desktop, as in
+                  // Numo's composer: the font's ascent is taller than its
+                  // descent, and an exactly centred line reads high. A touch
+                  // screen's 16px text already sits low: even paddings there.
+                  "flex flex-col justify-center-safe pt-[9px] pb-[7px] pointer-coarse:py-2",
+                  publicOption ? "pl-1.5" : "pl-4"
+                )
+          )}
+        >
+          <CommentEditor
+            value={draft}
+            onChange={setDraft}
+            members={members}
+            mentions={mentions}
+            onSubmit={() => void submit()}
+            placeholder={
+              placeholder ??
+              (isPublic ? t("publicCommentPlaceholder") : t("commentPlaceholder"))
+            }
+            autoFocus={autoFocus}
+            focusSignal={focusSignal}
+            includeNumo
+            className="rounded-none border-0 bg-transparent p-0 focus-within:border-0 focus-within:ring-0"
+            // In the row the line box itself is centred: the one-row minimum
+            // height is taller than the line and left it pinned to its top.
+            contentClassName={expanded ? undefined : "min-h-0"}
+          />
+        </div>
         {publicOption && (
-          <VisibilityToggle
-            visibility={visibility}
-            onChange={setVisibility}
-            disabledReason={publicOption.disabledReason}
+          <div
+            ref={leadRef}
+            className={cn("flex items-center [grid-area:lead]", expanded ? "pb-2.5 pl-2.5 pt-1" : "py-2.5 pl-2.5")}
+          >
+            <VisibilityToggle
+              visibility={visibility}
+              onChange={setVisibility}
+              disabledReason={publicOption.disabledReason}
+              disabled={posting}
+            />
+          </div>
+        )}
+        {/* Dictate sits where the Comment button lives while the composer is
+            empty, and slides to its left once there is text to post. */}
+        <div
+          ref={trailRef}
+          className={cn(
+            "flex items-center justify-end gap-1.5 [grid-area:trail]",
+            // Same side paddings in both layouts: folding back weighs the
+            // controls as they are now against the room the text wrapped in.
+            "pl-1 pr-2.5",
+            expanded ? "pb-2.5 pt-1" : "py-2.5"
+          )}
+        >
+          {allowAttachments && (
+            <AttachButton onFiles={uploads.addFiles} disabled={posting} />
+          )}
+          <DictateButton
+            context="comment"
+            onTranscription={(text) =>
+              setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
+            }
             disabled={posting}
           />
-        )}
-        <span className="min-w-0 flex-1" />
-        {allowAttachments && (
-          <AttachButton onFiles={uploads.addFiles} disabled={posting} />
-        )}
-        <DictateButton
-          context="comment"
-          onTranscription={(text) =>
-            setDraft((d) => (d.trim() ? `${d.trimEnd()} ${text}` : text))
-          }
-          disabled={posting}
-        />
-        {(canPost || posting) && (
-          <SendShortcutTooltip label={submitLabel ?? t("comment")}>
-            <Button
-              size="sm"
-              className="rounded-full px-4"
+          {/* Numo's round send button: a text button left a phone's
+              single row too little room for the text. */}
+          {(canPost || posting) && (
+            <SendButtonWithCost
+              cost={null}
+              isLoading={posting}
               disabled={posting || !canPost}
               onClick={() => void submit()}
-            >
-              {posting && <Spinner />}
-              {submitLabel ?? t("comment")}
-            </Button>
-          </SendShortcutTooltip>
-        )}
+              ariaLabel={submitLabel ?? t("comment")}
+              tooltipLabel={
+                <span className="inline-flex items-center gap-1.5">
+                  {submitLabel ?? t("comment")}
+                  <SendShortcutKeys />
+                </span>
+              }
+            />
+          )}
+        </div>
       </div>
     </div>
   );

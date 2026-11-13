@@ -167,6 +167,7 @@ export function AddResourceButton({
   disabled,
   accept,
   className,
+  variant = "ghost",
 }: {
   onFiles: (files: FileList) => void;
   /** Resolves once the link is registered — the dialog closes on success and
@@ -180,6 +181,8 @@ export function AddResourceButton({
   disabled?: boolean;
   accept?: string;
   className?: string;
+  /** A filled button where it sits among filled buttons (a phone's creation row). */
+  variant?: "ghost" | "outline";
 }) {
   const t = useTranslations("Resources");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -210,7 +213,7 @@ export function AddResourceButton({
             <DropdownMenuTrigger asChild>
               <Button
                 type="button"
-                variant="ghost"
+                variant={variant}
                 size="icon-sm"
                 aria-label={t("add")}
                 disabled={disabled}

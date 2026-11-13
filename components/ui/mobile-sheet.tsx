@@ -20,7 +20,7 @@ import { useMergedRef } from "./menu-scroll-fade";
 export function MobileSheetContent({ children, className, onOpenAutoFocus, showCloseButton = true, ref, ...props }: React.ComponentProps<typeof SheetContent>) {
   const mobile = useMobileLayout() === true;
   const swipeRef = useSwipeToDismiss(mobile);
-  const mergedRef = useMergedRef(ref, swipeRef);
+  const mergedRef = useMergedRef(ref, swipeRef, mobile ? holdEntranceUntilPainted : undefined);
   return <SheetContent {...props} ref={mergedRef} showCloseButton={mobile ? false : showCloseButton}
     onOpenAutoFocus={(event) => { onOpenAutoFocus?.(event); if (mobile) focusMobileSheet(event); }}
     data-mobile-sheet={mobile ? "" : undefined}
@@ -28,6 +28,21 @@ export function MobileSheetContent({ children, className, onOpenAutoFocus, showC
     {children}
     {mobile && showCloseButton && <MobileSheetClose />}
   </SheetContent>;
+}
+
+/**
+ * Holds a sheet's entrance on its first frame until the sheet has been
+ * painted once (app/globals.css, `data-sheet-entering`). Its animation's clock
+ * starts when the sheet mounts, but a heavy sheet (the command palette, with
+ * its field taking the focus and the keyboard) is first painted a hundred
+ * milliseconds later or more, by when most of the slide had run off screen:
+ * the sheet seemed to appear near its place instead of rising.
+ */
+function holdEntranceUntilPainted(node: HTMLDivElement | null) {
+  if (!node) return;
+  node.setAttribute("data-sheet-entering", "");
+  // The first frame runs before the paint that shows the sheet; the second, after it.
+  requestAnimationFrame(() => requestAnimationFrame(() => node.removeAttribute("data-sheet-entering")));
 }
 
 /** A mobile sheet swiped down closes like its close button (lib/sheet-swipe-dismiss.ts). */

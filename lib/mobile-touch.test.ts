@@ -79,59 +79,89 @@ describe("safe areas", () => {
       /\.app-shell \{\s*padding-top: env\(safe-area-inset-top\);/,
     );
   });
-
-  it("clears the notch on the side the mobile sidebar is glued to", () => {
-    // In landscape the notch sits on the left edge, where the sidebar opens:
-    // without this inset it covered the start of every row (MIN-841).
-    const reveal = read(GLOBALS).split("  .mobile-sidebar-reveal {")[1].split("}")[0];
-    expect(reveal).toContain("padding-top: env(safe-area-inset-top);");
-    expect(reveal).toContain("padding-left: env(safe-area-inset-left);");
-  });
 });
 
-describe("bottom sheets on wide screens (MIN-841)", () => {
+describe("bottom sheets on wide screens (MIN-841) and beside a side column", () => {
   const css = read(GLOBALS);
   const sheetSection = css.slice(
     css.indexOf("/* Mobile sheets share one breakpoint and viewport budget."),
-    css.indexOf("/* Single-column boards use persistent pagination"),
+    css.indexOf("/* Single-column boards snap from column to column"),
   );
-  const wide = sheetSection.slice(sheetSection.indexOf("@media (min-width: 640px) {"));
+  const wide = sheetSection.slice(
+    sheetSection.indexOf("@media (min-width: 640px) {"),
+    sheetSection.indexOf("/* A bottom sheet beside iPhone Duo's side column"),
+  );
 
-  it("floats every bottom sheet above the bottom edge from 640 px", () => {
-    // Anchored at the bottom with a gap, a width that follows the screen up
-    // to a reading measure, side gutters that clear a landscape notch, and four
-    // rounded corners: a floating bottom sheet, never a centered dialog.
-    expect(wide).toContain("--mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));");
-    expect(wide).toContain("--mobile-sheet-safe-bottom: 0px;");
+  it("anchors every bottom sheet to the bottom edge from 640 px", () => {
+    // A width that follows the screen up to a reading measure and side
+    // gutters that clear a landscape notch, but no gap under it: floating, an
+    // open iPhone Duo showed its bottom edge in mid-screen. Never a centered
+    // dialog.
+    expect(wide).toContain("--mobile-sheet-float: 0px;");
+    expect(wide).toContain("--mobile-sheet-bottom-radius: 0px;");
     expect(wide).toContain(":is(.mobile-bottom-sheet, .mobile-assistant-sheet)[data-slot=\"sheet-content\"]");
     expect(wide).toContain("[data-slot=\"alert-dialog-content\"]");
     expect(wide).toMatch(/width: min\(100% - 2 \* max\(1rem, env\(safe-area-inset-left\), env\(safe-area-inset-right\)\), 40rem\);/);
-    expect(wide).toContain("margin-inline: auto;");
-    expect(wide).toContain("border-radius: 24px;");
+    // Centred with a margin written out, so a change of place can slide.
+    expect(wide).toContain("margin-left: calc((100% - 2 * (var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)) - var(--sheet-wide-width)) / 2);");
+    expect(wide).toContain("transition: margin-left 350ms");
     expect(wide).not.toMatch(/\btop:|translate/);
   });
 
   it("overrides the full-width sheet rule rather than losing the cascade to it", () => {
     // Same specificity as the base rule: the wide one must come after it.
-    expect(sheetSection.indexOf("@media (min-width: 640px) {"))
-      .toBeGreaterThan(sheetSection.indexOf("border-radius: 24px 24px 0 0;"));
+    const base = "border-radius: var(--mobile-sheet-radius) var(--mobile-sheet-radius) var(--mobile-sheet-bottom-right-radius) var(--mobile-sheet-bottom-left-radius);";
+    expect(sheetSection).toContain(base);
+    expect(sheetSection.indexOf("@media (min-width: 640px) {")).toBeGreaterThan(sheetSection.indexOf(base));
+  });
+
+  it("moves the close button to the foot of iPhone Duo's side column", () => {
+    const side = sheetSection.slice(sheetSection.indexOf("/* A bottom sheet beside iPhone Duo's side column"));
+    expect(side).toContain("@media (max-width: 639.98px) {");
+    expect(side).toContain("--mobile-sheet-column: env(safe-area-inset-right);");
+    expect(side).toContain("bottom: max(4px, min(var(--mobile-sheet-bottom-right-radius) * 0.95 - 22px, (var(--mobile-sheet-column) - 44px) / 2));");
+    // Every sheet that sets its own padding keeps the column free.
+    for (const sheet of [".mobile-picker-sheet", ".mobile-command-palette", ".creation-sheet", ".mobile-assistant-sheet", ".mobile-bottom-sheet"]) {
+      const start = css.indexOf(`${sheet}[data-slot="sheet-content"] {`);
+      expect(start, sheet).toBeGreaterThan(-1);
+      const rule = css.slice(start, css.indexOf("}", start));
+      expect(rule, sheet).toContain("var(--mobile-sheet-column)");
+    }
+    // Sheets built on `Dialog`, pane-sized ones (the changelog, the project
+    // wizard) and confirmations reset their sides later in the file: they
+    // used to give the column back.
+    for (const selector of [
+      ".mobile-bottom-sheet[data-mobile-dialog] {",
+      ".mobile-bottom-sheet.dialog-pane-mirror[data-mobile-dialog] {",
+      "  [data-slot=\"alert-dialog-content\"] {\n    border: 0;",
+    ]) {
+      const start = css.indexOf(selector);
+      expect(start, selector).toBeGreaterThan(-1);
+      expect(css.slice(start, css.indexOf("}", start)), selector).toContain("var(--mobile-sheet-column)");
+    }
   });
 
   it("sizes every mobile sheet through the shared budget", () => {
     // A sheet that measured the viewport or the home indicator itself would
-    // overflow the top, or pad twice, once it floats.
-    expect(sheetSection).toContain("inset: auto 0 calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float));");
+    // overflow the top, or pad twice.
+    expect(sheetSection).toContain("inset: auto calc(var(--mobile-sheet-gutter) - var(--mobile-sheet-attach)) calc(var(--mobile-keyboard-room) + var(--mobile-sheet-float) - var(--mobile-sheet-attach));");
     const rules = sheetSection.slice(sheetSection.indexOf(":root[data-app-layout=\"mobile\"] {\n  .app-workspace"));
-    // Caps measure what the keyboard and the editor's strip leave (MIN-870).
+    // One ceiling for every sheet: what the keyboard and the editor's strip
+    // leave (MIN-870), under the status bar with a margin. Only the shared
+    // room measures the visible height; each sheet caps itself with it.
     const viewportCaps = css.split("\n").filter((line) => line.includes("var(--mobile-visible-height) -"));
-    expect(viewportCaps.length).toBeGreaterThan(5);
-    for (const line of viewportCaps) expect(line).toContain("var(--mobile-sheet-float)");
-    const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
-    // Only the sidebar footer and the float gap itself read the raw inset.
-    expect(bottomInsets.map((line) => line.trim())).toEqual([
-      "padding-bottom: max(10px, env(safe-area-inset-bottom));",
-      "--mobile-sheet-float: max(0.75rem, env(safe-area-inset-bottom));",
+    expect(viewportCaps.map((line) => line.trim())).toEqual([
+      "--mobile-sheet-room: calc(var(--mobile-visible-height) - var(--mobile-sheet-top-gap) - var(--mobile-sheet-float) + var(--mobile-sheet-attach));",
     ]);
+    expect(css).toContain("--mobile-sheet-top-gap: max(1rem, calc(env(safe-area-inset-top) + 0.625rem), calc(var(--window-controls-block-end, 0px) + 0.625rem));");
+    // Sheets size themselves from that room, never from the visible height
+    // directly: a sheet whose `height` and `max-height` both followed the
+    // keyboard had them move apart, and its top dipped and came back.
+    const roomUses = css.split("\n").filter((line) => line.includes("var(--mobile-sheet-room") && !line.includes("--mobile-sheet-room:"));
+    expect(roomUses.length).toBeGreaterThan(5);
+    // The sheets read the home indicator through the shared tokens only.
+    const bottomInsets = rules.split("\n").filter((line) => line.includes("env(safe-area-inset-bottom)"));
+    expect(bottomInsets).toEqual([]);
   });
 });
 
@@ -142,14 +172,19 @@ describe("touch targets", () => {
     // The day one of them reaches 11 (44px), the extended target becomes
     // unnecessary for that size: it is time to revisit the rule, not keep it
     // out of habit.
+    // The phone layout raises text buttons to 44px itself (PHONE_TEXT_BUTTON);
+    // the target is still needed for its 40px icon buttons and for a touch
+    // screen in the desktop layout, where these heights apply.
     const heights = [
-      /default:\s*\n?\s*"h-9 /, // 36
-      /sm: "h-8 /, // 32
-      /lg: "h-10 /, // 40
-      /icon: "size-9 p-0"/, // 36
-      /"icon-sm": "size-8 p-0"/, // 32
-      /"icon-lg": "size-10 p-0"/, // 40
+      /default:\s*\n?\s*`\$\{PHONE_TEXT_BUTTON\} h-9 /, // 36
+      /sm: `\$\{PHONE_TEXT_BUTTON\} h-8 /, // 32
+      /lg: `\$\{PHONE_TEXT_BUTTON\} h-10 /, // 40
+      /icon: `\$\{PHONE_ICON_BUTTON\} size-9 p-0`/, // 36
+      /"icon-sm": `\$\{PHONE_ICON_BUTTON\} size-8 p-0`/, // 32
+      /"icon-lg": `\$\{PHONE_ICON_BUTTON\} size-10 p-0`/, // 40
     ];
+    expect(button).toContain("app-mobile:not-data-[variant=link]:min-h-11");
+    expect(button).toContain("app-mobile:min-h-10 app-mobile:min-w-10");
     for (const height of heights) expect(button).toMatch(height);
   });
 
@@ -240,7 +275,12 @@ describe("touch feedback", () => {
     // Under `pointer: coarse` only, so the mouse experience is unchanged, and
     // never when the user requests reduced motion (`motion-safe`).
     expect(read(TOUCH)).toContain(
-      '"data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:active:[scale:0.97]"',
+      'data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:active:[scale:0.97]',
+    );
+    // And while a finger holds it, which `:active` alone misses in the iOS
+    // WebView (lib/press-state.ts).
+    expect(read(TOUCH)).toContain(
+      'data-[slot=button]:not-data-[variant=link]:pointer-coarse:motion-safe:not-disabled:not-aria-disabled:data-pressed:[scale:0.97]',
     );
   });
 
@@ -266,6 +306,13 @@ describe("touch feedback", () => {
     expect(read(GLOBALS)).not.toMatch(/^(html|body)[^{]*\{[^}]*touch-action/m);
   });
 
+  it("does not zoom on a double tap in a field or on the sign-in screens", () => {
+    // On iPhone Duo two taps in the sign-in email field zoomed the page by a
+    // third: the side insets leave the column narrower than the screen.
+    const rule = read(GLOBALS).match(/\n\s*input,\n\s*textarea,\n\s*select,\n[^{]*\.auth-shell \{\s*touch-action: manipulation;/);
+    expect(rule?.[0]).toContain('[contenteditable]:not([contenteditable="false"])');
+  });
+
   it("leaves the primitives' touch behavior to the primitives", () => {
     // globals.css must not patch these slots from the outside again: change
     // the component instead.
@@ -282,7 +329,12 @@ describe("other touch pitfalls", () => {
     // ends. The primitives handle this for their fields; the rule covers fields in the
     // handwritten product and any future ones.
     expect(read(UI("input"))).toContain("text-base");
-    expect(read(UI("input"))).toContain("md:text-sm");
+    // Compact in the desktop layout only, never from a width: an unfolded
+    // iPhone Duo is 951px wide and still lays the app out for a finger.
+    for (const name of ["input", "textarea", "select", "input-group", "combobox", "color-input", "slider"]) {
+      expect(read(UI(name)), name).not.toMatch(/(^|[\s"`:])md:/);
+    }
+    expect(read(UI("input"))).toContain("app-desktop:text-sm");
     const css = read(GLOBALS);
     expect(css).toMatch(/textarea:not\(\.title-field\),\s*select,\s*\[contenteditable\]:not\(\[contenteditable="false"\], \.title-field\) \{\s*font-size: 16px;/);
     // iOS zooms into any focused editable element, not only form fields: the
@@ -392,7 +444,6 @@ describe("other touch pitfalls", () => {
     // touch screen. Each reveal carries a `touch:` counterpart, or is
     // decoration listed here.
     const decorative = new Set([
-      "components/sidebar-onboarding.tsx", // a trailing arrow on a link row
       "components/project-icon-picker.tsx", // a veil over a preview the row taps
       "components/pages/page-toc.tsx", // focus opens the panel on touch
     ]);
@@ -437,15 +488,14 @@ describe("other touch pitfalls", () => {
 });
 
 describe("software keyboard (MIN-870)", () => {
-  it("anchors vaul's drawers on the shared keyboard inset, with vaul's own handling off", () => {
-    // vaul measured the keyboard as `innerHeight - visualViewport.height`,
-    // which iOS Safari reports as 0: its drawers stayed under the keyboard.
-    for (const name of ["dialog", "side-panel"]) {
-      expect(read(UI(name))).toContain("repositionInputs: false");
+  it("hands every dialog, side panel and confirmation to the shared sheet on a phone", () => {
+    // The vaul drawers they fell back to below 480 px had no close button,
+    // corners or keyboard tokens of their own; the shared sheet has them all.
+    for (const name of ["dialog", "side-panel", "alert-dialog"]) {
+      const source = read(UI(name));
+      expect(source, name).not.toContain("vaul");
+      expect(source, name).toContain("MobileSheetContent");
     }
-    const css = read(GLOBALS);
-    const drawer = css.slice(css.indexOf('[data-vaul-drawer][data-vaul-drawer-direction="bottom"] {'));
-    expect(drawer.slice(0, drawer.indexOf("}"))).toContain("bottom: var(--mobile-keyboard-room, 0px);");
   });
 
   it("lifts a workspace field by shrinking the shell, not by scrolling the document", () => {

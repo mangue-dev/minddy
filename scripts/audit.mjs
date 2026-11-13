@@ -46,7 +46,7 @@ export const AUDIT_RESULT = {
   unavailable: "unavailable",
 };
 
-/** The two lockfiles that resolve code installed or packaged by CI. */
+/** The lockfiles that resolve code installed or packaged by CI. */
 export const AUDIT_TARGETS = [
   {
     label: "root — pnpm-lock.yaml (the actually installed tree)",
@@ -57,6 +57,12 @@ export const AUDIT_TARGETS = [
   {
     label: "desktop — package-lock.json (macOS shell)",
     cwd: path.join(ROOT, "desktop"),
+    command: "npm",
+    args: ["audit", "--audit-level=high"],
+  },
+  {
+    label: "mobile — package-lock.json (Capacitor shell)",
+    cwd: path.join(ROOT, "mobile"),
     command: "npm",
     args: ["audit", "--audit-level=high"],
   },

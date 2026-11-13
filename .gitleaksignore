@@ -13,3 +13,9 @@
 # MIN-877: a placeholder base for parsing app-relative hrefs, not a network
 # address; the next commit parses the href without a base URL.
 21b3a48d7870d3f4f574a09b88501418a9a89c6c:lib/secondary-sidebar-context.tsx:minddy-internal-network-url:209
+# MIN-907: sample addresses on short non-example domains in an
+# email-validation test, moved to example domains in a later commit; and the
+# @2x scale suffix of an app icon file name, as in MIN-838.
+e63a7bb1a9a1a68d303bb16ec2105cbe4947415c:lib/auth-entry.test.ts:minddy-personal-email-marker:37
+e63a7bb1a9a1a68d303bb16ec2105cbe4947415c:lib/auth-entry.test.ts:minddy-personal-email-marker:41
+8801eda0d745dc6214f289917b17bcce2da9a34f:mobile/ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json:minddy-personal-email-marker:4

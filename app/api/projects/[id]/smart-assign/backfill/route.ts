@@ -8,6 +8,7 @@ import {
   requestSmartAssignBackfill,
   type SmartAssignBackfillState,
 } from "@/lib/server/smart-assign";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -45,6 +46,9 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
  * claimed only if it is still empty when its turn comes.
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const { id } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;

@@ -4,42 +4,33 @@ import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { useMediaQuery } from "@/lib/use-media-query"
 import { Button } from "./button"
+import { Sheet, SheetClose, SheetDescription, SheetTitle, SheetTrigger } from "./sheet"
+import { MobileSheetContent } from "./mobile-sheet"
+import { useMobileLayout } from "@/lib/use-mobile-layout"
 import { OverlayOpenProvider, useFrozenWhileClosed, useOverlayOpen } from "@/components/ui/overlay-freeze"
 
-// Below 480px the alert dialog is styled as a bottom sheet. Radix alert dialogs
-// are intentionally non-dismissible on outside click; in sheet mode we opt into
-// tap-to-close on the scrim above the sheet (parity with the Dialog drawer).
-const AlertDialogSheetContext = React.createContext<{
-  sheet: boolean
-  onOpenChange?: (open: boolean) => void
-}>({ sheet: false })
-
-function AlertDialog({
+function ModalAlertDialog({
   open,
   defaultOpen,
   onOpenChange,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
-  const sheet = useMediaQuery("(max-width: 479px)")
   const tracked = useOverlayOpen({ open, defaultOpen, onOpenChange })
   return (
-    <AlertDialogSheetContext.Provider value={{ sheet, onOpenChange: tracked.onOpenChange }}>
-      <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
-        <AlertDialogPrimitive.Root
-          data-slot="alert-dialog"
-          open={open}
-          defaultOpen={defaultOpen}
-          onOpenChange={tracked.onOpenChange}
-          {...props}
-        />
-      </OverlayOpenProvider>
-    </AlertDialogSheetContext.Provider>
+    <OverlayOpenProvider open={tracked.open} onOpenChange={tracked.onOpenChange}>
+      <AlertDialogPrimitive.Root
+        data-slot="alert-dialog"
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={tracked.onOpenChange}
+        {...props}
+      />
+    </OverlayOpenProvider>
   )
 }
 
-function AlertDialogTrigger({
+function ModalAlertDialogTrigger({
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
   return (
@@ -59,12 +50,9 @@ function AlertDialogOverlay({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
-  const { sheet, onOpenChange } = React.useContext(AlertDialogSheetContext)
   return (
     <AlertDialogPrimitive.Overlay
       data-slot="alert-dialog-overlay"
-      // Tap the scrim above the sheet to dismiss (sheet mode only).
-      onClick={sheet ? () => onOpenChange?.(false) : undefined}
       className={cn(
         // The one modal scrim (`--overlay-scrim`, MIN-931), dialog and sheet
         // alike. No `backdrop-filter` — see the note on SidePanelOverlay.
@@ -76,7 +64,7 @@ function AlertDialogOverlay({
   )
 }
 
-function AlertDialogContent({
+function ModalAlertDialogContent({
   className,
   size = "default",
   overFloatingSurface = false,
@@ -100,10 +88,6 @@ function AlertDialogContent({
         data-size={size}
         className={cn(
           "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-top)_-_env(safe-area-inset-bottom))] overflow-y-auto -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[2rem] bg-card p-6 ring-1 ring-border duration-200 ease-out outline-none data-[size=default]:max-w-xs data-[size=sm]:max-w-xs data-[size=default]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98] data-closed:duration-150 data-closed:ease-in",
-          // Bottom sheet below 480px: dock to the bottom edge, full width,
-          // rounded top, slide up/down instead of zoom-from-center. Padding stays
-          // p-4 on the sheet (the desktop modal is the more spacious one).
-          "max-[479px]:inset-x-0 max-[479px]:bottom-0 max-[479px]:top-auto max-[479px]:left-0 max-[479px]:max-h-[92dvh] max-[479px]:!w-full max-[479px]:!max-w-none max-[479px]:translate-x-0 max-[479px]:translate-y-0 max-[479px]:rounded-b-none max-[479px]:rounded-t-2xl max-[479px]:p-4 max-[479px]:pb-[max(1rem,var(--mobile-sheet-safe-bottom,env(safe-area-inset-bottom)))] max-[479px]:data-open:zoom-in-100 max-[479px]:data-closed:zoom-out-100 max-[479px]:data-open:slide-in-from-bottom-6 max-[479px]:data-closed:slide-out-to-bottom-6",
           className
         )}
         {...props}
@@ -162,7 +146,7 @@ function AlertDialogMedia({
   )
 }
 
-function AlertDialogTitle({
+function ModalAlertDialogTitle({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
@@ -178,7 +162,7 @@ function AlertDialogTitle({
   )
 }
 
-function AlertDialogDescription({
+function ModalAlertDialogDescription({
   className,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
@@ -194,7 +178,7 @@ function AlertDialogDescription({
   )
 }
 
-function AlertDialogAction({
+function ModalAlertDialogAction({
   className,
   variant = "default",
   size = "default",
@@ -212,7 +196,7 @@ function AlertDialogAction({
   )
 }
 
-function AlertDialogCancel({
+function ModalAlertDialogCancel({
   className,
   variant = "outline",
   size = "default",
@@ -227,6 +211,100 @@ function AlertDialogCancel({
         {...props}
       />
     </Button>
+  )
+}
+
+/* Exported alert dialog: the mobile layout hands it to the shared sheet, as
+   `Dialog` does (components/ui/dialog.tsx). A confirmation on a phone is a
+   sheet like any other: the grab handle, the close button, swipe to dismiss,
+   the screen's corners and the side column of iPhone Duo. Its actions close
+   it as Radix's do, unless their click handler prevents it (an action that
+   waits for a request before closing). */
+
+const MobileAlertDialog = React.createContext(false)
+
+function AlertDialog(props: React.ComponentProps<typeof ModalAlertDialog>) {
+  const mobile = useMobileLayout() === true
+  const Root = mobile ? Sheet : ModalAlertDialog
+  return <MobileAlertDialog.Provider value={mobile}><Root {...props} /></MobileAlertDialog.Provider>
+}
+
+function AlertDialogTrigger(props: React.ComponentProps<typeof ModalAlertDialogTrigger>) {
+  const Trigger = React.useContext(MobileAlertDialog) ? SheetTrigger : ModalAlertDialogTrigger
+  return <Trigger {...props} />
+}
+
+function AlertDialogContent({
+  className,
+  size = "default",
+  overFloatingSurface = false,
+  ...props
+}: React.ComponentProps<typeof ModalAlertDialogContent>) {
+  if (!React.useContext(MobileAlertDialog)) {
+    return <ModalAlertDialogContent className={className} size={size} overFloatingSurface={overFloatingSurface} {...props} />
+  }
+  return (
+    <MobileSheetContent
+      side="bottom"
+      role="alertdialog"
+      data-mobile-dialog
+      data-mobile-alert
+      data-size={size}
+      data-layer={overFloatingSurface ? "over-floating" : undefined}
+      className={cn("group/alert-dialog-content mobile-bottom-sheet gap-4 p-4", className)}
+      {...props}
+    />
+  )
+}
+
+function AlertDialogTitle({ className, ...props }: React.ComponentProps<typeof ModalAlertDialogTitle>) {
+  if (!React.useContext(MobileAlertDialog)) return <ModalAlertDialogTitle className={className} {...props} />
+  return <SheetTitle data-slot="alert-dialog-title" className={cn("text-base font-medium", className)} {...props} />
+}
+
+function AlertDialogDescription({ className, ...props }: React.ComponentProps<typeof ModalAlertDialogDescription>) {
+  if (!React.useContext(MobileAlertDialog)) return <ModalAlertDialogDescription className={className} {...props} />
+  // A sheet hides its description unless asked: a confirmation's says what
+  // is about to happen.
+  return (
+    <SheetDescription
+      data-slot="alert-dialog-description"
+      data-sheet-keeps-description
+      className={cn("text-sm text-balance text-muted-foreground *:[a]:underline *:[a]:underline-offset-3", className)}
+      {...props}
+    />
+  )
+}
+
+function AlertDialogAction({
+  className,
+  variant = "default",
+  size = "default",
+  ...props
+}: React.ComponentProps<typeof ModalAlertDialogAction>) {
+  if (!React.useContext(MobileAlertDialog)) {
+    return <ModalAlertDialogAction className={className} variant={variant} size={size} {...props} />
+  }
+  return (
+    <SheetClose asChild>
+      <Button data-slot="alert-dialog-action" variant={variant} size={size} className={cn(className)} {...props} />
+    </SheetClose>
+  )
+}
+
+function AlertDialogCancel({
+  className,
+  variant = "outline",
+  size = "default",
+  ...props
+}: React.ComponentProps<typeof ModalAlertDialogCancel>) {
+  if (!React.useContext(MobileAlertDialog)) {
+    return <ModalAlertDialogCancel className={className} variant={variant} size={size} {...props} />
+  }
+  return (
+    <SheetClose asChild>
+      <Button data-slot="alert-dialog-cancel" variant={variant} size={size} className={cn(className)} {...props} />
+    </SheetClose>
   )
 }
 

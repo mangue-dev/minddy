@@ -6,6 +6,7 @@ import type { Attachment, Comment, IssueEvent, ResourceInput } from "./types";
 import type { CommentVisibility } from "./feedback/types";
 import { trackEvent } from "./analytics";
 import { lengthBucket } from "./analytics-sanitize";
+import { hapticOutcome } from "./mobile/haptics";
 
 async function parseJson<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -47,21 +48,24 @@ export async function addCommentApi(
     mention_count: mentionedUserIds.length,
     attachment_count: attachments.length,
   });
-  const saved = await parseJson<Comment & { attachment_error?: string }>(
-    await fetch(`/api/issues/${issueId}/comments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: commentId,
-        body,
-        mentioned_user_ids: mentionedUserIds,
-        parent_id: parentId,
-        attachments,
-      }),
-    })
-  );
-  if (saved.attachment_error) throw new Error(saved.attachment_error);
-  return saved;
+  // A sent comment is a key outcome: the mobile app vibrates for it (MIN-959).
+  return hapticOutcome((async () => {
+    const saved = await parseJson<Comment & { attachment_error?: string }>(
+      await fetch(`/api/issues/${issueId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: commentId,
+          body,
+          mentioned_user_ids: mentionedUserIds,
+          parent_id: parentId,
+          attachments,
+        }),
+      })
+    );
+    if (saved.attachment_error) throw new Error(saved.attachment_error);
+    return saved;
+  })());
 }
 
 export async function fetchObjectiveCommentsApi(objectiveId: string, signal?: AbortSignal): Promise<Comment[]> {
@@ -111,8 +115,8 @@ export async function addFeedbackCommentApi(
     attachment_count: attachments.length,
     visibility,
   });
-  return parseJson<Comment>(
-    await fetch(`/api/projects/${projectId}/feedback/${postId}/comments`, {
+  return hapticOutcome(
+    fetch(`/api/projects/${projectId}/feedback/${postId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -122,7 +126,7 @@ export async function addFeedbackCommentApi(
         attachments,
         visibility,
       }),
-    })
+    }).then((response) => parseJson<Comment>(response))
   );
 }
 
@@ -174,8 +178,8 @@ export async function addObjectiveCommentApi(
     mention_count: mentionedUserIds.length,
     attachment_count: attachments.length,
   });
-  return parseJson<Comment>(
-    await fetch(`/api/objectives/${objectiveId}/comments`, {
+  return hapticOutcome(
+    fetch(`/api/objectives/${objectiveId}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -184,7 +188,7 @@ export async function addObjectiveCommentApi(
         parent_id: parentId,
         attachments,
       }),
-    })
+    }).then((response) => parseJson<Comment>(response))
   );
 }
 

@@ -26,12 +26,14 @@ type Entry = {
   page?: { icon: string | null; database: boolean };
   /** A pull request's state, for the color of its pill (MIN-906). */
   prState?: PullRequestState;
+  /** A member's avatar seed, for their portrait (MIN-964). */
+  seed?: string;
   at: number;
 };
 
 const TTL_MS = 60_000;
 /** Types whose pill shows something only the resolution answers. */
-const SERVER_FIGURES: ReadonlySet<MentionLinkType> = new Set(["mcp", "page", "pull_request"]);
+const SERVER_FIGURES: ReadonlySet<MentionLinkType> = new Set(["mcp", "page", "pull_request", "member"]);
 const BATCH = 200;
 
 const cache = new Map<string, Entry>();
@@ -70,6 +72,7 @@ async function flush() {
           mentions: Array<{
             type: string; id: string; label: string | null;
             status?: unknown; service?: unknown; icon?: unknown; database?: unknown; prState?: unknown;
+            seed?: unknown;
           }>;
         };
         for (const [index, mention] of mentions.entries()) {
@@ -82,6 +85,7 @@ async function flush() {
               ? { page: { icon: typeof mention.icon === "string" ? mention.icon : null, database: mention.database } }
               : {}),
             ...(isPullRequestState(mention.prState) ? { prState: mention.prState } : {}),
+            ...(typeof mention.seed === "string" ? { seed: mention.seed } : {}),
             at: now,
           });
         }
@@ -113,6 +117,20 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+/**
+ * Asks the server again for a target whose label or figure just changed,
+ * keeping the pill as it is until the answer: a member who renamed
+ * themselves or changed their avatar (MIN-964). A pill resolved behind the
+ * profile screen otherwise kept the account's first name for a minute.
+ */
+export function refreshResolvedMention(type: MentionLinkType, id: string): void {
+  const key = keyOf(type, id);
+  const entry = cache.get(key);
+  if (!entry) return;
+  cache.set(key, { ...entry, at: 0 });
+  notify();
+}
+
 /** The resolution of one mention: `undefined` while it loads. */
 export function useResolvedMentionLabel(
   type: MentionLinkType | null,
@@ -135,17 +153,37 @@ export function useResolvedMentionLabel(
 }
 
 /**
+ * Resolves once no mention is waiting for the server: every request queued
+ * by the pills on screen has been answered. A view that reveals its content
+ * in one step (the home page) awaits it so its pills appear with their names
+ * rather than resolving one after the other.
+ */
+export function mentionsSettled(): Promise<void> {
+  const idle = () => queued.size === 0 && inFlight.size === 0;
+  if (idle()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const check = () => {
+      if (!idle()) return;
+      listeners.delete(check);
+      resolve();
+    };
+    listeners.add(check);
+  });
+}
+
+/**
  * What the server returned with a resolved mention besides its label, read
  * from the same cache and in ONE subscription: an objective's status for the
  * glyph of its pill (MIN-785), an MCP connection's service for its logo, a
  * page's emoji and database flag for its glyph (MIN-879), a pull request's
- * state for its color (MIN-906). `undefined` until
+ * state for its color (MIN-906), a member's avatar seed for their portrait
+ * (MIN-964). `undefined` until
  * it is known. It never requests: the label hook beside it does.
  */
 export function useResolvedMentionDetails(
   type: MentionLinkType | null,
   id: string | null,
-): Pick<Entry, "status" | "service" | "page" | "prState"> | undefined {
+): Pick<Entry, "status" | "service" | "page" | "prState" | "seed"> | undefined {
   const current = useSyncExternalStore(subscribe, () => version, () => -1);
   if (!type || !id || current === -1) return undefined;
   return cache.get(keyOf(type, id));

@@ -2,7 +2,7 @@
 
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useId, useState } from "react";
-import { IMAGE_HERO_TRANSITION, ImageViewer } from "@/components/image-viewer";
+import { ImageViewer, heroThumbnailMotion } from "@/components/image-viewer";
 import { DocumentationInlineText } from "./documentation-inline-text";
 
 export function DocumentationImage({ src, alt, width, height, caption, openLabel }: {
@@ -24,8 +24,7 @@ export function DocumentationImage({ src, alt, width, height, caption, openLabel
         className="block w-fit max-w-full cursor-zoom-in text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
         onClick={() => setOpen(true)}>
         <motion.span layoutId={reducedMotion ? undefined : layoutId}
-          animate={{ opacity: open ? 0 : 1 }}
-          transition={{ ...IMAGE_HERO_TRANSITION, opacity: { duration: reducedMotion ? 0 : 0.12 } }}
+          {...heroThumbnailMotion(open, reducedMotion, layoutId)}
           className="block">
           <img src={src} alt={alt} loading="lazy" width={width} height={height} className="h-auto max-w-full" />
         </motion.span>

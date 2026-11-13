@@ -54,6 +54,7 @@ import { AppTooltip } from "@/components/ui/app-tooltip";
 import { NumoIcon } from "@/components/numo-icon";
 import { useAskNumoAboutSelection } from "@/lib/use-ask-numo-about-selection";
 import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
+import { haptic } from "@/lib/mobile/haptics";
 
 /** What clicking on the bubble does: where to anchor, and what we're talking about. */
 export interface PageCommentAnchor {
@@ -410,7 +411,11 @@ export function PageCommentBubble({
   // the card keeps the editor's selection, so the browser's copy reads it.
   const copySelection = () => {
     editor.view.focus();
-    if (document.execCommand("copy")) toast.success(tCommon("copied"));
+    if (document.execCommand("copy")) {
+      // The browser's own copy skips navigator.clipboard and its tick.
+      haptic("selection");
+      toast.success(tCommon("copied"));
+    }
     else {
       const { from, to } = editor.state.selection;
       void navigator.clipboard

@@ -10,6 +10,7 @@ test("a marketing-only change deploys the web without versioning the core", () =
       web: true,
       marketing: true,
       desktop: false,
+      mobile: false,
       coreFiles: ["app/(marketing)/page.tsx"],
       webFiles: ["app/(marketing)/page.tsx"],
       marketingFiles: ["app/(marketing)/page.tsx"],
@@ -36,6 +37,23 @@ test("the post-release desktop record does not trigger a new release", () => {
   assert.equal(result.core, false);
   assert.equal(result.web, false);
   assert.deepEqual(result.coreFiles, []);
+});
+
+test("a mobile shell change releases neither the web app nor the core", () => {
+  const files = ["mobile/ios/App/App/MinddyViewController.swift", "mobile/package.json"];
+  const result = classifyReleaseFiles(files, files, false);
+  assert.equal(result.core, false);
+  assert.equal(result.web, false);
+  assert.equal(result.mobile, true);
+  assert.deepEqual(result.coreFiles, []);
+  assert.deepEqual(result.webFiles, []);
+});
+
+test("the pages bundled in the mobile app are web code", () => {
+  const result = classifyReleaseFiles(["components/mobile/shell.tsx"], ["components/mobile/shell.tsx"], false);
+  assert.equal(result.core, true);
+  assert.equal(result.web, true);
+  assert.equal(result.mobile, false);
 });
 
 test("auto mode uses detected scopes and promotes the core", () => {

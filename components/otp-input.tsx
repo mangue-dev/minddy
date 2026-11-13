@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { OTPInput, REGEXP_ONLY_DIGITS, type SlotProps } from "input-otp";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,15 @@ import { cn } from "@/lib/utils";
  * the paste, arrows, selection and backspace are those of the
  * browser. The boxes are just drawing.
  *
+ * The field fills its container up to `max-w-sm`, with square boxes, so it
+ * lines up with the full-width buttons of the auth screens.
+ *
+ * A complete code blurs the field before `onComplete` runs. Left focused,
+ * the lib re-selects the first digit when the caret lands back at index 0,
+ * and iOS draws that as a text selection with handles while the code is
+ * being checked. When the field is enabled again with an empty value (a
+ * rejected code), focus returns to it so the next code can be typed.
+ *
  * `pushPasswordManagerStrategy: "increase-width"` (the default of the lib) excludes
  * slightly the area when a password manager pad is
  * detected, so that it does not overlap the last digit.
@@ -32,8 +42,8 @@ function Slot({ char, isActive, hasFakeCaret }: SlotProps) {
   return (
     <div
       className={cn(
-        "relative flex h-11 w-10 items-center justify-center rounded-md border border-input bg-card",
-        "font-mono text-base tabular-nums"
+        "relative flex aspect-square min-w-0 flex-1 items-center justify-center rounded-md border border-input bg-card",
+        "font-mono text-lg tabular-nums"
       )}
     >
       {char}
@@ -69,12 +79,28 @@ export function OtpInput({
       marked invalid and described by it (WCAG 3.3.1). */
   errorId?: string;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const wasDisabled = useRef(disabled);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (wasDisabled.current && !disabled && value === "" && input) {
+      const active = document.activeElement;
+      if (!active || active === document.body) input.focus({ preventScroll: true });
+    }
+    wasDisabled.current = disabled;
+  }, [disabled, value]);
+
   return (
     <OTPInput
+      ref={inputRef}
       id={id}
       value={value}
       onChange={onChange}
-      onComplete={onComplete}
+      onComplete={(completed: string) => {
+        inputRef.current?.blur();
+        onComplete?.(completed);
+      }}
       maxLength={6}
       disabled={disabled}
       autoFocus={autoFocus}
@@ -90,20 +116,20 @@ export function OtpInput({
       // generated code. Losing it would silently break the filling.
       autoComplete="one-time-code"
       containerClassName={cn(
-        "flex items-center gap-2",
+        "flex w-full max-w-sm items-center gap-2",
         disabled && "pointer-events-none opacity-60"
       )}
       render={({ slots }) => (
         <>
-          <div className="flex gap-2">
+          <div className="flex flex-1 gap-2">
             {slots.slice(0, 3).map((slot, i) => (
               <Slot key={i} {...slot} />
             ))}
           </div>
-          <div aria-hidden className="w-2 text-center text-muted-foreground">
+          <div aria-hidden className="w-2 shrink-0 text-center text-muted-foreground">
             –
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-1 gap-2">
             {slots.slice(3).map((slot, i) => (
               <Slot key={i + 3} {...slot} />
             ))}

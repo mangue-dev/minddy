@@ -85,6 +85,11 @@ supabase/.branches/
 # l'icône `.icns` et les entitlements sont des sources, pas des artefacts.
 /desktop/release
 
+# mobile shell (MIN-907): its dependencies and the pages `scripts/build-mobile.mjs`
+# bundles for it. The native build output is ignored by `mobile/ios/.gitignore`.
+/mobile/node_modules
+/mobile/www
+
 # local-only Claude skill, not meant for the repository
 /.claude/skills/minddy-full-release/
 opencode.json

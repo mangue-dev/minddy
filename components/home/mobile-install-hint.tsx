@@ -11,7 +11,7 @@ import { MobilePwaGuideSteps } from "@/components/marketing/mobile-pwa-install-g
 import { standaloneMobileInstallGuideCopy } from "@/components/marketing/mobile-install-guide-copy";
 import { usePwaInstall } from "@/components/marketing/use-pwa-install";
 import { useAuth } from "@/lib/auth-context";
-import { isDesktop } from "@/lib/desktop/bridge";
+import { isNativeApp } from "@/lib/native-app";
 import { resolveInstallPlatform } from "@/lib/desktop/install-prompt";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import type { MobileInstallGuidePlatform } from "@/lib/mobile-install-guide";
@@ -37,7 +37,8 @@ export function MobileInstallHint() {
   const copy = standaloneMobileInstallGuideCopy(td, tm);
 
   useEffect(() => {
-    if (isDesktop()) return;
+    // An installed app, desktop or mobile, has nothing to install.
+    if (isNativeApp()) return;
     const probe = navigator as Navigator & { userAgentData?: { platform?: string }; standalone?: boolean };
     const resolved = resolveInstallPlatform({
       uaDataPlatform: probe.userAgentData?.platform,

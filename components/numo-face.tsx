@@ -39,10 +39,16 @@ export type NumoFaceProps = Omit<SVGProps<SVGSVGElement>, "ref"> & {
   paint?: string;
   /** `<defs>` of the caller (the "thinking" gradient). */
   defs?: ReactNode;
+  /**
+   * Width of the head's outline, in the drawing's own units (48 wide). The
+   * default suits Numo on its own; `3` matches the 1.5 stroke of the icon set
+   * when Numo sits in a row of icons of the same size.
+   */
+  outlineWidth?: number;
   ref?: Ref<SVGSVGElement>;
 };
 
-export function NumoFace({ paint = "currentColor", defs, ref, ...props }: NumoFaceProps) {
+export function NumoFace({ paint = "currentColor", defs, outlineWidth = 4, ref, ...props }: NumoFaceProps) {
   return (
     <svg
       ref={ref}
@@ -54,7 +60,7 @@ export function NumoFace({ paint = "currentColor", defs, ref, ...props }: NumoFa
     >
       {defs}
       {/* Head outline — static. */}
-      <path d={HEAD_PATH} stroke={paint} strokeWidth={4} />
+      <path d={HEAD_PATH} stroke={paint} strokeWidth={outlineWidth} />
       {/* Face = eyes + mouth, translated together so a glance reads as the
           whole face turning. */}
       <g data-numo-face>

@@ -96,6 +96,8 @@ export async function POST(request: NextRequest) {
     p256dh,
     auth: authSecret,
     installationId,
+    apnsPlatform,
+    apnsEnvironment,
   } = registration;
 
   // A partial public configuration should not be sufficient to register a
@@ -158,6 +160,8 @@ export async function POST(request: NextRequest) {
       p_transport: selectedTransport,
       p_locale: typeof locale === "string" ? locale.trim() : "",
       p_refresh: refresh === true,
+      p_apns_platform: apnsPlatform,
+      p_apns_environment: apnsEnvironment,
     });
     if (error || !data) {
       console.error("[api/push-subscriptions] protected_registration_failed");
@@ -200,6 +204,8 @@ export async function POST(request: NextRequest) {
         p256dh: selectedTransport === "web" ? p256dh : null,
         auth: selectedTransport === "web" ? authSecret : null,
         native_installation_id: installationId,
+        apns_platform: apnsPlatform,
+        apns_environment: apnsEnvironment,
         // Calculated on the server side from the header: nothing to believe in a body of
         // request for a label that will be displayed as is.
         device_label: deviceLabelFromUserAgent(userAgent),

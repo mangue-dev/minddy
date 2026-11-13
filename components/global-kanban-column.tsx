@@ -227,7 +227,7 @@ export const GlobalKanbanColumn = memo(function GlobalKanbanColumn({
           data-board-column-scroller
           data-board-column-status={status.value}
           onScroll={scrollProps.onScroll}
-          className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2"
+          className="no-scrollbar flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2 max-sm:px-1"
         >
           <BoardWindowedItems
             issues={issues}

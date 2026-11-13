@@ -58,6 +58,14 @@ it("installs, then waits for the agent's sign-in while polling the grants", asyn
   const claude = [...host.querySelectorAll("button")].find((item) => item.textContent === "Claude Code")!;
   await act(async () => claude.click());
   expect(heading()).toBe("Add minddy to Claude Code");
+  // The prompt comes first and carries the same setup as the manual steps.
+  const writeText = vi.fn(async () => {});
+  vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+  const button = (label: string) => [...document.body.querySelectorAll("button")].find((item) => item.textContent === label)!;
+  await act(async () => button(messages.Account.copyAgentPrompt).click());
+  expect(writeText).toHaveBeenCalledWith(expect.stringContaining("claude mcp add --scope user"));
+  expect(document.body.textContent).not.toContain("claude mcp add --scope user");
+  await act(async () => button(messages.Account.manualSetup).click());
   expect(document.body.textContent).toContain("claude mcp add --scope user");
   expect(h.poll).toHaveBeenLastCalledWith(false);
 

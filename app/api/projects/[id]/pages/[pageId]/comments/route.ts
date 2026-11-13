@@ -13,6 +13,7 @@ import {
   replyTargetsNumoPage,
   runPageCommentMention,
 } from "@/lib/server/assistant/comment-agent";
+import { aiBlockedForAppRequest } from "@/lib/server/ai-consent";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -130,7 +131,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     : (await replyTargetsNumoPage(service, created))
       ? "reply"
       : null;
-  if (trigger) {
+  // In the mobile app, Numo answers only once AI is allowed (MIN-907).
+  if (trigger && !(await aiBlockedForAppRequest())) {
     const locale = await getLocale();
     const { user, supabase } = auth;
     after(() =>

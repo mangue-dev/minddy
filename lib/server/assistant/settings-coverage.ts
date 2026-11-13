@@ -57,6 +57,9 @@ export const ACCOUNT_METADATA_COVERAGE: Readonly<Record<string, AccountKeyCovera
     read: "dictation_vocabulary",
     sample: [{ term: "minddy" }, { term: "Numo", heardAs: "new mo" }],
   },
+  // Preferences → Mobile app (MIN-959)
+  haptics: { read: "haptics", sample: false },
+  ai_consent: { humanOnly: "The mobile app's answer to its AI consent sheet (MIN-907): only the person gives it, in the app." },
   // Numo
   numo_memory: { read: "numo_memory", sample: false },
   numo_background: { read: "numo_background", sample: false },
@@ -100,6 +103,7 @@ export const ACCOUNT_METADATA_COVERAGE: Readonly<Record<string, AccountKeyCovera
   onboarding_dismissed: { humanOnly: "Onboarding checklist state, not a setting." },
   onboarding_version: { humanOnly: "Onboarding checklist state, not a setting." },
   onboarding_started: { humanOnly: "Onboarding checklist state, not a setting." },
+  profile_setup_done: { humanOnly: "Whether a new account confirmed its name and picture on the first-run screen: interface state." },
   desktop_prompt_dismissed: { humanOnly: "Whether the desktop app banner was dismissed: interface state." },
   pwa_prompt_dismissed: { humanOnly: "Whether the install hint was dismissed: interface state." },
   tab_orders: { humanOnly: "Order of the view tabs, set by dragging them: interface state." },

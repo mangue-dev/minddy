@@ -30,8 +30,9 @@ export const AUTH_SHOWCASES = [
  * It sits NEXT to the form, never behind it: `auth-shell.tsx` explains why a
  * decoration under a password field was withdrawn. Each visit shows another
  * feature of the product with its localized capture, so the door of the app
- * also says what is behind it. Below 1024px it disappears and the form keeps
- * the whole screen.
+ * also says what is behind it. Below 1024px, and on a screen held upright (an
+ * iPad in portrait is 1032px wide), it disappears and the form keeps the
+ * whole screen, centred.
  *
  * The capture is decoration here: not selectable, not draggable, and hidden
  * from assistive technology like the rest of the pane.
@@ -43,7 +44,7 @@ export async function AuthShowcase({ pick = Math.random() }: { pick?: number }) 
     <aside
       aria-hidden="true"
       data-showcase={showcase.slot}
-      className="hidden w-[52%] max-w-[860px] shrink-0 p-3 pl-0 select-none desktop:flex"
+      className="hidden w-[52%] max-w-[860px] shrink-0 p-3 pl-0 select-none desktop:landscape:flex"
     >
       <div
         className={cn(

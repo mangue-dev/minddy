@@ -5,6 +5,8 @@ import * as SwitchPrimitive from "@radix-ui/react-switch"
 
 import { cn } from "@/lib/utils"
 import { COARSE_HIT_AREA, COARSE_TOUCH_ACTION } from "./touch-target"
+import { useMobileLayout } from "@/lib/use-mobile-layout"
+import { haptic } from "@/lib/mobile/haptics"
 
 const TRACK_WIDTH = 34
 const TRACK_HEIGHT = 20
@@ -14,6 +16,11 @@ const PILL_EXTEND = 2
 const PRESS_EXTEND = 4
 const PRESS_SHRINK = 4
 const DRAG_DEAD_ZONE = 2
+/**
+ * On a phone the switch is drawn half as large again, close to a native one
+ * (51 × 31pt): 51 × 30px, every measure below scaled alike.
+ */
+const PHONE_SCALE = 1.5
 
 const THUMB_TRANSITION =
   "transform 160ms cubic-bezier(0.16, 1, 0.3, 1), width 160ms cubic-bezier(0.16, 1, 0.3, 1), height 160ms cubic-bezier(0.16, 1, 0.3, 1)"
@@ -23,21 +30,23 @@ type SwitchProps = React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>
 function getThumbPosition(
   isChecked: boolean,
   pressed: boolean,
-  hovered: boolean
+  hovered: boolean,
+  scale = 1
 ) {
+  const size = THUMB_SIZE * scale
   const thumbWidth = pressed
-    ? THUMB_SIZE + PRESS_EXTEND
+    ? size + PRESS_EXTEND * scale
     : hovered
-      ? THUMB_SIZE + PILL_EXTEND
-      : THUMB_SIZE
-  const thumbHeight = pressed ? THUMB_SIZE - PRESS_SHRINK : THUMB_SIZE
+      ? size + PILL_EXTEND * scale
+      : size
+  const thumbHeight = pressed ? size - PRESS_SHRINK * scale : size
   const centerX = isChecked
-    ? TRACK_WIDTH - THUMB_OFFSET - thumbWidth / 2
-    : THUMB_OFFSET + thumbWidth / 2
+    ? TRACK_WIDTH * scale - THUMB_OFFSET * scale - thumbWidth / 2
+    : THUMB_OFFSET * scale + thumbWidth / 2
 
   return {
     x: centerX - thumbWidth / 2,
-    y: (TRACK_HEIGHT - thumbHeight) / 2,
+    y: (TRACK_HEIGHT * scale - thumbHeight) / 2,
     width: thumbWidth,
     height: thumbHeight,
   }
@@ -68,7 +77,8 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
     const [hovered, setHovered] = React.useState(false)
     const [pressed, setPressed] = React.useState(false)
     const isChecked = checked ?? internalChecked
-    const thumb = getThumbPosition(isChecked, pressed, hovered)
+    const scale = useMobileLayout() === true ? PHONE_SCALE : 1
+    const thumb = getThumbPosition(isChecked, pressed, hovered, scale)
     const [dragX, setDragX] = React.useState<number | null>(null)
     const thumbX = dragX ?? thumb.x
     const thumbXRef = React.useRef(thumbX)
@@ -86,6 +96,8 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         if (checked === undefined) {
           setInternalChecked(nextChecked)
         }
+        // A light tick in the mobile app (MIN-959); nothing elsewhere.
+        haptic("selection")
         onCheckedChange?.(nextChecked)
       },
       [checked, onCheckedChange]
@@ -114,7 +126,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       didDrag.current = false
       pointerStart.current = {
         clientX: event.clientX,
-        originX: getThumbPosition(isChecked, true, hovered).x,
+        originX: getThumbPosition(isChecked, true, hovered, scale).x,
       }
       if (typeof event.currentTarget.setPointerCapture === "function") {
         event.currentTarget.setPointerCapture(event.pointerId)
@@ -129,8 +141,8 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
       if (!dragging.current && Math.abs(delta) < DRAG_DEAD_ZONE) return
 
       dragging.current = true
-      const dragMin = getThumbPosition(false, true, false).x
-      const dragMax = getThumbPosition(true, true, false).x
+      const dragMin = getThumbPosition(false, true, false, scale).x
+      const dragMax = getThumbPosition(true, true, false, scale).x
       const nextX = Math.max(
         dragMin,
         Math.min(
@@ -159,8 +171,8 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         didDrag.current = true
         dragging.current = false
         const currentX = thumbXRef.current
-        const dragMin = getThumbPosition(false, true, false).x
-        const dragMax = getThumbPosition(true, true, false).x
+        const dragMin = getThumbPosition(false, true, false, scale).x
+        const dragMax = getThumbPosition(true, true, false, scale).x
         const shouldBeOn = currentX > (dragMin + dragMax) / 2
 
         if (shouldBeOn !== isChecked) {
@@ -214,7 +226,7 @@ const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
           `peer relative inline-flex h-5 w-[34px] shrink-0 cursor-pointer touch-none select-none items-center rounded-full border-0 bg-control transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:hover:bg-primary-hover data-[state=unchecked]:hover:bg-control-hover ${COARSE_TOUCH_ACTION} ${COARSE_HIT_AREA}`,
           className
         )}
-        style={{ width: TRACK_WIDTH, height: TRACK_HEIGHT, ...style }}
+        style={{ width: TRACK_WIDTH * scale, height: TRACK_HEIGHT * scale, ...style }}
         onClick={handleClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}

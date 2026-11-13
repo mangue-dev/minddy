@@ -24,14 +24,17 @@ import type { RepoProviderId } from "./repo-providers";
  * so a POINTER — the id, nothing else: the entry is already in the base.
  */
 
-/** The wizard stages, in the order of the complete course. */
+/**
+ * The wizard stages, in order (MIN-907): one route, no "where do we start
+ * from" question any more, and the team invited before the issues are
+ * imported. A draft saved at the retired "origin" step reopens at the start.
+ */
 export const PROJECT_WIZARD_STEPS = [
-  "origin",
   "project",
   "icon",
   "git",
-  "seed",
   "members",
+  "seed",
   "finish",
 ] as const;
 export type ProjectWizardStep = (typeof PROJECT_WIZARD_STEPS)[number];
@@ -39,20 +42,10 @@ export type ProjectWizardStep = (typeof PROJECT_WIZARD_STEPS)[number];
 /** Where do we start from (MIN-171) — the wizard's first question. */
 export type ProjectOrigin = "new" | "existing";
 
-export { MAX_INITIAL_BRIEF_CHARS } from "./project-brief";
-
-/**
- * The route KEPT. The seed depends on the origin — until it is chosen, the step has no content and does not count towards the stepper.
- */
-export function stepsFor(origin: ProjectOrigin | null): ProjectWizardStep[] {
-  return origin
-    ? ["origin", "project", "icon", "git", "seed", "members", "finish"]
-    : ["origin", "project", "icon", "git", "members", "finish"];
-}
 
 /** The index to reopen the wizard for this draft (0 if the step is unknown). */
 export function stepIndexOf(draft: ProjectDraft): number {
-  return Math.max(0, stepsFor(draft.origin).indexOf(draft.step));
+  return Math.max(0, (PROJECT_WIZARD_STEPS as readonly string[]).indexOf(draft.step));
 }
 
 /** The repository chosen in the wizard, not yet linked (the project does not exist). */

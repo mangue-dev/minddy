@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "./auth-context";
 import { GLOBAL_BOARD_KEY } from "./optimistic/issue-writes";
 import { fetchSeeded } from "./server-seed";
+import { refreshResolvedMention } from "./mention-resolution";
 
 type AvatarResponse = { avatar: string };
 
@@ -48,6 +49,8 @@ function useAvatarMutation(
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      // Pills naming the account, as Numo's intro does, take the new portrait.
+      if (user) refreshResolvedMention("member", user.id);
     },
   });
 }
@@ -87,21 +90,8 @@ export function useUploadAvatar() {
       void queryClient.invalidateQueries({ queryKey: GLOBAL_BOARD_KEY });
       void queryClient.invalidateQueries({ queryKey: ["notifications"] });
       void queryClient.invalidateQueries({ queryKey: ["my-invitations"] });
+      // Pills naming the account, as Numo's intro does, take the new portrait.
+      if (user) refreshResolvedMention("member", user.id);
     },
   });
-}
-
-/** Stages a signup image and returns the token to place in auth metadata. */
-export async function stageSignupAvatarFile(file: File): Promise<string> {
-  const body = new FormData();
-  body.append("file", file, file.name || "avatar");
-  const response = await fetch("/api/signup/avatar", { method: "POST", body });
-  const data = (await response.json().catch(() => ({}))) as {
-    error?: string;
-    token?: string;
-  };
-  if (!response.ok || !data.token) {
-    throw new Error(data.error ?? "Avatar upload failed");
-  }
-  return data.token;
 }

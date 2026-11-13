@@ -2,7 +2,7 @@
 
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, ServerStack01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, MoreHorizontalIcon, ServerStack01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "@/components/app-link";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { SearchSelect } from "@/components/search-select";
+import { IssueActionsMenu } from "@/components/issue-context-menu";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { Spinner } from "@/components/ui/spinner";
 import { InboxRowsSkeleton } from "@/components/inbox-skeleton";
 import { cn } from "@/lib/utils";
@@ -192,6 +195,7 @@ export default function InboxContent({
   const t = useTranslations("Inbox");
   const tCommon = useTranslations("Common");
   const tIssue = useTranslations("Issue");
+  const mobile = useMobileLayout() === true;
   const tProjects = useTranslations("Projects");
   const tTimeline = useTranslations("Timeline");
   const format = useFormatter();
@@ -335,60 +339,104 @@ export default function InboxContent({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-1 px-3">
-        <div
-          role="group"
-          aria-label={t("title")}
-          className="no-scrollbar flex min-w-0 flex-1 gap-3 overflow-x-auto overscroll-x-contain"
-        >
-          {FILTERS.map(({ key, labelKey }) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={filter === key}
-              onClick={() => setFilter(key)}
-              className={cn(
-                "flex min-h-12 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                filter === key ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t(labelKey as Parameters<typeof t>[0])}
-              {filterCounts[key] > 0 && (
-                <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums" aria-label={t("filterUnreadCount", { count: filterCounts[key] })}>
-                  {filterCounts[key]}
-                </span>
-              )}
-            </button>
-          ))}
+      {mobile ? (
+        // On a phone the filters are one picker, as a board's views are, and
+        // the actions share one menu: the row stays clear at arm's length.
+        <div data-inbox-sheet-bar className="flex shrink-0 items-center gap-2 px-3 pb-2">
+          <div className="min-w-0 flex-1">
+            <SearchSelect
+              value={filter}
+              onChange={(next) => { if (next) setFilter(next as InboxFilter); }}
+              options={FILTERS.map(({ key, labelKey }) => ({
+                value: key,
+                label: t(labelKey as Parameters<typeof t>[0]),
+                labelNode: (
+                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="truncate">{t(labelKey as Parameters<typeof t>[0])}</span>
+                    {filterCounts[key] > 0 && (
+                      <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">{filterCounts[key]}</span>
+                    )}
+                  </span>
+                ),
+              }))}
+              trigger={
+                <Button variant="outline" className="h-11 min-w-0 max-w-full justify-start gap-2 px-4 text-base">
+                  <span className="truncate">{t((FILTERS.find((item) => item.key === filter)?.labelKey ?? "filterUnread") as Parameters<typeof t>[0])}</span>
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+                </Button>
+              }
+            />
+          </div>
+          <IssueActionsMenu
+            tooltip={tCommon("moreActions")}
+            trigger={
+              <IconButton aria-label={tCommon("moreActions")}>
+                <HugeiconsIcon icon={MoreHorizontalIcon} />
+              </IconButton>
+            }
+            actions={[
+              { id: "mark-all-read", label: t("markAllRead"), icon: <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />, disabled: unreadCount === 0, onSelect: () => act(markAllRead()) },
+              { id: "clear-read", label: t("clearRead"), icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />, disabled: readCount === 0, transfersFocus: true, onSelect: () => setClearReadOpen(true) },
+              { id: "settings", label: t("settings"), icon: <HugeiconsIcon icon={Settings01Icon} className="size-4" />, separatorBefore: true, onSelect: () => { onNavigate?.(); router.push("/settings?tab=inbox"); } },
+            ]}
+          />
         </div>
-        <ActionTooltip label={t("clearRead")}>
-          <IconButton
-            size="sm"
-            aria-label={t("clearRead")}
-            disabled={readCount === 0}
-            onClick={() => setClearReadOpen(true)}
+      ) : (
+      <div className="flex shrink-0 items-center gap-1 px-3">
+          <div
+            role="group"
+            aria-label={t("title")}
+            className="no-scrollbar flex min-w-0 flex-1 gap-3 overflow-x-auto overscroll-x-contain"
           >
-            <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-          </IconButton>
-        </ActionTooltip>
-        <ActionTooltip label={t("markAllRead")}>
-          <IconButton
-            size="sm"
-            aria-label={t("markAllRead")}
-            disabled={unreadCount === 0}
-            onClick={() => act(markAllRead())}
-          >
-            <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />
-          </IconButton>
-        </ActionTooltip>
-        <ActionTooltip label={t("settings")}>
-          <IconButton size="sm" aria-label={t("settings")} asChild>
-            <Link href="/settings?tab=inbox" onClick={onNavigate}>
-              <HugeiconsIcon icon={Settings01Icon} className="size-4" />
-            </Link>
-          </IconButton>
-        </ActionTooltip>
-      </div>
+            {FILTERS.map(({ key, labelKey }) => (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+                className={cn(
+                  "flex min-h-12 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  filter === key ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(labelKey as Parameters<typeof t>[0])}
+                {filterCounts[key] > 0 && (
+                  <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums" aria-label={t("filterUnreadCount", { count: filterCounts[key] })}>
+                    {filterCounts[key]}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <ActionTooltip label={t("clearRead")}>
+            <IconButton
+              size="sm"
+              aria-label={t("clearRead")}
+              disabled={readCount === 0}
+              onClick={() => setClearReadOpen(true)}
+            >
+              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+            </IconButton>
+          </ActionTooltip>
+          <ActionTooltip label={t("markAllRead")}>
+            <IconButton
+              size="sm"
+              aria-label={t("markAllRead")}
+              disabled={unreadCount === 0}
+              onClick={() => act(markAllRead())}
+            >
+              <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />
+            </IconButton>
+          </ActionTooltip>
+          <ActionTooltip label={t("settings")}>
+            <IconButton size="sm" aria-label={t("settings")} asChild>
+              <Link href="/settings?tab=inbox" onClick={onNavigate}>
+                <HugeiconsIcon icon={Settings01Icon} className="size-4" />
+              </Link>
+            </IconButton>
+          </ActionTooltip>
+        </div>
+      )}
         <div
           ref={setListRef}
           {...contentFade.scrollProps}
@@ -397,7 +445,7 @@ export default function InboxContent({
           <div className="w-full py-3">
             {showInvitations && (
               <section>
-                <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground">
+                <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground app-mobile:px-3">
                   {t("groupInvitations")}
                 </h2>
                 <ul
@@ -477,7 +525,7 @@ export default function InboxContent({
                     index > 0 || showInvitations ? "mt-6" : undefined,
                   )}
                 >
-                  <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground">
+                  <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground app-mobile:px-3">
                     {t(GROUP_KEYS[group] as Parameters<typeof t>[0])}
                   </h2>
                   <ul
@@ -511,7 +559,7 @@ export default function InboxContent({
                             data-sidebar-filter-result
                             onClick={() => open(notification)}
                             className={cn(
-                              "relative flex w-full items-center gap-3 px-4 py-3 pr-20 text-left sm:pr-4 transition-colors",
+                              "relative flex w-full items-center gap-3 px-4 py-3 pr-20 text-left sm:pr-4 app-mobile:pl-3 transition-colors",
                               "focus-visible:outline-none",
                             )}
                           >

@@ -1,7 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { SESSION_COOKIE_OPTIONS } from "@/lib/session-cookies";
+import { supabaseCookieOptions } from "@/lib/session-cookies";
 import { browserRuntimeConfig } from "@/lib/runtime-config-provider";
 import { backendFetchWithTimeout } from "./backend-availability";
 
@@ -14,12 +14,13 @@ let _supabase: SupabaseClient | null = null;
  */
 export function getSupabase(): SupabaseClient {
   if (!_supabase) {
-    const { supabaseUrl: url, supabaseAnonKey: key } = browserRuntimeConfig();
-    // `cookieOptions`: THIS client writes session cookies to
-    // time of connection, and the packet does not put `Secure` (MIN-351).
+    const { supabaseUrl: url, supabaseAnonKey: key, supabaseProjectRef } = browserRuntimeConfig();
+    // `cookieOptions`: THIS client writes session cookies at sign-in, and the
+    // package does not set `Secure` (MIN-351). A declared project ref also
+    // pins the cookie name across a custom API domain (MIN-960).
     _supabase = createBrowserClient(url, key, {
       global: { fetch: backendFetchWithTimeout },
-      cookieOptions: SESSION_COOKIE_OPTIONS,
+      cookieOptions: supabaseCookieOptions(supabaseProjectRef),
     });
   }
   return _supabase;

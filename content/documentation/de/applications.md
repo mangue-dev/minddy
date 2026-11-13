@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 18,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -34,7 +34,8 @@
       "desktop"
     ],
     "evidence": [
-      "components/mobile-sidebar-reveal.tsx",
+      "components/mobile-navigation.tsx",
+      "components/auth/auth-entry.tsx",
       "components/issue-side-panel.tsx",
       "components/assistant-panel.tsx",
       "public/sw.js",
@@ -73,10 +74,10 @@
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 21,
+    "fact": "agent:claude-code (MIN-896 bottom sheets closed by a downward swipe, after the list scrolls back to its top; checked against components/ui/mobile-sheet.tsx and lib/sheet-swipe-dismiss.ts and their tests; not checked on a physical phone; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the gesture); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone menu opened from the bottom bar as a sheet, and the desktop app's first launch on the single sign-in and sign-up screen: checked against components/mobile-navigation.tsx, components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no browser walkthrough; existing figures do not show the bottom bar or the sign-in screen and were kept); agent:claude-code (MIN-907 store submission prep: the browser-install passage no longer states that minddy has no App Store app, ahead of the iOS app; checked against messages/*.json DownloadMobile.noteBody; no figure affected)",
+    "language": "agent:claude-code (de changed passage on closing bottom sheets, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-907 phone menu and desktop first-launch passages, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-907 browser-install sentence, in the locale's register; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "issues"
@@ -101,7 +102,7 @@
       "src": "/documentation/de/web-and-mobile-workflow.png",
       "alt": "Mobiles Ticketpanel mit lokalisiertem Titel, Beschreibung, Eigenschaften und Kommentarfeld.",
       "caption": "Auf einem schmalen Bildschirm erscheinen Ticketdetails in einem angepassten Panel. Schließe es über die Schaltfläche, um zum Projekt zurückzukehren; Numo bleibt über seine schwebende Schaltfläche erreichbar.",
-      "revision": 19,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +119,7 @@
       "src": "/documentation/de/install-the-pwa-workflow.png",
       "alt": "Illustrierte Safari-Installationsanleitung von minddy: Teilen, zum Home-Bildschirm hinzufügen und bestätigen.",
       "caption": "Die öffentliche Anleitung illustriert die drei Safari-Schritte und die aktivierte Option Als Web-App öffnen. Die Abbildungen sind von minddy dargestellte Anleitungen und keine Aufnahmen einer abgeschlossenen iOS-Installation.",
-      "revision": 19,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -135,7 +136,7 @@
       "src": "/documentation/de/devices-and-notifications-workflow.png",
       "alt": "Push-Einstellungen mit gesperrter Browserberechtigung und ohne registriertes Gerät.",
       "caption": "Dieser Browser blockiert Benachrichtigungen. Erlaube sie in den Website-Einstellungen, bevor du das Gerät registrierst.",
-      "revision": 19,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -152,7 +153,7 @@
       "src": "/documentation/de/devices-and-notifications-registered.png",
       "alt": "Aktives, für das Konto registriertes Browser-Gerät mit dem tatsächlichen Datum des letzten Versands.",
       "caption": "Für das Konto ist ein aktives Browser-Gerät registriert. Die Liste zeigt das Registrierungsdatum und den letzten Versand. Ob ein Banner erscheint, hängt weiterhin von der Browserberechtigung und den Betriebssystemeinstellungen ab.",
-      "revision": 19,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -169,7 +170,7 @@
       "src": "/documentation/de/desktop-renderer-recovery.png",
       "alt": "Lokale Wiederherstellungsseite nach einem erzwungenen Renderer-Absturz mit Reload window und Check server settings.",
       "caption": "Wiederherstellungsseite in der macOS-Entwicklungsapp mit isoliertem Profil und Demonstrationsserver. Die native Oberfläche verwendet in allen Sprachen englische Beschriftungen.",
-      "revision": 19,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -195,7 +196,7 @@ Du kannst dieselbe Instanz im Browser, als installierte Web-App oder als Desktop
 
 ## Im Browser und auf kleinen Bildschirmen arbeiten {#web-and-mobile}
 
-Öffne die Adresse deiner Instanz und melde dich dort an. Blende auf einem schmalen Bildschirm die Seitenleiste ein, wähle ein Projekt und öffne ein Ticket aus der Liste oder dem Board. Lies die Details im an die Bildschirmgröße angepassten Panel, ändere das gewünschte Feld oder füge einen Kommentar hinzu. Warte auf das Ergebnis der Speicherung, bevor du das Panel schließt. Schließe das Detailpanel, um zur Liste zurückzukehren; die mobile Darstellung unterscheidet sich von der Darstellung auf einem breiten Bildschirm.
+Öffne die Adresse deiner Instanz und melde dich dort an. Öffne auf einem schmalen Bildschirm das Menü links in der Leiste unten am Bildschirm, wähle ein Projekt und öffne ein Ticket aus der Liste oder dem Board. Lies die Details im an die Bildschirmgröße angepassten Panel, ändere das gewünschte Feld oder füge einen Kommentar hinzu. Warte auf das Ergebnis der Speicherung, bevor du das Panel schließt. Schließe das Detailpanel, um zur Liste zurückzukehren; die mobile Darstellung unterscheidet sich von der Darstellung auf einem breiten Bildschirm.
 
 Auf dem Smartphone öffnen sich Menüs, Auswahllisten und Dialoge in einem unteren Blatt. Schließe es mit seiner Schaltfläche zum Schließen oder indem du es nach unten wischst; ist seine Liste gescrollt, scrollt die Wischbewegung sie zuerst wieder nach oben.
 
@@ -215,7 +216,7 @@ Browser und installierte Web-App benötigen eine Netzwerkverbindung für Projekt
 
 Wähle unter iOS Teilen und anschließend Zu Home-Bildschirm hinzufügen. Lass Als Web-App öffnen aktiviert und tippe auf Hinzufügen. Je nach Safari-Oberfläche musst du vor Teilen zunächst Mehr öffnen. Fehlt die Aktion, prüfe Aktionen bearbeiten.
 
-Nutze unter Android die angebotene Installationsaufforderung oder wähle im Browsermenü App installieren beziehungsweise Zum Startbildschirm hinzufügen. Bestätige anschließend die Installation. Die Beschriftungen hängen vom Browser ab. Öffne das neue Symbol und melde dich mit dem Konto dieser Instanz an. Es handelt sich um eine im Browser installierte PWA; im iOS App Store oder bei Google Play gibt es keine native minddy-App.
+Nutze unter Android die angebotene Installationsaufforderung oder wähle im Browsermenü App installieren beziehungsweise Zum Startbildschirm hinzufügen. Bestätige anschließend die Installation. Die Beschriftungen hängen vom Browser ab. Öffne das neue Symbol und melde dich mit dem Konto dieser Instanz an. So installiert der Browser minddy als Web-App.
 
 ### Updates, Offlinezugriff und Push {#operation}
 
@@ -227,9 +228,9 @@ Durch die Installation entsteht keine Offlinekopie des Projekts. Der Service Wor
 
 Öffne die öffentliche Downloadseite. Wähle unter macOS das Paket für Apple silicon oder Intel. Installiere die Anwendung unter Windows über den Microsoft Store. Wähle unter Linux ein AppImage oder ein signiertes `deb`/`rpm`-Paket für x64 oder ARM64. Befolge die Plattformanleitung und die Hinweise zur Paketprüfung. Für Windows gibt es keinen `exe`-Installer. Die macOS-App benötigt macOS 13 (Ventura) oder neuer; auf einer älteren Version behält eine bereits installierte App ihre aktuelle Version und erhält keine weiteren Updates.
 
-Beim ersten Start öffnet die App die Registrierungsseite von minddy Cloud, auf der du dein Konto anlegst. Um stattdessen deine eigene Instanz zu nutzen, klicke unten auf den Anmelde- und Registrierungsseiten auf **minddy selbst hosten**. Das öffnet **minddy selbst hosten** mit drei Optionen: **Auf diesem Computer installieren** richtet eine [lokale Instanz](/de/dokumentation/install-locally#install-locally) ein, **Auf einem Server installieren** öffnet die öffentliche Anleitung für eine Serverinstallation in deinem Browser, und **Bestehende Installation verwenden** öffnet einen Bildschirm, der deine vorhandenen Installationen bündelt. Dort öffnet **Auf diesem Computer** einen minddy-Ordner, der bereits auf diesem Computer liegt, und die App startet ihn; darunter verbindet dich **Serveradresse** mit **Verbinden** mit einem Server, den du betreibst. Entfernte Server benötigen HTTPS; `localhost` kann HTTP verwenden.
+Beim ersten Start öffnet die App den Bildschirm **Anmelden oder registrieren** von minddy Cloud, auf dem du dich anmeldest oder dein Konto anlegst. Um stattdessen deine eigene Instanz zu nutzen, klicke unten auf diesem Bildschirm auf **minddy selbst hosten**. Das öffnet **minddy selbst hosten** mit drei Optionen: **Auf diesem Computer installieren** richtet eine [lokale Instanz](/de/dokumentation/install-locally#install-locally) ein, **Auf einem Server installieren** öffnet die öffentliche Anleitung für eine Serverinstallation in deinem Browser, und **Bestehende Installation verwenden** öffnet einen Bildschirm, der deine vorhandenen Installationen bündelt. Dort öffnet **Auf diesem Computer** einen minddy-Ordner, der bereits auf diesem Computer liegt, und die App startet ihn; darunter verbindet dich **Serveradresse** mit **Verbinden** mit einem Server, den du betreibst. Entfernte Server benötigen HTTPS; `localhost` kann HTTP verwenden.
 
-Um den Server später zu wechseln, wähle **Connect to a Server…** im nativen Menü minddy (das native Menü ist englisch; unter Windows und Linux blendet Alt die Menüleiste ein), **Ändern…** neben **Verbundener Server** unter **Kontoeinstellungen** → **Einstellungen** → **Desktop-App** oder **minddy selbst hosten** unten auf den Anmelde- und Registrierungsseiten. Jeder Weg bringt das App-Fenster zu **minddy selbst hosten**; ist ein selbst gehosteter Server verbunden, kehrst du unter **Bestehende Installation verwenden** mit **minddy Cloud verwenden** zu Cloud zurück. Der Pfad oben auf der Seite führt zu jedem Schritt zurück, und das minddy-Logo führt zurück in die App. Dieser Bildschirm ist in die Desktop-App eingebaut und öffnet sich ohne Internetverbindung. Prüfe das Ziel vor der Anmeldung: Jedes Konto gehört zu seiner Instanz. OAuth verwendet den Systembrowser und kehrt anschließend zur Desktop-App zurück.
+Um den Server später zu wechseln, wähle **Connect to a Server…** im nativen Menü minddy (das native Menü ist englisch; unter Windows und Linux blendet Alt die Menüleiste ein), **Ändern…** neben **Verbundener Server** unter **Kontoeinstellungen** → **Einstellungen** → **Desktop-App** oder **minddy selbst hosten** unten auf dem Bildschirm **Anmelden oder registrieren**. Jeder Weg bringt das App-Fenster zu **minddy selbst hosten**; ist ein selbst gehosteter Server verbunden, kehrst du unter **Bestehende Installation verwenden** mit **minddy Cloud verwenden** zu Cloud zurück. Der Pfad oben auf der Seite führt zu jedem Schritt zurück, und das minddy-Logo führt zurück in die App. Dieser Bildschirm ist in die Desktop-App eingebaut und öffnet sich ohne Internetverbindung. Prüfe das Ziel vor der Anmeldung: Jedes Konto gehört zu seiner Instanz. OAuth verwendet den Systembrowser und kehrt anschließend zur Desktop-App zurück.
 
 Unter macOS und Windows 11 zeigen Seitenleiste, Tabs und Fensterränder deinen Desktop verschwommen hinter dem deckenden Inhalt. Ein Fenster im Vollbildmodus bleibt deckend; die Transparenz kehrt zurück, sobald es den Vollbildmodus verlässt. Damit das Fenster auf diesem Gerät deckend bleibt, schalte **Transparenz der Desktop-App** unter **Kontoeinstellungen** → **Einstellungen** → [Aussehen](/docs/accounts#preferences) aus.
 

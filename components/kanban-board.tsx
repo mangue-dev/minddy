@@ -9,7 +9,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { BoardColumnDots } from "@/components/board-column-dots";
 import {
   DndContext,
   DragOverlay,
@@ -380,7 +379,7 @@ export const KanbanBoard = memo(function KanbanBoard({
     edges,
   } = useScrollFade<HTMLDivElement>("x");
 
-  // Mobile: track which column is snapped into view to drive the dot indicator.
+  // The horizontal position survives the board re-rendering its columns.
   const localHorizontalScroll = useRef(0);
   const preservedHorizontalScroll = horizontalScroll ?? localHorizontalScroll;
   const dropAnimation = useMemo(() => createBoardDropAnimation(() => scrollerRef.current), []);
@@ -623,7 +622,6 @@ export const KanbanBoard = memo(function KanbanBoard({
                 </div>
                 <ScrollFadeEdges edges={edges} axis="x" className="z-30" />
               </div>
-              <BoardColumnDots statuses={columns.map((column) => column.status)} scroller={scrollerRef} />
             </div>
 
             <MarqueeOverlay overlayRef={marqueeOverlayRef} />

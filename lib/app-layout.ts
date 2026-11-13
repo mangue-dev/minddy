@@ -12,11 +12,19 @@ export type AppLayoutInput = {
   screenWidth: number;
   screenHeight: number;
   orientation: "portrait" | "landscape" | null;
+  /**
+   * Inside the native mobile app (MIN-907). The app is touch-only, often
+   * without a keyboard: an iPad keeps the phone layout and its navigation
+   * whatever its size or orientation, where Safari on the same iPad shows
+   * the desktop layout in landscape.
+   */
+  nativeMobile?: boolean;
 };
 type AppLayoutPolicy = typeof APP_LAYOUT_POLICY;
 
 /** Self-contained so the same decision can run before React hydrates. */
 export function resolveMobileLayout(input: AppLayoutInput, policy: AppLayoutPolicy): boolean {
+  if (input.nativeMobile) return true;
   if (input.narrow ?? (input.width < policy.desktopMinWidth)) return true;
   if (!input.touch) return false;
   const shortSide = Math.min(input.screenWidth, input.screenHeight);
@@ -47,7 +55,20 @@ export function readAppLayoutInput(policy: AppLayoutPolicy): AppLayoutInput {
     screenWidth: screen?.width ?? 0,
     screenHeight: screen?.height ?? 0,
     orientation,
+    nativeMobile: isNativeMobileShell(),
   };
+}
+
+/** The Capacitor shell, read without importing the bridge: this runs before paint. */
+function isNativeMobileShell(): boolean {
+  try {
+    const capacitor = (window as Window & { Capacitor?: { isNativePlatform?: () => boolean; getPlatform?: () => string } }).Capacitor;
+    if (!capacitor?.isNativePlatform?.()) return false;
+    const platform = capacitor.getPlatform?.();
+    return platform === "ios" || platform === "android";
+  } catch {
+    return false;
+  }
 }
 
 export const MOBILE_LAYOUT_QUERY = `(max-width: ${APP_LAYOUT_POLICY.desktopMinWidth - 1}px)`;

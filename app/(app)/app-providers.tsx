@@ -32,6 +32,8 @@ import { MentionHoverProvider } from "@/components/mention-hover";
 import { MentionHoverCard } from "@/components/mention-hover-card";
 import { PrUnlinkConfirmationProvider } from "@/components/pull-requests/pr-unlink-confirmation";
 import { AppShellChrome } from "@/components/app-shell-chrome";
+import { FirstRunGate } from "@/components/first-run/first-run-gate";
+import { FirstRunCoverScript } from "@/components/first-run/first-run-cover-script";
 import { AssistantFab } from "@/components/assistant-fab";
 import { AnalyticsProjectGroup } from "@/components/analytics-project-group";
 import { PushServiceWorker } from "@/components/push-service-worker";
@@ -40,6 +42,8 @@ import { DesktopAnalyticsPrompt } from "@/components/desktop-analytics-prompt";
 import { PushNotificationDismiss } from "@/components/push-notification-dismiss";
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
+import { HapticsAccountSync } from "@/components/mobile/haptics-account-sync";
+import { AiConsentGate } from "@/components/mobile/ai-consent-gate";
 import { CommentShortcut } from "@/components/comment-shortcut";
 import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
 import { RememberTimeZone } from "@/components/server-seed";
@@ -110,12 +114,20 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     // framer-motion animates from script: "user" drops its transform and layout
     // animations for the whole signed-in app when the system asks (MIN-783).
     <MotionConfig reducedMotion="user">
+    {/* Before the first paint: a new account never sees the app before its
+        first-run screens (MIN-964). */}
+    <FirstRunCoverScript />
     {/* Provider buttons only appear on the auth screens, which mount their own
         AuthProvider. */}
     <AuthProvider discoverOAuthProviders={false}>
       {/* Adopts the ACCOUNT theme at sign-in (and migrates legacy accounts):
           renders nothing, sits here to see both Auth and Theme providers. */}
       <ThemeAccountSync />
+      {/* The account's vibration switch, for the mobile app (MIN-959). */}
+      <HapticsAccountSync />
+      {/* The mobile app asks before AI features send content to a model
+          provider (MIN-907). */}
+      <AiConsentGate />
       <RememberTimeZone />
       {/* The sending shortcut chosen by the account, placed high: all
  composers of the app are below, and none need to know
@@ -159,6 +171,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                                 <PrUnlinkConfirmationProvider>
                                   <OnboardingProvider>
                                     <AppShellChrome>{children}</AppShellChrome>
+                                    {/* A page of its own over the app for a new
+                                        account: profile, then the phone tour. */}
+                                    <FirstRunGate />
                                     <ResourcePreviewHost />
                                   </OnboardingProvider>
                                 </PrUnlinkConfirmationProvider>

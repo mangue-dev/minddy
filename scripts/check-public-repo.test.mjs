@@ -34,6 +34,33 @@ function runStagedCheck(cwd) {
   });
 }
 
+test("staged check accepts the mobile shell's sources and rejects its build output", () => {
+  const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
+  try {
+    git(root, ["init", "--initial-branch=main"]);
+    mkdirSync(join(root, "mobile", "ios", "App", "App", "public"), { recursive: true });
+    mkdirSync(join(root, "mobile", "www"));
+    writeFileSync(join(root, "mobile", "capacitor.config.ts"), "export default {};\n");
+    writeFileSync(join(root, "mobile", "ios", "App", "App", "AppDelegate.swift"), "import UIKit\n");
+    git(root, ["add", "mobile"]);
+
+    const accepted = runStagedCheck(root);
+    assert.equal(accepted.status, 0, accepted.stderr);
+
+    writeFileSync(join(root, "mobile", "www", "shell.js"), "// Generated bundle.\n");
+    writeFileSync(join(root, "mobile", "ios", "App", "App", "public", "shell.js"), "// Copied bundle.\n");
+    git(root, ["add", "mobile"]);
+
+    const rejected = runStagedCheck(root);
+    assert.equal(rejected.status, 1);
+    assert.match(rejected.stderr, /mobile\/www\/shell\.js: internal path is forbidden/);
+    assert.match(rejected.stderr, /mobile\/ios\/App\/App\/public\/shell\.js: internal path is forbidden/);
+    assert.doesNotMatch(rejected.stderr, /AppDelegate\.swift/);
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+});
+
 test("staged check allows the public security probe but rejects cloud-only scripts", () => {
   const root = mkdtempSync(join(tmpdir(), "minddy-public-repository-test-"));
   try {

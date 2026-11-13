@@ -34,7 +34,11 @@ function BrowseCollection({ href, navigation, children }: {
   const open = useAppNavigation();
   const { onNavigate, headerHost } = navigation;
   const select = useCallback((destination: string) => {
-    open(destination, () => { onNavigate(); router.push(destination); });
+    // The sheet closes now, outside the navigation's transition: closed from
+    // inside it, the sheet stayed up until the destination had loaded and hid
+    // its skeleton. A link in the menu closes it the same way (AppLink).
+    onNavigate();
+    open(destination, () => router.push(destination));
   }, [open, onNavigate, router]);
   const browse = useMemo(() => ({ headerHost, onSelect: select }), [headerHost, select]);
   const route = useMemo(() => ({ pathname: href, search: "", projectSegment: projectSegmentFromPath(href) }), [href]);

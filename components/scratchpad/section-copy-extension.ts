@@ -19,8 +19,20 @@ import { Decoration, DecorationSet } from "@tiptap/pm/view";
  */
 export interface SectionCopyOptions {
   onCopy: (headingIndex: number) => void;
-  label: string;
+  /** Read at each redraw, so the label follows the prompt's destination. */
+  label: string | (() => string);
+  /**
+   * Draws the button's icon into it and returns its cleanup, or returns null
+   * to keep the copy glyph. The notebook draws the logo of the agent a
+   * prompt is sent to (MIN-951).
+   */
+  renderIcon?: (host: HTMLElement) => (() => void) | null;
+  /** Names what `renderIcon` draws: a new key redraws the buttons. */
+  iconKey?: () => string;
 }
+
+/** Transaction meta that redraws the buttons, their label or icon having changed. */
+export const SECTION_COPY_REFRESH = "sectionCopyRefresh";
 
 const COPY_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
@@ -33,7 +45,7 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
   name: "sectionCopy",
 
   addOptions() {
-    return { onCopy: () => {}, label: "Copy section" };
+    return { onCopy: () => {}, label: "Copy section", renderIcon: undefined, iconKey: undefined };
   },
 
   addProseMirrorPlugins() {
@@ -108,6 +120,9 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
       chrome.tip.classList.remove("is-visible");
     };
 
+    // The cleanup of each button's drawn icon, run when ProseMirror drops it.
+    const iconCleanups = new WeakMap<Node, () => void>();
+
     return [
       new Plugin({
         key: new PluginKey("sectionCopy"),
@@ -135,7 +150,9 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
               btn.className = className;
               btn.contentEditable = "false";
               btn.setAttribute("aria-label", label);
-              btn.innerHTML = svg;
+              const cleanup = options.renderIcon?.(btn) ?? null;
+              if (cleanup) iconCleanups.set(btn, cleanup);
+              else btn.innerHTML = svg;
               // Keep focus/selection in the editor; just act.
               btn.addEventListener("mousedown", (e) => {
                 e.preventDefault();
@@ -156,6 +173,8 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
             };
 
             const decorations: Decoration[] = [];
+            const label = typeof options.label === "function" ? options.label() : options.label;
+            const iconKey = options.iconKey?.() ?? "copy";
             let headingIndex = -1;
             // FIRST LEVEL titles only: a section of the notebook is
             // a title of the note, not a `#` lost in a quote or a
@@ -170,10 +189,16 @@ export const SectionCopy = Extension.create<SectionCopyOptions>({
                 Decoration.widget(
                   pos + 1,
                   () =>
-                    makeButton("scratchpad-section-copy", COPY_SVG, options.label, () =>
+                    makeButton("scratchpad-section-copy", COPY_SVG, label, () =>
                       options.onCopy(index)
                     ),
-                  { side: -1, ignoreSelection: true, key: `section-copy-${index}` }
+                  {
+                    side: -1,
+                    ignoreSelection: true,
+                    // A new label or icon makes a new widget, drawn afresh.
+                    key: `section-copy-${index}-${iconKey}-${label}`,
+                    destroy: (node) => iconCleanups.get(node)?.(),
+                  }
                 )
               );
             });

@@ -3,6 +3,7 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { runFeedbackReview } from "@/lib/server/feedback/review";
 import { getAppConfigValue } from "@/lib/server/app-config";
+import { runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 
 /**
  * Hourly Vercel cron: review feedback with AI, purge rejected junk, and remove
@@ -22,7 +23,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const review = await runFeedbackReview();
+  // AI runs under each account's answer in the mobile app (MIN-907).
+  const review = await runAsBackgroundAiWork(() => runFeedbackReview());
 
   const service = getServiceClient();
   const purged = await purgeJunk();

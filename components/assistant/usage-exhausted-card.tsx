@@ -6,6 +6,7 @@ import { GaugeIcon as CircleGauge } from "@hugeicons/core-free-icons";
 import { useFormatter, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { getBillingPlan, type BillingPlanId } from "@/lib/billing-plans";
+import { usePurchasesHidden } from "@/lib/native-app";
 
 export interface NumoUsageExhaustedDetails {
   // Turns no longer hold a budget of their own (MIN-869); the
@@ -50,6 +51,8 @@ export function NumoUsageExhaustedCard({
 }) {
   const t = useTranslations("Assistant");
   const format = useFormatter();
+  // The mobile apps do not lead to a purchase (MIN-907).
+  const purchasesHidden = usePurchasesHidden();
   if (details.cause === "operation_allocation") {
     return (
       <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm">
@@ -86,7 +89,7 @@ export function NumoUsageExhaustedCard({
           </Button>
         ) : (
           <>
-            {details.nextPlanId ? (
+            {details.nextPlanId && !purchasesHidden ? (
               <Button asChild size="sm">
                 <Link href="/billing">
                   {t("usageUpgrade", {

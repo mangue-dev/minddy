@@ -191,8 +191,11 @@ export function UsageBudgetSummary({ compact = false }: { compact?: boolean }) {
 
 export function UsageSegmentBreakdown({
   compact = false,
+  touch = false,
 }: {
   compact?: boolean;
+  /** Rows at a finger's height, for the mobile bottom sheet. */
+  touch?: boolean;
 }) {
   const t = useTranslations("Billing");
   const locale = useLocale();
@@ -200,12 +203,12 @@ export function UsageSegmentBreakdown({
     useBillingSummary();
   if (usageError && !usage) return null;
   return (
-    <ul className={cn("min-w-0", compact ? "space-y-2" : "space-y-4")}>
+    <ul className={cn("min-w-0", touch ? "space-y-0" : compact ? "space-y-2" : "space-y-4")}>
       {USAGE_SEGMENTS.map((segment) => {
         const ui = SEGMENT_UI[segment.id];
         const usd = segments.find((s) => s.id === segment.id)?.usd ?? 0;
         return (
-          <li key={segment.id} className="space-y-1.5">
+          <li key={segment.id} className={cn("space-y-1.5", touch && "flex min-h-12 flex-col justify-center")}>
             <div className="flex items-start justify-between gap-3 text-sm">
               <span className="flex min-w-0 items-start gap-2">
                 <AppIcon

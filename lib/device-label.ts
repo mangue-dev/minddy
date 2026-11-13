@@ -16,7 +16,7 @@
 /** The order counts: each family declares itself by pretending to be the previous
  *. Edge says “Chrome” and “Safari”, Chrome says “Safari”. */
 const BROWSERS: readonly { name: string; test: RegExp }[] = [
-  { name: "minddy", test: /\bminddy-desktop\//i },
+  { name: "minddy", test: /\bminddy-(?:desktop|mobile)\//i },
   { name: "Edge", test: /\bEdg(?:e|A|iOS)?\//i },
   { name: "Opera", test: /\bOPR\/|\bOpera\//i },
   { name: "Samsung Internet", test: /\bSamsungBrowser\//i },

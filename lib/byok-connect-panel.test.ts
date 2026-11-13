@@ -111,6 +111,7 @@ describe("ByokConnectPanel", () => {
               appUrl: "https://www.minddy.app",
               supabaseUrl: "https://supabase.example.com",
               supabaseAnonKey: "anon-key",
+              supabaseProjectRef: null,
               siteName: "minddy",
               contactEmail: "support@example.com",
               productFeedbackIntegrationEnabled: false,

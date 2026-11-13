@@ -171,6 +171,12 @@ export interface AssistantShellProps {
   starterItems?: ReadonlyArray<{ label: string; prompt: string }> | null;
   /** The written rows are still loading: show no row yet. */
   startersPending?: boolean;
+  /**
+   * On a phone, hide the suggestion rows while the composer has the focus
+   * (Home): with the keyboard up they took the room right above it, between
+   * the field and the conversation.
+   */
+  hideStartersWhileComposing?: boolean;
   /** Shown instead of the "no AI provider" screen (Home keeps its greeting). */
   unavailableFallback?: ReactNode;
 }
@@ -197,6 +203,7 @@ export const AssistantShell = forwardRef<
     openingBriefId = null,
     starterItems = null,
     startersPending = false,
+    hideStartersWhileComposing = false,
     unavailableFallback = null,
   },
   ref
@@ -556,7 +563,12 @@ export const AssistantShell = forwardRef<
   const pathname = usePathname();
   const starterPage = assistantStarterPage(pathname, pageContext);
   const [composerEmpty, setComposerEmpty] = useState(true);
-  const showStarters = !hasMessages && !mobile && composerEmpty && !embeddedConversationId && !startersPending;
+  // On a phone only in the Numo sheet: Home keeps its page clear.
+  // Whether the composer holds the focus: with `hideStartersWhileComposing`,
+  // a phone hides the rows as soon as the keyboard is up, before a letter.
+  const [composing, setComposing] = useState(false);
+  const hiddenWhileComposing = hideStartersWhileComposing && mobile && composing;
+  const showStarters = !hasMessages && (!mobile || compact) && composerEmpty && !hiddenWhileComposing && !embeddedConversationId && !startersPending;
 
   // Question ask_user ACTIVE: the last visible message is a message
   // assistant carrying a tool-call ask_user and Numo is at rest (he is waiting for the
@@ -784,6 +796,7 @@ export const AssistantShell = forwardRef<
                 variant="ghost"
                 size="icon-sm"
                 aria-label={t("conversations")}
+                data-mobile-sheet-lead
               >
                 <HugeiconsIcon icon={Clock01Icon} className="h-4 w-4" />
               </Button>
@@ -804,7 +817,7 @@ export const AssistantShell = forwardRef<
           <div data-sheet-search className="flex h-11 shrink-0 items-center border-b border-border px-3">
             <SidebarFilterField {...sidebarFilter} />
           </div>
-          <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto p-1.5">
+          <div className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto p-1.5 app-mobile:p-0">
             <ConversationList
               activeConversationId={state.conversationId}
               onSelect={(id, convProjectId) => {
@@ -1256,6 +1269,12 @@ export const AssistantShell = forwardRef<
             fixed bottom padding keeps it off the edge of the content zone. */}
             <div
               data-keyboard-dock
+              // Only a field counts: a suggestion row is in this dock too.
+              onFocus={(event) => setComposing(isTextEntry(event.target))}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                setComposing(next instanceof Node && event.currentTarget.contains(next) && isTextEntry(next));
+              }}
               className={cn(
                 `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
                 compact ? "px-4" : "px-2 app-desktop:px-0",
@@ -1266,6 +1285,8 @@ export const AssistantShell = forwardRef<
                 page={starterPage}
                 visible={showStarters}
                 items={starterItems}
+                // In the sheet the rows span the composer's width.
+                className={compact ? "mx-0 flex" : undefined}
                 onPick={(prompt) => chatInputRef.current?.fill(prompt)}
               />
               {/* Active question: the card takes the PLACE of the composer. THE
@@ -1329,3 +1350,9 @@ export const AssistantShell = forwardRef<
   // has no destinations: you write there, and a click places the cursor there.
   return <MentionLinksProvider value={links}>{shell}</MentionLinksProvider>;
 });
+
+/** A field one writes in: the composer's editor, or any text input. */
+function isTextEntry(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement;
+}

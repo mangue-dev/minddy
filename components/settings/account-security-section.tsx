@@ -102,7 +102,8 @@ export function AccountSecuritySection() {
   } = useAuthSessionsQuery();
 
   const provider = (user?.app_metadata?.provider as string | undefined) ?? "email";
-  const providerLabel = provider === "google" ? "Google" : provider === "github" ? "GitHub" : null;
+  const providerLabel =
+    provider === "google" ? "Google" : provider === "github" ? "GitHub" : provider === "apple" ? "Apple" : null;
 
   // The tab's pad reads the same cache: invalidating it updates both.
   const reloadStatus = () =>

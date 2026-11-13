@@ -10,7 +10,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { assertReleaseCompatibility, assertVersion } from "./release-lib.mjs";
+import { appStoreVersion, assertReleaseCompatibility, assertVersion, xcodeMarketingVersions } from "./release-lib.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -100,7 +100,7 @@ export function findSettingsProblems({ workflows, actionsPolicy, configured }) {
   return problems;
 }
 
-export function findVersionProblems({ version, packageVersion, desktopVersion, compatibility, envExample, existingTags }) {
+export function findVersionProblems({ version, packageVersion, desktopVersion, mobileVersion, iosVersions, compatibility, envExample, existingTags }) {
   const problems = [];
   const fail = (message) => problems.push({ message });
   try {
@@ -109,8 +109,12 @@ export function findVersionProblems({ version, packageVersion, desktopVersion, c
     fail(error.message);
     return problems;
   }
-  if (packageVersion !== version || desktopVersion !== version) {
-    fail(`package.json (${packageVersion}) and desktop/package.json (${desktopVersion}) must both declare ${version}; prepare the release in a pull request`);
+  // The desktop and iOS apps follow the web's version (MIN-907); the App
+  // Store reads its numbers only (appStoreVersion).
+  const iosVersion = appStoreVersion(version);
+  if (packageVersion !== version || desktopVersion !== version || mobileVersion !== version
+    || iosVersions.length === 0 || iosVersions.some((value) => value !== iosVersion)) {
+    fail(`package.json (${packageVersion}), desktop/package.json (${desktopVersion}), mobile/package.json (${mobileVersion}) and the iOS MARKETING_VERSION (${iosVersions.join(", ") || "none"}) must all declare ${version}; prepare the release in a pull request`);
   }
   if (existingTags.includes(`v${version}`)) fail(`tag v${version} already exists; a published version is never reused`);
   try {
@@ -189,6 +193,8 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       version: options.version,
       packageVersion: JSON.parse(read("package.json")).version,
       desktopVersion: JSON.parse(read("desktop/package.json")).version,
+      mobileVersion: JSON.parse(read("mobile/package.json")).version,
+      iosVersions: xcodeMarketingVersions(read("mobile/ios/App/App.xcodeproj/project.pbxproj")),
       compatibility: JSON.parse(read("deploy/self-hosted/compatibility.json")),
       envExample: read("deploy/self-hosted/.env.example"),
       existingTags: tags.split("\n").filter(Boolean),

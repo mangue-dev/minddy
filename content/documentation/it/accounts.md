@@ -18,10 +18,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 19,
+  "revision": 21,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-12",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -35,8 +35,14 @@
     ],
     "evidence": [
       "app/(auth)/signup/page.tsx",
-      "components/auth/signup-wizard.tsx",
-      "lib/signup-wizard.ts",
+      "components/auth/auth-entry.tsx",
+      "components/auth/auth-chrome.tsx",
+      "lib/auth-entry.ts",
+      "app/api/auth/lookup/route.ts",
+      "components/first-run/first-run-gate.tsx",
+      "components/first-run/profile-setup-screen.tsx",
+      "components/first-run/onboarding-screen.tsx",
+      "lib/first-run.ts",
       "lib/password-policy.ts",
       "app/(auth)/login/page.tsx",
       "app/auth/confirm/page.tsx",
@@ -56,6 +62,7 @@
       "components/settings/account-data-section.tsx",
       "app/api/account/deletion-preview/route.ts",
       "app/api/account/route.ts",
+      "lib/server/apple-sign-in.ts",
       "supabase/migrations/20270109200046_list_auth_sessions.sql",
       "supabase/migrations/20270109200047_revoke_auth_session.sql",
       "lib/theme-presets.ts",
@@ -71,14 +78,16 @@
       "desktop/src/local-installer.ts",
       "desktop/src/local-account.ts",
       "lib/week-start.ts",
-      "components/settings/account-numo-section.tsx"
+      "components/settings/account-numo-section.tsx",
+      "lib/use-onboarding.ts",
+      "lib/onboarding.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured)",
-    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 21,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 4 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:/root (MIN-765 desktop preview channel removal: source review of components/settings/account-desktop-section.tsx and desktop/src/menu.ts; the Desktop app card no longer lists a preview channel; unchanged evidence retained; no browser walkthrough, no new captures); agent:claude-code (it/es catalog language review: quoted labels aligned on the corrected it catalog; no behavior change, no new captures); agent:claude-code (it/es catalog review recapture of account-security-workflow, profile-and-preferences-workflow, profile-and-preferences-preferences-workflow, privacy-and-account-deletion-workflow on 2026-10-22 from a local candidate of this branch against the preview demo account; images inspected; no form submitted); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-781 self-hosting from the desktop app: source review of components/desktop/server-choice.tsx, desktop/src/local-installer.ts and desktop/src/local-account.ts; the account-access section now states that a local instance installed by the desktop app has no signup; no installation run, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (MIN-881 first day of the week: source review of lib/week-start.ts, components/settings/account-preferences-section.tsx, components/calendar.tsx, lib/routine-schedule.ts, lib/routine-week-order.ts, components/stats/activity-heatmap.tsx and lib/mention-date.ts; new preferences paragraph; localized mention example checked against the parser; no browser walkthrough, no screenshot recaptured, existing figures carried forward unchanged); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 4 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-954 settings split: account settings paths moved from the former AI & Numo tab to the Numo, AI and MCP tabs, checked against components/settings/account-settings-page.tsx, components/settings/account-numo-section.tsx and messages/*.json; no browser walkthrough; existing figures kept, not recaptured); agent:claude-code (MIN-907 single sign-in and sign-up screen, first-run profile page and phone getting-started tour: checked against components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx, lib/auth-entry.ts, app/api/auth/lookup/route.ts, components/first-run/first-run-gate.tsx, components/first-run/profile-setup-screen.tsx, components/first-run/onboarding-screen.tsx, lib/first-run.ts and messages/*.json; no browser walkthrough; existing figures do not show these screens and were kept); agent:claude-code (MIN-907 tour follow-up: skip confirmation, final screen with confetti, Home after the tour and the issue step completed on creation, checked against components/first-run/onboarding-screen.tsx, lib/use-onboarding.ts and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-907 four-step tour: the cycles step left the getting-started steps (lib/onboarding.ts ONBOARDING_STEPS, components/sidebar-onboarding.tsx); the phone tour's Back and Skip row, Back from the first step returning to the profile page, and the skip confirmation checked against components/first-run/onboarding-screen.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept); agent:claude-code (MIN-964 tour on every platform: the full-screen getting-started steps now also run on a computer, their actions open dialogs, the issue step offers the CSV import to a project owner on a computer, and the sidebar checklist is gone; checked against components/first-run/first-run-gate.tsx, components/first-run/onboarding-screen.tsx, components/app-sidebar.tsx and messages/*.json; no browser walkthrough; existing figures do not show the tour and were kept)",
+    "language": "agent:/root/min747 (it translation of the release corrections with catalog UI labels; equivalent meaning self-reviewed; agent review, not human acceptance); agent:/root (it MIN-765 removal edit; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (it label alignment after the full catalog review; self-reviewed; agent review, not human acceptance); agent:claude-code (it manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-781 changed passages on local instances from the desktop app, with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-881 first-day-of-week paragraph with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-954 settings paths with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 account-access section rewritten for the single sign-in and sign-up screen and the first-run screens, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 tour follow-up tour passage with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 four-step tour passage with Back and Skip, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-964 changed passages on the tour on every platform, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-12"
   },
   "related": [
     "choose-an-instance",
@@ -110,7 +119,7 @@
       "src": "/documentation/it/account-security-workflow.png",
       "alt": "Scheda di autenticazione a due fattori con pulsante di attivazione.",
       "caption": "Inizia qui, poi verifica l’autenticatore e conserva privatamente i codici di recupero.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -127,7 +136,7 @@
       "src": "/documentation/it/profile-and-preferences-workflow.png",
       "alt": "Intestazione del profilo con l’avatar e il suo badge di modifica, il nome e l’email di sola lettura.",
       "caption": "Seleziona l’avatar per generarne o caricarne uno, oppure il nome per cambiarlo; l’indirizzo email resta di sola lettura.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -144,7 +153,7 @@
       "src": "/documentation/it/profile-and-preferences-preferences-workflow.png",
       "alt": "Selettore della lingua, controlli del tema chiaro, scuro e di sistema, selettori di palette delle modalità chiara e scura e interruttore della trasparenza.",
       "caption": "La lingua dell’account e quella del sito pubblico si impostano separatamente.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -161,7 +170,7 @@
       "src": "/documentation/it/privacy-and-account-deletion-workflow.png",
       "alt": "Anteprima di eliminazione con progetti posseduti, ticket e membri che perderanno l’accesso.",
       "caption": "Leggi l’anteprima ed esporta i dati da conservare prima di aprire la conferma.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -186,13 +195,22 @@ L’account appartiene all’istanza su cui ti registri. Puoi gestire accesso, r
 
 ## Creare un account e accedere {#account-access}
 
-Apri la schermata di accesso o registrazione sull’istanza che vuoi usare. Cloud e un’altra istanza autonoma hanno account separati. I metodi di accesso disponibili e la possibilità di registrarsi dipendono dalla configurazione di autenticazione dell’istanza. Un’istanza locale installata dall’app desktop non prevede registrazione: l’app crea il tuo account e ti fa accedere. Consulta [Istanze locali](/it/documentazione/install-locally#install-locally).
+Apri la schermata di accesso dell’istanza che vuoi usare. **Accedi o registrati** è un’unica schermata per entrambe le cose, sia su `/login` sia su `/signup`. Cloud e un’altra istanza autonoma hanno account separati. I servizi di accesso disponibili e la possibilità di registrarsi dipendono dalla configurazione di autenticazione dell’istanza. Un’istanza locale installata dall’app desktop non prevede registrazione: l’app crea il tuo account e ti fa accedere. Consulta [Istanze locali](/it/documentazione/install-locally#install-locally).
 
-Per registrarti via email, inserisci il tuo indirizzo e prosegui al passaggio dedicato all’identità. Inserisci il nome completo; non può essere vuoto né contenere soltanto spazi. Puoi anche scegliere un avatar. Prosegui al passaggio della password e inseriscine una di almeno otto caratteri con una lettera minuscola (a–z), una maiuscola (A–Z) e una cifra. Ripetila nel campo di conferma. Invia quest’ultimo passaggio per creare l’account. Se abbandoni i passaggi precedenti, l’account non viene creato.
+La schermata inizia con il tuo indirizzo email e **Continua**. Sotto **oppure**, elenca i servizi di accesso offerti dall’istanza, in questo ordine: Apple, Google e GitHub. Nell’app desktop li segue **Ospita minddy in autonomia**. Dopo **Continua**, minddy verifica a cosa corrisponde l’indirizzo e mostra uno di questi passaggi. **Modifica**, accanto all’indirizzo, riporta a quest’ultimo.
 
-Quando è richiesta la conferma dell’email, apri il messaggio inviato dall’istanza. Segui il collegamento e premi il pulsante di conferma nella pagina. Aprire il collegamento non basta: minddy richiede questa azione esplicita prima di consumare il token email.
+- **Inserisci la password**: l’indirizzo ha un account con password. Inseriscila e scegli **Accedi**. **Hai dimenticato la password?** avvia il [recupero della password](#account-recovery).
+- **Scegli una password**: l’indirizzo non ha ancora un account. Inserisci almeno otto caratteri con una lettera minuscola (a–z), una maiuscola (A–Z) e una cifra; i requisiti vengono controllati mentre scrivi. Scegli **Crea il mio account**. Questo passaggio non chiede né nome, né immagine, né conferma della password.
+- **Questo account non ha una password**: l’account è stato creato con un servizio di accesso. Continua con lo stesso servizio, oppure scegli **Imposta una password**, che apre il recupero della password per questo indirizzo.
+- **Le iscrizioni sono chiuse qui**: l’istanza di anteprima di minddy non crea account. Il suo pulsante porta all’iscrizione su minddy.app.
 
-Torna all’applicazione prevista e accedi. Un account appena autenticato può creare il proprio progetto o accettare un invito a un progetto. Conoscere l’URL di un progetto non ne conferisce l’appartenenza.
+Quando è richiesta la conferma dell’email, dopo la creazione dell’account compare **Controlla la tua casella di posta**. Apri il messaggio inviato dall’istanza. Segui il collegamento e premi il pulsante di conferma nella pagina. Aprire il collegamento non basta: non conferma l’account e non consuma il token email. Poi torna all’applicazione prevista e accedi. Troppe verifiche di indirizzi in poco tempo vengono rifiutate per un po’: attendi prima di riprovare.
+
+Dopo il primo accesso, un nuovo account si apre su **Come dovremmo chiamarti?** prima dell’app. Scegli **Carica immagine** o **Nuovo avatar di Lorelei** per la tua immagine, poi inserisci il tuo nome utente; il nome fornito da un servizio di accesso è già compilato. Scegli **Continua**. Questa pagina compare una sola volta, su tutte le piattaforme; gli account creati prima della sua introduzione non la vedono mai. Puoi cambiare entrambi in seguito nel tuo [profilo](#profile-and-preferences).
+
+Un nuovo account segue poi i primi passi, sul telefono come sul computer, uno per pagina, con punti di avanzamento: **Crea o unisciti a un progetto**, **Aggiungi il tuo primo ticket**, **Scopri Numo** e **Collega un agente di codice**. Il pulsante di ogni passaggio apre sopra la pagina la stessa finestra di dialogo dell’app: creazione di un progetto o di un ticket, Numo o il collegamento dell’agente. Sul computer, il passaggio del ticket offre anche **Importa ticket** al proprietario di un progetto. Il passaggio del ticket è completato appena crei il ticket, anche se Smart Fill lo sta ancora compilando. Sotto i pulsanti del passaggio, **Indietro** mostra di nuovo il passaggio precedente; dal primo passaggio, torna a **Come dovremmo chiamarti?**, dove **Continua** ti riporta ai passaggi. **Salta** passa al passaggio successivo. **Salta l'onboarding** chiede prima una conferma, perché i passaggi saltati non tornano più: conferma con **Salta l'onboarding**. Dopo l’ultimo passaggio compare **Tutto pronto.** con una breve animazione di coriandoli, e **Continua** porta alla Home. Anche saltare il percorso porta alla Home.
+
+Un account appena autenticato può creare il proprio progetto o accettare un invito a un progetto. Conoscere l’URL di un progetto non ne conferisce l’appartenenza.
 
 
 ### Uscire e controllare le email mancanti {#session-and-mail}
@@ -208,7 +226,7 @@ Se l’email non arriva, controlla indirizzo, cartella dello spam e identità de
 
 ## Proteggere l’account con un secondo fattore {#account-security}
 
-Apri la sezione Sicurezza nelle impostazioni dell’account e attiva l’autenticazione a due fattori. Questo secondo fattore viene richiesto anche quando accedi tramite Google o GitHub: l’autenticazione del provider non lo sostituisce.
+Apri la sezione Sicurezza nelle impostazioni dell’account e attiva l’autenticazione a due fattori. Questo secondo fattore viene richiesto anche quando accedi tramite Google, GitHub o Apple: l’autenticazione del provider non lo sostituisce.
 
 1. Scansiona il codice QR con un’app di autenticazione TOTP oppure inserisci manualmente la chiave di configurazione mostrata. Non includere né il codice QR né la chiave in una schermata.
 2. Inserisci il codice corrente di sei cifre e conferma. Se è scaduto, prova con il codice successivo; dopo troppi tentativi, attendi prima di riprovare.
@@ -222,7 +240,7 @@ L’attivazione aggiorna la sessione corrente e tenta di disconnettere le altre 
 
 Durante l’accesso, se non hai il telefono, usa uno dei codici di recupero che hai conservato. L’uso di un codice disattiva l’autenticazione a due fattori e invalida tutti i codici rimanenti. Dopo l’accesso, configura nuovamente l’app di autenticazione e conserva i nuovi codici di recupero. Questa procedura non garantisce il ripristino dell’account da parte dell’assistenza umana.
 
-La sostituzione dei codici di recupero invalida l’elenco precedente. Sia la sostituzione sia la disattivazione volontaria richiedono i controlli di autenticazione recente del server. Leggi la conferma: disattivando la funzione, il fattore aggiuntivo non verrà più richiesto, neppure negli accessi tramite Google o GitHub.
+La sostituzione dei codici di recupero invalida l’elenco precedente. Sia la sostituzione sia la disattivazione volontaria richiedono i controlli di autenticazione recente del server. Leggi la conferma: disattivando la funzione, il fattore aggiuntivo non verrà più richiesto, neppure negli accessi tramite Google, GitHub o Apple.
 
 
 ## Recuperare l’accesso all’account {#account-recovery}
@@ -270,7 +288,7 @@ Il consenso è distinto dai dati necessari al funzionamento dell’account. Legg
 
 Prima di eliminare l’account, esporta dalla scheda **Privacy e dati** ciò che devi conservare. Leggi l’anteprima dei progetti di cui sei proprietario, dei membri coinvolti, dei ticket, dei commenti e dell’abbonamento attivo. Le conseguenze sui progetti posseduti riguardano altre persone: risolvile prima di confermare.
 
-Apri la conferma di eliminazione soltanto quando sei pronto. Digita l’indirizzo email dell’account e, se l’account ha una password, anche la password. Gli account senza password richiedono un accesso recente. Segui le indicazioni di un eventuale rifiuto di autenticazione recente, senza riprovare alla cieca. Se l’eliminazione riesce, la sessione viene chiusa e si torna al sito pubblico. Non è uno spostamento nel cestino recuperabile. Mantieni private le esportazioni e gestisci eventuali questioni residue su abbonamenti o provider tramite i rispettivi controlli di fatturazione e servizio.
+Apri la conferma di eliminazione soltanto quando sei pronto. Digita l’indirizzo email dell’account e, se l’account ha una password, anche la password. Gli account senza password richiedono un accesso recente. Segui le indicazioni di un eventuale rifiuto di autenticazione recente, senza riprovare alla cieca. Se l’eliminazione riesce, la sessione viene chiusa e si torna al sito pubblico. Se l’account accede con Apple, l’eliminazione chiede anche ad Apple di revocare l’accesso di minddy al tuo Account Apple. Non è uno spostamento nel cestino recuperabile. Mantieni private le esportazioni e gestisci eventuali questioni residue su abbonamenti o provider tramite i rispettivi controlli di fatturazione e servizio.
 
 
 ## Configurare le routine {#routines}

@@ -11,7 +11,21 @@
   background: transparent;
 }
 
-:global(html[data-app-layout="mobile"]) .container { height: 44px; padding-inline: 16px 60px; }
+/* On a phone, the bottom sheets' search field (app/globals.css): a capsule
+   beside the close button, concentric like it with the sheet's corner. */
+:global(html[data-app-layout="mobile"]) .container {
+  height: var(--mobile-sheet-search, 44px);
+  gap: var(--mobile-sheet-row-gap, 12px);
+  padding-inline: var(--mobile-sheet-row-inline, 12px);
+  margin-right: calc(var(--mobile-sheet-close-room, 68px) - var(--mobile-sheet-inset, 8px));
+  margin-left: calc(var(--mobile-sheet-top, 16px) - var(--mobile-sheet-inset, 8px));
+  border-radius: 999px;
+  background: var(--control);
+}
+:global(html[data-app-layout="mobile"]) .searchIcon {
+  width: var(--mobile-sheet-icon, 20px);
+  height: var(--mobile-sheet-icon, 20px);
+}
 
 .iconWrapper {
   display: flex;

@@ -296,7 +296,7 @@ export function SelectionPill({
     // survives the animation.
     <motion.div
       data-bulk-issue-actions
-      className="absolute bottom-4 app-mobile:bottom-[var(--mobile-nav-clearance)] left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl app-mobile:max-w-[calc(100%-2rem)]"
+      className="absolute bottom-4 app-mobile:bottom-[max(calc(1rem+env(safe-area-inset-bottom)),var(--mobile-nav-clearance))] left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border border-border bg-background/95 p-1.5 shadow-xl app-mobile:max-w-[calc(100%-2rem)]"
       initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}

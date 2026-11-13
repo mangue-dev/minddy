@@ -4,6 +4,7 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { haptic } from "@/lib/mobile/haptics"
 import { COARSE_INSET_HIT_AREA, COARSE_ROW } from "./touch-target"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -12,9 +13,20 @@ import { useOverlayCollisionPadding, useWindowControlsOverlayPage } from "@/comp
 import { useListScrollFade } from "@/components/ui/menu-scroll-fade"
 
 function Select({
+  onValueChange,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      onValueChange={(value) => {
+        // A light tick in the mobile app (MIN-959); nothing elsewhere.
+        haptic("selection")
+        onValueChange?.(value)
+      }}
+      {...props}
+    />
+  )
 }
 
 function SelectGroup({
@@ -49,7 +61,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        `pointer-coarse:touch-manipulation ${COARSE_INSET_HIT_AREA} flex h-11 w-fit items-center justify-between gap-2 rounded-lg bg-control px-3.5 py-1.5 font-sans font-normal text-base md:text-sm whitespace-nowrap transition-colors outline-none select-none hover:bg-control-hover aria-expanded:bg-control-hover focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-11 data-[size=default]:md:h-9 data-[size=sm]:h-8 data-[size=sm]:md:h-8 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
+        `pointer-coarse:touch-manipulation ${COARSE_INSET_HIT_AREA} flex h-11 w-fit items-center justify-between gap-2 rounded-lg bg-control px-3.5 py-1.5 font-sans font-normal text-base app-desktop:text-sm whitespace-nowrap transition-colors outline-none select-none hover:bg-control-hover active:bg-control-hover data-pressed:bg-control-hover aria-expanded:bg-control-hover focus-visible:outline-none focus-visible:ring-0 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-11 data-[size=default]:app-desktop:h-9 data-[size=sm]:h-8 data-[size=sm]:app-desktop:h-8 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
         className
       )}
       {...props}
@@ -84,7 +96,7 @@ function SelectContent({
         data-slot="select-content"
         data-align-trigger={position === "item-aligned"}
         className={cn(
-                                  "relative z-50 max-h-(--radix-select-content-available-height) w-max min-w-[max(var(--radix-select-trigger-width),12rem)] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border duration-150 ease-out data-closed:duration-120 data-closed:ease-in data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+                                  "relative z-50 max-h-(--radix-select-content-available-height) w-max min-w-[max(var(--radix-select-trigger-width),12rem)] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-xl app-mobile:rounded-[26px] bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border duration-150 ease-out data-closed:duration-120 data-closed:ease-in data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
                                   position === "popper" &&
                                     "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
                                   className
@@ -135,7 +147,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} w-full cursor-default items-center gap-1.5 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2`,
+        `relative flex min-h-8 max-[1199px]:min-h-10 ${COARSE_ROW} w-full cursor-default items-center gap-1.5 rounded-sm app-mobile:rounded-[18px] py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent active:bg-accent data-pressed:bg-accent data-highlighted:text-accent-foreground not-data-[variant=destructive]:data-highlighted:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2`,
         className
       )}
       {...props}

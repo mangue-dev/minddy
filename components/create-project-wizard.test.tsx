@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(), createProject: vi.fn(), createPage: vi.fn(),
   updateProject: vi.fn(), deleteDraft: vi.fn(), invalidate: vi.fn(),
   track: vi.fn(), close: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(),
-  prepareBrief: vi.fn(), saveDraft: vi.fn(), projects: [] as Project[],
+  saveDraft: vi.fn(), projects: [] as Project[],
   invite: vi.fn(), memberLimit: null as number | null, events: [] as string[],
   closeDialog: null as { onSave: () => void; onDiscard: () => void } | null,
   inviteCollaborator: vi.fn(), collaborators: [] as Collaborator[],
@@ -41,7 +41,7 @@ vi.mock("@/lib/projects-context", () => ({ useProjects: () => ({
   saveProjectDraft: mocks.saveDraft, deleteProjectDraft: mocks.deleteDraft,
 }) }));
 vi.mock("@/lib/use-git-connections-query", () => ({ useGitConnectionsQuery: () => ({ connections: [], providers: [] }) }));
-vi.mock("@/lib/pages-api", () => ({ createPageApi: mocks.createPage, prepareInitialBriefApi: mocks.prepareBrief }));
+vi.mock("@/lib/pages-api", () => ({ createPageApi: mocks.createPage }));
 vi.mock("@/lib/use-analytics", () => ({ useAnalytics: () => ({ track: mocks.track }) }));
 vi.mock("@/lib/use-track-view", () => ({ useTrackView: vi.fn() }));
 vi.mock("@hugeicons/react", () => ({ HugeiconsIcon: () => null }));
@@ -110,7 +110,7 @@ let host: HTMLDivElement;
 let root: Root;
 const draft: ProjectDraft = {
   id: "11111111-1111-4111-8111-111111111111", name: "New project", key: "NEW",
-  orbSeed: null, keyTouched: true, step: "seed", origin: "new", seed: null,
+  orbSeed: null, keyTouched: true, step: "seed", origin: "existing", seed: null,
   icon: { kind: "none" }, repo: null, smartAssignEnabled: true,
   invitees: [], inviteeUsers: [], updatedAt: "2026-10-06T10:00:00Z",
 };
@@ -121,9 +121,6 @@ beforeEach(() => {
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   mocks.createProject.mockResolvedValue({ id: draft.id, name: draft.name });
   mocks.projects = [];
-  mocks.prepareBrief.mockImplementation(async (markdown: string) => ({
-    type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: markdown }] }],
-  }));
   mocks.saveDraft.mockResolvedValue(draft);
   mocks.createPage.mockResolvedValue({ id: "brief-page" });
   mocks.updateProject.mockResolvedValue(undefined);
@@ -160,13 +157,6 @@ async function mount(overrides: Partial<ProjectDraft> = {}) {
     resume={{ draft: { ...draft, ...overrides }, connectionId: null }} />));
 }
 
-async function typeBrief(value: string) {
-  const input = host.querySelector("textarea")!;
-  await act(() => {
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(input, value);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-}
 
 async function submit() {
   const button = host.querySelector<HTMLButtonElement>("[data-submit]")!;
@@ -179,151 +169,17 @@ function expectNormalNavigation() {
   expect(takeSeedHandoff()).toBeNull();
 }
 
-describe("initial project brief", () => {
-  it("saves the full 50,000-character Markdown brief as a page without opening Numo", async () => {
+describe("issue import", () => {
+  it("hands the CSV over to the new project's board", async () => {
     await mount();
-    expect(host.textContent).toContain(en.Projects.wizardSeedBriefDesc);
-    const text = "# Initial brief\n\n- Build the project\n\n".padEnd(49_992, "x") + "THE END!";
-    expect(text.length).toBe(50_000);
-    await typeBrief(text);
-    expect(host.querySelector('[role="alert"]')).toBeNull();
-    expect(host.querySelector(".tabular-nums")!.textContent).toBe("50000 / 50000");
-    await submit();
-    await submit();
-    expect(mocks.createPage).not.toHaveBeenCalled();
-    await submit();
-    expect(mocks.createPage).toHaveBeenCalledExactlyOnceWith(draft.id, {
-      title: en.Projects.wizardBriefPageTitle, icon: "📝",
-      content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text }] }] },
-    });
-    expect(mocks.prepareBrief).toHaveBeenCalledExactlyOnceWith(text);
-    expectNormalNavigation();
-  });
-
-  it("blocks 50,001 characters, preserves the input, and lets the user shorten it", async () => {
-    await mount();
-    await typeBrief("x".repeat(50_001));
-    expect(host.querySelector<HTMLTextAreaElement>("textarea")!.value).toHaveLength(50_001);
-    expect(host.querySelector<HTMLButtonElement>("[data-submit]")!.disabled).toBe(true);
-    expect(host.querySelector('[role="alert"]')!.textContent).toContain("50000");
-    expect(mocks.createProject).not.toHaveBeenCalled();
-    await typeBrief("x".repeat(50_000));
-    expect(host.querySelector<HTMLButtonElement>("[data-submit]")!.disabled).toBe(false);
-    expect(host.querySelector('[role="alert"]')).toBeNull();
-  });
-
-  it("revalidates an oversized saved brief when resuming at the final step", async () => {
-    await mount({ step: "finish", seed: { kind: "brief", text: "x".repeat(50_001) } });
-    await submit();
-    expect(host.querySelector("textarea")).toBeTruthy();
-    expect(host.querySelector('[role="alert"]')).toBeTruthy();
-    expect(mocks.createProject).not.toHaveBeenCalled();
-  });
-
-  it("skips a whitespace-only brief without creating a page or conversation", async () => {
-    await mount();
-    await typeBrief(" \n\t ");
-    expect(host.querySelector("[data-submit]")!.textContent).toBe(en.Common.skip);
-    await submit();
-    await submit();
-    await submit();
-    expect(mocks.createPage).not.toHaveBeenCalled();
-    expectNormalNavigation();
-  });
-
-  it("completes an older Numo draft without starting a conversation", async () => {
-    const restored = projectDraftFromRow({
-      id: draft.id, name: draft.name, step: "finish", updated_at: draft.updatedAt,
-      data: { key: draft.key, origin: "new", seed: { kind: "numo" } },
-    });
-    await mount(restored);
-    await submit();
-    expect(mocks.createPage).not.toHaveBeenCalled();
-    expectNormalNavigation();
-  });
-
-
-  it("rejects projected page overflow before creating a project and retains the editable brief", async () => {
-    const text = "x\n\n".repeat(16_666);
-    mocks.prepareBrief.mockRejectedValueOnce(new Error("Projected page too large"));
-    await mount({ step: "finish", seed: { kind: "brief", text } });
-    await submit();
-    expect(mocks.createProject).not.toHaveBeenCalled();
-    expect(mocks.createPage).not.toHaveBeenCalled();
-    expect(mocks.deleteDraft).not.toHaveBeenCalled();
-    expect(mocks.close).not.toHaveBeenCalled();
-    expect(host.querySelector<HTMLTextAreaElement>("textarea")!.value).toBe(text);
-    expect(host.querySelector('[role="alert"]')!.textContent).toBe("Projected page too large");
-    await typeBrief("A shorter brief");
-    expect(host.querySelector('[role="alert"]')).toBeNull();
-    await submit();
-    await submit();
-    await submit();
-    expectNormalNavigation();
-  });
-
-  it("retains the full brief and its draft on page-write failure, then retries the same project", async () => {
-    const text = "# Brief\n\n".padEnd(50_000, "x");
-    mocks.createPage.mockRejectedValueOnce(new Error("Page service unavailable"));
-    await mount({ step: "finish", seed: { kind: "brief", text } });
-    await submit();
-    expect(host.querySelector('[role="alert"]')!.textContent).toBe("Page service unavailable");
-    expect(mocks.saveDraft).toHaveBeenCalledWith(expect.objectContaining({
-      id: draft.id, step: "finish", seed: { kind: "brief", text },
-    }));
-    expect(mocks.deleteDraft).not.toHaveBeenCalled();
-    expect(mocks.close).not.toHaveBeenCalled();
-    expect(mocks.push).not.toHaveBeenCalled();
-    expect(mocks.toastSuccess).not.toHaveBeenCalled();
-    expect(takeSeedHandoff()).toBeNull();
-    await submit();
-    expect(mocks.createProject).toHaveBeenCalledTimes(1);
-    expect(mocks.createPage).toHaveBeenCalledTimes(2);
-    expect(mocks.createPage.mock.calls[1][1].content.content[0].content[0].text).toBe(text);
-    expect(mocks.deleteDraft).toHaveBeenCalledExactlyOnceWith(draft.id);
-    expectNormalNavigation();
-  });
-
-  it("keeps the wizard retryable even when saving its recovery draft also fails", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
-    mocks.createPage.mockRejectedValueOnce(new Error("Offline"));
-    mocks.saveDraft.mockRejectedValueOnce(new Error("Offline"));
-    await mount({ step: "finish", seed: { kind: "brief", text: "Keep this brief" } });
-    await submit();
-    expect(host.querySelector('[role="alert"]')!.textContent).toBe("Offline");
-    expect(mocks.deleteDraft).not.toHaveBeenCalled();
-    expect(mocks.close).not.toHaveBeenCalled();
-    await submit();
-    expect(mocks.createProject).toHaveBeenCalledTimes(1);
-    expectNormalNavigation();
-  });
-
-  it("resumes the saved recovery draft against the already created project", async () => {
-    mocks.createPage.mockRejectedValueOnce(new Error("Try again later"));
-    await mount({ step: "finish", seed: { kind: "brief", text: "Saved recovery brief" } });
-    await submit();
-    const saved = mocks.saveDraft.mock.calls[0][0];
-    await act(() => root.unmount());
-    root = createRoot(host);
-    mocks.projects = [{ id: draft.id, name: draft.name, owner_id: "owner" } as Project];
-    await mount(saved);
-    await submit();
-    expect(mocks.createProject).toHaveBeenCalledTimes(1);
-    expect(mocks.createPage).toHaveBeenCalledTimes(2);
-    expectNormalNavigation();
-  });
-
-  it("retains the CSV handoff for an existing project", async () => {
-    await mount({ origin: "existing" });
     const file = new File(["title\nImported issue"], "issues.csv", { type: "text/csv" });
     const input = host.querySelector<HTMLInputElement>('input[type="file"]')!;
     await act(() => {
       Object.defineProperty(input, "files", { value: [file] });
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
-    await submit();
-    await submit();
-    await submit();
+    await submit(); // import → finish
+    await submit(); // finish
     expect(mocks.createPage).not.toHaveBeenCalled();
     expect(takeSeedHandoff()).toEqual({ kind: "import", file });
     expect(mocks.push).toHaveBeenCalledExactlyOnceWith(`/projects/${draft.id.slice(0, 8)}?setup=import`);
@@ -367,16 +223,6 @@ describe("finishing step", () => {
 });
 
 describe("closing while Finish runs", () => {
-  it("creates nothing when the wizard is discarded before the create request is sent", async () => {
-    let briefReady: (value: unknown) => void = () => {};
-    mocks.prepareBrief.mockImplementation(() => new Promise((resolve) => { briefReady = resolve; }));
-    await mount({ step: "finish", seed: { kind: "brief", text: "Plan" } });
-    await submit();
-    await act(async () => mocks.closeDialog!.onDiscard());
-    await act(async () => briefReady({ type: "doc", content: [] }));
-    expect(mocks.createProject).not.toHaveBeenCalled();
-    expect(mocks.push).not.toHaveBeenCalled();
-  });
 
   it("finishes a project already being created, without writing into the fresh wizard or navigating", async () => {
     let created: (value: { id: string; name: string }) => void = () => {};
@@ -437,6 +283,9 @@ describe("member invitations", () => {
     expect(host.textContent).toContain(en.Projects.wizardMembersTitle);
     await typeInvitee("kept@example.com");
     await submit();
+    // The team is invited before its issues are imported (MIN-907).
+    expect(host.textContent).toContain(en.Projects.wizardSeedImportTitle);
+    await submit();
     expect(host.textContent).toContain(en.Projects.wizardFinishTitle);
     expect(mocks.invite).not.toHaveBeenCalled();
     await submit();
@@ -494,17 +343,6 @@ describe("member invitations", () => {
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
-  it("waits for a failed brief to be saved, then invites once with the same project", async () => {
-    mocks.createPage.mockRejectedValueOnce(new Error("Page service unavailable"));
-    await mount({ step: "finish", seed: { kind: "brief", text: "Brief" }, invitees: ["ana@example.com"] });
-    await submit();
-    expect(mocks.invite).not.toHaveBeenCalled();
-    expect(mocks.saveDraft).toHaveBeenCalledWith(expect.objectContaining({ invitees: ["ana@example.com"] }));
-    await submit();
-    expect(mocks.createProject).toHaveBeenCalledTimes(1);
-    expect(mocks.invite).toHaveBeenCalledExactlyOnceWith(draft.id, "ana@example.com");
-    expectNormalNavigation();
-  });
 
   it("keeps inviting after a refusal and reports who was not invited", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);

@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { runIssueIndexBackfill } from "@/lib/server/issue-relation-inference";
+import { runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 
 /**
  * The issue index backfill (MIN-717): existing issues, imports, forge copies
@@ -21,7 +22,8 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   try {
-    const result = await runIssueIndexBackfill();
+    // AI runs under each account's answer in the mobile app (MIN-907).
+    const result = await runAsBackgroundAiWork(() => runIssueIndexBackfill());
     return NextResponse.json({ ok: true, ...result });
   } catch {
     console.error("[issue-index] backfill failed");

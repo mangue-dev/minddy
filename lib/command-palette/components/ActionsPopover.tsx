@@ -27,6 +27,7 @@ import { usePaletteStore } from "../store";
 import styles from "../styles/ActionsPopover.module.css";
 import type { ActionExecutionContext, ContextualAction } from "../registry/types";
 import type { PaletteItem } from "../types";
+import { haptic } from "@/lib/mobile/haptics";
 
 // =============================================================================
 // TYPES
@@ -214,6 +215,8 @@ export function ActionsPopover({
   // Execute action
   const executeAction = useCallback(
     async (action: ContextualAction) => {
+      // A chosen action ticks in the mobile app (MIN-959).
+      haptic("selection");
       // Form actions open the inline form (requires item)
       if (action.requiresForm) {
         if (!item) return;

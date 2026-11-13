@@ -13,9 +13,10 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {deletePushDeviceApi, setPushDeviceEnabledApi, testPushDeviceApi} from "@/lib/push-devices-api";
 import {pushDevicesQueryKey, usePushDevicesQuery} from "@/lib/use-push-devices-query";
-import {currentEndpoint, isPushSupported, isIOS, isStandalone, pushPermission, subscribeThisDevice, unsubscribeThisDevice} from "@/lib/push/client";
+import {currentEndpoint, isPushSupported, isIOS, isStandalone, pushPermission, refreshPushPermission, subscribeThisDevice, unsubscribeThisDevice} from "@/lib/push/client";
 import {trackEvent} from "@/lib/analytics";
 import {getDesktopBridge, isDesktop} from "@/lib/desktop/bridge";
+import {getMobileBridge} from "@/lib/mobile/bridge";
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import {isMobileDeviceLabel} from "@/lib/device-label";
 import {SettingsEmpty, SettingsGroup, SettingsListRow, SettingsRow} from "@/components/settings/settings-ui";
@@ -55,6 +56,8 @@ export function AccountPushDevicesSection() {
     NotificationPermission | "unsupported" | null
   >(null);
   const [needsInstall, setNeedsInstall] = useState(false);
+  // The iOS app pushes through APNs and has its own notification settings.
+  const [iosAppPush, setIosAppPush] = useState(false);
   /** Like browser capabilities, read after editing (see effect). */
   const [inDesktopApp, setInDesktopApp] = useState(false);
   const [nativeDesktopPush, setNativeDesktopPush] = useState(false);
@@ -77,6 +80,17 @@ export function AccountPushDevicesSection() {
   useEffect(() => {
     setPermission(pushPermission());
     setNeedsInstall(isIOS() && !isStandalone());
+    const mobileShell = getMobileBridge()?.shell;
+    setIosAppPush(
+      getMobileBridge()?.platform === "ios" && !!mobileShell?.registerForPushNotifications
+    );
+    // The app's permission comes from its shell, asynchronously, and changes
+    // in the Settings app while the page waits in the background.
+    void refreshPushPermission().then(setPermission);
+    const rereadPermission = () => {
+      if (document.visibilityState === "visible") void refreshPushPermission().then(setPermission);
+    };
+    document.addEventListener("visibilitychange", rereadPermission);
     setInDesktopApp(isDesktop());
     const desktop = getDesktopBridge();
     const nativeTransport =
@@ -100,7 +114,10 @@ export function AccountPushDevicesSection() {
     const stopLinuxBackground =
       desktop?.onLinuxBackgroundNotificationsChanged?.(setLinuxBackground);
     if (isPushSupported()) void currentEndpoint().then(setThisEndpoint);
-    return () => stopLinuxBackground?.();
+    return () => {
+      stopLinuxBackground?.();
+      document.removeEventListener("visibilitychange", rereadPermission);
+    };
   }, []);
 
   const refresh = useCallback(
@@ -139,10 +156,10 @@ export function AccountPushDevicesSection() {
               // will work. Announce “blocked, reopen site settings”
               // would then be false — the switch which returns to the stop says
               // already it didn't work.
-              const after = pushPermission();
+              const after = await refreshPushPermission();
               setPermission(after);
               trackEvent("push_permission_denied", {});
-              if (after === "denied") toast.error(t("deniedHint"));
+              if (after === "denied") toast.error(t(iosAppPush ? "iosDeniedHint" : "deniedHint"));
             } else if (result.reason === "needs-install") {
               setNeedsInstall(true);
               toast.error(t("iosInstallHint"));
@@ -153,7 +170,7 @@ export function AccountPushDevicesSection() {
             }
             return;
           }
-          setPermission(pushPermission());
+          setPermission(await refreshPushPermission());
           setThisEndpoint(result.device.endpoint);
           toast.success(t("enabledToast"));
         }
@@ -279,7 +296,7 @@ export function AccountPushDevicesSection() {
         )
       : capabilities &&
           !(
-            nativeDesktopTransport === "apns"
+            nativeDesktopTransport === "apns" || iosAppPush
               ? capabilities.apns
               : nativeDesktopTransport === "wns"
                 ? capabilities.wns
@@ -289,7 +306,7 @@ export function AccountPushDevicesSection() {
         : permission === "unsupported"
           ? t("unsupportedHint")
           : permission === "denied"
-            ? t(nativeNotificationSettings ? "macDeniedHint" : "deniedHint")
+            ? t(iosAppPush ? "iosDeniedHint" : nativeNotificationSettings ? "macDeniedHint" : "deniedHint")
             : needsInstall
               ? t("iosInstallHint")
               : null;
@@ -306,7 +323,9 @@ export function AccountPushDevicesSection() {
           hint={
             blocked ??
             t(
-              nativeDesktopTransport === "wns"
+              iosAppPush
+                ? "enableDescIos"
+                : nativeDesktopTransport === "wns"
                 ? "enableDescWindows"
                 : nativeDesktopPush
                   ? "enableDescNative"
@@ -314,8 +333,20 @@ export function AccountPushDevicesSection() {
             )
           }
           control={
-            blocked && !nativeNotificationSettings ? undefined : (
+            blocked && !nativeNotificationSettings && !(iosAppPush && permission === "denied") ? undefined : (
               <>
+                {iosAppPush && permission === "denied" && (
+                  // Only Settings can allow notifications again once refused.
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void getMobileBridge()?.shell?.openNotificationSettings?.()}
+                  >
+                    <HugeiconsIcon icon={Settings02Icon} className="size-4" />
+                    {t("iosSettingsButton")}
+                  </Button>
+                )}
                 {nativeNotificationSettings && (
                   <Button
                     type="button"

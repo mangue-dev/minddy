@@ -23,6 +23,7 @@ import {
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { fetchAiProvider } from "@/lib/server/ai-provider-request";
 import type { AgentProviderId } from "@/lib/agent-providers";
+import { aiDeclinedInBackground } from "@/lib/server/ai-consent";
 
 /**
  * Cost tracking context for an embeddings call (one call = one run).
@@ -91,6 +92,8 @@ export async function requestEmbeddings(
   }
 ): Promise<EmbeddingBatch | null> {
   if (texts.length === 0) return null;
+  // A cron job runs no AI for an account that declined it in the mobile app (MIN-907).
+  if (await aiDeclinedInBackground(opts.billedUserId)) return null;
   const runtime = opts.billedUserId
     ? await resolveAiRuntime({
         userId: opts.billedUserId,

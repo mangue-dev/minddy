@@ -3,6 +3,7 @@ import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { drainNumoTurns } from "@/lib/server/numo/turns";
 import { drainNumoWakeTurns } from "@/lib/server/numo/wake";
 import { drainNumoWatchTurns } from "@/lib/server/numo/watch-clock";
+import { runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -18,11 +19,14 @@ async function handle(request: NextRequest) {
   // user's conversation busy until it runs.
   const [summary, wakes, reminders] = await Promise.all([
     drainNumoTurns({ limit: 1 }),
-    drainNumoWakeTurns().catch((error: Error) => {
+    // Wakes and reminders are Numo acting on its own: they follow each
+    // account's answer in the mobile app (MIN-907). Admitted turns already
+    // passed that check when their request came in.
+    runAsBackgroundAiWork(() => drainNumoWakeTurns()).catch((error: Error) => {
       console.error("[cron/numo-turns] wakes:", error.name);
       return { ran: 0 };
     }),
-    drainNumoWatchTurns().catch((error: Error) => {
+    runAsBackgroundAiWork(() => drainNumoWatchTurns()).catch((error: Error) => {
       console.error("[cron/numo-turns] reminders:", error.name);
       return { ran: 0 };
     }),

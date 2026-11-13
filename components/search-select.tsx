@@ -14,6 +14,7 @@ import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/com
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { SearchMenu } from "@/components/search-menu";
+import { useMobileLayout } from "@/lib/use-mobile-layout";
 
 /**
  * The trigger of a picker which PRESENTS LIKE A FIELD — placed in a
@@ -210,8 +211,10 @@ export function SearchSelect({
   onChange: (v: string | null) => void;
   options: PickerOption[];
   noneOption?: { label: string; icon?: React.ReactNode };
-  /** Always-visible actions, distinct from query-based entity creation. */
-  menuActions?: { id: string; label: string; icon?: React.ReactNode; onSelect: () => void }[];
+  /** Always-visible actions, distinct from query-based entity creation.
+   *  `inSearchRow`: on a phone, a round button beside the search field
+   *  instead of a row of the list (the sheet's main action, "New view"). */
+  menuActions?: { id: string; label: string; icon?: React.ReactNode; onSelect: () => void; inSearchRow?: boolean }[];
   /**
    * Issue pickers only (MIN-718): option values are issue ids, and options
    * found by meaning in this scope are appended after the text matches.
@@ -233,8 +236,16 @@ export function SearchSelect({
     onChange(v);
     setOpen(false);
   };
+  const mobile = useMobileLayout() === true;
+  const run = (action: { onSelect: () => void }) => {
+    setOpen(false);
+    requestAnimationFrame(action.onSelect);
+  };
+  const rowActions = mobile ? menuActions?.filter((action) => action.inSearchRow) : undefined;
+  const listActions = mobile ? menuActions?.filter((action) => !action.inSearchRow) : menuActions;
   return (
-    <SearchMenu open={open} onOpenChange={setOpen} {...shell} {...searchProps}>
+    <SearchMenu open={open} onOpenChange={setOpen} {...shell} {...searchProps}
+      searchActions={rowActions?.map((action) => ({ ...action, onSelect: () => run(action) }))}>
       <CommandGroup>
         {noneOption && (
           <CommandItem
@@ -276,11 +287,11 @@ export function SearchSelect({
           )}
         />
       )}
-      {menuActions?.length ? <>
+      {listActions?.length ? <>
         <CommandSeparator alwaysRender className="my-1" />
         <CommandGroup forceMount>
-          {menuActions.map((action) => <CommandItem key={action.id} value={action.id} forceMount
-            onSelect={() => { setOpen(false); requestAnimationFrame(action.onSelect); }}>
+          {listActions.map((action) => <CommandItem key={action.id} value={action.id} forceMount
+            onSelect={() => run(action)}>
             {action.icon}<span className="truncate">{action.label}</span>
           </CommandItem>)}
         </CommandGroup>

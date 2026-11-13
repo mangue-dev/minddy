@@ -146,7 +146,7 @@ of the MCP server in the public registry after each release is documented in
 [docs/mcp-registry-publication.md](docs/mcp-registry-publication.md).
 
 The CI workflow is the source of truth for checks. It runs the public-repository
-check, lint, typecheck, desktop bundle build, tests, and dependency audit. See
+check, lint, typecheck, desktop and mobile bundle builds, tests, and dependency audit. See
 [CONTRIBUTING.md](CONTRIBUTING.md) for contribution and review guidance, and
 [SECURITY.md](SECURITY.md) for the security model and vulnerability reporting.
 

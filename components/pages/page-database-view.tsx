@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, Edit04Icon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { memo, startTransition, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -168,6 +168,7 @@ function SortablePropertyRow({ property, sortable, children }: {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
+      data-mobile-sheet-row
       className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-md" : ""}`}
     >
       <AppTooltip label={t("reorderColumnHint")}>
@@ -272,7 +273,7 @@ function PropertySettings({
                   property={property}
                   sortable={!pending && schema.length > 1 && editing !== property.id}
                 >
-                  <AppIcon icon={Icon} className="mr-1 size-4 shrink-0 text-muted-foreground" />
+                  <AppIcon icon={Icon} className="mr-1 size-4 shrink-0 text-muted-foreground app-mobile:mr-0" />
                   {editing === property.id ? (
                     <form
                       className="flex min-w-0 flex-1 gap-1"
@@ -407,7 +408,7 @@ function PropertySettings({
       {sheet ? (
         <Sheet open={open} onOpenChange={setOpen}>
           <MobileSheetContent side="bottom" aria-describedby={undefined}
-            className="gap-2 p-2 pt-12 [&_button]:rounded-md [&_input]:rounded-md">
+            className="gap-2 p-2 px-[var(--mobile-sheet-inset)] pt-12 [&_button]:rounded-md [&_input]:rounded-md">
             <SheetTitle className="mobile-picker-title truncate">{t("properties")}</SheetTitle>
             {columnsBody}
           </MobileSheetContent>
@@ -520,6 +521,10 @@ export const PageDatabaseView = memo(function PageDatabaseView({
   // the sort, filter and column sheets.
   const [mobileSearch, setMobileSearch] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<"settings" | "sort" | "filter" | "columns" | null>(null);
+  // Renaming the view is one of its settings on a phone; the strip keeps the
+  // dialog and opens it on each request.
+  const [renameRequest, setRenameRequest] = useState(0);
+  const tBoard = useTranslations("Board");
   // The side panel's toolbar: its settings menu sorts in place and opens the
   // filter or column popover against its button once the menu has closed.
   const panelToolbar = compact && !mobile;
@@ -792,10 +797,11 @@ export const PageDatabaseView = memo(function PageDatabaseView({
     ),
   ];
   const contentWidth = columnWidths.reduce((total, width) => total + width, 0);
-  // The chrome columns around the data: the row gutter (+ and handle), which a
-  // touch screen does without, the selection checkbox, and the trailing cell.
+  // The chrome columns around the data: the row gutter (+ and handle) and the
+  // selection checkbox, which a phone does without so the table starts under
+  // the title, and the trailing cell. A row tapped on a phone opens.
   const gutterWidth = mobile ? 0 : 64;
-  const selectWidth = mobile ? 44 : 32;
+  const selectWidth = mobile ? 0 : 32;
   const chromeWidth = gutterWidth + selectWidth + 56;
   const filterEditor = (
     <DatabaseFilterEditor schema={schema} filter={filters} members={members} onChange={setFilters} />
@@ -976,6 +982,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
             onRename={databaseViews.rename}
             onDelete={databaseViews.remove}
             onMove={databaseViews.move}
+            renameRequest={renameRequest}
           />
         </div>
         {mobile ? (
@@ -1077,7 +1084,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
       {mobile && (
         <>
           <Sheet open={mobileSheet === "settings"} onOpenChange={(open) => setMobileSheet(open ? "settings" : null)}>
-            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-1 p-2 pt-12">
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-1 p-2 px-[var(--mobile-sheet-inset)] pt-12">
               <SheetTitle className="mobile-picker-title truncate">{t("viewSettings")}</SheetTitle>
               {([
                 { key: "sort", icon: ArrowUpDownIcon, label: t("sort"),
@@ -1086,7 +1093,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                 { key: "columns", icon: Settings02Icon, label: t("properties"),
                   detail: t("visibleColumns", { count: visible.length + 1 }) },
               ] as const).map((row) => (
-                <button key={row.key} type="button" onClick={() => setMobileSheet(row.key)}
+                <button key={row.key} type="button" onClick={() => setMobileSheet(row.key)} data-mobile-sheet-row
                   className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-sm active:bg-control">
                   <HugeiconsIcon icon={row.icon} className="size-5 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{row.label}</span>
@@ -1094,16 +1101,24 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                   <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
                 </button>
               ))}
+              {canWrite && (
+                <button type="button" data-mobile-sheet-row
+                  onClick={() => { setMobileSheet(null); setRenameRequest((count) => count + 1); }}
+                  className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 text-left text-sm active:bg-control">
+                  <HugeiconsIcon icon={Edit04Icon} className="size-5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{tBoard("renameView")}</span>
+                </button>
+              )}
             </MobileSheetContent>
           </Sheet>
           <Sheet open={mobileSheet === "sort"} onOpenChange={(open) => setMobileSheet(open ? "sort" : null)}>
-            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 pt-12">
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 px-[var(--mobile-sheet-inline)] pt-12">
               <SheetTitle className="mobile-picker-title truncate">{t("sort")}</SheetTitle>
               {sortControls}
             </MobileSheetContent>
           </Sheet>
           <Sheet open={mobileSheet === "filter"} onOpenChange={(open) => setMobileSheet(open ? "filter" : null)}>
-            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 pt-12">
+            <MobileSheetContent side="bottom" aria-describedby={undefined} className="gap-2 p-4 px-[var(--mobile-sheet-inline)] pt-12">
               <SheetTitle className="mobile-picker-title truncate">{t("filter")}</SheetTitle>
               <div className="max-h-[60dvh] overflow-y-auto">{filterEditor}</div>
             </MobileSheetContent>
@@ -1131,7 +1146,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
         >
           <colgroup>
             {!mobile && <col style={{ width: gutterWidth }} />}
-            <col style={{ width: selectWidth }} />
+            {!mobile && <col style={{ width: selectWidth }} />}
             {columnWidths.map((width, index) => (
               <col
                 key={index}
@@ -1145,6 +1160,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
           <thead>
             <tr className="text-left text-muted-foreground">
               {!mobile && <th scope="col" className="w-16 bg-background" />}
+              {!mobile && (
               <th scope="col" className="w-8 bg-background">
                 {/* The tooltip sits on the wrapper: as the checkbox's own trigger,
                     its `data-state` would replace the checked state. */}
@@ -1174,6 +1190,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                 </div>
                 </AppTooltip>
               </th>
+              )}
               <th
                 scope="col"
                 className="overflow-hidden border-b border-border/50 p-1 font-normal"
@@ -1465,6 +1482,7 @@ const DatabaseRow = memo(function DatabaseRow({
           </div>
         </td>
       )}
+      {!mobile && (
       <td
         className="pointer-events-none sticky left-0 z-20 h-10 w-8 p-0 pointer-coarse:h-12"
         data-selection-cell
@@ -1488,6 +1506,7 @@ const DatabaseRow = memo(function DatabaseRow({
           </AppTooltip>
         </div>
       </td>
+      )}
       <td className="h-10 overflow-hidden border-b border-border/40 p-0 pointer-coarse:h-12">
         <button
           type="button"

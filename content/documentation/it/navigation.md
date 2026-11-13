@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 24,
+  "revision": 28,
+  "sourceRevision": 26,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-12",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -72,14 +72,15 @@
       "lib/keyboard/typeahead.ts",
       "components/app-shell.tsx",
       "lib/keyboard-modality.ts",
-      "lib/keyboard/hover-keys.ts"
+      "lib/keyboard/hover-keys.ts",
+      "components/usage-indicator.tsx"
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 28,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 phone bottom bar (menu, search, inbox, Numo, New) and navigation sheet: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-907 phone menu sheet: the account, the AI usage percentage and What's new head the sheet on the close button's row, followed by the New issue button and the destinations; checked against components/app-sidebar.tsx SidebarFrame and SidebarFooter, components/mobile-navigation.tsx, components/usage-indicator.tsx and messages/*.json; no browser walkthrough; existing figures show the desktop layout and were kept); agent:claude-code (MIN-959 flat phone navigation sheet: one level, a project picker over that project's sections as tiles, no project list, the page's own list in a second tab that the sheet opens on, checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx and in a phone viewport; no figure shows the sheet, none recaptured)",
+    "language": "agent:claude-code (it changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 phone bottom bar passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-907 phone menu sheet sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (it MIN-959 phone menu passage, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-12"
   },
   "related": [
     "views",
@@ -100,7 +101,7 @@
       "src": "/documentation/it/work-navigation.png",
       "alt": "Navigazione del progetto accanto alla bacheca dei ticket dimostrativi.",
       "caption": "La barra del progetto permette di aprire ticket, obiettivi, pagine e triage.",
-      "revision": 26,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -117,7 +118,7 @@
       "src": "/documentation/it/work-search.png",
       "alt": "Risultati della ricerca dell’identificativo di un ticket dimostrativo.",
       "caption": "La palette trova il ticket tramite identificativo insieme alle pagine del progetto; aprire un risultato conserva le sue regole di accesso.",
-      "revision": 26,
+      "revision": 28,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -167,7 +168,7 @@ L’azione si applica alla riga su cui hai fatto clic, anche quando è aperto un
 
 Un ticket si apre in un pannello di dettaglio, lasciando disponibile il tabellone sottostante. Una pagina aperta da una menzione o da un collegamento si apre allo stesso modo, in un pannello laterale con **Espandi** per raggiungere la pagina intera. Numo si apre dal pulsante flottante in un pannello di conversazione condiviso. La posta in arrivo si apre come pannello a comparsa della navigazione, con notifiche e inviti. I vecchi collegamenti alle schermate dedicate della posta in arrivo e di Numo portano ai punti di accesso attuali; non indicano schermate separate ancora presenti.
 
-Sul telefono, apri il menu laterale di navigazione per scegliere le stesse destinazioni. La barra in fondo allo schermo riunisce, da sinistra a destra, il menu laterale di navigazione, Numo, la ricerca, il taccuino delle attività e **Nuovo**; **Home** si trova nel menu laterale. Una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
+Sul telefono, la barra in fondo allo schermo riunisce, da sinistra a destra, il menu, la ricerca, la posta in arrivo, Numo e **Nuovo** (+). Un punto sulla posta in arrivo segnala una notifica non letta o un invito in attesa. Il menu apre un foglio su un solo livello, senza righe per tornare indietro. La sua prima riga, accanto al pulsante di chiusura, riunisce il tuo account (avatar e nome), la percentuale di utilizzo dell'IA quando è minddy a fornirti l'IA, e **Novità**. Segue un selettore di progetto, impostato sul progetto della pagina o sull'ultimo in cui hai creato un ticket, con le sezioni di quel progetto come riquadri (**Ticket**, **Obiettivi**, **Pagine**, **Triage**, **Feedback**, **Impostazioni**). Scegliere un altro progetto cambia i riquadri, non la pagina. Poi vengono **Home** e le altre destinazioni; crea un progetto da **Nuovo** (+). Quando la pagina ha un proprio elenco, come gli obiettivi o le impostazioni, una seconda scheda in cima al foglio lo mostra, e il foglio si apre su quella scheda; **Vai a** porta ovunque altrove. Una barra di caricamento in alto indica che la navigazione è in corso, anche mentre vengono completati i salvataggi della pagina in sospeso. I pannelli usano la larghezza disponibile: chiudi il pannello attuale o torna indietro per rivedere l’elenco. Usa i pulsanti visibili quando una scorciatoia da tastiera non è disponibile.
 
 ### Schede desktop {#tabs}
 

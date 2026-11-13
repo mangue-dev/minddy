@@ -104,3 +104,28 @@ describe("typed project mention", () => {
     projects.value = null;
   });
 });
+
+describe("typed member mention", () => {
+  const MEMBER = "55555555-5555-4555-8555-555555555551";
+
+  // MIN-964: a member written as Markdown (a Numo answer on Home) carries
+  // only their id; the portrait comes from the seed the server resolves.
+  it("wears the avatar seed the server returns, not the member's id", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      mentions: [{ type: "member", id: MEMBER, label: "Ana", seed: "uploaded-seed" }],
+    }))));
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () => {
+      root.render(createElement(TypedMentionChip, { type: "member", id: MEMBER }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const pill = container.querySelector("[data-type='member']");
+    expect(pill?.textContent).toBe("Ana");
+    expect(pill?.getAttribute("data-seed")).toBe("uploaded-seed");
+    act(() => root.unmount());
+  });
+});

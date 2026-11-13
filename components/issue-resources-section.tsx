@@ -70,7 +70,7 @@ export const IssueResourcesSection = memo(function IssueResourcesSection({
           onPage={uploads.addPage}
           projectId={projectId}
           // Its icon centers on the relations link icon below (8px from the edge).
-          className="-mr-2"
+          className="-mr-2 app-mobile:-mr-1.5 app-mobile:pr-1.5"
         />
       </PropertyRow>
       {!empty && (

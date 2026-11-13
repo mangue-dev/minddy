@@ -42,6 +42,7 @@ import {
   suggestionPlaceholder,
 } from "@/components/editor/suggestion-chip";
 import { caretMenuPosition, editorMenuBand } from "@/lib/visible-band";
+import { haptic } from "@/lib/mobile/haptics";
 
 /** The section an entry is listed under, with its translated header. */
 export interface PageSlashSection {
@@ -198,7 +199,10 @@ const SlashMenu = forwardRef<SlashMenuRef, SlashProps>(function SlashMenu(
       return;
     }
     const item = items[index];
-    if (item) props.command(item);
+    if (!item) return;
+    // A chosen block ticks in the mobile app (MIN-959).
+    haptic("selection");
+    props.command(item);
   };
 
   useImperativeHandle(ref, () => ({

@@ -33,6 +33,7 @@ import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMembersQuery } from "@/lib/use-members-query";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { usePlanGates } from "@/lib/use-billing-query";
 import {
   SettingsGroup,
@@ -68,9 +69,9 @@ function roleLabel(t: MembersT, role: ProjectRole): string {
  */
 const ROLE_TRIGGER_CLASS = {
   badge:
-    "w-auto gap-1 rounded-full px-2 py-1.5 text-xs md:text-xs font-medium leading-tight data-[size=sm]:h-7 data-[size=sm]:md:h-7 data-[size=sm]:rounded-full [&_svg]:size-3.5",
+    "w-auto gap-1 rounded-full px-2 py-1.5 text-xs app-desktop:text-xs font-medium leading-tight data-[size=sm]:h-7 data-[size=sm]:app-desktop:h-7 data-[size=sm]:rounded-full [&_svg]:size-3.5",
   field:
-    "w-auto gap-1.5 rounded-full px-3 font-medium data-[size=default]:h-9 data-[size=default]:md:h-9",
+    "w-auto gap-1.5 rounded-full px-3 font-medium data-[size=default]:h-9 data-[size=default]:app-desktop:h-9",
 } as const;
 
 /** Compact Member/Reader picker shared by members, invitations and the invite form. */
@@ -157,6 +158,7 @@ export function ProjectMembers({
   const t = useTranslations("Members");
   const tc = useTranslations("Common");
   const tb = useTranslations("Billing");
+  const purchasesHidden = usePurchasesHidden();
   const {
     members,
     invitations,
@@ -358,13 +360,18 @@ export function ProjectMembers({
             <p className="mt-1 text-xs text-muted-foreground">
               {limitReached ? (
                 <>
-                  {t("inviteLimitReached", { limit: maxMembersPerProject })}{" "}
-                  <Link
-                    href="/billing"
-                    className="font-medium text-foreground underline underline-offset-2"
-                  >
-                    {tb("membersGateCta")}
-                  </Link>
+                  {t("inviteLimitReached", { limit: maxMembersPerProject })}
+                  {!purchasesHidden && (
+                    <>
+                      {" "}
+                      <Link
+                        href="/billing"
+                        className="font-medium text-foreground underline underline-offset-2"
+                      >
+                        {tb("membersGateCta")}
+                      </Link>
+                    </>
+                  )}
                 </>
               ) : (
                 <span className="tabular-nums">
@@ -479,6 +486,7 @@ export function ProjectMembers({
               return (
                 <div key={inv.id} className="flex flex-col">
                   <SettingsListRow
+                    stackOnPhone
                     title={inv.invited_email}
                     action={
                       <>

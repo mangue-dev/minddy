@@ -16,6 +16,8 @@
 /package-lock.json @mangue-dev
 /desktop/package.json @mangue-dev
 /desktop/package-lock.json @mangue-dev
+/mobile/package.json @mangue-dev
+/mobile/package-lock.json @mangue-dev
 /scripts/ @mangue-dev
 /content/documentation/ @mangue-dev
 /public/documentation/ @mangue-dev

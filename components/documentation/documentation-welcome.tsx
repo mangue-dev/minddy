@@ -36,7 +36,7 @@ export async function DocumentationWelcome({ articles, locale, query = "", previ
     <p className="mt-4 text-lg leading-relaxed text-muted-foreground">{t("welcomeSummary")}</p>
     {preview && <p className="mt-4 rounded-lg border border-border bg-muted p-3 text-sm" role="status">{t("draftPreview")}</p>}
     {!articles.length && <p className="mt-8 text-muted-foreground">{t("empty")}</p>}
-    {guides.map(guide => <section key={guide.id} id={guide.id} tabIndex={-1} className="@container mt-12 scroll-mt-40 sm:scroll-mt-32 xl:scroll-mt-24">
+    {guides.map(guide => <section key={guide.id} id={guide.id} tabIndex={-1} className="@container mt-12 scroll-mt-32 xl:scroll-mt-24">
       <h2 className="text-xl font-semibold tracking-tight">{guide.title}</h2>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{guide.intro}</p>
       <ul className="mt-6 grid grid-cols-1 gap-4 @min-[26rem]:grid-cols-2 @min-[42rem]:grid-cols-3">

@@ -141,7 +141,7 @@ export function PageHeader({
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               )}
             >
-              <HugeiconsIcon icon={SmileIcon} className="size-3.5" />
+              <HugeiconsIcon icon={SmileIcon} className="size-3.5 pointer-coarse:size-[18px]" />
               {t("addIcon")}
             </button>
           </EmojiPicker>

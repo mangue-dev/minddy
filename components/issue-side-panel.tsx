@@ -1381,14 +1381,19 @@ export function IssueSidePanel({
           />
 
           {canComment && (
-            <SidePanelFooter data-keyboard-dock className="flex-col border-t-0 pt-3 sm:flex-col">
-              <CommentFollowUpButton followUp={followUp} onCopy={copyCommentsPrompt} />
-              <CommentComposer
-                members={members}
-                projectId={issue.project_id}
-                commentTarget={commentTarget("issue", issue.id)}
-                onSubmit={compose}
-              />
+            <SidePanelFooter data-keyboard-dock className="border-t-0 pt-3">
+              {/* One column of its own: on the mobile layout the sheet stacks a
+                footer's direct children as actions (reversed, full-width pills),
+                which put the follow-up button under or beside the composer. */}
+              <div className="flex w-full flex-col gap-2">
+                <CommentFollowUpButton followUp={followUp} onCopy={copyCommentsPrompt} />
+                <CommentComposer
+                  members={members}
+                  projectId={issue.project_id}
+                  commentTarget={commentTarget("issue", issue.id)}
+                  onSubmit={compose}
+                />
+              </div>
             </SidePanelFooter>
           )}
 

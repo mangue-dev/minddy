@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import {
   Tooltip,
@@ -20,13 +20,18 @@ import {
 
 /** Small “i” with a tooltip explaining what a metric counts. */
 export function InfoHint({ text }: { text: string }) {
+  // A finger has no hover: a tap opens the tooltip, and a tap anywhere else
+  // closes it (the tooltip's outside press). Radix closes it on the press
+  // itself, so the click that follows reopens it.
+  const [open, setOpen] = useState(false);
   return (
-    <Tooltip>
+    <Tooltip open={open} onOpenChange={setOpen}>
       <TooltipTrigger asChild>
         <button
           type="button"
           aria-label={text}
-          className="inline-flex shrink-0 text-muted-foreground/50 transition-colors hover:text-foreground"
+          onClick={() => setOpen(true)}
+          className="relative inline-flex shrink-0 text-muted-foreground/50 transition-colors hover:text-foreground pointer-coarse:after:absolute pointer-coarse:after:-inset-3"
         >
           <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" />
         </button>

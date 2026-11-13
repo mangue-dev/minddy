@@ -108,7 +108,10 @@ export interface DocumentEditorProps {
       title above, with its x for ↑ (MIN-756, see title-bridge.ts). Read at
       mount: pass it from the first render. */
   onLeaveTop?: (x?: number) => void;
-  autoFocus?: boolean;
+  /** Focus once mounted. On a phone `true` is held back, so a surface does
+   *  not raise the keyboard on its own; `"requested"` is for a field a tap
+   *  just opened (Reply), which the keyboard follows. */
+  autoFocus?: boolean | "requested";
   /** One call, as soon as the surface exists: the caller keeps the handles
       and writes into the editor without owning its state. */
   apiRef?: (api: DocumentEditorApi) => void;

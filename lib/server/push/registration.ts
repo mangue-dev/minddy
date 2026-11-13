@@ -41,6 +41,13 @@ export interface ParsedPushRegistration {
   p256dh: string | null;
   auth: string | null;
   installationId: string | null;
+  /**
+   * APNs only: the app and the gateway the token belongs to, as the device
+   * says. Absent from the macOS app, whose rows keep them empty: the macOS
+   * app in production (`LEGACY_APNS_TARGET`).
+   */
+  apnsPlatform: "ios" | "macos" | null;
+  apnsEnvironment: "production" | "sandbox" | null;
 }
 
 /** Validates the local form before the route does web network checking. */
@@ -50,6 +57,8 @@ export function parsePushRegistration(input: unknown): ParsedPushRegistration | 
     endpoint?: unknown;
     transport?: unknown;
     installationId?: unknown;
+    platform?: unknown;
+    environment?: unknown;
     keys?: { p256dh?: unknown; auth?: unknown };
   };
   if (value.transport === "apns") {
@@ -58,12 +67,22 @@ export function parsePushRegistration(input: unknown): ParsedPushRegistration | 
       !/^apns:[a-f0-9]{32,512}$/i.test(value.endpoint) ||
       !isPushInstallationId(value.installationId)
     ) return null;
+    // Both or neither: a token without its gateway would be sent to the
+    // wrong one, and APNs answers that with "BadDeviceToken", which deletes
+    // the device.
+    const platform = value.platform ?? null;
+    const environment = value.environment ?? null;
+    if ((platform === null) !== (environment === null)) return null;
+    if (platform !== null && platform !== "ios" && platform !== "macos") return null;
+    if (environment !== null && environment !== "production" && environment !== "sandbox") return null;
     return {
       endpoint: value.endpoint,
       transport: "apns",
       p256dh: null,
       auth: null,
       installationId: value.installationId,
+      apnsPlatform: platform,
+      apnsEnvironment: environment,
     };
   }
 
@@ -79,6 +98,8 @@ export function parsePushRegistration(input: unknown): ParsedPushRegistration | 
       p256dh: null,
       auth: null,
       installationId: value.installationId,
+      apnsPlatform: null,
+      apnsEnvironment: null,
     };
   }
 
@@ -98,6 +119,8 @@ export function parsePushRegistration(input: unknown): ParsedPushRegistration | 
     p256dh,
     auth,
     installationId: null,
+    apnsPlatform: null,
+    apnsEnvironment: null,
   };
 }
 

@@ -15,6 +15,8 @@ describe("parsePushRegistration", () => {
       p256dh: "public",
       auth: "secret",
       installationId: null,
+      apnsPlatform: null,
+      apnsEnvironment: null,
     });
   });
 
@@ -27,7 +29,32 @@ describe("parsePushRegistration", () => {
       p256dh: null,
       auth: null,
       installationId,
+      apnsPlatform: null,
+      apnsEnvironment: null,
     });
+  });
+
+  it("records the app and the gateway an APNs token belongs to", () => {
+    const endpoint = `apns:${"ab".repeat(32)}`;
+    const installationId = "11111111-1111-4111-8111-111111111111";
+    expect(
+      parsePushRegistration({ transport: "apns", endpoint, installationId, platform: "ios", environment: "sandbox" }),
+    ).toMatchObject({ apnsPlatform: "ios", apnsEnvironment: "sandbox" });
+  });
+
+  it("refuses an APNs token with half a target or an unknown one", () => {
+    const endpoint = `apns:${"ab".repeat(32)}`;
+    const installationId = "11111111-1111-4111-8111-111111111111";
+    // Sent to the wrong gateway, a token comes back "BadDeviceToken" and the
+    // device is deleted: better refuse it at registration.
+    expect(parsePushRegistration({ transport: "apns", endpoint, installationId, platform: "ios" })).toBeNull();
+    expect(parsePushRegistration({ transport: "apns", endpoint, installationId, environment: "sandbox" })).toBeNull();
+    expect(
+      parsePushRegistration({ transport: "apns", endpoint, installationId, platform: "android", environment: "production" }),
+    ).toBeNull();
+    expect(
+      parsePushRegistration({ transport: "apns", endpoint, installationId, platform: "ios", environment: "staging" }),
+    ).toBeNull();
   });
 
   it("refuse de faire passer une URL ou un token arbitraire pour APNs", () => {
@@ -44,6 +71,8 @@ describe("parsePushRegistration", () => {
       p256dh: null,
       auth: null,
       installationId,
+      apnsPlatform: null,
+      apnsEnvironment: null,
     });
     expect(
       parsePushRegistration({

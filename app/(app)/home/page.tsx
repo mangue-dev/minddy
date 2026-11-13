@@ -12,11 +12,14 @@ import { AssistantChatProvider, useAssistantChatContext } from "@/lib/assistant-
 import { AssistantComposerProvider } from "@/lib/assistant-composer-context";
 import { useAiSurfaceAvailability } from "@/lib/use-ai-surface-availability";
 import { useHomeBriefQuery } from "@/lib/use-home-brief-query";
+import { mentionsSettled } from "@/lib/mention-resolution";
+import { cn } from "@/lib/utils";
 import { AppContentHeader } from "@/components/app-content-header";
 import { AssistantShell, type AssistantShellHandle } from "@/components/assistant/assistant-shell";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HomeNumoBrief } from "@/components/home/home-numo-brief";
+import { NumoIntro } from "@/components/assistant/numo-intro";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
 import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warning";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
@@ -25,17 +28,62 @@ import { MobileInstallHint } from "@/components/home/mobile-install-hint";
 type AuthMeta = { display_name?: string; full_name?: string; name?: string };
 
 // Resolve local time after hydration and keep the greeting stable for this visit.
-function useGreeting(name: string): string {
+function useGreeting(name: string): { greeting: string; settled: boolean } {
   const t = useTranslations("Home");
   const [seed, setSeed] = useState<number | null>(null);
   useEffect(() => {
     setSeed(Math.floor(Math.random() * 1_000_000));
   }, []);
 
-  if (seed === null) return name ? t("greeting", { name }) : t("greetingNoName");
+  if (seed === null) {
+    return { greeting: name ? t("greeting", { name }) : t("greetingNoName"), settled: false };
+  }
   const variant = pickGreeting(new Date(), seed);
-  return t(name ? variant.key : variant.keyNoName, { name });
+  return { greeting: t(name ? variant.key : variant.keyNoName, { name }), settled: true };
 }
+
+/** The longest the page waits before showing what it has. */
+const REVEAL_CAP_MS = 1500;
+
+/**
+ * Home arrives in one step. Its parts come from different places (the
+ * session for the name, the time of day for the greeting, Numo's word and
+ * its suggestions from the server, the names of the word's mentions from
+ * another request), and shown as each one lands, the page rewrote itself
+ * three or four times in a second: a generic greeting and the fixed
+ * suggestions, then the name, then the word with placeholder pills, then
+ * the pills' names. The page now waits for all of them, at most
+ * `REVEAL_CAP_MS`, and reveals them together. Once shown it stays shown:
+ * a later version of the word replaces the old one in place.
+ */
+function useHomeReveal(inputsReady: boolean): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (ready) return;
+    const cap = setTimeout(() => setReady(true), REVEAL_CAP_MS);
+    return () => clearTimeout(cap);
+  }, [ready]);
+  useEffect(() => {
+    if (ready || !inputsReady) return;
+    let cancelled = false;
+    // One frame first: the word's pills mount, still hidden, and queue the
+    // lookup of their names, which `mentionsSettled` then waits for.
+    const frame = requestAnimationFrame(() => {
+      void mentionsSettled().then(() => {
+        if (!cancelled) setReady(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [inputsReady, ready]);
+  return ready;
+}
+
+/** The same fade, blur and rise as the suggestion rows above the composer. */
+const REVEAL_CLASS =
+  "transition-[opacity,filter,translate] duration-200 ease-out motion-reduce:transition-none motion-reduce:blur-none motion-reduce:translate-y-0";
 
 /**
  * Home is a Numo conversation (MIN-930): the same view as the Numo panel,
@@ -81,7 +129,7 @@ function HomeConversation() {
     },
     "",
   );
-  const greeting = useGreeting(name);
+  const { greeting, settled: greetingSettled } = useGreeting(name);
   const { brief, loading: briefLoading } = useHomeBriefQuery(!!user);
   const shellRef = useRef<AssistantShellHandle>(null);
   // The page IS the conversation: the floating button would open it twice.
@@ -93,6 +141,8 @@ function HomeConversation() {
   const blankConversation = !chat.conversationId && chat.messages.length === 0 && !isBusy;
   const aiAvailability = useAiSurfaceAvailability("assistant");
   const aiUnavailable = !aiAvailability.loading && !aiAvailability.available;
+  const revealed = useHomeReveal(!!user && greetingSettled && !briefLoading && !aiAvailability.loading);
+  const reveal = cn(REVEAL_CLASS, revealed ? "opacity-100" : "translate-y-1.5 opacity-0 blur-[6px]");
 
   // Left-aligned, like the composer and the messages below it. The page's
   // heading is the greeting, kept for screen readers whatever is shown.
@@ -134,9 +184,10 @@ function HomeConversation() {
           displayMode="expanded"
           visible={!panelOpen}
           intro={
-            <div className="flex flex-col gap-6">
+            <div className={cn("flex flex-col gap-6", reveal)} aria-busy={!revealed}>
               {welcome}
-              {brief ? <HomeNumoBrief brief={brief} /> : null}
+              {/* Until Numo has a word of its own, it introduces itself. */}
+              {brief ? <HomeNumoBrief brief={brief} /> : briefLoading ? null : <NumoIntro />}
             </div>
           }
           // Once you write, Numo's word stays as the opening message of the
@@ -147,10 +198,13 @@ function HomeConversation() {
           // Numo receives it too: the conversation opens with it (MIN-933).
           openingBriefId={brief?.id ?? null}
           starterItems={brief ? brief.suggestions : null}
-          startersPending={briefLoading}
+          // The suggestions come in with the rest of the page.
+          startersPending={briefLoading || !revealed}
+          // On a phone the rows give their room to the keyboard while you write.
+          hideStartersWhileComposing
           unavailableFallback={
             <div className="flex h-full items-center justify-center overflow-y-auto px-4">
-              <div className="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-3">
+              <div className={cn("mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-3", reveal)}>
                 <div className="mb-2">{welcome}</div>
                 <PendingInvitationsBanner />
                 <HomeSmartAssignWarning />

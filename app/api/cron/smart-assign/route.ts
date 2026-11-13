@@ -5,6 +5,7 @@ import {
   resumeSmartAssignBackfills,
   sweepUnassignedIssues,
 } from "@/lib/server/smart-assign";
+import { runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 
 /**
  * The Smart Assign NET (MIN-31): tickets that should have been triggered
@@ -35,10 +36,14 @@ async function handle(request: NextRequest) {
   }
 
   const startedAt = Date.now();
-  const result = await sweepUnassignedIssues();
-  const backfill = await resumeSmartAssignBackfills(
-    Math.max(0, BACKFILL_DEADLINE_MS - (Date.now() - startedAt))
-  );
+  // AI runs under each account's answer in the mobile app (MIN-907).
+  const { result, backfill } = await runAsBackgroundAiWork(async () => {
+    const result = await sweepUnassignedIssues();
+    const backfill = await resumeSmartAssignBackfills(
+      Math.max(0, BACKFILL_DEADLINE_MS - (Date.now() - startedAt))
+    );
+    return { result, backfill };
+  });
   return NextResponse.json({ ok: true, ...result, backfill });
 }
 

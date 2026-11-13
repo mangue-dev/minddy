@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth-context";
-import { isDesktop } from "@/lib/desktop/bridge";
+import { isNativeApp } from "@/lib/native-app";
 import {
   ANALYTICS_CONSENT_META_KEY,
   readConsent,
@@ -21,7 +21,7 @@ import { useAnalytics } from "@/lib/use-analytics";
 
 /**
  * The question of audience measurement, asked ONCE, in the desktop app
- * (MIN-291).
+ * (MIN-291) and in the mobile app (MIN-907).
  *
  * The footer banner does not follow in the window: it is a site object
  * (see components/cookie-banner.tsx). But the only other door being the
@@ -67,7 +67,7 @@ export function DesktopAnalyticsPrompt() {
   useEffect(() => {
     // After editing: neither the bridge nor the local storage exists when rendered
     // server, and assuming them would cause the hydration to diverge.
-    if (!capabilities.analytics?.configured || !isDesktop() || readConsent() !== null) return;
+    if (!capabilities.analytics?.configured || !isNativeApp() || readConsent() !== null) return;
     // The session arrives after the first rendering: as long as it is not there, we
     // does not yet know if the question is already answered, and asking it would be
     // Ask it to someone who may have already answered it.
@@ -104,15 +104,18 @@ export function DesktopAnalyticsPrompt() {
         onPointerDownOutside={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
         className="max-w-[calc(100%-2rem)] sm:max-w-[420px]"
+        // A consent is read before it is given: on a phone this sheet keeps
+        // its description, which other sheets leave to screen readers.
+        data-sheet-keeps-description
       >
-        <div className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <div className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground app-mobile:hidden">
           <HugeiconsIcon icon={Analytics01Icon} className="size-4" />
         </div>
-        <DialogTitle className="mt-3 text-base">{t("promptTitle")}</DialogTitle>
+        <DialogTitle className="mt-3 text-base app-mobile:mt-0">{t("promptTitle")}</DialogTitle>
         <DialogDescription className="leading-relaxed">
           {t("description")} {t("promptSettingsHint")}
         </DialogDescription>
-        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div data-mobile-sheet-actions className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => choose("declined")}>
             {t("promptDecline")}
           </Button>

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AppLink from "@/components/app-link";
 import { useAppNavigation, useAppRouter } from "./use-app-router";
 import { clearPendingNavigation } from "./pending-navigation";
+import { MobileNavigationContext } from "./mobile-navigation-context";
 
 const state = vi.hoisted(() => ({
   reuseDestination: vi.fn(() => true),
@@ -112,6 +113,21 @@ describe("application navigation entry points", () => {
     await click(await renderLink({ href: "/all", onClick: (event) => event.preventDefault() }));
     expect(state.reuseDestination).not.toHaveBeenCalled();
     await click(await renderLink({ href: "/all", onNavigate: (event) => event.preventDefault() }));
+    expect(state.reuseDestination).not.toHaveBeenCalled();
+  });
+  it("hands the mobile shell the destination of a link and of a programmatic opening", async () => {
+    const mobile = { registerDeparture: vi.fn(), open: vi.fn() };
+    let open!: ReturnType<typeof useAppNavigation>;
+    function Caller() { open = useAppNavigation(); return null; }
+    const linkRouter = { ...state.router, pathname: "/home", asPath: "/home", query: {}, isReady: true } as unknown as NextRouter;
+    await act(() => root.render(createElement(MobileNavigationContext.Provider, { value: mobile },
+      createElement(RouterContext.Provider, { value: linkRouter },
+        createElement(Caller),
+        createElement(AppLink, { href: "/all", prefetch: false }, "Open")))));
+    await click(container.querySelector("a")!);
+    expect(mobile.open).toHaveBeenLastCalledWith(expect.any(Function), "/all");
+    open("/projects/p/pages/a", vi.fn());
+    expect(mobile.open).toHaveBeenLastCalledWith(expect.any(Function), "/projects/p/pages/a");
     expect(state.reuseDestination).not.toHaveBeenCalled();
   });
 });

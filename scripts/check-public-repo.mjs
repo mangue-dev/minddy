@@ -51,6 +51,7 @@ const historicalForbiddenPaths = [
   /^docs\/harness-2026-08\.md$/,
   /^[^/]+-plan\.md$/,
   /^desktop\/dist\//,
+  /^mobile\/(?:www|ios\/DerivedData|ios\/App\/App\/public)\//,
   /^docs\/audits\/securite-2026-08-05\.md$/,
   /^docs\/desktop-signing\.md$/,
   /^docs\/rgpd\/registre-des-traitements\.md$/,

@@ -23,6 +23,7 @@ import Link from "@/components/app-link";
 import dynamic from "next/dynamic";
 import { APP_VERSION } from "@/lib/app-version";
 import { getDesktopBridge } from "@/lib/desktop/bridge";
+import { getMobileBridge } from "@/lib/mobile/bridge";
 import { useDisplayedPathname, useDisplayedSearchParam } from "@/lib/pending-navigation";
 import { objectiveIdFromBoardLocation } from "@/lib/objective-board-route";
 import { animate, motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -57,6 +58,7 @@ import { composeSidebarContextActions } from "@/lib/sidebar-context-actions";
 import { useAuth } from "@/lib/auth-context";
 import { authDisplayName, type AuthNameMeta } from "@/lib/display-name";
 import { useIsAdmin } from "@/lib/use-is-admin";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { useBillingSummary } from "@/lib/use-billing-query";
 import { type BillingPlanId } from "@/lib/billing-plans";
 import { useMyAvatarSource } from "@/lib/use-my-avatar";
@@ -86,7 +88,6 @@ import {
 import { useSidebarScrollEdges } from "@/lib/use-sidebar-scroll-edges";
 import { useRuntimeConfig } from "@/lib/runtime-config-provider";
 import { NewMenu } from "@/components/new-menu";
-import { SidebarOnboarding } from "@/components/sidebar-onboarding";
 import { UsageIndicator } from "@/components/usage-indicator";
 import {
   SIDEBAR_COMPACT_CONTROL_CLASS,
@@ -658,7 +659,7 @@ export function ProjectContextRow({
           <MobileSheetScrollArea>
             {projects.map((project) => <button key={project.id} type="button"
               onClick={() => { setPickerOpen(false); onProjectSelect(project); }}
-              className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
+              data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-muted">
               <ProjectOrb seed={projectOrbSeed(project)} iconUrl={project.icon_url} className="size-[18px] rounded-[5px]" />
               <span className="min-w-0 flex-1 truncate">{project.name}</span>
               {project.id === currentProject.id && <HugeiconsIcon icon={CheckIcon} className="size-4 shrink-0" />}
@@ -688,9 +689,15 @@ function AccountButton({
 }) {
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
+  const tAccount = useTranslations("Account");
   const { user, signOut } = useAuth();
   const { capabilities } = useRuntimeConfig();
   const hasManagedService = capabilities.managedBilling?.configured || capabilities.managedAi?.configured;
+  // The mobile apps sell nothing, so their menus do not lead to the billing
+  // page (MIN-907). The plan's name under the account stays: the app
+  // recognizes a subscription bought on the web.
+  const purchasesHidden = usePurchasesHidden();
+  const showBilling = Boolean(hasManagedService) && !purchasesHidden;
   const { status } = useBillingSummary();
   const mobileIdentity = useMobileAccountIdentity();
   const tBilling = useTranslations("Billing");
@@ -734,26 +741,29 @@ function AccountButton({
 
   if (mobile) {
     const destinations = [
-      { href: "/settings?tab=profile", label: name, icon: null },
-      ...(hasManagedService ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
+      // The row names the place, as its neighbours do; the name is already
+      // on the button that opened the sheet.
+      { href: "/settings?tab=profile", label: tAccount("profileTab"), icon: null },
+      ...(showBilling ? [{ href: "/billing", label: t("billing"), icon: CreditCardIcon }] : []),
       { href: "/settings", label: t("accountSettings"), icon: Settings01Icon },
       { href: "/trash", label: t("trash"), icon: Delete02Icon },
       ...(isAdmin ? [{ href: "/admin", label: t("adminDashboard"), icon: Shield01Icon }] : []),
     ];
     return <>
       <button type="button" data-mobile-sidebar-account aria-haspopup="dialog" aria-expanded={menuOpen}
-        onClick={() => setMenuOpen(true)} className={cn("flex h-10 w-full items-center gap-3 rounded-lg pr-3 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent", AVATAR_PL)}>
-        <UserAvatar seed={seed} className="size-[22px] shrink-0" />
+        onClick={() => setMenuOpen(true)} className="flex h-11 w-full items-center gap-2.5 rounded-full pr-3 pl-1.5 text-left outline-none transition-colors hover:bg-sidebar-accent focus-visible:bg-sidebar-accent">
+        {/* 32px avatar, 6px inset, 44px pill: the two curves share a center. */}
+        <UserAvatar seed={seed} className="size-8 shrink-0" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
       </button>
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <DialogContent aria-describedby={undefined} onCloseAutoFocus={finishOpeningSignOutConfirmation}>
           <DialogTitle>{t("account")}</DialogTitle>
           <MobileSheetScrollArea>
-            {destinations.map(({ href, label, icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
+            {destinations.map(({ href, label, icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} data-mobile-sheet-row className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
               {icon ? <AppIcon icon={icon} className="size-[18px] shrink-0" /> : <UserAvatar seed={seed} className="size-[22px] shrink-0" />}<span className="min-w-0 truncate">{label}</span>
             </Link>)}
-            <button type="button" onClick={openSignOutConfirmation} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-destructive hover:bg-muted">
+            <button type="button" onClick={openSignOutConfirmation} data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-sm text-destructive hover:bg-muted">
               <AppIcon icon={LogOutIcon} className="size-[18px]" />{t("signOut")}
             </button>
           </MobileSheetScrollArea>
@@ -804,7 +814,7 @@ function AccountButton({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {hasManagedService && (
+              {showBilling && (
                 <DropdownMenuItem asChild>
                   <Link href="/billing">
                     <HugeiconsIcon icon={CreditCardIcon} />
@@ -908,11 +918,21 @@ function ChangelogButton({
   const [dialogMounted, setDialogMounted] = useState(false);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [feedbackDialogMounted, setFeedbackDialogMounted] = useState(false);
-  const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
+  // The native app's own version, beside the web's: the desktop app's, or
+  // the iPhone shell's (MIN-907). Both follow the web's version at release.
+  const [appVersion, setAppVersion] = useState<string | null>(null);
 
   useEffect(() => {
     const bridge = getDesktopBridge();
-    if (bridge) setDesktopVersion(bridge.version);
+    if (bridge) {
+      setAppVersion(bridge.version);
+      return;
+    }
+    const shell = getMobileBridge()?.shell;
+    if (!shell) return;
+    let live = true;
+    void shell.state().then((state) => { if (live && state.version) setAppVersion(state.version); }, () => {});
+    return () => { live = false; };
   }, []);
 
   const handleMenuOpenChange = (nextOpen: boolean) => {
@@ -937,14 +957,14 @@ function ChangelogButton({
         <DialogTitle>{t("whatsNew")}</DialogTitle>
         <MobileSheetScrollArea>
           <a href={documentationHref} target="_blank" rel="noopener noreferrer" onClick={() => handleMenuOpenChange(false)}
-            className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
+            data-mobile-sheet-row className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
             <AppIcon icon={Book02Icon} className="size-[18px] shrink-0" />
             <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
             <AppIcon icon={ArrowUpRight01Icon} className="size-4 shrink-0 text-muted-foreground" />
           </a>
           <button
             type="button"
-            className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted"
+            data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted"
             onClick={() => {
               handleMenuOpenChange(false);
               setDialogMounted(true);
@@ -954,7 +974,7 @@ function ChangelogButton({
             <AppIcon icon={NewspaperIcon} className="size-[18px] shrink-0" />
             <span className="min-w-0 truncate">{t("changelog")}</span>
           </button>
-          {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
+          {(productFeedbackIntegrationEnabled || productFeedbackUrl) && <button type="button" data-mobile-sheet-row className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm hover:bg-muted" onClick={() => {
             handleMenuOpenChange(false);
             if (productFeedbackIntegrationEnabled) { setFeedbackDialogMounted(true); setFeedbackDialogOpen(true); }
             else if (productFeedbackUrl) window.open(productFeedbackUrl, "_blank", "noopener,noreferrer");
@@ -962,8 +982,8 @@ function ChangelogButton({
           <AppVersions
             className="px-3 pt-3"
             web={t("webVersion")}
-            app={desktopVersion ? t("appVersion") : null}
-            desktopVersion={desktopVersion}
+            app={appVersion ? t("appVersion") : null}
+            appVersion={appVersion}
           />
         </MobileSheetScrollArea>
       </DialogContent>
@@ -1037,8 +1057,8 @@ function ChangelogButton({
           <AppVersions
             className="px-2.5 py-1.5"
             web={t("webVersion")}
-            app={desktopVersion ? t("appVersion") : null}
-            desktopVersion={desktopVersion}
+            app={appVersion ? t("appVersion") : null}
+            appVersion={appVersion}
           />
         </DropdownMenuContent>
       </DropdownMenu>
@@ -1091,13 +1111,22 @@ export function SidebarFrame({ id, mobile = false, children, onLayerOpenChange, 
   id: string; mobile?: boolean; children: ReactNode;
   onLayerOpenChange?: (open: boolean) => void; onNavigate?: () => void; focusRef?: Ref<HTMLElement>;
 }) {
+  // On a phone the row's pill keeps the sheet's top inset on its left too,
+  // so its curve follows the sheet's corner; the right inset clears the
+  // close button with a gap.
+  const footer = <div data-sidebar-footer className={cn("shrink-0", mobile ? "pb-2 pl-2 pr-16" : cn("pt-2 pb-2.5", GUTTER))}>
+    <SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} />
+  </div>;
   return <aside ref={focusRef} tabIndex={mobile ? -1 : undefined} id={id} data-sidebar-navigation data-mobile-sidebar={mobile || undefined}
     style={{ width: mobile ? "100%" : EXPANDED_WIDTH }}
     className="flex h-full min-h-0 flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-none"
     onClickCapture={mobile ? (event) => { if (isPlainNavigationClick(event) && event.target instanceof Element && event.target.closest("a[href]")) onNavigate?.(); } : undefined}>
+    {/* On a phone the account, the usage and what's new head the sheet, on
+        the row of its close button (MIN-907); the sidebar's own header band
+        follows under them. */}
+    {mobile && footer}
     {children}
-    <SidebarOnboarding mobile={mobile} onLayerOpenChange={onLayerOpenChange} />
-    <div data-sidebar-footer className={cn("shrink-0 pt-2 pb-2.5", GUTTER)}><SidebarFooter portalOwner={id} mobile={mobile} onMenuOpenChange={onLayerOpenChange} /></div>
+    {!mobile && footer}
   </aside>;
 }
 
@@ -1144,12 +1173,12 @@ export function SidebarTopBand({ secondary = false, headerRef, onCreate }: {
 function AppVersions({
   web,
   app,
-  desktopVersion,
+  appVersion,
   className,
 }: {
   web: string;
   app: string | null;
-  desktopVersion: string | null | undefined;
+  appVersion: string | null | undefined;
   className?: string;
 }) {
   return (
@@ -1157,10 +1186,10 @@ function AppVersions({
       <MinddyLogo className={cn("h-3.5 w-3.5 shrink-0 text-foreground", ENV_LOGO_TINT[getAppEnv()])} />
       <span className="truncate">{web}</span>
       <span className="tabular-nums">{APP_VERSION}</span>
-      {app && desktopVersion ? (
+      {app && appVersion ? (
         <>
           <span className="col-start-2 truncate">{app}</span>
-          <span className="tabular-nums">{desktopVersion}</span>
+          <span className="tabular-nums">{appVersion}</span>
         </>
       ) : null}
     </div>

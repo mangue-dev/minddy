@@ -112,7 +112,7 @@ export function DocumentationContents({ sections, label }: { sections: Section[]
   if (!sections.length) return null;
   const contents = <ContentsList sections={sections} activeId={activeId} label={label} onNavigate={onNavigate} />;
   return <>
-    <Collapsible data-documentation-mobile-contents open={open} onOpenChange={setOpen} className="fixed inset-x-0 top-24 z-20 border-b border-border bg-background px-6 sm:top-16 lg:left-72 xl:hidden">
+    <Collapsible data-documentation-mobile-contents open={open} onOpenChange={setOpen} className="fixed inset-x-0 top-16 z-20 border-b border-border bg-background px-6 lg:left-72 xl:hidden">
       <CollapsibleTrigger aria-label={label} className="group flex h-12 w-full items-center justify-between gap-3 text-left text-sm focus-visible:outline-2 focus-visible:outline-ring">
         <span className="truncate">{sections.find(section => section.id === activeId)?.title ?? sections[0].title}</span>
         <HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-90 motion-reduce:transition-none" aria-hidden />

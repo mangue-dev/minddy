@@ -14,6 +14,7 @@ import { usePaletteStore } from "../store";
 import { listenToNewKeydowns } from "./new-keydowns";
 import type { ActionExecutionContext } from "../registry/types";
 import type { PaletteItem } from "../types";
+import { haptic } from "@/lib/mobile/haptics";
 
 // =============================================================================
 // TYPES
@@ -145,6 +146,7 @@ export function useKeyboardNavigation({
             if (!allowSelectionRef.current) break;
             const selectedItem = currentItems[currentActiveIndex];
             if (selectedItem) {
+              haptic("selection");
               const selectHandler = onSelectItemRef.current;
               if (selectHandler) {
                 selectHandler(selectedItem);

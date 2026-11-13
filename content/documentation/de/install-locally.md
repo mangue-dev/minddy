@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 12,
-  "sourceRevision": 12,
+  "revision": 13,
+  "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-04",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -50,14 +50,15 @@
       "desktop/src/menu.ts",
       "components/auth/auth-chrome.tsx",
       "lib/desktop/local-account.ts",
-      "desktop/src/local-account.ts"
+      "desktop/src/local-account.ts",
+      "components/auth/auth-entry.tsx"
     ]
   },
   "review": {
-    "revision": 12,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 13,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-907 desktop app first launch on the single sign-in and sign-up screen: checked against components/auth/auth-entry.tsx, components/auth/auth-chrome.tsx and desktop/src/main.ts; no installation run; existing figures kept)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-907 desktop first-launch step, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +75,7 @@
       "src": "/documentation/de/install-locally-flow.svg",
       "alt": "Diagramm: Desktop-App wählt den Klon. Loopback-Anwendung: Port 6463. Minimales Supabase und dauerhafte Daten. Beenden stoppt App und Backend.",
       "caption": "Die Desktop-App steuert die lokalen Dienste des gewählten Klons, während ihre Daten dauerhaft gespeichert bleiben.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +107,7 @@
       "src": "/documentation/de/install-locally-wizard.png",
       "alt": "Öffentlicher Installationsassistent mit ausgewähltem Profil für diesen Computer.",
       "caption": "Wähle die persönliche Installation, wenn die Desktop-App die lokalen Dienste verwalten soll.",
-      "revision": 12,
+      "revision": 13,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -130,7 +131,7 @@ Eine lokale Instanz betreibt minddy mit einem minimalen Supabase in Docker auf e
 
 Die Desktop-App enthält ein Installationsprogramm, das den gesamten Ablauf für dich ausführt:
 
-1. Öffne die Desktop-App. Sie startet mit minddy Cloud: Beim ersten Start öffnet sich dessen Registrierungsseite. Klicke unten auf der Anmelde- oder Registrierungsseite auf **minddy selbst hosten**. Bist du angemeldet, öffnest du denselben Bildschirm mit **Connect to a Server…** im nativen Menü minddy (das native Menü ist englisch; unter Windows und Linux blendet Alt die Menüleiste ein) oder über **Kontoeinstellungen** → **Einstellungen** → **Desktop-App** → **Verbundener Server** → **Ändern…**.
+1. Öffne die Desktop-App. Sie startet mit minddy Cloud: Beim ersten Start öffnet sich dessen Bildschirm **Anmelden oder registrieren**. Klicke unten auf diesem Bildschirm auf **minddy selbst hosten**. Bist du angemeldet, öffnest du denselben Bildschirm mit **Connect to a Server…** im nativen Menü minddy (das native Menü ist englisch; unter Windows und Linux blendet Alt die Menüleiste ein) oder über **Kontoeinstellungen** → **Einstellungen** → **Desktop-App** → **Verbundener Server** → **Ändern…**.
 2. Wähle in **minddy selbst hosten** die Option **Auf diesem Computer installieren**.
 3. Unter **Voraussetzungen** prüft die App Git, Node.js 24, pnpm, Supabase CLI und Docker. Ein fehlendes Werkzeug zeigt **Nicht gefunden, wird installiert**, ein älteres Node.js **Version … gefunden; Node.js 24 wird für minddy installiert**. Ein installiertes, aber gestopptes Docker zeigt **Installiert, läuft aber nicht, wird gestartet**. Du musst vorher nichts installieren: **Installieren** übernimmt das. **Erneut prüfen** wiederholt die Prüfung.
 4. Prüfe den **Installationsordner**. Standardmäßig ist es ein Ordner `minddy` in deinem Benutzerordner; mit **Auswählen…** wählst du einen anderen. Enthält der gewählte Ordner bereits andere Dateien, installiert die App in einen Ordner `minddy` darin.

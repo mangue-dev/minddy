@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 11,
-  "sourceRevision": 11,
+  "revision": 12,
+  "sourceRevision": 12,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-06",
+  "updatedAt": "2026-11-11",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -38,14 +38,15 @@
       "components/settings/account-settings-page.tsx",
       "lib/server/notifications.ts",
       "lib/server/numo-notes.ts",
-      "lib/notification-prefs.ts"
+      "lib/notification-prefs.ts",
+      "components/mobile-navigation.tsx"
     ]
   },
   "review": {
-    "revision": 11,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-924: which routine runs notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-924 passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-06"
+    "revision": 12,
+    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-924: which routine runs notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-907 inbox button in the phone bottom bar with its dot: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figure kept)",
+    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-924 passage; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-907 phone inbox entry point, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-11"
   },
   "related": [
     "projects",
@@ -63,7 +64,7 @@
       "src": "/documentation/en/work-inbox.png",
       "alt": "Inbox with demonstration mentions, assignments and comments, including read and unread items.",
       "caption": "Demonstration activity shows the author, issue and read state. All includes read and unread notifications.",
-      "revision": 11,
+      "revision": 12,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -83,7 +84,7 @@
 
 ## Read Inbox {#notifications-and-inbox}
 
-Open Inbox from its icon in the top bar, from the Inbox row of the sidebar on a phone, or by pressing G then I outside a text field. A red count on the icon adds unread notifications and pending invitations; an installed PWA shows the same count on its app icon. Inbox opens as a popover, or as a sheet on a phone, and groups notifications under Today, Yesterday and Earlier. Once you type in the command palette, it also finds notifications: choosing one opens Inbox on the tab that lists it, Unread or All, and highlights it without marking it read.
+Open Inbox from its icon in the top bar, from the inbox button in the bar at the bottom of the screen on a phone, or by pressing G then I outside a text field. A red count on the icon adds unread notifications and pending invitations, and on a phone a dot marks the inbox button; an installed PWA shows the same count on its app icon. Inbox opens as a popover, or as a sheet on a phone, and groups notifications under Today, Yesterday and Earlier. Once you type in the command palette, it also finds notifications: choosing one opens Inbox on the tab that lists it, Unread or All, and highlights it without marking it read.
 
 Inbox opens on the Unread filter. All also lists read notifications, and Mentions keeps only mentions in comments and pages. Select an item to open its underlying issue, page or pull request. Opening a notification marks it read. Its row also offers Mark as read or Mark as unread, and Mark all as read in the Inbox header clears every unread marker. Marking unread restores that activity marker; it does not undo the underlying issue or page change. A notification is a pointer to accessible work, not a replacement for its current content.
 

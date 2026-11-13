@@ -9,6 +9,7 @@ node_modules
 desktop/node_modules
 desktop/out
 desktop
+mobile
 captures
 assets
 docs/**

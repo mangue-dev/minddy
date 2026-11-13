@@ -31,14 +31,26 @@ export async function refreshSession() {
   await page.evaluate(() => document.fonts.ready);
 
   const submit = page.getByRole("button", { name: /connexion|se connecter|sign in|log in/i });
+  const passwordField = page.getByRole("textbox", { name: /mot de passe|password/i });
   const leftAuth = (url) => !/\/(login|signup)/.test(url.pathname);
 
   // No hydration marker is displayed by Next: rather than a timer
   // arbitrary, we try again. A click gone too soon is visible — we are still
   // on /login — and the next one lands on a hydrated page.
   for (let attempt = 1; ; attempt += 1) {
-    await page.getByRole("textbox", { name: /e-?mail/i }).fill(DEMO_EMAIL);
-    await page.getByRole("textbox", { name: /mot de passe|password/i }).fill(password);
+    // Sign-in asks for the address first, then for the password once the
+    // address is known to have one (components/auth/auth-entry.tsx).
+    if (!(await passwordField.isVisible())) {
+      await page.getByRole("textbox", { name: /e-?mail/i }).fill(DEMO_EMAIL);
+      await page.getByRole("button", { name: /^continuer$|^continue$/i }).click();
+      const asked = await passwordField.waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
+      if (!asked) {
+        if (attempt === 3) throw new Error(`Le formulaire de connexion n'a pas demandé de mot de passe (${CAPTURE.baseUrl}).`);
+        await page.waitForTimeout(2_000);
+        continue;
+      }
+    }
+    await passwordField.fill(password);
     await submit.click();
 
     const ok = await page

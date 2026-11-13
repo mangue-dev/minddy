@@ -21,6 +21,11 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+/* The app's layout, set before the first paint (lib/app-layout.ts): the
+   primitives take their compact desktop sizes from it, never from the width,
+   so an unfolded phone or a tablet in the mobile layout keeps finger sizes. */
+@custom-variant app-mobile (&:where(html[data-app-layout="mobile"] *));
+@custom-variant app-desktop (&:where(html[data-app-layout="desktop"] *));
 
 /* ── State variants ──────────────────────────────────────────────────────────
    Restored from the shadcn base (lost on extraction). They map short names to
@@ -278,6 +283,21 @@
 }
 
 :root {
+  /* The side insets of a screen whose content is centred. On iPhone Duo the
+     status bar and the system controls stand on a side of the screen, not at
+     its top: the right inset is 84px on both displays and the left one is 0.
+     Where there is room (the inner display), such a screen steps back by the
+     larger inset on BOTH sides, so its content stays in the middle of the
+     screen and clear of the controls instead of sitting off-centre in what
+     they leave. On a narrow screen (the outer display, 466px) that would cost
+     the content a third of its width: it clears each side by its own inset. */
+  --safe-inline-start: env(safe-area-inset-left);
+  --safe-inline-end: env(safe-area-inset-right);
+  @media (min-width: 40rem) {
+    --safe-inline-start: max(env(safe-area-inset-left), env(safe-area-inset-right));
+    --safe-inline-end: max(env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+
   /* Dialog max size — 90% of app shell on ultrawide, 90% of viewport below. */
   --spacing-dialog-w: min(90vw, calc(var(--spacing-app-max-w) * 0.9));
   --spacing-dialog-h: min(90vh, calc(var(--spacing-app-max-h) * 0.9));

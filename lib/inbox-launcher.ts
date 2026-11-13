@@ -7,6 +7,8 @@ export interface OpenInboxDetail {
   /** The notification to show: the inbox picks the tab that lists it,
    *  scrolls to its row and pulses it (MIN-846). */
   notificationId?: string;
+  /** Open it, never close it: a notification or a link asked for it. */
+  show?: boolean;
 }
 
 export function openInbox() {
@@ -22,4 +24,9 @@ export function openInboxAtNotification(notificationId: string) {
   window.dispatchEvent(
     new CustomEvent<OpenInboxDetail>(OPEN_INBOX_EVENT, { detail: { notificationId } }),
   );
+}
+
+/** Opens the inbox, and leaves it open when it already is. */
+export function showInbox() {
+  window.dispatchEvent(new CustomEvent<OpenInboxDetail>(OPEN_INBOX_EVENT, { detail: { show: true } }));
 }

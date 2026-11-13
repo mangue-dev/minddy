@@ -38,6 +38,7 @@ import { plainMarkdownParts } from "@/lib/plain-markdown";
 import type { RoutineSchedule } from "@/lib/routine-schedule";
 import type { RoutineRunSummary } from "@/lib/routines-api";
 import type { MessageKey } from "@/lib/i18n-keys";
+import { usePurchasesHidden } from "@/lib/native-app";
 import { formatRoutineRunDuration } from "@/lib/routine-run-metrics";
 import { TruncatedText } from "@/components/ui/truncated-text";
 
@@ -107,6 +108,8 @@ export function RoutineDetail({
   onIntentConsumed?: () => void;
 }) {
   const t = useTranslations("Routines");
+  // The mobile app sells nothing and has no billing page (MIN-907).
+  const purchasesHidden = usePurchasesHidden();
   const tCommon = useTranslations("Common");
   const format = useFormatter();
   const {
@@ -334,7 +337,7 @@ export function RoutineDetail({
               <p className="flex items-center gap-1.5 text-xs text-warning-strong">
                 <HugeiconsIcon icon={Alert01Icon} className="size-3.5 shrink-0" />
                 <span>{routineErrorLabel(routine.last_error, t)}</span>
-                {routine.last_error === "quota" ? (
+                {routine.last_error === "quota" && !purchasesHidden ? (
                   <Link
                     href="/settings/billing"
                     className="underline underline-offset-2"

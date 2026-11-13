@@ -20,6 +20,7 @@ import { getMcpConnection } from "@/lib/server/mcp-client";
 import { mcpPresetForUrl } from "@/lib/mcp-catalog";
 import { decodeRoutineTitle } from "@/lib/server/routine-content";
 import { fetchAuthUsersById, toNamed } from "@/lib/server/auth-users";
+import { fetchAvatarSeeds } from "@/lib/server/avatar-seeds";
 import { issueStore } from "@/lib/server/issue-store";
 import { objectiveStore } from "@/lib/server/objective-store";
 import { decodeAttachmentRow } from "@/lib/server/attachment-content";
@@ -109,6 +110,7 @@ export async function resolveMentionTargets(
   mcpServices?: Map<string, string>,
   pageFigures?: Map<string, { icon: string | null; database: boolean }>,
   pullRequestStates?: Map<string, PullRequestState>,
+  memberSeeds?: Map<string, string>,
 ): Promise<MentionResolution> {
   const resolution: MentionResolution = new Map();
   const unique = new Map<string, MentionRef>();
@@ -231,8 +233,12 @@ export async function resolveMentionTargets(
     // A connection is read under its owner's id: another account's reads as none.
     Promise.all(idsOf("mcp")
       .map(async (id) => [id, await getMcpConnection(userId, id).catch(() => null)] as const)),
-    visibleMembers.size ? fetchAuthUsersById(service, [...visibleMembers]) : null,
+    // The reader's own name is read fresh: they may have just changed it.
+    visibleMembers.size ? fetchAuthUsersById(service, [...visibleMembers], [userId]) : null,
   ]);
+  // A member's portrait: Markdown names a member by id alone, and the id is
+  // not the seed of their avatar (MIN-964).
+  const seeds = memberSeeds && visibleMembers.size ? await fetchAvatarSeeds(service, [...visibleMembers]) : null;
   for (const row of decodedPages) {
     const title = typeof row.title === "string" ? row.title.trim() : "";
     // A page the reader may see but nobody titled yet (a subpage just
@@ -274,7 +280,10 @@ export async function resolveMentionTargets(
   if (users) {
     for (const id of visibleMembers) {
       const user = users.get(id);
-      if (user) resolution.set(`member:${id}`, displayName(toNamed(user), "User"));
+      if (!user) continue;
+      resolution.set(`member:${id}`, displayName(toNamed(user), "User"));
+      const seed = seeds?.get(id);
+      if (seed) memberSeeds?.set(`member:${id}`, seed);
     }
   }
   return resolution;
