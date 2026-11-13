@@ -14,8 +14,8 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 13,
-  "sourceRevision": 13,
+  "revision": 14,
+  "sourceRevision": 14,
   "owner": "@mangue-dev",
   "updatedAt": "2026-11-13",
   "compatibility": {
@@ -41,13 +41,14 @@
       "lib/notification-prefs.ts",
       "components/mobile-navigation.tsx",
       "components/inbox-row.tsx",
-      "lib/notification-line.ts"
+      "lib/notification-line.ts",
+      "mobile/README.md"
     ]
   },
   "review": {
-    "revision": 13,
-    "fact": "agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-924: which routine runs notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-907 inbox button in the phone bottom bar with its dot: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figure kept); agent:claude-code (MIN-975: inbox redesign — view picker and More actions menu, actor/sentence/context rows with mention pills, no date groups, invitation buttons with confirmation, swipe actions on phones; source audit against the change; no browser walkthrough; work-inbox.png recaptured on 2026-11-13 from the local candidate (light, six locales, response-only demo notifications, no writes) and inspected)",
-    "language": "agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-924 passage; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-907 phone inbox entry point, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-975 passages, figure alt and caption with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
+    "revision": 14,
+    "fact": "agent:claude-code (MIN-973: the iOS app among the push delivery channels; checked against components/settings/account-push-devices-section.tsx and mobile/README.md; no figure affected); agent:/root/min747 (0.20.0 release review: source audit against the v0.11.0..main delta, verified corrections applied; 1 screenshot(s) recaptured on 2026-10-20 from the local candidate and inspected; no browser walkthrough of the procedures or operator rehearsal; earlier evidence retained in git history); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (0.30.0 release review MIN-794: source audit against v0.20.0..HEAD; corrected the Inbox entry points to include notification search in the command palette, and the preferences section to state that administrators of a self-hosted instance get an unmutable Instance variables notification; no browser walkthrough; figures not reviewed in this pass); agent:claude-code (MIN-914: Numo messages in Inbox, their link targets, recipient rule and Messages from Numo switch, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-924: which routine runs notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-907 inbox button in the phone bottom bar with its dot: checked against components/mobile-navigation.tsx and components/app-shell-chrome.tsx; no browser walkthrough; existing figure kept); agent:claude-code (MIN-975: inbox redesign — view picker and More actions menu, actor/sentence/context rows with mention pills, no date groups, invitation buttons with confirmation, swipe actions on phones; source audit against the change; no browser walkthrough; work-inbox.png recaptured on 2026-11-13 from the local candidate (light, six locales, response-only demo notifications, no writes) and inspected)",
+    "language": "agent:claude-code (en MIN-973 iOS app sentence, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:/root/min747 (en changed passages with catalog UI labels; retained-meaning self-review; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en corrected passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-914 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-924 passage; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-907 phone inbox entry point, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-975 passages, figure alt and caption with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
     "date": "2026-11-13"
   },
   "related": [
@@ -66,7 +67,7 @@
       "src": "/documentation/en/work-inbox.png",
       "alt": "Inbox on the All view with demonstration mentions, assignments and comments: each row names who acted, the issue as a pill, and its title.",
       "caption": "Each row shows who acted, what happened with the issue, and its title. Read rows are dimmed; All lists read and unread notifications.",
-      "revision": 13,
+      "revision": 14,
       "reviewed": true,
       "capturedAt": "2026-11-13",
       "viewport": [
@@ -104,6 +105,6 @@ Pending project invitations appear at the top of the Unread and All views, with 
 
 Select Inbox settings in the More actions menu of Inbox, or open Account settings and choose the Notifications tab. Under Inbox notifications, a switch per category (Assignments, Mentions, Comments, Numo, Routines, Pull requests, Feedback, Pages and Messages from Numo) decides what lands in your Inbox. Turning a category off stops future notifications of that kind, including their push alerts; it does not remove notifications you already received. On a self-hosted instance, administrators also get an Instance variables notification when another administrator changes an instance variable; no switch turns it off. See [Edit the instance variables](/docs/instance-administration#instance-variables).
 
-The Push notifications section on the same tab lists the devices that receive alerts. Browser, PWA or desktop delivery also needs device registration and the operating system's permission. Turning a device off or removing it stops alerts on that device only; your Inbox and its categories are unchanged.
+The Push notifications section on the same tab lists the devices that receive alerts. Browser, PWA, iOS app or desktop delivery also needs device registration and the operating system's permission. Turning a device off or removing it stops alerts on that device only; your Inbox and its categories are unchanged.
 
 If a notification leads to unavailable content, verify whether project membership changed or the object was deleted. For missing push delivery, check device permission and registration using the [device-notification section](/docs/applications#devices-and-notifications); in-app Inbox remains a useful place to inspect activity. Never send session cookies or private notification contents as troubleshooting screenshots.

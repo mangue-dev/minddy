@@ -939,6 +939,20 @@
     "section": "desktop-app"
   },
   {
+    "workflow": "A13",
+    "article": "applications",
+    "outcome": "Install the iOS app sign in choose a server and decide on AI features",
+    "audiences": [
+      "member"
+    ],
+    "type": "guide",
+    "source": "`mobile/README.md`; `components/mobile/shell.tsx`; `components/mobile/ai-consent-gate.tsx`; `components/settings/account-mobile-section.tsx`",
+    "gaps": "App Store install, sign-in services, self-hosted server choice, universal links, push, vibrations, purchases hidden, AI consent and its effect when declined",
+    "illustration": "Current localized sign-in, AI consent sheet and Mobile app preferences",
+    "requiresFigures": true,
+    "section": "ios-app"
+  },
+  {
     "workflow": "H01",
     "article": "installation",
     "outcome": "Select a supported topology release and host",
