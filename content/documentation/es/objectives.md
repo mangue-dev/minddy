@@ -16,9 +16,9 @@
   "visibility": "public",
   "status": "published",
   "revision": 25,
-  "sourceRevision": 24,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -67,14 +67,15 @@
       "lib/server/objectives.ts",
       "lib/smart-assign-config.ts",
       "components/settings/account-smart-fill-section.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "lib/server/assistant/execute-tool.ts"
     ]
   },
   "review": {
     "revision": 25,
-    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
-    "language": "agent:claude-code (es translation of the changed passages with catalog UI labels, reviewed against en revision 24; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
+    "language": "agent:claude-code (es translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "issues",
@@ -151,7 +152,7 @@ El panel Ritmo solo aparece cuando el objetivo tiene una fecha objetivo. Al elim
 
 El ritmo resume el trabajo completado recientemente. Puede estar acelerándose, estable, ralentizándose o detenido, con estados separados para objetivos no iniciados, completados y cancelados. Úsalo para identificar un resultado que necesite atención y después lee las incidencias y la actividad subyacentes.
 
-La fecha estimada parte de las personas que hacen el trabajo. Para cada persona asignada a incidencias vinculadas, minddy deduce sus horas de actividad habituales a partir de cuándo finaliza incidencias, mide el esfuerzo que entrega en todos sus proyectos y estima la parte de ese esfuerzo dedicada a este objetivo según sus finalizaciones recientes y su trabajo abierto. La estimación solo avanza durante esas horas de actividad: las noches y los fines de semana no suman progreso, y el trabajo sin asignar se reparte entre quienes contribuyen. El cálculo se hace en el servidor: las incidencias de otros proyectos y las cifras de cada persona nunca se muestran, solo la fecha resultante. Una persona cuenta en cuanto ha finalizado al menos dos incidencias en las últimas seis semanas. Si no hay ninguna, la estimación vuelve al ritmo propio del objetivo, que requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen al ritmo las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Si hay una fecha objetivo pero no define un periodo válido posterior a la creación, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos.
+La fecha estimada parte de las personas que hacen el trabajo. Para cada persona asignada a incidencias vinculadas, minddy deduce sus horas de actividad habituales a partir de cuándo finaliza incidencias, mide el esfuerzo que entrega en todos sus proyectos y estima la parte de ese esfuerzo dedicada a este objetivo según sus finalizaciones recientes y su trabajo abierto. La estimación solo avanza durante esas horas de actividad: las noches y los fines de semana no suman progreso, y el trabajo sin asignar se reparte entre quienes contribuyen. El cálculo se hace en el servidor: las incidencias de otros proyectos y las cifras de cada persona nunca se muestran, solo la fecha resultante. Una persona cuenta en cuanto ha finalizado al menos dos incidencias en las últimas seis semanas. Si no hay ninguna, la estimación vuelve al ritmo propio del objetivo, que requiere al menos dos finalizaciones, una semana completa observada, esfuerzo entregado positivo y trabajo pendiente. Solo contribuyen al ritmo las incidencias vinculadas actualmente; una finalización anterior a la creación del objetivo no genera un ritmo reciente artificial. Con una fecha objetivo válida, el historial abarca desde la creación hasta esa fecha y el rendimiento utiliza el tiempo observado desde la creación, incluido el transcurrido después de una fecha incumplida. Si hay una fecha objetivo pero no define un periodo válido posterior a la creación, el cálculo utiliza un historial móvil de ocho semanas y una ventana de previsión de 28 días. Un historial escaso o un cambio reciente de alcance reducen su utilidad. La estimación no es una fecha prometida y no incluye trabajo invisible que no hayas vinculado. Compara la fecha objetivo, el trabajo pendiente y las restricciones reales antes de cambiar compromisos. Numo lee la misma fecha cuando abre el objetivo, así que puedes preguntarle si el objetivo cumplirá su fecha objetivo.
 
 
 ## Elegir un objetivo para un comentario {#objective-feedback}

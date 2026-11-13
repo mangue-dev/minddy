@@ -16,9 +16,9 @@
   "visibility": "public",
   "status": "published",
   "revision": 25,
-  "sourceRevision": 24,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -67,14 +67,15 @@
       "lib/server/objectives.ts",
       "lib/smart-assign-config.ts",
       "components/settings/account-smart-fill-section.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "lib/server/assistant/execute-tool.ts"
     ]
   },
   "review": {
     "revision": 25,
-    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
-    "language": "agent:claude-code (pt-BR translation of the changed passages with catalog UI labels, reviewed against en revision 24; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
+    "language": "agent:claude-code (pt-BR translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "issues",
@@ -151,7 +152,7 @@ O painel Ritmo aparece apenas quando o objetivo tem uma data-alvo. Ao remover es
 
 O ritmo resume trabalho concluído recentemente. Ele pode estar acelerando, estável, desacelerando ou parado, com estados separados para objetivos não iniciados, concluídos e cancelados. Use-o para identificar um resultado que precisa de atenção, depois leia os tickets e a atividade subjacentes.
 
-A data estimada de conclusão parte das pessoas que fazem o trabalho. Para cada pessoa responsável por tickets vinculados, o minddy deduz seus horários habituais de atividade a partir dos momentos em que ela conclui tickets, mede o esforço que entrega em todos os seus projetos e estima a parcela desse esforço dedicada a este objetivo com base nas conclusões recentes e no trabalho em aberto. A estimativa só avança durante esses horários de atividade: noites e fins de semana não somam progresso, e o trabalho sem responsável é dividido entre quem contribui. O cálculo é feito no servidor: os tickets de outros projetos e os números de cada pessoa nunca são exibidos, apenas a data resultante.
+A data estimada de conclusão parte das pessoas que fazem o trabalho. Para cada pessoa responsável por tickets vinculados, o minddy deduz seus horários habituais de atividade a partir dos momentos em que ela conclui tickets, mede o esforço que entrega em todos os seus projetos e estima a parcela desse esforço dedicada a este objetivo com base nas conclusões recentes e no trabalho em aberto. A estimativa só avança durante esses horários de atividade: noites e fins de semana não somam progresso, e o trabalho sem responsável é dividido entre quem contribui. O cálculo é feito no servidor: os tickets de outros projetos e os números de cada pessoa nunca são exibidos, apenas a data resultante. O Numo lê a mesma data quando abre o objetivo, então você pode perguntar a ele se o objetivo vai cumprir a data-alvo.
 
 Uma pessoa passa a contar assim que concluiu pelo menos dois tickets nas últimas seis semanas. Sem nenhuma pessoa nessa situação, a estimativa volta ao ritmo próprio do objetivo, que exige pelo menos duas conclusões, uma semana inteira observada, esforço entregue positivo e trabalho restante. Apenas os tickets atualmente vinculados contribuem para o ritmo; uma conclusão anterior à criação do objetivo não produz um ritmo recente artificial.
 

@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 24,
+  "revision": 25,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -67,14 +67,15 @@
       "lib/server/objectives.ts",
       "lib/smart-assign-config.ts",
       "components/settings/account-smart-fill-section.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "lib/server/assistant/execute-tool.ts"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
-    "language": "agent:claude-code (en changed passages; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 25,
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
+    "language": "agent:claude-code (en changed sentence; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "issues",
@@ -95,7 +96,7 @@
       "src": "/documentation/en/reader-objectives.png",
       "alt": "Unsubmitted objective-creation dialog in the Aurora project with a demonstration result name and the Create objective button.",
       "caption": "Name the result before choosing the lead, target date and status. This dialog has not created a second objective.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -151,7 +152,7 @@ The Momentum panel appears only when the objective has a target date. Removing t
 
 Momentum summarizes recently completed work. It can be accelerating, steady, slowing or stalled, with separate states for not-started, complete and canceled objectives. Use it to identify an outcome needing attention, then read the underlying issues and activity.
 
-An estimated finish date comes from the people doing the work. For each person assigned to linked issues, minddy learns their usual activity hours from when they complete issues, measures the effort they deliver across all their projects, and estimates the share of that effort going to this objective from their recent completions and their open work. The estimate advances only during those active hours, so nights and weekends add no progress, and unassigned work is shared among the contributors. It is computed on the server: issues from other projects and each person's figures are never shown, only the resulting date.
+An estimated finish date comes from the people doing the work. For each person assigned to linked issues, minddy learns their usual activity hours from when they complete issues, measures the effort they deliver across all their projects, and estimates the share of that effort going to this objective from their recent completions and their open work. The estimate advances only during those active hours, so nights and weekends add no progress, and unassigned work is shared among the contributors. It is computed on the server: issues from other projects and each person's figures are never shown, only the resulting date. Numo reads the same date when it opens the objective, so you can ask it whether the objective will meet its target date.
 
 A person counts once they have completed at least two issues in the last six weeks. Without such a person, the estimate falls back to the objective's own pace, which requires at least two completions, a full observed week, positive delivered effort and remaining work. Only currently linked issues contribute to momentum; completions before objective creation do not count as recent momentum.
 

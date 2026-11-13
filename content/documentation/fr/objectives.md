@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 24,
-  "sourceRevision": 24,
+  "revision": 25,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -67,14 +67,15 @@
       "lib/server/objectives.ts",
       "lib/smart-assign-config.ts",
       "components/settings/account-smart-fill-section.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "lib/server/assistant/execute-tool.ts"
     ]
   },
   "review": {
-    "revision": 24,
-    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
-    "language": "agent:claude-code (fr translation of the changed passages with catalog UI labels, reviewed against en revision 24; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 25,
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
+    "language": "agent:claude-code (fr translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "issues",
@@ -95,7 +96,7 @@
       "src": "/documentation/fr/reader-objectives.png",
       "alt": "Dialogue de création d’objectif non envoyé dans le projet Aurora, avec un nom de résultat d’exemple et le bouton Créer l’objectif.",
       "caption": "Nommez le résultat avant de choisir le responsable, la date cible et l’état. Ce dialogue n’a pas créé un deuxième objectif.",
-      "revision": 24,
+      "revision": 25,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -151,7 +152,7 @@ Le panneau Élan apparaît uniquement si l’objectif a une date cible. Supprime
 
 La dynamique résume le travail récemment terminé. Elle peut accélérer, rester stable, ralentir ou stagner, avec des états distincts pour les objectifs non démarrés, terminés et annulés. Utilisez ce signal pour repérer un résultat qui mérite votre attention, puis consultez tickets et activité.
 
-La date de fin estimée part des personnes qui font le travail. Pour chaque personne assignée à des tickets associés, minddy déduit ses heures d’activité habituelles des moments où elle termine des tickets, mesure l’effort qu’elle réalise sur l’ensemble de ses projets et estime la part de cet effort consacrée à cet objectif d’après ses réalisations récentes et son travail ouvert. L’estimation n’avance que pendant ces heures d’activité : les nuits et les week-ends n’ajoutent aucune progression, et le travail non assigné est réparti entre les contributeurs. Le calcul a lieu sur le serveur : les tickets des autres projets et les chiffres de chaque personne ne sont jamais affichés, seule la date qui en résulte l’est.
+La date de fin estimée part des personnes qui font le travail. Pour chaque personne assignée à des tickets associés, minddy déduit ses heures d’activité habituelles des moments où elle termine des tickets, mesure l’effort qu’elle réalise sur l’ensemble de ses projets et estime la part de cet effort consacrée à cet objectif d’après ses réalisations récentes et son travail ouvert. L’estimation n’avance que pendant ces heures d’activité : les nuits et les week-ends n’ajoutent aucune progression, et le travail non assigné est réparti entre les contributeurs. Le calcul a lieu sur le serveur : les tickets des autres projets et les chiffres de chaque personne ne sont jamais affichés, seule la date qui en résulte l’est. Numo lit la même date quand il ouvre l’objectif : vous pouvez donc lui demander si l’objectif tiendra sa date cible.
 
 Une personne est prise en compte dès qu’elle a terminé au moins deux tickets au cours des six dernières semaines. Sans personne dans ce cas, l’estimation revient au rythme propre de l’objectif, qui exige au moins deux réalisations, une semaine complète d’observation, un effort réalisé positif et du travail restant. Seuls les tickets actuellement associés contribuent à la dynamique ; les réalisations antérieures à la création de l’objectif ne comptent pas dans la dynamique récente.
 

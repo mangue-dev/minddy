@@ -15,10 +15,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 24,
+  "revision": 27,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -67,14 +67,15 @@
       "lib/server/objectives.ts",
       "lib/smart-assign-config.ts",
       "components/settings/account-smart-fill-section.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "lib/server/assistant/execute-tool.ts"
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
-    "language": "agent:claude-code (de translation of the changed passages with catalog UI labels, reviewed against en revision 24; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "revision": 27,
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
+    "language": "agent:claude-code (de translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "issues",
@@ -95,7 +96,7 @@
       "src": "/documentation/de/reader-objectives.png",
       "alt": "Noch nicht gesendeter Zieldialog im Projekt Aurora mit einem Beispielnamen und der Schaltfläche Ziel erstellen.",
       "caption": "Benenne das Ergebnis, bevor du Verantwortung, Zieldatum und Status festlegst. Dieser Dialog hat kein zweites Ziel erstellt.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -151,7 +152,7 @@ Der Bereich Dynamik erscheint nur, wenn das Ziel ein Zieldatum hat. Wenn du dies
 
 Momentum fasst kürzlich abgeschlossene Arbeit zusammen. Es kann beschleunigend, gleichmäßig, langsamer oder stockend sein; für noch nicht begonnene, abgeschlossene und abgebrochene Ziele gibt es eigene Zustände. Nutze es, um Ergebnisse mit Handlungsbedarf zu erkennen, und lies dann die zugrunde liegenden Tickets und Aktivitäten.
 
-Das geschätzte Abschlussdatum geht von den Personen aus, die die Arbeit erledigen. Für jede Person, der zugeordnete Tickets zugewiesen sind, leitet minddy ihre üblichen Aktivitätszeiten aus den Zeitpunkten ab, zu denen sie Tickets abschließt, misst den Aufwand, den sie über alle ihre Projekte hinweg liefert, und schätzt anhand ihrer jüngsten Abschlüsse und ihrer offenen Arbeit, welcher Anteil dieses Aufwands auf dieses Ziel entfällt. Die Schätzung schreitet nur während dieser Aktivitätszeiten voran: Nächte und Wochenenden bringen keinen Fortschritt, und nicht zugewiesene Arbeit wird auf die Mitwirkenden verteilt. Die Berechnung erfolgt auf dem Server: Tickets anderer Projekte und die Werte einzelner Personen werden nie angezeigt, nur das daraus resultierende Datum. Eine Person zählt, sobald sie in den letzten sechs Wochen mindestens zwei Tickets abgeschlossen hat. Ohne eine solche Person greift die Schätzung auf das eigene Tempo des Ziels zurück, das mindestens zwei Abschlüsse, eine volle beobachtete Woche, positiven gelieferten Aufwand und verbleibende Arbeit voraussetzt. Nur aktuell zugeordnete Tickets zählen zum Momentum; ein Abschluss vor der Erstellung des Ziels erzeugt kein künstliches jüngstes Momentum. Bei einem gültigen Zieldatum reicht der Verlauf von der Erstellung bis zu diesem Datum. Der Durchsatz verwendet die beobachtete Zeit seit der Erstellung, einschließlich der Zeit nach einem verpassten Zieltermin. Wenn ein Zieldatum eingetragen ist, aber keinen gültigen Zeitraum nach der Erstellung definiert, verwendet die Berechnung einen gleitenden Verlauf von acht Wochen und ein Vorhersagefenster von 28 Tagen. Wenig Verlauf oder eine kürzliche Änderung des Umfangs verringern den Nutzen. Die Schätzung ist kein zugesagter Termin und enthält keine noch nicht zugeordnete, unsichtbare Arbeit. Vergleiche Zieldatum, verbleibende Arbeit und tatsächliche Einschränkungen, bevor du Zusagen änderst.
+Das geschätzte Abschlussdatum geht von den Personen aus, die die Arbeit erledigen. Für jede Person, der zugeordnete Tickets zugewiesen sind, leitet minddy ihre üblichen Aktivitätszeiten aus den Zeitpunkten ab, zu denen sie Tickets abschließt, misst den Aufwand, den sie über alle ihre Projekte hinweg liefert, und schätzt anhand ihrer jüngsten Abschlüsse und ihrer offenen Arbeit, welcher Anteil dieses Aufwands auf dieses Ziel entfällt. Die Schätzung schreitet nur während dieser Aktivitätszeiten voran: Nächte und Wochenenden bringen keinen Fortschritt, und nicht zugewiesene Arbeit wird auf die Mitwirkenden verteilt. Die Berechnung erfolgt auf dem Server: Tickets anderer Projekte und die Werte einzelner Personen werden nie angezeigt, nur das daraus resultierende Datum. Eine Person zählt, sobald sie in den letzten sechs Wochen mindestens zwei Tickets abgeschlossen hat. Ohne eine solche Person greift die Schätzung auf das eigene Tempo des Ziels zurück, das mindestens zwei Abschlüsse, eine volle beobachtete Woche, positiven gelieferten Aufwand und verbleibende Arbeit voraussetzt. Nur aktuell zugeordnete Tickets zählen zum Momentum; ein Abschluss vor der Erstellung des Ziels erzeugt kein künstliches jüngstes Momentum. Bei einem gültigen Zieldatum reicht der Verlauf von der Erstellung bis zu diesem Datum. Der Durchsatz verwendet die beobachtete Zeit seit der Erstellung, einschließlich der Zeit nach einem verpassten Zieltermin. Wenn ein Zieldatum eingetragen ist, aber keinen gültigen Zeitraum nach der Erstellung definiert, verwendet die Berechnung einen gleitenden Verlauf von acht Wochen und ein Vorhersagefenster von 28 Tagen. Wenig Verlauf oder eine kürzliche Änderung des Umfangs verringern den Nutzen. Die Schätzung ist kein zugesagter Termin und enthält keine noch nicht zugeordnete, unsichtbare Arbeit. Vergleiche Zieldatum, verbleibende Arbeit und tatsächliche Einschränkungen, bevor du Zusagen änderst. Numo liest dasselbe Datum, wenn es das Ziel öffnet. Du kannst Numo also fragen, ob das Ziel sein Zieldatum einhält.
 
 
 ## Ein Ziel für Feedback wählen {#objective-feedback}

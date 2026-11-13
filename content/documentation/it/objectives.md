@@ -16,9 +16,9 @@
   "visibility": "public",
   "status": "published",
   "revision": 25,
-  "sourceRevision": 24,
+  "sourceRevision": 25,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-09",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -67,14 +67,15 @@
       "lib/server/objectives.ts",
       "lib/smart-assign-config.ts",
       "components/settings/account-smart-fill-section.tsx",
-      "lib/smart-fill.ts"
+      "lib/smart-fill.ts",
+      "lib/server/assistant/execute-tool.ts"
     ]
   },
   "review": {
     "revision": 25,
-    "fact": "agent:claude-code (new section on Smart Fill and Smart Assign for objectives, MIN-919: Smart Fill button and arrow menu in the new-objective form, name/color/target date filled only when empty, Smart Assign in place of an empty lead in every lead picker, lead chosen from the closest assigned issues or the owner; checked against components/objective-dialog.tsx, lib/server/objectives.ts, lib/server/smart-fill-objective.ts, lib/server/smart-assign-objective.ts, components/objective-detail.tsx and components/objectives/objectives-page.tsx; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured, the existing figure does not show the Smart Fill button; Follow-up: the target date keeps the time the text gives, resolved in the author's time zone, and the new Fill created objectives switch; checked against lib/server/smart-fill-objective.ts, components/settings/account-smart-fill-section.tsx and lib/smart-fill.ts; the objective name follows its own Write missing names switch)",
-    "language": "agent:claude-code (it translation of the changed passages with catalog UI labels, reviewed against en revision 24; agent review, not human acceptance)",
-    "date": "2026-11-09"
+    "fact": "agent:claude-code (MIN-977: Numo's get_objective now returns the estimated finish date from the same server forecast as the Momentum panel; one sentence added to the estimated finish date paragraph)",
+    "language": "agent:claude-code (it translation of the changed sentence, reviewed against en revision 25; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "issues",
@@ -151,7 +152,7 @@ Il pannello Ritmo appare solo quando l’obiettivo ha una data obiettivo. Rimuov
 
 L’andamento riassume il lavoro completato di recente. Può essere in accelerazione, costante, in rallentamento o fermo, con stati separati per obiettivi non iniziati, completati e annullati. Usalo per individuare un risultato che richiede attenzione, poi leggi i ticket e l’attività sottostanti.
 
-La data di fine stimata parte dalle persone che svolgono il lavoro. Per ogni persona assegnataria di ticket collegati, minddy ricava le sue abituali ore di attività dai momenti in cui completa i ticket, misura l’impegno che consegna in tutti i suoi progetti e stima la quota di quell’impegno dedicata a questo obiettivo in base ai completamenti recenti e al lavoro aperto. La stima avanza solo durante quelle ore di attività: notti e fine settimana non aggiungono progressi, e il lavoro non assegnato viene ripartito tra chi contribuisce. Il calcolo avviene sul server: i ticket degli altri progetti e i dati di ogni persona non vengono mai mostrati, solo la data risultante.
+La data di fine stimata parte dalle persone che svolgono il lavoro. Per ogni persona assegnataria di ticket collegati, minddy ricava le sue abituali ore di attività dai momenti in cui completa i ticket, misura l’impegno che consegna in tutti i suoi progetti e stima la quota di quell’impegno dedicata a questo obiettivo in base ai completamenti recenti e al lavoro aperto. La stima avanza solo durante quelle ore di attività: notti e fine settimana non aggiungono progressi, e il lavoro non assegnato viene ripartito tra chi contribuisce. Il calcolo avviene sul server: i ticket degli altri progetti e i dati di ogni persona non vengono mai mostrati, solo la data risultante. Numo legge la stessa data quando apre l’obiettivo, quindi puoi chiedergli se l’obiettivo rispetterà la sua data obiettivo.
 
 Una persona viene considerata appena ha completato almeno due ticket nelle ultime sei settimane. Se non ce n’è nessuna, la stima torna al ritmo proprio dell’obiettivo, che richiede almeno due completamenti, una settimana intera osservata, impegno consegnato positivo e lavoro rimanente. Contribuiscono all’andamento solo i ticket attualmente collegati; un completamento precedente alla creazione dell’obiettivo non produce un andamento recente artificiale.
 

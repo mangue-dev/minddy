@@ -4,9 +4,10 @@ import { executeTool, type ToolContext } from "./execute-tool";
 import { resolveObjectiveRef } from "@/lib/server/issue-reads";
 import { CONVERSATION_ASSISTANT_TOOLS } from "./tools";
 
-const { getProjectAccess, addCommentToObjective } = vi.hoisted(() => ({
-  getProjectAccess: vi.fn(), addCommentToObjective: vi.fn(),
+const { getProjectAccess, addCommentToObjective, getObjectiveForecast } = vi.hoisted(() => ({
+  getProjectAccess: vi.fn(), addCommentToObjective: vi.fn(), getObjectiveForecast: vi.fn(),
 }));
+vi.mock("@/lib/server/objective-forecast", () => ({ getObjectiveForecast }));
 vi.mock("@/lib/server/add-comment", async (original) => ({
   ...await original<typeof import("@/lib/server/add-comment")>(), addCommentToObjective,
 }));
@@ -90,6 +91,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   databaseError = null;
   getProjectAccess.mockResolvedValue({ project: { id: "project-1", key: "MIN" }, isOwner: false, isMember: true, role: "member", canWrite: true, canComment: true });
+  getObjectiveForecast.mockResolvedValue({ forecastDate: null, forecastDays: null, basis: null });
   tables = {
     objectives: [
       { id: objectiveId, project_id: "project-1", name: "Release", description: "Ship it", status: "planned", lead_user_id: "user-1", target_date: null },
@@ -112,6 +114,7 @@ describe("Numo get_objective", () => {
       success: true,
       result: {
         comments: [],
+        forecast: null,
         linked_feedback: [],
         objective: { id: objectiveId, name: "Release", description: "Ship it", status: "planned", lead_user_id: "user-1", target_date: null },
         relations: [
@@ -146,6 +149,27 @@ describe("Numo get_objective", () => {
     ]);
     expect(comments[0].resources).toEqual([expect.objectContaining({ kind: "link", url: "https://example.com/spec" })]);
     expect(comments[1]).not.toHaveProperty("resources");
+  });
+
+  it("returns the Momentum panel's estimated finish date in the user's zone (MIN-977)", async () => {
+    getObjectiveForecast.mockResolvedValue({
+      forecastDate: "2026-12-04T16:00:00.000Z", forecastDays: 21, basis: "contributors",
+    });
+    const result = await executeTool("get_objective", { project_id: "project-1", objective_id: objectiveId },
+      { ...context(), timezone: "Europe/Paris" });
+    expect(result).toMatchObject({ success: true, result: { forecast: {
+      estimated_finish_date: "2026-12-04T16:00:00.000Z", estimated_days: 21, basis: "contributors",
+    } } });
+    expect(getObjectiveForecast).toHaveBeenCalledWith("user-1", objectiveId, { timeZone: "Europe/Paris" });
+  });
+
+  it("keeps the rest of the read when the forecast fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    getObjectiveForecast.mockRejectedValue(new Error("Forecast issue read failed"));
+    const result = await executeTool("get_objective", { project_id: "project-1", objective_id: objectiveId }, context());
+    expect(result).toMatchObject({ success: true, result: { forecast: null, objective: { id: objectiveId } } });
+    expect(getObjectiveForecast).toHaveBeenCalledWith("user-1", objectiveId, { timeZone: "UTC" });
+    consoleError.mockRestore();
   });
 
   it.each([undefined, "obj:Release", "invalid"])("rejects invalid objective IDs: %s", async (id) => {

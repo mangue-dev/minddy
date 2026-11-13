@@ -3,6 +3,7 @@ import { readProjectStats } from "@/lib/server/project-stats";
 import { updateFeedbackPostFields } from "@/lib/server/feedback/posts";
 import { materializePendingDescription } from "@/lib/server/description-collaboration";
 import { listFeedbackForObjective } from "@/lib/server/feedback/team-queries";
+import { getObjectiveForecast } from "@/lib/server/objective-forecast";
 import { DOCUMENTATION_HELP_ORIGIN } from "@/lib/documentation-help-links";
 import { issueStore } from "@/lib/server/issue-store";
 import { abortableReadClient } from "./abortable-read-client";
@@ -1812,7 +1813,7 @@ async function executeToolUnlisted(
         if (!objective) return toolError("Objective not found in this project.");
         // The objective's own comment thread, as on an issue: without it Numo
         // believed objectives had none (MIN-793).
-        const [relations, { data: comments, error: commentsError }, { data: commentResources }] =
+        const [relations, { data: comments, error: commentsError }, { data: commentResources }, forecast] =
           await Promise.all([
             resolveEntityRelations(
               ctx.supabase,
@@ -1831,6 +1832,21 @@ async function executeToolUnlisted(
               .eq("objective_id", objective.id)
               .not("comment_id", "is", null)
               .order("created_at", { ascending: true }),
+            // The Momentum panel's estimated finish date (MIN-977), from the
+            // same server forecast and in the user's zone, so both agree. It
+            // is a best-effort extra: a failure leaves the rest of the read.
+            getObjectiveForecast(ctx.userId, objective.id, { timeZone: ctx.timezone || "UTC" })
+              .then((value) => value?.forecastDate
+                ? {
+                    estimated_finish_date: value.forecastDate,
+                    estimated_days: value.forecastDays,
+                    basis: value.basis,
+                  }
+                : null)
+              .catch((error: unknown) => {
+                console.error("[numo] objective forecast failed:", (error as Error).message);
+                return null;
+              }),
           ]);
         if (commentsError) return toolError("Unable to read objective comments.");
         const resourcesByComment = new Map<string, Record<string, unknown>[]>();
@@ -1847,6 +1863,7 @@ async function executeToolUnlisted(
         return {
           result: {
             objective,
+            forecast,
             comments: (comments ?? []).map((c) => {
               const resources = resourcesByComment.get(c.id as string);
               return {
