@@ -17,13 +17,19 @@ const requested=process.env.DOC_CAPTURE_SCREENS?.split(',');
 /** Notification examples are rendered by the real Inbox using response-only demo data. */
 function inboxDemoNotifications(fixture) {
  const titles=['Add keyboard shortcuts to the command palette','Rework the onboarding checklist','Dark mode flickers on first paint','Cache avatar lookups on the members endpoint','Public roadmap page','Slack notifications for mentions'];
+ // Every row reads actor, sentence with the issue pill, then the issue title as context (MIN-975).
  return titles.map((title,index)=>({
   id:`documentation-notification-${index}`,type:['mention','assigned','comment'][index%3],
   created_at:`${captureDate}T${['10:15','09:45','08:30','08:15','08:00','07:45'][index]}:00.000Z`,
   read_at:index%3===2?`${captureDate}T09:00:00.000Z`:null,
   issue_id:fixture.issueId,issue_number:[2,3,1,4,11,10][index],issue_title:fixture.mapping[title],
+  issue_status:['in_progress','todo','in_review','backlog','todo','in_progress'][index],
+  objective_id:null,objective_name:null,feedback_post_id:null,feedback_title:null,routine_id:null,routine_title:null,
+  pull_request_id:null,pull_request_number:null,pull_request_title:null,pull_request_provider:null,
+  page_id:null,page_title:null,block_id:null,comment_excerpt:null,numo_note_title:null,numo_note_body:null,
+  issue_count:null,project_name:null,via_automation:false,api_key_agent:null,api_key_name:null,
   project_id:project,project_key:'AUR',actor_name:['Alice','Tom','Camille'][index%3],
-  actor_avatar_seed:['alice','tom','camille-aurora'][index%3],from_numo:false,via_mcp:false,via_smart_assign:false,
+  actor_avatar_seed:['alice','tom','camille-aurora'][index%3],from_numo:false,via_mcp:false,via_smart_assign:index===1,
  }));
 }
 const base=`/projects/${project}`;
@@ -41,7 +47,7 @@ const screens=[
  ['view-filters',base,async(p,m)=>{await p.getByRole('button',{name:m.Common.filters,exact:true}).click();},p=>p.locator('[data-radix-popper-content-wrapper]').last()],
  ['share-view',base,async(p,m)=>{await p.getByRole('button',{name:m.Board.viewOptions.replace('{name}',m.Board.defaultViewName),exact:true}).click();await p.getByText(m.Board.shareView,{exact:true}).last().click();},p=>p.getByRole('dialog').last()],
  ['search',base,async p=>{await p.keyboard.press('ControlOrMeta+k');await p.getByRole('dialog').waitFor();await p.getByRole('dialog').locator('input').fill('AUR-2');},p=>p.getByRole('dialog')],
- ['inbox','/home',async(p,m)=>{await p.getByRole('button',{name:m.Nav.inbox,exact:true}).click();await p.locator('#inbox-popover').waitFor();await p.locator('#inbox-popover').locator('button[aria-pressed]').filter({hasText:new RegExp('^'+m.Inbox.filterAll)}).click();await p.locator('#inbox-popover').getByText('AUR-2',{exact:false}).first().waitFor();},p=>p.locator('#inbox-popover')],
+ ['inbox','/home',async(p,m)=>{await p.getByRole('button',{name:m.Nav.inbox,exact:true}).click();await p.locator('#inbox-popover').waitFor();await p.locator('#inbox-popover [data-inbox-sheet-bar] button').first().click();await p.getByRole('option',{name:new RegExp('^'+m.Inbox.filterAll)}).click();await p.locator('[data-radix-popper-content-wrapper] [role=listbox]').waitFor({state:'detached'}).catch(()=>{});await p.locator('#inbox-popover').getByText('AUR-2',{exact:false}).first().waitFor();},p=>p.locator('#inbox-popover')],
  ['task-notebook',base,async(p,m)=>{await p.getByRole('button',{name:new RegExp('^'+m.Scratchpad.openAria.split('(')[0].trim())}).first().click();await p.getByRole('dialog',{name:m.Scratchpad.title,exact:true}).waitFor();// The editor's block gutter stays on the first block after opening; it is a hover affordance.
 await p.addStyleTag({content:`[role=dialog] div:has(> button[aria-label="${m.Pages.insertBlock}"]){visibility:hidden!important}[role=dialog] div:has(> button[aria-label="${m.Pages.insertBlock}"]) *{visibility:hidden!important}`});},p=>p.getByRole('dialog')],
  ['statistics','/settings',async(p,m)=>{await p.getByRole('region',{name:m.Stats.yearStory,exact:true}).first().waitFor();},p=>p.locator('main')],
