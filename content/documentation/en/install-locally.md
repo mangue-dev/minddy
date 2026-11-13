@@ -3,7 +3,7 @@
   "id": "install-locally",
   "locale": "en",
   "title": "Local instances",
-  "summary": "Install a private local instance from the desktop app, or open a clone you prepared, with Node.js 24.22.1 or a later 24.x, pnpm 10.28.0, Git, Supabase CLI and a running Docker daemon.",
+  "summary": "Install a private local instance from the desktop app, or open a clone you prepared, with Node.js 24.22.3 or a later 24.x, pnpm 10.28.0, Git, Supabase CLI and a running Docker daemon.",
   "topic": "Operate an instance",
   "type": "tutorial",
   "audiences": [
@@ -127,7 +127,7 @@
 
 ## Install minddy on this computer {#install-locally}
 
-A local instance runs minddy with a minimal Supabase stack in Docker on one computer, for evaluation or personal use. Its data stays on that computer, and the desktop app starts and stops its services. It uses Git, Node.js 24.22.1 or a later 24.x, `pnpm` 10.28.0, Supabase CLI and a running Docker daemon. The desktop app installs any of them that is missing; a clone you prepare yourself needs them beforehand. Allow at least 4 GB free RAM, two CPU cores and 10 GB free SSD; 8 GB, four cores and 20 GB are recommended. Install the signed desktop app from the download page first. Windows uses Microsoft Store; macOS and Linux use their platform downloads.
+A local instance runs minddy with a minimal Supabase stack in Docker on one computer, for evaluation or personal use. Its data stays on that computer, and the desktop app starts and stops its services. It uses Git, Node.js 24.22.3 or a later 24.x, `pnpm` 10.28.0, Supabase CLI and a running Docker daemon. The desktop app installs any of them that is missing; a clone you prepare yourself needs them beforehand. Allow at least 4 GB free RAM, two CPU cores and 10 GB free SSD; 8 GB, four cores and 20 GB are recommended. Install the signed desktop app from the download page first. Windows uses Microsoft Store; macOS and Linux use their platform downloads.
 
 The desktop app includes an installer that runs the whole procedure for you:
 

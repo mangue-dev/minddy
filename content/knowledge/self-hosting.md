@@ -37,7 +37,7 @@ Minddy Cloud is not a dependency or fallback. A self-hosted instance does not si
 
 ## Prerequisites and secrets
 
-For a local clone you prepare yourself, install Node.js 24.22.1 or a later 24.x, pnpm 10.28.0 through Corepack, Git, the Supabase CLI, and Docker with a running daemon; the desktop app's **Install on this computer** installs any of them that is missing. For a server, also install `psql` and meet the selected release's Docker Engine and Docker Compose minimums. Keep secrets in a host secret manager or a mode-0600 environment file; never commit `.env.local`, `deploy/self-hosted/.env`, database URLs, service-role keys, private keys, or backups.
+For a local clone you prepare yourself, install Node.js 24.22.3 or a later 24.x, pnpm 10.28.0 through Corepack, Git, the Supabase CLI, and Docker with a running daemon; the desktop app's **Install on this computer** installs any of them that is missing. For a server, also install `psql` and meet the selected release's Docker Engine and Docker Compose minimums. Keep secrets in a host secret manager or a mode-0600 environment file; never commit `.env.local`, `deploy/self-hosted/.env`, database URLs, service-role keys, private keys, or backups.
 
 The deployed application needs these values:
 

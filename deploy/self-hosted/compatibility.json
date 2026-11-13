@@ -24,7 +24,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.19",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -64,7 +64,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.21",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -104,7 +104,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.22",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -144,7 +144,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.23",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -184,7 +184,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.24",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -224,7 +224,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.25",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -264,7 +264,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.26",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -304,7 +304,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.27",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -344,7 +344,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.28",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -384,7 +384,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.29",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -424,7 +424,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.10.30",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -464,7 +464,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.11.0",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -504,7 +504,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.20.0",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -544,7 +544,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.20.1",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -584,7 +584,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.30.0",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {
@@ -624,7 +624,7 @@
       "referenceCompose": {
         "minddyImage": "ghcr.io/mangue-dev/minddy:v0.30.1",
         "caddyImage": "caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d",
-        "schedulerImage": "node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2"
+        "schedulerImage": "node:24.22.3-alpine3.23@sha256:3946fb783fdce8a2812136ea694bc95c698c4f4096f3fd18568dc27a8ac389dc"
       },
       "supabase": {
         "simpleManaged": {

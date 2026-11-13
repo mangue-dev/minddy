@@ -3,7 +3,7 @@
   "id": "install-locally",
   "locale": "fr",
   "title": "Instances locales",
-  "summary": "Installez une instance locale privée depuis l’application desktop, ou ouvrez un clone préparé, avec Node.js 24.22.1 ou une version 24.x ultérieure, pnpm 10.28.0, Git, la CLI Supabase et un daemon Docker actif.",
+  "summary": "Installez une instance locale privée depuis l’application desktop, ou ouvrez un clone préparé, avec Node.js 24.22.3 ou une version 24.x ultérieure, pnpm 10.28.0, Git, la CLI Supabase et un daemon Docker actif.",
   "topic": "Exploiter une instance",
   "type": "tutorial",
   "audiences": [
@@ -127,7 +127,7 @@
 
 ## Installer minddy sur cet ordinateur {#install-locally}
 
-Une instance locale fait tourner minddy avec un Supabase minimal dans Docker sur un seul ordinateur, pour une évaluation ou un usage personnel. Ses données restent sur cet ordinateur, et l’application desktop démarre et arrête ses services. Elle utilise Git, Node.js 24.22.1 ou une version 24.x ultérieure, `pnpm` 10.28.0, la CLI Supabase et un daemon Docker actif. L’application desktop installe ceux qui manquent ; un clone que vous préparez vous-même en a besoin au préalable. Prévoyez au moins 4 Go de RAM libre, deux cœurs CPU et 10 Go de SSD libre ; 8 Go, quatre cœurs et 20 Go sont recommandés. Installez d’abord l’application desktop signée depuis la page de téléchargement. Windows passe par Microsoft Store ; macOS et Linux disposent de leurs téléchargements.
+Une instance locale fait tourner minddy avec un Supabase minimal dans Docker sur un seul ordinateur, pour une évaluation ou un usage personnel. Ses données restent sur cet ordinateur, et l’application desktop démarre et arrête ses services. Elle utilise Git, Node.js 24.22.3 ou une version 24.x ultérieure, `pnpm` 10.28.0, la CLI Supabase et un daemon Docker actif. L’application desktop installe ceux qui manquent ; un clone que vous préparez vous-même en a besoin au préalable. Prévoyez au moins 4 Go de RAM libre, deux cœurs CPU et 10 Go de SSD libre ; 8 Go, quatre cœurs et 20 Go sont recommandés. Installez d’abord l’application desktop signée depuis la page de téléchargement. Windows passe par Microsoft Store ; macOS et Linux disposent de leurs téléchargements.
 
 L’application desktop intègre un installeur qui exécute toute la procédure pour vous :
 

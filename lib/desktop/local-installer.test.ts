@@ -15,10 +15,11 @@ import {
 } from "./local-installer";
 
 describe("local installer prerequisites", () => {
-  it("accepts Node.js 24.22.1 and later 24.x only", () => {
-    expect(nodeVersionSupported("24.22.1")).toBe(true);
+  it("accepts Node.js 24.22.3 and later 24.x only", () => {
+    expect(nodeVersionSupported("24.22.3")).toBe(true);
     expect(nodeVersionSupported("24.30.0")).toBe(true);
-    expect(nodeVersionSupported("24.22.0")).toBe(false);
+    expect(nodeVersionSupported("24.22.2")).toBe(false);
+    expect(nodeVersionSupported("24.22.1")).toBe(false);
     expect(nodeVersionSupported("22.12.0")).toBe(false);
     expect(nodeVersionSupported("25.0.0")).toBe(false);
   });
@@ -30,7 +31,7 @@ describe("local installer prerequisites", () => {
       state: "outdated",
       version: "22.12.0",
     });
-    expect(evaluatePrerequisite("node", { ok: true, stdout: "v24.22.1" }).state).toBe("ready");
+    expect(evaluatePrerequisite("node", { ok: true, stdout: "v24.22.3" }).state).toBe("ready");
     expect(
       evaluatePrerequisite("docker", { ok: true, stdout: "Docker version 28.1.1, build 4eba377" }, { ok: false, stdout: "" }),
     ).toEqual({ id: "docker", state: "stopped", version: "28.1.1" });

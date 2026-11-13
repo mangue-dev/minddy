@@ -3,7 +3,7 @@
   "id": "install-locally",
   "locale": "de",
   "title": "Lokale Instanzen",
-  "summary": "Installiere eine private lokale Instanz aus der Desktop-App oder öffne einen vorbereiteten Klon, mit Node.js 24.22.1 oder einer neueren 24.x-Version, pnpm 10.28.0, Git, Supabase CLI und laufendem Docker-Daemon.",
+  "summary": "Installiere eine private lokale Instanz aus der Desktop-App oder öffne einen vorbereiteten Klon, mit Node.js 24.22.3 oder einer neueren 24.x-Version, pnpm 10.28.0, Git, Supabase CLI und laufendem Docker-Daemon.",
   "topic": "Instanz betreiben",
   "type": "tutorial",
   "audiences": [
@@ -127,7 +127,7 @@
 
 ## minddy auf diesem Computer installieren {#install-locally}
 
-Eine lokale Instanz betreibt minddy mit einem minimalen Supabase in Docker auf einem einzigen Computer, zur Erprobung oder für die persönliche Nutzung. Ihre Daten bleiben auf diesem Computer, und die Desktop-App startet und beendet ihre Dienste. Sie verwendet Git, Node.js 24.22.1 oder eine neuere 24.x-Version, `pnpm` 10.28.0, Supabase CLI und einen laufenden Docker-Daemon. Die Desktop-App installiert, was davon fehlt; ein selbst vorbereiteter Klon braucht diese Werkzeuge vorab. Plane mindestens 4 GB freien RAM, zwei CPU-Kerne und 10 GB freien SSD-Speicher ein; empfohlen sind 8 GB, vier Kerne und 20 GB. Installiere zuerst die signierte Desktop-App von der Downloadseite. Windows verwendet den Microsoft Store; macOS und Linux haben eigene Downloads.
+Eine lokale Instanz betreibt minddy mit einem minimalen Supabase in Docker auf einem einzigen Computer, zur Erprobung oder für die persönliche Nutzung. Ihre Daten bleiben auf diesem Computer, und die Desktop-App startet und beendet ihre Dienste. Sie verwendet Git, Node.js 24.22.3 oder eine neuere 24.x-Version, `pnpm` 10.28.0, Supabase CLI und einen laufenden Docker-Daemon. Die Desktop-App installiert, was davon fehlt; ein selbst vorbereiteter Klon braucht diese Werkzeuge vorab. Plane mindestens 4 GB freien RAM, zwei CPU-Kerne und 10 GB freien SSD-Speicher ein; empfohlen sind 8 GB, vier Kerne und 20 GB. Installiere zuerst die signierte Desktop-App von der Downloadseite. Windows verwendet den Microsoft Store; macOS und Linux haben eigene Downloads.
 
 Die Desktop-App enthält ein Installationsprogramm, das den gesamten Ablauf für dich ausführt:
 
