@@ -386,7 +386,7 @@ export function SidebarRows({ sections, renderItem }: { sections: AppNavSection[
     const reorder = section.reorder && section.reorder.keys.length > 1 ? section.reorder : undefined;
     const list = <ul className="flex flex-col gap-1">{section.items.map((item) => {
       const movable = reorder?.keys.includes(item.key);
-      const content = renderItem?.(item) ?? <SidebarRow item={item} keyShortcuts={movable ? REORDER_KEY_SHORTCUTS : undefined} />;
+      const content = renderItem?.(item) ?? <SidebarRow item={item} keyShortcuts={movable ? REORDER_SHORTCUTS : undefined} />;
       return <motion.li key={item.key} variants={panelRowVariants} custom={reduce ? -1 : row++}>
         {movable && reorder ? <SortableSidebarItem itemKey={item.key} reorder={reorder}>{content}</SortableSidebarItem> : content}
       </motion.li>;
@@ -399,7 +399,7 @@ export function SidebarRows({ sections, renderItem }: { sections: AppNavSection[
 }
 
 /** Announced on a movable row, as the tabs announce Alt+Shift+Left/Right. */
-const REORDER_KEY_SHORTCUTS = "Alt+Shift+ArrowUp Alt+Shift+ArrowDown";
+const REORDER_SHORTCUTS = "Alt+Shift+ArrowUp Alt+Shift+ArrowDown";
 
 /** Module-level, so the sensors keep their identity across renders. */
 const SIDEBAR_MOUSE_SENSOR_OPTIONS = { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } };
