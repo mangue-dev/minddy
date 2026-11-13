@@ -331,5 +331,6 @@
   "20270109200119_apple_sign_in_tokens.sql": "b59b0b3a30d483420d1e9bee49a8cb92f8bb98da0e4b0f6452227a48e537bf9e",
   "20270109200120_push_apns_target.sql": "a0126a2bba1780c4355537bb088daf5c7033c2d5024c552bce37db1416b22217",
   "20270109200121_auth_account_status.sql": "95bf1eb1c2c97f1d4d6a28769b8d7cbcc512c2812d1c41485a3f53333620dc80",
-  "20270109200122_drop_legacy_notification_types.sql": "e7ecdae962386c6a7ec81b385681ff8e9c5a1df5d2ce1a257908f4ad5b419f7b"
+  "20270109200122_drop_legacy_notification_types.sql": "e7ecdae962386c6a7ec81b385681ff8e9c5a1df5d2ce1a257908f4ad5b419f7b",
+  "20270109200123_ai_decision_preferences.sql": "4ea4afddd280f8a9baca025c96335133cf6e0a6d4194ebf0fb577072ec2e6f2b"
 }

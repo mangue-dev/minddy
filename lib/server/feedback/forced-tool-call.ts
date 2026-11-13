@@ -10,7 +10,7 @@ import {
 } from "@/lib/server/ai-usage";
 import { getAgentProvider } from "@/lib/agent-providers";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
-import type { AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
+import type { AiProviderChoice, AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import {
   fetchAiChat,
   resolveAiRuntime,
@@ -110,6 +110,13 @@ export async function forcedToolCall(
     modelKey?: ByokModelKey;
     /** Special case where the same model belongs to another surface (feedback voice). */
     surface?: AiSurface;
+    /**
+     * A provider the account chose for this call instead of the call type's
+     * route (decisions, MIN-980): `minddy` or one of its credentials.
+     */
+    provider?: AiProviderChoice | null;
+    /** The model the account chose with `provider`; its default otherwise. */
+    modelOverride?: string | null;
     /** Default: 1024 — enough to cover a verdict or title. Note for
  * outputs that grow with the input (a correspondence plan
  * carries one line per column of the file). */
@@ -164,6 +171,8 @@ export async function forcedToolCall(
       userId: billedUserId,
       modelKey: options.modelKey,
       surface: options.surface,
+      provider: options.provider ?? null,
+      modelOverride: options.modelOverride ?? null,
     }).catch((err: Error) => {
       keyUnavailable = err.name === "ManagedAiKeyUnavailableError";
       return null;

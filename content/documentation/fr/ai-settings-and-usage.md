@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 26,
-  "sourceRevision": 26,
+  "revision": 27,
+  "sourceRevision": 27,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -62,14 +62,17 @@
       "components/agent/model-combobox.tsx",
       "lib/server/assistant/model-preferences.ts",
       "app/api/account/numo-preferences/route.ts",
-      "lib/server/ai-routes.ts"
+      "lib/server/ai-routes.ts",
+      "lib/server/decisions/engine.ts",
+      "app/api/account/ai-decisions/route.ts",
+      "lib/decision-engine.ts"
     ]
   },
   "review": {
-    "revision": 26,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 27,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-946: Billing usage paragraph (budget forecast, Daily usage chart, hover values, Numo's warning), source audit against the change; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954: Numo Conversations paragraph and the ai-keys-and-models-workflow diagram's third step and caption, source audit against lib/server/assistant/model-preferences.ts, app/api/account/numo-preferences/route.ts and components/settings/account-ai-keys-section.tsx; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-954 model roles: usages and language-model paragraphs of #ai-keys-and-models and the ai-keys-and-models-workflow diagram, source audit against components/settings/account-ai-keys-section.tsx, lib/server/ai-routes.ts and lib/server/ai-runtime.ts; diagram SVG fallback updated in every locale; no browser walkthrough); agent:claude-code (MIN-980: Decisions paragraph of #ai-keys-and-models, source audit against components/settings/account-ai-keys-section.tsx, lib/server/decisions/engine.ts and app/api/account/ai-decisions/route.ts; no browser walkthrough; no figure shows this row; existing figures kept, not recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-946 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "scheduled-routines"
@@ -90,7 +93,7 @@
       "src": "/documentation/fr/ai-providers-and-numo-defaults-flow.svg",
       "alt": "Les fournisseurs connectés, un fournisseur par sorte de modèle et le modèle de langage sont des réglages distincts.",
       "caption": "Chaque sorte de modèle passe par minddy Cloud ou un fournisseur connecté. Sur minddy Cloud, l’instance fixe le modèle de langage ; avec une clé personnelle, son modèle est enregistré par fournisseur et une conversation peut choisir le sien.",
-      "revision": 26,
+      "revision": 27,
       "reviewed": true,
       "capturedAt": "2026-10-28",
       "viewport": [
@@ -135,6 +138,8 @@ Dans les paramètres IA du compte, **Fournisseurs connectés** liste minddy Clou
 En dessous, **Modèles** choisit un fournisseur pour chaque sorte de modèle : **Modèle de langage** pour Numo et toutes les fonctions IA qui lisent ou écrivent du texte, **Embeddings** pour la recherche par le sens et les tickets et retours liés, et **Transcription** pour la dictée. Chacun choisit minddy Cloud ou un fournisseur connecté capable de le servir : les embeddings et la transcription demandent un fournisseur qui propose ces modèles. Aucune fonction n’a de fournisseur ni de modèle propre ; la recherche web, qui demande minddy Cloud ou une clé OpenRouter, reste sur minddy Cloud quand votre modèle de langage passe par un autre fournisseur. Quand **Embeddings** ou **Transcription** passe par l’une de vos clés, son modèle apparaît sous le fournisseur : gardez le modèle présélectionné du fournisseur ou choisissez-en un autre. Les choix s’appliquent immédiatement. Sur une instance sans minddy Cloud, un fournisseur nouvellement connecté sert chaque sorte qui n’en a pas encore.
 
 Pour **Modèle de langage**, choisissez le fournisseur. Sur **minddy Cloud**, il utilise le modèle et le niveau de raisonnement réglés par l’administrateur de l’instance : ni cette ligne ni une conversation ne proposent de modèle. Avec l’une de vos clés, choisissez un modèle de ce fournisseur : Numo et toutes les fonctions de texte l’utilisent. Le sélecteur affiche le modèle par défaut de l’app sous son propre nom, coché tant que vous le suivez ; le choisir garde votre réglage aligné sur le défaut de l’app, dont les changements ultérieurs s’appliquent donc encore. **Par défaut de l’app** n’apparaît comme option que si ce modèle ne figure pas au catalogue. Ce défaut est enregistré pour votre compte et séparément pour chaque fournisseur, entre les rechargements et les nouvelles sessions. Dans une conversation, la liste des modèles à côté du micro s’ouvre sur les fournisseurs lorsque plusieurs sont disponibles ; choisissez-en un pour voir ses modèles. La conversation garde ce fournisseur et ce modèle, et les conversations qui suivent votre défaut reprennent les changements ultérieurs du compte. Les tours déjà admis conservent leur fournisseur et leur modèle figés. Un modèle enregistré devenu indisponible est refusé : choisissez un autre modèle ou le modèle par défaut de l’app. Si le fournisseur d’une conversation est retiré, Numo vous demande d’en choisir un autre au lieu d’en changer seul. L’export et l’import du compte incluent ces préférences de modèle, sans les identifiants des fournisseurs.
+
+**Décisions** choisit ce qui répond à Smart Fill, Smart Assign, aux relations, au tri des événements et à la relecture des retours. La première liste choisit le type de modèle : **Modèle de décision**, qui retombe sur le modèle de langage quand il hésite, ou **Modèle de langage**. Le type utilisé par l’instance est marqué par défaut ; le choisir revient au réglage de l’administrateur. La deuxième liste choisit le fournisseur : un modèle de décision demande minddy Cloud ou une clé OpenRouter, seul fournisseur à proposer des modèles de décision, tandis qu’un modèle de langage accepte tout fournisseur connecté qui sert du texte. La liste ne propose que les fournisseurs capables de répondre, et devient un simple texte quand un seul le peut. Tant que vous n’avez rien choisi, les décisions passent par le fournisseur de votre modèle de langage s’il peut y répondre, sinon par minddy Cloud. Sur l’une de vos clés, une troisième liste choisit son modèle : l’un de ses modèles de décision, ou n’importe quel modèle de langage. Changer le type ou le fournisseur remet le modèle par défaut du fournisseur.
 
 Une clé non confirmée ou inaccessible peut laisser les appels IA généraux compatibles sur le quota minddy lorsque l’IA gérée est configurée. Votre fournisseur facture les appels effectués avec sa clé, et minddy ne les enregistre pas. Les clés personnelles validées et le travail financé par minddy suivent les [règles de budget ci-dessous](#consumption).
 

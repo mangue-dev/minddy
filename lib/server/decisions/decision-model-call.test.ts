@@ -34,7 +34,17 @@ vi.mock("@/lib/server/ai-usage", () => ({
   }),
 }));
 vi.mock("@/lib/server/model-config", () => ({ resolveConfiguredModel: resolveConfiguredModelMock }));
-vi.mock("@/lib/server/agent/model", () => ({ getUserByok: getUserByokMock }));
+const getUserByokForProviderMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/agent/model", () => ({
+  getUserByok: getUserByokMock,
+  getUserByokForProvider: getUserByokForProviderMock,
+}));
+// The account's decision route (MIN-980): automatic unless a test says otherwise.
+const resolveDecisionRouteMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/decisions/engine", () => ({
+  billedUserIdOf: async (billTo: { userId?: string }) => billTo.userId ?? null,
+  resolveDecisionRoute: resolveDecisionRouteMock,
+}));
 // The managed key of the billed account, or the public key when none is billed.
 vi.mock("@/lib/server/ai-runtime", () => ({
   resolvePlatformApiKey: resolvePlatformApiKeyMock,
@@ -74,6 +84,8 @@ beforeEach(() => {
   recordAiUsageMock.mockReset().mockResolvedValue(undefined);
   resolveConfiguredModelMock.mockReset().mockResolvedValue({ model: "liquid/d1" });
   getUserByokMock.mockReset().mockResolvedValue(null);
+  getUserByokForProviderMock.mockReset().mockResolvedValue(null);
+  resolveDecisionRouteMock.mockReset().mockResolvedValue({ engine: "model", provider: null, model: null });
   resolvePlatformApiKeyMock.mockReset().mockResolvedValue({ apiKey: "platform-key" });
   handleManagedKeyRejectionMock.mockReset().mockResolvedValue(undefined);
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -167,8 +179,9 @@ describe("callDecisionModel", () => {
     expect(fetchAiProviderMock).not.toHaveBeenCalled();
   });
 
-  it("uses the payer's OpenRouter BYOK key when one exists", async () => {
-    getUserByokMock.mockResolvedValue({
+  it("uses the payer's OpenRouter BYOK key when its decisions run on it", async () => {
+    resolveDecisionRouteMock.mockResolvedValue({ engine: "model", provider: "openrouter", model: null });
+    getUserByokForProviderMock.mockResolvedValue({
       provider: "openrouter",
       apiKey: "byok-key",
       baseUrl: "https://openrouter.ai/api/v1",
@@ -180,6 +193,37 @@ describe("callDecisionModel", () => {
     const init = fetchAiProviderMock.mock.calls[0][2] as RequestInit;
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer byok-key");
     expect(recordAiUsageMock).toHaveBeenCalledWith(expect.objectContaining({ keyMode: "byok" }));
+  });
+});
+
+describe("the account's decision route (MIN-980)", () => {
+  const openrouterKey = { provider: "openrouter", apiKey: "decision-key", baseUrl: "https://openrouter.ai/api/v1" };
+  const answered = () => respond({ model: "x", answers: { priority: { choice: "low" } }, usage: {} });
+
+  it("runs the account's own decision model on the OpenRouter key it chose", async () => {
+    resolveDecisionRouteMock.mockResolvedValue({ engine: "model", provider: "openrouter", model: "typesafe/jev-2" });
+    getUserByokForProviderMock.mockResolvedValue(openrouterKey);
+    fetchAiProviderMock.mockResolvedValue(answered());
+    await callDecisionModel(SPEC, CTX);
+    const init = fetchAiProviderMock.mock.calls[0][2] as RequestInit;
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer decision-key");
+    expect(JSON.parse(String(init.body))).toMatchObject({ model: "typesafe/jev-2" });
+  });
+
+  it("stays on minddy Cloud when the account chose it", async () => {
+    resolveDecisionRouteMock.mockResolvedValue({ engine: "model", provider: "minddy", model: null });
+    getUserByokForProviderMock.mockResolvedValue(openrouterKey);
+    fetchAiProviderMock.mockResolvedValue(answered());
+    await callDecisionModel(SPEC, CTX);
+    const init = fetchAiProviderMock.mock.calls[0][2] as RequestInit;
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer platform-key");
+    expect(JSON.parse(String(init.body))).toMatchObject({ model: "liquid/d1" });
+  });
+
+  it("uses the route the runner already read instead of reading it again", async () => {
+    fetchAiProviderMock.mockResolvedValue(answered());
+    await callDecisionModel(SPEC, { ...CTX, route: { engine: "model", provider: null, model: null } });
+    expect(resolveDecisionRouteMock).not.toHaveBeenCalled();
   });
 });
 

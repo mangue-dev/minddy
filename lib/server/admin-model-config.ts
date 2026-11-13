@@ -19,6 +19,7 @@ import {
   type ModelConfigFileError,
 } from "@/lib/ai-model-config-file";
 import { isReasoningLevel, REASONING_LEVELS } from "@/lib/agent-reasoning";
+import { DECISION_ENGINES, isDecisionEngine } from "@/lib/decision-engine";
 import { validateDecisionModelChoice } from "@/lib/server/decisions/model-validation";
 import { validateCatalogCapabilityChoice } from "@/lib/server/model-capability-validation";
 
@@ -95,6 +96,13 @@ export async function checkAiConfigValue(key: string, value: unknown): Promise<A
       return { ok: false, status: 400, error: `Value must be a whole number from 0 to ${max}` };
     }
     return { ok: true, value: String(Number(trimmed)) };
+  }
+  if (field?.kind === "engine" && !isDecisionEngine(trimmed)) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Decision engine must be one of: ${DECISION_ENGINES.join(", ")}`,
+    };
   }
   if (field?.kind === "reasoning" && !isReasoningLevel(trimmed)) {
     return {

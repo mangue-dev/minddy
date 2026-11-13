@@ -27,6 +27,7 @@ import {
   roleUsageKey,
 } from "@/lib/ai-surfaces";
 import { DEFAULT_REASONING_LEVEL } from "@/lib/agent-reasoning";
+import { DECISION_ENGINE_CONFIG_KEY, DEFAULT_DECISION_ENGINE } from "@/lib/decision-engine";
 import {
   modelCatalogCapabilityForKey,
   providerSupportsModelKey,
@@ -38,7 +39,8 @@ import {
  * `modelId` → id entered as is, in the namespace of a BYOK provider (`gpt-…`,
  * `claude-…`): the platform catalog would write invalid ids;
  * `reasoning` → one of the shared Numo reasoning levels;
- * `count` → a whole number from 0 to `max` (a cap, not a model).
+ * `count` → a whole number from 0 to `max` (a cap, not a model);
+ * `engine` → the engine that answers decisions, `model` or `llm` (MIN-980).
  *
  * There is no on/off switch here: every AI feature is always on (MIN-733).
  */
@@ -47,7 +49,9 @@ export type AiConfigKind =
   | "modelId"
   | "reasoning"
   /** A whole number, such as a daily cap. Not part of the models file. */
-  | "count";
+  | "count"
+  /** A decision model or the language model (`lib/decision-engine.ts`). */
+  | "engine";
 
 /**
  * The dashboard sections (MIN-954): one per model role, plus the defaults of
@@ -179,6 +183,14 @@ export const AI_MODEL_CONFIG_FIELDS: AiConfigField[] = [
     fallback: "openai/whisper-large-v3",
     group: "voice",
     catalogCapability: "transcription",
+  },
+  // The engine of every decision (MIN-980): a decision model, or the
+  // language model above. Accounts follow it unless they chose their own.
+  {
+    key: DECISION_ENGINE_CONFIG_KEY,
+    kind: "engine",
+    fallback: DEFAULT_DECISION_ENGINE,
+    group: "decision",
   },
   // AI decision layer (MIN-557, MIN-694): ONE decision model for the whole
   // instance — Smart Fill, Smart Assign, relation decisions, background

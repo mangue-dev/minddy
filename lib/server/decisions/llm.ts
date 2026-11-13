@@ -223,10 +223,14 @@ export function warmLlmDecision(spec: DecisionSpec): void {
 }
 
 /**
- * One LLM fallback decision: resolve the use case's configured model, replay
- * the pass verbatim through `forcedToolCall`, map the answer. `null` on any
- * failure — the use case applies its own degradation, never the user waits
- * for a retry here.
+ * One LLM decision: resolve the use case's configured model, replay the pass
+ * verbatim through `forcedToolCall`, map the answer. `null` on any failure —
+ * the use case applies its own degradation, never the user waits for a retry
+ * here.
+ *
+ * When the language model is the account's decision engine (MIN-980), the
+ * provider and model of the account's decisions in `ctx.route` replace the
+ * language model's route.
  */
 export async function runLlmDecision(
   spec: DecisionSpec,
@@ -249,6 +253,9 @@ export async function runLlmDecision(
       ...(profile.timeoutMs !== undefined ? { timeoutMs: profile.timeoutMs } : {}),
       ...(profile.reasoning !== undefined ? { reasoning: profile.reasoning } : {}),
       ...(profile.preferNonReasoning ? { preferNonReasoning: true } : {}),
+      ...(ctx.route?.engine === "llm" && ctx.route.provider
+        ? { provider: ctx.route.provider, modelOverride: ctx.route.model }
+        : {}),
       record: {
         // The shadow replay (MIN-567) overrides the feature so the sampling
         // delta does not read as a real pass of the use case.

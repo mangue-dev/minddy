@@ -142,6 +142,31 @@ describe("runLlmDecision — Smart Fill generation", () => {
     expect(answers?.category_ids?.value).toEqual(["cat-a"]);
   });
 
+  it("runs on the provider and model the account chose for decisions with the language model (MIN-980)", async () => {
+    forcedToolCallMock.mockResolvedValue({ priority: "high" });
+    const route = { engine: "llm", provider: "anthropic", model: "claude-haiku-5" } as const;
+    await runLlmDecision(SPEC, { runId: "r", billTo: { userId: "creator" }, route });
+    expect(forcedToolCallMock.mock.calls[0][5]).toMatchObject({
+      modelKey: "smart_fill_model", provider: "anthropic", modelOverride: "claude-haiku-5",
+    });
+  });
+
+  it("keeps the language model's route for a fallback, or when no provider can answer (MIN-980)", async () => {
+    forcedToolCallMock.mockResolvedValue({ priority: "high" });
+    await runLlmDecision(SPEC, {
+      runId: "r", billTo: { userId: "creator" },
+      route: { engine: "model", provider: "openrouter", model: "liquid/d1" },
+    });
+    await runLlmDecision(SPEC, {
+      runId: "r", billTo: { userId: "creator" },
+      route: { engine: "llm", provider: null, model: null },
+    });
+    for (const call of forcedToolCallMock.mock.calls) {
+      expect(call[5]).not.toHaveProperty("provider");
+      expect(call[5]).not.toHaveProperty("modelOverride");
+    }
+  });
+
   it("keeps a failed generation non-fatal without retrying", async () => {
     forcedToolCallMock.mockResolvedValue(null);
     expect(await runLlmDecision(SPEC, { runId: "fill-run", billTo: { userId: "creator" } })).toBeNull();

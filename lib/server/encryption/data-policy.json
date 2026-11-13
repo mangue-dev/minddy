@@ -4567,5 +4567,26 @@
         "encryption_version"
       ]
     }
+  },
+  "user_ai_decision_preferences": {
+    "scope": {
+      "kind": "user",
+      "column": "user_id"
+    },
+    "encrypted": [],
+    "clear": {
+      "routing_identity": [
+        "user_id",
+        "provider"
+      ],
+      "operational_configuration": [
+        "engine",
+        "model",
+        "model_engine"
+      ],
+      "timestamp": [
+        "updated_at"
+      ]
+    }
   }
 }

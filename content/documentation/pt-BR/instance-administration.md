@@ -14,10 +14,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 18,
-  "sourceRevision": 18,
+  "revision": 19,
+  "sourceRevision": 19,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-13",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -55,14 +55,16 @@
       "app/api/admin/instance-variables/route.ts",
       "components/admin/admin-instance-dashboard.tsx",
       "components/agent/model-combobox.tsx",
-      "lib/server/assistant/conversation-config.ts"
+      "lib/server/assistant/conversation-config.ts",
+      "lib/decision-engine.ts",
+      "lib/server/decisions/engine.ts"
     ]
   },
   "review": {
-    "revision": 18,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts); agent:claude-code (MIN-954: sentence on Numo's model on minddy Cloud in #models, source audit against lib/server/assistant/conversation-config.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954 model roles: #models, #models-file, #decision-model and #smart-fill-relations rewritten for one model per role, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot still shows the former category cards and needs a recapture); agent:claude-code (MIN-954: recommended models and routing shortcuts removed from #models and #models-file, checked against components/admin/admin-models-dashboard.tsx and lib/ai-model-config-file.ts)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 19,
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 2 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 1 kept with their earlier capture; no browser walkthrough of the procedures); agent:claude-code (MIN-928: event screening added to the Assistant category of Models, checked against lib/ai-model-config.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-929: Background turns per day added to the Assistant card of Models, checked against lib/ai-model-config.ts and lib/ai-model-config-file.ts; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (MIN-930: home summary added to the Assistant category of Models, checked against lib/ai-model-config.ts); agent:claude-code (MIN-954: sentence on Numo's model on minddy Cloud in #models, source audit against lib/server/assistant/conversation-config.ts; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured); agent:claude-code (MIN-954 model roles: #models, #models-file, #decision-model and #smart-fill-relations rewritten for one model per role, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot still shows the former category cards and needs a recapture); agent:claude-code (MIN-954: recommended models and routing shortcuts removed from #models and #models-file, checked against components/admin/admin-models-dashboard.tsx and lib/ai-model-config-file.ts); agent:claude-code (MIN-980: decision engine switch in #decision-model, per-member decision model and the models file's decision engine in #models-file, source audit against lib/ai-model-config.ts, lib/ai-model-config-file.ts, lib/server/admin-model-config.ts and components/admin/admin-models-dashboard.tsx; no browser walkthrough; the instance-administration-models screenshot does not show the new switch and was not recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-928 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-929 passage translated from en with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 passage with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-954 model-role passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-980 decision passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-13"
   },
   "related": [
     "authentication-and-email",
@@ -80,7 +82,7 @@
       "src": "/documentation/pt-BR/instance-administration-overview.png",
       "alt": "Aba Contas com o número de contas e a busca de uma conta pelo e-mail exato.",
       "caption": "Contas mostra o número de contas e a busca de suporte; a captura vem de uma instância de demonstração.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -97,7 +99,7 @@
       "src": "/documentation/pt-BR/instance-administration-models.png",
       "alt": "Aba Modelos com um modelo padrão por categoria e os modelos por tarefa recolhidos.",
       "caption": "Modelos mostra um modelo padrão por categoria; os modelos por tarefa ficam recolhidos. Nenhuma configuração de modelo ou provedor foi alterada para esta captura.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -114,7 +116,7 @@
       "src": "/documentation/pt-BR/instance-administration-instance.png",
       "alt": "Aba Instância com a origem de cada variável, uma chave do OpenRouter mascarada definida aqui e os endereços de administradores vindos do arquivo.",
       "caption": "Instância mostra de onde vem cada valor; os segredos mostram só os últimos caracteres. Esta captura vem de uma instância auto-hospedada local descartável.",
-      "revision": 18,
+      "revision": 19,
       "reviewed": true,
       "capturedAt": "2026-10-29",
       "viewport": [
@@ -161,7 +163,7 @@ No minddy Cloud, o Numo de cada membro usa o modelo e o **Nível de raciocínio*
 
 ## Exportar e importar a configuração de modelos {#models-file}
 
-No canto superior direito do painel **Modelos**, **Exportar** baixa a configuração de modelos como um arquivo JSON versionado (formato `minddy.instance-models`): o modelo de cada tipo, o nível de raciocínio e os modelos padrão das chaves pessoais. Ele não contém chave de API nem conta. **Importar** lê um arquivo assim e lista cada mudança antes de gravar qualquer coisa; **Aplicar** grava todas, ou nenhuma quando um valor é recusado, por exemplo um modelo que não é de decisão. Uma importação substitui a configuração: os ajustes que o arquivo omite voltam ao padrão. Um arquivo de uma versão anterior do minddy é atualizado para o formato atual: os modelos padrão das categorias Assistente e Embeddings preenchem o modelo de linguagem e o de embeddings, e os modelos por tarefa, atalhos de roteamento e modelos recomendados são listados e ignorados. Um arquivo de uma versão mais nova é recusado até a instância ser atualizada.
+No canto superior direito do painel **Modelos**, **Exportar** baixa a configuração de modelos como um arquivo JSON versionado (formato `minddy.instance-models`): o modelo de cada tipo, o nível de raciocínio, o mecanismo das decisões e os modelos padrão das chaves pessoais. Ele não contém chave de API nem conta. **Importar** lê um arquivo assim e lista cada mudança antes de gravar qualquer coisa; **Aplicar** grava todas, ou nenhuma quando um valor é recusado, por exemplo um modelo que não é de decisão. Uma importação substitui a configuração: os ajustes que o arquivo omite voltam ao padrão. Um arquivo de uma versão anterior do minddy é atualizado para o formato atual: os modelos padrão das categorias Assistente e Embeddings preenchem o modelo de linguagem e o de embeddings, e os modelos por tarefa, atalhos de roteamento e modelos recomendados são listados e ignorados. Um arquivo de uma versão mais nova é recusado até a instância ser atualizada.
 
 ## Administrar a instância com o Numo {#numo}
 
@@ -179,7 +181,9 @@ Salvar um segredo ou os endereços dos administradores pede o seu código de doi
 
 ## Escolher o modelo de decisão de IA {#decision-model}
 
-Em **Modelos**, **Decisões**, **Modelo de decisão** define o único modelo de decisão que responde a todas as decisões de IA da instância: Smart Fill, Smart Assign, decisões de relação, análise de eventos e revisão de feedback. Não há escolha por projeto, usuário ou recurso. O seletor lista só modelos do OpenRouter que publicam a capacidade de decisão; modelos de chat, embeddings e transcrição nunca aparecem. Ao salvar, o candidato é testado com uma decisão representativa. Um modelo que não é de decisão, recusa a solicitação, devolve uma resposta inválida ou leva mais de 5 segundos é recusado, e o modelo atual continua em uso. Quando o catálogo não pode ser carregado, toda mudança é recusada. Instâncias auto-hospedadas sem IA gerenciada não têm catálogo da plataforma e mantêm o padrão, Jev.
+Em **Modelos**, **Decisões**, **Modelo de decisão** define o único modelo de decisão que responde a todas as decisões de IA da instância: Smart Fill, Smart Assign, decisões de relação, análise de eventos e revisão de feedback. Não há escolha por projeto ou recurso; um membro pode escolher outro modelo de decisão para a própria chave do OpenRouter nos ajustes de IA. O seletor lista só modelos do OpenRouter que publicam a capacidade de decisão; modelos de chat, embeddings e transcrição nunca aparecem. Ao salvar, o candidato é testado com uma decisão representativa. Um modelo que não é de decisão, recusa a solicitação, devolve uma resposta inválida ou leva mais de 5 segundos é recusado, e o modelo atual continua em uso. Quando o catálogo não pode ser carregado, toda mudança é recusada. Instâncias auto-hospedadas sem IA gerenciada não têm catálogo da plataforma e mantêm o padrão, Jev.
+
+**Usar um modelo de linguagem para as decisões**, no mesmo cartão, envia cada decisão ao **Modelo de linguagem** e oculta **Modelo de decisão**. É o padrão de cada membro, que pode escolher outra opção nos [ajustes de IA](/docs/ai-settings-and-usage#ai-keys-and-models). Ative quando sua instância não tiver nenhum modelo de decisão disponível, por exemplo uma instância auto-hospedada sem IA gerenciada cujos membros usam as próprias chaves.
 
 Novas decisões usam o modelo salvo em cerca de um minuto em cada processo do servidor. Quando o modelo falha ou responde abaixo do limite de confiança, a decisão recorre ao modelo de linguagem. O limite foi calibrado no Jev e outros modelos de decisão distribuem a confiança de outro jeito, então confira a concordância por modelo na view `ai_decision_evaluations_weekly` do banco após uma mudança. As linhas de uso registram o modelo que respondeu.
 

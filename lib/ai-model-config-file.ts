@@ -18,6 +18,7 @@ import {
   ASSISTANT_REASONING_CONFIG_KEY,
 } from "@/lib/ai-model-config";
 import { isReasoningLevel } from "@/lib/agent-reasoning";
+import { DECISION_ENGINE_CONFIG_KEY, isDecisionEngine } from "@/lib/decision-engine";
 
 export const MODEL_CONFIG_FILE_FORMAT = "minddy.instance-models";
 /**
@@ -38,6 +39,11 @@ export interface ModelConfigFile {
   /** The role models that are set, by `app_config` key. */
   tasks: Record<string, ModelChoice>;
   reasoningLevel: string | null;
+  /**
+   * What answers decisions, `model` or `llm` (MIN-980); absent or null is the
+   * default. Optional: a version 2 file written before it still imports.
+   */
+  decisionEngine?: string | null;
   /** Per-provider defaults for personal keys, by `app_config` key. */
   providerDefaults: Record<string, string>;
 }
@@ -77,6 +83,7 @@ export function buildModelConfigFile(
     exportedAt: now.toISOString(),
     tasks,
     reasoningLevel: values[ASSISTANT_REASONING_CONFIG_KEY]?.trim() || null,
+    decisionEngine: values[DECISION_ENGINE_CONFIG_KEY]?.trim() || null,
     providerDefaults,
   };
 }
@@ -199,6 +206,12 @@ export function parseModelConfigFile(input: string | unknown): ParsedModelConfig
   if (reasoning !== null) {
     if (!isReasoningLevel(reasoning)) return fail("reasoningLevel is not a reasoning level");
     values[ASSISTANT_REASONING_CONFIG_KEY] = reasoning;
+  }
+
+  const engine = file.decisionEngine ?? null;
+  if (engine !== null) {
+    if (!isDecisionEngine(engine)) return fail("decisionEngine must be model or llm");
+    values[DECISION_ENGINE_CONFIG_KEY] = engine;
   }
 
   // The admin no longer sets the picker's shortlist (MIN-954).

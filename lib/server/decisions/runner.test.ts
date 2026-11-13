@@ -61,6 +61,11 @@ vi.mock("@/lib/server/decisions/llm", () => ({
 vi.mock("@/lib/server/decisions/shadow", () => ({
   runShadowComparison: runShadowComparisonMock,
 }));
+const resolveDecisionRouteMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/server/decisions/engine", () => ({
+  billedUserIdOf: async (billTo: { userId?: string }) => billTo.userId ?? null,
+  resolveDecisionRoute: resolveDecisionRouteMock,
+}));
 
 const { runDecision, loadDecisionModelSettings, shouldShadowSample } = await import("./runner");
 import type { DecisionSpec } from "./types";
@@ -101,6 +106,7 @@ beforeEach(() => {
   warmLlmDecisionMock.mockReset();
   vi.spyOn(console, "warn").mockImplementation(() => {});
   runShadowComparisonMock.mockReset().mockResolvedValue(undefined);
+  resolveDecisionRouteMock.mockReset().mockResolvedValue({ engine: "model", provider: null, model: null });
 });
 
 /** The deterministic roll of the shadow sampling: Math.random is the draw. */
@@ -364,6 +370,40 @@ describe("LLM-first switch (MIN-567)", () => {
     runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
     const outcome = await runDecision(SPEC, { billTo: BILL_TO });
     expect(runModelDecisionMock).toHaveBeenCalledTimes(1);
+    expect(outcome).toMatchObject({ engine: "model", fallbackReason: null });
+  });
+});
+
+describe("decision engine (MIN-980)", () => {
+  it("asks the LLM directly when the language model is the engine, on the account's route", async () => {
+    const route = { engine: "llm", provider: "anthropic", model: "claude-haiku-5" };
+    resolveDecisionRouteMock.mockResolvedValue(route);
+    getAppConfigValuesMock.mockResolvedValue({ jev_shadow_sample_rate: "1" });
+    roll(0);
+    runLlmDecisionMock.mockResolvedValue({
+      priority: { value: "high", probability: null, confidence: null },
+    });
+    const outcome = await runDecision(SPEC, { billTo: BILL_TO });
+    expect(resolveDecisionRouteMock).toHaveBeenCalledWith("user-1");
+    expect(runModelDecisionMock).not.toHaveBeenCalled();
+    expect(runLlmDecisionMock).toHaveBeenCalledTimes(1);
+    expect(runLlmDecisionMock.mock.calls[0][1]).toMatchObject({ seq: 0, route });
+    expect(outcome).toMatchObject({ engine: "llm", fallbackReason: "llm_engine" });
+    expect(afterOrNowMock).not.toHaveBeenCalled();
+  });
+
+  it("hands the account's route to the decision model in decision-model mode", async () => {
+    const route = { engine: "model", provider: "openrouter", model: "liquid/d1" };
+    resolveDecisionRouteMock.mockResolvedValue(route);
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
+    await runDecision(SPEC, { billTo: BILL_TO });
+    expect(runModelDecisionMock.mock.calls[0][1]).toMatchObject({ seq: 0, route });
+  });
+
+  it("keeps deciding when the route cannot be read", async () => {
+    resolveDecisionRouteMock.mockRejectedValue(new Error("db down"));
+    runModelDecisionMock.mockResolvedValue(answered(CONFIDENT_ANSWERS));
+    const outcome = await runDecision(SPEC, { billTo: BILL_TO });
     expect(outcome).toMatchObject({ engine: "model", fallbackReason: null });
   });
 });
