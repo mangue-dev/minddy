@@ -176,6 +176,19 @@ export function parseNumoWatchRecurrence(value: unknown): NumoWatchRecurrence | 
 }
 
 /**
+ * Grants Numo may set on a recurring reminder without the user's
+ * confirmation card (MIN-982): sending the user a note that is not urgent
+ * reaches only the user and changes nothing. Every other grant lets an
+ * unattended turn change or reach something, so the user confirms it.
+ */
+const GRANTS_WITHOUT_CONFIRMATION: ReadonlySet<NumoWatchGrant> = new Set(["notification"]);
+
+/** Whether a reminder with these grants waits for the user's confirmation card. */
+export function numoWatchGrantsNeedConfirmation(grants: readonly NumoWatchGrant[]): boolean {
+  return grants.some((grant) => !GRANTS_WITHOUT_CONFIRMATION.has(grant));
+}
+
+/**
  * The grants in a list, each once, in the order of `NUMO_WATCH_GRANTS`. Null
  * when the value is not a list or names something that is not a grant.
  */

@@ -111,7 +111,7 @@ beforeEach(() => {
     instruction: input.instruction, conversation_id: input.conversationId, status: "active",
     timezone: input.timezone ?? null,
     fire_at: null, expires_at: "2027-02-06T12:00:00.000Z", fired_at: null, outcome: null,
-    recurrence: input.recurrence ?? null, grants: [], consecutive_failures: 0,
+    recurrence: input.recurrence ?? null, grants: input.grants ?? [], consecutive_failures: 0,
     created_at: "2026-11-08T12:00:00.000Z",
   }));
 });
@@ -365,13 +365,31 @@ describe("personal reminders (MIN-982)", () => {
     expect(H.getProjectAccess).not.toHaveBeenCalled();
   });
 
-  it("proposes a personal reminder that holds permissions with no project for the user to confirm", async () => {
+  it("saves a reminder allowed only to notify at once, with no card", async () => {
     const result = await executeTool("create_watch", { ...everyDay, grants: ["notification"] }, context());
+    expect(result).toMatchObject({ success: true, result: { watch: { id: WATCH, project_id: null } } });
+    expect(result.result).not.toHaveProperty("confirmation_required");
+    expect(H.createNumoWatch).toHaveBeenCalledWith(expect.anything(), "user-1", expect.objectContaining({
+      projectId: null, grants: ["notification"],
+    }));
+  });
+
+  it("still asks the user to confirm any other permission, on a personal reminder too", async () => {
+    const result = await executeTool("create_watch", { ...everyDay, grants: ["notification", "external"] }, context());
     expect(result.result).toMatchObject({
       confirmation_required: true,
-      proposal: { project_id: null, grants: ["notification"], recurrence: { kind: "daily", time: "09:00" } },
+      proposal: { project_id: null, grants: ["notification", "external"], recurrence: { kind: "daily", time: "09:00" } },
     });
     expect(H.createNumoWatch).not.toHaveBeenCalled();
+  });
+
+  it("update_watch rewords a reminder allowed only to notify, but not one holding another permission", async () => {
+    const blank = { id: WATCH, paused: null, instruction: "Check twice a day", repeat: null, time: null, weekday: null, day_of_month: null };
+    H.listOpenNumoWatches.mockResolvedValue([kept({ grants: ["notification"] })]);
+    H.updateNumoWatch.mockResolvedValue(kept({ grants: ["notification"] }));
+    expect((await executeTool("update_watch", blank, context())).success).toBe(true);
+    H.listOpenNumoWatches.mockResolvedValue([kept({ grants: ["notification", "trash"] })]);
+    expect((await executeTool("update_watch", blank, context())).success).toBe(false);
   });
 
   it("refuses a personal reminder on an issue or an objective", async () => {

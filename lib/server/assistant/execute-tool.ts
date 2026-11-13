@@ -293,6 +293,7 @@ import {
   isNumoWatchObjectiveStatus,
   isValidTimeZone,
   parseNumoWatchDate,
+  numoWatchGrantsNeedConfirmation,
   parseNumoWatchGrants,
   parseNumoWatchRecurrence,
   type NumoWatchItem,
@@ -1277,7 +1278,7 @@ async function executeWatchListTool(
       if (!recurrence && !instruction && paused === null) {
         return toolError("Nothing to change: pass paused, instruction or repeat.");
       }
-      if ((recurrence || instruction) && current.grants.length > 0) {
+      if ((recurrence || instruction) && numoWatchGrantsNeedConfirmation(current.grants)) {
         // The user confirmed these permissions for the reminder as it is.
         return toolError("This reminder holds permissions the user confirmed for it as it is. To change its instruction or cadence, call create_watch with its id in replaces and the same grants: the user confirms again on a card.");
       }
@@ -1393,10 +1394,11 @@ async function executeCreateWatch(
       target, action: args.action, instruction: args.instruction,
       recurrence, grants, timezone: ctx.timezone || null,
     });
-    if (valid.grants.length > 0 && valid.recurrence) {
+    if (valid.recurrence && numoWatchGrantsNeedConfirmation(valid.grants)) {
       // Permissions are the user's to give: nothing is written here. The
       // conversation shows this proposal as a card, and the user's own
       // confirmation writes the reminder (`confirmNumoWatchProposal`).
+      // `notification` alone needs no card (MIN-982): it only reaches the user.
       if (replaces && !(await listOpenNumoWatches(ctx.service, ctx.userId)).some((watch) => watch.id === replaces)) {
         return toolError("No reminder with the id in replaces. Take ids from list_watches.");
       }
@@ -1430,6 +1432,8 @@ async function executeCreateWatch(
       action: args.action as "notify" | "act",
       instruction: args.instruction,
       recurrence,
+      // Only grants that need no card reach this point (`notification`).
+      grants: valid.grants,
       // Only a conversation the user holds with Numo reaches this point
       // (watchToolRefusal): a one-off reminder's turn runs there later. Each
       // occurrence of a recurring one opens a conversation of its own.
