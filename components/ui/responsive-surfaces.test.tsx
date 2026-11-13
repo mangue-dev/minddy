@@ -25,7 +25,9 @@ let container: HTMLDivElement;
 beforeEach(() => {
   viewport.mobile = true;
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-  vi.stubGlobal("matchMedia", () => ({ matches: viewport.mobile }));
+  // framer-motion listens to the reduced-motion query (`Unfold`), so the stub
+  // needs the listener methods too.
+  vi.stubGlobal("matchMedia", () => ({ matches: viewport.mobile, addEventListener() {}, removeEventListener() {} }));
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
   Element.prototype.scrollIntoView = vi.fn();
   container = document.createElement("div"); document.body.appendChild(container); root = createRoot(container);

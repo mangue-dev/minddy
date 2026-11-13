@@ -4,6 +4,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { OtpInput } from "./otp-input";
 
+// input-otp reads `document.elementFromPoint` on a timer that can fire after a
+// test ends; jsdom has no layout and no such method.
+document.elementFromPoint ??= () => null;
+
 let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {

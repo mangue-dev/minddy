@@ -51,9 +51,11 @@ describe("public SEO surface", () => {
     }
 
     const mobileCopy = Object.values(en.DownloadMobile).join(" ");
-    expect(mobileCopy).toContain("progressive web app");
-    expect(mobileCopy).toMatch(/not a native mobile app|not a native iOS or Android app/);
-    expect(mobileCopy).toContain("There is no minddy application in the iOS App Store or Google Play");
+    // The page installs the web app from the browser. It no longer says there
+    // is no App Store app: the iOS app is on its way (MIN-907), and the page
+    // must stay true once it ships.
+    expect(mobileCopy).toContain("web app");
+    expect(mobileCopy).not.toMatch(/no minddy application in the iOS App Store/);
   });
 
   it("keeps a mobile guide route and retires desktop guide pages", () => {

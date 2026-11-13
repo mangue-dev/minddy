@@ -34,11 +34,11 @@ describe("lookupAccount", () => {
 });
 
 describe("isValidEmail", () => {
-  it.each(["a@b.co", "  clement@minddy.app  ", "x+tag@mail.example.org"])("accepts %s", (email) => {
+  it.each(["a@example.test", "  ana@example.com  ", "x+tag@mail.example.com"])("accepts %s", (email) => {
     expect(isValidEmail(email)).toBe(true);
   });
 
-  it.each(["", "clement", "clement@", "@minddy.app", "a@b", "a@@b.co", "a b@c.co", "a@.co", "a@b."])("refuses %j", (email) => {
+  it.each(["", "ana", "ana@", "@minddy.app", "a@b", "a@@example.test", "a b@example.test", "a@.co", "a@b."])("refuses %j", (email) => {
     expect(isValidEmail(email)).toBe(false);
   });
 });
