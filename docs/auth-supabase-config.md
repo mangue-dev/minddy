@@ -134,26 +134,31 @@ Switch order, so that no sign-in breaks in between:
 2. DNS for `minddy.app`: add the CNAME `auth` -> `cmzrlbnlytvgnomzgmqf.supabase.co`
    and the TXT verification record the previous step prints. Wait for
    `supabase domains reverify` to succeed; do not activate yet.
-3. Add `https://auth.minddy.app/auth/v1/callback` to each provider, keeping the
-   `supabase.co` callback until the switch is verified:
+3. Add `https://auth.minddy.app/auth/v1/callback` to each provider that
+   accepts several callbacks, keeping the `supabase.co` one until the switch is
+   verified:
    - Google Cloud Console: the OAuth client's authorized redirect URIs.
-   - GitHub: the sign-in OAuth app's callback URL. An OAuth app has a single
-     callback URL, but GitHub accepts any redirect under it when the path
-     matches, so replace it only after activation.
    - Apple Developer: Identifiers -> Services ID `app.minddy.web` -> Sign In
      with Apple -> Configure: add `auth.minddy.app` under Domains and the
      callback under Return URLs. Native Sign in with Apple on iOS uses an ID
      token (`signInWithIdToken`) and needs no callback.
 4. Activate the domain (`supabase domains activate`). Supabase then sends the
-   new callback URL to every provider.
-5. Vercel production: set `MINDDY_PUBLIC_SUPABASE_URL` and
+   new callback URL to every provider. At once, set the GitHub sign-in OAuth
+   app's callback URL to `https://auth.minddy.app/auth/v1/callback`: a classic
+   OAuth app holds a single callback, and GitHub refuses a redirect to another
+   host, so GitHub sign-in fails between activation and this edit. If the
+   sign-in app is a GitHub App, which holds several callbacks, add the URL in
+   step 3 instead.
+5. Once the code that reads `MINDDY_PUBLIC_SUPABASE_PROJECT_REF` is in
+   production, set in Vercel production `MINDDY_PUBLIC_SUPABASE_URL` and
    `MINDDY_PRODUCTION_SUPABASE_URL` to `https://auth.minddy.app`, and
    `MINDDY_PUBLIC_SUPABASE_PROJECT_REF` to `cmzrlbnlytvgnomzgmqf`, then
-   redeploy. The `MINDDY_PUBLIC_SUPABASE_URL` secret of the `Promote production`
+   redeploy. Change `MINDDY_PRODUCTION_SUPABASE_URL` in the preview
+   environment too, so both declare the same production database. The `MINDDY_PUBLIC_SUPABASE_URL` secret of the `Promote production`
    workflow may keep the `supabase.co` URL: both reach the same project.
 6. Verify Google, GitHub and Apple sign-in on the web, the desktop app and the
    iOS app, and that a session opened before the switch is still signed in.
-   Remove the old GitHub callback once all pass.
+   Remove the old Google and Apple callbacks once all pass.
 
 `MINDDY_PUBLIC_SUPABASE_PROJECT_REF` is required with a custom domain.
 `@supabase/ssr` names the session cookie after the first label of the API
