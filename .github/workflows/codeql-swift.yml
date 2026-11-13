@@ -4,6 +4,13 @@ name: CodeQL Swift
 # repository. It runs on a macOS runner, so only when the shell changes, and
 # once a week on main.
 #
+# Every pull request still reports a Swift result. The `main` ruleset blocks a
+# merge while code scanning cannot compare a pull request with `main`, and
+# `main` carries a `/language:swift` configuration: a pull request without one
+# showed "1 configuration not found" and could not merge. When `mobile/` is
+# untouched, a Linux job uploads an empty CodeQL result under the same
+# category instead of building the shell.
+#
 # CodeQL extracts Swift while the compiler runs, so the Xcode project must be
 # built. Two things stand in the way:
 #
@@ -19,10 +26,9 @@ name: CodeQL Swift
 #   `continue-on-error` once a runner image ships Xcode 27.1 or later.
 
 on:
+  # No `paths` filter: the `changes` job decides between the real analysis
+  # and the placeholder.
   pull_request:
-    paths:
-      - "mobile/**"
-      - ".github/workflows/codeql-swift.yml"
   push:
     branches: [main]
     paths:
@@ -40,27 +46,82 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect iOS shell changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      mobile: ${{ steps.files.outputs.mobile }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+        run: |
+          files="$(gh api --paginate "repos/$REPOSITORY/pulls/$PULL_REQUEST/files" --jq '.[].filename')"
+          if grep -qE '^(mobile/|\.github/workflows/codeql-swift\.yml$)' <<<"$files"; then
+            echo "mobile=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mobile=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # One job for both outcomes: code scanning identifies a configuration by
+  # its workflow and JOB ID, so the placeholder must be uploaded by `analyze`
+  # too, or `main`'s configuration would still be "not found".
   analyze:
     name: Analyze (swift)
-    runs-on: macos-26
+    needs: changes
+    # `changes` runs on pull requests only. Skipped on main, the schedule and
+    # a manual run, it must not skip this job: `!cancelled()` keeps it.
+    if: ${{ !cancelled() && needs.changes.result != 'failure' }}
+    # The full analysis needs Xcode; the placeholder needs nothing.
+    runs-on: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.mobile == 'true') && 'macos-26' || 'ubuntu-latest' }}
     timeout-minutes: 45
     permissions:
       contents: read
       security-events: write
+    env:
+      FULL_ANALYSIS: ${{ github.event_name != 'pull_request' || needs.changes.outputs.mobile == 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - name: Write an empty CodeQL result
+        if: env.FULL_ANALYSIS != 'true'
+        run: |
+          cat > "$RUNNER_TEMP/swift.sarif" <<'SARIF'
+          {
+            "version": "2.1.0",
+            "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+            "runs": [{ "tool": { "driver": { "name": "CodeQL" } }, "results": [] }]
+          }
+          SARIF
+
+      - name: Upload the empty CodeQL result
+        if: env.FULL_ANALYSIS != 'true'
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: ${{ runner.temp }}/swift.sarif
+          category: /language:swift
+
+      - if: env.FULL_ANALYSIS == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           check-latest: true
 
       - name: Install mobile dependencies
+        if: env.FULL_ANALYSIS == 'true'
         run: npm --prefix mobile ci --ignore-scripts
 
       - name: Generate the files Capacitor writes into the Xcode project
+        if: env.FULL_ANALYSIS == 'true'
         working-directory: mobile
         run: |
           mkdir -p www
@@ -68,12 +129,14 @@ jobs:
           npx cap sync ios
           git diff --exit-code -- ios
 
-      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+      - if: env.FULL_ANALYSIS == 'true'
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: swift
           build-mode: manual
 
       - name: Build the iOS shell
+        if: env.FULL_ANALYSIS == 'true'
         continue-on-error: true
         working-directory: mobile
         run: >-
@@ -87,6 +150,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO
           COMPILER_INDEX_STORE_ENABLE=NO
 
-      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+      - if: env.FULL_ANALYSIS == 'true'
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: /language:swift
