@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { verifyCronSecret } from "@/lib/server/cron-auth";
 import { runDueSmartFillReevaluations } from "@/lib/server/smart-fill-reevaluation";
+import { runAsBackgroundAiWork } from "@/lib/server/ai-consent";
 
 /**
  * Smart Fill re-evaluation (MIN-750): runs the passes whose title and
@@ -17,7 +18,8 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const result = await runDueSmartFillReevaluations();
+  // AI runs under each account's answer in the mobile app (MIN-907).
+  const result = await runAsBackgroundAiWork(() => runDueSmartFillReevaluations());
   return NextResponse.json({ ok: true, ...result });
 }
 

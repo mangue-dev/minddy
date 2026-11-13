@@ -1,5 +1,6 @@
 import "server-only";
 
+import { assertAiConsent } from "@/lib/server/ai-consent";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { stripModelSuffix } from "@/lib/ai-model-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
@@ -179,6 +180,8 @@ async function attemptWebSearch(params: {
   }
 
   try {
+    // The mobile app's AI consent (MIN-907): this call skips fetchAiProvider.
+    await assertAiConsent();
     const response = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: {

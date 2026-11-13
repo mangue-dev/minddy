@@ -18,6 +18,7 @@ import {
 import { isPlanLimitError, planLimitResponse } from "@/lib/server/plan-limit-error";
 import { encodeConversationTitle, shouldProtectConversationTitle } from
   "@/lib/server/numo/conversation-title-content";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 export async function GET(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -37,6 +38,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   let body: { title?: string | null; projectId?: string | null; provider?: string | null; model?: string | null; reasoningLevel?: string | null };

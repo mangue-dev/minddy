@@ -36,6 +36,7 @@ import { HttpResponseError, isBackendUnavailableError } from "./backend-availabi
 import { withClientRequestDeadline } from "./client-request-deadline";
 import type { User, Session } from "@supabase/supabase-js";
 import { refreshResolvedMention } from "./mention-resolution";
+import { clearAiConsent } from "@/lib/mobile/ai-consent";
 
 /**
  * Opens the session an app's authentication round brought back: an OAuth
@@ -593,6 +594,8 @@ export function AuthProvider({
     // before his own requests are successful.
     clearPersistedQueryCache();
     clearAppTabsWindowState();
+    // The mobile app asks the next account on this phone again (MIN-907).
+    clearAiConsent();
     window.location.href = "/login";
   }, []);
 

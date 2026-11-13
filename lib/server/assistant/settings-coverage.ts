@@ -59,6 +59,7 @@ export const ACCOUNT_METADATA_COVERAGE: Readonly<Record<string, AccountKeyCovera
   },
   // Preferences → Mobile app (MIN-959)
   haptics: { read: "haptics", sample: false },
+  ai_consent: { humanOnly: "The mobile app's answer to its AI consent sheet (MIN-907): only the person gives it, in the app." },
   // Numo
   numo_memory: { read: "numo_memory", sample: false },
   numo_background: { read: "numo_background", sample: false },

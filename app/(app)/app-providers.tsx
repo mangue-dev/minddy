@@ -43,6 +43,7 @@ import { PushNotificationDismiss } from "@/components/push-notification-dismiss"
 import { ProjectDraftResume } from "@/components/project-draft-resume";
 import { ThemeAccountSync } from "@/components/theme-account-sync";
 import { HapticsAccountSync } from "@/components/mobile/haptics-account-sync";
+import { AiConsentGate } from "@/components/mobile/ai-consent-gate";
 import { CommentShortcut } from "@/components/comment-shortcut";
 import { loadScratchpadModal } from "@/lib/lazy-app-surfaces";
 import { RememberTimeZone } from "@/components/server-seed";
@@ -124,6 +125,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <ThemeAccountSync />
       {/* The account's vibration switch, for the mobile app (MIN-959). */}
       <HapticsAccountSync />
+      {/* The mobile app asks before AI features send content to a model
+          provider (MIN-907). */}
+      <AiConsentGate />
       <RememberTimeZone />
       {/* The sending shortcut chosen by the account, placed high: all
  composers of the app are below, and none need to know

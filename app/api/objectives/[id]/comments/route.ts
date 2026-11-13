@@ -12,6 +12,7 @@ import {
   replyTargetsNumoObjective,
   runObjectiveCommentMention,
 } from "@/lib/server/assistant/comment-agent";
+import { aiBlockedForAppRequest } from "@/lib/server/ai-consent";
 
 // @Numo replies run in after() once the response is sent — same window as the
 // assistant chat route so the agent loop isn't cut mid-flight.
@@ -113,7 +114,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     : (await replyTargetsNumoObjective(service, created))
       ? "reply"
       : null;
-  if (trigger) {
+  // In the mobile app, Numo answers only once AI is allowed (MIN-907).
+  if (trigger && !(await aiBlockedForAppRequest())) {
     const locale = await getLocale();
     const { user, supabase } = auth;
     after(() =>

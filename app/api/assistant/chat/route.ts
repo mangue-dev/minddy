@@ -54,6 +54,7 @@ import { beginNumoTurn, executeNumoTurn } from "@/lib/server/numo/turns";
 import { openConversationWithHomeBrief } from "@/lib/server/numo/home-brief-opening";
 import { routineContinuationForConversation } from "@/lib/server/routine-occurrences";
 import { ensureNumoRequestConversation } from "@/lib/server/numo/request-conversation";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -315,6 +316,9 @@ function parseMentions(raw: unknown): AssistantMention[] {
 }
 
 export async function POST(request: NextRequest) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const requestStartedAt = performance.now();
   // getAuthedUser rather than a direct getUser(): it is he who carries the gate
   // Global MFA (aal2) and 503 “instance unreachable” — a protected account

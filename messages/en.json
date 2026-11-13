@@ -316,6 +316,24 @@
     "resourceNameInvalid": "Enter a name for this resource.",
     "resourceNotRenamable": "A page resource takes the title of its page."
   },
+  "InAppApiErrors": {
+    "projectLimitReached": "Your plan allows up to {limit} projects.",
+    "issueLimitReached": "This project's plan is limited to {limit} issues.",
+    "memberLimitReached": "Your plan allows up to {limit} guests per project.",
+    "usageBudgetExceeded": "Your AI usage budget is used up. It resets next period.",
+    "storageQuotaFull": "This project's account has run out of storage. Free some space to add files."
+  },
+  "AiConsent": {
+    "title": "Use AI features?",
+    "body": "Numo, Smart Fill, dictation and search send the content they work on (issue text, comments, pages, recordings) to the provider of the AI model in use, which processes it on its own servers.",
+    "retention": "Each provider has its own retention rules. The <privacy>privacy policy</privacy> names the providers and gives the details.",
+    "declineNote": "If you decline, these features stay off in this app. You can change your answer in Preferences, under Mobile app.",
+    "allow": "Allow",
+    "decline": "Not now",
+    "settingsLabel": "AI features",
+    "settingsDesc": "Send content to AI model providers when you use Numo, Smart Fill, dictation or search.",
+    "refused": "AI features are off in this app. Turn them on in Preferences, under Mobile app."
+  },
   "RelayClaim": {
     "title": "Connect GitHub",
     "waiting": "GitHub opened in a new tab. Install the minddy app there. This page continues on its own once the installation is linked to your instance.",

@@ -316,6 +316,24 @@
     "resourceNameInvalid": "Gib einen Namen für diese Ressource ein.",
     "resourceNotRenamable": "Eine Seitenressource trägt den Titel ihrer Seite."
   },
+  "InAppApiErrors": {
+    "projectLimitReached": "Dein Plan erlaubt bis zu {limit} Projekte.",
+    "issueLimitReached": "Der Plan dieses Projekts ist auf {limit} Tickets beschränkt.",
+    "memberLimitReached": "Dein Plan erlaubt bis zu {limit} Gäste pro Projekt.",
+    "usageBudgetExceeded": "Dein KI-Nutzungsbudget ist aufgebraucht. Es wird im nächsten Zeitraum zurückgesetzt.",
+    "storageQuotaFull": "Der Speicherplatz dieses Projektkontos ist erschöpft. Gib Speicherplatz frei, um Dateien hinzuzufügen."
+  },
+  "AiConsent": {
+    "title": "KI-Funktionen nutzen?",
+    "body": "Numo, Smart Fill, das Diktieren und die Suche senden die Inhalte, mit denen sie arbeiten (Tickettexte, Kommentare, Seiten, Aufnahmen), an den Anbieter des verwendeten KI-Modells. Dieser verarbeitet sie auf seinen eigenen Servern.",
+    "retention": "Jeder Anbieter hat eigene Regeln zur Speicherung. Die <privacy>Datenschutzerklärung</privacy> nennt die Anbieter und die Einzelheiten.",
+    "declineNote": "Wenn du ablehnst, bleiben diese Funktionen in der App ausgeschaltet. Du kannst deine Antwort unter Einstellungen, Bereich Mobile App, ändern.",
+    "allow": "Erlauben",
+    "decline": "Nicht jetzt",
+    "settingsLabel": "KI-Funktionen",
+    "settingsDesc": "Inhalte an KI-Modellanbieter senden, wenn du Numo, Smart Fill, das Diktieren oder die Suche nutzt.",
+    "refused": "KI-Funktionen sind in der App ausgeschaltet. Schalte sie unter Einstellungen, Bereich Mobile App, ein."
+  },
   "RelayClaim": {
     "title": "GitHub verbinden",
     "waiting": "GitHub wurde in einem neuen Tab geöffnet. Installiere dort die minddy-App. Diese Seite macht von selbst weiter, sobald die Installation mit deiner Instanz verknüpft ist.",

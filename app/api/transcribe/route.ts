@@ -33,6 +33,7 @@ import {
   resolveDictationVocabulary,
   vocabularyTerms,
 } from "@/lib/dictation-vocabulary";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 // A long dictation takes longer to come back than a short one: the road
 // takes the maximum budget of the platform, under which the timeout of
@@ -57,6 +58,9 @@ function resolveFeature(value: FormDataEntryValue | null): AiFeature {
 }
 
 export async function POST(request: NextRequest) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const { user } = auth;

@@ -7,6 +7,7 @@ import {
   requestNumoTurnStop,
   retryNumoTurn,
 } from "@/lib/server/numo/turns";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -15,6 +16,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;
   const { user, supabase } = auth;

@@ -16,6 +16,7 @@ import {
   normalizeVoiceTranscript,
   runFeedbackVoicePass,
 } from "@/lib/server/feedback/voice";
+import { aiConsentRefusal } from "@/lib/server/ai-consent";
 
 /**
  * The STORAGE of a dictated return in the dashboard — the authenticated twin of
@@ -40,6 +41,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // The mobile app asks before any AI work (MIN-907, guideline 5.1.2(i)).
+  const consentRefusal = await aiConsentRefusal();
+  if (consentRefusal) return consentRefusal;
   const { id: projectId } = await params;
   const auth = await getAuthedUser(request);
   if (!auth.ok) return auth.response;

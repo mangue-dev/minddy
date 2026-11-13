@@ -316,6 +316,24 @@
     "resourceNameInvalid": "Saisissez un nom pour cette ressource.",
     "resourceNotRenamable": "Une ressource de page porte le titre de sa page."
   },
+  "InAppApiErrors": {
+    "projectLimitReached": "Votre offre est limitée à {limit} projets.",
+    "issueLimitReached": "L'offre de ce projet est limitée à {limit} tickets.",
+    "memberLimitReached": "Votre offre est limitée à {limit} invités par projet.",
+    "usageBudgetExceeded": "Votre budget d'usage IA est épuisé. Il repart à zéro à la prochaine période.",
+    "storageQuotaFull": "Le compte de ce projet n'a plus d'espace de stockage. Libérez de la place pour ajouter des fichiers."
+  },
+  "AiConsent": {
+    "title": "Utiliser les fonctions d'IA ?",
+    "body": "Numo, Smart Fill, la dictée et la recherche envoient le contenu qu'ils traitent (texte des tickets, commentaires, pages, enregistrements) au fournisseur du modèle d'IA utilisé, qui le traite sur ses propres serveurs.",
+    "retention": "Chaque fournisseur a ses propres règles de conservation. La <privacy>politique de confidentialité</privacy> nomme les fournisseurs et donne le détail.",
+    "declineNote": "Si vous refusez, ces fonctions restent désactivées dans l'application. Vous pourrez changer d'avis dans Préférences, rubrique Application mobile.",
+    "allow": "Autoriser",
+    "decline": "Pas maintenant",
+    "settingsLabel": "Fonctions d'IA",
+    "settingsDesc": "Envoyer du contenu aux fournisseurs de modèles d'IA quand vous utilisez Numo, Smart Fill, la dictée ou la recherche.",
+    "refused": "Les fonctions d'IA sont désactivées dans l'application. Activez-les dans Préférences, rubrique Application mobile."
+  },
   "RelayClaim": {
     "title": "Connecter GitHub",
     "waiting": "GitHub s'est ouvert dans un nouvel onglet. Installez-y l'app minddy. Cette page continue seule dès que l'installation est liée à votre instance.",

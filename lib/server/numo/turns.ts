@@ -1,5 +1,6 @@
 import { withEventActor, withRoutineCause } from "@/lib/server/supabase-fetch";
 import "server-only";
+import { assertAiAllowedInBackground, assertAiConsent } from "@/lib/server/ai-consent";
 import { markdownForReader } from "@/lib/server/mention-access";
 
 import { randomUUID } from "node:crypto";
@@ -255,6 +256,11 @@ function checkpointRecord(checkpoint: NumoTurnCheckpoint): Record<string, unknow
 }
 
 export async function beginNumoTurn(input: BeginNumoTurnInput): Promise<NumoTurn> {
+  // A turn runs later, in a job that cannot see the request: the mobile app's
+  // AI consent is checked when the turn is admitted (MIN-907). A turn a cron
+  // job admits (a routine, a wake) follows the account's answer.
+  await assertAiConsent();
+  await assertAiAllowedInBackground(input.userId);
   const admissionStartedAt = performance.now();
   const service = getServiceClient();
   const messageId = randomUUID();

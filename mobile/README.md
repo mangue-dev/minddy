@@ -370,12 +370,58 @@ cards, upgrade buttons and links to plans. A feature the plan lacks says so and
 stops there. `components/billing/purchases-hidden.test.tsx` holds that rule;
 extend it when a new surface links to billing.
 
+The plan-limit errors the server writes (project, issue, guest, AI budget and
+storage limits) end on a call to upgrade on the web. For a request from the app,
+`i18n/request.ts` reads them from `InAppApiErrors`, the same messages without
+that call (`i18n/in-app-messages.ts`), so every route is covered at once.
+
 The public website stays out of the app as well. The WebView keeps every page
 of its server, and the landing, pricing, the manual and the legal pages are
 pages of it, whose header and footer lead to pricing. A tapped link to one of
 them opens in Safari's sheet over the app instead
 (`lib/mobile/public-links.ts`, `MinddyShell.openBrowser`):
 `lib/public-routes.ts` says which paths are the public site.
+
+## AI features ask first
+
+Numo, Smart Fill, dictation and semantic search send what they work on to
+the provider of the AI model in use, which the instance's administration
+sets. The sheet names no provider for that reason; the privacy policy does.
+Guideline 5.1.2(i) asks the app to say so and to get permission before the
+first such request, so the app asks once on each device
+(`components/mobile/ai-consent-gate.tsx`), after sign-in and the first-run
+screens. The answer is a cookie of the WebView, `minddy-ai-consent`
+(`lib/mobile/ai-consent.ts`), which the server reads on every request; signing
+out clears it. It is also written to the account (`user_metadata.ai_consent`)
+for the cron jobs. **Preferences → Mobile app → AI features** changes both.
+
+Until the answer is "granted", a request from the app starts no AI work
+(`lib/server/ai-consent.ts`):
+
+- the routes that start AI work on request (Numo's messages and turns,
+  transcription, the dictations, the home brief, the manual's answers, a
+  routine run, Smart Assign's backfill) answer 403 with the
+  `x-minddy-ai-consent: required` header, and the app shows the sheet again;
+- underneath, `fetchAiProvider`, the web search and `beginNumoTurn` refuse, so
+  the work a request starts on the side (Smart Fill on a new issue, semantic
+  search) is skipped as when no provider is configured, and a Numo mention
+  in a comment gets no answer.
+
+A new route that starts AI work on request calls `aiConsentRefusal()` first.
+The web and the desktop app never ask, and a request from them is never
+refused.
+
+Cron jobs have no app to ask, so they follow the account's last answer: an
+account that declined gets no AI run on its behalf; one that allowed, or was
+never asked, does. The crons that run AI wrap that work in
+`runAsBackgroundAiWork()` (Smart Assign, Smart Fill's re-evaluation, the issue
+index, the feedback review, the routines clock, Numo's wakes and reminders),
+and the places that pick the paying account check it: `resolveAiRuntime`,
+`forcedToolCall`, the decision model, `requestEmbeddings` and
+`beginNumoTurn`. A scheduled routine of such an account skips its passage
+without an error. Numo turns admitted from a request already passed the
+request's check and run as admitted. A new cron that runs AI for an account
+uses the same wrapper.
 
 ## Store metadata
 
