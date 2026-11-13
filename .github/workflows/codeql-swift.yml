@@ -1,0 +1,92 @@
+name: CodeQL Swift
+
+# Code scanning for the iOS shell (`mobile/`), the only Swift in the
+# repository. It runs on a macOS runner, so only when the shell changes, and
+# once a week on main.
+#
+# CodeQL extracts Swift while the compiler runs, so the Xcode project must be
+# built. Two things stand in the way:
+#
+# - The project references files that `cap sync` generates and Git ignores
+#   (`App/public`, `config.xml`, `capacitor.config.json`). A placeholder page
+#   is enough for them: the analysis reads Swift, not the bundled pages, so
+#   the root dependencies and `scripts/build-mobile.mjs` are not needed.
+# - The shell calls iOS 27.1 APIs behind `#available`, and GitHub's macOS
+#   images stop at Xcode 26.6, whose SDK does not declare them. The build
+#   therefore fails on those calls. The extractor still records what the
+#   compiler saw, so the step tolerates the failure, and the analysis reports
+#   the compiler errors and its file coverage among its diagnostics. Remove
+#   `continue-on-error` once a runner image ships Xcode 27.1 or later.
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/codeql-swift.yml"
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - ".github/workflows/codeql-swift.yml"
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-swift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (swift)
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          check-latest: true
+
+      - name: Install mobile dependencies
+        run: npm --prefix mobile ci --ignore-scripts
+
+      - name: Generate the files Capacitor writes into the Xcode project
+        working-directory: mobile
+        run: |
+          mkdir -p www
+          printf '<!doctype html><title>minddy</title>\n' > www/index.html
+          npx cap sync ios
+          git diff --exit-code -- ios
+
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: swift
+          build-mode: manual
+
+      - name: Build the iOS shell
+        continue-on-error: true
+        working-directory: mobile
+        run: >-
+          xcodebuild build
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/DerivedData"
+          CODE_SIGNING_ALLOWED=NO
+          COMPILER_INDEX_STORE_ENABLE=NO
+
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:swift

@@ -471,7 +471,12 @@ Release builds ignore the variable.
 The root TypeScript configuration excludes this folder. CI installs its
 lockfile, runs `npm --prefix mobile run typecheck`, bundles the pages and runs
 `npx cap sync ios`, then fails if the committed Swift package manifest changed.
-The iOS build itself needs macOS and does not run in CI yet.
+The iOS build itself needs macOS and does not run in CI yet. The one place
+CI compiles the shell is code scanning: `.github/workflows/codeql-swift.yml`
+builds it on a macOS runner when `mobile/` changes, so CodeQL can analyse the
+Swift. GitHub's images stop at Xcode 26.6, which lacks the iOS 27.1 APIs the
+shell calls, so that build fails on those calls and the analysis is partial
+until a runner ships Xcode 27.1.
 
 The shell's decisions that need no UIKit (the server address rules, where a
 universal link goes) have their own runner, which compiles them with `swiftc`
