@@ -114,6 +114,8 @@ export function useMentionSectionLabel(): (id: string) => string | null {
   const t = useTranslations("Picker");
   return (id) => {
     switch (id as MentionSectionId) {
+      case "fromNumo":
+        return t("mentionSectionFromNumo");
       case "subpages":
         return t("mentionSectionSubpages");
       case "relations":

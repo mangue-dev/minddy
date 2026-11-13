@@ -16,7 +16,7 @@ import {
   forwardRef,
   type ReactNode,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -63,6 +63,7 @@ import {
   withPinnedContext,
 } from "@/lib/assistant-context";
 import { useNumoMentionables } from "@/lib/use-numo-mentionables";
+import { numoCitations, numoCitedMentions } from "@/lib/numo-cited-mentions";
 import { useRepositorySkills } from "@/lib/use-repository-skills";
 import { MentionLinksProvider } from "@/components/mention-links";
 import { useSlashCommands } from "@/components/assistant/slash-menu";
@@ -167,6 +168,12 @@ export interface AssistantShellProps {
    * Numo's first message.
    */
   openingBriefId?: string | null;
+  /**
+   * Numo's text shown above the conversation without being one of its
+   * messages (Home: its word). Its mentions lead the "@" menu with those of
+   * Numo's replies (MIN-969).
+   */
+  citedByNumo?: string | null;
   /** Rows written for the user in place of the page's fixed suggestions; null keeps them. */
   starterItems?: ReadonlyArray<{ label: string; prompt: string }> | null;
   /** The written rows are still loading: show no row yet. */
@@ -201,6 +208,7 @@ export const AssistantShell = forwardRef<
     keptIntro = null,
     keptHeader = null,
     openingBriefId = null,
+    citedByNumo = null,
     starterItems = null,
     startersPending = false,
     hideStartersWhileComposing = false,
@@ -378,7 +386,18 @@ export const AssistantShell = forwardRef<
     ...(Array.isArray(message.metadata?.mentions) ? message.metadata.mentions as AssistantMention[] : []),
     ...(message.context?.pinned ?? []).map(({ kind, ...item }) => ({ ...item, type: kind })),
   ]), [state.messages]);
-  const { mentionables, links, onMentionQuery } = useNumoMentionables(projectId, messageReferences);
+  const { mentionables: catalog, links, onMentionQuery } = useNumoMentionables(projectId, messageReferences);
+  // What Numo cited leads the "@" menu (MIN-969): its latest reply first,
+  // then the earlier ones, then the word Home opens with.
+  const locale = useLocale();
+  const citations = useMemo(() => numoCitations([
+    ...state.messages.flatMap((message) => (message.role === "assistant" && message.content ? [message.content] : [])).reverse(),
+    citedByNumo,
+  ]), [state.messages, citedByNumo]);
+  const mentionables = useMemo(
+    () => numoCitedMentions(catalog, citations, locale),
+    [catalog, citations, locale],
+  );
 
   // Read by the send handlers without stale closures. The host may set the
   // context the same tick it dispatches a one-shot send, so the imperative

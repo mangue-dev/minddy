@@ -77,13 +77,17 @@ it("offers the titled pages of every visible project, each naming its project, w
   await unmount();
 });
 
-it("keeps a project surface to its own pages, without a project name", async () => {
+it("offers the project's own pages first and bare, then the other visible projects' pages (MIN-969)", async () => {
   const { result, unmount } = await mount("p");
 
   expect(pages(result.options)).toEqual([
     expect.objectContaining({ id: "page-a", projectId: "p", label: "Guide" }),
+    expect.objectContaining({ id: "page-b", projectId: "q", label: "Guide", detail: "Website" }),
   ]);
   expect(pages(result.options)[0]).not.toHaveProperty("detail");
+  // Another project's page opens from its pill; a hidden one still resolves.
+  expect(result.links!.href("page", "page-b")).toContain("/projects/q");
+  expect(result.links!.label!("page", "page-h")).toBe("Old notes");
 
   await unmount();
 });

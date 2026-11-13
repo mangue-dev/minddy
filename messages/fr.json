@@ -2789,7 +2789,8 @@
     "mentionSectionSubpages": "Sous-pages",
     "mentionSectionRelations": "Relations",
     "mentionSectionThisIssue": "Ce ticket",
-    "mentionSectionThisObjective": "Cet objectif"
+    "mentionSectionThisObjective": "Cet objectif",
+    "mentionSectionFromNumo": "Mentionné par Numo"
   },
   "Plan": {
     "tabDescription": "Description",
