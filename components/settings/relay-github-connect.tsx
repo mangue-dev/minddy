@@ -2,7 +2,7 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { AlertCircleIcon, ArrowRight01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { AlertCircleIcon, CheckIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -158,7 +158,6 @@ export function RelayGithubConnect() {
         </p>
         <Button type="button" variant="outline" className="mt-2" onClick={() => router.replace(returnPath)}>
           {t("back")}
-          <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden />
         </Button>
       </ClaimCard>
     );
@@ -175,7 +174,6 @@ export function RelayGithubConnect() {
           <a href={claimUrl} target="_blank" rel="noopener noreferrer">
             <Github aria-hidden />
             {t("openGithub")}
-            <HugeiconsIcon icon={ArrowRight01Icon} aria-hidden />
           </a>
         </Button>
       )}

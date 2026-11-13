@@ -87,3 +87,11 @@ ends on the day it is applied. The default run only describes the world;
 world does not remove those pull requests (their ticket link is only set to
 null), so remove them with `plan.remove("pull_requests", …)` before
 `deleteDemoWorld()`.
+
+`012-avatars.mjs` keeps the three demo members' portraits apart and in line
+with their first names (MIN-976). Each person has a background family on the
+color wheel and a look: long or tied-back hair for Camille and Alice, a short
+cut for Tom, a beard only where it fits and no earrings for Tom. Candidate
+seeds are derived from the person and an attempt number, so the dry run shows
+the very portraits `--apply` writes. A member whose portrait already fits is
+left alone; `--apply` requires explicit user approval.

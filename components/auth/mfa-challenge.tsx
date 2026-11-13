@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { AUTH_SUBMIT_CLASS, SubmitArrow } from "@/components/auth/auth-chrome";
+import { AUTH_SUBMIT_CLASS } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { RECOVERY_CODE_LENGTH, mfaVerifyErrorKey } from "@/lib/mfa";
 import { OtpInput } from "@/components/otp-input";
@@ -147,7 +147,6 @@ export function MfaChallenge({
           >
             {busy && <Spinner />}
             {t("mfaVerify")}
-            {!busy && <SubmitArrow />}
           </Button>
         </form>
       ) : (

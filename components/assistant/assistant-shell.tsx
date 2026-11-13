@@ -1285,8 +1285,10 @@ export const AssistantShell = forwardRef<
                 page={starterPage}
                 visible={showStarters}
                 items={starterItems}
-                // In the sheet the rows span the composer's width.
-                className={compact ? "mx-0 flex" : undefined}
+                // In the phone's sheet the rows span the composer's width; in
+                // the desktop panel they keep their inset, in line with the
+                // composer's + button.
+                className={compact ? "mx-0 flex app-desktop:mx-2.5" : undefined}
                 onPick={(prompt) => chatInputRef.current?.fill(prompt)}
               />
               {/* Active question: the card takes the PLACE of the composer. THE

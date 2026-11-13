@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowRight01Icon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, LoaderCircleIcon } from "@hugeicons/core-free-icons";
 import type { ComponentType } from "react";
 import { Github, Gitlab } from "@/components/git/provider-icons";
 import { useTranslations } from "next-intl";
@@ -94,12 +94,6 @@ export function ProviderConnectButtons({
             >
               {t("gitConnectWith", { provider: provider.displayName })}
             </span>
-            {/* The arrow is only used for the stack: it pulls the eye towards the edge
- right of a button which occupies the entire width. A button at just its
- width has no far edge. */}
-            {!isConnecting && !inline && (
-              <HugeiconsIcon icon={ArrowRight01Icon} className="h-4 w-4 shrink-0 text-muted-foreground" />
-            )}
           </Button>
         );
       })}

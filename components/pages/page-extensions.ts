@@ -27,6 +27,7 @@ import UniqueID from "@tiptap/extension-unique-id";
 import { Markdown } from "tiptap-markdown";
 import { MentionNodeBase } from "@/components/mention-node";
 import { writeTextEscapingMath } from "@/components/pages/blocks/math";
+import { MarkdownTables } from "@/components/pages/markdown-tables";
 import type { MarkdownState } from "@/components/pages/blocks/types";
 import {
   BLOCK_ID_ATTRIBUTE,
@@ -173,6 +174,9 @@ export function pageExtensions(
       types: BLOCK_ID_TYPES,
       ...(uniqueIdFilter ? { filterTransaction: uniqueIdFilter } : {}),
     }),
+    // A markdown table becomes one bullet per row: the schema has no table
+    // node, and the cells would otherwise be glued into one paragraph.
+    MarkdownTables,
     Markdown.configure({
       // `true`: the leaflet and the subpage are projected in minimal HTML
       // (see blocks/details.ts and blocks/subpage.ts) — markdown has neither

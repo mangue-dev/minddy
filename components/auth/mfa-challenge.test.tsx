@@ -13,7 +13,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/auth-context", () => ({ useAuth: () => state }));
-vi.mock("@/components/auth/auth-chrome", () => ({ AUTH_SUBMIT_CLASS: "", SubmitArrow: () => null }));
+vi.mock("@/components/auth/auth-chrome", () => ({ AUTH_SUBMIT_CLASS: "" }));
 vi.mock("@/components/ui/button", () => ({
   Button: ({ variant: _variant, ...props }: ComponentProps<"button"> & { variant?: string }) => <button {...props} />,
 }));

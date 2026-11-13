@@ -147,7 +147,7 @@ minddy calls AI models from the server, so it cannot use a model running on your
 
 ## Understand Cloud plans and AI consumption {#plans-and-ai-usage}
 
-Cloud offers Free, Go and Pro. All include MCP, Numo conversations, contextual actions and routines. Capacity, included AI, models and storage differ. Open Billing for your current allowance and usage, and compare the public pricing page before choosing a plan; the figures shown there are the current reference.
+Cloud offers Free, Go and Pro. All include MCP, Numo conversations, contextual actions and routines. Capacity, included AI, models and storage differ. Open Usage & billing for your current allowance and usage, and compare the public pricing page before choosing a plan; the figures shown there are the current reference.
 
 Use the offered checkout or subscription-management action for your account. Review the amount, billing period and provider confirmation before accepting. A successful plan change should appear in account billing; verify that rather than treating a closed checkout window as proof.
 
@@ -167,7 +167,7 @@ These defaults describe minddy 0.20.0. Verify the live pricing page and account 
 | Go | Unlimited | Unlimited | Unlimited | 20 GiB | 5 |
 | Pro | Unlimited | Unlimited | Unlimited | 100 GiB | 15 |
 
-Billing shows the remaining AI budget and its next reset. **Budget over time** draws what you have used so far as a solid line and, dashed, where the current pace leads by the reset; the sentence under its title says whether you are on track or on which day the budget runs out. **What uses your budget?**, which splits consumption into **Routines**, **Numo**, **Voice dictation**, **Feedback** and **Automations** as a percentage of the included budget. **Daily usage** shows what each day used, by usage type; hover a chart to read the values of a day. **Usage history** lists the actions of the current period and their share of the budget. Numo reads the same figures and forecast when you ask about your budget, and warns you on **Home** when the budget is on track to run out before it resets.
+Usage & billing shows the remaining AI budget and its next reset. **Budget over time** draws what you have used so far as a solid line and, dashed, where the current pace leads by the reset; the sentence under its title says whether you are on track or on which day the budget runs out. **What uses your budget?**, which splits consumption into **Routines**, **Numo**, **Voice dictation**, **Feedback** and **Automations** as a percentage of the included budget. **Daily usage** shows what each day used, by usage type; hover a chart to read the values of a day. **Usage history** lists the actions of the current period and their share of the budget. Numo reads the same figures and forecast when you ask about your budget, and warns you on **Home** when the budget is on track to run out before it resets.
 
 ## Dictate text and edits {#voice-dictation}
 

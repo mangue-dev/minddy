@@ -45,7 +45,6 @@ vi.mock("@/components/auth/auth-chrome", () => ({
   AuthBackButton: ({ onClick }: { onClick: () => void }) => <button type="button" data-back onClick={onClick}>Back</button>,
   AuthMethodsSkeleton: () => <div data-methods-loading />,
   AUTH_SUBMIT_CLASS: "",
-  SubmitArrow: () => null,
   OAuthButtons: ({ providers, disabled, onSelect }: { providers: string[]; disabled: boolean; onSelect: (provider: string) => void }) =>
     providers.map((provider) => <button key={provider} type="button" data-oauth={provider} disabled={disabled} onClick={() => onSelect(provider)}>{provider}</button>),
   OrDivider: () => <hr />,

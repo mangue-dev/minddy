@@ -12,13 +12,19 @@
  * remedy is what the product already offers: removing a seed.
  *
  * The script targets a FAMILY of shades per person, and restarts the draw
- * until you fall in. Idempotent: relaunched, he finds that everyone is already
- * in his family and writes nothing.
+ * until you fall in. Idempotent: relaunched, it finds that everyone is already
+ * in their family and writes nothing.
+ *
+ * MIN-976: the draw also has to suit the first name. A seed picks the hair
+ * and, rarely, a beard; Alice came out with a short cut and Tom with long
+ * hair. Each person now also has a LOOK — a set of hairstyles (long or tied
+ * back, or short) and whether a beard or earrings may appear — and a seed is
+ * kept only when both its background and its look fit.
  *
  * node captures/world/seed/012-avatars.mjs (shows the plan)
  * node captures/world/seed/012-avatars.mjs --apply (written, after agreement)
  */
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { createAvatar } from "@dicebear/core";
 import * as lorelei from "@dicebear/lorelei";
 import { openDemoWorld, createPlan } from "../../lib/guards.mjs";
@@ -33,31 +39,83 @@ const FAMILIES = {
 };
 
 /**
- * One family per person, chosen from the four corners of the wheel. Camille guard
- * the cold: this is the main account, his portrait is already the one we see
- * in the sidebar of most captures.
+ * The Lorelei hairstyles (`variantNN`), sorted by eye from a contact sheet
+ * of the 48. The ones that read either way are left out of both sets.
  */
-const WANTED = {
-  "captures-demo@minddy.app": "froid",
-  "captures-demo+alice@minddy.app": "chaud",
-  "captures-demo+tom@minddy.app": "vert",
+const HAIR = {
+  long: [10, 13, 14, 15, 17, 18, 19, 21, 23, 26, 29, 30, 31, 33, 35, 37, 38, 41, 42, 45, 46],
+  short: [1, 2, 3, 4, 9, 12, 22, 25, 27, 28, 39, 47],
 };
 
-/** The bottom DiceBear shoots for a seed — the only thing we care about. */
-function backgroundOf(seed) {
-  const svg = createAvatar(lorelei, { seed, backgroundColor: AVATAR_BACKGROUNDS })
-    .toString()
-    .toLowerCase();
-  return AVATAR_BACKGROUNDS.find((hex) => svg.includes(hex)) ?? null;
+/** A look: the allowed hairstyles, and which rare extras may be drawn. */
+const LOOKS = {
+  feminine: { hair: HAIR.long, beard: false, earrings: true },
+  masculine: { hair: HAIR.short, beard: true, earrings: false },
+};
+
+/**
+ * One family per person, chosen from the four corners of the wheel, and the
+ * look of the first name. Camille keeps the cold: this is the main account,
+ * whose portrait is the one seen in the sidebar of most captures.
+ */
+const WANTED = {
+  "captures-demo@minddy.app": { family: "froid", look: "feminine" },
+  "captures-demo+alice@minddy.app": { family: "chaud", look: "feminine" },
+  "captures-demo+tom@minddy.app": { family: "vert", look: "masculine" },
+};
+
+/** The portrait exactly as the app draws it (lib/avatar.ts). */
+function draw(seed, extra = {}) {
+  return createAvatar(lorelei, { seed, backgroundColor: AVATAR_BACKGROUNDS, ...extra });
 }
 
-/** Draw seeds until you find one that falls into the target family. */
-function seedInFamily(family) {
-  for (let attempt = 0; attempt < 500; attempt++) {
-    const seed = randomUUID();
-    if (FAMILIES[family].includes(backgroundOf(seed))) return seed;
+/** What a seed draws that we care about: background, hairstyle, extras. */
+function portraitOf(seed) {
+  const avatar = draw(seed);
+  const svg = avatar.toString();
+  const lower = svg.toLowerCase();
+  const hair = Number(avatar.toJson().extra.hair.replace("variant", ""));
+  return {
+    background: AVATAR_BACKGROUNDS.find((hex) => lower.includes(hex)) ?? null,
+    hair,
+    // The JSON names a beard and earrings even when their probability did
+    // not draw them; turning each off and comparing says whether it shows.
+    beard: draw(seed, { beardProbability: 0 }).toString() !== svg,
+    earrings: draw(seed, { earringsProbability: 0 }).toString() !== svg,
+  };
+}
+
+function fits(portrait, { family, look }) {
+  const wanted = LOOKS[look];
+  return FAMILIES[family].includes(portrait.background)
+    && wanted.hair.includes(portrait.hair)
+    && (wanted.beard || !portrait.beard)
+    && (wanted.earrings || !portrait.earrings);
+}
+
+function describe(portrait) {
+  if (!portrait) return "aucun portrait";
+  const extras = [portrait.beard && "barbe", portrait.earrings && "boucles"].filter(Boolean);
+  return `#${portrait.background}, coiffure ${portrait.hair}${extras.length ? `, ${extras.join(", ")}` : ""}`;
+}
+
+/**
+ * A UUID-shaped seed derived from the person and the attempt number rather
+ * than drawn at random, so the dry run shows the very portraits `--apply`
+ * writes.
+ */
+function candidateSeed(email, attempt) {
+  const hex = createHash("sha256").update(`demo-avatar:${email}:${attempt}`).digest("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+/** The first candidate seed that fits the person's family and look. */
+function seedFor(email, wanted) {
+  for (let attempt = 0; attempt < 5000; attempt++) {
+    const seed = candidateSeed(email, attempt);
+    if (fits(portraitOf(seed), wanted)) return seed;
   }
-  throw new Error(`Aucune graine trouvée pour la famille « ${family} » en 500 essais.`);
+  throw new Error(`Aucune graine trouvée pour « ${wanted.family} / ${wanted.look} » en 5000 essais.`);
 }
 
 const world = await openDemoWorld();
@@ -71,19 +129,19 @@ if (error) throw new Error(`Lecture des graines : ${error.message}`);
 const seedByUser = new Map((rows ?? []).map((r) => [r.user_id, r.seed]));
 
 for (const user of world.demoUsers) {
-  const family = WANTED[user.email];
-  if (!family) continue;
+  const wanted = WANTED[user.email];
+  if (!wanted) continue;
 
   const current = seedByUser.get(user.id);
-  const currentBackground = current ? backgroundOf(current) : null;
-  if (currentBackground && FAMILIES[family].includes(currentBackground)) {
-    console.log(`${user.full_name} : déjà en « ${family} » (#${currentBackground}), on ne touche pas.`);
+  const currentPortrait = current ? portraitOf(current) : null;
+  if (currentPortrait && fits(currentPortrait, wanted)) {
+    console.log(`${user.full_name} : déjà bon (${describe(currentPortrait)}), on ne touche pas.`);
     continue;
   }
 
-  const seed = seedInFamily(family);
+  const seed = seedFor(user.email, wanted);
   console.log(
-    `${user.full_name} : #${currentBackground ?? "?"} → #${backgroundOf(seed)} (famille « ${family} »)`,
+    `${user.full_name} : ${describe(currentPortrait)} → ${describe(portraitOf(seed))} (« ${wanted.family} », ${wanted.look})`,
   );
   // A fresh account has no row yet: the app creates it on first use.
   if (current) {
@@ -100,7 +158,7 @@ for (const user of world.demoUsers) {
 
 const description = plan.describe();
 if (!description) {
-  console.log("\nRien à faire : les trois portraits sont déjà éloignés.");
+  console.log("\nRien à faire : les trois portraits sont déjà bons.");
   process.exit(0);
 }
 

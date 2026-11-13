@@ -25,7 +25,6 @@ import {
   PasswordRules,
   SelfHostButton,
   SignupLegalNotice,
-  SubmitArrow,
   useInDesktopApp,
   type OAuthProvider,
 } from "@/components/auth/auth-chrome";
@@ -393,7 +392,6 @@ export function AuthEntry({ invite }: { invite: InvitationPreview | null }) {
             <Button type="submit" disabled={busy || !password} className={AUTH_SUBMIT_CLASS}>
               {loading && <Spinner />}
               {creating ? t("createAccount") : t("signIn")}
-              {!loading && <SubmitArrow />}
             </Button>
             <AuthBackButton onClick={backToEmail} disabled={busy} />
             {creating && <SignupLegalNotice external={inDesktopApp} />}

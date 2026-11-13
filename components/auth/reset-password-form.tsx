@@ -16,7 +16,6 @@ import {
   PasswordRules,
   useInDesktopApp,
   AUTH_SUBMIT_CLASS,
-  SubmitArrow,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { useAnalytics } from "@/lib/use-analytics";
@@ -224,7 +223,6 @@ export function ResetPasswordForm() {
           >
             {busy && <Spinner />}
             {t("resetSubmit")}
-            {!busy && <SubmitArrow />}
           </Button>
         </form>
       </div>

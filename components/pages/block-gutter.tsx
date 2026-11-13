@@ -279,6 +279,14 @@ export function BlockGutter({
       const root = dom.closest<HTMLElement>(".page-editor");
       if (!root) return;
       const target = event.target instanceof Element ? event.target : null;
+      // Over the floating table of contents (page-toc.tsx), which lies on
+      // the right margin, the pointer is reading the table, not the block
+      // beside it: a comment button there would cover its entries.
+      if (target?.closest("[data-page-toc]")) {
+        setZone(root, "none");
+        placeComment(null, null);
+        return;
+      }
       // On a button itself, its own zone holds.
       if (target?.closest("[data-block-comment-button]")) return setZone(root, "comment");
       if (gutter.current && target && gutter.current.contains(target)) return setZone(root, "gutter");

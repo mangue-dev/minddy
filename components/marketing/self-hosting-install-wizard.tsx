@@ -951,9 +951,9 @@ export function SelfHostingInstallWizard({
             </div>
             <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={goBack} disabled={currentIndex === 0} className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-0">
-                <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" aria-hidden />{copy.backLabel}
+                {copy.backLabel}
               </button>
-              {currentIndex < stages.length - 1 && <button type="button" onClick={continueWizard} disabled={!currentStage.canContinue} className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-35">{currentStage.continueLabel ?? copy.continueLabel}<HugeiconsIcon icon={ArrowRight01Icon} className="size-4 shrink-0" aria-hidden /></button>}
+              {currentIndex < stages.length - 1 && <button type="button" onClick={continueWizard} disabled={!currentStage.canContinue} className="inline-flex min-h-11 max-w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-center text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-35">{currentStage.continueLabel ?? copy.continueLabel}</button>}
             </div>
           </div>
         </div>

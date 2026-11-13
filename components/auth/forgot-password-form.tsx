@@ -13,7 +13,6 @@ import {
   MailGlyph,
   useInDesktopApp,
   AUTH_SUBMIT_CLASS,
-  SubmitArrow,
 } from "@/components/auth/auth-chrome";
 import { useAuth } from "@/lib/auth-context";
 import { isValidEmail, preserveAuthParams } from "@/lib/auth-entry";
@@ -148,7 +147,6 @@ export function ForgotPasswordForm() {
           >
             {loading && <Spinner />}
             {t("forgotSubmit")}
-            {!loading && <SubmitArrow />}
           </Button>
           {/* Cancelling the request returns to where it started (MIN-907). */}
           <Button asChild variant="outline" className="h-12 w-full justify-center rounded-full">
