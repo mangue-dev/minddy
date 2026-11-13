@@ -8,6 +8,7 @@ import {
   completeMcpOAuth,
   initialMcpOAuth,
   isDesktopMcpOAuthState,
+  mcpClientMetadataDocument,
   openMcpOAuth,
 } from "./mcp-oauth";
 import { decryptMcpToken, encryptMcpToken } from "./mcp-credentials";
@@ -37,6 +38,8 @@ const state = vi.hoisted(() => ({
   session: false,
   rejectRegistration: false,
   google: false,
+  vercel: false,
+  cimd: false,
   store: null as EncryptedStore | null,
 }));
 vi.mock("./encryption/registry", () => ({ getEncryptedStore: () => state.store }));
@@ -93,6 +96,24 @@ vi.mock("./safe-fetch", () => ({
         response_types_supported: ["code"],
         code_challenge_methods_supported: ["S256"],
       });
+    // Vercel: rejects unreviewed registrations, accepts a metadata document.
+    if (state.vercel && url.includes("oauth-protected-resource"))
+      return Response.json({
+        resource: "https://mcp.example.com/mcp",
+        authorization_servers: ["https://vercel.com"],
+      });
+    if (state.vercel && url.includes("oauth-authorization-server"))
+      return Response.json({
+        issuer: "https://vercel.com",
+        authorization_endpoint: "https://vercel.com/oauth/authorize",
+        token_endpoint: "https://vercel.com/api/login/oauth/token",
+        registration_endpoint: "https://vercel.com/api/login/oauth/register",
+        response_types_supported: ["code"],
+        grant_types_supported: ["authorization_code", "refresh_token"],
+        code_challenge_methods_supported: ["S256"],
+        token_endpoint_auth_methods_supported: ["none"],
+        client_id_metadata_document_supported: true,
+      });
     if (state.challengeOnly && url.includes("oauth-protected-resource"))
       return new Response(null, { status: 404 });
     if (
@@ -114,6 +135,7 @@ vi.mock("./safe-fetch", () => ({
         grant_types_supported: ["authorization_code", "refresh_token"],
         code_challenge_methods_supported: ["S256"],
         token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+        ...(state.cimd ? { client_id_metadata_document_supported: true } : {}),
       });
     if (url.endsWith("/register") && state.rejectRegistration)
       return Response.json(
@@ -241,6 +263,8 @@ beforeEach(() => {
   state.session = false;
   state.rejectRegistration = false;
   state.google = false;
+  state.vercel = false;
+  state.cimd = false;
   const key = randomBytes(32);
   state.store = new EncryptedStore({
     current: async () => ({ version: 1, bytes: Buffer.from(key) }),
@@ -259,6 +283,62 @@ describe("generic MCP OAuth", () => {
     await expect(started).rejects.toBeInstanceOf(McpClientNotApprovedError);
     await expect(started).rejects.toMatchObject({ status: 400 });
     expect(state.tables.user_mcp_oauth_attempts).toHaveLength(0);
+  });
+  it("identifies itself to Vercel with its metadata document instead of registering", async () => {
+    state.vercel = true;
+    state.rejectRegistration = true;
+    const url = new URL(await startMcpOAuth(connection));
+    expect(url.origin + url.pathname).toBe("https://vercel.com/oauth/authorize");
+    expect(url.searchParams.get("client_id")).toBe(
+      "https://minddy.test/api/account/mcp-connections/oauth/client",
+    );
+    expect(url.searchParams.get("redirect_uri")).toBe(
+      "https://minddy.test/api/account/mcp-connections/oauth/callback",
+    );
+    expect(
+      state.requests.some((request) => request.url.endsWith("/register")),
+    ).toBe(false);
+    const attempt = await decodeMcpAttempt(
+      state.tables.user_mcp_oauth_attempts[0] as never,
+    );
+    expect(JSON.parse(attempt.payload_encrypted).client.client_id).toBe(
+      "https://minddy.test/api/account/mcp-connections/oauth/client",
+    );
+  });
+  it("keeps dynamic registration with other providers that accept a metadata document", async () => {
+    state.cimd = true;
+    const url = new URL(await startMcpOAuth(connection));
+    expect(url.searchParams.get("client_id")).toBe("registered-client");
+  });
+  it("drops a metadata-document client served from another origin", async () => {
+    state.vercel = true;
+    const stale = {
+      ...connection,
+      oauth_encrypted: encryptMcpToken(JSON.stringify({
+        client: {
+          client_id: "https://old.example/api/account/mcp-connections/oauth/client",
+          issuer: "https://vercel.com",
+        },
+      })),
+    };
+    const url = new URL(await startMcpOAuth(stale));
+    expect(url.searchParams.get("client_id")).toBe(
+      "https://minddy.test/api/account/mcp-connections/oauth/client",
+    );
+  });
+  it("publishes a metadata document that matches what minddy sends", () => {
+    expect(mcpClientMetadataDocument()).toEqual({
+      client_id: "https://minddy.test/api/account/mcp-connections/oauth/client",
+      client_name: "Minddy Numo",
+      client_uri: "https://minddy.test",
+      logo_uri: "https://minddy.test/web-app-manifest-192x192.png",
+      redirect_uris: [
+        "https://minddy.test/api/account/mcp-connections/oauth/callback",
+      ],
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      token_endpoint_auth_method: "none",
+    });
   });
   it("asks for an OAuth app when the provider cannot register clients", async () => {
     state.google = true;

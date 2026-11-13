@@ -174,13 +174,13 @@ describe("list_mcp_presets", () => {
       LISTED_MCP_PRESETS.map((preset) => preset.id),
     );
     expect(result.presets[0].setup_note).toBeTruthy();
-    // Services the provider must validate first are not offered (MIN-913),
-    // except Vercel, whose approval is under review.
+    // Services the provider must validate first are not offered (MIN-913).
+    // Vercel is standard OAuth since minddy publishes a metadata document.
     const ids = result.presets.map((preset) => preset.id);
     expect(ids).not.toContain("google-gmail");
     expect(ids).not.toContain("figma");
     const vercel = result.presets.find((preset) => preset.id === "vercel");
-    expect(vercel?.setup_note).toMatch(/approve/i);
+    expect(vercel?.setup_note).toMatch(/^Standard OAuth/);
     expect(result.connections).toEqual([
       expect.objectContaining({ id: CONNECTION_ID, needs_auth: true }),
     ]);

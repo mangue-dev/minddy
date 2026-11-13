@@ -211,11 +211,10 @@ export const MCP_PRESETS: McpPreset[] = [
     name: "Vercel",
     url: "https://mcp.vercel.com",
     auth: "oauth",
-    // Vercel only accepts MCP clients it has reviewed: its registration
-    // endpoint refuses minddy's callback with `invalid_redirect_uri`
-    // (verified 2026-10-28, MIN-828). It stays listed, unlike Figma, because
-    // minddy's approval request is under review (MIN-835).
-    setup: "approvedClient",
+    // Vercel refuses dynamic registration from clients it has not reviewed
+    // (MIN-828); minddy identifies itself with its Client ID Metadata
+    // Document instead (`lib/server/mcp-oauth.ts`, MIN-835).
+    setup: "standard",
     docs: "https://vercel.com/docs/agent-resources/vercel-mcp",
   },
   {

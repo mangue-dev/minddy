@@ -51,7 +51,7 @@ describe("the MCP preset catalog", () => {
       .not.toContain("https://mail.google.com/");
   });
 
-  it("offers no service the provider must validate first, except Vercel", () => {
+  it("offers no service the provider must validate first", () => {
     const listed = new Set(LISTED_MCP_PRESETS.map((preset) => preset.id));
     const hidden = MCP_PRESETS.filter((preset) => !listed.has(preset.id));
     expect(hidden.map((preset) => preset.id).sort()).toEqual(
