@@ -294,6 +294,11 @@ export function createMentionNode(option: MentionOption): HTMLSpanElement {
   return pill;
 }
 
+/** A date option's identity: its day, time and end. */
+function dateOptionKey(option: { id: string; meta?: Record<string, string> }): string {
+  return `${option.id}|${option.meta?.time ?? ""}|${option.meta?.end ?? ""}`;
+}
+
 function skillFromNode(node: HTMLElement): RepositorySkillSummary | null {
   const path = node.dataset.skillPath;
   const name = node.dataset.skillName;
@@ -779,7 +784,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             const found = filterMentions([...(mentionables ?? []), ...skillMentionables], mentionQuery);
             // Dates come from the query itself, as in every editor (MIN-872),
             // first when the query clearly is one.
-            const dates = dateMentionOptions(mentionQuery, locale, new Date(), undefined, weekStart);
+            // A date Numo cited is already listed above (MIN-969).
+            const cited = new Set(found.flatMap((option) => (option.type === "date" ? [dateOptionKey(option)] : [])));
+            const dates = dateMentionOptions(mentionQuery, locale, new Date(), undefined, weekStart)
+              .filter((option) => !cited.has(dateOptionKey(option)));
             return datesFirst(mentionQuery, locale) ? [...dates, ...found] : [...found, ...dates];
           })(),
       [mentionQuery, mentionables, skillMentionables, locale, weekStart],

@@ -197,6 +197,8 @@ function HomeConversation() {
           keptIntro={brief ? <HomeNumoBrief brief={brief} /> : null}
           // Numo receives it too: the conversation opens with it (MIN-933).
           openingBriefId={brief?.id ?? null}
+          // What the word cites leads the "@" menu (MIN-969).
+          citedByNumo={brief?.content ?? null}
           starterItems={brief ? brief.suggestions : null}
           // The suggestions come in with the rest of the page.
           startersPending={briefLoading || !revealed}

@@ -71,11 +71,10 @@ export interface MentionSources {
       the palette index: quoting a page from another project makes no sense —
       a wiki belongs to his project, and its title is unique only to him. */
   pages: MentionPage[];
-  /** Every page of every project, from the palette index — only on a surface
-      WITHOUT a project (the task notebook, Numo outside a project), which
-      spans projects and has no wiki of its own (MIN-899). Empty otherwise.
-      It feeds the links and the menu, never the legacy label scan: a title
-      is unique only within its project. */
+  /** Every page of every project, from the palette index, for the surfaces
+      that span projects: the task notebook and Numo, outside a project
+      (MIN-899) or in one (MIN-969). It feeds the links and the menu, never
+      the legacy label scan: a title is unique only within its project. */
   accountPages: MentionPage[];
   /** What a picker may PROPOSE (MIN-751): the same lists without my hidden
       projects, except the one on screen. The complete lists above keep
@@ -89,6 +88,8 @@ export interface MentionSources {
       account pages of offered projects otherwise. Apart from `offered` so a
       page rename does not rebuild the thousands of issue options. */
   offeredPages: MentionPage[];
+  /** `accountPages` without the hidden projects (MIN-751), in a project too. */
+  offeredAccountPages: MentionPage[];
   /** Request the index right away — call at the first “@” typed, rather
       than to wait for the dead time which usually arms it. */
   armNow: () => void;
@@ -203,16 +204,14 @@ export function useMentionSources(
 
   const previousAccountPages = useRef<MentionPage[]>(NO_PAGES);
   const accountPages = useMemo<MentionPage[]>(() => {
-    const next = projectId
-      ? NO_PAGES
-      : (index?.pages ?? []).map((page) => ({
-          id: page.id,
-          project_id: page.project_id,
-          title: page.title,
-          icon: page.icon,
-        }));
+    const next = (index?.pages ?? []).map((page) => ({
+      id: page.id,
+      project_id: page.project_id,
+      title: page.title,
+      icon: page.icon,
+    }));
     return sameMentionPages(previousAccountPages.current, next) ? previousAccountPages.current : next;
-  }, [projectId, index?.pages]);
+  }, [index?.pages]);
   previousAccountPages.current = accountPages;
 
   const isOffered = useOfferedProject(projectId);
@@ -232,7 +231,17 @@ export function useMentionSources(
   );
   const offeredPages = projectId ? pages : offeredAccountPages;
 
-  return { projects: mentionProjects, issues, objectives, pages, accountPages, offered, offeredPages, armNow };
+  return {
+    projects: mentionProjects,
+    issues,
+    objectives,
+    pages,
+    accountPages,
+    offered,
+    offeredPages,
+    offeredAccountPages,
+    armNow,
+  };
 }
 
 /** `rows` itself when nothing is left out, so its consumers keep their identity. */

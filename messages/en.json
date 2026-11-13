@@ -2789,7 +2789,8 @@
     "mentionSectionSubpages": "Sub-pages",
     "mentionSectionRelations": "Relations",
     "mentionSectionThisIssue": "This issue",
-    "mentionSectionThisObjective": "This objective"
+    "mentionSectionThisObjective": "This objective",
+    "mentionSectionFromNumo": "Mentioned by Numo"
   },
   "Plan": {
     "tabDescription": "Description",

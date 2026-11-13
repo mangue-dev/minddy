@@ -78,8 +78,8 @@ export function useNumoMentionables(
   const [wanted, setWanted] = useState(false);
   const { members } = useNumoMembers(wanted, scopeProjectId);
   // Tickets and objectives come from the palette index, like the mentions
-  // a description: it already carries everything, of all my projects. Pages are
-  // those of the project in scope, or of every project without one (MIN-899).
+  // a description: it already carries everything, of all my projects. Pages
+  // are those of every project (MIN-899), the scoped project's first (MIN-969).
   const {
     projects: mentionProjects,
     issues,
@@ -88,17 +88,26 @@ export function useNumoMentionables(
     accountPages,
     offered,
     offeredPages,
+    offeredAccountPages,
     armNow,
   } = useMentionSources(
     scopeProjectId,
     wanted,
   );
 
-  // Without a project, every project's pages are offered (MIN-899): their
-  // pills must open them too. `accountPages` is empty in a project.
+  // In a project, its own pages come from its exact query, the other
+  // projects' from the index; without one, every page from the index.
   const linkedPages = useMemo(
-    () => (accountPages.length ? accountPages : pages),
-    [accountPages, pages],
+    () => (scopeProjectId
+      ? [...pages, ...accountPages.filter((page) => page.project_id !== scopeProjectId)]
+      : accountPages),
+    [scopeProjectId, pages, accountPages],
+  );
+  const pageOptions = useMemo(
+    () => (scopeProjectId
+      ? [...offeredPages, ...offeredAccountPages.filter((page) => page.project_id !== scopeProjectId)]
+      : offeredPages),
+    [scopeProjectId, offeredPages, offeredAccountPages],
   );
   const entityLinks = useMentionLinksFor({ issues, objectives, pages: linkedPages, references });
   // Pull requests, routines, the notebook, cycles and MCP servers (MIN-872),
@@ -165,13 +174,13 @@ export function useNumoMentionables(
         objectiveStatus: o.status,
       })),
       // Wiki pages (MIN-273): quoting “@Guide” is enough that Numo reads the
-      // document before responding. In a project, its own pages; without one,
-      // those of every project, each naming its project, since two wikis may
-      // both hold a “Guide” (MIN-899).
-      ...offeredPages
+      // document before responding. Every project's pages are offered, those
+      // of the project in scope first and bare, the others naming their
+      // project, since two wikis may both hold a “Guide” (MIN-899, MIN-969).
+      ...pageOptions
         .filter((p) => p.title.trim())
         .map((p) => {
-          const project = scopeProjectId ? undefined : projectNames.get(p.project_id);
+          const project = p.project_id === scopeProjectId ? undefined : projectNames.get(p.project_id);
           return {
             type: "page" as const,
             id: p.id,
@@ -183,7 +192,7 @@ export function useNumoMentionables(
         }),
       ...features.options.filter((option) => option.type !== "skill"),
     ],
-    [members, offered, offeredPages, scopeProjectId, projectNames, features.options],
+    [members, offered, pageOptions, scopeProjectId, projectNames, features.options],
   );
 
   const onMentionQuery = useCallback(

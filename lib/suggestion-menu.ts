@@ -56,10 +56,11 @@ export function stepSuggestion(current: number, count: number, direction: "up" |
 }
 
 /** The section of a mention list, by the type of what it cites. The first
-    four hold what the surface being written is tied to, listed before the
-    rest: its sub-pages, its relations, and the due date or plan of the very
-    issue or objective being written. */
+    five hold what the surface being written is tied to, listed before the
+    rest: what Numo cited in the conversation, the sub-pages, the relations,
+    and the due date or plan of the very issue or objective being written. */
 export type MentionSectionId =
+  | "fromNumo"
   | "subpages"
   | "relations"
   | "thisIssue"

@@ -2789,7 +2789,8 @@
     "mentionSectionSubpages": "Subpáginas",
     "mentionSectionRelations": "Relações",
     "mentionSectionThisIssue": "Este ticket",
-    "mentionSectionThisObjective": "Este objetivo"
+    "mentionSectionThisObjective": "Este objetivo",
+    "mentionSectionFromNumo": "Mencionado pelo Numo"
   },
   "Plan": {
     "tabDescription": "Descrição",
