@@ -2668,8 +2668,13 @@ html.marquee-drawing * {
 /* While the floating table of contents is open (components/pages/page-toc.tsx),
    the badges of the right margin step aside: its panel is translucent, and a
    badge seen through it reads as something to click among its entries. */
-:root:has([data-page-toc]:is(:hover, :focus-within)) .page-block-comment-host {
+:root:has([data-page-toc]:focus-within) .page-block-comment-host {
   visibility: hidden;
+}
+@media (hover: hover) and (pointer: fine) {
+  :root:has([data-page-toc]:hover) .page-block-comment-host {
+    visibility: hidden;
+  }
 }
 
 /* Below the width where the right margin exists, the pad returns INTO the stream,
