@@ -63,9 +63,11 @@ with the callback URL, select **Use this client for an AI-powered agent**, and
 add the scopes Google's guide lists for that service to the consent screen.
 minddy requests those scopes and offline access, so the connection keeps
 working after the first hour. Without a client ID and secret, signing in stops
-with a message asking for the OAuth app. Slack requires an internal or Marketplace app, Asana requires a
-registered MCP app, and Vercel requires provider approval of the MCP client. An
-entry in the catalog does not bypass these provider restrictions.
+with a message asking for the OAuth app. Slack requires an internal or Marketplace app, and Asana requires a
+registered MCP app. An entry in the catalog does not bypass these provider
+restrictions. Vercel needs no setup: minddy identifies itself with a Client ID
+Metadata Document, and Vercel's consent screen shows minddy's name, logo and
+domain before you approve the connection.
 
 Alternatively, choose **Bearer token** or **No authentication** in advanced settings. These settings
 accept encrypted custom headers, such as `X-API-Key`, and legacy **SSE** transport;

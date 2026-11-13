@@ -50,7 +50,7 @@ const failure = (error: string): ToolExecution => ({
 /** Provider prerequisites, in the words of the product knowledge article. */
 const SETUP_NOTES: Record<McpPreset["setup"], string> = {
   standard:
-    "Standard OAuth: minddy handles discovery, dynamic registration, PKCE and refresh tokens.",
+    "Standard OAuth: minddy handles discovery, client registration, PKCE and refresh tokens.",
   apiKey:
     "This provider authenticates with a static access token: create one in the provider's developer console and save it as the connection's bearer token.",
   oauthApp:

@@ -28,7 +28,7 @@ type OAuthData = {
 };
 /**
  * The authorization server refused to register minddy as a client. Some
- * providers (Vercel, Figma) only accept MCP clients they have reviewed, so
+ * providers (Figma) only accept MCP clients they have reviewed, so
  * retrying or checking credentials cannot help: the user needs the provider's
  * approval or an OAuth app of their own.
  */
@@ -77,6 +77,54 @@ export function isDesktopMcpOAuthState(state: string): boolean {
 export const mcpOAuthCallback = () =>
   `${oauthAppOrigin()}/api/account/mcp-connections/oauth/callback`;
 
+const MCP_CLIENT_METADATA_PATH = "/api/account/mcp-connections/oauth/client";
+
+/**
+ * The URL of minddy's Client ID Metadata Document, which is also its OAuth
+ * `client_id` wherever that document is used. Served by
+ * `app/api/account/mcp-connections/oauth/client/route.ts`.
+ */
+export const mcpClientMetadataUrl = () =>
+  `${oauthAppOrigin()}${MCP_CLIENT_METADATA_PATH}`;
+
+/**
+ * Authorization servers that get the metadata document instead of dynamic
+ * registration. Vercel refuses dynamic registration from clients it has not
+ * reviewed (MIN-828) but accepts any client identified by a metadata document
+ * since 2026-11-02 (MIN-835). Other providers that advertise
+ * `client_id_metadata_document_supported` (Notion, Linear, Sentry…) keep
+ * dynamic registration, which already works for them and does not require
+ * the provider to reach minddy's origin.
+ */
+const CLIENT_METADATA_DOCUMENT_ISSUERS = new Set(["https://vercel.com"]);
+
+/** What minddy declares about itself, at registration and in its document. */
+function mcpClientMetadata(tokenEndpointAuthMethod: "none" | "client_secret_post") {
+  return {
+    client_name: "Minddy Numo",
+    redirect_uris: [mcpOAuthCallback()],
+    grant_types: ["authorization_code", "refresh_token"],
+    response_types: ["code"],
+    token_endpoint_auth_method: tokenEndpointAuthMethod,
+  };
+}
+
+/**
+ * minddy's Client ID Metadata Document (draft-ietf-oauth-client-id-metadata-document):
+ * a public client whose `client_id` is the document's own URL. Vercel shows
+ * the name, the logo (a PNG under 100 KB) and the serving host on its consent
+ * screen.
+ */
+export function mcpClientMetadataDocument() {
+  const origin = oauthAppOrigin();
+  return {
+    client_id: mcpClientMetadataUrl(),
+    ...mcpClientMetadata("none"),
+    client_uri: origin,
+    logo_uri: `${origin}/web-app-manifest-192x192.png`,
+  };
+}
+
 function readData(encrypted: string | null, version = 0): OAuthData {
   return encrypted
     ? (JSON.parse(version ? encrypted : decryptMcpToken(encrypted)!) as OAuthData)
@@ -114,14 +162,21 @@ function providerFor(
 ): OAuthClientProvider {
   return {
     redirectUrl: mcpOAuthCallback(),
-    clientMetadata: {
-      client_name: "Minddy Numo",
-      redirect_uris: [mcpOAuthCallback()],
-      grant_types: ["authorization_code", "refresh_token"],
-      response_types: ["code"],
-      token_endpoint_auth_method: data.client?.client_secret
-        ? "client_secret_post"
-        : "none",
+    clientMetadata: mcpClientMetadata(
+      data.client?.client_secret ? "client_secret_post" : "none",
+    ),
+    // Read by the SDK after discovery and only when no client is stored yet;
+    // it then uses the URL as `client_id` when the server advertises
+    // `client_id_metadata_document_supported`. A provider can only fetch the
+    // document over HTTPS, so a local origin keeps dynamic registration.
+    get clientMetadataUrl() {
+      const issuer = data.discovery?.authorizationServerMetadata?.issuer;
+      const url = mcpClientMetadataUrl();
+      return issuer &&
+        CLIENT_METADATA_DOCUMENT_ISSUERS.has(issuer.replace(/\/+$/, "")) &&
+        url.startsWith("https://")
+        ? url
+        : undefined;
     },
     state: () => {
       if (!state) throw new Error("Reconnect MCP from account settings");
@@ -252,6 +307,14 @@ export async function startMcpOAuth(
   if (
     Array.isArray(registeredRedirects) &&
     !registeredRedirects.includes(mcpOAuthCallback())
+  )
+    delete data.client;
+  // A client identified by minddy's metadata document is bound to the origin
+  // that served it: the provider fetches that URL and checks its redirect URIs.
+  const clientId = data.client?.client_id;
+  if (
+    clientId?.endsWith(MCP_CLIENT_METADATA_PATH) &&
+    clientId !== mcpClientMetadataUrl()
   )
     delete data.client;
   const fetchFn = mcpFetch(AbortSignal.timeout(MCP_TIMEOUT_MS));
