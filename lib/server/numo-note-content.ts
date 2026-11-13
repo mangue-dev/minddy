@@ -3,13 +3,17 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EncryptedRowCodec, type StoredRow } from "./encryption/row-codec";
 import { getEncryptedStore } from "./encryption/registry";
+import { isContentEncryptionEnabled } from "./encryption/content-config";
 import { shouldProtectProjects } from "./project-content";
 
 /**
  * The codec of Numo's notes (MIN-914). Title and body are model-written free
  * text, sealed under the project's key once project content encryption is
- * active. Kept apart from `numo-notes.ts` so the inbox and push readers do not
- * import the writer, which imports the notification insert path.
+ * active. A personal note (MIN-982, a reminder without a project) is sealed
+ * under its user's key once user content encryption is enabled, like the
+ * reminder's instruction. Kept apart from `numo-notes.ts` so the inbox and
+ * push readers do not import the writer, which imports the notification
+ * insert path.
  */
 
 export interface NumoNoteContent {
@@ -24,20 +28,26 @@ function validContent(row: Row): boolean {
     typeof row.body === "string" && !!row.body.trim();
 }
 
+/** The project's key, or for a personal note the user's. */
 function scope(row: Row) {
-  if (typeof row.project_id !== "string" || !row.project_id) {
-    throw new Error("Numo note project is required");
+  if (typeof row.project_id === "string" && row.project_id) {
+    return { kind: "project" as const, id: row.project_id };
   }
-  return { kind: "project" as const, id: row.project_id };
+  if (row.project_id == null && typeof row.user_id === "string" && row.user_id) {
+    return { kind: "user" as const, id: row.user_id };
+  }
+  throw new Error("Numo note owner is required");
 }
 
-/** Seal a complete note before its insert when project content is protected. */
+/** Seal a complete note before its insert when its owner's content is protected. */
 export async function encodeNumoNote(row: Row,
   options: { service?: SupabaseClient; force?: boolean } = {}): Promise<Row> {
   if (!validContent(row) || typeof row.id !== "string" || !row.id) {
     throw new Error("Incomplete Numo note");
   }
-  const protect = options.force || await shouldProtectProjects(options.service);
+  const personal = scope(row).kind === "user";
+  const protect = options.force ||
+    (personal ? isContentEncryptionEnabled() : await shouldProtectProjects(options.service));
   if (!protect) return { ...row, encryption_version: 0, encrypted_content: null };
   return new EncryptedRowCodec(getEncryptedStore()).encode({
     ...row, encryption_version: 0, encrypted_content: null,

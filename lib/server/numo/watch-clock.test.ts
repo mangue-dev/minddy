@@ -132,11 +132,17 @@ vi.mock("./watches", () => ({
   },
 }));
 
-const notes = vi.hoisted(() => [] as Array<{ title: string; body: string; link: unknown; dedupe?: boolean }>);
+const notes = vi.hoisted(() => [] as Array<{
+  title: string; body: string; link: unknown; dedupe?: boolean; projectId?: string | null;
+}>);
 vi.mock("@/lib/server/numo-notes", () => ({
   NUMO_NOTE_BODY_MAX: 600,
-  sendNumoNote: async (input: { title: string; body: string; link: unknown; dedupe?: boolean }) => {
-    notes.push({ title: input.title, body: input.body, link: input.link, dedupe: input.dedupe });
+  sendNumoNote: async (input: {
+    title: string; body: string; link: unknown; dedupe?: boolean; projectId: string | null;
+  }) => {
+    notes.push({
+      title: input.title, body: input.body, link: input.link, dedupe: input.dedupe, projectId: input.projectId,
+    });
     return world.noteResult;
   },
 }));
@@ -332,6 +338,7 @@ describe("dispatchNumoWatch", () => {
     expect(startNumoIntent).not.toHaveBeenCalled();
     expect(notes).toEqual([{
       title: "[@](mention:issue/44444444-4444-4444-8444-444444444444) is now “Done”", body: "Tell the client", link: { type: "issue", id: ISSUE }, dedupe: false,
+      projectId: PROJECT,
     }]);
   });
 
@@ -544,5 +551,55 @@ describe("recurring reminders (MIN-953)", () => {
       await vi.waitFor(() => expect(notes).toHaveLength(1));
       expect(world.watches[0]).toMatchObject({ outcome: "acted", consecutive_failures: 0 });
     });
+  });
+});
+
+describe("personal reminders (MIN-982)", () => {
+  /** Every day at 09:00 in Paris, in no project; its occurrence is five minutes late. */
+  const DUE = "2026-11-08T07:55:00.000Z";
+  const AT_NINE = new Date("2026-11-08T08:00:00.000Z");
+  const seed = (overrides: Row = {}) => {
+    world.watches = [{
+      ...watchItem({
+        project_id: null, target_type: "date", target_id: null, condition: { kind: "date" }, action: "act",
+        instruction: "Check the web for a concert by X", recurrence: { kind: "daily", time: "09:00" },
+        grants: ["notification"], conversation_id: null,
+      }),
+      status: "active", fire_at: DUE, fired_at: null, ...overrides,
+    }];
+  };
+
+  it("runs its occurrence with no project, whatever the user's project access", async () => {
+    seed();
+    // No project to open: the reminder still belongs to its user.
+    world.access = false;
+    expect(await runNumoWatchClock({ now: AT_NINE })).toMatchObject({ fired: 1, canceled: 0 });
+    const input = startNumoIntent.mock.calls[0][0];
+    expect(input).toMatchObject({
+      userId: ALICE, projectId: null, source: "reminder", timezone: "Europe/Paris",
+      reminder: {
+        watchId: "w1", projectId: null, targetType: "date",
+        recurring: { firedAt: AT_NINE.toISOString(), grants: ["notification"] },
+      },
+    });
+    expect(world.watches[0]).toMatchObject({ status: "active", outcome: "acted", fire_at: "2026-11-09T07:55:00.000Z" });
+    expect(notes).toEqual([]);
+  });
+
+  it("tells the user about a failed occurrence with a personal note", async () => {
+    seed();
+    startNumoIntent.mockRejectedValue(new Error("boom"));
+    await runNumoWatchClock({ now: AT_NINE });
+    expect(notes).toEqual([expect.objectContaining({
+      projectId: null, link: null, body: expect.stringContaining("could not carry it out"),
+    })]);
+  });
+
+  it("a one-off personal reminder sends its note in no project", async () => {
+    seed({ action: "notify", recurrence: null, grants: [], instruction: "Call the venue" });
+    world.access = false;
+    expect(await runNumoWatchClock({ now: AT_NINE })).toMatchObject({ fired: 1 });
+    expect(notes).toEqual([expect.objectContaining({ projectId: null, link: null, body: "Call the venue" })]);
+    expect(world.watches[0]).toMatchObject({ status: "fired", outcome: "notified" });
   });
 });

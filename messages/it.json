@@ -3096,6 +3096,7 @@
     "numoWatchWhenDate": "Il {date}",
     "numoWatchActionNotify": "Numo te lo ricorda",
     "numoWatchActionAct": "Numo se ne occupa",
+    "numoWatchPersonal": "Personale",
     "numoWatchExpires": "Scade il {date}",
     "numoWatchCancel": "Annulla promemoria",
     "numoWatchCancelTitle": "Annullare questo promemoria?",

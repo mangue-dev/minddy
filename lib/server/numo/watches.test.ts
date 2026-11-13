@@ -161,6 +161,24 @@ describe("createNumoWatch", () => {
     expect(late.expires_at).toBe("2027-02-07T11:00:00.000Z");
   });
 
+  it("sets a personal date reminder, one-off or recurring, and no personal reminder on a record (MIN-982)", async () => {
+    const service = fakeService([]);
+    const once = await create(service, ALICE, {
+      projectId: null, target: { type: "date", id: null, condition: { kind: "date" }, fireAt: "2026-11-09T09:00:00+01:00" },
+    });
+    expect(once).toMatchObject({ project_id: null, target_type: "date", fire_at: "2026-11-09T08:00:00.000Z" });
+    const daily = await create(service, ALICE, {
+      projectId: null, action: "act", timezone: "Europe/Paris",
+      target: { type: "date", id: null, condition: { kind: "date" }, fireAt: "" },
+      recurrence: { kind: "daily", time: "09:00" },
+    });
+    // 13:00 in Paris on the 8th: the first occurrence is the next morning at 09:00.
+    expect(daily).toMatchObject({ project_id: null, recurrence: { kind: "daily", time: "09:00" },
+      fire_at: "2026-11-09T08:00:00.000Z" });
+    await expect(create(service, ALICE, { projectId: null }))
+      .rejects.toMatchObject({ code: "invalid_project" });
+  });
+
   it("refuses an instruction longer than a note can hold", async () => {
     await expect(create(fakeService([]), ALICE, { instruction: "x".repeat(501) }))
       .rejects.toMatchObject({ code: "invalid_instruction" });

@@ -945,7 +945,7 @@
       "functionReferences": []
     },
     "guard_numo_note_content()": {
-      "sha256": "c592437f65891714f4ea9ccbaeccec0e28a31fad12f4e9e3c0d2d9dff05875e0",
+      "sha256": "fe5c197cf9eb71bbd9cb1410c62927e7ecec0e28af614b647f7f892faa92cf68",
       "securityDefiner": true,
       "configuration": [
         "search_path=\"\""

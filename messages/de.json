@@ -3096,6 +3096,7 @@
     "numoWatchWhenDate": "Am {date}",
     "numoWatchActionNotify": "Numo erinnert dich",
     "numoWatchActionAct": "Numo erledigt es",
+    "numoWatchPersonal": "Persönlich",
     "numoWatchExpires": "Läuft am {date} ab",
     "numoWatchCancel": "Wiedervorlage entfernen",
     "numoWatchCancelTitle": "Diese Wiedervorlage entfernen?",

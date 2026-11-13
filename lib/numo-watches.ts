@@ -98,7 +98,8 @@ export type NumoWatchTarget =
 export interface NumoWatchItem {
   id: string;
   user_id: string;
-  project_id: string;
+  /** Null for a personal reminder (MIN-982): a date reminder of no project. */
+  project_id: string | null;
   target_type: "issue" | "objective" | "date";
   target_id: string | null;
   condition: { kind: "status"; status: string } | { kind: "comment" } | { kind: "date" };
@@ -269,7 +270,8 @@ export function nextOccurrence(recurrence: NumoWatchRecurrence, timeZone: string
 export interface NumoWatchProposal {
   /** The id the reminder takes, so confirming twice writes once. */
   id: string;
-  project_id: string;
+  /** Null for a personal reminder (MIN-982). */
+  project_id: string | null;
   instruction: string;
   recurrence: NumoWatchRecurrence;
   grants: NumoWatchGrant[];
@@ -291,12 +293,12 @@ export function parseNumoWatchProposal(value: unknown): NumoWatchProposal | null
   const instruction = normalizeNumoWatchInstruction(raw.instruction);
   const replaces = raw.replaces === null || raw.replaces === undefined ? null : raw.replaces;
   if (typeof raw.id !== "string" || !UUID.test(raw.id)) return null;
-  if (typeof raw.project_id !== "string" || !UUID.test(raw.project_id)) return null;
+  if (raw.project_id !== null && (typeof raw.project_id !== "string" || !UUID.test(raw.project_id))) return null;
   if (!recurrence || !grants || !instruction || !isValidTimeZone(raw.timezone)) return null;
   if (replaces !== null && (typeof replaces !== "string" || !UUID.test(replaces))) return null;
   return {
     id: raw.id.toLowerCase(),
-    project_id: raw.project_id.toLowerCase(),
+    project_id: typeof raw.project_id === "string" ? raw.project_id.toLowerCase() : null,
     instruction,
     recurrence,
     grants,
