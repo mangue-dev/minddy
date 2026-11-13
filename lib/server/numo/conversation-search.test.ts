@@ -20,9 +20,14 @@ import {
   ConversationSearchError,
   excerptAround,
   readNumoConversation,
+  READ_MESSAGE_CHARS,
   searchNumoConversations,
   searchTerms,
 } from "./conversation-search";
+import {
+  getToolResultCharLimit,
+  serializeToolResult,
+} from "@/lib/server/assistant/tool-result-serialization";
 
 type Row = Record<string, unknown>;
 
@@ -217,6 +222,29 @@ describe("readNumoConversation (MIN-956)", () => {
       { conversationId: LAUNCH, offset: first.next_offset });
     expect(second.messages).toHaveLength(7);
     expect(second.next_offset).toBeNull();
+  });
+
+  it("bounds a page by its text so next_offset is never cut off (MIN-974)", async () => {
+    for (let index = 0; index < 12; index += 1) {
+      tables.assistant_messages.push(message(LAUNCH, "assistant", `${index} `.repeat(5_000),
+        `2026-11-08T11:${String(index).padStart(2, "0")}:00Z`));
+    }
+    const { client } = fakeService(tables);
+    const seen: string[] = [];
+    let offset: number | null = 0;
+    while (offset !== null) {
+      const page: Awaited<ReturnType<typeof readNumoConversation>> =
+        await readNumoConversation(client, USER, { conversationId: LAUNCH, offset });
+      const serialized = serializeToolResult(page, getToolResultCharLimit("read_conversation"));
+      expect(serialized).not.toContain("[truncated: only the first");
+      expect(page.messages.length).toBeGreaterThan(0);
+      seen.push(...page.messages.map((entry) => entry.text));
+      offset = page.next_offset;
+    }
+    const long = seen.filter((text) => text.length > READ_MESSAGE_CHARS);
+    expect(long).toHaveLength(12);
+    // A message past the per-message cap says how much was left out.
+    expect(long[0]).toMatch(/^(0 )+0?\n… \[message truncated, \d+ characters omitted\]$/);
   });
 
   it("does not open another user's conversation", async () => {

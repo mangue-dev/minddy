@@ -49,6 +49,7 @@ import { authorizedSkillsNotes } from "@/lib/server/assistant/skills";
 import { commandNote } from "@/lib/server/assistant/commands";
 import { buildDocumentationHelpPrompt } from "@/lib/server/assistant/documentation-help";
 import { sanitizeAssistantMessageContent } from "@/lib/server/assistant/sanitize";
+import { replayedToolResult, toolCallArgumentsById } from "@/lib/server/assistant/tool-result-serialization";
 import {
   CONVERSATION_ASSISTANT_TOOLS,
   ROUTINE_UNATTENDED_EXCLUDED_TOOLS,
@@ -719,6 +720,7 @@ async function buildExecutionInput(input: {
       : [],
   );
 
+  const toolArguments = toolCallArgumentsById(history);
   // Where each history message is stored, so a summary can mark the last one it covers.
   const origins = new WeakMap<ChatMessage, StoredMessageOrigin>();
   // Each message resolves its mentions and attachments independently; a
@@ -730,10 +732,15 @@ async function buildExecutionInput(input: {
       || (message.role === "tool" && recoveringToolCallIds.has(message.tool_call_id ?? ""))
     );
     if (recoveringPendingMessage) return null;
+    // A tool result keeps its stored JSON under its own tool's ceiling, as in
+    // the turn that produced it (MIN-974); chat text takes the message cap.
+    const text = message.role === "tool"
+      ? replayedToolResult(message.content, message.tool_name,
+        toolArguments.get(message.tool_call_id ?? ""))
+      : sanitizeAssistantMessageContent(message.content);
     // A typed mention (MIN-872) reaches the model named as the conversation's
     // user may see it: the current label, or "unavailable". This covers the
     // user's messages and Numo's own.
-    const text = sanitizeAssistantMessageContent(message.content);
     // Numo's own messages too: its Home summary stores mentions without
     // their names, unreadable to the model as they are.
     const sanitized = ((message.role === "user" || message.role === "assistant") && text.includes("](mention:")

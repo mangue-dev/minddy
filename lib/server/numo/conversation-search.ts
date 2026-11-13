@@ -35,10 +35,16 @@ const MESSAGES_PER_BATCH = 400;
 const SNIPPETS_PER_CONVERSATION = 3;
 const SNIPPET_CHARS = 240;
 const OPENING_CHARS = 200;
-/** Messages returned by one read_conversation page. */
+/** Messages returned by one read_conversation page, at most. */
 export const CONVERSATION_READ_PAGE = 40;
 /** Characters kept of one message in a transcript page. */
-const READ_MESSAGE_CHARS = 4_000;
+export const READ_MESSAGE_CHARS = 8_000;
+/**
+ * Message text one page carries, at most. With its JSON it stays within
+ * read_conversation's result ceiling, so the page is never cut and its
+ * next_offset, at the end, always reaches the model (MIN-974).
+ */
+export const READ_PAGE_CHARS = 20_000;
 /** Messages a transcript may span: a safety bound, far above a real thread. */
 const READ_MESSAGE_LIMIT = 2_000;
 
@@ -392,13 +398,25 @@ export async function readNumoConversation(service: SupabaseClient, userId: stri
   const texts = conversationTexts(await hydrate(service, userId, rows));
   const start = typeof input.offset === "number" && Number.isInteger(input.offset) && input.offset > 0
     ? input.offset : 0;
-  const end = start + CONVERSATION_READ_PAGE;
+  // A page ends at 40 messages or at the text budget, whichever comes first;
+  // it always holds at least one message, so reading moves forward.
+  const messages: ConversationText[] = [];
+  let pageChars = 0;
+  let end = start;
+  while (end < texts.length && messages.length < CONVERSATION_READ_PAGE) {
+    const message = texts[end];
+    const omitted = message.text.length - READ_MESSAGE_CHARS;
+    const text = omitted > 0
+      ? `${message.text.slice(0, READ_MESSAGE_CHARS)}\n… [message truncated, ${omitted} characters omitted]`
+      : message.text;
+    if (messages.length > 0 && pageChars + text.length > READ_PAGE_CHARS) break;
+    messages.push({ ...message, text });
+    pageChars += text.length;
+    end += 1;
+  }
   return {
     ...summary(row, await titleOf(userId, row)),
-    messages: texts.slice(start, end).map((message) => ({
-      ...message, text: message.text.length > READ_MESSAGE_CHARS
-        ? `${message.text.slice(0, READ_MESSAGE_CHARS)}…` : message.text,
-    })),
+    messages,
     total: texts.length,
     next_offset: end < texts.length ? end : null,
   };
