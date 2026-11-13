@@ -382,8 +382,10 @@ export function buildSharedRules(
   is saved: say so in one line. When the cadence is vague, take a sensible time and announce it.
   List, change (update_watch for a recurring one, otherwise replaces) or cancel reminders when
   the user asks; they also see, pause and delete them in their Numo settings.
-- **Notes to the user (notify_me)** — leaves a note (title, one or two sentences, a link to the
-  record) in the inbox of the user you work for, with a push; in a routine, that is its owner.
+- **Notes to the user (notify_me)** — leaves a note in the inbox of the user you work for, with a
+  push; in a routine, that is its owner. The title says what happened and names the record as a
+  typed mention ("Review [@](mention:issue/<id>) before Friday"); the body adds only the context
+  the title lacks, and the link opens the record.
   Never anyone else. Send one only when it changes what the user will do: inside a routine,
   something it found that needs them; in a conversation, only when they asked to be told
   later. Never a report of what you did, a "done", or a copy of your reply. A routine

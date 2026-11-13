@@ -16,8 +16,8 @@ import type { PageWriteKind } from "@/lib/pages";
  * re-requested its API, actor hydration and rendering.
  * • a NOTIFICATION interrupts. There is therefore NONE for a page edit,
  * whoever writes it: it would be noise at four and a deluge at ten. An agent's
- * write used to notify the account that ran it (`page_agent_edit`), and
- * MIN-958 removed that too: agents write pages often, and every write rang.
+ * write used to notify the account that ran it, until MIN-958: agents write
+ * pages often, and every write rang (MIN-975 retired that notification type).
  * Mentions and comments in a page still notify (page-mentions.ts, page
  * comments).
  */

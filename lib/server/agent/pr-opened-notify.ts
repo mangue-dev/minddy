@@ -12,10 +12,8 @@ import { rowProvider, type PullRequestRow } from "./pull-requests";
  * Inbox: "a pull request has just opened" — to ALL project members
  * where it reads.
  *
- * This is the only moment in the life of a PR that didn't trigger anything. `pr_reviewed`
- * and `pr_merged` (MIN-138) warn the author of the run when rereading or merging
- * SA pull request; the opening, for its part, does not concern its author but
- * the others — it is the moment when the work awaits the eyes.
+ * The opening is the one moment of a pull request's life that notifies: it
+ * concerns not its author but the others, since the work now awaits review.
  *
  * **It does not matter where it comes from**: the one that Numo opens at the end of the run like
  * the one that a human opens from the forge. A PR exists → the team learns it.

@@ -68,16 +68,12 @@ export interface NotificationRow {
   issue_count?: number | null;
 }
 
-/** The agent types displace each other: one live agent notification per issue.
- * `routine_done` stays among them for the rows written before MIN-924: a
- * successful routine run no longer notifies, and a routine's failure or
- * question replaces the unread line of its previous run, so a daily routine
- * does not stack one line per morning. */
+/** The agent types displace each other: a routine's failure or question
+ * replaces the unread line of its previous run, so a daily routine does not
+ * stack one line per morning. */
 const AGENT_TYPES: readonly NotificationType[] = [
-  "agent_done",
   "agent_question",
   "agent_failed",
-  "routine_done",
 ];
 
 const siblingTypes = (type: NotificationType): readonly NotificationType[] =>

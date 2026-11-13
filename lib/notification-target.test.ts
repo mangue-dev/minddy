@@ -1,18 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { notificationTargetPath, NOTIFICATION_LINE_KEYS } from "./notification-target";
-import en from "@/messages/en.json";
+import { notificationTargetPath } from "./notification-target";
 
 const P = "11111111-1111-1111-1111-111111111111";
 
 describe("notificationTargetPath", () => {
-  it("ouvre l'objectif quand la ligne en porte un", () => {
+  it("opens the objective when the row points at one", () => {
     expect(
       notificationTargetPath({ project_id: P, issue_id: null, objective_id: "obj" })
     ).toBe(`/projects/${P.slice(0, 8)}/objectives?open=obj`);
   });
 
-  it("ouvre le retour du board quand la ligne en porte un", () => {
+  it("opens the board post when the row points at one", () => {
     expect(
       notificationTargetPath({ project_id: P, issue_id: null, feedback_post_id: "fp" })
     ).toBe(`/projects/${P.slice(0, 8)}/feedback?post=fp`);
@@ -26,7 +25,7 @@ describe("notificationTargetPath", () => {
 
   // The order of priority is the contract: a goal line that drags a
   // context `issue_id` should open the GOAL, not the ticket.
-  it("fait passer l'objectif avant le retour, et le retour avant le ticket", () => {
+  it("prefers the objective over the post, and the post over the issue", () => {
     expect(
       notificationTargetPath({
         project_id: P,
@@ -75,15 +74,5 @@ describe("a backfill line (MIN-903)", () => {
   it("opens the project that holds the assigned issues", () => {
     expect(notificationTargetPath({ type: "smart_assign_batch", project_id: P, issue_id: null }))
       .toBe(`/projects/${P.slice(0, 8)}`);
-  });
-});
-
-describe("NOTIFICATION_LINE_KEYS", () => {
-  // The `MessageKey<"Inbox">` typing already keeps the promise at compile time;
-  // this test also involves building a catalog amputated by hand.
-  it("points to keys that really exist in the Inbox namespace", () => {
-    for (const key of Object.values(NOTIFICATION_LINE_KEYS)) {
-      expect(en.Inbox, `Inbox.${key}`).toHaveProperty(key);
-    }
   });
 });

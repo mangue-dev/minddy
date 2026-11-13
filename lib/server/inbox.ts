@@ -17,6 +17,7 @@ import { readProjectNames } from "@/lib/server/project-content";
 import { feedbackPostStore } from "@/lib/server/feedback-post-store";
 import { displayName } from "@/lib/display-name";
 import type { MyNotification } from "@/lib/types";
+import type { IssueStatus } from "@/lib/issue-constants";
 
 /** Maximum comment excerpt shown in the inbox and exposed to Numo. */
 const EXCERPT_MAX = 140;
@@ -188,7 +189,7 @@ export async function readInboxNotifications({
     { keyOwners, keyOwnerMembers },
   ] = await Promise.all([
     issueIds.length && projectIds.length
-      ? issueStore(service).select("id, project_id, number, title")
+      ? issueStore(service).select("id, project_id, number, title, status")
           .in("id", issueIds)
           .in("project_id", projectIds)
           .is("deleted_at", null)
@@ -198,6 +199,7 @@ export async function readInboxNotifications({
             project_id: string;
             number: number;
             title: string;
+            status: IssueStatus;
           }[],
         }),
     objectiveIds.length && projectIds.length
@@ -281,11 +283,13 @@ export async function readInboxNotifications({
     readable.map((n) => n.numo_note_id as string | null).filter(
       (id): id is string => !!id), userId) ?? new Map();
   if (objectivesError) return { notifications: [], error: "Unable to read notification objectives" };
-  // A backfill line (MIN-903) is titled by its project: the name is read for
-  // those rows only, in projects the reader can still open.
+  // A backfill line (MIN-903) and a feedback line point at their project's
+  // pill: the name is read for those rows only, in projects the reader can
+  // still open.
   const batchProjectNames = await readProjectNames(
     service,
-    readable.filter((n) => n.type === "smart_assign_batch").map((n) => n.project_id as string | null),
+    readable.filter((n) => n.type === "smart_assign_batch" || n.feedback_post_id)
+      .map((n) => n.project_id as string | null),
     userId,
   );
 
@@ -310,6 +314,10 @@ export async function readInboxNotifications({
   // target's current label, or the neutral one — never the stored label.
   const readableBodies = await readResultForReader(userId, Object.fromEntries(
     (comments ?? []).map((item) => [String(item.id), String(item.body ?? "")])));
+  // A Numo note may mention records in its title and body (MIN-975): the
+  // labels it carries are the reader's, like a comment excerpt's.
+  const readableNotes = await readResultForReader(userId, Object.fromEntries(
+    [...numoNotes].map(([id, note]) => [id, { title: note.title, body: note.body }])));
   const inProject = <T extends { project_id: string }>(
     item: T | undefined,
     projectId: unknown,
@@ -463,6 +471,7 @@ export async function readInboxNotifications({
         issue_id: n.issue_id,
         issue_number: issue?.number ?? null,
         issue_title: issue?.title ?? null,
+        issue_status: issue?.status ?? null,
         objective_id: n.objective_id ?? null,
         objective_name: objective?.name ?? null,
         feedback_post_id: n.feedback_post_id ?? null,
@@ -472,6 +481,7 @@ export async function readInboxNotifications({
         pull_request_id: n.pull_request_id ?? null,
         pull_request_number: pullRequest?.number ?? null,
         pull_request_title: pullRequest?.title ?? null,
+        pull_request_provider: pullRequest?.provider ?? null,
         page_id: n.page_id ?? null,
         page_title: page?.title ?? null,
         block_id: n.block_id ?? null,
@@ -496,14 +506,14 @@ export async function readInboxNotifications({
           ? excerptOf(mentionPlainText(readableBodies[String(comment.id)] ?? ""))
           : null,
         numo_note_title: n.numo_note_id
-          ? numoNotes.get(n.numo_note_id)?.title ?? null
+          ? readableNotes[n.numo_note_id]?.title ?? null
           : null,
         numo_note_body: n.numo_note_id
-          ? numoNotes.get(n.numo_note_id)?.body ?? null
+          ? readableNotes[n.numo_note_id]?.body ?? null
           : null,
         issue_count: typeof n.issue_count === "number" ? n.issue_count : null,
         project_name:
-          n.type === "smart_assign_batch" && n.project_id
+          (n.type === "smart_assign_batch" || n.feedback_post_id) && n.project_id
             ? batchProjectNames.get(n.project_id) ?? null
             : null,
       };

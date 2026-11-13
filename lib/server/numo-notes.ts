@@ -7,6 +7,7 @@ import { issueStore } from "./issue-store";
 import { objectiveStore } from "./objective-store";
 import { insertNotifications, type NotificationRow } from "./notifications";
 import { resolveNotificationPrefs } from "@/lib/notification-prefs";
+import { splitMentionLinks } from "@/lib/mention-link";
 
 /**
  * Numo's notes (MIN-914): a short message Numo writes into the inbox of the
@@ -19,8 +20,14 @@ import { resolveNotificationPrefs } from "@/lib/notification-prefs";
  * encryption is active; the notification row only points at the note.
  */
 
+/** What the reader sees of a title and a body: a mention counts as its pill. */
 export const NUMO_NOTE_TITLE_MAX = 120;
 export const NUMO_NOTE_BODY_MAX = 600;
+/** What `numo_notes` stores, mention links included (its check constraint). */
+const NUMO_NOTE_TITLE_STORED_MAX = 200;
+const NUMO_NOTE_BODY_STORED_MAX = 1000;
+/** The room a mention pill takes in a line, whatever its link's length. */
+const MENTION_VISIBLE_LENGTH = 12;
 /** Notes one Numo turn may send. A turn that needs more is reporting, not warning. */
 export const NUMO_NOTES_PER_TURN = 5;
 /** The same note to the same target is sent once in this window. */
@@ -39,10 +46,26 @@ export interface NumoNoteLink {
   id: string;
 }
 
-/** Collapse whitespace and cap the length, so a note always fits its surfaces. */
-function clean(value: unknown, max: number): string {
+/** The length a reader sees: each typed mention reads as one pill. */
+function visibleLength(text: string): number {
+  return splitMentionLinks(text).reduce((length, piece) =>
+    length + (typeof piece === "string" ? piece.length : MENTION_VISIBLE_LENGTH), 0);
+}
+
+/**
+ * Collapse whitespace and cap the length, so a note always fits its surfaces.
+ * Typed mentions (MIN-975) count as the pill they draw, and a cut never
+ * leaves half a mention behind.
+ */
+function clean(value: unknown, max: number, storedMax: number): string {
   if (typeof value !== "string") return "";
-  return value.replace(/\s+/g, " ").trim().slice(0, max).trim();
+  const text = value.replace(/\s+/g, " ").trim();
+  if (visibleLength(text) <= max && text.length <= storedMax) return text;
+  const cut = text.slice(0, max);
+  // A mention the cut went through is dropped whole.
+  const at = cut.lastIndexOf("[@");
+  const whole = at < 0 || splitMentionLinks(cut.slice(at)).some((piece) => typeof piece !== "string");
+  return (whole ? cut : cut.slice(0, at)).trim();
 }
 
 export function parseNumoNoteLink(value: unknown): NumoNoteLink | null | "invalid" {
@@ -140,8 +163,8 @@ export async function sendNumoNote(input: {
   now?: Date;
 }): Promise<SendNumoNoteResult> {
   const { service, userId, projectId, link } = input;
-  const title = clean(input.title, NUMO_NOTE_TITLE_MAX);
-  const body = clean(input.body, NUMO_NOTE_BODY_MAX);
+  const title = clean(input.title, NUMO_NOTE_TITLE_MAX, NUMO_NOTE_TITLE_STORED_MAX);
+  const body = clean(input.body, NUMO_NOTE_BODY_MAX, NUMO_NOTE_BODY_STORED_MAX);
   if (!title) return { ok: false, error: "title is required." };
   if (!body) return { ok: false, error: "body is required." };
 

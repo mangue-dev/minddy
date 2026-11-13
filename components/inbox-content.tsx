@@ -1,13 +1,10 @@
 "use client";
 
-import { TruncatedText } from "@/components/ui/truncated-text";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, AtIcon, Delete02Icon, GitMergeIcon, GitPullRequestIcon, InboxIcon, Mail01Icon, MailOpen01Icon, Megaphone01Icon, Message01Icon, MoreHorizontalIcon, ServerStack01Icon, Settings01Icon, UserAdd01Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import Link from "@/components/app-link";
+import { ArrowDown01Icon, Delete02Icon, InboxIcon, MailOpen01Icon, MoreHorizontalIcon, Settings01Icon } from "@hugeicons/core-free-icons";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppRouter } from "@/lib/use-app-router";
-import { useFormatter, useTranslations } from "next-intl";
-import { useTimeAgo } from "@/lib/use-live-now";
+import { useTranslations } from "next-intl";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import {
   AlertDialog,
@@ -24,44 +21,16 @@ import { IconButton } from "@/components/ui/icon-button";
 import { SearchSelect } from "@/components/search-select";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
-import { Spinner } from "@/components/ui/spinner";
 import { InboxRowsSkeleton } from "@/components/inbox-skeleton";
+import { InboxInvitationRow, InboxNotificationRow } from "@/components/inbox-row";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { EmptyScene } from "@/components/empty-scene";
-import {
-  AutomationAvatar,
-  McpAvatar,
-  NumoAvatar,
-  SmartAssignAvatar,
-} from "@/components/actor-avatars";
-import { UserAvatar } from "@/components/user-avatar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { notificationLineValues, notificationTitle } from "@/lib/notification-line";
 import { useNotifications } from "@/lib/use-notifications";
 import { useInvitationResponder } from "@/lib/use-invitations-query";
-import {
-  notificationLineKey,
-  notificationTargetPath,
-} from "@/lib/notification-target";
+import { notificationTargetPath } from "@/lib/notification-target";
 import { useScrollFade } from "@/lib/use-scroll-fade";
-import type {
-  MyInvitation,
-  MyNotification,
-  NotificationType,
-} from "@/lib/types";
-
-const AGENT_TYPES: readonly NotificationType[] = [
-  "agent_done",
-  "agent_question",
-  "agent_failed",
-  "routine_done",
-  "page_agent_edit",
-];
+import type { MyNotification } from "@/lib/types";
 
 type InboxFilter = "unread" | "all" | "mentions";
 
@@ -87,103 +56,6 @@ export function inboxFilterFor(notification: Pick<MyNotification, "read_at">): I
   return notification.read_at ? "all" : "unread";
 }
 
-type DateGroup = "today" | "yesterday" | "earlier";
-
-const GROUP_KEYS: Record<DateGroup, string> = {
-  today: "groupToday",
-  yesterday: "groupYesterday",
-  earlier: "groupEarlier",
-};
-
-function groupOf(at: string): DateGroup {
-  const date = new Date(at);
-  const now = new Date();
-  const startOfDay = (value: Date) =>
-    new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
-  const diffDays = Math.round(
-    (startOfDay(now) - startOfDay(date)) / 86_400_000,
-  );
-  if (diffDays <= 0) return "today";
-  if (diffDays === 1) return "yesterday";
-  return "earlier";
-}
-
-/** The actor or event brand shown at the start of every notification row. */
-function RowAvatar({
-  notification,
-  unread,
-}: {
-  notification: MyNotification;
-  unread: boolean;
-}) {
-  if (notification.from_numo || AGENT_TYPES.includes(notification.type)) {
-    return <NumoAvatar className="size-8" iconClassName="size-5" />;
-  }
-  if (notification.via_automation) {
-    return <AutomationAvatar className="size-8" iconClassName="size-4" />;
-  }
-  if (notification.via_smart_assign) {
-    return <SmartAssignAvatar className="size-8" iconClassName="size-4" />;
-  }
-  if (notification.via_mcp) {
-    return (
-      <McpAvatar
-        agent={notification.api_key_agent}
-        className="size-8"
-        iconClassName="size-4"
-      />
-    );
-  }
-  if (notification.actor_avatar_seed) {
-    return (
-      <UserAvatar seed={notification.actor_avatar_seed} className="size-8" />
-    );
-  }
-
-  const Icon =
-    notification.type === "assigned"
-      ? UserAdd01Icon
-      : notification.type === "mention" || notification.type === "page_mention"
-        ? AtIcon
-        : notification.type === "feedback_new"
-          ? Megaphone01Icon
-          : notification.type === "pr_merged"
-            ? GitMergeIcon
-            : notification.type === "pr_reviewed" ||
-                notification.type === "pr_opened"
-              ? GitPullRequestIcon
-              : notification.type === "instance_config_changed"
-                ? ServerStack01Icon
-                : Message01Icon;
-  return (
-    <span
-      className={cn(
-        "flex size-8 shrink-0 items-center justify-center rounded-full",
-        unread
-          ? "bg-muted text-foreground"
-          : "bg-muted/60 text-muted-foreground",
-      )}
-    >
-      <HugeiconsIcon icon={Icon} className="size-4" />
-    </span>
-  );
-}
-
-function ActionTooltip({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent side="top">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 export default function InboxContent({
   onNavigate,
   focus = null,
@@ -194,23 +66,8 @@ export default function InboxContent({
   const router = useAppRouter();
   const t = useTranslations("Inbox");
   const tCommon = useTranslations("Common");
-  const tIssue = useTranslations("Issue");
   const mobile = useMobileLayout() === true;
-  const tProjects = useTranslations("Projects");
-  const tTimeline = useTranslations("Timeline");
-  const format = useFormatter();
-  const timeAgo = useTimeAgo();
   const contentFade = useScrollFade<HTMLDivElement>();
-
-  const labels = {
-    someone: t("someone"),
-    mcpFallback: tTimeline("mcpFallback"),
-    somePageFallback: t("somePageFallback"),
-    someIssueFallback: t("someIssueFallback", {
-      entity: tIssue("entity").toLowerCase(),
-    }),
-    instanceConfigTitle: t("instanceConfigTitle"),
-  };
 
   const {
     notifications,
@@ -261,26 +118,6 @@ export default function InboxContent({
     return () => clearTimeout(timer);
   }, [pulse]);
 
-  const titleOf = (notification: MyNotification): string =>
-    notificationTitle(notification, labels);
-
-  const sentenceOf = (notification: MyNotification): string => {
-    // A Numo note (MIN-914) says it in its own words.
-    if (notification.type === "numo_message" && notification.numo_note_body) {
-      return notification.numo_note_body;
-    }
-    const sentence = t(
-      notificationLineKey(notification.type, notification.from_numo),
-      notificationLineValues(notification, labels),
-    );
-    return notification.comment_excerpt
-      ? `${sentence}: ${notification.comment_excerpt}`
-      : sentence;
-  };
-
-  const inviterOf = (invitation: MyInvitation): string =>
-    invitation.inviter_name || invitation.inviter_email || t("someone");
-
   const visible = notifications.filter((notification) => {
     if (filter === "unread" && notification.read_at) return false;
     if (
@@ -293,19 +130,7 @@ export default function InboxContent({
     return true;
   });
 
-  const visibleInvitations = invitations;
   const showInvitations = filter !== "mentions" && invitations.length > 0;
-
-  const groups = useMemo(() => {
-    const buckets = new Map<DateGroup, MyNotification[]>();
-    for (const notification of visible) {
-      const group = groupOf(notification.created_at);
-      const items = buckets.get(group);
-      if (items) items.push(notification);
-      else buckets.set(group, [notification]);
-    }
-    return [...buckets.entries()];
-  }, [visible]);
 
   const readCount = notifications.length - unreadCount;
   const pendingCount = unreadCount + invitations.length;
@@ -337,335 +162,102 @@ export default function InboxContent({
         ? t("emptyAll")
         : t("emptyTitle");
 
+  const filterLabel = (key: InboxFilter) =>
+    t((FILTERS.find((item) => item.key === key)?.labelKey ?? "filterUnread") as Parameters<typeof t>[0]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {mobile ? (
-        // On a phone the filters are one picker, as a board's views are, and
-        // the actions share one menu: the row stays clear at arm's length.
-        <div data-inbox-sheet-bar className="flex shrink-0 items-center gap-2 px-3 pb-2">
-          <div className="min-w-0 flex-1">
-            <SearchSelect
-              value={filter}
-              onChange={(next) => { if (next) setFilter(next as InboxFilter); }}
-              options={FILTERS.map(({ key, labelKey }) => ({
-                value: key,
-                label: t(labelKey as Parameters<typeof t>[0]),
-                labelNode: (
-                  <span className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="truncate">{t(labelKey as Parameters<typeof t>[0])}</span>
-                    {filterCounts[key] > 0 && (
-                      <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">{filterCounts[key]}</span>
-                    )}
-                  </span>
-                ),
-              }))}
-              trigger={
-                <Button variant="outline" className="h-11 min-w-0 max-w-full justify-start gap-2 px-4 text-base">
-                  <span className="truncate">{t((FILTERS.find((item) => item.key === filter)?.labelKey ?? "filterUnread") as Parameters<typeof t>[0])}</span>
-                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
-                </Button>
-              }
-            />
-          </div>
-          <IssueActionsMenu
-            tooltip={tCommon("moreActions")}
+      {/* The views are one picker and the actions one menu, on every layout
+          (MIN-975): the same bar as the phone's, so the rows keep the room. */}
+      <div
+        data-inbox-sheet-bar
+        className={cn("flex shrink-0 items-center gap-2", mobile ? "px-3 pb-2" : "px-3 pt-3 pb-1")}
+      >
+        <div className="min-w-0 flex-1">
+          <SearchSelect
+            value={filter}
+            onChange={(next) => { if (next) setFilter(next as InboxFilter); }}
+            options={FILTERS.map(({ key }) => ({
+              value: key,
+              label: filterLabel(key),
+              labelNode: (
+                <span className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="truncate">{filterLabel(key)}</span>
+                  {filterCounts[key] > 0 && (
+                    <span
+                      className="rounded-full bg-muted px-1.5 text-xs tabular-nums"
+                      aria-label={t("filterUnreadCount", { count: filterCounts[key] })}
+                    >
+                      {filterCounts[key]}
+                    </span>
+                  )}
+                </span>
+              ),
+            }))}
             trigger={
-              <IconButton aria-label={tCommon("moreActions")}>
-                <HugeiconsIcon icon={MoreHorizontalIcon} />
-              </IconButton>
+              <Button
+                variant="outline"
+                size={mobile ? "lg" : "sm"}
+                className={cn("min-w-0 max-w-full justify-start gap-1.5", mobile && "h-11 px-4 text-base")}
+              >
+                <span className="truncate">{filterLabel(filter)}</span>
+                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+              </Button>
             }
-            actions={[
-              { id: "mark-all-read", label: t("markAllRead"), icon: <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />, disabled: unreadCount === 0, onSelect: () => act(markAllRead()) },
-              { id: "clear-read", label: t("clearRead"), icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />, disabled: readCount === 0, transfersFocus: true, onSelect: () => setClearReadOpen(true) },
-              { id: "settings", label: t("settings"), icon: <HugeiconsIcon icon={Settings01Icon} className="size-4" />, separatorBefore: true, onSelect: () => { onNavigate?.(); router.push("/settings?tab=inbox"); } },
-            ]}
           />
         </div>
-      ) : (
-      <div className="flex shrink-0 items-center gap-1 px-3">
-          <div
-            role="group"
-            aria-label={t("title")}
-            className="no-scrollbar flex min-w-0 flex-1 gap-3 overflow-x-auto overscroll-x-contain"
-          >
-            {FILTERS.map(({ key, labelKey }) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={filter === key}
-                onClick={() => setFilter(key)}
-                className={cn(
-                  "flex min-h-12 shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  filter === key ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {t(labelKey as Parameters<typeof t>[0])}
-                {filterCounts[key] > 0 && (
-                  <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums" aria-label={t("filterUnreadCount", { count: filterCounts[key] })}>
-                    {filterCounts[key]}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-          <ActionTooltip label={t("clearRead")}>
-            <IconButton
-              size="sm"
-              aria-label={t("clearRead")}
-              disabled={readCount === 0}
-              onClick={() => setClearReadOpen(true)}
-            >
-              <HugeiconsIcon icon={Delete02Icon} className="size-4" />
+        <IssueActionsMenu
+          tooltip={tCommon("moreActions")}
+          trigger={
+            <IconButton size={mobile ? undefined : "sm"} aria-label={tCommon("moreActions")}>
+              <HugeiconsIcon icon={MoreHorizontalIcon} />
             </IconButton>
-          </ActionTooltip>
-          <ActionTooltip label={t("markAllRead")}>
-            <IconButton
-              size="sm"
-              aria-label={t("markAllRead")}
-              disabled={unreadCount === 0}
-              onClick={() => act(markAllRead())}
-            >
-              <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />
-            </IconButton>
-          </ActionTooltip>
-          <ActionTooltip label={t("settings")}>
-            <IconButton size="sm" aria-label={t("settings")} asChild>
-              <Link href="/settings?tab=inbox" onClick={onNavigate}>
-                <HugeiconsIcon icon={Settings01Icon} className="size-4" />
-              </Link>
-            </IconButton>
-          </ActionTooltip>
-        </div>
-      )}
-        <div
-          ref={setListRef}
-          {...contentFade.scrollProps}
-          className="min-h-0 flex-1 overflow-y-auto"
-        >
-          <div className="w-full py-3">
-            {showInvitations && (
-              <section>
-                <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground app-mobile:px-3">
-                  {t("groupInvitations")}
-                </h2>
-                <ul
-                  data-inbox-invitations
-                  className="divide-y divide-border/60"
-                >
-                  {visibleInvitations.map((invitation) => {
-                    const busy = invitationBusyId === invitation.id;
-                    return (
-                      <li
-                        key={invitation.id}
-                        className="relative flex items-center gap-3 px-4 py-3"
-                      >
-                        <span className="relative shrink-0">
-                          <UserAvatar
-                            seed={invitation.inviter_avatar_seed}
-                            className="size-8"
-                          />
-                          <span
-                            className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full bg-blue-500 ring-2 ring-card"
-                            aria-hidden
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-foreground">
-                            {invitation.project_name}
-                          </span>
-                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                            {t("lineInvitation", {
-                              actor: inviterOf(invitation),
-                            })}
-                          </span>
-                        </span>
-                        <span className="flex shrink-0 items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={busy}
-                            onClick={() =>
-                              void answerInvitation(invitation.id, "reject")
-                            }
-                          >
-                            {tProjects("reject")}
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={busy}
-                            onClick={() =>
-                              void answerInvitation(invitation.id, "accept")
-                            }
-                          >
-                            {busy && <Spinner />}
-                            {tProjects("join")}
-                          </Button>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            )}
-
-            {loading ? (
-              <InboxRowsSkeleton />
-            ) : visible.length === 0 ? (
-              showInvitations ? null : (
-                <EmptyScene
-                  icon={InboxIcon}
-                  title={emptyTitle}
-                />
-              )
-            ) : (
-              groups.map(([group, items], index) => (
-                <section
-                  key={group}
-                  className={cn(
-                    index > 0 || showInvitations ? "mt-6" : undefined,
-                  )}
-                >
-                  <h2 className="mb-2 px-4 text-xs font-medium text-muted-foreground app-mobile:px-3">
-                    {t(GROUP_KEYS[group] as Parameters<typeof t>[0])}
-                  </h2>
-                  <ul
-                    data-inbox-list
-                    className="divide-y divide-border/60"
-                  >
-                    {items.map((notification) => {
-                      const unread = !notification.read_at;
-                      const fullDate = format.dateTime(
-                        new Date(notification.created_at),
-                        {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      );
-                      return (
-                        <li
-                          // A new key per request restarts the pulse animation
-                          // on a row that is still pulsing.
-                          key={pulse?.id === notification.id ? `${notification.id}:${pulse.seq}` : notification.id}
-                          data-notification-id={notification.id}
-                          className={cn(
-                            "group relative hover:bg-muted/50 focus-within:bg-muted/50",
-                            pulse?.id === notification.id && "inbox-row-target",
-                          )}
-                        >
-                          <button
-                            type="button"
-                            data-sidebar-filter-result
-                            onClick={() => open(notification)}
-                            className={cn(
-                              "relative flex w-full items-center gap-3 px-4 py-3 pr-20 text-left sm:pr-4 app-mobile:pl-3 transition-colors",
-                              "focus-visible:outline-none",
-                            )}
-                          >
-                            <span className="relative shrink-0">
-                              <RowAvatar
-                                notification={notification}
-                                unread={unread}
-                              />
-                              {unread && (
-                                <span
-                                  className={cn(
-                                    "absolute -right-0.5 -top-0.5 size-2.5 rounded-full ring-2 ring-card",
-                                    notification.type === "agent_question"
-                                      ? "bg-yellow-500"
-                                      : "bg-blue-500",
-                                  )}
-                                  aria-hidden
-                                />
-                              )}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="flex items-baseline gap-2">
-                                {notification.issue_id &&
-                                  notification.project_key &&
-                                  notification.issue_number != null && (
-                                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                                      {notification.project_key}-
-                                      {notification.issue_number}
-                                    </span>
-                                  )}
-                                {notification.pull_request_id &&
-                                  notification.pull_request_number != null && (
-                                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                                      #{notification.pull_request_number}
-                                    </span>
-                                  )}
-                                <TruncatedText
-                                  text={titleOf(notification)}
-                                  className={cn(
-                                    "truncate text-sm",
-                                    unread
-                                      ? "font-medium text-foreground"
-                                      : "text-muted-foreground",
-                                  )}
-                                />
-                              </span>
-                              <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                                {sentenceOf(notification)}
-                              </span>
-                            </span>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="hidden shrink-0 text-xs tabular-nums text-muted-foreground transition-opacity sm:block touch:hidden group-hover:opacity-0 group-focus-within:opacity-0">
-                                  {timeAgo(notification.created_at)}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                {fullDate}
-                              </TooltipContent>
-                            </Tooltip>
-                          </button>
-                          <span className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 touch:opacity-100">
-                            {unread ? (
-                              <ActionTooltip label={t("markOneRead")}>
-                                <IconButton
-                                  size="sm"
-                                  aria-label={t("markOneRead")}
-                                  onClick={() =>
-                                    act(markRead([notification.id]))
-                                  }
-                                >
-                                  <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />
-                                </IconButton>
-                              </ActionTooltip>
-                            ) : (
-                              <ActionTooltip label={t("markUnread")}>
-                                <IconButton
-                                  size="sm"
-                                  aria-label={t("markUnread")}
-                                  onClick={() =>
-                                    act(markUnread([notification.id]))
-                                  }
-                                >
-                                  <HugeiconsIcon icon={Mail01Icon} className="size-4" />
-                                </IconButton>
-                              </ActionTooltip>
-                            )}
-                            <ActionTooltip label={tCommon("delete")}>
-                              <IconButton
-                                size="sm"
-                                aria-label={tCommon("delete")}
-                                onClick={() => setDeleteTargetId(notification.id)}
-                              >
-                                <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                              </IconButton>
-                            </ActionTooltip>
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))
-            )}
-          </div>
-        </div>
+          }
+          actions={[
+            { id: "mark-all-read", label: t("markAllRead"), icon: <HugeiconsIcon icon={MailOpen01Icon} className="size-4" />, disabled: unreadCount === 0, onSelect: () => act(markAllRead()) },
+            { id: "clear-read", label: t("clearRead"), icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />, disabled: readCount === 0, transfersFocus: true, onSelect: () => setClearReadOpen(true) },
+            { id: "settings", label: t("settings"), icon: <HugeiconsIcon icon={Settings01Icon} className="size-4" />, separatorBefore: true, onSelect: () => { onNavigate(); router.push("/settings?tab=inbox"); } },
+          ]}
+        />
+      </div>
+      <div
+        ref={setListRef}
+        {...contentFade.scrollProps}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
+        <ul data-inbox-list className="w-full divide-y divide-border/60 py-1">
+          {showInvitations && invitations.map((invitation) => (
+            <InboxInvitationRow
+              key={invitation.id}
+              invitation={invitation}
+              busy={invitationBusyId === invitation.id}
+              onAnswer={(answer) => void answerInvitation(invitation.id, answer)}
+            />
+          ))}
+          {!loading && visible.map((notification) => (
+            <InboxNotificationRow
+              // A new key per request restarts the pulse animation on a row
+              // that is still pulsing.
+              key={pulse?.id === notification.id ? `${notification.id}:${pulse.seq}` : notification.id}
+              notification={notification}
+              pulse={pulse?.id === notification.id}
+              swipeable={mobile}
+              actions={{
+                onOpen: () => open(notification),
+                onToggleRead: () => act(notification.read_at
+                  ? markUnread([notification.id])
+                  : markRead([notification.id])),
+                onDelete: () => setDeleteTargetId(notification.id),
+              }}
+            />
+          ))}
+        </ul>
+        {loading ? (
+          <InboxRowsSkeleton />
+        ) : visible.length === 0 && !showInvitations ? (
+          <EmptyScene icon={InboxIcon} title={emptyTitle} />
+        ) : null}
+      </div>
       <ConfirmDeleteDialog
         open={deleteTargetId !== null}
         onOpenChange={(open) => {

@@ -1,17 +1,13 @@
-// Where does a notification lead, and by what sentence is it said (MIN-183).
+// Where a notification leads (MIN-183). A notification is also read outside
+// the app: the service worker opens this URL on click, so the inbox and the
+// push payload share one rule instead of two that could diverge. What the
+// notification says lives in lib/notification-line.ts.
 //
-// Both lived on the inbox page, and no longer had their place there
-// from the moment a notification is ALSO read outside the app: the service
-// worker opens a URL on click, and the pushed payload already carries the
-// sentence. Leaving them there would have meant rewriting them identically
-// server — that is, let them diverge.
-//
-// PUR module (no `server-only`, no React): the page reads it, makes it
-// de charge utile aussi.
+// PURE module (no `server-only`, no React): the inbox and the push builder
+// both read it.
 
 import { feedbackPostHref, issueHref, objectiveHref, pagePath, projectPath, pullRequestHref, routineHref } from "./app-urls";
 import type { NotificationType } from "./types";
-import type { MessageKey } from "./i18n-keys";
 
 /** The target of a notification, reduced to what decides its destination. */
 export interface NotificationTarget {
@@ -101,40 +97,3 @@ export const NOTIFICATION_TARGET_PARAMS = [
   "routine",
   "pr",
 ] as const;
-
-/** The i18n key of the phrase "who did what", namespace `Inbox`. Typed as
- * `MessageKey` and not as `string`: a key removed from the catalog no longer compiles
- *, instead of being displayed as "Inbox...." on the screen. */
-export const NOTIFICATION_LINE_KEYS: Record<
-  NotificationType,
-  MessageKey<"Inbox">
-> = {
-  assigned: "lineAssigned",
-  mention: "lineMention",
-  comment: "lineComment",
-  agent_done: "lineAgentDone",
-  agent_question: "lineAgentQuestion",
-  agent_failed: "lineAgentFailed",
-  feedback_new: "lineFeedbackNew",
-  pr_reviewed: "linePrReviewed",
-  pr_merged: "linePrMerged",
-  pr_opened: "linePrOpened",
-  automation_paused: "lineAutomationPaused",
-  automation_stopped: "lineAutomationStopped",
-  routine_done: "lineRoutineDone",
-  instance_config_changed: "lineInstanceConfigChanged",
-  page_mention: "linePageMention",
-  page_agent_edit: "linePageAgentEdit",
-  page_comment: "linePageComment",
-  numo_message: "lineNumoMessage",
-  smart_assign_batch: "lineSmartAssignBatch",
-};
-
-/** Numo answers use a reply-specific sentence instead of the generic comment line. */
-export function notificationLineKey(
-  type: NotificationType,
-  fromNumo: boolean
-): MessageKey<"Inbox"> {
-  if (fromNumo && type === "comment") return "lineNumoReply";
-  return NOTIFICATION_LINE_KEYS[type];
-}

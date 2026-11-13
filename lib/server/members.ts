@@ -23,6 +23,7 @@ import type { Invitation } from "@/lib/types";
 import { isMemberRole, type MemberRole } from "@/lib/project-roles";
 import { intlLocaleByLocale, type Locale } from "@/i18n/config";
 import { pushMessages, toPushLocale } from "@/lib/server/push/payload";
+import { readProjectNames } from "@/lib/server/project-content";
 import {
   decryptInvitationEmail,
   encryptInvitationEmail,
@@ -237,7 +238,7 @@ export async function inviteMember({
   // answered. It therefore escapes the push connection of `insertNotifications`, and
   // it’s precisely the inbox line that most expects a notification — we
   // push it here, by hand (MIN-183).
-  if (memberUser) pushInvitation(memberUser.id, actorId);
+  if (memberUser) pushInvitation(memberUser.id, actorId, projectId);
 
   // Email delivery, when configured, happens AFTER the response via `afterOrNow`:
   // a detached promise could be frozen with the invocation and die in flight
@@ -313,7 +314,7 @@ export async function attachPendingInvitations(user: {
     .is("invited_user_id", null)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
-    .select("id, invited_by");
+    .select("id, invited_by, project_id");
 
   const matches = [attach("invited_email", email)];
   if (isInvitationEncryptionConfigured()) {
@@ -330,7 +331,7 @@ export async function attachPendingInvitations(user: {
       continue;
     }
     for (const row of result.data ?? []) {
-      pushInvitation(user.id, row.invited_by as string);
+      pushInvitation(user.id, row.invited_by as string, row.project_id as string);
     }
   }
 }
@@ -397,13 +398,14 @@ export async function claimPendingInvitationsLate(user: {
 }
 
 /** The system notification of an invitation. Best-effort from start to finish. */
-function pushInvitation(inviteeId: string, inviterId: string): void {
+function pushInvitation(inviteeId: string, inviterId: string, projectId: string): void {
   if (!isPushConfigured() && !isApnsConfigured()) return;
   afterOrNow(async () => {
     const service = getServiceClient();
-    const [inviters, { data: inviteeData }] = await Promise.all([
+    const [inviters, { data: inviteeData }, projectNames] = await Promise.all([
       fetchAuthUsersById(service, [inviterId]),
       service.auth.admin.getUserById(inviteeId),
+      readProjectNames(service, [projectId]),
     ]);
     const inviterName = displayName(toNamed(inviters.get(inviterId)), "");
     const locale = toPushLocale(
@@ -414,11 +416,14 @@ function pushInvitation(inviteeId: string, inviterId: string): void {
     const messages = pushMessages(locale);
     const t = createTranslator({ locale, messages, namespace: "Inbox" });
 
+    // The same lines as the inbox row (MIN-975): the inviter, then the
+    // project they invite to. A project whose name cannot be read is not
+    // pushed: “Invited you to join” alone says nothing.
+    const projectName = projectNames.get(projectId);
+    if (!projectName) return;
     await sendPushToUser(service, inviteeId, {
-      // The title names the destination because an invitation has no issue,
-      // page, or other target entity of its own.
-      title: t("groupInvitations"),
-      body: t("lineInvitation", { actor: inviterName || t("someone") }),
+      title: inviterName || t("someone"),
+      body: t("titleInvitation", { target: projectName }),
       lang: intlLocaleByLocale[locale],
       url: "/inbox",
       tag: "/inbox",

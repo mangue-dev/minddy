@@ -52,41 +52,38 @@ const commentRow = (source: Partial<NotificationRow>): NotificationRow =>
     ...source,
   }) as NotificationRow;
 
-const bodyOf = (source: Partial<NotificationRow>): string =>
-  buildPushPayload(context(), commentRow(source), "fr")!.body;
+/** The banner names its actor in its title (MIN-975). */
+const actorOf = (source: Partial<NotificationRow>): string =>
+  buildPushPayload(context(), commentRow(source), "fr")!.title;
 
 describe("notificationActorSource", () => {
-  it("ne pose rien pour un geste humain — la ligne nomme la personne", () => {
+  it("sets nothing for a human gesture: the banner names the person", () => {
     expect(notificationActorSource({})).toEqual({});
     expect(notificationActorSource({ viaAssistant: false, mcpKeyId: null })).toEqual({});
-    expect(bodyOf(notificationActorSource({}))).toContain("Clément");
+    expect(actorOf(notificationActorSource({}))).toBe("Clément");
   });
 
-  it("nomme NUMO d'un geste de l'agent, et pas le compte qui l'a permis", () => {
+  it("names Numo for an agent's gesture, not the account that allowed it", () => {
     const source = notificationActorSource({ viaAssistant: true });
     expect(source).toEqual({ via_assistant: true });
-
-    const body = bodyOf(source);
-    expect(body).toContain("Numo");
-    expect(body).not.toContain("Clément");
+    expect(actorOf(source)).toBe("Numo");
   });
 
-  it("nomme l'agent de la CLÉ quand l'écriture vient du MCP", () => {
+  it("names the key's agent when the write came through MCP", () => {
     const source = notificationActorSource({ mcpKeyId: "k1" });
     expect(source).toEqual({ via_mcp: true, api_key_id: "k1" });
 
-    const body = bodyOf(source);
-    expect(body).toContain("Claude Code");
-    expect(body).not.toContain("Clément");
-    expect(body).not.toContain(fr.Inbox.someone);
+    const actor = actorOf(source);
+    expect(actor).toContain("Claude Code");
+    expect(actor).not.toContain("Clément");
+    expect(actor).not.toContain(fr.Inbox.someone);
   });
 
-  it("ne cumule JAMAIS les deux drapeaux : la clé l'emporte, elle a un nom", () => {
+  it("never sets both flags: the key wins, since it has a name", () => {
     // The display tests `via_assistant` before `via_mcp` (like the timeline):
-    // wearing them both would make you say “Numo” with a familiar gesture
-    // l'agent par son nom.
+    // carrying both would say “Numo” for a gesture whose agent is known by name.
     const source = notificationActorSource({ viaAssistant: true, mcpKeyId: "k1" });
     expect(source.via_assistant).toBeUndefined();
-    expect(bodyOf(source)).toContain("Claude Code");
+    expect(actorOf(source)).toContain("Claude Code");
   });
 });

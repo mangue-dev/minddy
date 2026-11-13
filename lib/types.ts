@@ -211,40 +211,24 @@ export type NotificationType =
   | "assigned"
   | "mention"
   | "comment"
-  /** The code agent finished a turn on an issue I launched it on. */
-  | "agent_done"
-  /** The code agent asked a question and waits for my answer. */
+  /** A routine occurrence waits for the owner's answer (kept for the
+      occurrences that were already waiting when routines stopped asking). */
   | "agent_question"
-  /** The code agent failed to start or died on an error. */
+  /** A routine run failed, was stopped or ran out of budget. */
   | "agent_failed"
   /** A new feedback post arrived on the project's board. */
   | "feedback_new"
-  /** Someone reviewed (approved / requested changes on) a PR the agent opened for me. */
-  | "pr_reviewed"
-  /** A PR the agent opened for me was merged on the forge. */
-  | "pr_merged"
-  /** A pull request has just opened on a repository linked to one of my projects —
- from Numo or a human, it is waiting for eyes in both cases. */
+  /** A pull request has just opened on a repository linked to one of my
+      projects — from Numo or a human, it is waiting for eyes in both cases. */
   | "pr_opened"
-  /** An automation chain is waiting for a human green light (MIN-147). */
-  | "automation_paused"
-  /** An automation chain has stopped: budget, quota, check failed. */
-  | "automation_stopped"
-  /** A routine pass completed without pushing anything — the case where neither the PR
- nor the failure spoke, and the routine therefore said nothing at all. */
-  | "routine_done"
   /** An administrator changed an instance variable from the admin dashboard
       (MIN-847): sent to every administrator, the actor named, no target —
       the change itself is read in the Instance tab's history. */
   | "instance_config_changed"
-  /** I was quoted in a wiki PAGE (MIN-278) — the same sentence as in a
- ticket comment, which she already warned about. */
+  /** I was mentioned in a wiki PAGE (MIN-278). */
   | "page_mention"
-  /** The agent wrote in a page. To the only launcher of the run: a page rewritten
- in silence is the counterpart of the problem that MIN-277 has equipped. */
-  | "page_agent_edit"
   /** Someone commented on a page I wrote, or a thread I participated in
- (MIN-282) — the exact counterpart of `comment` on a ticket. */
+      (MIN-282) — the exact counterpart of `comment` on a ticket. */
   | "page_comment"
   /** Smart Assign filled several open issues for me in one backfill
       (MIN-903): one line with their count, not one per issue. */
@@ -262,6 +246,8 @@ export interface MyNotification {
   issue_id: string | null;
   issue_number: number | null;
   issue_title: string | null;
+  /** The issue's workflow state: its mention pill shows it (MIN-975). */
+  issue_status: IssueStatus | null;
   /** Set instead of the issue fields when the notification points at an objective. */
   objective_id: string | null;
   objective_name: string | null;
@@ -276,6 +262,9 @@ export interface MyNotification {
   pull_request_id: string | null;
   pull_request_number: number | null;
   pull_request_title: string | null;
+  /** The forge of that pull request (`github`, `gitlab`): an opened pull
+      request has no minddy actor, so the row names its forge (MIN-975). */
+  pull_request_provider: string | null;
   /** Set instead of all of the above when it points at a PAGE (MIN-278) — the
  project wiki; `block_id` refines the target to the block when it is known. */
   page_id: string | null;
@@ -308,8 +297,9 @@ export interface MyNotification {
       its recipient. Null on every other type, or when the note is unreadable. */
   numo_note_title: string | null;
   numo_note_body: string | null;
-  /** How many issues a `smart_assign_batch` line stands for (MIN-903), and
-      the name of their project, which is that line's title. Null otherwise. */
+  /** How many issues a `smart_assign_batch` line stands for (MIN-903). Null
+      otherwise. `project_name` is the label of the project pill that a
+      backfill line and a feedback line point at; null on other types. */
   issue_count: number | null;
   project_name: string | null;
 }

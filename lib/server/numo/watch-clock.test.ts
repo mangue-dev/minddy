@@ -331,7 +331,7 @@ describe("dispatchNumoWatch", () => {
     expect(await dispatchNumoWatch(watchItem(), service as never)).toBe("notified");
     expect(startNumoIntent).not.toHaveBeenCalled();
     expect(notes).toEqual([{
-      title: "MIN-42 is now “Done”", body: "Tell the client", link: { type: "issue", id: ISSUE }, dedupe: false,
+      title: "[@](mention:issue/44444444-4444-4444-8444-444444444444) is now “Done”", body: "Tell the client", link: { type: "issue", id: ISSUE }, dedupe: false,
     }]);
   });
 
@@ -346,7 +346,8 @@ describe("dispatchNumoWatch", () => {
   it("writes the note in the user's language", async () => {
     world.locale = "fr";
     await dispatchNumoWatch(watchItem(), service as never);
-    expect(notes[0].title).toBe("MIN-42 est passé à « Terminé »");
+    // The note names its issue as a mention, which the inbox draws (MIN-975).
+    expect(notes[0].title).toBe("[@](mention:issue/44444444-4444-4444-8444-444444444444) est passé à « Terminé »");
   });
 
   it("act: an unattended reminder turn in the watch's conversation, then a note", async () => {

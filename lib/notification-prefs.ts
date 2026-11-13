@@ -94,35 +94,17 @@ export function categoryOfNotificationType(
       return "mention";
     case "comment":
       return "comment";
-    case "agent_done":
     case "agent_question":
     case "agent_failed":
-    // An automation chain, Numo is working: same switch as
-    // its runs, rather than one more category to manage for nothing.
-    case "automation_paused":
-    case "automation_stopped":
       return "agent";
-    case "routine_done":
-      return "routine";
-    // The entire life of a pull request under the same switch — opened, reread,
-    // merged. Only one of the three under another switch would be a trap:
-    // we cut “pull requests” and some remains.
     case "pr_opened":
-    case "pr_reviewed":
-    case "pr_merged":
       return "pullRequest";
     case "feedback_new":
       return "feedback";
-    // The two WIKI signals under the same flip-flop (MIN-278): be cited in
-    // a page and seeing the agent write on it are the same subject — “what moves
-    // in the pages”. The page mention does NOT join “Mentions”, which
-    // talks about tickets, nor the “Numo” agent writing, which talks about runs:
-    // cutting one for the other would be cutting twice too much.
-    // The thread of a page (MIN-282) joins the other two: it is again “this
-    // which moves in the pages”. Putting it under “Comments” would have liked
-    // say that a toggle designed for tickets decides the wiki.
+    // The wiki signals share one switch (MIN-278, MIN-282): a mention in a
+    // page and a page thread are both “what moves in the pages”, which the
+    // ticket switches (Mentions, Comments) do not decide.
     case "page_mention":
-    case "page_agent_edit":
     case "page_comment":
       return "page";
     // A change of the instance configuration (MIN-847) is a security notice:
@@ -139,11 +121,9 @@ export function categoryOfNotificationType(
 /**
  * The toggle that governs a notification — type IS NOT ENOUGH.
  *
- * A routine announces the end of its passes with the agent's types
- * (`agent_done` when it has opened a pull request, `agent_failed` when she
- * stopped): only `routine_id` distinguishes her passage from the run that we launched
- * by hand. Without this detour, cutting “Routines” would have missed the failure of
- * the next morning — half of what we wanted to cut.
+ * A routine reports a failed or waiting run with the agent's types
+ * (`agent_failed`, `agent_question`): only `routine_id` tells its run from
+ * one launched by hand, so cutting “Routines” also cuts those.
  */
 export function categoryOfNotification(n: {
   type: NotificationType;
