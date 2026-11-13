@@ -45,6 +45,7 @@
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/project-order.ts",
       "lib/issue-semantic-query.ts",
       "lib/use-semantic-issue-search.ts",
       "lib/server/issue-semantic-search.ts",
@@ -142,6 +143,8 @@ La navigazione distingue lavoro personale e contenuti di ogni progetto. Ricerca,
 ## Trovare il lavoro personale e cambiare progetto {#navigation}
 
 La navigazione principale permette di raggiungere il lavoro personale e i tuoi progetti. Seleziona un progetto per vedere i suoi ticket e le destinazioni secondarie, tra cui triage, obiettivi, pagine e impostazioni del progetto. La riga per tornare indietro sale di un livello nella navigazione; può cambiare il contenuto della barra laterale mentre la pagina principale resta aperta. Su computer, le destinazioni secondarie di un progetto mostrano il suo nome accanto alla riga per tornare indietro: scegli lì un altro progetto per aprire la stessa destinazione al suo interno, come i suoi obiettivi o il suo feedback. Command/Ctrl+Maiusc+P apre questo elenco, dove puoi scrivere per filtrare i progetti per nome; è la stessa scorciatoia di **Crea in** quando crei un ticket o un obiettivo. Seleziona una destinazione per aprirla. In un elenco come triage, obiettivi, feedback, revisione del codice o routine, il campo di filtro in cima alla barra laterale cerca in tutti gli elementi, qualunque siano i filtri che restringono l’elenco; il suo testo segnaposto ne indica il totale.
+
+Su computer, trascina un progetto verso l’alto o verso il basso nella navigazione principale per mettere i tuoi progetti nell’ordine che preferisci, oppure porta il focus sulla sua riga e premi Alt+Maiusc+Freccia su o giù. L’ordine vale solo per te e segue il tuo account su ogni dispositivo; lo usa anche l’elenco dei progetti accanto alla riga per tornare indietro. Un progetto a cui ti unisci in seguito viene aggiunto in fondo.
 
 Contatori e avvisi ti seguono da un livello all’altro. Il controllo che riporta alla **Home** mostra il totale da smistare nei progetti elencati nella **Home**, compreso quello attuale, e l’avviso di Smart Assign quando a uno dei tuoi progetti mancano regole. Una riga di ritorno mostra il contatore del livello a cui riporta come badge sulla sua freccia, in ambra finché vale l’avviso di Smart Assign. All’interno di un progetto, **Triage** e **Feedback** mantengono i contatori di quel progetto. Le schede dell’app desktop portano lo stesso badge della loro voce nella barra laterale: l’avviso sulla **Home** e i contatori su **Posta in arrivo**, **Revisione del codice** e su **Triage** e **Feedback** di un progetto, aggiornati anche quando la scheda è in secondo piano.
 

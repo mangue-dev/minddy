@@ -45,6 +45,7 @@
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/project-order.ts",
       "lib/issue-semantic-query.ts",
       "lib/use-semantic-issue-search.ts",
       "lib/server/issue-semantic-search.ts",
@@ -142,6 +143,8 @@ A navegação separa o trabalho pessoal do conteúdo de cada projeto. Pesquisa, 
 ## Encontrar trabalho pessoal e alternar projetos {#navigation}
 
 A navegação principal dá acesso ao seu trabalho pessoal e aos seus projetos. Selecione um projeto para ver seus tickets e destinos secundários, como triagem, objetivos, páginas e configurações do projeto. A linha de retorno sobe um nível de navegação; ela pode mudar o conteúdo da barra lateral enquanto a página principal permanece aberta. No computador, os destinos secundários de um projeto mostram o nome dele ao lado da linha de retorno: escolha ali outro projeto para abrir o mesmo destino nele, como os objetivos ou o feedback. Command/Ctrl+Shift+P abre essa lista, onde você pode digitar para filtrar os projetos pelo nome; é o mesmo atalho de **Criar em** ao criar um ticket ou objetivo. Selecione um destino para navegar até ele. Em uma lista como triagem, objetivos, feedback, revisão de código ou rotinas, o campo de filtro no topo da barra lateral busca em todos os itens, quaisquer que sejam os filtros que restringem a lista; o texto de exemplo dele indica o total.
+
+No computador, arraste um projeto para cima ou para baixo na navegação principal para colocar seus projetos na ordem que quiser, ou coloque o foco na linha dele e pressione Alt+Shift+Seta para cima ou para baixo. A ordem é só sua e acompanha sua conta em todos os dispositivos; a lista de projetos ao lado da linha de retorno também a usa. Um projeto em que você entrar depois é adicionado ao final.
 
 Contadores e alertas acompanham você entre os níveis. O controle que volta para a **Página inicial** mostra o total para triagem nos projetos listados na **Página inicial**, incluindo o atual, e o alerta do Smart Assign quando um dos seus projetos não tem regras. Uma linha de retorno mostra o contador do nível para onde ela volta como selo sobre a seta, em âmbar enquanto o alerta do Smart Assign se aplica. Dentro de um projeto, **Triagem** e **Feedback** mantêm os contadores desse projeto. As abas do app para desktop exibem o mesmo selo da entrada correspondente na barra lateral: o alerta na **Página inicial** e os contadores em **Caixa de entrada**, **Revisão de código** e em **Triagem** e **Feedback** de um projeto, atualizados mesmo quando a aba está em segundo plano.
 

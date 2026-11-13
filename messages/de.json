@@ -3401,6 +3401,7 @@
     "hiddenToast": "„{name}“ ist in deiner Seitenleiste ausgeblendet. Du findest es unter Kontoeinstellungen → Ausgeblendete Projekte.",
     "shownToast": "„{name}“ ist wieder in deiner Seitenleiste.",
     "hideFailed": "Das Projekt konnte nicht ausgeblendet werden. Versuche es erneut.",
+    "reorderFailed": "Die Reihenfolge der Projekte konnte nicht gespeichert werden. Versuche es erneut.",
     "showFailed": "Das Projekt konnte nicht eingeblendet werden. Versuche es erneut.",
     "wizardSeedChooseFile": "CSV-Datei auswählen"
   },
@@ -7026,7 +7027,8 @@
     "cardInstructions": "Drücke Enter, um das Ticket zu öffnen, oder Umschalt+F10 für sein Menü. Mit seinen Schaltflächen änderst du Status, Priorität und weitere Felder.",
     "cardRole": "Ticketkarte",
     "tabInstructions": "Alt+Umschalt+Pfeil nach links oder rechts verschiebt den Tab.",
-    "viewInstructions": "Zieh mit der Maus, um die Ansichten neu anzuordnen."
+    "viewInstructions": "Zieh mit der Maus, um die Ansichten neu anzuordnen.",
+    "projectInstructions": "Zieh mit der Maus oder drück Alt+Umschalt+Pfeil nach oben oder unten, um das Projekt zu verschieben."
   },
   "MobileShell": {
     "serverHeading": "Mit deinem Server verbinden",

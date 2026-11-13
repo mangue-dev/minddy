@@ -3401,6 +3401,7 @@
     "hiddenToast": "«{name}» è nascosto dalla tua barra laterale. Lo trovi in Impostazioni account → Progetti nascosti.",
     "shownToast": "«{name}» è di nuovo nella tua barra laterale.",
     "hideFailed": "Impossibile nascondere il progetto. Riprova.",
+    "reorderFailed": "Impossibile salvare l’ordine dei progetti. Riprova.",
     "showFailed": "Impossibile mostrare il progetto. Riprova.",
     "wizardSeedChooseFile": "Scegli il file CSV"
   },
@@ -7026,7 +7027,8 @@
     "cardInstructions": "Premi Invio per aprire il ticket, o Maiusc+F10 per il suo menu. I suoi pulsanti ne cambiano lo stato, la priorità e gli altri campi.",
     "cardRole": "scheda di ticket",
     "tabInstructions": "Alt+Maiusc+Freccia sinistra o destra sposta la scheda.",
-    "viewInstructions": "Trascina con il mouse per riordinare le viste."
+    "viewInstructions": "Trascina con il mouse per riordinare le viste.",
+    "projectInstructions": "Trascina con il mouse, o premi Alt+Maiusc+Freccia su o giù, per spostare il progetto."
   },
   "MobileShell": {
     "serverHeading": "Connettiti al tuo server",

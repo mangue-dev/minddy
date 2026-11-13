@@ -92,9 +92,17 @@ import {
   AppSidebar,
   EXPANDED_WIDTH,
   type AppNavItem,
+  type AppNavReorder,
   type AppNavSection,
   type SidebarBackBadge,
 } from "@/components/app-sidebar";
+import { applyProjectOrder, moveProjectInOrder } from "@/lib/project-order";
+import { useProjectOrder } from "@/lib/use-project-order";
+
+/** A project's row in the home panel, and back (MIN-968 reorders by it). */
+const PROJECT_NAV_KEY_PREFIX = "project-";
+const projectNavKey = (projectId: string) => `${PROJECT_NAV_KEY_PREFIX}${projectId}`;
+const projectIdFromNavKey = (key: string) => key.slice(PROJECT_NAV_KEY_PREFIX.length);
 import { SidebarNavOverlay } from "@/components/sidebar-nav-overlay";
 import { BOARD_ICON, ROUTINE_ICON } from "@/components/feature-icons";
 import {
@@ -403,14 +411,29 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
   // the project on screen so they can still say where I am; leaving it does
   // not bring it back.
   const { hiddenProjectIds } = useHiddenProjects();
+  // Both lists follow the order I gave my projects by dragging them (MIN-968).
+  const { order: projectOrder, setOrder: setProjectOrder } = useProjectOrder();
+  const orderedProjects = useMemo(
+    () => applyProjectOrder(projects, projectOrder),
+    [projects, projectOrder]
+  );
   const listedProjects = useMemo(
-    () => visibleNavigationProjects(projects, hiddenProjectIds),
-    [projects, hiddenProjectIds]
+    () => visibleNavigationProjects(orderedProjects, hiddenProjectIds),
+    [orderedProjects, hiddenProjectIds]
   );
   const switcherProjects = useMemo(
-    () => visibleNavigationProjects(projects, hiddenProjectIds, currentProjectId),
-    [projects, hiddenProjectIds, currentProjectId]
+    () => visibleNavigationProjects(orderedProjects, hiddenProjectIds, currentProjectId),
+    [orderedProjects, hiddenProjectIds, currentProjectId]
   );
+  const tDrag = useTranslations("DragAnnouncements");
+  const projectReorder = useMemo<AppNavReorder>(() => ({
+    keys: listedProjects.map((p) => projectNavKey(p.id)),
+    onMove: (activeKey, overKey) => {
+      const next = moveProjectInOrder(projects, projectOrder, projectIdFromNavKey(activeKey), projectIdFromNavKey(overKey));
+      if (next) void setProjectOrder(next);
+    },
+    instructions: tDrag("projectInstructions"),
+  }), [listedProjects, projects, projectOrder, setProjectOrder, tDrag]);
   // ⌘K resolves every row through the projects it may show (MIN-751): the
   // pages, tickets and objectives of a hidden project stay out of the palette,
   // index and content search alike, unless it is the project on screen.
@@ -1396,6 +1419,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
         ],
       },
       {
+        reorder: projectReorder,
         items: [
           ...listedProjects.map((p) => {
             // A single number for both halves of the line: enter the
@@ -1403,7 +1427,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
             // total must land there exactly.
             const toTriage = triageCountTotal(triageCounts[p.id]);
             return {
-              key: `project-${p.id}`,
+              key: projectNavKey(p.id),
               label: p.name,
               icon: projectOrbIcon(projectOrbSeed(p), p.icon_url),
               href: projectPath(p.id),
@@ -1448,7 +1472,7 @@ export function AppShellChrome({ children }: { children: React.ReactNode }) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pathname, inboxCount, openPrCount, projects, listedProjects, projectDrafts, openProjectDraft, triageCounts, openCreateProject, openCreateIssue, agentsAllowed, projectLimitReached, smartAssignBadge, projectContext.projectActions, user?.id, t, tProjects]
+    [pathname, inboxCount, openPrCount, projects, listedProjects, projectReorder, projectDrafts, openProjectDraft, triageCounts, openCreateProject, openCreateIssue, agentsAllowed, projectLimitReached, smartAssignBadge, projectContext.projectActions, user?.id, t, tProjects]
   );
 
   const sections = useMemo<AppNavSection[]>(() => {

@@ -3401,6 +3401,7 @@
     "hiddenToast": "«{name}» está oculto en tu barra lateral. Encuéntralo en Ajustes de la cuenta → Proyectos ocultos.",
     "shownToast": "«{name}» vuelve a estar en tu barra lateral.",
     "hideFailed": "No se pudo ocultar el proyecto. Inténtalo de nuevo.",
+    "reorderFailed": "No se pudo guardar el orden de los proyectos. Inténtalo de nuevo.",
     "showFailed": "No se pudo mostrar el proyecto. Inténtalo de nuevo.",
     "wizardSeedChooseFile": "Elegir el archivo CSV"
   },
@@ -7026,7 +7027,8 @@
     "cardInstructions": "Pulsa Intro para abrir la incidencia, o Mayús+F10 para su menú. Sus botones cambian el estado, la prioridad y los demás campos.",
     "cardRole": "tarjeta de incidencia",
     "tabInstructions": "Alt+Mayús+Flecha izquierda o derecha mueve la pestaña.",
-    "viewInstructions": "Arrastra con el ratón para reordenar las vistas."
+    "viewInstructions": "Arrastra con el ratón para reordenar las vistas.",
+    "projectInstructions": "Arrastra con el ratón, o pulsa Alt+Mayús+Flecha arriba o abajo, para mover el proyecto."
   },
   "MobileShell": {
     "serverHeading": "Conéctate a tu servidor",

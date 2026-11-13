@@ -45,6 +45,7 @@
       "components/routines/routines-panel.tsx",
       "components/pull-requests/pr-context-actions.tsx",
       "lib/use-hidden-projects.ts",
+      "lib/project-order.ts",
       "lib/issue-semantic-query.ts",
       "lib/use-semantic-issue-search.ts",
       "lib/server/issue-semantic-search.ts",
@@ -142,6 +143,8 @@ Use navigation to choose your personal work or a project, and the command palett
 ## Find personal work and switch projects {#navigation}
 
 The main navigation gives access to personal work and your projects. Select a project to see its own issues and secondary destinations, including triage, objectives, pages and project settings. The back row moves up one navigation level; it can change the sidebar's contents while the main page remains open. On a computer, a project's secondary pages place the project's name beside the back row: choose another project there to open the same page in it, such as its objectives or its feedback. Command/Ctrl+Shift+P opens that list, where typing filters the projects by name; it is the same shortcut as **Create in** when creating an issue or objective. Select a destination to navigate there. In a list such as triage, objectives, feedback, code review or routines, the filter field at the top searches every item, whatever the filters narrowing the list; its placeholder gives their total.
+
+On a computer, drag a project up or down the main navigation to put your projects in the order you want, or focus its row and press Alt+Shift+Up or Down Arrow. The order is yours alone and follows your account to every device; the project list beside the back row uses it too. A project you join later is added at the end.
 
 Counters and warnings follow you between levels. The control that leads back to **Home** shows the total waiting to be triaged across the projects **Home** lists, the current one included, and the Smart Assign warning when one of your projects needs rules. A back row shows the counter of the level it returns to as a badge on its arrow, amber while the Smart Assign warning applies. Inside a project, **Triage** and **Feedback** keep that project's own counts. Desktop tabs carry the same badge as their sidebar entry: the warning on **Home**, and the counts on **Inbox**, **Code review** and a project's **Triage** and **Feedback**, updated even when the tab is in the background.
 

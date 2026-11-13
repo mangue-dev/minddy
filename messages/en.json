@@ -3401,6 +3401,7 @@
     "hiddenToast": "“{name}” is hidden from your sidebar. Find it in Account settings → Hidden projects.",
     "shownToast": "“{name}” is back in your sidebar.",
     "hideFailed": "Couldn't hide the project. Try again.",
+    "reorderFailed": "Couldn't save the project order. Try again.",
     "showFailed": "Couldn't show the project. Try again.",
     "wizardSeedChooseFile": "Choose the CSV file"
   },
@@ -7026,7 +7027,8 @@
     "cardInstructions": "Press Enter to open the issue, or Shift+F10 for its menu. Its buttons change its status, priority and other fields.",
     "cardRole": "issue card",
     "tabInstructions": "Alt+Shift+Left or Right Arrow moves the tab.",
-    "viewInstructions": "Drag with the mouse to reorder the views."
+    "viewInstructions": "Drag with the mouse to reorder the views.",
+    "projectInstructions": "Drag with the mouse, or press Alt+Shift+Up or Down Arrow, to move the project."
   },
   "MobileShell": {
     "serverHeading": "Connect to your server",
