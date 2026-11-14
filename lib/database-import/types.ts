@@ -1,4 +1,5 @@
 import type {
+  DatabaseMetadataType,
   DatabaseProperty,
   DatabasePropertyType,
   DatabaseValues,
@@ -14,7 +15,7 @@ export const MAX_IMPORT_FILES = 100;
 export const MAX_IMPORT_PEOPLE = 5000;
 export const MAX_IMPORT_PAGE_CONTENT_BYTES = 1_000_000;
 export type ImportColumnType =
-  | Exclude<DatabasePropertyType, "created_at">
+  | Exclude<DatabasePropertyType, DatabaseMetadataType>
   | "title";
 export interface ImportColumn {
   name: string;

@@ -122,7 +122,9 @@ export function DatabaseSelectCell({
   return (
     <>
       <SearchMenu
-        contentClassName="[&_[cmdk-item]]:rounded-sm"
+        // Wide enough for its search placeholder in every language, whatever
+        // the width of the cell it hangs from.
+        contentClassName="min-w-72 [&_[cmdk-item]]:rounded-sm"
         open={open}
         onOpenChange={changeOpen}
         trigger={trigger}

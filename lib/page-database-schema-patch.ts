@@ -17,23 +17,37 @@ export function patchDatabaseSchema(
       const base = before.find((p) => p.id === property.id);
       const next = after.find((p) => p.id === property.id);
       if (!base || !next) return property;
-      const patch = Object.fromEntries(
-        Object.keys(next)
-          .filter(
-            (key) =>
-              JSON.stringify(next[key as keyof DatabaseProperty]) !==
-              JSON.stringify(base[key as keyof DatabaseProperty]),
-          )
-          .map((key) => [key, next[key as keyof DatabaseProperty]]),
-      );
-      return { ...property, ...patch };
+      const keys = [...new Set([...Object.keys(base), ...Object.keys(next)])] as
+        (keyof DatabaseProperty)[];
+      const changed = keys.filter((key) =>
+        JSON.stringify(next[key]) !== JSON.stringify(base[key]));
+      const patched: Record<string, unknown> = { ...property };
+      for (const key of changed) {
+        // A key the draft dropped (a number format) is dropped here too.
+        if (next[key] === undefined) delete patched[key];
+        else patched[key] = next[key];
+      }
+      return patched as unknown as DatabaseProperty;
     });
-  for (const property of after)
+  // A new column takes its place in the draft: right after the column that
+  // precedes it there, so undoing a deletion puts the column back where it was
+  // (MIN-990). A column appended to the draft still lands after the last one.
+  after.forEach((property, index) => {
     if (
-      !before.some((p) => p.id === property.id) &&
-      !result.some((p) => p.id === property.id)
+      before.some((p) => p.id === property.id) ||
+      result.some((p) => p.id === property.id)
     )
-      result.push(property);
+      return;
+    let at = 0;
+    for (let i = index - 1; i >= 0; i -= 1) {
+      const anchor = result.findIndex((p) => p.id === after[i].id);
+      if (anchor !== -1) { at = anchor + 1; break; }
+    }
+    // Nothing before it in the draft: first, unless the draft was empty of
+    // known columns, where it joins the end as before.
+    if (at === 0 && index > 0) at = result.length;
+    result.splice(at, 0, property);
+  });
   const retainedBefore = before
     .filter((p) => after.some((next) => next.id === p.id))
     .map((p) => p.id);

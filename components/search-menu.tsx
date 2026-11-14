@@ -30,16 +30,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/** Shared styling for the search input inside any dropdown (cmdk or Radix). */
+/** Shared styling for the search input inside any dropdown (cmdk or Radix).
+ *  The field takes the whole row and a placeholder too long for it ends on an
+ *  ellipsis instead of being cut mid-word. */
 export const searchInputClass =
-  "w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground";
+  "w-full min-w-0 flex-1 truncate bg-transparent text-sm outline-none placeholder:text-ellipsis placeholder:text-muted-foreground";
 
 /** The search row (magnifier + input) shared by every searchable dropdown —
  *  the cmdk shell below and the Radix context menu both render it, so the field
  *  looks identical everywhere. Pass the actual input (cmdk or plain) as child. */
 export function DropdownSearchRow({ children }: { children: React.ReactNode }) {
   return (
-    <div data-sheet-search className="flex items-center gap-2 px-2 py-1">
+    <div data-sheet-search className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1">
       <HugeiconsIcon icon={Search01Icon} className="size-4 shrink-0 opacity-50" />
       {children}
     </div>

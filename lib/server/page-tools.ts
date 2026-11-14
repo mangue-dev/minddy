@@ -35,7 +35,10 @@ import { displayName } from "@/lib/display-name";
 import { SITE_NAME } from "@/lib/site";
 import { convertPageDatabase, updatePageDatabase } from "@/lib/server/page-databases";
 import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
-import type { DatabaseProperty, DatabaseValues } from "@/lib/page-databases";
+import { databasePropertyValue, type DatabaseProperty, type DatabaseValues } from "@/lib/page-databases";
+
+/** Stands for an "updated by" column when reading an entry's last author. */
+const UPDATED_BY: DatabaseProperty = { id: "", name: "", type: "updated_by" };
 import type { Page, PageWriteKind } from "@/lib/pages";
 
 /**
@@ -201,6 +204,10 @@ export interface PageRead extends PageTreeEntry {
     icon: string | null;
     property_values?: DatabaseValues;
     created_at?: string;
+    /** What the read-only metadata columns of a database show for an entry. */
+    updated_at?: string;
+    created_by?: string | null;
+    updated_by?: string | null;
   }>;
   /**
  * WHICH relies on this page (MIN-279) — tickets, objectives and other pages,
@@ -341,7 +348,14 @@ export async function readPageForAgent({
           title: p.title,
           icon: p.icon,
           ...(page.database_schema != null
-            ? { property_values: p.property_values ?? {}, created_at: p.created_at }
+            ? {
+                property_values: p.property_values ?? {},
+                created_at: p.created_at,
+                updated_at: p.updated_at,
+                created_by: p.created_by,
+                // "minddy" when an agent made the last edit (identity rule).
+                updated_by: databasePropertyValue(p, UPDATED_BY) as string | null,
+              }
             : {}),
         }))
     : [];

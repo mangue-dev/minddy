@@ -2,9 +2,11 @@ import "server-only";
 
 import { z } from "zod";
 import {
+  DATABASE_CALCULATIONS,
   DEFAULT_DATABASE_VIEW,
   MAX_DATABASE_VIEWS,
   MAX_DATABASE_VIEW_NAME,
+  type DatabaseCalculation,
   type DatabaseProperty,
   type DatabaseView,
   type SavedDatabaseView,
@@ -64,6 +66,8 @@ export interface AgentDatabaseView {
   descending: boolean;
   filters: AgentDatabaseFilter;
   hidden_property_ids: string[];
+  /** The figure shown under a number column, by property id. */
+  calculations: Record<string, DatabaseCalculation>;
 }
 
 export interface AgentDatabaseViews {
@@ -94,6 +98,7 @@ export const DATABASE_VIEWS_TOOL_SCHEMA = z.object({
     })).max(MAX_DATABASE_FILTER_CONDITIONS),
   }).nullable().optional(),
   hidden_property_ids: z.array(id).max(30).optional(),
+  calculations: z.record(id, z.enum(DATABASE_CALCULATIONS)).optional(),
   order: z.array(id).max(MAX_DATABASE_VIEWS).optional(),
 });
 type ViewsInput = z.infer<typeof DATABASE_VIEWS_TOOL_SCHEMA>;
@@ -140,14 +145,14 @@ export function databaseViewsToolDescriptions(names: DatabaseViewToolNames):
   const board = names.boardViews;
   return {
     list:
-      "The saved VIEWS of a database page, in the order of its view strip: each has view_id, name, position, sort, descending, filters ({ match: \"and\"|\"or\", conditions: [{ property_id, operator, value }] }) and hidden_property_ids. Views are shared by every project member. When the conversation is about a database page, \"a view\" / \"une vue\" means one of THESE, never an issue board view. An empty list means the database still shows its default view (by position, no filter, every column). " +
+      "The saved VIEWS of a database page, in the order of its view strip: each has view_id, name, position, sort, descending, filters ({ match: \"and\"|\"or\", conditions: [{ property_id, operator, value }] }), hidden_property_ids and calculations (the figure shown under a number column, by property id: sum, average, min, max or count). Views are shared by every project member. When the conversation is about a database page, \"a view\" / \"une vue\" means one of THESE, never an issue board view. An empty list means the database still shows its default view (by position, no filter, every column). " +
       `Read this before ${names.updateViews}.` +
       (board ? ` These are NOT the issue views of ${board.list}.` : ""),
     update:
       `Create, reconfigure, delete or reorder the saved VIEWS of a database page — never its schema or entries (${names.updateDatabase}), never the issue board views${board ? ` (${board.create}/${board.update})` : ""}. ` +
       "When the conversation is about a database page, this is the tool for \"create a view\" / \"crée une vue\", filtering, sorting or hiding columns. " +
       `Read ${names.getPage} for the property ids and option ids, and ${names.listViews} for the view ids, first. ` +
-      "operation=create needs name and takes any view field; omitted fields get the default (sort position ascending, no filter, no hidden column); the view is added at the end of the strip. operation=update needs view_id and changes ONLY the fields you pass (name, sort, descending, filters, hidden_property_ids). filters and hidden_property_ids each REPLACE the whole current value: resend the conditions and ids you want to keep. operation=delete needs view_id; the last view cannot be deleted. operation=reorder needs order: EVERY view_id of the database exactly once, in the new strip order. sort is \"position\" (manual order), \"title\" or a property id. filters = { match: \"and\" (every condition, the default) or \"or\" (any condition), conditions: up to 10 { property_id, operator, value } }; null or no conditions removes the filter. Operators by property type: text contains, not_contains, eq, neq (case-insensitive); number eq, neq, gt, lt (value a decimal); select eq, neq (value an option ID, never its name); multi_select contains, not_contains (option ID); people contains, not_contains (member user id); date and created_at eq (same day), gt (after), lt (before) with value YYYY-MM-DD; checkbox eq with \"true\" or \"false\"; every type except checkbox also takes empty and not_empty, without a value. " +
+      "operation=create needs name and takes any view field; omitted fields get the default (sort position ascending, no filter, no hidden column); the view is added at the end of the strip. operation=update needs view_id and changes ONLY the fields you pass (name, sort, descending, filters, hidden_property_ids, calculations). filters, hidden_property_ids and calculations each REPLACE the whole current value: resend the conditions, ids and calculations you want to keep. calculations maps the id of a NUMBER property to sum, average, min, max or count; the table shows that figure under the column, computed on the entries the view keeps. A select or multi_select column sorts in the order of its options. operation=delete needs view_id; the last view cannot be deleted. operation=reorder needs order: EVERY view_id of the database exactly once, in the new strip order. sort is \"position\" (manual order), \"title\" or a property id. filters = { match: \"and\" (every condition, the default) or \"or\" (any condition), conditions: up to 10 { property_id, operator, value } }; null or no conditions removes the filter. Operators by property type: text contains, not_contains, eq, neq (case-insensitive); number eq, neq, gt, lt (value a decimal); select eq, neq (value an option ID, never its name); multi_select contains, not_contains (option ID); people contains, not_contains (member user id); date and created_at eq (same day), gt (after), lt (before) with value YYYY-MM-DD; checkbox eq with \"true\" or \"false\"; every type except checkbox also takes empty and not_empty, without a value. " +
       `Column ORDER is not part of a view: it is the order of the database_schema array, changed with ${names.updateDatabase} operation=schema. The result lists every view after the write.`,
   };
 }
@@ -163,8 +168,11 @@ const VALUE_HINT: Record<DatabaseProperty["type"], string> = {
   select: "an option id of this property from database_schema",
   multi_select: "an option id of this property from database_schema",
   people: "a member user id",
-  date: "a day as YYYY-MM-DD",
+  date: "a day as YYYY-MM-DD (a recurring date is compared through its next occurrence)",
   created_at: "a day as YYYY-MM-DD",
+  updated_at: "a day as YYYY-MM-DD",
+  created_by: "a member user id",
+  updated_by: "a member user id",
   checkbox: "\"true\" (checked) or \"false\" (unchecked)",
 };
 
@@ -209,6 +217,7 @@ function flatten(saved: SavedDatabaseView, schema: DatabaseProperty[]): AgentDat
       })),
     },
     hidden_property_ids: saved.view.hidden,
+    calculations: saved.view.calculations ?? {},
   };
 }
 
@@ -293,6 +302,13 @@ function mergeView(base: DatabaseView, input: ViewsInput, schema: DatabaseProper
     if (unknown.length)
       return invalid(`hidden_property_ids must be property ids from database_schema: ${unknown.join(", ")}.`);
     next.hidden = [...new Set(input.hidden_property_ids)];
+  }
+  if (input.calculations !== undefined) {
+    const wrong = Object.keys(input.calculations).filter((property) =>
+      known.get(property)?.type !== "number");
+    if (wrong.length)
+      return invalid(`calculations keys must be ids of number properties from database_schema: ${wrong.join(", ")}.`);
+    next.calculations = { ...input.calculations };
   }
   return { ok: true, data: next };
 }

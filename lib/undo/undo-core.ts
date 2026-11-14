@@ -7,6 +7,11 @@
 // row purged in the meantime is re-created client-side, which yields a NEW id
 // — the alias map keeps older entries that still reference the original id
 // applicable.
+//
+// A `replay` entry (MIN-990) covers the surfaces whose writes are already
+// optimistic and queued on their own (database cells, columns and entries):
+// it carries the two gestures that replay it instead of data the provider
+// would have to interpret.
 
 import type {
   Issue,
@@ -79,7 +84,45 @@ export type UndoAction =
       projectId: string;
       relationId: string;
       relation: RelationSnapshot;
+    }
+  | {
+      kind: "replay";
+      projectId: string;
+      /** What the toast names; a key of `Undo.actions`. */
+      label: ReplayLabel;
+      /** Apply the change backwards. Optimistic: it updates its caches at
+          once and resolves when the server has it; rejects when it failed. */
+      undo: () => Promise<unknown>;
+      /** Apply the change again, with the same contract. */
+      redo: () => Promise<unknown>;
     };
+
+export type ReplayLabel =
+  | "databaseValue"
+  | "databaseColumns"
+  | "entryCreate"
+  | "entryTrash"
+  | "entryMove"
+  | "viewSettings";
+
+/**
+ * The two gestures of a `replay` entry, each one waiting for the previous
+ * replay of the same entry (and for the recorded write): a restore must not
+ * reach the server before the trash it reverts.
+ */
+export function replayGestures(
+  recorded: Promise<unknown> | undefined,
+  undo: () => Promise<unknown>,
+  redo: () => Promise<unknown>,
+): { undo: () => Promise<unknown>; redo: () => Promise<unknown> } {
+  let last: Promise<unknown> = recorded ?? Promise.resolve();
+  const after = (run: () => Promise<unknown>) => () => {
+    const next = last.catch(() => {}).then(run);
+    last = next;
+    return next;
+  };
+  return { undo: after(undo), redo: after(redo) };
+}
 
 // The intersection distributes over the union, so narrowing on `kind` holds.
 export type UndoEntry = UndoAction & {

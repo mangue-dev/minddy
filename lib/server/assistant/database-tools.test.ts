@@ -82,7 +82,7 @@ describe("Numo database tool dispatch", () => {
       (t) => t.function.name === "update_page_database",
     );
     expect(tool?.function.parameters.properties).toHaveProperty("project_id");
-    expect(tool?.function.description).toContain("created_at is read-only");
+    expect(tool?.function.description).toContain("created_at, updated_at, created_by and updated_by are read-only metadata");
     expect(
       await executeTool("get_page", { page_id: "database" }, ctx),
     ).toMatchObject({ success: true, result: { database_revision: 3 } });

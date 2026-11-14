@@ -9,6 +9,7 @@ import { startRoutineOccurrence } from "@/lib/server/routine-occurrences";
 import { notifyRoutineLaunchFailure } from "@/lib/server/routine-hooks";
 import { assertPropertyConditions, evaluateRoutineConditions, parseRoutineTrigger, RoutineTriggerError, type ConditionContext, type RoutineTrigger } from "@/lib/routine-triggers";
 import type { Routine } from "@/lib/server/routines";
+import { databaseDateOccurrence, databasePropertyValue, isDatabaseMetadataType } from "@/lib/page-databases";
 import { routeEventToBatches, sweepUnroutedEvents } from "@/lib/server/numo/event-batches";
 
 export interface RoutineEventRow {
@@ -83,7 +84,12 @@ async function subjectContext(routine: Routine, arming: Arming, trigger: Routine
     if (!database.database_schema) throw new RoutineTriggerError("invalidConditionReference");
     assertPropertyConditions(trigger, database.database_schema);
     const properties = { ...page.property_values };
-    for (const p of database.database_schema) if (p.type === "created_at") properties[p.id] = page.created_at;
+    for (const p of database.database_schema) {
+      // Derived properties are read from the entry; a recurring date is its next occurrence.
+      if (isDatabaseMetadataType(p.type)) properties[p.id] = databasePropertyValue(page, p);
+      else if (p.type === "date" && properties[p.id] != null)
+        properties[p.id] = databaseDateOccurrence(properties[p.id]) ?? properties[p.id];
+    }
     return { properties, schema: database.database_schema };
   }
   // Feedback remains private and retains its moderation state; only its ID is

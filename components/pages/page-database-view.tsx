@@ -2,18 +2,18 @@
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, Edit04Icon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowRight01Icon, ArrowUpDownIcon, Cancel01Icon, Copy01Icon, Delete02Icon, DragDropVerticalIcon, Edit04Icon, File02Icon, FilterIcon, Search01Icon, Settings02Icon, TypeIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
 import { memo, startTransition, useEffect, useMemo, useRef, useState, type DragEvent, type MouseEvent, type ReactNode, type RefObject } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { DatabaseChoice } from "./database-choice";
+import { IssueActionsMenu, type ContextMenuAction } from "@/components/issue-context-menu";
+import { usePageDocumentMenu } from "./page-document-actions";
+import { useMenuScrollFade } from "@/components/ui/menu-scroll-fade";
+import { useUndoHistory } from "@/lib/undo/undo-context";
+import { replayGestures, type ReplayLabel } from "@/lib/undo/undo-core";
+import { createUuid } from "@/lib/create-uuid";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent } from "@/components/ui/mobile-sheet";
@@ -58,7 +58,7 @@ import {
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { usePagesQuery } from "@/lib/use-pages-query";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
-import { usePromotePage, usePromotePages } from "./page-promotion-context";
+import { usePromotePages } from "./page-promotion-context";
 import { useAssistantPanelActions } from "@/lib/assistant-panel-context";
 import { BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
 import { BulkEntityActions } from "@/components/bulk-entity-actions";
@@ -77,12 +77,21 @@ import { DatabaseFilterEditor, activeFilterCount } from "./database-filter-edito
 import { matchesDatabaseFilter, type DatabaseViewFilter } from "@/lib/page-database-filters";
 import { displayName } from "@/lib/display-name";
 import {
+  DATABASE_CALCULATIONS,
+  MAX_DATABASE_COLUMN_WIDTH,
   MAX_DATABASE_PROPERTIES,
+  MIN_DATABASE_COLUMN_WIDTH,
   compareDatabaseValues,
+  databaseCalculation,
   databaseValueText,
   databasePropertyValue,
+  isDatabaseDateType,
+  type DatabaseCalculation,
   type DatabaseProperty,
+  type DatabasePropertyType,
 } from "@/lib/page-databases";
+import { formatDatabaseNumber } from "@/lib/page-database-number";
+import type { MessageKey } from "@/lib/i18n-keys";
 import type { PageSummary } from "@/lib/pages-api";
 import {
   DatabaseOptionsDialog,
@@ -109,49 +118,86 @@ const ROW_DROP_LINE =
 const ROW_DROP_LINE_ABOVE = `${ROW_DROP_LINE} [&>td]:after:top-0`;
 const ROW_DROP_LINE_BELOW = `${ROW_DROP_LINE} [&>td]:after:bottom-0`;
 
-function SortableDatabaseColumn({ projectId, database, property, disabled, onEdit }: {
+const CALCULATION_LABELS = {
+  sum: "calculationSum",
+  average: "calculationAverage",
+  min: "calculationMin",
+  max: "calculationMax",
+  count: "calculationCount",
+} as const satisfies Record<DatabaseCalculation, MessageKey<"PageDatabase">>;
+
+type ColumnResize = {
+  /** The width while the edge is dragged; committed to the view on release. */
+  preview: (id: string, width: number | null) => void;
+  commit: (id: string, width: number | null) => void;
+};
+
+/**
+ * The right edge of a header: drag it to set the column's width, double-click
+ * to give the column its default width back. From the keyboard, Left and
+ * Right move the edge.
+ */
+function ColumnResizer({ id, name, resize }: { id: string; name: string; resize: ColumnResize }) {
+  const t = useTranslations("PageDatabase");
+  const clamp = (width: number) =>
+    Math.round(Math.min(MAX_DATABASE_COLUMN_WIDTH, Math.max(MIN_DATABASE_COLUMN_WIDTH, width)));
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={t("resizeColumn", { name })}
+      tabIndex={0}
+      data-database-column-resizer={id}
+      className="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize touch-none outline-none hover:bg-primary/40 focus-visible:bg-primary/60 active:bg-primary/60"
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const cell = event.currentTarget.parentElement;
+        if (!cell) return;
+        const start = event.clientX;
+        const initial = cell.getBoundingClientRect().width;
+        let width = initial;
+        const move = (next: PointerEvent) => {
+          width = clamp(initial + next.clientX - start);
+          resize.preview(id, width);
+        };
+        const stop = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", stop);
+          window.removeEventListener("pointercancel", stop);
+          resize.preview(id, null);
+          if (width !== initial) resize.commit(id, width);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", stop);
+        window.addEventListener("pointercancel", stop);
+      }}
+      onDoubleClick={() => resize.commit(id, null)}
+      onKeyDown={(event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const current = event.currentTarget.parentElement?.getBoundingClientRect().width ?? 0;
+        resize.commit(id, clamp(current + (event.key === "ArrowRight" ? 16 : -16)));
+      }}
+    />
+  );
+}
+
+function SortableDatabaseColumn({ projectId, database, property, disabled, onEdit, resize }: {
   projectId: string; database: PageSummary; property: DatabaseProperty; disabled: boolean;
-  onEdit: (property: DatabaseProperty) => void;
+  onEdit: (property: DatabaseProperty) => void; resize: ColumnResize;
 }) {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({ id: property.id, disabled });
   return <th ref={setNodeRef} scope="col" data-database-column={property.id}
-    className={`relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-1 font-normal ${isDragging ? "shadow-md" : ""}`}
+    className={`relative overflow-hidden whitespace-nowrap border-b border-border/50 bg-background p-0 font-normal ${isDragging ? "shadow-md" : ""}`}
     // A translation only: dnd-kit's transform also scales the dragged header
     // to the width of the column under it, which stretched its text.
     style={{ transform: CSS.Translate.toString(transform), transition, zIndex: isDragging ? 1 : undefined }}>
     <DatabaseColumnName projectId={projectId} database={database} property={property} disabled={disabled}
       dragging={isDragging} onEdit={onEdit} dragHandleProps={{ ...attributes, ...listeners }} />
+    <ColumnResizer id={property.id} name={property.name} resize={resize} />
   </th>;
-}
-
-function DatabaseSelect({
-  value,
-  onChange,
-  label,
-  options,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <Select
-      value={value || "__empty__"}
-      onValueChange={(next) => onChange(next === "__empty__" ? "" : next)}
-    >
-      <SelectTrigger aria-label={label} className="w-full min-w-0">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent className="[&_[role=option]]:rounded-sm">
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value || "__empty__"}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
 }
 
 const verticalPropertyDrag: Modifier = ({ transform }) => ({ ...transform, x: 0 });
@@ -228,6 +274,8 @@ function PropertySettings({
   const t = useTranslations("PageDatabase");
   const tCommon = useTranslations("Common");
   const { saveSchema, pending } = usePageDatabase(projectId);
+  const tUndo = useTranslations("Undo");
+  const undo = useUndoHistory();
   const schema = database.database_schema ?? [];
   const [popoverOpen, setPopoverOpen] = useState(false);
   const controlled = sheet ?? anchored;
@@ -245,6 +293,7 @@ function PropertySettings({
   );
   const announcements = useDragAnnouncements((id) =>
     schema.find((property) => property.id === id)?.name);
+  const fade = useMenuScrollFade<HTMLDivElement>();
   const columnsBody = (
     <>
           {!sheet && <div className="px-2 py-1 text-sm font-medium">{t("properties")}</div>}
@@ -264,7 +313,15 @@ function PropertySettings({
           >
           <DragCursor />
           <SortableContext items={schema.map((property) => property.id)} strategy={verticalListSortingStrategy}>
-          <div className={sheet ? "max-h-[50dvh] space-y-1 overflow-y-auto" : "max-h-72 space-y-1 overflow-y-auto"}>
+          <div
+            ref={fade.ref}
+            onScroll={fade.onScroll}
+            // Rows hidden past an edge fade out there, under a chevron, as in
+            // the editor's menus. The gap sits between rows only: the fade's
+            // own anchors take no height.
+            className={`${sheet ? "max-h-[50dvh]" : "max-h-72"} overflow-y-auto [&>[data-mobile-sheet-row]+[data-mobile-sheet-row]]:mt-1`}
+          >
+            {!sheet && fade.start}
             {schema.map((property) => {
               const Icon = PROPERTY_ICONS[property.type];
               return (
@@ -379,6 +436,7 @@ function PropertySettings({
                 </SortablePropertyRow>
               );
             })}
+            {!sheet && fade.end}
           </div>
           </SortableContext>
           </DndContext>
@@ -454,17 +512,37 @@ function PropertySettings({
         cancelLabel={tCommon("cancel")}
         isLoading={pending}
         onConfirm={() => {
+          const name = remove?.name ?? "";
           void saveSchema(
             removeBase,
             (removeBase.database_schema ?? []).filter(
               (p) => p.id !== remove?.id,
             ),
-          );
+          ).then((saved) => {
+            if (saved) toast(t("propertyDeleted", { name }), {
+              action: { label: tUndo("undo"), onClick: () => undo.undo() },
+            });
+          });
         }}
       />
     </>
   );
 }
+
+type SortDirectionKeys = readonly [MessageKey<"PageDatabase">, MessageKey<"PageDatabase">];
+const TEXT_DIRECTIONS: SortDirectionKeys = ["sortTextAscending", "sortTextDescending"];
+
+/** How the two sort directions read for what a column holds. */
+function sortDirectionKeys(type: DatabasePropertyType | "position" | "title"): SortDirectionKeys {
+  if (type === "position") return ["sortManualAscending", "sortManualDescending"];
+  if (type === "number") return ["sortNumberAscending", "sortNumberDescending"];
+  if (type === "checkbox") return ["sortCheckboxAscending", "sortCheckboxDescending"];
+  if (type === "select" || type === "multi_select") return ["sortOptionAscending", "sortOptionDescending"];
+  if (type !== "title" && isDatabaseDateType(type)) return ["sortDateAscending", "sortDateDescending"];
+  return TEXT_DIRECTIONS;
+}
+
+const NO_MENU_ACTIONS: ContextMenuAction[] = [];
 
 /** Rows in the first paint of a database (more than a screen holds), then per step. */
 const FIRST_PAINT_ROWS = 40;
@@ -498,20 +576,50 @@ export const PageDatabaseView = memo(function PageDatabaseView({
   const columnAnnouncements = useDragAnnouncements((id) =>
     database.database_schema?.find((property) => property.id === id)?.name);
   const { canWrite } = useProjectCapabilities(projectId);
-  const promotePage = usePromotePage(projectId);
   const {
     pages,
     createPage,
     duplicatePage,
     trashPage,
+    restorePage,
     updatePage,
     prefetchPage,
   } = usePagesQuery(projectId);
+  const undo = useUndoHistory();
+  /**
+   * Make a gesture on entries undoable (MIN-990): one history entry per page,
+   * linked so a selection comes back in one ⌘Z. `settled` is the gesture's own
+   * write; when it fails the entries leave the history.
+   */
+  const recordEntries = (
+    label: ReplayLabel,
+    ids: string[],
+    settled: Promise<unknown>,
+    revert: (id: string) => Promise<unknown>,
+    replay: (id: string) => Promise<unknown>,
+  ) => {
+    const link = ids.length > 1 ? `entries-${createUuid()}` : undefined;
+    const done = settled.then(() => true, () => false);
+    const records = ids.map((id) => undo.record(
+      { kind: "replay", projectId, label,
+        ...replayGestures(done, () => revert(id), () => replay(id)) },
+      done,
+      link,
+    ));
+    void done.then((saved) => { if (!saved) for (const record of records) record?.retract(); });
+  };
+  const recordCreated = (ids: string[], settled: Promise<unknown>) =>
+    recordEntries("entryCreate", ids, settled, (id) => trashPage(id), (id) => restorePage(id));
   const { members } = useMembersQuery(projectId, true);
   const [query, setQuery] = useState("");
   const databaseViews = usePageDatabaseViews(projectId, database.id, canWrite,
     database.database_schema ?? undefined);
   const { sort, descending, filters, hidden } = databaseViews.config;
+  const calculations = databaseViews.config.calculations ?? {};
+  const widths = databaseViews.config.widths ?? {};
+  const locale = useLocale();
+  // The edge being dragged: the table follows it, the view is saved on release.
+  const [resizing, setResizing] = useState<{ id: string; width: number } | null>(null);
   const updateView = databaseViews.update;
   const setSort = (next: string) => updateView({ sort: next });
   const setDescending = (next: boolean) => updateView({ descending: next });
@@ -619,6 +727,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
   const add = () =>
     void run(async () => {
       const entry = await createPage({ parent_id: database.id });
+      recordCreated([entry.id], entry.settled);
       onOpen(entry.id);
       await entry.settled;
     });
@@ -634,6 +743,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
       // Manual order is already on screen; the new entry must not be filtered out.
       if (filters.conditions.length) setFilters({ ...filters, conditions: [] });
       setQuery("");
+      recordCreated([created.id], created.settled);
       onOpen(created.id);
       await created.settled;
     });
@@ -683,7 +793,9 @@ export const PageDatabaseView = memo(function PageDatabaseView({
       );
       if (copies.length === 1) onOpen(copies[0].id);
       else setSelected(copies.map((copy) => copy.id));
-      await Promise.all(copies.map((copy) => copy.settled));
+      const settled = Promise.all(copies.map((copy) => copy.settled));
+      recordCreated(copies.map((copy) => copy.id), settled);
+      await settled;
     });
   const drop = (targetId: string, above: boolean) => {
     const ids = dragging.current;
@@ -701,12 +813,89 @@ export const PageDatabaseView = memo(function PageDatabaseView({
     );
     if (!positions.length) return;
     void run(async () => {
-      await Promise.all(
+      const before = new Map(moving.map((entry) => [entry.id, entry.position]));
+      const after = new Map(moving.map((entry, index) => [entry.id, positions[index]]));
+      const settled = Promise.all(
         moving.map((entry, index) =>
           updatePage(entry.id, { position: positions[index] }),
         ),
       );
+      recordEntries("entryMove", moving.map((entry) => entry.id), settled,
+        (id) => updatePage(id, { position: before.get(id) }),
+        (id) => updatePage(id, { position: after.get(id) }));
+      await settled;
     });
+  };
+  /** Move entries to the trash; ⌘Z brings them back. */
+  const trashEntries = (targets: PageSummary[]) =>
+    run(async () => {
+      const ids = targets.map((entry) => entry.id);
+      const settled = Promise.all(ids.map((id) => trashPage(id)));
+      setSelected((selection) => selection.filter((id) => !ids.includes(id)));
+      recordEntries("entryTrash", ids, settled, (id) => restorePage(id), (id) => trashPage(id));
+      await settled;
+    });
+  // The sidebar's page menu, for an entry: the same actions and dialogs.
+  const documentMenu = usePageDocumentMenu({
+    projectId,
+    pages,
+    onCreateChild: (parentId) =>
+      void run(async () => {
+        const created = await createPage({ parent_id: parentId });
+        onOpen(created.id);
+        await created.settled;
+      }),
+    onToggleFavorite: (page) =>
+      void run(() => updatePage(page.id, { favorite: !page.favorite })),
+    onTrash: (page) => {
+      const entry = entries.find((candidate) => candidate.id === page.id);
+      if (entry) void trashEntries([entry]);
+    },
+  });
+  const openAction = (entry: PageSummary): ContextMenuAction => ({
+    id: "open-page",
+    label: t("openEntry"),
+    icon: <HugeiconsIcon icon={File02Icon} className="size-4" />,
+    onSelect: () => onOpen(entry.id),
+  });
+  const duplicateAction = (targets: PageSummary[]): ContextMenuAction => ({
+    id: "duplicate",
+    label: t("duplicate"),
+    icon: <HugeiconsIcon icon={Copy01Icon} className="size-4" />,
+    onSelect: () => setDuplicateTargets(targets),
+  });
+  /**
+   * What an entry's handle offers: opening it, then everything the sidebar
+   * offers for a page. On a wider selection the menu acts on all of it, and
+   * keeps to what applies to several entries at once.
+   */
+  const entryMenu = (entry: PageSummary): ContextMenuAction[] => {
+    const targets = targetsFor(entry);
+    if (targets.length > 1) {
+      return canWrite
+        ? [
+            duplicateAction(targets),
+            {
+              id: "trash",
+              label: tCommon("moveToTrash"),
+              icon: <HugeiconsIcon icon={Delete02Icon} className="size-4" />,
+              variant: "destructive",
+              separatorBefore: true,
+              onSelect: () => setRemove(targets),
+            },
+          ]
+        : [];
+    }
+    const shared = documentMenu.actionsFor({
+      id: entry.id,
+      title: entry.title,
+      favorite: entry.favorite,
+    });
+    if (!canWrite) return [openAction(entry), ...shared];
+    // Duplicating sits with the other ways to make a page, above the trash.
+    const trash = shared.findIndex((action) => action.id === "trash");
+    const end = trash === -1 ? shared.length : trash;
+    return [openAction(entry), ...shared.slice(0, end), duplicateAction(targets), ...shared.slice(end)];
   };
   // Row handlers keep one identity and read the latest state when called, so
   // a memoized row re-renders only when what it shows changes (MIN-875).
@@ -715,9 +904,6 @@ export const PageDatabaseView = memo(function PageDatabaseView({
     prefetch: (id) => prefetchPage(id),
     insert: (entry, altKey) => insert(entry, altKey),
     menuOpenChange: (id, open) => setMenuEntry(open ? id : null),
-    promote: (entry) => void promotePage(entry),
-    duplicate: (entry) => setDuplicateTargets(targetsFor(entry)),
-    remove: (entry) => setRemove(targetsFor(entry)),
     dragOver: (event, id) => {
       if (!manual || !dragging.current.length || dragging.current.includes(id)) return;
       event.preventDefault();
@@ -780,20 +966,34 @@ export const PageDatabaseView = memo(function PageDatabaseView({
     },
   });
   const visible = useMemo(() => schema.filter((property) => !hidden.includes(property.id)), [schema, hidden]);
+  const widthOf = (id: string, fallback: number) =>
+    resizing?.id === id ? resizing.width : widths[id] ?? fallback;
+  const resize: ColumnResize = {
+    preview: (id, width) => setResizing(width === null ? null : { id, width }),
+    commit: (id, width) => {
+      const next = { ...widths };
+      if (width === null) delete next[id];
+      else next[id] = width;
+      updateView({ widths: next });
+    },
+  };
   const columnWidths = [
-    240,
+    widthOf("title", 240),
     ...visible.map(
-      (property) =>
+      (property) => widthOf(property.id,
         ({
           text: 240,
           number: 160,
           select: 192,
           multi_select: 240,
           created_at: 200,
+          updated_at: 200,
+          created_by: 192,
+          updated_by: 192,
           date: 176,
           people: 192,
           checkbox: 128,
-        })[property.type],
+        })[property.type]),
     ),
   ];
   const contentWidth = columnWidths.reduce((total, width) => total + width, 0);
@@ -806,29 +1006,37 @@ export const PageDatabaseView = memo(function PageDatabaseView({
   const filterEditor = (
     <DatabaseFilterEditor schema={schema} filter={filters} members={members} onChange={setFilters} />
   );
+  const sortIcon = (icon: Parameters<typeof AppIcon>[0]["icon"]) =>
+    <AppIcon icon={icon} className="size-4 shrink-0 text-muted-foreground" />;
   const sortOptions = [
-    { value: "position", label: t("manualOrder") },
-    { value: "title", label: database.database_title_name ?? t("name") },
-    ...schema.map((p) => ({ value: p.id, label: p.name })),
+    { value: "position", label: t("manualOrder"), icon: sortIcon(DragDropVerticalIcon) },
+    { value: "title", label: database.database_title_name ?? t("name"), icon: sortIcon(TypeIcon) },
+    ...schema.map((p) => ({ value: p.id, label: p.name, icon: sortIcon(PROPERTY_ICONS[p.type]) })),
+  ];
+  // The two directions read as what they do to this column's values.
+  const [ascendingKey, descendingKey] = sortDirectionKeys(
+    sort === "position" || sort === "title"
+      ? sort
+      : schema.find((p) => p.id === sort)?.type ?? "position");
+  const directionOptions = [
+    { value: "ascending", label: t(ascendingKey) },
+    { value: "descending", label: t(descendingKey) },
   ];
   const sortLabel = sortOptions.find((option) => option.value === sort)?.label ?? t("manualOrder");
   const sorted = sort !== "position" || descending;
   const sortControls = (
     <>
-      <DatabaseSelect
+      <DatabaseChoice
         label={t("sort")}
         value={sort}
         onChange={setSort}
         options={sortOptions}
       />
-      <DatabaseSelect
+      <DatabaseChoice
         label={t("sortDirection")}
         value={descending ? "descending" : "ascending"}
         onChange={(next) => setDescending(next === "descending")}
-        options={[
-          { value: "ascending", label: t("sortAscending") },
-          { value: "descending", label: t("sortDescending") },
-        ]}
+        options={directionOptions}
       />
     </>
   );
@@ -921,6 +1129,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
               <DropdownMenuRadioGroup value={sort} onValueChange={setSort}>
                 {sortOptions.map((option) => (
                   <DropdownMenuRadioItem key={option.value} value={option.value}>
+                    {option.icon}
                     <span className="truncate">{option.label}</span>
                   </DropdownMenuRadioItem>
                 ))}
@@ -930,8 +1139,9 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                 value={descending ? "descending" : "ascending"}
                 onValueChange={(next) => setDescending(next === "descending")}
               >
-                <DropdownMenuRadioItem value="ascending">{t("sortAscending")}</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="descending">{t("sortDescending")}</DropdownMenuRadioItem>
+                {directionOptions.map((option) => (
+                  <DropdownMenuRadioItem key={option.value} value={option.value}>{option.label}</DropdownMenuRadioItem>
+                ))}
               </DropdownMenuRadioGroup>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
@@ -1193,12 +1403,13 @@ export const PageDatabaseView = memo(function PageDatabaseView({
               )}
               <th
                 scope="col"
-                className="overflow-hidden border-b border-border/50 p-1 font-normal"
+                className="relative overflow-hidden border-b border-border/50 p-0 font-normal"
               >
                 <DatabaseColumnName projectId={projectId} database={database} />
+                <ColumnResizer id="title" name={database.database_title_name ?? t("name")} resize={resize} />
               </th>
               {visible.map((property) => <SortableDatabaseColumn key={property.id}
-                projectId={projectId} database={database} property={property} disabled={schemaPending} onEdit={setEditProperty} />)}
+                projectId={projectId} database={database} property={property} disabled={schemaPending} onEdit={setEditProperty} resize={resize} />)}
               <th
                 scope="col"
                 data-create-property-column
@@ -1229,18 +1440,90 @@ export const PageDatabaseView = memo(function PageDatabaseView({
                   database={database}
                   visible={visible}
                   checked={checked}
-                  // The menu offers "Open" and "Promote" only for a single target.
-                  singleTarget={!checked || selectedRows.length === 1}
                   menuOpen={menuEntry === entry.id}
+                  // Built for the open menu only: the other rows keep one
+                  // identity and do not re-render.
+                  menuActions={menuEntry === entry.id ? entryMenu(entry) : NO_MENU_ACTIONS}
                   dropLine={dropTarget?.id === entry.id ? (dropTarget.above ? "above" : "below") : null}
                   isDragging={isDragging}
                   mobile={mobile}
-                  canWrite={canWrite}
                   actions={rowActions}
                 />
               );
             })}
           </tbody>
+          <tfoot>
+              {/* The row that adds an entry also carries one figure per number
+                  column, on the entries the view keeps: chosen per column and
+                  saved with the view. */}
+              <tr className="group/totals text-muted-foreground">
+                {!mobile && <td className="bg-background" />}
+                {!mobile && <td className="bg-background" />}
+                <td className="h-9 overflow-hidden p-0">
+                  <button
+                    type="button"
+                    // The entries' own inset and gap: the plus sits under
+                    // their icons and the label under their names.
+                    className="flex h-9 w-full min-w-0 items-center gap-2 overflow-hidden px-2 text-left text-sm whitespace-nowrap outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    onClick={add}
+                  >
+                    <HugeiconsIcon icon={Add01Icon} className="size-4 shrink-0" />
+                    <span className="min-w-0 truncate">{t("newEntry")}</span>
+                  </button>
+                </td>
+                {visible.map((property) => {
+                  if (property.type !== "number" || !rows.length) return <td key={property.id} />;
+                  const kind = calculations[property.id];
+                  const result = kind ? databaseCalculation(kind,
+                    rows.map((entry) => databasePropertyValue(entry, property))) : null;
+                  return (
+                    <td key={property.id} className="h-9 p-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={t("calculationFor", { name: property.name })}
+                            className={cn(
+                              "flex h-9 w-full min-w-0 items-center justify-end gap-1.5 overflow-hidden px-2 text-xs whitespace-nowrap outline-none transition-opacity hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                              !kind && "opacity-0 group-hover/totals:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 touch:opacity-100",
+                            )}
+                          >
+                            {kind ? (
+                              <>
+                                <span className="shrink-0">{t(CALCULATION_LABELS[kind])}</span>
+                                <span className="min-w-0 truncate text-sm tabular-nums text-foreground">
+                                  {result === null ? "—" : kind === "count"
+                                    ? result : formatDatabaseNumber(result, property, locale)}
+                                </span>
+                              </>
+                            ) : t("calculate")}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuRadioGroup
+                            value={kind ?? "none"}
+                            onValueChange={(next) => {
+                              const updated = { ...calculations };
+                              if (next === "none") delete updated[property.id];
+                              else updated[property.id] = next as DatabaseCalculation;
+                              updateView({ calculations: updated });
+                            }}
+                          >
+                            <DropdownMenuRadioItem value="none">{t("calculationNone")}</DropdownMenuRadioItem>
+                            {DATABASE_CALCULATIONS.map((option) => (
+                              <DropdownMenuRadioItem key={option} value={option}>
+                                {t(CALCULATION_LABELS[option])}
+                              </DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  );
+                })}
+                <td />
+              </tr>
+          </tfoot>
         </table>
         {!rows.length && entries.length > 0 && (
           <div className="px-6 py-10 text-center">
@@ -1249,15 +1532,6 @@ export const PageDatabaseView = memo(function PageDatabaseView({
         )}
       </DatabaseTableScroll>
       </SortableContext></DndContext>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="justify-start text-muted-foreground"
-        onClick={add}
-      >
-        <HugeiconsIcon icon={Add01Icon} className="size-4" />
-        {t("newEntry")}
-      </Button>
       {editProperty && (
         <DatabaseEditPropertyDialog
           projectId={projectId}
@@ -1287,6 +1561,7 @@ export const PageDatabaseView = memo(function PageDatabaseView({
           />
         )}
       </BulkIssueActionsPresence>
+      {documentMenu.dialogs}
       <AlertDialog open={duplicateTargets.length > 0} onOpenChange={(open) => { if (!open) setDuplicateTargets([]); }}>
         <AlertDialogContent><AlertDialogHeader>
           <AlertDialogTitle>{t("duplicateEntries", { count: duplicateTargets.length })}</AlertDialogTitle>
@@ -1319,16 +1594,9 @@ export const PageDatabaseView = memo(function PageDatabaseView({
               variant="destructive"
               onClick={(e) => {
                 e.preventDefault();
-                void run(async () => {
-                  const requests = remove.map((entry) => trashPage(entry.id));
-                  setSelected((ids) =>
-                    ids.filter(
-                      (id) => !remove.some((entry) => entry.id === id),
-                    ),
-                  );
-                  setRemove([]);
-                  await Promise.all(requests);
-                });
+                const targets = remove;
+                setRemove([]);
+                void trashEntries(targets);
               }}
             >
               {tCommon("moveToTrash")}
@@ -1345,9 +1613,6 @@ type RowActions = {
   prefetch: (id: string) => void;
   insert: (entry: PageSummary, altKey: boolean) => void;
   menuOpenChange: (id: string, open: boolean) => void;
-  promote: (entry: PageSummary) => void;
-  duplicate: (entry: PageSummary) => void;
-  remove: (entry: PageSummary) => void;
   dragOver: (event: DragEvent<HTMLTableRowElement>, id: string) => void;
   drop: (event: DragEvent<HTMLTableRowElement>, id: string) => void;
   handleMouseDown: (event: MouseEvent<HTMLButtonElement>, entry: PageSummary) => void;
@@ -1381,24 +1646,22 @@ function useRowActions(actions: RowActions): RowActions {
  * component renders on a 150-row database (MIN-875).
  */
 const DatabaseRow = memo(function DatabaseRow({
-  entry, projectId, database, visible, checked, singleTarget, menuOpen, dropLine, isDragging, mobile, canWrite, actions,
+  entry, projectId, database, visible, checked, menuOpen, menuActions, dropLine, isDragging, mobile, actions,
 }: {
   entry: PageSummary;
   projectId: string;
   database: PageSummary;
   visible: DatabaseProperty[];
   checked: boolean;
-  /** The menu acts on this entry alone (not on a wider selection). */
-  singleTarget: boolean;
   menuOpen: boolean;
+  /** The handle's menu; empty while it is closed. */
+  menuActions: ContextMenuAction[];
   dropLine: "above" | "below" | null;
   isDragging: boolean;
   mobile: boolean;
-  canWrite: boolean;
   actions: RowActions;
 }) {
   const t = useTranslations("PageDatabase");
-  const tCommon = useTranslations("Common");
   const tPages = useTranslations("Pages");
   return (
     <tr
@@ -1425,60 +1688,33 @@ const DatabaseRow = memo(function DatabaseRow({
                 <HugeiconsIcon icon={Add01Icon} className="size-5" />
               </button>
             </AppTooltip>
-            <DropdownMenu
+            <IssueActionsMenu
               open={menuOpen}
               onOpenChange={(open) => actions.menuOpenChange(entry.id, open)}
-            >
-              <AppTooltip label={t("entryActions")}>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={t("entryActions")}
-                    // Like a page block's handle: the plain cursor on hover,
-                    // the grab cursor only once a drag is under way.
-                    className={cn(ROW_GUTTER_BUTTON, "size-7", isDragging && "cursor-grabbing")}
-                    onPointerDownCapture={(event) => {
-                      if (event.button === 0) event.stopPropagation();
-                    }}
-                    onClick={() => actions.menuOpenChange(entry.id, true)}
-                    // The page's gesture (database-row-drag.ts): the rows
-                    // themselves follow the pointer, and below the threshold
-                    // the press stays a click.
-                    onMouseDown={(event) => actions.handleMouseDown(event, entry)}
-                  >
-                    {/* Filled dots, as on a page's handle. */}
-                    <HugeiconsIcon icon={DragDropVerticalIcon} className="size-6 [&_path]:fill-current" />
-                  </button>
-                </DropdownMenuTrigger>
-              </AppTooltip>
-              <DropdownMenuContent align="start" className="[&_[role=menuitem]]:rounded-sm">
-                {singleTarget && (
-                  <DropdownMenuItem onSelect={() => actions.open(entry.id)}>
-                    <HugeiconsIcon icon={File02Icon} className="size-4" />
-                    {t("openEntry")}
-                  </DropdownMenuItem>
-                )}
-                {/* One entry, one issue: a selection is not promoted in bulk. */}
-                {singleTarget && canWrite && (
-                  <DropdownMenuItem onSelect={() => actions.promote(entry)}>
-                    <NumoIcon animated={false} className="size-4" />
-                    {tPages("promoteToIssue")}
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onSelect={() => actions.duplicate(entry)}>
-                  <HugeiconsIcon icon={Copy01Icon} className="size-4" />
-                  {t("duplicate")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  onSelect={() => actions.remove(entry)}
+              align="start"
+              tooltip={t("entryActions")}
+              actions={menuActions}
+              trigger={
+                <button
+                  type="button"
+                  aria-label={t("entryActions")}
+                  // Like a page block's handle: the plain cursor on hover,
+                  // the grab cursor only once a drag is under way.
+                  className={cn(ROW_GUTTER_BUTTON, "size-7", isDragging && "cursor-grabbing")}
+                  onPointerDownCapture={(event) => {
+                    if (event.button === 0) event.stopPropagation();
+                  }}
+                  onClick={() => actions.menuOpenChange(entry.id, true)}
+                  // The page's gesture (database-row-drag.ts): the rows
+                  // themselves follow the pointer, and below the threshold
+                  // the press stays a click.
+                  onMouseDown={(event) => actions.handleMouseDown(event, entry)}
                 >
-                  <HugeiconsIcon icon={Delete02Icon} className="size-4" />
-                  {tCommon("moveToTrash")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {/* Filled dots, as on a page's handle. */}
+                  <HugeiconsIcon icon={DragDropVerticalIcon} className="size-6 [&_path]:fill-current" />
+                </button>
+              }
+            />
           </div>
         </td>
       )}

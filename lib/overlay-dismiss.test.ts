@@ -46,6 +46,31 @@ describe("listenOutsideClick", () => {
     expect(onOutside).not.toHaveBeenCalled();
   });
 
+  it("leaves the popover open when the press dismisses a list it opened", () => {
+    const list = document.createElement("div");
+    list.setAttribute("data-slot", "select-content");
+    list.setAttribute("data-state", "open");
+    // jsdom lays nothing out: say the list is on screen.
+    list.checkVisibility = () => true;
+    document.body.appendChild(list);
+    press(outside);
+    expect(onOutside).not.toHaveBeenCalled();
+    // The list is gone: the next press outside closes the popover.
+    list.remove();
+    press(outside);
+    expect(onOutside).toHaveBeenCalledTimes(1);
+  });
+
+  it("still closes when a list is open under the popover, not above it", () => {
+    const below = document.createElement("div");
+    below.setAttribute("data-slot", "dropdown-menu-content");
+    below.setAttribute("data-state", "open");
+    below.checkVisibility = () => true;
+    document.body.insertBefore(below, content);
+    press(outside);
+    expect(onOutside).toHaveBeenCalledTimes(1);
+  });
+
   it("closes on a click elsewhere in a dialog below it", () => {
     press(document.getElementById("in-dialog")!);
     expect(onOutside).toHaveBeenCalledTimes(1);

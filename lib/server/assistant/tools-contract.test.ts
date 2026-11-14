@@ -126,7 +126,7 @@ describe("Numo tool contracts", () => {
     const properties = create?.function.parameters.properties as Record<string, {
       items?: { required?: string[]; properties?: Record<string, unknown> };
     }>;
-    expect(properties.properties.items?.required).toEqual(["name", "type", "options"]);
+    expect(properties.properties.items?.required).toEqual(["name", "type", "number_format", "currency", "options"]);
     expect(properties.rows.items?.required).toEqual(["title", "values"]);
     expect(create?.function.description).toMatch(/tracker/);
     // create_page sends any collection to the database tool.

@@ -11,19 +11,15 @@ import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { AppIcon } from "@/components/icon";
+import { DatabaseChoice } from "./database-choice";
+import { PROPERTY_ICONS } from "./database-property-icons";
 import { DateTimePicker } from "@/components/date-time-picker";
 import { SearchSelect } from "@/components/search-select";
 import { UserAvatar } from "@/components/user-avatar";
 import { createUuid } from "@/lib/create-uuid";
 import { displayName } from "@/lib/display-name";
-import type { DatabaseProperty } from "@/lib/page-databases";
+import { isDatabaseAuthorType, isDatabaseDateType, type DatabaseProperty } from "@/lib/page-databases";
 import {
   MAX_DATABASE_FILTER_CONDITIONS,
   databaseFilterNeedsValue,
@@ -53,33 +49,10 @@ const DATE_OPERATOR_LABEL = {
 } as const;
 
 function operatorLabelKey(property: DatabaseProperty | undefined, operator: DatabaseFilterOperator) {
-  if ((property?.type === "date" || property?.type === "created_at") && operator in DATE_OPERATOR_LABEL) {
+  if (property && isDatabaseDateType(property.type) && operator in DATE_OPERATOR_LABEL) {
     return DATE_OPERATOR_LABEL[operator as keyof typeof DATE_OPERATOR_LABEL];
   }
   return OPERATOR_LABEL[operator];
-}
-
-function Choice({ value, onChange, label, options, className }: {
-  value: string;
-  onChange: (value: string) => void;
-  label: string;
-  options: { value: string; label: string }[];
-  className?: string;
-}) {
-  return (
-    <Select value={value || "__empty__"} onValueChange={(next) => onChange(next === "__empty__" ? "" : next)}>
-      <SelectTrigger aria-label={label} className={className ?? "w-full min-w-0"}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent className="[&_[role=option]]:rounded-sm">
-        {options.map((option) => (
-          <SelectItem key={option.value || "__empty__"} value={option.value || "__empty__"}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
 }
 
 /** A new condition on `property`, with the first operator its type allows. */
@@ -115,7 +88,7 @@ export function DatabaseFilterEditor({
   return (
     <div className="flex flex-col gap-2">
       {conditions.length > 1 && (
-        <Choice
+        <DatabaseChoice
           label={t("filterMatch")}
           value={filter.match}
           onChange={(match) => onChange({ ...filter, match: match === "or" ? "or" : "and" })}
@@ -135,7 +108,7 @@ export function DatabaseFilterEditor({
             className="flex flex-col gap-1.5 rounded-lg bg-muted/40 p-2"
           >
             <div className="flex min-w-0 items-center gap-1.5">
-              <Choice
+              <DatabaseChoice
                 label={t("filterProperty")}
                 value={condition.propertyId}
                 className="min-w-0 flex-1"
@@ -143,7 +116,11 @@ export function DatabaseFilterEditor({
                   const next = schema.find((p) => p.id === id);
                   if (next) change(index, { ...conditionFor(next), id: condition.id });
                 }}
-                options={schema.map((p) => ({ value: p.id, label: p.name }))}
+                options={schema.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                  icon: <AppIcon icon={PROPERTY_ICONS[p.type]} className="size-4 shrink-0 text-muted-foreground" />,
+                }))}
               />
               <Button
                 variant="ghost"
@@ -155,7 +132,7 @@ export function DatabaseFilterEditor({
               </Button>
             </div>
             {property && (
-              <Choice
+              <DatabaseChoice
                 label={t("filterOperator")}
                 value={condition.operator}
                 onChange={(operator) => {
@@ -205,7 +182,7 @@ function ConditionValue({ property, value, members, onChange }: {
   const t = useTranslations("PageDatabase");
   if (property.type === "checkbox") {
     return (
-      <Choice
+      <DatabaseChoice
         label={t("filterValue")}
         value={value || "true"}
         onChange={onChange}
@@ -218,7 +195,7 @@ function ConditionValue({ property, value, members, onChange }: {
   }
   if (property.type === "select" || property.type === "multi_select") {
     return (
-      <Choice
+      <DatabaseChoice
         label={t("filterValue")}
         value={value}
         onChange={onChange}
@@ -229,7 +206,7 @@ function ConditionValue({ property, value, members, onChange }: {
       />
     );
   }
-  if (property.type === "people") {
+  if (property.type === "people" || isDatabaseAuthorType(property.type)) {
     const member = members.find((m) => m.user_id === value);
     return (
       <SearchSelect
@@ -255,7 +232,7 @@ function ConditionValue({ property, value, members, onChange }: {
       />
     );
   }
-  if (property.type === "date" || property.type === "created_at") {
+  if (isDatabaseDateType(property.type)) {
     return (
       <DateTimePicker
         dateOnly

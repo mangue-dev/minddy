@@ -6,6 +6,7 @@ import {
   MAX_DATABASE_PROPERTIES,
   type DatabasePropertyType,
   type DatabaseValues,
+  isDatabaseMetadataType,
   isDatabaseSchema,
   isDatabasePropertyValue,
 } from "@/lib/page-databases";
@@ -127,7 +128,7 @@ async function updateProtectedPageDatabase(projectId: string,
   for (const cell of cells) {
     const property = parent.page.database_schema?.find((item) =>
       item.id === cell.propertyId);
-    if (!property || property.type === "created_at" ||
+    if (!property || isDatabaseMetadataType(property.type) ||
         !isDatabasePropertyValue(property, cell.value) ||
         !isDeepStrictEqual(page.property_values?.[property.id] ?? null,
           cell.expected)) return "conflict";

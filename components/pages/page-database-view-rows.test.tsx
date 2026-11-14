@@ -131,7 +131,11 @@ it("offers Open for one entry and drops it when the menu acts on a selection", a
   let menu = await openMenu("a");
   expect(menu.textContent).toContain(t.openEntry);
   const open = [...menu.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((item) => item.textContent?.includes(t.openEntry))!;
-  await act(async () => open.click());
+  // The shared actions menu closes first and runs the action on the next frame.
+  await act(async () => {
+    open.click();
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  });
   expect(h.onOpen).toHaveBeenCalledWith("a");
 
   await act(async () => checkbox("a").click());

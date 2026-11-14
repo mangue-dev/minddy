@@ -110,7 +110,7 @@ function controls(element: Element, id: string): boolean {
  * outside press came from inside. This listener sees every press first, in
  * the capture phase, and asks `onOutside` to close the popover unless the
  * press starts or ends in it, on its own trigger, or in a layer stacked above
- * it.
+ * it, or dismisses a list the popover opened and that is still open.
  *
  * Where the press starts matters on its own: a click is dispatched on the
  * nearest common ancestor of its pointerdown and pointerup targets. A select
@@ -130,8 +130,17 @@ export function listenOutsideClick(content: HTMLElement, onOutside: (event: Mous
   // ending the press that opened it (a surface opening on pointerdown) is not
   // one, nor a press begun in the popover or in a layer above it.
   let pressedOutside = false;
+  /**
+   * A select, menu or picker opened from the popover and still open: a press
+   * outside dismisses that list first, as it would in a dialog, and leaves the
+   * popover for the next one (MIN-990). Without this, choosing nothing in a
+   * sort or filter select closed the whole settings popover with it.
+   */
+  const hasOpenLayerAbove = (): boolean =>
+    visibleMatches(OPEN_POPPER).some((popper) =>
+      popper !== content && !popper.contains(content) && isAbove(popper, content));
   const onPointerDown = (event: Event) => {
-    pressedOutside = !within(event.target);
+    pressedOutside = !within(event.target) && !hasOpenLayerAbove();
   };
   const onClick = (event: MouseEvent) => {
     if (!pressedOutside) return;

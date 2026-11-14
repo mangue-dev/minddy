@@ -40,7 +40,7 @@ const view = (id: string, name: string, position: number,
   overrides: Partial<SavedDatabaseView["view"]> = {}): SavedDatabaseView => ({
   id, name, position,
   view: { sort: "position", descending: false, filters: { match: "and", conditions: [] },
-    filter: "", filterValue: "", hidden: [], ...overrides },
+    filter: "", filterValue: "", hidden: [], calculations: {}, widths: {}, ...overrides },
 });
 let stored: SavedDatabaseView[];
 
@@ -103,7 +103,7 @@ describe("Numo database view tools", () => {
         { property_id: DUE, operator: "lt", value: "2026-10-01" },
       ] } });
     expect(h.create).toHaveBeenCalledWith("project", DB, "actor", { name: "Late", view: {
-      sort: DUE, descending: true, hidden: [],
+      sort: DUE, descending: true, hidden: [], calculations: {}, widths: {},
       filters: { match: "or", conditions: [
         { id: expect.any(String), propertyId: DONE, operator: "eq", value: "false" },
         { id: expect.any(String), propertyId: DUE, operator: "lt", value: "2026-10-01" },
@@ -119,7 +119,7 @@ describe("Numo database view tools", () => {
     await write({ operation: "update", view_id: V2, name: "Undated", filters: {
       conditions: [{ property_id: DUE, operator: "empty", value: "ignored" }] } });
     expect(h.update).toHaveBeenCalledWith("project", DB, V2, "actor", { name: "Undated", view: {
-      sort: "position", descending: false, hidden: [DUE],
+      sort: "position", descending: false, hidden: [DUE], calculations: {}, widths: {},
       filters: { match: "and", conditions: [{ id: expect.any(String), propertyId: DUE, operator: "empty" }] },
       filter: DUE, filterValue: "" } });
     await write({ operation: "update", view_id: V2, filters: null });

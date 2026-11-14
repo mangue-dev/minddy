@@ -263,3 +263,49 @@ describe("the single filter of the previous release", () => {
       .toEqual({ filter: "", filterValue: "" });
   });
 });
+
+describe("metadata and recurring dates (MIN-990)", () => {
+  const EDITED = "10000000-0000-4000-8000-000000000011";
+  const AUTHOR = "10000000-0000-4000-8000-000000000012";
+  const EDITOR = "10000000-0000-4000-8000-000000000013";
+  const DUE = "10000000-0000-4000-8000-000000000014";
+  const columns: DatabaseProperty[] = [
+    { id: EDITED, name: "Edited", type: "updated_at" },
+    { id: AUTHOR, name: "Author", type: "created_by" },
+    { id: EDITOR, name: "Editor", type: "updated_by" },
+    { id: DUE, name: "Due", type: "date" },
+  ];
+  const row = {
+    created_at: "2026-01-02T12:00:00.000Z",
+    updated_at: "2026-02-03T12:00:00.000Z",
+    created_by: ALICE,
+    updated_by: BOB,
+    updated_kind: "human",
+    property_values: {},
+  };
+  const only = (propertyId: string, operator: DatabaseFilterCondition["operator"], value?: string):
+    DatabaseViewFilter => ({ match: "and", conditions: [{ id: "c", propertyId, operator, value }] });
+
+  it("filters on the day of the last edit", () => {
+    expect(matchesDatabaseFilter(row, columns, only(EDITED, "gt", "2026-01-31"))).toBe(true);
+    expect(matchesDatabaseFilter(row, columns, only(EDITED, "lt", "2026-01-31"))).toBe(false);
+  });
+
+  it("filters on who created and who last edited an entry", () => {
+    expect(databaseFilterOperators("created_by")).toEqual(["eq", "neq"]);
+    expect(matchesDatabaseFilter(row, columns, only(AUTHOR, "eq", ALICE))).toBe(true);
+    expect(matchesDatabaseFilter(row, columns, only(EDITOR, "eq", ALICE))).toBe(false);
+    expect(matchesDatabaseFilter(row, columns, only(EDITOR, "neq", ALICE))).toBe(true);
+    // An agent's edit is minddy's, never the account that authorized it.
+    expect(matchesDatabaseFilter({ ...row, updated_kind: "agent" }, columns, only(EDITOR, "eq", BOB)))
+      .toBe(false);
+  });
+
+  it("compares a recurring date through its next occurrence", () => {
+    const yearly = { ...row, property_values: { [DUE]: "R/2000-01-01/P1Y" } };
+    // The anchor is decades old; the occurrence is never in the past.
+    expect(matchesDatabaseFilter(yearly, columns, only(DUE, "lt", "2001-01-01"))).toBe(false);
+    expect(matchesDatabaseFilter(yearly, columns, only(DUE, "gt", "2001-01-01"))).toBe(true);
+    expect(matchesDatabaseFilter(yearly, columns, only(DUE, "not_empty"))).toBe(true);
+  });
+});

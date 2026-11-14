@@ -2,7 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { pickFreeCategoryColor } from "@/lib/category-colors";
-import { DATABASE_PROPERTY_TYPES, type DatabasePropertyType } from "@/lib/page-databases";
+import { DATABASE_PROPERTY_TYPES, isDatabaseMetadataType, type DatabasePropertyType } from "@/lib/page-databases";
+import { DATABASE_CURRENCIES, isDatabaseCurrency, parseDatabaseNumber, type DatabaseNumberFormat } from "@/lib/page-database-number";
 import { createPageForAgent, updateDatabaseForAgent } from "@/lib/server/page-tools";
 
 /**
@@ -18,8 +19,9 @@ const MAX_PROPERTIES = 30;
 const MAX_ROWS = 50;
 const MAX_OPTIONS = 100;
 
-type PropertyInput = { name: string; type: DatabasePropertyType; options: string[] };
-type BuiltProperty = {
+type NumberDisplay = { number_format?: DatabaseNumberFormat; currency?: string };
+type PropertyInput = { name: string; type: DatabasePropertyType; options: string[] } & NumberDisplay;
+type BuiltProperty = NumberDisplay & {
   id: string;
   name: string;
   type: DatabasePropertyType;
@@ -67,7 +69,18 @@ function parseProperties(raw: unknown): PropertyInput[] | string {
     const options = Array.isArray(row.options)
       ? row.options.filter((option): option is string => typeof option === "string")
       : [];
-    out.push({ name, type: row.type, options });
+    // A format belongs to a number column; a plain number carries none.
+    const display: NumberDisplay = {};
+    if (row.type === "number" && row.number_format === "percent") display.number_format = "percent";
+    if (row.type === "number" && row.number_format === "currency") {
+      const currency = typeof row.currency === "string" ? row.currency.trim().toUpperCase() : "";
+      if (!isDatabaseCurrency(currency)) {
+        return `Property "${name}" needs a currency among: ${DATABASE_CURRENCIES.join(", ")}.`;
+      }
+      display.number_format = "currency";
+      display.currency = currency;
+    }
+    out.push({ name, type: row.type, options, ...display });
   }
   return out;
 }
@@ -75,7 +88,9 @@ function parseProperties(raw: unknown): PropertyInput[] | string {
 /** Schema with fresh ids; the option names used by the rows join the declared ones. */
 function buildSchema(properties: PropertyInput[], rows: Record<string, unknown>[]): BuiltProperty[] {
   return properties.map((property) => {
-    const built: BuiltProperty = { id: randomUUID(), name: property.name, type: property.type };
+    const built: BuiltProperty = { id: randomUUID(), name: property.name, type: property.type,
+      ...(property.number_format && { number_format: property.number_format }),
+      ...(property.currency && { currency: property.currency }) };
     if (property.type !== "select" && property.type !== "multi_select") return built;
     const names = [...property.options];
     for (const row of rows) {
@@ -107,7 +122,7 @@ function rowValues(schema: BuiltProperty[], raw: unknown):
   for (const [name, value] of Object.entries(record(raw))) {
     const property = schema.find((item) => key(item.name) === key(name));
     if (!property) { unknown.push(name); continue; }
-    if (value === null || value === undefined || property.type === "created_at") continue;
+    if (value === null || value === undefined || isDatabaseMetadataType(property.type)) continue;
     const optionId = (option: string) =>
       property.options?.find((item) => key(item.name) === key(option))?.id;
     switch (property.type) {
@@ -121,8 +136,9 @@ function rowValues(schema: BuiltProperty[], raw: unknown):
           .map(optionId).filter((id): id is string => Boolean(id));
         break;
       case "number": {
-        const number = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-        if (Number.isFinite(number)) values[property.id] = number;
+        // A written figure ("25 %", "1 200,50 €") reads as the cell editor reads it.
+        const number = typeof value === "number" ? value : parseDatabaseNumber(String(value));
+        if (typeof number === "number" && Number.isFinite(number)) values[property.id] = number;
         break;
       }
       case "checkbox":

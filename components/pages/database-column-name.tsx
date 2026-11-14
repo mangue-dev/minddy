@@ -13,13 +13,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Input } from "@/components/ui/input";
 import { AppTooltip } from "@/components/ui/app-tooltip";
 import { PROPERTY_ICONS } from "./database-property-icons";
 import { DatabaseOptionsDialog } from "./database-property-dialogs";
 import type { PageSummary } from "@/lib/pages-api";
 import type { DatabaseProperty } from "@/lib/page-databases";
 import { usePageDatabase } from "@/lib/use-page-database";
+import { useUndoHistory } from "@/lib/undo/undo-context";
+import { toast } from "sonner";
 
 export function DatabaseColumnName({
   projectId,
@@ -40,6 +41,8 @@ export function DatabaseColumnName({
 }) {
   const t = useTranslations("PageDatabase");
   const tCommon = useTranslations("Common");
+  const tUndo = useTranslations("Undo");
+  const undo = useUndoHistory();
   const name = property?.name ?? database.database_title_name ?? t("name");
   const [editing, setEditing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -92,27 +95,30 @@ export function DatabaseColumnName({
           void save();
         }}
       >
-        {/* The header button's own box (32px, 8px inset, small radius) at
-            every width: the shared input grows to 36px from `md`, which
-            pushed the header row down while renaming. */}
-        <Input
-          autoFocus
-          aria-label={t("renameColumn", { name })}
-          className="h-8 min-w-0 rounded-md px-2 md:h-8"
-          maxLength={80}
-          value={draft}
-          disabled={pending}
-          onChange={(event) => setDraft(event.target.value)}
-          onFocus={(event) => event.target.select()}
-          onBlur={() => void save()}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              cancelled.current = true;
-              setEditing(false);
-            }
-          }}
-        />
+        {/* The header cell's own box: as tall as the cell, the same inset
+            and the same type icon before the name, with no border or radius
+            of its own, so neither the row nor the name moves while renaming. */}
+        <label className="flex h-10 w-full min-w-0 items-center gap-2 bg-background px-2 ring-2 ring-inset ring-ring">
+          {Icon && <AppIcon icon={Icon} className="size-3.5 shrink-0 text-muted-foreground" />}
+          <input
+            autoFocus
+            aria-label={t("renameColumn", { name })}
+            className="block h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none disabled:opacity-60"
+            maxLength={80}
+            value={draft}
+            disabled={pending}
+            onChange={(event) => setDraft(event.target.value)}
+            onFocus={(event) => event.target.select()}
+            onBlur={() => void save()}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                cancelled.current = true;
+                setEditing(false);
+              }
+            }}
+          />
+        </label>
       </form>
     );
   return (
@@ -130,7 +136,9 @@ export function DatabaseColumnName({
           <button
             type="button"
             data-database-column-trigger={property?.id ?? "title"}
-            className={`flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 text-left outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${dragging ? "cursor-grabbing bg-muted" : "cursor-default"}`}
+            // A header reads as a cell of the table: it fills its cell edge
+            // to edge, square, and hovers like the cells below it.
+            className={`flex h-10 w-full min-w-0 items-center gap-2 overflow-hidden rounded-none px-2 text-left outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${dragging ? "cursor-grabbing bg-muted" : "cursor-default"}`}
             aria-label={t("columnActions", { name })}
             disabled={disabled || pending}
             {...dragHandleProps}
@@ -197,6 +205,20 @@ export function DatabaseColumnName({
             {t("editOptions")}
           </DropdownMenuItem>
         )}
+        {/* A number column takes its format from what is typed in it; this
+            is the way back to the plain figure. */}
+        {property?.number_format && property.number_format !== "number" && (
+          <DropdownMenuItem
+            onSelect={() => void saveSchema(database, (database.database_schema ?? []).map((p) => {
+              if (p.id !== property.id) return p;
+              const { number_format: _format, currency: _currency, ...rest } = p;
+              return rest;
+            }))}
+          >
+            <AppIcon icon={PROPERTY_ICONS.number} className="size-4" />
+            {t("clearNumberFormat")}
+          </DropdownMenuItem>
+        )}
         {property && (
           <>
             <DropdownMenuSeparator />
@@ -231,7 +253,12 @@ export function DatabaseColumnName({
           void saveSchema(
             removeBase,
             (removeBase.database_schema ?? []).filter((p) => p.id !== property.id),
-          );
+          ).then((saved) => {
+            // The column and its values come back with one click (or ⌘Z).
+            if (saved) toast(t("propertyDeleted", { name }), {
+              action: { label: tUndo("undo"), onClick: () => undo.undo() },
+            });
+          });
         }}
       />
     )}

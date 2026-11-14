@@ -2,13 +2,14 @@ import "server-only";
 
 import { z } from "zod";
 import { DATABASE_PROPERTY_TYPES } from "@/lib/page-databases";
+import { DATABASE_CURRENCIES, DATABASE_NUMBER_FORMATS } from "@/lib/page-database-number";
 
 /** Shared model contract for MCP, Numo chat, and the coding agent. */
 export function databaseToolDescription(readTool: string, createTool: string): string {
   return DESCRIPTION.replaceAll("get_page", readTool).replaceAll("create_page", createTool);
 }
 
-const DESCRIPTION = "Update a database schema or the properties of one entry. Read get_page first. For schema, send the FULL schema preserving existing properties/options and its database_revision as revision; option ids are stable UUIDs, names are unique per property, colors are #RRGGBB. Removing a property or option clears its entry values. For value, use the entry page_id and exact previous value as expected (null when empty). To set several properties of the same entry at once, use operation=values with the entry page_id, values mapping property ids to new values and expected mapping the SAME property ids to their exact previous values (null when empty); all cells are written together or none is. To create an entry with its properties, prefer create_page with parent_page_id set to the database and values. Number values must be finite JSON numbers, select is one option id, multi_select an array of option ids, people an array of project member ids, date YYYY-MM-DD, checkbox boolean, text string; null clears. created_at is read-only metadata. To change a column type, use operation=convert with the database page_id, propertyId, targetType, revision, optional new name, and preview=true. Inspect totalCount and incompatibleCount; then apply the SAME settings with preview=false and the returned token. Set confirmLoss=true only after the user authorizes clearing incompatible values. Never change a type through schema. A stale edit is refused: reread and reapply, never overwrite blindly.";
+const DESCRIPTION = "Update a database schema or the properties of one entry. Read get_page first. For schema, send the FULL schema preserving existing properties/options and its database_revision as revision; option ids are stable UUIDs, names are unique per property, colors are #RRGGBB. Removing a property or option clears its entry values. For value, use the entry page_id and exact previous value as expected (null when empty). To set several properties of the same entry at once, use operation=values with the entry page_id, values mapping property ids to new values and expected mapping the SAME property ids to their exact previous values (null when empty); all cells are written together or none is. To create an entry with its properties, prefer create_page with parent_page_id set to the database and values. Number values must be finite JSON numbers (compute a calculation yourself and send its result), select is one option id, multi_select an array of option ids, people an array of project member ids, date YYYY-MM-DD, checkbox boolean, text string; null clears. A date that RECURS is written R/YYYY-MM-DD/P1D (daily), P1W (weekly), P1M (monthly) or P1Y (yearly): the date is where the rhythm starts, and readers show its next occurrence, so never rewrite it when a day passes; send the plain date again to stop the recurrence. A number property may carry number_format: percent (25 reads 25 %) or currency, with currency set to an ISO 4217 code among " + DATABASE_CURRENCIES.join(", ") + "; omit both for a plain number, and keep them when resending the schema. The stored value stays a plain number in every format. created_at, updated_at, created_by and updated_by are read-only metadata filled from the entry itself (its creation and last edit, and who made them): add them as columns, never write their values. To change a column type, use operation=convert with the database page_id, propertyId, targetType, revision, optional new name, and preview=true. Inspect totalCount and incompatibleCount; then apply the SAME settings with preview=false and the returned token. Set confirmLoss=true only after the user authorizes clearing incompatible values. Never change a type through schema. A stale edit is refused: reread and reapply, never overwrite blindly.";
 
 const value = z.union([z.string(), z.number(), z.boolean(), z.array(z.string()), z.null()]);
 /** Entry cells keyed by property id, shared by operation=values and page creation. */
@@ -23,6 +24,8 @@ export const DATABASE_TOOL_SCHEMA = z.object({
     id: z.string().uuid(),
     name: columnName,
     type: z.enum(DATABASE_PROPERTY_TYPES),
+    number_format: z.enum(DATABASE_NUMBER_FORMATS).optional(),
+    currency: z.enum(DATABASE_CURRENCIES).optional(),
     options: z.array(z.object({
       id: z.string().uuid(),
       name: columnName,

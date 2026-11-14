@@ -84,7 +84,7 @@ const view = (id: string, name: string, position: number,
   overrides: Partial<SavedDatabaseView["view"]> = {}): SavedDatabaseView => ({
   id, name, position,
   view: { sort: "position", descending: false, filters: { match: "and", conditions: [] },
-    filter: "", filterValue: "", hidden: [], ...overrides },
+    filter: "", filterValue: "", hidden: [], calculations: {}, widths: {}, ...overrides },
 });
 let stored: SavedDatabaseView[];
 

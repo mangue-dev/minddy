@@ -18,6 +18,11 @@
 // never recorded. While focus is on a typing target, ⌘Z stays with the
 // native/TipTap undo.
 //
+// Database edits (MIN-990) record `replay` entries: their writes are already
+// optimistic and queued per database (lib/use-page-database.ts), so the entry
+// carries its own undo and redo gestures and the provider only orders them,
+// names them in the toast and drops the entry when a replay fails.
+//
 // One gesture that edits several issues (a selection, MIN-795) runs inside
 // `linked()`: every entry it records shares a link, and ⌘Z / ⌘⇧Z replay the
 // whole gesture at once instead of one issue per keystroke.
@@ -63,6 +68,7 @@ import {
   resolveAliased,
   type IssueSnapshot,
   type RelationSnapshot,
+  type ReplayLabel,
   type UndoAction,
   type UndoEntry,
 } from "./undo-core";
@@ -97,6 +103,9 @@ interface UndoHistory {
   /** The link of the gesture running now. A hook that records after an
       `await` reads it before awaiting and hands it to `record`. */
   currentLink: () => string | undefined;
+  /** Undo the last recorded change, as ⌘Z does: what the "Undo" button of a
+      toast shown right after a change calls. */
+  undo: () => void;
 }
 
 // Safe default so the hook is a no-op outside the provider (tests, share pages).
@@ -104,6 +113,7 @@ const UndoContext = createContext<UndoHistory>({
   record: () => null,
   linked: (run) => run(),
   currentLink: () => undefined,
+  undo: () => {},
 });
 
 /** Recording facade for the mutation hooks. No-op outside an UndoProvider. */
@@ -120,7 +130,7 @@ function isNotFound(err: unknown): boolean {
 /** FULL keys (`actions.*`) rather than suffixes glued back to the
  * calling point: this is what allows TypeScript to check them against the
  * catalog — a `actions.` + suffix is ​​just a string to it. */
-const ACTION_KEYS: Record<UndoEntry["kind"], MessageKey<"Undo">> = {
+const ACTION_KEYS: Record<Exclude<UndoEntry["kind"], "replay">, MessageKey<"Undo">> = {
   update: "actions.update",
   categories: "actions.categories",
   create: "actions.create",
@@ -128,6 +138,20 @@ const ACTION_KEYS: Record<UndoEntry["kind"], MessageKey<"Undo">> = {
   "relation-add": "actions.relationAdd",
   "relation-remove": "actions.relationRemove",
 };
+
+/** A `replay` entry names itself. */
+const REPLAY_KEYS: Record<ReplayLabel, MessageKey<"Undo">> = {
+  databaseValue: "actions.databaseValue",
+  databaseColumns: "actions.databaseColumns",
+  entryCreate: "actions.entryCreate",
+  entryTrash: "actions.delete",
+  entryMove: "actions.entryMove",
+  viewSettings: "actions.viewSettings",
+};
+
+function actionKey(entry: UndoEntry): MessageKey<"Undo"> {
+  return entry.kind === "replay" ? REPLAY_KEYS[entry.label] : ACTION_KEYS[entry.kind];
+}
 
 export function UndoProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -141,6 +165,9 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   const aliasRef = useRef(new Map<string, string>());
   /** Serial queue of replay writes — keeps them ordered without blocking UI. */
   const queueRef = useRef<Promise<void>>(Promise.resolve());
+  /** The running replay of each `replay` entry: started with the optimistic
+      step, awaited by the queued one. */
+  const replayRunsRef = useRef(new WeakMap<UndoEntry, Promise<unknown>>());
   /** The link of the `linked()` gesture executing now. */
   const linkRef = useRef<string | undefined>(undefined);
   const nextLinkRef = useRef(0);
@@ -272,6 +299,14 @@ export function UndoProvider({ children }: { children: ReactNode }) {
             removeRelationFromCaches(entry.projectId, entry.relationId);
           }
           return null;
+        case "replay": {
+          // The gesture patches its caches at once and queues its own write.
+          const run = (direction === "undo" ? entry.undo : entry.redo)();
+          // Awaited (and reported) by the queued step.
+          run.catch(() => {});
+          replayRunsRef.current.set(entry, run);
+          return null;
+        }
       }
     },
     [patchIssueCaches, removeIssueFromCaches, removeRelationFromCaches]
@@ -291,6 +326,10 @@ export function UndoProvider({ children }: { children: ReactNode }) {
 
   const invalidate = useCallback(
     (entry: UndoEntry) => {
+      if (entry.kind === "replay") {
+        void queryClient.invalidateQueries({ queryKey: ["pages", entry.projectId] });
+        return;
+      }
       void queryClient.invalidateQueries({
         queryKey: ["issues", entry.projectId],
       });
@@ -477,6 +516,10 @@ export function UndoProvider({ children }: { children: ReactNode }) {
             await removeIssueRelationApi(entry.relationId);
           }
           break;
+        case "replay":
+          // Its caches are already exact: nothing to refetch on success.
+          await replayRunsRef.current.get(entry);
+          return undefined;
       }
       invalidate(entry);
       return undefined;
@@ -528,7 +571,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
       if (step.length === 0) return;
 
       // Instant feedback: patch the caches and toast once, writes in the queue.
-      const action = tRef.current(ACTION_KEYS[step[0].kind]);
+      const action = tRef.current(actionKey(step[0]));
       toast.success(
         step.length > 1
           ? tRef.current(direction === "undo" ? "undoneLinked" : "redoneLinked", {
@@ -563,8 +606,8 @@ export function UndoProvider({ children }: { children: ReactNode }) {
   }, [run]);
 
   const value = useMemo<UndoHistory>(
-    () => ({ record, linked, currentLink }),
-    [record, linked, currentLink]
+    () => ({ record, linked, currentLink, undo: () => run("undo") }),
+    [record, linked, currentLink, run]
   );
 
   return <UndoContext.Provider value={value}>{children}</UndoContext.Provider>;
