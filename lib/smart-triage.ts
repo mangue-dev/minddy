@@ -19,6 +19,7 @@ export function boardComparatorFactory(
   ctx: {
     relations?: IssueRelation[];
     statusById?: Map<string, IssueStatus>;
+    objectiveByIssue?: Map<string, string | null>;
     now?: number;
   },
   direction: SortDirection = "asc"
@@ -31,6 +32,7 @@ export function boardComparatorFactory(
     issues: columnIssues,
     relations: ctx.relations,
     statusById: ctx.statusById,
+    objectiveByIssue: ctx.objectiveByIssue,
     now: ctx.now,
   });
 }
@@ -57,9 +59,10 @@ export interface TriageIssue {
  *    nothing: a done blocker no longer blocks,
  *    and a blocker whose targets all closed stops earning its lift — the same
  *    semantics the "smart" view sort already applies. An objective blocking
- *    one of its OWN tickets reads as resolved (MIN-890): that ticket only
- *    waits for the rest of the objective, which cannot close before it does,
- *    so it ranks as if the edge were gone and the other rules decide.
+ *    one of its OWN tickets reads as resolved (MIN-890) only once that ticket
+ *    is the objective's last step: no open ticket of the objective is left
+ *    free of such an edge (MIN-989). Until then the blocked ticket sinks like
+ *    any other; afterwards it ranks as if the edge were gone.
  * 2. **Quick wins inside a tier.** Priority minus the effort discount (xs
  *    buys back more than xl costs), minus the due-date lift (overdue and
  *    imminent dates read as urgent). Same PRIORITY_ORDER as the view sort.
@@ -79,6 +82,10 @@ export interface TriageContext {
       blocker no longer earns its lift. Resolved against ALL issues (the other
       end may be outside the visible column). */
   statusById?: Map<string, IssueStatus>;
+  /** Issue id → objective id, over ALL issues: an objective's remaining work
+      often sits in another column. Column tickets are added on top; without
+      the map only the column is known. */
+  objectiveByIssue?: Map<string, string | null>;
   /** Frozen "now", for the due lifts and the age tie-break — stable across a
       whole triage. Defaults to Date.now() at comparator creation. */
   now?: number;
@@ -119,19 +126,57 @@ function edgeActive(
   return true;
 }
 
+function isOpen(
+  id: string,
+  statusById: Map<string, IssueStatus> | undefined
+): boolean {
+  const status = statusById?.get(id);
+  return status === undefined || !isClosedStatus(status);
+}
+
+/** Objectives whose blocks on their own tickets read as resolved: every open
+    ticket of the objective is blocked by it, so those tickets are its last
+    steps (MIN-890). One open ticket the objective does not block is work that
+    must come first, and keeps every such edge active (MIN-989). */
+function finishedObjectives(
+  relations: IssueRelation[],
+  statusById: Map<string, IssueStatus> | undefined,
+  objectiveById: Map<string, string | null>
+): Set<string> {
+  const lastSteps = new Map<string, Set<string>>();
+  for (const r of relations) {
+    if (r.type !== "blocks") continue;
+    if (objectiveById.get(r.target_id) !== r.source_id) continue;
+    const targets = lastSteps.get(r.source_id) ?? new Set<string>();
+    targets.add(r.target_id);
+    lastSteps.set(r.source_id, targets);
+  }
+  const finished = new Set(lastSteps.keys());
+  for (const [issueId, objectiveId] of objectiveById) {
+    if (!objectiveId || !finished.has(objectiveId)) continue;
+    if (lastSteps.get(objectiveId)?.has(issueId)) continue;
+    if (isOpen(issueId, statusById)) finished.delete(objectiveId);
+  }
+  return finished;
+}
+
 /** The "blocks" edges that still order the column: both ends open, and not
-    an objective blocking one of its own tickets (MIN-890) — that ticket is
-    the objective's last step, so the edge reads as resolved. */
+    an objective blocking one of its own tickets once nothing else of the
+    objective is left to do (see `finishedObjectives`). */
 function orderingEdges(
   relations: IssueRelation[] | undefined,
   statusById: Map<string, IssueStatus> | undefined,
   objectiveById: Map<string, string | null>
 ): IssueRelation[] {
   if (!relations?.length) return [];
+  const finished = finishedObjectives(relations, statusById, objectiveById);
   return relations.filter(
     (r) =>
       r.type === "blocks" &&
-      objectiveById.get(r.target_id) !== r.source_id &&
+      !(
+        objectiveById.get(r.target_id) === r.source_id &&
+        finished.has(r.source_id)
+      ) &&
       edgeActive(r.source_id, r.target_id, statusById)
   );
 }
@@ -149,11 +194,9 @@ export function triageIssueComparator(
 ): (a: TriageIssue, b: TriageIssue) => number {
   const now = ctx.now ?? Date.now();
   const { issues } = ctx;
-  const edges = orderingEdges(
-    ctx.relations,
-    ctx.statusById,
-    new Map(issues.map((issue) => [issue.id, issue.objective_id]))
-  );
+  const objectiveById = new Map(ctx.objectiveByIssue);
+  for (const issue of issues) objectiveById.set(issue.id, issue.objective_id);
+  const edges = orderingEdges(ctx.relations, ctx.statusById, objectiveById);
   // Blockers: open tickets that still block an open ticket. Blocked: open
   // tickets held back by at least one open blocker.
   const blockers = new Set(edges.map((r) => r.source_id));

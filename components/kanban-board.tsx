@@ -202,7 +202,9 @@ export const KanbanBoard = memo(function KanbanBoard({
       Array.from(allIssueMap.values(), (i) => [i.id, i.status] as const),
     );
     const issuesByObjective = new Map<string, string[]>();
+    const objectiveByIssue = new Map<string, string | null>();
     for (const issue of allIssues) {
+      objectiveByIssue.set(issue.id, issue.objective_id);
       if (!issue.objective_id) continue;
       const list = issuesByObjective.get(issue.objective_id);
       if (list) list.push(issue.id);
@@ -221,6 +223,7 @@ export const KanbanBoard = memo(function KanbanBoard({
           (statusById.has(r.source_id) && statusById.has(r.target_id)),
       ),
       statusById,
+      objectiveByIssue,
     };
   }, [relations, allIssues, objectives, allIssueMap]);
   const makeComparator = useMemo(
@@ -230,6 +233,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         {
           relations: triageContext.relations,
           statusById: triageContext.statusById,
+          objectiveByIssue: triageContext.objectiveByIssue,
         },
         sortDirection ?? "asc"
       ),

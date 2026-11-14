@@ -310,7 +310,8 @@ describe("boardComparatorFactory (MIN-576)", () => {
       ...issues.map((issue) => [issue.id, "todo"] as const),
       ...objectiveStatuses,
     ]);
-    return { relations, statusById };
+    const objectiveByIssue = new Map(issues.map((issue) => [issue.id, issue.objective_id]));
+    return { relations, statusById, objectiveByIssue };
   }
 
   it("reads an objective blocking its own ticket as resolved, whatever the objective's status (MIN-890)", () => {
@@ -339,7 +340,6 @@ describe("boardComparatorFactory (MIN-576)", () => {
     const issues = [
       boardTicket({ id: "last-b", objective_id: "obj-1", priority: "urgent", position: 10 }),
       boardTicket({ id: "last-a", objective_id: "obj-1", priority: "low", position: 20 }),
-      boardTicket({ id: "step", objective_id: "obj-1", priority: "medium", position: 30 }),
       boardTicket({ id: "free", priority: "high", position: 40 }),
     ];
     const storedRelations: IssueRelation[] = [
@@ -348,10 +348,40 @@ describe("boardComparatorFactory (MIN-576)", () => {
       { id: "a-b", source_id: "last-a", target_id: "last-b", type: "blocks" },
     ];
     const ctx = foldedContext(issues, storedRelations, { "obj-1": "in_progress" });
-    expect(sorted(issues, "smart", ctx)).toEqual(["last-a", "free", "step", "last-b"]);
+    expect(sorted(issues, "smart", ctx)).toEqual(["last-a", "free", "last-b"]);
 
     const unchained = foldedContext(issues, storedRelations.slice(0, 2), { "obj-1": "in_progress" });
-    expect(sorted(issues, "smart", unchained)).toEqual(["last-b", "step", "last-a", "free"]);
+    expect(sorted(issues, "smart", unchained)).toEqual(["last-b", "last-a", "free"]);
+  });
+
+  describe("while the objective still holds open work it does not block (MIN-989)", () => {
+    const last = boardTicket({ id: "last", objective_id: "obj-1", priority: "urgent", position: 10 });
+    const step = boardTicket({ id: "step", objective_id: "obj-1", priority: "low", position: 20 });
+    const free = boardTicket({ id: "free", priority: "medium", position: 30 });
+    const storedRelations: IssueRelation[] = [
+      { id: "o-last", source_id: "obj-1", source_type: "objective", target_id: "last", type: "blocks" },
+    ];
+
+    it("sinks the blocked ticket below the remaining step", () => {
+      const issues = [last, step, free];
+      const ctx = foldedContext(issues, storedRelations, { "obj-1": "in_progress" });
+      expect(sorted(issues, "smart", ctx)).toEqual(["free", "step", "last"]);
+    });
+
+    it("reads the remaining step from another column", () => {
+      const ctx = foldedContext([last, step, free], storedRelations, { "obj-1": "in_progress" });
+      const column = [last, free];
+      const make = boardComparatorFactory("smart", { now: NOW, ...ctx });
+      expect(column.slice().sort(make(column.slice())).map((i) => i.id)).toEqual(["free", "last"]);
+    });
+
+    it("releases the blocked ticket once the remaining step closes", () => {
+      const ctx = foldedContext([last, step, free], storedRelations, { "obj-1": "in_progress" });
+      ctx.statusById.set("step", "done");
+      const column = [last, free];
+      const make = boardComparatorFactory("smart", { now: NOW, ...ctx });
+      expect(column.slice().sort(make(column.slice())).map((i) => i.id)).toEqual(["last", "free"]);
+    });
   });
 
   it("still sinks a ticket blocked by ANOTHER open objective (MIN-890)", () => {
