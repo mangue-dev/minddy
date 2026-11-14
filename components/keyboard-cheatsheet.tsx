@@ -10,11 +10,12 @@ import { usePromptActionLabel } from "@/components/prompt-action";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { SidePanel, SidePanelBody, SidePanelContent, SidePanelDescription, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
+import { SidePanel, SidePanelBody, SidePanelContent, SidePanelHeader, SidePanelTitle } from "@/components/ui/side-panel";
 import { KbdSequence } from "@/components/ui/kbd";
 import { useCheatsheet } from "@/lib/keyboard/keyboard-context";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { filterCheatsheet } from "@/lib/keyboard/filter-cheatsheet";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 import { CHEATSHEET, resolveKeyToken } from "@/lib/keyboard/shortcuts";
 
 /** The shortcuts that hand a prompt to the coding agent. */
@@ -28,6 +29,9 @@ export function KeyboardCheatsheet() {
   const promptLabel = usePromptActionLabel();
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  // The list fades at the top and bottom while there is more to scroll, as
+  // the issue panel's body does. The phone sheet draws its own fade.
+  const listFade = useScrollFade<HTMLDivElement>();
   const filteredCheatsheet = filterCheatsheet(CHEATSHEET, query, {
     sectionTitle: tSection,
     shortcutLabel: tShortcut,
@@ -37,6 +41,7 @@ export function KeyboardCheatsheet() {
     <SidePanel open={open} onOpenChange={setOpen}>
       <SidePanelContent
         side="right"
+        aria-describedby={undefined}
         // Typing filters right away on desktop; on mobile the keyboard stays shut.
         onOpenAutoFocus={() => {
           if (allowInputAutoFocus()) searchRef.current?.focus({ preventScroll: true });
@@ -44,7 +49,6 @@ export function KeyboardCheatsheet() {
       >
         <SidePanelHeader>
           <SidePanelTitle>{tk("shortcutsTitle")}</SidePanelTitle>
-          <SidePanelDescription>{tk("shortcutsDescription")}</SidePanelDescription>
         </SidePanelHeader>
 
         <div className="relative shrink-0 px-6 pt-4 pb-2">
@@ -59,7 +63,7 @@ export function KeyboardCheatsheet() {
           />
         </div>
 
-        <SidePanelBody className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pt-2 pb-6">
+        <SidePanelBody ref={listFade.ref} {...listFade.scrollProps} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pt-2 pb-6">
           {filteredCheatsheet.map((section) => (
             <section key={section.id}>
               <h3 className="mb-1 text-xs font-medium text-muted-foreground">

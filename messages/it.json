@@ -2336,7 +2336,6 @@
   "Keyboard": {
     "then": "poi",
     "shortcutsTitle": "Scorciatoie da tastiera",
-    "shortcutsDescription": "Premi ? per riaprire questo elenco.",
     "searchLabel": "Cerca scorciatoie",
     "searchPlaceholder": "Cerca scorciatoie…",
     "noSearchResults": "Nessuna scorciatoia trovata.",

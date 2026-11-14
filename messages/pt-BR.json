@@ -2336,7 +2336,6 @@
   "Keyboard": {
     "then": "depois",
     "shortcutsTitle": "Atalhos de teclado",
-    "shortcutsDescription": "Pressione ? para reabrir esta lista.",
     "searchLabel": "Pesquisar atalhos",
     "searchPlaceholder": "Pesquisar atalhos…",
     "noSearchResults": "Nenhum atalho encontrado.",
