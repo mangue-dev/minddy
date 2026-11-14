@@ -112,8 +112,8 @@ export function PublicBoard({
   );
 }
 
-/** One shared card: the face, with the integration's name and the
-    description's typed mentions the board resolves. */
+/** One shared card: the face, with the integration's name the board
+    resolves. */
 function PublicCardFace(props: ComponentProps<typeof IssueCardFace>) {
   const slots = useIssueCardRichSlots(props.issue);
   return <IssueCardFace {...props} slots={slots} />;

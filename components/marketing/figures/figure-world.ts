@@ -57,7 +57,6 @@ export function figureIssue(
   return {
     id: `figure-${fields.number}`,
     project_id: FIGURE_PROJECT_ID,
-    description: null,
     effort: null,
     assignee_id: null,
     objective_id: null,

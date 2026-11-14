@@ -35,7 +35,6 @@ import { dueDateFormat, parseDueDate } from "@/lib/due-date";
 import { displayName } from "@/lib/display-name";
 import { issueIdentifier, type IssueEffort, type IssuePriority, type IssueStatus } from "@/lib/issue-constants";
 import { planProgress, type PlanProgress } from "@/lib/plan";
-import { plainMarkdownParts } from "@/lib/plain-markdown";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { useSmartAssignFillsEmpty } from "@/lib/use-smart-assign-empty";
 import type {
@@ -316,28 +315,11 @@ function IssueCardPullRequest({ state, number }: { state: IssuePr["state"]; numb
   );
 }
 
-/** The description's first lines. Typed mentions need their resolver, which
-    is too heavy for this module: a surface that shows them passes the
-    `description` slot (see `issue-card-rich-slots.tsx`); the plain text alone
-    is shown otherwise. */
-function IssueCardDescription({ description }: { description: string | null }) {
-  // Limited to the first 400 characters: three truncated lines need no more,
-  // and the rest of the body is never read (MIN-316).
-  const parts = description ? plainMarkdownParts(description.slice(0, 400)) : [];
-  if (!parts.length) return null;
-  return (
-    <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-      {parts.filter((part) => typeof part === "string")}
-    </p>
-  );
-}
-
 export interface IssueCardFaceSlots {
   /** Who filed the issue: an integration's indicator. */
   integration?: ReactNode;
   parent?: ReactNode;
   relations?: ReactNode;
-  description?: ReactNode;
   commentFollowUp?: ReactNode;
   /** The pull request (with its readiness) or the plan's progress. */
   activity?: ReactNode;
@@ -502,11 +484,9 @@ export function IssueCardFace({
         </span>
       </div>
 
-      {/* Title + description (tight spacing between them, and to the row above) */}
-      <div className="-mt-1 flex flex-col gap-0.5">
-        <TruncatedText text={issue.title} className="line-clamp-2 text-sm font-semibold leading-snug" />
-        {slots?.description ?? <IssueCardDescription description={issue.description} />}
-      </div>
+      {/* The title alone, two lines at most, tight to the row above: the
+          description stays in the side panel (MIN-987). */}
+      <TruncatedText text={issue.title} className="-mt-1 line-clamp-2 text-sm font-semibold leading-snug" />
 
       {/* Indicators — spread edge-to-edge: status · priority · effort · category */}
       {/* Last line of a card without objective or due date: 4px more keeps

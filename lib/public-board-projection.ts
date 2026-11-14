@@ -25,14 +25,14 @@ import type {
  */
 
 /** The ticket, reduced to what a card displays. `plan` is not there: the
- card only draws advancement, and advancement is not what is published. */
+ card only draws advancement, and advancement is not what is published. Nor
+ is `description`: the card shows the title alone (MIN-987). */
 export function toPublicIssue(issue: Issue): IssueCardIssue {
   return {
     id: issue.id,
     project_id: issue.project_id,
     number: issue.number,
     title: issue.title,
-    description: issue.description,
     status: issue.status,
     priority: issue.priority,
     effort: issue.effort,

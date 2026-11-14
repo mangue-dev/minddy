@@ -135,7 +135,7 @@ Eine gespeicherte Ansicht ist keine Kopie ihrer Tickets. Das Löschen der Ansich
 
 Öffne den Link in einer separaten Browsersitzung ohne dein Konto. Prüfe die Ticketauswahl, Felder und verknüpften Inhalte, die Besucher sehen können. Der öffentliche Link gewährt schreibgeschützten Zugriff auf die Ansicht, keine Mitgliedschaft oder Bearbeitungsrechte im Projekt.
 
-Geteilte Karten zeigen Titel, Beschreibungen und eingeblendete Eigenschaften, darunter Namen zuständiger Personen, Kategorien, Zielnamen, Fälligkeitstermine, Wiederholung und vorhandene Links zur entfernten Git-Plattform. Die veröffentlichte Darstellung enthält keine Inhalte von Umsetzungsplänen und keine E-Mail-Adressen der Mitglieder. Kennzeichnungen übergeordneter Tickets und Beziehungen können Kennungen von Projekttickets außerhalb des Ansichtsfilters zeigen. Prüfe diese Beschreibungen, Namen und Kennungen ebenso wie die sichtbaren Spalten. Das Ausblenden einer Karteneigenschaft ist keine allgemeine Schwärzung vertraulicher Inhalte.
+Geteilte Karten zeigen Titel und eingeblendete Eigenschaften, darunter Namen zuständiger Personen, Kategorien, Zielnamen, Fälligkeitstermine, Wiederholung und vorhandene Links zur entfernten Git-Plattform. Die veröffentlichte Darstellung enthält keine Ticketbeschreibungen, keine Inhalte von Umsetzungsplänen und keine E-Mail-Adressen der Mitglieder. Kennzeichnungen übergeordneter Tickets und Beziehungen können Kennungen von Projekttickets außerhalb des Ansichtsfilters zeigen. Prüfe diese Namen und Kennungen ebenso wie die sichtbaren Spalten. Das Ausblenden einer Karteneigenschaft ist keine allgemeine Schwärzung vertraulicher Inhalte.
 
 ![Freigabedialog einer Ansicht mit ausgewähltem privatem Zugriff.](/documentation/de/work-share-view.png)
 

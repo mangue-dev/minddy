@@ -296,9 +296,10 @@ access. It does not check the surface; that scope is the app's.
 
 A preview that flattens Markdown must not print a stored label either:
 
-- An issue card's description preview splits typed mentions out
-  (`plainMarkdownParts` in `lib/plain-markdown.ts`) and renders each with
-  `TypedMentionText`: `@` plus the current label, or the neutral label.
+- A draft's description preview in the drafts tray splits typed mentions
+  out (`plainMarkdownParts` in `lib/plain-markdown.ts`) and renders each with
+  `TypedMentionText`: `@` plus the current label, or the neutral label. Board
+  cards show the title alone (MIN-987).
 - The inbox's comment excerpt is relabeled for its recipient
   (`lib/server/inbox.ts`).
 - A page's search text reduces each typed mention to `@…`

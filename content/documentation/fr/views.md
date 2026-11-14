@@ -135,7 +135,7 @@ Ouvrez le menu de la vue dans un tableau de projet éligible et choisissez Parta
 
 Ouvrez-le dans une session de navigateur sans votre compte. Inspectez tickets, champs et contenus liés accessibles au visiteur. Le lien donne un accès en lecture à la vue, pas une adhésion ni des droits de modification au projet.
 
-Les cartes partagées exposent leurs titres, descriptions et propriétés affichées : noms des responsables, catégories, noms des objectifs, échéances, récurrences et éventuels liens de forge. La projection exclut le corps des plans d’implémentation et les e-mails des membres. Les indicateurs de parent et de relation peuvent montrer les identifiants de tickets du projet hors des filtres de la vue. Examinez descriptions, noms et identifiants autant que les colonnes visibles ; masquer une propriété de carte n’est pas un outil général de suppression de contenu sensible.
+Les cartes partagées exposent leurs titres et propriétés affichées : noms des responsables, catégories, noms des objectifs, échéances, récurrences et éventuels liens de forge. La projection exclut les descriptions des tickets, le corps des plans d’implémentation et les e-mails des membres. Les indicateurs de parent et de relation peuvent montrer les identifiants de tickets du projet hors des filtres de la vue. Examinez noms et identifiants autant que les colonnes visibles ; masquer une propriété de carte n’est pas un outil général de suppression de contenu sensible.
 
 ![Dialogue de partage d’une vue avec l’accès privé sélectionné.](/documentation/fr/work-share-view.png)
 

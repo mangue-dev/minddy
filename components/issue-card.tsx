@@ -153,14 +153,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-/**
- * Strip common markdown so the description preview reads as plain text.
- *
- * ⚠ Called on a SLICE of the description, never on the entire description
- * (MIN-316): eight regular expressions including one not anchored
- * (```` ```[\s\S]*?``` ````) on a body of several kilobytes, each
- * rendering of each card — for a preview rendered in `line-clamp-3`.
- */
 /* ── Inline indicator pickers ────────────────────────────────────────────
    Each indicator on the card is a dropdown trigger: clicking it edits the
    field in place. `stop` keeps the click/drag from bubbling to the card (which
@@ -787,7 +779,7 @@ export const IssueCardBody = memo(function IssueCardBody({
   // their JSX icons — even for CLOSED menus.
   const memberList = useMemo(() => [...memberMap.values()], [memberMap]);
   const categoryList = useMemo(() => [...categoryMap.values()], [categoryMap]);
-  const rich = useIssueCardRichSlots(issue, { resolveResources: true });
+  const rich = useIssueCardRichSlots(issue);
 
   const setStatus = onUpdate
     ? (status: IssueStatus) => onUpdate({ status })

@@ -206,7 +206,6 @@ async function issuePreview(userId: string, id: string, service: SupabaseClient)
       project_id: projectId,
       number: Number(row.number),
       title: String(row.title),
-      description: typeof row.description === "string" ? row.description.slice(0, 400) : null,
       status: row.status as IssueStatus,
       priority: row.priority as never,
       effort: (row.effort as IssueEffort | null) ?? null,

@@ -135,7 +135,7 @@ Apri il menu di una vista idonea sul tabellone del progetto e scegli l’azione 
 
 Apri il link in una sessione del browser separata, senza il tuo account. Controlla il sottoinsieme di ticket, i campi e i contenuti collegati che un visitatore può vedere. Il link pubblico concede accesso in sola lettura alla vista, non appartenenza o permessi di modifica nel progetto.
 
-Le schede condivise espongono titoli, descrizioni e proprietà visualizzate, compresi nomi degli assegnatari, categorie, nomi degli obiettivi, scadenze, ricorrenza ed eventuali link a piattaforme Git remote. La proiezione pubblica esclude i contenuti dei piani di implementazione e gli indirizzi email dei membri. Le etichette del padre e delle relazioni possono mostrare identificativi di ticket del progetto fuori dal filtro della vista. Controlla descrizioni, nomi e identificativi oltre alle colonne visibili; nascondere una proprietà della scheda non è uno strumento generale per oscurare contenuti riservati.
+Le schede condivise espongono titoli e proprietà visualizzate, compresi nomi degli assegnatari, categorie, nomi degli obiettivi, scadenze, ricorrenza ed eventuali link a piattaforme Git remote. La proiezione pubblica esclude le descrizioni dei ticket, i contenuti dei piani di implementazione e gli indirizzi email dei membri. Le etichette del padre e delle relazioni possono mostrare identificativi di ticket del progetto fuori dal filtro della vista. Controlla nomi e identificativi oltre alle colonne visibili; nascondere una proprietà della scheda non è uno strumento generale per oscurare contenuti riservati.
 
 ![Finestra di condivisione di una vista con accesso privato selezionato.](/documentation/it/work-share-view.png)
 
