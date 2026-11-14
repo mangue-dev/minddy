@@ -1089,7 +1089,6 @@ export interface IssueCardIssue {
   project_id: string;
   number: number;
   title: string;
-  description: string | null;
   status: IssueStatus;
   priority: IssuePriority;
   effort: IssueEffort | null;

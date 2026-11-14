@@ -182,7 +182,8 @@ describe("previewMentionTarget", () => {
     if (preview?.type !== "issue") return;
     expect(preview.project).toMatchObject({ key: "MIN", name: "Minddy" });
     expect(preview.issue).toMatchObject({ number: 42, title: "Fix login", category_ids: ["cat"], objective_id: OBJECTIVE });
-    expect(preview.issue.description).toHaveLength(400);
+    // The card shows the title alone (MIN-987): the description stays on the server.
+    expect(preview.issue).not.toHaveProperty("description");
     expect(preview.categories).toEqual([{ id: "cat", name: "Bug", color: "#f00" }]);
     expect(preview.objective).toMatchObject({ id: OBJECTIVE, name: "Launch" });
     expect(preview.assignee).toMatchObject({ user_id: MEMBER, role: "reader", full_name: "Camille Roy" });

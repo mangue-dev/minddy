@@ -135,7 +135,7 @@ Open the view menu on an eligible project board and choose Share view. You need 
 
 Open the link in a separate browser session without your account. Inspect the issue subset, fields and any linked content a visitor can see. A public link grants the view's read-only access rather than membership or edit permission in the project.
 
-Shared cards expose their titles, descriptions and displayed properties, including assignee names, categories, objective names, due dates, recurrence and any remote forge links. The projection excludes implementation-plan bodies and member email addresses. Parent and relation chips can show identifiers of project issues outside the view filter. Review those descriptions, names and identifiers as well as the visible columns; hiding a card property is not a general content-redaction tool.
+Shared cards expose their titles and displayed properties, including assignee names, categories, objective names, due dates, recurrence and any remote forge links. The projection excludes issue descriptions, implementation-plan bodies and member email addresses. Parent and relation chips can show identifiers of project issues outside the view filter. Review those names and identifiers as well as the visible columns; hiding a card property is not a general content-redaction tool.
 
 ![View-sharing dialog with private access selected.](/documentation/en/work-share-view.png)
 

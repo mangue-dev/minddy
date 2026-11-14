@@ -45,7 +45,6 @@ function issue(patch: Partial<IssueCardFaceProps["issue"]> = {}): IssueCardFaceP
     project_id: "project-1",
     number: 7,
     title: "Keep the card light",
-    description: null,
     status: "todo",
     priority: "medium",
     effort: null,
@@ -71,7 +70,6 @@ const fixtures: Array<[string, IssueCardFaceProps]> = [
   ["full fields", {
     ...base,
     issue: issue({
-      description: "A compact **description**.",
       assignee_id: member.user_id,
       category_ids: [category.id],
       objective_id: objective.id,
@@ -145,6 +143,21 @@ describe("IssueCardFace", () => {
 
     expect(host.querySelector("[data-testid=body]")?.innerHTML)
       .toBe(host.querySelector("[data-testid=face]")?.innerHTML);
+  });
+
+  it("shows the title alone, even when the issue has a description (MIN-987)", async () => {
+    // The board passes complete issues, description included.
+    const withDescription = { ...issue(), description: "Context the card must not print." };
+    await act(() => root.render(
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <TooltipProvider>
+          <IssueCardBody {...base} issue={withDescription} />
+        </TooltipProvider>
+      </NextIntlClientProvider>,
+    ));
+
+    expect(host.textContent).toContain("Keep the card light");
+    expect(host.textContent).not.toContain("Context the card must not print.");
   });
 });
 

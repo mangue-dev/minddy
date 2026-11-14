@@ -136,7 +136,7 @@ Abra o menu de uma visualização elegível em um quadro do projeto e escolha a 
 
 Abra o link em outra sessão do navegador, sem sua conta. Confira o subconjunto de tickets, os campos e os conteúdos vinculados que um visitante pode ver. O link público concede acesso somente leitura à visualização, não participação nem permissão de edição no projeto.
 
-Os cartões compartilhados expõem títulos, descrições e propriedades exibidas, incluindo nomes dos responsáveis, categorias, nomes dos objetivos, prazos, recorrência e eventuais links para plataformas Git remotas. A projeção pública exclui o conteúdo dos planos de implementação e os e-mails dos membros. As etiquetas do ticket pai e das relações podem mostrar identificadores de tickets do projeto fora do filtro da visualização. Confira essas descrições, nomes e identificadores, além das colunas visíveis; ocultar uma propriedade do cartão não é uma ferramenta geral para censurar conteúdo sensível.
+Os cartões compartilhados expõem títulos e propriedades exibidas, incluindo nomes dos responsáveis, categorias, nomes dos objetivos, prazos, recorrência e eventuais links para plataformas Git remotas. A projeção pública exclui as descrições dos tickets, o conteúdo dos planos de implementação e os e-mails dos membros. As etiquetas do ticket pai e das relações podem mostrar identificadores de tickets do projeto fora do filtro da visualização. Confira esses nomes e identificadores, além das colunas visíveis; ocultar uma propriedade do cartão não é uma ferramenta geral para censurar conteúdo sensível.
 
 ![Janela de compartilhamento de visualização com acesso privado selecionado.](/documentation/pt-BR/work-share-view.png)
 

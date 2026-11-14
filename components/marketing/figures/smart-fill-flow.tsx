@@ -326,9 +326,9 @@ export function SmartFillFlow() {
     () =>
       figureIssue({
         number: example.number,
-        // Smart Fill writes the title from the description, as in the app.
-        title: step >= 1 ? t(example.title) : "",
-        description,
+        // Smart Fill writes the title from the description, as in the app;
+        // until then the description stands in as the title (MIN-987).
+        title: step >= 1 ? t(example.title) : description,
         status: "todo",
         priority: step >= 2 ? priority : "none",
         effort: step >= 3 ? effort : null,

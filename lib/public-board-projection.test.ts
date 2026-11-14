@@ -48,7 +48,6 @@ describe("toPublicIssue", () => {
     expect(Object.keys(toPublicIssue(issue())).sort()).toEqual([
       "assignee_id",
       "category_ids",
-      "description",
       "due_date",
       "effort",
       "id",
@@ -71,6 +70,11 @@ describe("toPublicIssue", () => {
     for (const leak of ["tâche secrète", "u-secret", "cycle-secret", "1234"]) {
       expect(serialized).not.toContain(leak);
     }
+  });
+
+  it("keeps the description on the server: the card shows the title alone (MIN-987)", () => {
+    const serialized = JSON.stringify(toPublicIssue(issue({ description: "internal body" })));
+    expect(serialized).not.toContain("internal body");
   });
 });
 

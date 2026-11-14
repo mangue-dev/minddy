@@ -149,9 +149,9 @@ function issueOf(card: Card, title: string): IssueCardIssue {
   const filled = card.stage >= 1;
   return figureIssue({
     number: n,
-    // Smart Fill writes the title from the description, as in the app.
-    title: filled ? title : "",
-    description: filled ? null : title,
+    // The card shows the title alone (MIN-987): before Smart Fill, the text
+    // stands in as the title, as the description's first line does in the app.
+    title,
     status: STAGE_STATUS[card.stage],
     priority: filled ? PRIORITIES[n % PRIORITIES.length] : "none",
     effort: filled ? EFFORTS[n % EFFORTS.length] : null,
