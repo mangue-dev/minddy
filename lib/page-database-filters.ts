@@ -1,12 +1,12 @@
 import {
   databaseDateDay,
   databasePropertyValue,
-  isDatabaseValue,
+  isPlainDatabaseDate,
   parseDatabaseNumber,
+  type DatabaseEntryFields,
   type DatabaseProperty,
   type DatabasePropertyType,
   type DatabaseValue,
-  type DatabaseValues,
   type DatabaseView,
 } from "./page-databases";
 
@@ -68,6 +68,9 @@ const OPERATORS: Record<DatabasePropertyType, readonly DatabaseFilterOperator[]>
   people: ["contains", "not_contains", "empty", "not_empty"],
   date: ["eq", "gt", "lt", "empty", "not_empty"],
   created_at: ["eq", "gt", "lt", "empty", "not_empty"],
+  updated_at: ["eq", "gt", "lt", "empty", "not_empty"],
+  created_by: ["eq", "neq"],
+  updated_by: ["eq", "neq"],
   checkbox: ["eq"],
 };
 
@@ -100,10 +103,13 @@ export function isDatabaseFilterValue(property: DatabaseProperty, value: unknown
     case "multi_select":
       return !!property.options?.some((option) => option.id === value);
     case "people":
+    case "created_by":
+    case "updated_by":
       return UUID.test(value);
     case "date":
     case "created_at":
-      return DAY.test(value) && isDatabaseValue("date", value);
+    case "updated_at":
+      return DAY.test(value) && isPlainDatabaseDate(value);
     case "checkbox":
       return value === "true" || value === "false";
   }
@@ -145,6 +151,8 @@ function matchesCondition(value: DatabaseValue | undefined, property: DatabasePr
       return operator === "gt" ? number > bound : number < bound;
     }
     case "select":
+    case "created_by":
+    case "updated_by":
       return operator === "eq" ? value === target : value !== target;
     case "multi_select":
     case "people": {
@@ -152,7 +160,9 @@ function matchesCondition(value: DatabaseValue | undefined, property: DatabasePr
       return operator === "contains" ? ids.includes(target) : !ids.includes(target);
     }
     case "date":
-    case "created_at": {
+    case "created_at":
+    case "updated_at": {
+      // A recurring date is compared through its next occurrence.
       const day = databaseDateDay(value);
       if (day === null) return false;
       // Same-length ISO days compare in calendar order.
@@ -168,7 +178,7 @@ function matchesCondition(value: DatabaseValue | undefined, property: DatabasePr
  * evaluate are left out; with none left, every entry matches.
  */
 export function matchesDatabaseFilter(
-  entry: { created_at?: string; property_values?: DatabaseValues },
+  entry: DatabaseEntryFields,
   schema: readonly DatabaseProperty[],
   filter: DatabaseViewFilter,
 ): boolean {
@@ -272,8 +282,13 @@ export function legacyDatabaseViewFilter(
   if (property.type === "checkbox") return add("eq", filterValue === "true" ? "true" : "false");
   if (!filterValue) return add("empty");
   switch (property.type) {
+    case "created_by":
+    case "updated_by":
+      // The previous release had no author property to filter on.
+      return result;
     case "date":
     case "created_at":
+    case "updated_at":
     case "people":
       if (!isDatabaseFilterValue(property, filterValue)) return result;
       return add(property.type === "people" ? "contains" : "eq", filterValue);
@@ -336,7 +351,11 @@ export function legacyDatabaseViewFields(
         break;
       case "date":
       case "created_at":
+      case "updated_at":
         if (condition.operator === "eq") return keep(value);
+        break;
+      case "created_by":
+      case "updated_by":
         break;
     }
   }

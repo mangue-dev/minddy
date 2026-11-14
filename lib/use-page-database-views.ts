@@ -21,11 +21,14 @@ import {
   resolveDatabaseViewFilter,
 } from "./page-database-filters";
 import { removeLocalSnapshot, restoreLocalSnapshot } from "./local-snapshots";
+import { useUndoHistory } from "./undo/undo-context";
+import { replayGestures } from "./undo/undo-core";
 
 export const pageDatabaseViewsKey = (projectId: string, pageId: string) =>
   ["page-database-views", projectId, pageId] as const;
 
 const SAVE_DELAY_MS = 400;
+const VIEW_UNDO_COALESCE_MS = 1500;
 
 /** The view this browser shows for a database; a per-viewer convenience. */
 const activeViewKey = (pageId: string) => `minddy:database-active-view:${pageId}`;
@@ -89,6 +92,7 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
   schema?: readonly DatabaseProperty[]) {
   const queryClient = useQueryClient();
   const t = useTranslations("PageDatabase");
+  const undo = useUndoHistory();
   const base = `/api/projects/${projectId}/pages/${pageId}/database/views`;
   const { data, isSuccess } = useQuery({
     queryKey: pageDatabaseViewsKey(projectId, pageId),
@@ -180,7 +184,7 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
     queued.current = null;
   }, []);
 
-  const update = useCallback((patch: Partial<DatabaseView>) => {
+  const apply = useCallback((patch: Partial<DatabaseView>) => {
     const { config: previous, active: view, localKey: entryKey, schema: properties } =
       latest.current;
     const next = { ...previous, ...patch };
@@ -202,6 +206,42 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
     queued.current = () => void persist(view?.id ?? null, next, entryKey);
     timer.current = setTimeout(flush, SAVE_DELAY_MS);
   }, [canWrite, persist, flush]);
+
+  /**
+   * A change to the view on screen, undoable with ⌘Z (MIN-990). Changes to
+   * the same settings made in quick succession (a filter value being typed)
+   * are one step.
+   */
+  const lastChange = useRef<{ keys: string; at: number; after: Partial<DatabaseView> } | null>(null);
+  const update = useCallback((patch: Partial<DatabaseView>) => {
+    const { config: previous, active: view } = latest.current;
+    const keys = Object.keys(patch).sort().join(",");
+    const viewId = view?.id ?? null;
+    const before = Object.fromEntries(Object.keys(patch).map((key) =>
+      [key, previous[key as keyof DatabaseView]])) as Partial<DatabaseView>;
+    apply(patch);
+    const now = Date.now();
+    const recent = lastChange.current;
+    if (recent && recent.keys === `${viewId}:${keys}` && now - recent.at < VIEW_UNDO_COALESCE_MS) {
+      recent.at = now;
+      Object.assign(recent.after, patch);
+      return;
+    }
+    const after = { ...patch };
+    lastChange.current = { keys: `${viewId}:${keys}`, at: now, after };
+    const replay = (values: Partial<DatabaseView>) => async () => {
+      // The change belongs to the view it was made on.
+      // A change made on the default view was saved as the first view.
+      const now = latest.current.active?.id ?? null;
+      const same = now === viewId ||
+        (viewId === null && now === (latest.current.views[0]?.id ?? null));
+      if (!same) throw new Error(t("viewChanged"));
+      lastChange.current = null;
+      apply(values);
+    };
+    undo.record({ kind: "replay", projectId, label: "viewSettings",
+      ...replayGestures(undefined, replay(before), replay(after)) });
+  }, [apply, undo, projectId, t]);
 
   // A change still waiting when the page closes is saved right away.
   useEffect(() => flush, [projectId, pageId, flush]);
@@ -263,10 +303,10 @@ export function usePageDatabaseViews(projectId: string, pageId: string, canWrite
       if (!legacy || latest.current.views.length ||
           !latest.current.localKey.startsWith(`${pageId}:`)) return;
       // That browser view only knew the single filter.
-      update({ sort: legacy.sort, descending: legacy.descending, filter: legacy.filter,
+      apply({ sort: legacy.sort, descending: legacy.descending, filter: legacy.filter,
         filterValue: legacy.filterValue, hidden: legacy.hidden });
     });
-  }, [isSuccess, projectId, pageId, update]);
+  }, [isSuccess, projectId, pageId, apply]);
 
   return { views, active, config, update, select, create, rename, remove, move };
 }

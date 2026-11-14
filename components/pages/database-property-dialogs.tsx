@@ -4,11 +4,18 @@ import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
-import { Add01Icon, ArrowDown01Icon, ArrowUp01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
-import { arrayMove } from "@dnd-kit/sortable";
+import { Add01Icon, ArrowDown01Icon, Delete02Icon, DragDropVerticalIcon } from "@hugeicons/core-free-icons";
+import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type Modifier } from "@dnd-kit/core";
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { DragCursor } from "@/components/drag-cursor";
+import { DRAG_ACTIVATION_DISTANCE } from "@/lib/drag-feel";
+import { useDragAnnouncements } from "@/lib/use-drag-announcements";
+import { AppTooltip } from "@/components/ui/app-tooltip";
+import { cn } from "@/lib/utils";
 import { createUuid } from "@/lib/create-uuid";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,12 +37,16 @@ import { pickFreeCategoryColor } from "@/lib/category-colors";
 import { ColorSelect } from "@/components/color-select";
 import { keepOverlayOpenForPopper } from "@/lib/overlay-dismiss";
 import { usePageDatabase } from "@/lib/use-page-database";
+import { useUndoHistory } from "@/lib/undo/undo-context";
+import { toast } from "sonner";
 import {
   DATABASE_PROPERTY_TYPES,
   MAX_DATABASE_PROPERTIES,
   MAX_DATABASE_OPTIONS,
+  isDatabaseMetadataType,
   type DatabaseProperty,
   type DatabasePropertyType,
+  type DatabaseSelectOption,
 } from "@/lib/page-databases";
 import type { PageSummary } from "@/lib/pages-api";
 import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
@@ -58,6 +69,8 @@ export function DatabaseOptionsDialog({
   const t = useTranslations("PageDatabase");
   const tCommon = useTranslations("Common");
   const tObjectives = useTranslations("Objectives");
+  const tUndo = useTranslations("Undo");
+  const undo = useUndoHistory();
   const locale = useLocale();
   const { saveSchema, pending } = usePageDatabase(projectId);
   const [base] = useState(database);
@@ -73,11 +86,25 @@ export function DatabaseOptionsDialog({
   // and ask before the save goes through (MIN-743).
   const [confirmRemoved, setConfirmRemoved] = useState<string[] | null>(null);
   const save = () => {
+    const removed = (property.options ?? []).filter((option) =>
+      !options.some((kept) => kept.id === option.id)).length;
     void saveSchema(base, (base.database_schema ?? []).map((p) =>
-      p.id === property.id ? { ...p, options: options.map((option) => ({ ...option, name: option.name.trim() })) } : p));
+      p.id === property.id ? { ...p, options: options.map((option) => ({ ...option, name: option.name.trim() })) } : p))
+      .then((saved) => {
+        // Deleted options, and the values that used them, come back with one click.
+        if (saved && removed > 0) toast(t("optionsDeleted", { count: removed }), {
+          action: { label: tUndo("undo"), onClick: () => undo.undo() },
+        });
+      });
     onClose();
   };
   const listFormat = new Intl.ListFormat(locale, { style: "long", type: "conjunction" });
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const announcements = useDragAnnouncements((id) =>
+    options.find((option) => option.id === id)?.name);
   return (
     <>
     <FormDialog
@@ -103,11 +130,27 @@ export function DatabaseOptionsDialog({
       }}
     >
       <div className="max-h-[min(50dvh,400px)] space-y-2 overflow-y-auto px-0.5 py-1">
+        <DndContext
+          accessibility={{ announcements, screenReaderInstructions: { draggable: t("reorderColumnHint") } }}
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[verticalOptionDrag]}
+          onDragEnd={({ active, over }) => {
+            if (!over || active.id === over.id) return;
+            setOptions((rows) => {
+              const from = rows.findIndex((row) => row.id === active.id);
+              const to = rows.findIndex((row) => row.id === over.id);
+              return from === -1 || to === -1 ? rows : arrayMove(rows, from, to);
+            });
+          }}
+        >
+        <DragCursor />
+        <SortableContext items={options.map((option) => option.id)} strategy={verticalListSortingStrategy}>
         {options.map((option, index) => (
-          <div
+          <SortableOptionRow
             key={option.id}
-            data-database-option-row
-            className="flex min-h-11 min-w-0 items-center gap-1"
+            option={option}
+            sortable={!pending && options.length > 1}
           >
             <Input
               aria-label={t("optionName")}
@@ -150,20 +193,6 @@ export function DatabaseOptionsDialog({
               }
             />
             <Button type="button" variant="ghost" size="icon"
-              className="size-9 shrink-0 app-mobile:size-11"
-              disabled={pending || index === 0}
-              aria-label={t("moveOptionUp", { name: option.name })}
-              onClick={() => setOptions((rows) => arrayMove(rows, index, index - 1))}>
-              <HugeiconsIcon icon={ArrowUp01Icon} className="size-4" />
-            </Button>
-            <Button type="button" variant="ghost" size="icon"
-              className="size-9 shrink-0 app-mobile:size-11"
-              disabled={pending || index === options.length - 1}
-              aria-label={t("moveOptionDown", { name: option.name })}
-              onClick={() => setOptions((rows) => arrayMove(rows, index, index + 1))}>
-              <HugeiconsIcon icon={ArrowDown01Icon} className="size-4" />
-            </Button>
-            <Button type="button" variant="ghost" size="icon"
               className="size-9 shrink-0 text-muted-foreground hover:text-destructive app-mobile:size-11"
               disabled={pending}
               aria-label={t("deleteOption", { name: option.name })}
@@ -172,8 +201,10 @@ export function DatabaseOptionsDialog({
               }}>
               <HugeiconsIcon icon={Delete02Icon} className="size-4" />
             </Button>
-          </div>
+          </SortableOptionRow>
         ))}
+        </SortableContext>
+        </DndContext>
         {!options.length && (
           <p className="py-6 text-center text-sm text-muted-foreground">
             {t("noOptions")}
@@ -209,6 +240,42 @@ export function DatabaseOptionsDialog({
       onConfirm={save}
     />
     </>
+  );
+}
+
+const verticalOptionDrag: Modifier = ({ transform }) => ({ ...transform, x: 0 });
+
+/** One option of the dialog, reordered by its handle like the project's categories. */
+function SortableOptionRow({ option, sortable, children }: {
+  option: DatabaseSelectOption; sortable: boolean; children: ReactNode;
+}) {
+  const t = useTranslations("PageDatabase");
+  const { setNodeRef, setActivatorNodeRef, attributes, listeners, transform, transition, isDragging } =
+    useSortable({ id: option.id, disabled: !sortable });
+  return (
+    <div
+      ref={setNodeRef}
+      data-database-option-row
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={cn("relative flex min-h-11 min-w-0 items-center gap-1 rounded-md", isDragging && "z-10 bg-popover shadow-md")}
+    >
+      <AppTooltip label={t("reorderColumnHint")}>
+        <button
+          ref={setActivatorNodeRef}
+          type="button"
+          aria-label={t("reorderColumn", { name: option.name })}
+          disabled={!sortable}
+          {...attributes}
+          {...listeners}
+          // A touch on the handle drags; the rest of the list still scrolls.
+          style={{ touchAction: "none" }}
+          className={cn("flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 app-mobile:size-11", isDragging && "cursor-grabbing")}
+        >
+          <HugeiconsIcon icon={DragDropVerticalIcon} className="size-4" />
+        </button>
+      </AppTooltip>
+      {children}
+    </div>
   );
 }
 
@@ -383,9 +450,10 @@ function DatabaseColumnDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>{t("conversionWarningTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {type === "created_at"
+              {isDatabaseMetadataType(type)
                 ? t("conversionMetadataWarning", {
                     count: warning?.incompatibleCount ?? 0,
+                    type: t(type),
                   })
                 : t("conversionWarningDescription", {
                     count: warning?.incompatibleCount ?? 0,
@@ -405,7 +473,7 @@ function DatabaseColumnDialog({
               }}
             >
               {t(
-                type === "created_at"
+                isDatabaseMetadataType(type)
                   ? "confirmMetadataConversion"
                   : "confirmConversion",
               )}

@@ -1,4 +1,10 @@
-import { parseDueDate } from "./due-date";
+import { DATE_ONLY, isDueDateOverdue, parseDueDate } from "./due-date";
+import { startDueDate, type RecurrenceCadence } from "./recurrence";
+import {
+  DATABASE_NUMBER_FORMATS,
+  isDatabaseCurrency,
+  type DatabaseNumberFormat,
+} from "./page-database-number";
 import {
   normalizeDatabaseViewFilter,
   sameDatabaseViewFilter,
@@ -11,17 +17,50 @@ export const DATABASE_PROPERTY_TYPES = [
   "number",
   "select",
   "multi_select",
-  "created_at",
   "date",
   "people",
   "checkbox",
+  "created_at",
+  "updated_at",
+  "created_by",
+  "updated_by",
 ] as const;
 export type DatabasePropertyType = (typeof DATABASE_PROPERTY_TYPES)[number];
+
+/**
+ * Properties read from the entry itself (MIN-990): when it was created or
+ * last edited, and by whom. Never stored as a value, never editable.
+ */
+export const DATABASE_METADATA_TYPES = [
+  "created_at",
+  "updated_at",
+  "created_by",
+  "updated_by",
+] as const satisfies readonly DatabasePropertyType[];
+export type DatabaseMetadataType = (typeof DATABASE_METADATA_TYPES)[number];
+export function isDatabaseMetadataType(type: unknown): type is DatabaseMetadataType {
+  return (DATABASE_METADATA_TYPES as readonly unknown[]).includes(type);
+}
+/** Properties whose value is a moment: compared as days, sorted in time. */
+export function isDatabaseDateType(type: DatabasePropertyType): boolean {
+  return type === "date" || type === "created_at" || type === "updated_at";
+}
+/** Metadata naming one author. */
+export function isDatabaseAuthorType(type: DatabasePropertyType): boolean {
+  return type === "created_by" || type === "updated_by";
+}
+/** What an author property holds when the last write came from an agent. */
+export const DATABASE_AGENT_AUTHOR = "minddy";
+
 export interface DatabaseProperty {
   id: string;
   name: string;
   type: DatabasePropertyType;
   options?: DatabaseSelectOption[];
+  /** How a number column shows its values; absent for a plain number. */
+  number_format?: DatabaseNumberFormat;
+  /** ISO 4217 code of a `currency` column. */
+  currency?: string;
 }
 export interface DatabaseSelectOption {
   id: string;
@@ -50,6 +89,15 @@ export function isDatabaseSchema(value: unknown): value is DatabaseProperty[] {
       ids.has(property.id)
     )
       return false;
+    if (property.number_format !== undefined || property.currency !== undefined) {
+      if (
+        property.type !== "number" ||
+        !DATABASE_NUMBER_FORMATS.includes(property.number_format) ||
+        (property.number_format === "currency") !== (property.currency !== undefined) ||
+        (property.currency !== undefined && !isDatabaseCurrency(property.currency))
+      )
+        return false;
+    }
     if (property.options !== undefined) {
       if (
         !["select", "multi_select"].includes(property.type) ||
@@ -86,7 +134,7 @@ export function isDatabaseValue(
   type: DatabasePropertyType,
   value: unknown,
 ): value is DatabaseValue {
-  if (type === "created_at") return false;
+  if (isDatabaseMetadataType(type)) return false;
   if (value === null) return true;
   switch (type) {
     case "number":
@@ -104,19 +152,8 @@ export function isDatabaseValue(
       return typeof value === "boolean";
     case "text":
       return typeof value === "string" && value.length <= 2000;
-    case "date": {
-      if (typeof value !== "string" || value !== value.trim() ||
-          !/^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:0\d|1[0-5]):[0-5]\d))?$/.test(value))
-        return false;
-      const calendar = value.slice(0, 10);
-      const date = new Date(`${calendar}T00:00:00.000Z`);
-      return (
-        date.getUTCFullYear() > 0 &&
-        Number.isFinite(date.getTime()) &&
-        date.toISOString().slice(0, 10) === calendar &&
-        (value.length === 10 || Number.isFinite(Date.parse(value)))
-      );
-    }
+    case "date":
+      return parseDatabaseDate(value) !== null;
     case "people":
       return (
         Array.isArray(value) &&
@@ -124,7 +161,81 @@ export function isDatabaseValue(
         value.every((id) => typeof id === "string" && UUID.test(id)) &&
         new Set(value).size === value.length
       );
+    default:
+      return false;
   }
+}
+
+const PLAIN_DATE = /^\d{4}-\d{2}-\d{2}(?:T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:0\d|1[0-5]):[0-5]\d))?$/;
+const RECURRING_DATE = /^R\/([^/]+)\/P1([DWMY])$/;
+const CADENCE_CODES = { D: "daily", W: "weekly", M: "monthly", Y: "yearly" } as const;
+
+/** A calendar day or a timestamp, without any recurrence. */
+export function isPlainDatabaseDate(value: unknown): value is string {
+  if (typeof value !== "string" || !PLAIN_DATE.test(value)) return false;
+  const calendar = value.slice(0, 10);
+  const date = new Date(`${calendar}T00:00:00.000Z`);
+  return (
+    date.getUTCFullYear() > 0 &&
+    Number.isFinite(date.getTime()) &&
+    date.toISOString().slice(0, 10) === calendar &&
+    (value.length === 10 || Number.isFinite(Date.parse(value)))
+  );
+}
+
+/**
+ * A date cell (MIN-990): its date, and the cadence when it recurs. A recurring
+ * date is stored as an ISO 8601 repeating interval, `R/<date>/P1D|P1W|P1M|P1Y`;
+ * `<date>` is the day or timestamp the rhythm starts from.
+ */
+export interface DatabaseDate {
+  date: string;
+  recurrence: RecurrenceCadence | null;
+}
+
+export function parseDatabaseDate(value: unknown): DatabaseDate | null {
+  if (typeof value !== "string") return null;
+  const recurring = RECURRING_DATE.exec(value);
+  const date = recurring ? recurring[1] : value;
+  if (!isPlainDatabaseDate(date)) return null;
+  return {
+    date,
+    recurrence: recurring ? CADENCE_CODES[recurring[2] as keyof typeof CADENCE_CODES] : null,
+  };
+}
+
+export function formatDatabaseDate(date: string, recurrence: RecurrenceCadence | null): string {
+  if (!recurrence) return date;
+  const code = (Object.keys(CADENCE_CODES) as (keyof typeof CADENCE_CODES)[])
+    .find((key) => CADENCE_CODES[key] === recurrence);
+  return `R/${date}/P1${code}`;
+}
+
+/**
+ * The date a cell stands for now: the stored date, or for a recurring one its
+ * next occurrence (today included). Nothing rewrites the cell when a day
+ * passes: the occurrence is computed each time it is read. A day stays a day
+ * and a timestamp a timestamp.
+ */
+export function databaseDateOccurrence(value: unknown, now: Date = new Date()): string | null {
+  const parsed = parseDatabaseDate(value);
+  if (!parsed) return null;
+  if (!parsed.recurrence) return parsed.date;
+  if (DATE_ONLY.test(parsed.date)) {
+    // Calendar arithmetic in UTC, against today's local calendar day: local
+    // midnights drift by an hour across a time change.
+    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const base = new Date(`${parsed.date}T00:00:00.000Z`);
+    if (base.getTime() >= today.getTime()) return parsed.date;
+    // A UTC midnight is "late" exactly when it is before today's, whatever
+    // the local zone makes of its hour.
+    const next = startDueDate(base, parsed.recurrence, today);
+    return next.toISOString().slice(0, 10);
+  }
+  const base = parseDueDate(parsed.date);
+  if (!base) return null;
+  if (!isDueDateOverdue(base, now.getTime())) return parsed.date;
+  return startDueDate(base, parsed.recurrence, now).toISOString();
 }
 
 export function databaseValueText(
@@ -141,7 +252,10 @@ export function databaseValueText(
   if (Array.isArray(value)) return value.map(name).join(", ");
   if (typeof value === "number") return String(value);
   if (typeof value === "boolean") return value ? "1" : "0";
-  return property?.type === "select" ? name(value) : value;
+  if (property?.type === "date") return databaseDateOccurrence(value) ?? value;
+  return property?.type === "select" || (property && isDatabaseAuthorType(property.type))
+    ? name(value)
+    : value;
 }
 
 export function compareDatabaseValues(
@@ -151,9 +265,30 @@ export function compareDatabaseValues(
   property?: DatabaseProperty,
 ): number {
   if (typeof a === "number" && typeof b === "number") return a - b;
-  if (property?.type === "date" && typeof a === "string" && typeof b === "string" &&
-      isDatabaseValue("date", a) && isDatabaseValue("date", b))
-    return parseDueDate(a)!.getTime() - parseDueDate(b)!.getTime();
+  // A selection sorts in the order of its options, the one set in the options
+  // dialog: "To do" before "Done", whatever their names (MIN-990).
+  if (property?.type === "select" || property?.type === "multi_select") {
+    const rank = (value: DatabaseValue | undefined) => {
+      const ids = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+      return ids.map((id) => {
+        const index = property.options?.findIndex((option) => option.id === id) ?? -1;
+        return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+      }).sort((x, y) => x - y);
+    };
+    const first = rank(a);
+    const second = rank(b);
+    for (let i = 0; i < Math.max(first.length, second.length); i += 1) {
+      // Fewer selections sort first; an empty cell before every option.
+      const delta = (first[i] ?? -1) - (second[i] ?? -1);
+      if (delta) return delta;
+    }
+    return 0;
+  }
+  if (property && isDatabaseDateType(property.type)) {
+    const first = parseDueDate(databaseDateOccurrence(a));
+    const second = parseDueDate(databaseDateOccurrence(b));
+    if (first && second) return first.getTime() - second.getTime();
+  }
   return databaseValueText(a, names, property).localeCompare(
     databaseValueText(b, names, property),
     undefined,
@@ -163,8 +298,7 @@ export function compareDatabaseValues(
 
 /** The local calendar day (`YYYY-MM-DD`) the date editor shows for a value, or null. */
 export function databaseDateDay(value: DatabaseValue | undefined): string | null {
-  if (typeof value !== "string") return null;
-  const date = parseDueDate(value);
+  const date = parseDueDate(databaseDateOccurrence(value));
   if (!date) return null;
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -175,14 +309,36 @@ export function databaseDateMatches(value: DatabaseValue | undefined, day: strin
   return databaseDateDay(value) === day;
 }
 
+/** What an entry carries for its derived properties. */
+export interface DatabaseEntryFields {
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string | null;
+  updated_by?: string | null;
+  updated_kind?: string;
+  property_values?: DatabaseValues;
+}
+
 /** Metadata is derived from the entry, never stored as an editable value. */
 export function databasePropertyValue(
-  page: { created_at?: string; property_values?: DatabaseValues },
+  page: DatabaseEntryFields,
   property: DatabaseProperty,
 ): DatabaseValue {
-  return property.type === "created_at"
-    ? (page.created_at ?? null)
-    : (page.property_values?.[property.id] ?? null);
+  switch (property.type) {
+    case "created_at":
+      return page.created_at ?? null;
+    case "updated_at":
+      return page.updated_at ?? page.created_at ?? null;
+    case "created_by":
+      return page.created_by ?? null;
+    case "updated_by":
+      // Nobody rewrote the entry since its creation: its author stands.
+      if (page.updated_by == null) return page.created_by ?? null;
+      // An agent writes under a human account; the gesture is minddy's.
+      return page.updated_kind === "agent" ? DATABASE_AGENT_AUTHOR : page.updated_by;
+    default:
+      return page.property_values?.[property.id] ?? null;
+  }
 }
 
 export function isDatabasePropertyValue(
@@ -198,17 +354,7 @@ export function isDatabasePropertyValue(
   );
 }
 
-/** Accept decimal punctuation while keeping letters out of numeric editors. */
-export function isDatabaseNumberDraft(value: string): boolean {
-  return /^[+-]?(?:\d*(?:[.,]\d*)?)$/.test(value);
-}
-
-export function parseDatabaseNumber(value: string): number | null | undefined {
-  if (!value.trim()) return null;
-  if (!isDatabaseNumberDraft(value) || !/\d/.test(value)) return undefined;
-  const number = Number(value.replace(",", "."));
-  return Number.isFinite(number) ? number : undefined;
-}
+export { isDatabaseNumberDraft, parseDatabaseNumber } from "./page-database-number";
 
 /**
  * The saved view of a database: its sort, filters and hidden columns (MIN-764).
@@ -233,7 +379,32 @@ export interface DatabaseView {
   filter: string;
   filterValue: string;
   hidden: string[];
+  /** The figure shown under a number column, by property id (MIN-990). */
+  calculations: Record<string, DatabaseCalculation>;
+  /** Column widths set by hand, in pixels, by property id or `title`. */
+  widths: Record<string, number>;
 }
+export const DATABASE_CALCULATIONS = ["sum", "average", "min", "max", "count"] as const;
+export type DatabaseCalculation = (typeof DATABASE_CALCULATIONS)[number];
+export const MIN_DATABASE_COLUMN_WIDTH = 80;
+export const MAX_DATABASE_COLUMN_WIDTH = 800;
+
+/** The figure a calculation gives for a column's values; null without any number. */
+export function databaseCalculation(
+  kind: DatabaseCalculation,
+  values: readonly (DatabaseValue | undefined)[],
+): number | null {
+  const numbers = values.filter((value): value is number => typeof value === "number");
+  if (kind === "count") return numbers.length;
+  if (!numbers.length) return null;
+  const total = numbers.reduce((sum, value) => sum + value, 0);
+  const result = kind === "sum" ? total
+    : kind === "average" ? total / numbers.length
+    : kind === "min" ? Math.min(...numbers) : Math.max(...numbers);
+  // Binary floats leak into sums: 0.1 + 0.2 reads 0.3.
+  return Number(result.toPrecision(12));
+}
+
 export const DEFAULT_DATABASE_VIEW: DatabaseView = {
   sort: "position",
   descending: false,
@@ -242,6 +413,8 @@ export const DEFAULT_DATABASE_VIEW: DatabaseView = {
   filter: "",
   filterValue: "",
   hidden: [],
+  calculations: {},
+  widths: {},
 };
 const MAX_VIEW_FILTER_LENGTH = 200;
 const VIEW_PROPERTY = /^(?:position|title|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
@@ -255,6 +428,16 @@ export function normalizeDatabaseView(value: unknown): DatabaseView | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const input = value as Record<string, unknown>;
   const { sort, descending, filter, filterValue, hidden } = input;
+  // Views saved before MIN-990 carry neither; a malformed entry is dropped.
+  const entries = (raw: unknown) => raw && typeof raw === "object" && !Array.isArray(raw)
+    ? Object.entries(raw as Record<string, unknown>).slice(0, MAX_DATABASE_PROPERTIES + 1) : [];
+  const calculations = Object.fromEntries(entries(input.calculations).filter(([id, kind]) =>
+    UUID.test(id) && DATABASE_CALCULATIONS.includes(kind as DatabaseCalculation))) as
+    Record<string, DatabaseCalculation>;
+  const widths = Object.fromEntries(entries(input.widths).flatMap(([id, width]) =>
+    (id === "title" || UUID.test(id)) && typeof width === "number" && Number.isFinite(width)
+      ? [[id, Math.round(Math.min(MAX_DATABASE_COLUMN_WIDTH,
+          Math.max(MIN_DATABASE_COLUMN_WIDTH, width)))]] : [])) as Record<string, number>;
   // A view written by the previous release has no `filters` at all.
   const filters = input.filters === undefined
     ? { match: "and" as const, conditions: [] }
@@ -280,7 +463,14 @@ export function normalizeDatabaseView(value: unknown): DatabaseView | null {
     filter,
     filterValue: filter ? filterValue : "",
     hidden: [...new Set(hidden as string[])],
+    calculations,
+    widths,
   };
+}
+
+function sameRecord(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every((key) => a[key] === b[key]);
 }
 
 export function sameDatabaseView(a: DatabaseView, b: DatabaseView): boolean {
@@ -291,7 +481,9 @@ export function sameDatabaseView(a: DatabaseView, b: DatabaseView): boolean {
     a.filterValue === b.filterValue &&
     sameDatabaseViewFilter(a.filters, b.filters) &&
     a.hidden.length === b.hidden.length &&
-    a.hidden.every((id, index) => id === b.hidden[index])
+    a.hidden.every((id, index) => id === b.hidden[index]) &&
+    sameRecord(a.calculations ?? {}, b.calculations ?? {}) &&
+    sameRecord(a.widths ?? {}, b.widths ?? {})
   );
 }
 

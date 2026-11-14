@@ -10,7 +10,7 @@ import type { Page } from "@/lib/pages";
 import type { DatabaseProperty, DatabasePropertyType, DatabaseValue,
   DatabaseSelectOption } from "@/lib/page-databases";
 import type { DatabaseConversionPreview } from "@/lib/page-database-conversion";
-import { isDatabaseValue } from "@/lib/page-databases";
+import { isDatabaseAuthorType, isDatabaseMetadataType, isPlainDatabaseDate, parseDatabaseDate } from "@/lib/page-databases";
 
 type StoredPage = Page & { content_revision: number; encryption_version: number;
   database_revision: number };
@@ -22,7 +22,8 @@ function convertCell(source: DatabaseProperty,
   if (cell == null || cell === "" || Array.isArray(cell) && cell.length === 0) {
     return { value: null, compatible: true };
   }
-  if (target === "people" || target === "created_at" || source.type === "people") {
+  if (target === "people" || isDatabaseMetadataType(target) ||
+      source.type === "people" || isDatabaseAuthorType(source.type)) {
     return { value: null, compatible: false };
   }
   let label: string;
@@ -49,6 +50,8 @@ function convertCell(source: DatabaseProperty,
     }
     label = validIds.map((id) => options.get(id)).join(", ");
   } else label = String(cell);
+  // A recurring date converts as the date its rhythm starts from.
+  if (source.type === "date") label = parseDatabaseDate(cell)?.date ?? label;
   if (target === "text") {
     return label.length <= 2000 ? { value: label, compatible: true } :
       { value: null, compatible: false };
@@ -80,8 +83,9 @@ function convertCell(source: DatabaseProperty,
     return { value: null, compatible: false };
   }
   if (target === "date") {
-    const candidate = source.type === "created_at" ? label.slice(0, 10) : label;
-    return isDatabaseValue("date", candidate)
+    const candidate = source.type === "created_at" || source.type === "updated_at"
+      ? label.slice(0, 10) : label;
+    return isPlainDatabaseDate(candidate)
       ? { value: candidate, compatible: true }
       : { value: null, compatible: false };
   }
@@ -122,7 +126,8 @@ export async function convertProtectedPageDatabase({
   const entries = await children(projectId, page.id, actorId);
   const snapshot = JSON.stringify([page.id, page.database_revision, propertyId,
     target, name, entries.map((entry) => [entry.id,
-      entry.property_values?.[propertyId] ?? null, entry.created_at])]);
+      entry.property_values?.[propertyId] ?? null, entry.created_at,
+      ...(source.type === "updated_at" ? [entry.updated_at] : [])])]);
   const scope = { kind: "project" as const, id: projectId };
   const key = await getBlindIndexKeys().byVersion(scope, 1);
   let token: string;
@@ -140,6 +145,8 @@ export async function convertProtectedPageDatabase({
   let incompatibleCount = 0;
   for (const entry of entries) {
     const cell = source.type === "created_at" ? entry.created_at :
+      source.type === "updated_at" ? entry.updated_at :
+      isDatabaseAuthorType(source.type) ? undefined :
       entry.property_values?.[propertyId];
     const converted = convertCell(source, target, cell);
     if (!converted.compatible) incompatibleCount++;
@@ -165,6 +172,7 @@ export async function convertProtectedPageDatabase({
   const replacement: DatabaseProperty = { ...source, name, type: target };
   if (target === "select" || target === "multi_select") replacement.options = choices;
   else delete replacement.options;
+  if (target !== "number") { delete replacement.number_format; delete replacement.currency; }
   const preview: DatabaseConversionPreview = { status: "preview",
     totalCount: entries.length, incompatibleCount, token,
     column: replacement, values };
@@ -179,7 +187,7 @@ export async function convertProtectedPageDatabase({
   if (source.type !== target) {
     for (const entry of entries) {
       const propertyValues = { ...entry.property_values };
-      if (values[entry.id] == null || target === "created_at") {
+      if (values[entry.id] == null || isDatabaseMetadataType(target)) {
         delete propertyValues[propertyId];
       } else propertyValues[propertyId] = values[entry.id];
       edits.push({ previous: entry, next: { ...entry, property_values: propertyValues } });

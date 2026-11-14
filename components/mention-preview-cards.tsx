@@ -263,7 +263,7 @@ function PagePreviewCard({ preview }: { preview: Extract<MentionPreview, { type:
 
 /** Column widths of the real table (components/pages/page-database-view.tsx). */
 const DATABASE_COLUMN_WIDTHS: Record<DatabasePropertyType, number> = {
-  text: 240, number: 160, select: 192, multi_select: 240, created_at: 200, date: 176, people: 192, checkbox: 128,
+  text: 240, number: 160, select: 192, multi_select: 240, created_at: 200, updated_at: 200, created_by: 192, updated_by: 192, date: 176, people: 192, checkbox: 128,
 };
 const DATABASE_TITLE_WIDTH = 240;
 

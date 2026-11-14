@@ -15,7 +15,7 @@ import {
   type DatabasePreviewCell,
 } from "@/lib/mention-preview";
 import { mcpPresetForUrl } from "@/lib/mcp-catalog";
-import { databaseValueText, type DatabaseProperty, type DatabaseValue } from "@/lib/page-databases";
+import { databaseDateOccurrence, databasePropertyValue, databaseValueText, isDatabaseAuthorType, isDatabaseDateType, isDatabaseMetadataType, type DatabaseEntryFields, type DatabaseProperty, type DatabaseValue } from "@/lib/page-databases";
 import { memberRoleFromRow } from "@/lib/project-roles";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { resolveRelations, type DisplayRelation } from "@/lib/relation-constants";
@@ -286,13 +286,16 @@ async function objectivePreview(userId: string, id: string, service: SupabaseCli
 /** A database cell as the card draws it, like the table does. */
 function previewCell(
   property: DatabaseProperty,
-  value: DatabaseValue | undefined,
-  createdAt: string | undefined,
+  entry: DatabaseEntryFields,
   names: ReadonlyMap<string, string>,
 ): DatabasePreviewCell {
+  const value = databasePropertyValue(entry, property);
   if (property.type === "checkbox") return { kind: "checkbox", checked: value === true };
-  if (property.type === "created_at") return createdAt ? { kind: "date", value: createdAt } : { kind: "text", text: "" };
-  if (property.type === "date") return typeof value === "string" && value ? { kind: "date", value } : { kind: "text", text: "" };
+  if (isDatabaseDateType(property.type)) {
+    // A recurring date shows its next occurrence, as the table does.
+    const date = isDatabaseMetadataType(property.type) ? value : databaseDateOccurrence(value);
+    return typeof date === "string" && date ? { kind: "date", value: date } : { kind: "text", text: "" };
+  }
   if (property.type === "select" || property.type === "multi_select") {
     const ids = Array.isArray(value) ? value : typeof value === "string" && value ? [value] : [];
     const options = ids.flatMap((optionId) => {
@@ -317,7 +320,7 @@ async function pagePreview(userId: string, id: string, service: SupabaseClient):
   const database = page.database_schema != null;
   const columns = ((page.database_schema ?? []) as DatabaseProperty[]).slice(0, DATABASE_PREVIEW_COLUMNS);
   const children = () => service.from("pages")
-    .select("id, project_id, title, icon, property_values, created_at, deleted_at, encrypted_content, encryption_version",
+    .select("id, project_id, title, icon, property_values, created_at, updated_at, created_by, updated_by, updated_kind, deleted_at, encrypted_content, encryption_version",
       { count: "exact" })
     .eq("project_id", page.project_id).eq("parent_id", id).is("deleted_at", null)
     .order("position").limit(DATABASE_PREVIEW_ROWS);
@@ -336,11 +339,22 @@ async function pagePreview(userId: string, id: string, service: SupabaseClient):
     title: typeof row.title === "string" ? row.title : "",
     icon: typeof row.icon === "string" && row.icon ? row.icon : null,
     values: (row.property_values ?? {}) as Record<string, DatabaseValue>,
-    createdAt: typeof row.created_at === "string" ? row.created_at : undefined,
+    entry: {
+      property_values: (row.property_values ?? {}) as Record<string, DatabaseValue>,
+      created_at: typeof row.created_at === "string" ? row.created_at : undefined,
+      updated_at: typeof row.updated_at === "string" ? row.updated_at : undefined,
+      created_by: typeof row.created_by === "string" ? row.created_by : null,
+      updated_by: typeof row.updated_by === "string" ? row.updated_by : null,
+      updated_kind: typeof row.updated_kind === "string" ? row.updated_kind : undefined,
+    } satisfies DatabaseEntryFields,
   }));
   // People cells name their members, as the table does.
   const people = [...new Set(rows.flatMap((row) => columns.flatMap((property) =>
-    property.type === "people" && Array.isArray(row.values[property.id]) ? row.values[property.id] as string[] : [])))];
+    property.type === "people" && Array.isArray(row.values[property.id]) ? row.values[property.id] as string[]
+      : isDatabaseAuthorType(property.type)
+        ? [databasePropertyValue(row.entry, property)].filter((value): value is string =>
+            typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value))
+        : [])))];
   const users = people.length ? await fetchAuthUsersById(service, people) : new Map();
   const names = new Map(people.map((userId) => [userId, displayName(toNamed(users.get(userId)), "User")]));
   return {
@@ -357,7 +371,7 @@ async function pagePreview(userId: string, id: string, service: SupabaseClient):
           rows: rows.map((row) => ({
             title: row.title,
             icon: row.icon,
-            cells: columns.map((property) => previewCell(property, row.values[property.id], row.createdAt, names)),
+            cells: columns.map((property) => previewCell(property, row.entry, names)),
           })),
           total: entries.total,
         }

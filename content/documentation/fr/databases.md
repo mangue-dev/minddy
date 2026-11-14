@@ -17,10 +17,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 19,
-  "sourceRevision": 19,
+  "revision": 20,
+  "sourceRevision": 20,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-10-28",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -61,14 +61,22 @@
       "supabase/migrations/20270109200092_page_database_views_realtime.sql",
       "components/pages/page-peek-panel.tsx",
       "components/pages/pages-shell.tsx",
-      "components/global-page-panel.tsx"
+      "components/global-page-panel.tsx",
+      "lib/page-database-number.ts",
+      "lib/page-database-schema-patch.ts",
+      "lib/use-page-database.ts",
+      "lib/undo/undo-context.tsx",
+      "components/pages/database-choice.tsx",
+      "components/pages/page-document-actions.tsx",
+      "lib/server/database-tool-schema.ts",
+      "supabase/migrations/20270109200126_page_database_metadata_recurrence_formats.sql"
     ]
   },
   "review": {
-    "revision": 19,
-    "fact": "agent:claude-code (column header menu Delete column with confirmation and right-click opening, hover-only row gutter, touch-screen rows without gutter, checkbox tooltips and partial header state, bottom scrollbar hidden on touch screens, view rename/delete by right-click, column reordering by handle in Columns, Numo view tools and no MCP view tools checked against components/pages/database-column-name.tsx, page-database-view.tsx, database-view-strip.tsx, database-table-scroll.tsx, components/ui/checkbox.tsx, lib/server/assistant/tools.ts and lib/server/database-view-tools.ts; several filter conditions with All/Any match, operators per column type, up to 10 conditions, single filters kept, live view updates, default view rename, phone view dropdown, View settings sheets, search field and cell sheets checked against lib/page-database-filters.ts, components/pages/database-filter-editor.tsx, lib/use-page-database-views.ts, supabase/migrations/20270109200092_page_database_views_realtime.sql, components/pages/database-view-strip.tsx, components/pages/page-database-view.tsx and components/pages/database-cell-editor.tsx; Page options in the entry side panel checked against components/pages/page-peek-panel.tsx and components/pages/pages-shell.tsx; the side panel's compact database toolbar (view dropdown, search popover, View settings menu with a Sort by submenu and Filter and Columns popovers, in-panel horizontal scrollbar, entries opened in place with Back) checked against components/pages/page-database-view.tsx, components/pages/database-view-strip.tsx, components/pages/database-table-scroll.tsx, components/global-page-panel.tsx and components/pages/page-peek-panel.tsx; rest of the article unchanged since the previous review; no figure recaptured, existing figures do not show the changed controls); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected, 6 kept with their earlier capture; no browser walkthrough of the procedures)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; equivalent meaning to en revision 19; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-04"
+    "revision": 20,
+    "fact": "agent:claude-code (MIN-990 changes mirrored from en revision 20; labels checked against messages/fr.json; agent review, not human acceptance)",
+    "language": "agent:claude-code (fr translation of the changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "pages"
@@ -92,7 +100,7 @@
       "src": "/documentation/fr/database-setup-cards.png",
       "alt": "Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.",
       "caption": "Suggestions pour une nouvelle base, présentées avec des données de démonstration. Choisissez Numo ou l’import, ou masquez les cartes pour continuer manuellement.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-11",
       "viewport": [
@@ -107,14 +115,14 @@
       "id": "create-a-database-steps",
       "kind": "screenshot",
       "src": "/documentation/fr/database-property-types.png",
-      "alt": "Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.",
+      "alt": "Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, date, personnes, case à cocher et les quatre types en lecture seule.",
       "caption": "Choisissez un type adapté aux valeurs à conserver.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
-      "capturedAt": "2026-10-18",
+      "capturedAt": "2026-11-14",
       "viewport": [
         448,
-        357
+        453
       ],
       "theme": "light",
       "padding": 24,
@@ -126,7 +134,7 @@
       "src": "/documentation/fr/database-entry.png",
       "alt": "Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.",
       "caption": "Ouvrez une entrée pour lire son texte complet et modifier les valeurs typées.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -142,7 +150,7 @@
       "src": "/documentation/fr/database-conversion-warning.png",
       "alt": "Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.",
       "caption": "Vérifiez le nombre réel de cellules incompatibles avant de confirmer. Annuler conserve les valeurs actuelles.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -158,7 +166,7 @@
       "src": "/documentation/fr/database-import-review.png",
       "alt": "Vérification d’un CSV local : deux pages d’entrées et deux colonnes, avec le bouton Importer la base.",
       "caption": "Vérifiez les entrées analysées et le nombre de colonnes avant l’import dans la base vide.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -172,11 +180,11 @@
       "id": "database-options-preview",
       "kind": "screenshot",
       "src": "/documentation/fr/database-options.png",
-      "alt": "Aperçu du composant Modifier les options avec des statuts en français, des flèches vers le haut et le bas, des corbeilles et l’explication de la suppression.",
-      "caption": "Modifiez ensemble les noms, les couleurs et l’ordre des options. La corbeille retire une option des modifications en cours ; Enregistrer applique les changements. Données de démonstration.",
-      "revision": 19,
+      "alt": "Aperçu du composant Modifier les options avec des statuts en français, des poignées de déplacement, des corbeilles et l’explication de la suppression.",
+      "caption": "Modifiez ensemble les noms, les couleurs et l’ordre des options. Faites glisser une poignée pour réordonner ; la corbeille retire une option des modifications en cours ; Enregistrer applique les changements. Données de démonstration.",
+      "revision": 20,
       "reviewed": true,
-      "capturedAt": "2026-10-12",
+      "capturedAt": "2026-11-14",
       "viewport": [
         560,
         448
@@ -191,7 +199,7 @@
       "src": "/documentation/fr/database-date-time.png",
       "alt": "Aperçu du sélecteur de date avec le 24 juillet 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 02:00 AM.",
       "caption": "Activez Préciser l’heure pour saisir une heure. Cet aperçu du composant utilise des données de démonstration et le fuseau horaire de l’appareil.",
-      "revision": 19,
+      "revision": 20,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -220,21 +228,25 @@ La zone de configuration d’une nouvelle base propose deux cartes : **Créer av
 
 Comme propriétaire ou Membre du projet, ouvrez les pages, utilisez + et choisissez une base de données. Elle commence avec le nom des entrées, sans colonne optionnelle. Sa bannière propose une création avec Numo ou l’import d’une base existante. La configuration manuelle reste disponible sans IA. Choisir **Créer avec Numo** ouvre une demande préparée avec cette base comme contexte de page, après confirmation de sa création. Relisez et envoyez la demande pour décrire la structure souhaitée ; ouvrir la conversation ne termine pas la configuration. Le travail IA nécessite un fournisseur configuré et un budget disponible ou une clé personnelle compatible. Inspectez le schéma et les entrées obtenus avant de vous y fier.
 
-Ouvrez Colonnes et ajoutez une colonne, ou utilisez + à droite du tableau. Nommez-la et choisissez Texte, Nombre, Sélection, Sélection multiple, Date de création, Date, Personnes ou Case à cocher. Utilisez la recherche du sélecteur pour retrouver un type. Enregistrez, ajoutez une entrée et vérifiez la colonne dans la liste et la page d’entrée.
+Ouvrez Colonnes et ajoutez une colonne, ou utilisez + à droite du tableau. Nommez-la et choisissez Texte, Nombre, Sélection, Sélection multiple, Date, Personnes, Case à cocher, Date de création, Dernière modification, Créé par ou Dernière modification par. Utilisez la recherche du sélecteur pour retrouver un type. Enregistrez, ajoutez une entrée et vérifiez la colonne dans la liste et la page d’entrée.
 
 
 ![Aperçu du composant proposant la création d’une base avec Numo ou l’import d’une base existante.](/documentation/fr/database-setup-cards.png)
 
 ### Types et limites {#database-types}
 
-Une base accepte 30 colonnes de propriétés en plus du nom. Sélection autorise une option, Sélection multiple plusieurs, avec 100 options maximum par colonne. Une cellule texte accepte 2 000 caractères. Nombre accepte les décimaux signés avec point ou virgule et refuse les lettres. La date de création est l’horodatage initial et ne se modifie pas.
+Une base accepte 30 colonnes de propriétés en plus du nom. Sélection autorise une option, Sélection multiple plusieurs, avec 100 options maximum par colonne. Une cellule texte accepte 2 000 caractères. Nombre accepte un nombre écrit avec un point ou une virgule, avec des séparateurs de milliers, un symbole monétaire ou un signe pour cent, et refuse les lettres. Il accepte aussi un calcul : saisissez `14 + 2` et la cellule enregistre 16. Les calculs acceptent `+`, `-`, `*`, `/`, `^` et les parenthèses, et un pourcentage dans un calcul s’applique à ce qui le précède : `80 + 20 %` donne donc 96.
+
+Une colonne Nombre adapte son affichage à ce que vous saisissez. Saisissez un montant avec un symbole ou un code de devise, par exemple `12 €`, `$40` ou `40 CHF`, et toute la colonne affiche des montants dans cette devise. Saisissez un nombre suivi du signe pour cent, par exemple `25 %`, et la colonne affiche des pourcentages. Un nombre simple ou un calcul laisse la colonne telle quelle. Pour revenir aux nombres simples, ouvrez le menu de l’en-tête de la colonne et choisissez **Afficher comme nombre simple**. Le format change l’affichage des valeurs, jamais le nombre enregistré. Un nombre simple s’affiche avec des séparateurs de milliers à partir de cinq chiffres : une année se lit donc toujours 2026.
+
+Quatre types de colonne se remplissent d’eux-mêmes à partir de chaque entrée et ne se modifient pas : Date de création et Dernière modification indiquent quand l’entrée a été créée et modifiée pour la dernière fois, Créé par et Dernière modification par indiquent qui l’a fait. Une modification faite par Numo ou par un agent MCP est présentée comme faite par minddy.
 
 Personnes sélectionne les membres du projet, pas des e-mails arbitraires. Les membres nouvellement mentionnés peuvent être notifiés. Chaque entrée est aussi une page avec contenu, commentaires et pièces jointes.
 
 Formules avancées et automatisations ne sont pas disponibles. Utilisez une propriété texte ou un document lié si les données ne correspondent pas à un type proposé ; ne présentez pas une formule non prise en charge comme une colonne fonctionnelle.
 
 
-![Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, dates, personnes et case à cocher.](/documentation/fr/database-property-types.png)
+![Sélecteur de type de colonne avec un champ de recherche : texte, nombre, sélections, date, personnes, case à cocher et les quatre types en lecture seule.](/documentation/fr/database-property-types.png)
 
 ## Modifier les cellules et pages d’une base {#database-cells-and-entries}
 
@@ -242,15 +254,17 @@ Dans l’éditeur d’options, ajoutez une option sous les lignes existantes, m�
 
 Cliquez dans une cellule ou sur une propriété au-dessus du corps de l’entrée. Entrée enregistre, Échap annule, Maj+Entrée ajoute une ligne au texte. Quitter l’éditeur enregistre. Un nombre invalide le garde ouvert jusqu’à correction ; un échec de sauvegarde rétablit la valeur et affiche une erreur.
 
-Le champ Sélection permet de choisir une option ; Sélection multiple permet d’en choisir plusieurs. Recherchez une option ou créez-la dans le menu. Ouvrez Modifier les options depuis une cellule, ou depuis le menu de l’en-tête d’une colonne Sélection ou Sélection multiple (cliquez sur le nom de la colonne), pour renommer ou recolorer, puis enregistrez ensemble ou annulez. Les champs Date, Personnes et Case à cocher ont leurs propres commandes ; la date de création reste en lecture seule.
+Le champ Sélection permet de choisir une option ; Sélection multiple permet d’en choisir plusieurs. Recherchez une option ou créez-la dans le menu. Ouvrez Modifier les options depuis une cellule, ou depuis le menu de l’en-tête d’une colonne Sélection ou Sélection multiple (cliquez sur le nom de la colonne), pour renommer ou recolorer, puis enregistrez ensemble ou annulez. Les champs Date, Personnes et Case à cocher ont leurs propres commandes ; Date de création, Dernière modification, Créé par et Dernière modification par restent en lecture seule.
 
 Les nouvelles options reçoivent une couleur aléatoire de la palette qui n’est pas encore utilisée dans la colonne, qu’elles soient créées depuis une cellule ou dans le dialogue d’options. Lorsque les dix couleurs sont utilisées, elles peuvent se répéter. Vous pouvez toujours choisir la couleur manuellement.
 
-Dans Modifier les options, utilisez les flèches vers le haut et le bas d’une ligne pour réordonner les options. Utilisez sa corbeille pour supprimer une option. Enregistrer applique ensemble les noms, les couleurs, l’ordre et les suppressions ; si vous avez supprimé des options, il les liste d’abord et demande de confirmer avec **Supprimer et enregistrer**, car la suppression est irréversible. Une option supprimée est retirée de toutes les entrées qui l’utilisent, y compris celles dans la corbeille ; les autres options sélectionnées sont conservées. Annuler abandonne les modifications en cours.
+Dans Modifier les options, faites glisser la poignée au début d’une ligne pour réordonner les options. Au clavier, placez le focus sur la poignée, appuyez sur Espace, déplacez l’option avec les flèches Haut et Bas, puis appuyez de nouveau sur Espace pour la déposer ; Échap annule. Utilisez la corbeille de la ligne pour supprimer une option. Enregistrer applique ensemble les noms, les couleurs, l’ordre et les suppressions ; si vous avez supprimé des options, il les liste d’abord et demande de confirmer avec **Supprimer et enregistrer**. Une notification propose alors **Annuler**, ce qui rétablit les options avec les valeurs qui les utilisaient. Une option supprimée est retirée de toutes les entrées qui l’utilisent, y compris celles dans la corbeille ; les autres options sélectionnées sont conservées. Annuler abandonne les modifications en cours.
 
 Choisissez un jour dans Date. Pour ajouter une heure, activez Préciser l’heure et remplissez Heure. La valeur s’enregistre pendant la modification et le sélecteur reste ouvert. Les valeurs avec heure s’affichent dans le fuseau horaire de votre appareil, y compris minuit. Désactiver Préciser l’heure conserve le jour affiché comme date sans heure. Les filtres de date correspondent au jour affiché.
 
-![Aperçu du composant Modifier les options avec des statuts en français, des flèches vers le haut et le bas, des corbeilles et l’explication de la suppression.](/documentation/fr/database-options.png)
+Une date peut se répéter, comme l’échéance d’un ticket. Dans le sélecteur de date, choisissez **Récurrent** au lieu de **Une fois**, puis un rythme : chaque jour, semaine, mois ou année. La cellule affiche une icône de répétition et la prochaine occurrence, qui avance d’elle-même une fois le jour passé ; le tri et les filtres utilisent cette occurrence. Choisissez **Une fois** pour revenir à une date unique.
+
+![Aperçu du composant Modifier les options avec des statuts en français, des poignées de déplacement, des corbeilles et l’explication de la suppression.](/documentation/fr/database-options.png)
 
 ![Aperçu du sélecteur de date avec le 24 juillet 2026 sélectionné, Préciser l’heure activé et Heure réglée sur 02:00 AM.](/documentation/fr/database-date-time.png)
 
@@ -260,15 +274,21 @@ Le contenu d’une entrée vide affiche un texte indicatif pour repérer la zone
 
 Ouvrez une entrée dans le panneau flottant. Agrandir l’ouvre en page entière une fois les sauvegardes en attente terminées. En cas d’échec, le panneau reste ouvert pour permettre la correction. L’en-tête du panneau comporte aussi le menu **Options de la page** (`…`) de l’entrée, entre Agrandir et la fermeture ; déplacer l’entrée vers la corbeille depuis ce menu ferme le panneau et laisse le tableau en place. Une entrée vide reste dans la base jusqu’à suppression.
 
-Les cases des lignes permettent de sélectionner les entrées ; Maj-clic sélectionne une plage. L’infobulle de chaque case indique **Sélectionner** ou **Désélectionner**. La case de l’en-tête (**Sélectionner toutes les entrées**, ou **Tout désélectionner** lorsque toutes le sont) affiche un tiret quand seule une partie des entrées est sélectionnée et une coche quand elles le sont toutes ; cliquée depuis une sélection partielle, elle sélectionne toutes les entrées. Survolez une ligne pour afficher sa marge : la poignée ouvre les actions et réordonne en ordre manuel, et le + insère en dessous de l’entrée ; Option/Alt permet de l’insérer au-dessus. L’insertion adjacente enlève les filtres de la vue active pour montrer la nouvelle entrée. Les entrées cochées ouvrent la barre de sélection flottante : choisissez **Actions**, ou appuyez sur Command+K sur macOS ou Ctrl+K ailleurs, pour les promouvoir en tickets, les **Dupliquer** ou les **Déplacer vers la corbeille**, chacune derrière sa confirmation, et **Demander à Numo** ouvre Numo avec toutes les entrées cochées dans son contexte. Sur un écran tactile, les lignes n’ont pas de marge et leurs cases restent visibles ; la même barre de sélection agit sur les entrées cochées, et le déplacement d’une entrée vers le haut ou le bas n’y est pas disponible.
+Les cases des lignes permettent de sélectionner les entrées ; Maj-clic sélectionne une plage. L’infobulle de chaque case indique **Sélectionner** ou **Désélectionner**. La case de l’en-tête (**Sélectionner toutes les entrées**, ou **Tout désélectionner** lorsque toutes le sont) affiche un tiret quand seule une partie des entrées est sélectionnée et une coche quand elles le sont toutes ; cliquée depuis une sélection partielle, elle sélectionne toutes les entrées. Survolez une ligne pour afficher sa marge : la poignée ouvre le menu de l’entrée et réordonne en ordre manuel, et le + insère en dessous de l’entrée ; Option/Alt permet de l’insérer au-dessus. L’insertion adjacente enlève les filtres de la vue active pour montrer la nouvelle entrée. Les entrées cochées ouvrent la barre de sélection flottante : choisissez **Actions**, ou appuyez sur Command+K sur macOS ou Ctrl+K ailleurs, pour les promouvoir en tickets, les **Dupliquer** ou les **Déplacer vers la corbeille**, chacune derrière sa confirmation, et **Demander à Numo** ouvre Numo avec toutes les entrées cochées dans son contexte. Sur un écran tactile, les lignes n’ont pas de marge et leurs cases restent visibles ; la même barre de sélection agit sur les entrées cochées, et le déplacement d’une entrée vers le haut ou le bas n’y est pas disponible.
 
-Depuis le menu de la poignée d’une seule entrée, le propriétaire ou un Membre peut choisir **Promouvoir en ticket** pour que Numo transforme cette entrée, son contenu et ses propriétés en un ticket. L’entrée reste dans la base. Lorsque le menu vise plusieurs lignes sélectionnées, promouvez-les plutôt depuis **Actions** dans la barre de sélection : une seule conversation avec Numo crée un ticket par entrée. Le [guide des pages](/fr/documentation/pages#promote-page-to-issue) décrit les questions de Numo et la marche à suivre lorsque l’entrée ne peut pas être enregistrée au préalable.
+Le menu de la poignée d’une seule entrée commence par **Ouvrir la page**, puis propose ce que la barre latérale propose pour toute page : **Ajouter une sous-page**, **Ajouter aux favoris**, **Copier**, **Promouvoir en ticket**, **Publier…** et **Exporter**, suivis de **Dupliquer** et **Déplacer vers la corbeille**. Un lecteur voit **Ouvrir la page**, **Copier** et **Exporter**. Lorsque le menu vise plusieurs lignes sélectionnées, il garde **Dupliquer** et **Déplacer vers la corbeille**.
+
+Depuis ce menu, le propriétaire ou un Membre peut choisir **Promouvoir en ticket** pour que Numo transforme cette entrée, son contenu et ses propriétés en un ticket. L’entrée reste dans la base. Lorsque le menu vise plusieurs lignes sélectionnées, promouvez-les plutôt depuis **Actions** dans la barre de sélection : une seule conversation avec Numo crée un ticket par entrée. Le [guide des pages](/fr/documentation/pages#promote-page-to-issue) décrit les questions de Numo et la marche à suivre lorsque l’entrée ne peut pas être enregistrée au préalable.
 
 ### Vues de la base {#database-display}
 
 Une base présente ses entrées à travers des vues, listées au-dessus du tableau. Chaque vue garde son propre classement, son filtre et ses colonnes masquées, et tous les membres du projet voient les mêmes vues. Le propriétaire ou un Membre ajoute une vue avec **Nouvelle vue** (+), qui part de la vue affichée, fait un clic droit sur une vue pour choisir **Renommer la vue** ou **Supprimer la vue**, et fait glisser les vues pour les réordonner. Les changements de classement, de filtre et de colonnes sont enregistrés dans la vue active pour tout le monde. Une base garde au moins une vue ; avant son premier changement, elle affiche la vue **Tableau** par défaut. Les lecteurs passent d’une vue à l’autre et peuvent en ajuster une pour eux-mêmes jusqu’à ce qu’ils quittent la page. Le navigateur retient la dernière vue ouverte ; la recherche n’est jamais enregistrée. L’ordre manuel est partagé avec l’arbre. Faites défiler horizontalement avec le pavé tactile, Maj et molette ou la barre de défilement en bas de la fenêtre. Un écran tactile n’affiche pas cette barre : faites glisser le tableau du doigt. Un aperçu tronqué ne raccourcit pas la valeur stockée. Une entrée avec des valeurs peut se réordonner dans sa base, mais pas sortir de celle-ci. Numo peut lister les vues d’une base et, à votre demande, en créer, les renommer, les réordonner ou les supprimer (jamais la dernière), ou changer leur classement, leurs filtres (tous ou au moins un) et leurs colonnes masquées. Sur la page d’une base, Numo comprend « une vue » comme une vue de la base, et non du tableau des tickets. L’ordre des colonnes ne fait pas partie d’une vue : il relève du schéma de la base. Les clients minddy MCP ne gèrent pas les vues.
 
-Ouvrez **Filtrer** pour composer une liste de conditions avec **Ajouter un filtre** ; **Supprimer ce filtre** en retire une. Chaque condition choisit une colonne, une condition et une valeur, et les conditions dépendent du type de colonne. Texte propose contient, ne contient pas, est, n’est pas, est vide et n’est pas vide. Nombre propose est, n’est pas, supérieur à, inférieur à, est vide et n’est pas vide. Sélection propose est, n’est pas, est vide et n’est pas vide. Sélection multiple et Personnes proposent contient, ne contient pas, est vide et n’est pas vide. Date et Date de création proposent est le, est après, est avant, est vide et n’est pas vide. Case à cocher correspond à **Cochée** ou **Décochée**. Une condition sans valeur ne filtre pas encore. À partir de deux conditions, choisissez **Tous les filtres** pour garder les entrées qui les respectent toutes, ou **Au moins un filtre** pour celles qui en respectent au moins une. Une vue contient jusqu’à 10 conditions ; une vue enregistrée auparavant avec un seul filtre le conserve.
+Ouvrez **Trier par** pour choisir une colonne, puis un sens formulé selon ce que la colonne contient : **A à Z** ou **Z à A** pour le texte et les personnes, **Première option d’abord** ou **Dernière option d’abord** pour une colonne Sélection ou Sélection multiple, triée dans l’ordre de ses options, **Plus petit d’abord** ou **Plus grand d’abord** pour un nombre, **Plus ancien d’abord** ou **Plus récent d’abord** pour une date, **Décochées d’abord** ou **Cochées d’abord** pour une case à cocher, et **De haut en bas** ou **De bas en haut** pour l’ordre manuel. Les listes de colonnes de **Trier par** et de **Filtrer** affichent l’icône du type de chaque colonne.
+
+Faites glisser le bord droit d’un en-tête de colonne pour régler la largeur de la colonne ; double-cliquez sur ce bord pour revenir à la largeur par défaut. Sous une colonne Nombre, survolez le bas du tableau et choisissez **Calculer** pour afficher la **Somme**, la **Moyenne**, le **Minimum**, le **Maximum** ou le **Nombre de valeurs** des entrées que la vue conserve. Les largeurs et les calculs sont enregistrés avec la vue, comme son classement et ses filtres.
+
+Ouvrez **Filtrer** pour composer une liste de conditions avec **Ajouter un filtre** ; **Supprimer ce filtre** en retire une. Chaque condition choisit une colonne, une condition et une valeur, et les conditions dépendent du type de colonne. Texte propose contient, ne contient pas, est, n’est pas, est vide et n’est pas vide. Nombre propose est, n’est pas, supérieur à, inférieur à, est vide et n’est pas vide. Sélection propose est, n’est pas, est vide et n’est pas vide. Sélection multiple et Personnes proposent contient, ne contient pas, est vide et n’est pas vide. Date, Date de création et Dernière modification proposent est le, est après, est avant, est vide et n’est pas vide. Créé par et Dernière modification par proposent est et n’est pas, avec un membre du projet. Case à cocher correspond à **Cochée** ou **Décochée**. Une condition sans valeur ne filtre pas encore. À partir de deux conditions, choisissez **Tous les filtres** pour garder les entrées qui les respectent toutes, ou **Au moins un filtre** pour celles qui en respectent au moins une. Une vue contient jusqu’à 10 conditions ; une vue enregistrée auparavant avec un seul filtre le conserve.
 
 Les vues se mettent à jour en direct : une vue qu’un membre de l’équipe ou Numo crée ou modifie apparaît sans recharger la page. Tant qu’une base n’a aucune vue enregistrée, faites un clic droit sur sa vue par défaut pour choisir **Renommer la vue** : le renommage l’enregistre comme vue nommée avec les réglages actuels, et **Supprimer la vue** reste indisponible.
 
@@ -279,21 +299,27 @@ Une base de données ouverte dans le panneau latéral, depuis une mention, un li
 
 ![Entrée de démonstration avec description, durée 2.5, case cochée et sélection vide.](/documentation/fr/database-entry.png)
 
+### Annuler et rétablir {#database-undo}
+
+Appuyez sur ⌘Z (Ctrl+Z sous Windows et Linux) pour annuler votre dernière modification dans une base, et sur ⌘⇧Z (Ctrl+Shift+Z) pour la rétablir. Cela couvre la valeur d’une cellule, une colonne ajoutée, renommée, réordonnée, convertie vers un autre type ou supprimée, des options modifiées, une entrée créée, dupliquée, réordonnée ou déplacée vers la corbeille, et les réglages d’une vue : classement, filtres, colonnes masquées, largeurs de colonnes et calculs. Annuler la suppression d’une colonne ou d’une option restaure les valeurs qu’elle avait retirées. Une modification appliquée à plusieurs entrées sélectionnées s’annule en une seule étape.
+
+L’historique appartient à l’onglet ouvert et ne contient que vos propres modifications : il est perdu lorsque vous rechargez la page, et il laisse de côté les modifications des autres membres de l’équipe, de Numo ou d’un agent MCP. Tant que le curseur se trouve dans un champ de texte ou dans le corps d’une page, les mêmes touches annulent la saisie. Si quelqu’un d’autre a modifié la même valeur entre-temps, l’annulation est refusée et le tableau affiche la valeur actuelle.
+
 ## Modifier le schéma d’une base {#change-a-database-schema}
 
 Le déplacement d’une colonne commence après un mouvement du pointeur et reste horizontal. Le curseur de déplacement apparaît uniquement pendant le glisser-déposer ; un clic normal ouvre toujours les actions de la colonne. Lorsqu’un en-tête de colonne a le focus, Entrée ou Espace ouvre ses actions. Appuyez sur F8 pour commencer le déplacement au clavier, utilisez Gauche ou Droite, puis Entrée pour confirmer ou Échap pour annuler.
 
 Dans Colonnes, l’œil montre ou masque une propriété, et la poignée d’une ligne de cette liste se fait glisser pour réordonner les colonnes. Au clavier, placez le focus sur la poignée, appuyez sur Espace, déplacez la colonne avec les flèches Haut et Bas, puis appuyez de nouveau sur Espace pour la déposer ; Échap annule. Cliquez sur un en-tête, ou faites un clic droit dessus, pour ouvrir son menu, par exemple pour renommer la colonne, ou faites glisser les en-têtes pour les réordonner ; le nom reste en première position. Les options de sélection simple ou multiple se modifient depuis la cellule ou Colonnes ; noms et couleurs s’enregistrent ensemble.
 
-Masquer change l’affichage, sans supprimer les valeurs. Pour supprimer une colonne personnalisée, choisissez **Supprimer la colonne** dans le menu de son en-tête ou son bouton corbeille dans Colonnes ; une confirmation est demandée dans les deux cas. La suppression retire ses valeurs de chaque entrée et ne peut pas être annulée. Lisez cette conséquence avant confirmation.
+Masquer change l’affichage, sans supprimer les valeurs. Pour supprimer une colonne personnalisée, choisissez **Supprimer la colonne** dans le menu de son en-tête ou son bouton corbeille dans Colonnes ; une confirmation est demandée dans les deux cas. La suppression retire ses valeurs de chaque entrée. Une notification propose alors **Annuler**, et l’[annulation](#database-undo) rétablit la colonne et ses valeurs tant que la page reste ouverte ; ensuite, la suppression est définitive.
 
 ### Convertir le type {#convert-column}
 
 Choisissez la modification d’une colonne personnalisée et son nouveau type. Le dialogue convertit les valeurs lors de l’enregistrement. Si certaines sont incompatibles, l’avertissement indique combien seront effacées. Continuez uniquement si cette perte est acceptable, ou annulez pour garder type et valeurs.
 
-Passer à la date de création utilise la date initiale de chaque entrée et avertit avant remplacement. Après conversion, inspectez des exemples, notamment lorsqu’un nombre, une sélection ou une date peut changer d’interprétation.
+Passer à Date de création, Dernière modification, Créé par ou Dernière modification par remplace les valeurs existantes par ce que minddy enregistre pour chaque entrée, et avertit avant de le faire. Après conversion, inspectez des exemples, notamment lorsqu’un nombre, une sélection ou une date peut changer d’interprétation.
 
-Les agents modifient le schéma avec la révision courante et un jeton de prévisualisation. Un changement concurrent invalide cette prévisualisation. Relisez et prévisualisez de nouveau au lieu de forcer une ancienne conversion ; effacer les valeurs incompatibles nécessite une confirmation explicite.
+Numo et les agents MCP lisent et écrivent les mêmes colonnes : ils peuvent ajouter les colonnes en lecture seule, définir un format de nombre et écrire une date récurrente. Les agents modifient le schéma avec la révision courante et un jeton de prévisualisation. Un changement concurrent invalide cette prévisualisation. Relisez et prévisualisez de nouveau au lieu de forcer une ancienne conversion ; effacer les valeurs incompatibles nécessite une confirmation explicite.
 
 
 ![Avertissement de conversion : passer de Texte à Nombre efface une cellule incompatible, avec boutons Annuler et confirmation.](/documentation/fr/database-conversion-warning.png)

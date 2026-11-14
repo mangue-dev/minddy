@@ -4,11 +4,8 @@ import { OVERLAY_COLLISION_PADDING } from "@/components/ui/menu-surface";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
-import {
-  isDatabaseNumberDraft,
-  parseDatabaseNumber,
-  type DatabaseValue,
-} from "@/lib/page-databases";
+import { isDatabaseNumberDraft, type DatabaseValue } from "@/lib/page-databases";
+import { detectDatabaseNumberFormat, evaluateDatabaseNumber } from "@/lib/page-database-number";
 import { useArrowField } from "@/lib/use-arrow-field";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
@@ -22,17 +19,21 @@ import { Textarea } from "@/components/ui/textarea";
 export function DatabaseCellEditor({
   value,
   numeric,
+  display,
   label,
   className,
   empty,
   save,
 }: {
   value: DatabaseValue;
+  /** How the stored value reads in the cell; the stored value when omitted. */
+  display?: string;
   numeric: boolean;
   label: string;
   className: string;
   empty: string;
-  save: (value: DatabaseValue, expected: DatabaseValue) => Promise<boolean>;
+  /** `typed` is the text as entered: a number cell's unit sets its column's format. */
+  save: (value: DatabaseValue, expected: DatabaseValue, typed: string) => unknown;
 }) {
   const t = useTranslations("PageDatabase");
   const tCommon = useTranslations("Common");
@@ -132,7 +133,8 @@ export function DatabaseCellEditor({
   }, [open, draft, mobile]);
   const commit = (restoreFocus = false) => {
     if (closing.current) return;
-    const next = numeric ? parseDatabaseNumber(draft) : draft || null;
+    // A number cell stores the result of what was typed: "14 + 2" saves 16.
+    const next = numeric ? evaluateDatabaseNumber(draft) : draft || null;
     if (next === undefined) {
       setError(true);
       input.current?.setCustomValidity(t("numberRequired"));
@@ -143,7 +145,10 @@ export function DatabaseCellEditor({
     closing.current = true;
     setOpen(false);
     if (restoreFocus) trigger.current?.focus();
-    if (next !== expected.current) void save(next, expected.current);
+    // A typed unit counts even when the figure is unchanged: "12" retyped
+    // as "12 €" turns the column into a currency.
+    if (next !== expected.current || (numeric && next !== null && detectDatabaseNumberFormat(draft)))
+      void save(next, expected.current, draft);
   };
   return (
     <>
@@ -163,7 +168,7 @@ export function DatabaseCellEditor({
         {value == null || value === "" ? (
           <span className="text-muted-foreground">{empty}</span>
         ) : (
-          <span className="min-w-0 truncate">{String(value)}</span>
+          <span className="min-w-0 truncate">{display ?? String(value)}</span>
         )}
       </button>
       {mobile && (
@@ -182,7 +187,8 @@ export function DatabaseCellEditor({
                 aria-label={label}
                 aria-invalid={error}
                 autoFocus
-                inputMode={numeric ? "decimal" : "text"}
+                // A number cell takes a calculation: the full keyboard has its operators.
+                inputMode="text"
                 rows={numeric ? 1 : 3}
                 maxLength={numeric ? 320 : 2000}
                 value={draft}
@@ -209,7 +215,7 @@ export function DatabaseCellEditor({
             aria-label={label}
             aria-invalid={error}
             data-database-cell-editor
-            inputMode={numeric ? "decimal" : "text"}
+            inputMode="text"
             className="fixed z-[100] resize-none rounded-sm border border-ring bg-background px-2 py-2 text-sm leading-6 shadow-lg outline-none"
             style={{
               ...geometry,

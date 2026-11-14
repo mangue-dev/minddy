@@ -12,6 +12,13 @@ import {
   databaseViewPositionBetween,
   normalizeDatabaseView,
   normalizeDatabaseViewName,
+  DATABASE_AGENT_AUTHOR,
+  DATABASE_METADATA_TYPES,
+  databaseCalculation,
+  databaseDateOccurrence,
+  formatDatabaseDate,
+  parseDatabaseDate,
+  type DatabaseProperty,
 } from "./page-databases";
 
 const property = {
@@ -156,7 +163,10 @@ describe("extended database properties", () => {
     expect(parseDatabaseNumber("")).toBeNull();
     expect(parseDatabaseNumber("-")).toBeUndefined();
     expect(parseDatabaseNumber("1e3")).toBeUndefined();
-    expect(isDatabaseNumberDraft("12a")).toBe(false);
+    // Letters pass while typing (a currency code) and are refused on save.
+    expect(isDatabaseNumberDraft("12a")).toBe(true);
+    expect(parseDatabaseNumber("12a")).toBeUndefined();
+    expect(isDatabaseNumberDraft("12!")).toBe(false);
     expect(isDatabaseNumberDraft("-0,")).toBe(true);
     expect(compareDatabaseValues(-10, -2, new Map())).toBeLessThan(0);
   });
@@ -184,7 +194,42 @@ describe("saved database views", () => {
   it("keeps a valid view, without duplicate hidden columns or unknown keys", () => {
     expect(normalizeDatabaseView({ ...view, extra: "dropped" })).toEqual({
       ...view, filters: { match: "and", conditions: [] }, hidden: [property],
+      calculations: {}, widths: {},
     });
+  });
+
+  it("keeps the calculations and column widths of a view, and drops what is malformed", () => {
+    const other = "10000000-0000-4000-8000-0000000000cc";
+    const normalized = normalizeDatabaseView({ ...view,
+      calculations: { [property]: "sum", [other]: "median", nope: "sum" },
+      widths: { title: 300.4, [property]: 20, [other]: 5000, nope: 200, text: "wide" } });
+    expect(normalized?.calculations).toEqual({ [property]: "sum" });
+    expect(normalized?.widths).toEqual({ title: 300, [property]: 80, [other]: 800 });
+  });
+
+  it("computes a column's figure on its numbers only", () => {
+    const values = [10, 2.5, null, undefined, "x", 7.5];
+    expect(databaseCalculation("sum", values)).toBe(20);
+    expect(databaseCalculation("average", values)).toBeCloseTo(6.6667, 3);
+    expect(databaseCalculation("min", values)).toBe(2.5);
+    expect(databaseCalculation("max", values)).toBe(10);
+    expect(databaseCalculation("count", values)).toBe(3);
+    expect(databaseCalculation("sum", [0.1, 0.2])).toBe(0.3);
+    expect(databaseCalculation("sum", [null])).toBeNull();
+    expect(databaseCalculation("count", [])).toBe(0);
+  });
+
+  it("sorts a selection in the order of its options, empty cells first", () => {
+    const [low, high] = ["20000000-0000-4000-8000-0000000000a1", "20000000-0000-4000-8000-0000000000a2"];
+    const status = { id: property, name: "Status", type: "select", options: [
+      { id: low, name: "Zeta", color: "#000000" }, { id: high, name: "Alpha", color: "#111111" }] } as DatabaseProperty;
+    const names = new Map<string, string>();
+    // "Zeta" is the first option: it sorts before "Alpha".
+    expect(compareDatabaseValues(low, high, names, status)).toBeLessThan(0);
+    expect(compareDatabaseValues(null, low, names, status)).toBeLessThan(0);
+    const tags = { ...status, type: "multi_select" } as DatabaseProperty;
+    expect(compareDatabaseValues([low], [low, high], names, tags)).toBeLessThan(0);
+    expect(compareDatabaseValues([high], [low, high], names, tags)).toBeGreaterThan(0);
   });
 
   it("keeps the filter conditions of a view", () => {
@@ -219,5 +264,79 @@ describe("saved database views", () => {
     expect(databaseViewPositionBetween(undefined, 1)).toBe(0);
     expect(databaseViewPositionBetween(2)).toBe(3);
     expect(databaseViewPositionBetween(1, 2)).toBe(1.5);
+  });
+});
+
+describe("derived and recurring values (MIN-990)", () => {
+  const column = (type: string) => ({ id: "10000000-0000-4000-8000-0000000000aa", name: "Column", type }) as DatabaseProperty;
+  const entry = {
+    created_at: "2026-01-02T03:04:05.000Z",
+    updated_at: "2026-02-03T04:05:06.000Z",
+    created_by: "20000000-0000-4000-8000-000000000001",
+    updated_by: "20000000-0000-4000-8000-000000000002",
+    updated_kind: "human",
+  };
+
+  it("reads metadata from the entry and never accepts a written value", () => {
+    expect(databasePropertyValue(entry, column("updated_at"))).toBe(entry.updated_at);
+    expect(databasePropertyValue(entry, column("created_by"))).toBe(entry.created_by);
+    expect(databasePropertyValue(entry, column("updated_by"))).toBe(entry.updated_by);
+    for (const type of DATABASE_METADATA_TYPES)
+      expect(isDatabaseValue(type, "2026-01-01")).toBe(false);
+  });
+
+  it("names the author when nobody edited since, and minddy for an agent edit", () => {
+    expect(databasePropertyValue({ ...entry, updated_by: null }, column("updated_by")))
+      .toBe(entry.created_by);
+    expect(databasePropertyValue({ ...entry, updated_kind: "agent" }, column("updated_by")))
+      .toBe(DATABASE_AGENT_AUTHOR);
+  });
+
+  it("stores a recurring date as a repeating interval around a plain date", () => {
+    expect(formatDatabaseDate("2026-03-31", "monthly")).toBe("R/2026-03-31/P1M");
+    expect(formatDatabaseDate("2026-03-31", null)).toBe("2026-03-31");
+    expect(parseDatabaseDate("R/2026-03-31/P1M")).toEqual({ date: "2026-03-31", recurrence: "monthly" });
+    expect(parseDatabaseDate("2026-03-31T09:00:00.000Z")).toEqual({
+      date: "2026-03-31T09:00:00.000Z", recurrence: null });
+    expect(isDatabaseValue("date", "R/2026-03-31/P1W")).toBe(true);
+    expect(isDatabaseValue("date", "R/2026-02-30/P1W")).toBe(false);
+    expect(isDatabaseValue("date", "R/2026-03-31/P2W")).toBe(false);
+    expect(isDatabaseValue("date", "R/2026-03-31")).toBe(false);
+  });
+
+  it("shows the next occurrence of a recurring day, today included", () => {
+    const now = new Date(2026, 10, 14, 15, 0, 0);
+    expect(databaseDateOccurrence("2026-01-05", now)).toBe("2026-01-05");
+    expect(databaseDateOccurrence("R/2026-11-14/P1W", now)).toBe("2026-11-14");
+    expect(databaseDateOccurrence("R/2026-11-02/P1W", now)).toBe("2026-11-16");
+    expect(databaseDateOccurrence("R/2026-11-13/P1D", now)).toBe("2026-11-14");
+    expect(databaseDateOccurrence("R/2027-01-01/P1Y", now)).toBe("2027-01-01");
+    expect(databaseDateOccurrence("R/2024-02-29/P1Y", now)).toBe("2027-02-28");
+    expect(databaseDateOccurrence("not a date", now)).toBeNull();
+  });
+
+  it("keeps the day of the month across shorter months", () => {
+    expect(databaseDateOccurrence("R/2026-01-31/P1M", new Date(2026, 1, 10))).toBe("2026-02-28");
+    expect(databaseDateOccurrence("R/2026-01-31/P1M", new Date(2026, 2, 10))).toBe("2026-03-31");
+  });
+
+  it("sorts and searches a recurring date by its occurrence", () => {
+    const date = column("date");
+    const names = new Map<string, string>();
+    // Anchored long ago, yearly: its occurrence is after next month's plain date.
+    const far = "R/2020-01-01/P1Y";
+    const soon = databaseDateOccurrence("R/2020-01-01/P1D") as string;
+    expect(compareDatabaseValues(soon, far, names, date)).toBeLessThan(0);
+    expect(databaseValueText(far, names, date)).toBe(databaseDateOccurrence(far));
+  });
+
+  it("validates a number format on number columns only", () => {
+    const base = { id: "10000000-0000-4000-8000-0000000000bb", name: "Price" };
+    expect(isDatabaseSchema([{ ...base, type: "number", number_format: "percent" }])).toBe(true);
+    expect(isDatabaseSchema([{ ...base, type: "number", number_format: "currency", currency: "EUR" }])).toBe(true);
+    expect(isDatabaseSchema([{ ...base, type: "number", number_format: "currency" }])).toBe(false);
+    expect(isDatabaseSchema([{ ...base, type: "number", number_format: "currency", currency: "XXX" }])).toBe(false);
+    expect(isDatabaseSchema([{ ...base, type: "number", currency: "EUR" }])).toBe(false);
+    expect(isDatabaseSchema([{ ...base, type: "text", number_format: "percent" }])).toBe(false);
   });
 });

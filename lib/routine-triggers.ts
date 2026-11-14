@@ -104,12 +104,12 @@ export function assertPropertyConditions(trigger: RoutineTrigger, schema: Databa
     const collection = ["people", "multi_select"].includes(property.type);
     if (collection && leaf.operator !== "contains" || !collection && leaf.operator === "contains") refuse("invalidConditionOperator");
     const comparative = ["gt", "gte", "lt", "lte"].includes(leaf.operator);
-    if (comparative && !["number", "date", "created_at"].includes(property.type)) refuse("invalidConditionOperator");
+    if (comparative && !["number", "date", "created_at", "updated_at"].includes(property.type)) refuse("invalidConditionOperator");
     if (property.type === "number" ? typeof leaf.value !== "number" : property.type === "checkbox" ? typeof leaf.value !== "boolean" : !(typeof leaf.value === "string" || leaf.operator === "in")) refuse("invalidConditionValue");
     const values = Array.isArray(leaf.value) ? leaf.value : [leaf.value];
     if (["select", "multi_select"].includes(property.type) && values.some(v => !property.options?.some(o => o.id === v))) refuse("invalidConditionReference");
     if (property.type === "people" && values.some(v => typeof v !== "string" || !UUID.test(v))) refuse("invalidConditionReference");
-    if (["date", "created_at"].includes(property.type) && values.some(v => typeof v !== "string" || !Number.isFinite(Date.parse(v)))) refuse("invalidConditionValue");
+    if (["date", "created_at", "updated_at"].includes(property.type) && values.some(v => typeof v !== "string" || !Number.isFinite(Date.parse(v)))) refuse("invalidConditionValue");
   }
 }
 export function evaluateRoutineConditions(tree: RoutineCondition | undefined, context: ConditionContext): boolean {
@@ -122,7 +122,7 @@ export function evaluateRoutineConditions(tree: RoutineCondition | undefined, co
   if (!present) return false;
   let expected = tree.value;
   const property = context.schema?.find(p => p.id === tree.propertyId);
-  if (property && ["date", "created_at"].includes(property.type) && ["gt", "gte", "lt", "lte", "eq", "neq"].includes(tree.operator)) {
+  if (property && ["date", "created_at", "updated_at"].includes(property.type) && ["gt", "gte", "lt", "lte", "eq", "neq"].includes(tree.operator)) {
     actual = typeof actual === "string" ? Date.parse(actual) : NaN;
     expected = typeof expected === "string" ? Date.parse(expected) : NaN;
     if (!Number.isFinite(actual) || !Number.isFinite(expected)) return false;

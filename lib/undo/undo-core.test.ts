@@ -5,6 +5,7 @@ import {
   buildBeforePatch,
   popLinked,
   pushEntry,
+  replayGestures,
   resolveAliased,
   snapshotIssue,
   type UndoEntry,
@@ -218,5 +219,34 @@ describe("popLinked (MIN-795)", () => {
     pushEntry(stack, { ...categoriesEntry("a", [], ["c1"], 1), link: "g1" });
     pushEntry(stack, { ...categoriesEntry("a", ["c1"], [], 2), link: "g2" });
     expect(stack).toHaveLength(2);
+  });
+});
+
+describe("replayGestures", () => {
+  it("runs each replay after the recorded write and the previous replay", async () => {
+    const order: string[] = [];
+    let release!: () => void;
+    const recorded = new Promise<void>((resolve) => { release = resolve; });
+    const gestures = replayGestures(
+      recorded.then(() => { order.push("recorded"); }),
+      async () => { order.push("undo"); },
+      async () => { order.push("redo"); },
+    );
+    const undone = gestures.undo();
+    const redone = gestures.redo();
+    expect(order).toEqual([]);
+    release();
+    await Promise.all([undone, redone]);
+    expect(order).toEqual(["recorded", "undo", "redo"]);
+  });
+
+  it("reports a failed replay and still runs the next one", async () => {
+    const gestures = replayGestures(
+      undefined,
+      async () => { throw new Error("stale"); },
+      async () => "again",
+    );
+    await expect(gestures.undo()).rejects.toThrow("stale");
+    await expect(gestures.redo()).resolves.toBe("again");
   });
 });

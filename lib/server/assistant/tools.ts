@@ -817,7 +817,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "get_page",
       description:
-        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. is_database says whether the page IS a database: true even when database_schema is an empty array and database_revision is 0 — that is a database with no properties yet, to fill with update_page_database, never to recreate with create_page. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and entry property_values/created_at in subpages. Its saved views (sort, filter, hidden columns) are read with list_page_database_views. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A page mention '[@Title](mention:page/<id>)' — how a page cites its subpages — is a LINK, never its content: read that page too if you need it.",
+        "ONE page in full: title, icon, body in MARKDOWN, version, and its direct subpages. is_database says whether the page IS a database: true even when database_schema is an empty array and database_revision is 0 — that is a database with no properties yet, to fill with update_page_database, never to recreate with create_page. Database pages also return database_schema (property and option ids/names/colors), database_revision, database_title_name, and, for each entry in subpages, property_values plus what the read-only metadata columns show (created_at, updated_at, created_by, updated_by as member ids; updated_by is \"minddy\" when an agent made the last edit). A date value written R/YYYY-MM-DD/P1W recurs from that date (P1D daily, P1W weekly, P1M monthly, P1Y yearly). Its saved views (sort, filter, hidden columns) are read with list_page_database_views. Read a database entry separately for its body. Use update_page_database for properties, never markdown tables. This is what you read before writing: copy passages from here verbatim for edit_page_text, and keep the version to replace the body safely with update_page. A page mention '[@Title](mention:page/<id>)' — how a page cites its subpages — is a LINK, never its content: read that page too if you need it.",
       parameters: {
         type: "object",
         properties: {
@@ -845,7 +845,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             type: "object",
             additionalProperties: true,
             description:
-              "Only for a new ENTRY of a database (parent_page_id is the database): its property values, keyed by property id from the database_schema of get_page, so the entry is created with every property in ONE call instead of one update_page_database call per property. Same value formats as update_page_database; created_at is read-only. Omit for any other page.",
+              "Only for a new ENTRY of a database (parent_page_id is the database): its property values, keyed by property id from the database_schema of get_page, so the entry is created with every property in ONE call instead of one update_page_database call per property. Same value formats as update_page_database; the metadata columns (created_at, updated_at, created_by, updated_by) are read-only. Omit for any other page.",
           },
           title: {
             type: "string",
@@ -908,10 +908,12 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               type: "object",
               properties: {
                 name: { type: "string", description: "Column name, unique in this database." },
-                type: { type: "string", enum: ["text", "number", "select", "multi_select", "date", "checkbox", "people", "created_at"], description: "select for a status or a category (one choice), multi_select for tags, date for any date, number for amounts and scores, checkbox for yes/no, people for project members, created_at for the creation date, text otherwise." },
+                type: { type: "string", enum: ["text", "number", "select", "multi_select", "date", "checkbox", "people", "created_at", "updated_at", "created_by", "updated_by"], description: "select for a status or a category (one choice), multi_select for tags, date for any date (it may recur), number for amounts, percentages and scores, checkbox for yes/no, people for project members, text otherwise. Four read-only columns fill themselves from each row: created_at (creation date), updated_at (last edit), created_by and updated_by (who created and last edited it)." },
+                number_format: { type: ["string", "null"], enum: ["number", "percent", "currency", null], description: "For a number column: percent shows 25 as 25 %, currency shows an amount in the column's currency, number or null shows the figure as typed. null for other types." },
+                currency: { type: ["string", "null"], description: "For number_format currency: the ISO 4217 code, e.g. EUR, USD or GBP. null otherwise." },
                 options: { type: ["array", "null"], items: { type: "string" }, description: "For select and multi_select: the choice names, e.g. [\"Applied\", \"Interview\", \"Offer\", \"Rejected\"]. null for other types." },
               },
-              required: ["name", "type", "options"],
+              required: ["name", "type", "number_format", "currency", "options"],
             },
           },
           rows: {
@@ -922,7 +924,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
               type: "object",
               properties: {
                 title: { type: "string", description: "The row's title (its title column value)." },
-                values: { type: "object", additionalProperties: true, description: "Cell values keyed by property NAME: text and date (YYYY-MM-DD) as strings, number as a number, select as one option name, multi_select as a list of option names, checkbox as a boolean, people as member ids." },
+                values: { type: "object", additionalProperties: true, description: "Cell values keyed by property NAME: text and date (YYYY-MM-DD) as strings, number as a number, select as one option name, multi_select as a list of option names, checkbox as a boolean, people as member ids. A date that recurs is written R/YYYY-MM-DD/P1W (P1D daily, P1W weekly, P1M monthly, P1Y yearly). Leave the read-only columns out." },
               },
               required: ["title", "values"],
             },
