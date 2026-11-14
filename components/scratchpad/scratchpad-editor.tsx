@@ -18,7 +18,7 @@ import {
 import { RichEditor, editorMarkdown } from "@/components/editor/rich-editor";
 import { useAttachmentImageUploads } from "@/components/editor/document-uploads";
 import { SECTION_COPY_REFRESH, SectionCopy } from "@/components/scratchpad/section-copy-extension";
-import { createRoot } from "react-dom/client";
+import { mountWidgetRoot } from "@/components/editor/widget-root";
 import { McpAgentLogo } from "@/components/mcp-agent-logo";
 import { AGENT_TARGETS } from "@/lib/prompt-delivery";
 import { usePromptDelivery } from "@/lib/prompt-delivery-context";
@@ -310,11 +310,7 @@ export function ScratchpadEditor({
           renderIcon: (host) => {
             const target = promptTargetRef.current;
             if (!target) return null;
-            const root = createRoot(host);
-            root.render(<McpAgentLogo agent={AGENT_TARGETS[target].logo} size={14} />);
-            // ProseMirror drops a widget while it updates the view, which may
-            // be inside a React render: unmount once it is done.
-            return () => queueMicrotask(() => root.unmount());
+            return mountWidgetRoot(host, <McpAgentLogo agent={AGENT_TARGETS[target].logo} size={14} />);
           },
         }),
       ] as unknown as Extensions

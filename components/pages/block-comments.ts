@@ -38,7 +38,7 @@ import type { Node } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { createElement } from "react";
-import { createRoot, type Root } from "react-dom/client";
+import { mountWidgetRoot } from "@/components/editor/widget-root";
 
 import { BlockCommentBadge } from "@/components/pages/block-comment-badge";
 import { commentButtonOffset } from "@/components/pages/block-chrome-geometry";
@@ -89,7 +89,7 @@ export function documentBlockIds(editor: Editor | null): Set<string> {
   return ids;
 }
 
-const badgeRoots = new WeakMap<globalThis.Node, Root>();
+const badgeTeardowns = new WeakMap<globalThis.Node, () => void>();
 
 /** The badge uses the same React tooltip primitive as the rest of the app. */
 function badge(
@@ -100,16 +100,18 @@ function badge(
   const host = document.createElement("span");
   host.contentEditable = "false";
   host.className = BADGE_HOST_CLASS;
-  const root = createRoot(host);
-  root.render(
-    createElement(BlockCommentBadge, {
-      blockId,
-      count,
-      label: storage.label,
-      onOpen: (id: string) => storage.open?.(id),
-    })
+  badgeTeardowns.set(
+    host,
+    mountWidgetRoot(
+      host,
+      createElement(BlockCommentBadge, {
+        blockId,
+        count,
+        label: storage.label,
+        onOpen: (id: string) => storage.open?.(id),
+      })
+    )
   );
-  badgeRoots.set(host, root);
   return host;
 }
 
@@ -135,12 +137,8 @@ function placeBadge(host: HTMLElement): void {
 }
 
 function destroyBadge(dom: globalThis.Node): void {
-  const root = badgeRoots.get(dom);
-  if (!root) return;
-  badgeRoots.delete(dom);
-  // Decoration teardown can happen inside a React-driven editor update.
-  // Defer unmounting so React never destroys a root during another render.
-  queueMicrotask(() => root.unmount());
+  badgeTeardowns.get(dom)?.();
+  badgeTeardowns.delete(dom);
 }
 
 function decorationsFor(

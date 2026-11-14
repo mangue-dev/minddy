@@ -6,6 +6,7 @@ import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
+import { PageScroll } from "@/components/page-scroll";
 import { usePurchasesHidden } from "@/lib/native-app";
 import { usePlanGates } from "@/lib/use-billing-query";
 
@@ -25,19 +26,21 @@ export function AgentsPlanGate({ children }: { children: React.ReactNode }) {
   if (loading || agentsAllowed) return <>{children}</>;
 
   return (
-    <div className="mx-auto w-full max-w-[calc(var(--content-width)+3rem)] px-6 py-16">
-      <EmptyState
-        icon={<HugeiconsIcon icon={BotIcon} className="size-6" />}
-        title={t("agentsGateTitle")}
-        description={purchasesHidden ? t("notOnPlan") : t("agentsGateDescription")}
-        action={
-          purchasesHidden ? undefined : (
-            <Button asChild size="sm">
-              <Link href="/billing">{t("agentsGateCta")}</Link>
-            </Button>
-          )
-        }
-      />
-    </div>
+    <PageScroll>
+      <div className="mx-auto w-full max-w-[calc(var(--content-width)+3rem)] px-6 py-16">
+        <EmptyState
+          icon={<HugeiconsIcon icon={BotIcon} className="size-6" />}
+          title={t("agentsGateTitle")}
+          description={purchasesHidden ? t("notOnPlan") : t("agentsGateDescription")}
+          action={
+            purchasesHidden ? undefined : (
+              <Button asChild size="sm">
+                <Link href="/billing">{t("agentsGateCta")}</Link>
+              </Button>
+            )
+          }
+        />
+      </div>
+    </PageScroll>
   );
 }

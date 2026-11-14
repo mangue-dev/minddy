@@ -369,7 +369,7 @@ export function BudgetTrendChart() {
                 <div
                   role="status"
                   className={cn(
-                    "pointer-events-none absolute top-1 z-10 min-w-32 rounded-md bg-foreground px-2.5 py-2 text-xs leading-snug text-background shadow-md",
+                    "pointer-events-none absolute top-1 z-10 min-w-32 rounded-md border border-border bg-popover px-2.5 py-2 text-xs leading-snug text-popover-foreground shadow-md",
                     x(active.at) > width / 2 ? "-translate-x-full" : undefined,
                   )}
                   style={{
@@ -380,7 +380,7 @@ export function BudgetTrendChart() {
                   }}
                 >
                   <span className="block font-medium">{active.label}</span>
-                  <span className="mt-1 flex items-center justify-between gap-4 text-background/80">
+                  <span className="mt-1 flex items-center justify-between gap-4 text-muted-foreground">
                     <span>
                       {t(active.forecast ? "trendForecast" : "trendActual")}
                     </span>

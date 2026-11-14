@@ -289,7 +289,7 @@ Esse consentimento é separado dos dados necessários ao funcionamento da conta.
 
 Antes de excluir a conta, exporte pela aba **Privacidade e dados** o que precisa conservar. Leia a prévia dos projetos que possui, membros afetados, tickets, comentários e assinatura ativa. As consequências para os projetos próprios afetam outras pessoas; resolva essas questões antes de confirmar.
 
-Abra a confirmação de exclusão somente quando estiver pronto. Digite o email da conta e, nas contas com senha, a senha. Contas sem senha exigem um login recente. Siga as orientações de uma recusa por autenticação não recente, em vez de repetir tentativas às cegas. Uma exclusão bem-sucedida encerra a sessão e retorna ao site público. Se a conta entra com a Apple, a exclusão também pede à Apple que revogue o acesso do minddy à sua Conta Apple. Essa operação não envia os dados para uma lixeira recuperável. Mantenha as exportações privadas e trate qualquer questão restante de assinatura ou provedor pelos controles correspondentes de cobrança e serviço.
+Abra a confirmação de exclusão somente quando estiver pronto. Digite **Excluir minha conta** e, nas contas com senha, a senha. Contas sem senha exigem um login recente. Siga as orientações de uma recusa por autenticação não recente, em vez de repetir tentativas às cegas. Uma exclusão bem-sucedida encerra a sessão e retorna ao site público. Se a conta entra com a Apple, a exclusão também pede à Apple que revogue o acesso do minddy à sua Conta Apple. Essa operação não envia os dados para uma lixeira recuperável. Mantenha as exportações privadas e trate qualquer questão restante de assinatura ou provedor pelos controles correspondentes de cobrança e serviço.
 
 
 ## Configurar rotinas {#routines}

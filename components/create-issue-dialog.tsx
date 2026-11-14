@@ -1086,7 +1086,7 @@ export function CreateIssueDialog({
                 id={titleId}
                 ref={arrowTitle.ref}
                 enterKeyHint={mobile ? "next" : undefined}
-                autoFocus={!mobile && !focusDescription && !writesTitle}
+                autoFocus={!focusDescription && !writesTitle}
                 required={!writesTitle}
                 value={title}
                 onChange={(e) => setTitle(arrowTitle.read(e))}
@@ -1112,7 +1112,9 @@ export function CreateIssueDialog({
                 mentions={mentions}
                 key={editorKey}
                 onLeaveTop={titleBody.leaveBody}
-                autoFocus={focusDescription || (!mobile && writesTitle)}
+                // A phone's editor holds back a plain `true`: the sheet was opened by a
+                // tap, so the keyboard is asked for ("requested").
+                autoFocus={(focusDescription || writesTitle) && (mobile ? "requested" : true)}
                 value={description}
                 document={draftDocument}
                 uploadScope={`projects/${activeProjectId}`}

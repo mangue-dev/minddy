@@ -35,11 +35,10 @@ function isSingleGlyph(children: React.ReactNode): boolean {
 }
 
 /**
- * Keyboard key indicator. Transparent surface with a tinted border so keys
- * read as outlines on any background; text and border share `currentColor`,
- * the glyph slightly muted (75%) and the border more so (30%) — so a key
- * inherits whatever color its surface is built for (foreground normally, the
- * inverted tooltip text on tooltips) without shouting. The font is
+ * Keyboard key indicator. No border: a fill tinted from `currentColor` (10%),
+ * the glyph slightly muted (75%), so a key takes the color its surface is
+ * built for (a shade deeper than a tooltip's or a menu's gray, a light tint on
+ * a colored button) without shouting. The font is
  * `--font-kbd` (see app/globals.css): Inter has none of the ⌘⇧⌥ glyphs. The
  * radius is explicit because the token scale of app/tokens.css redefines
  * `rounded-md` (0.375rem) to 14px.
@@ -64,7 +63,10 @@ export function Kbd({
         // center inside the fixed square. `shrink-0`: in a flex row beside a
         // label that wraps (a tooltip, a menu row), a key cap was squeezed
         // narrower than tall — a key keeps its shape whatever the row does.
-        "inline-flex shrink-0 items-center justify-center tracking-normal rounded-[0.375rem] border [border-color:color-mix(in_srgb,currentColor_30%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
+        // No border: a fill tinted from the text color. On a tooltip or a menu
+        // it reads as a slightly deeper gray than the surface, and it stays a
+        // light tint on a colored button (the send shortcut on a primary).
+        "inline-flex shrink-0 items-center justify-center tracking-normal rounded-[0.375rem] [background-color:color-mix(in_srgb,currentColor_10%,transparent)] [color:color-mix(in_srgb,currentColor_75%,transparent)] [font-family:var(--font-kbd)] font-semibold",
         // `leading-*` equals the cap's own height, per size. The flex
         // centering centers the text's LINE BOX, whose height is the
         // INHERITED line-height — it varies per surface (menu rows, cheat

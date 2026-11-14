@@ -12,6 +12,7 @@ import type { PageSummary } from "@/lib/pages-api";
 import { pageHref, replacePagesHistory } from "@/lib/pages-navigation";
 import { readLastPage } from "@/lib/pages-last-open";
 import { useProjectCapabilities } from "@/lib/use-project-capabilities";
+import { PageScroll } from "@/components/page-scroll";
 
 export function PagesHome({
   projectId,
@@ -44,7 +45,7 @@ export function PagesHome({
   if (loading) return null;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+    <PageScroll className="px-6 py-8">
       <div className="mx-auto max-w-content">
         <EmptyScene
           icon={File02Icon}
@@ -58,6 +59,6 @@ export function PagesHome({
           )}
         </EmptyScene>
       </div>
-    </div>
+    </PageScroll>
   );
 }

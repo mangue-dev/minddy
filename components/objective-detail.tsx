@@ -75,7 +75,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useObjectiveTimeline } from "@/lib/use-objective-timeline";
 import { useObjectiveDictation } from "@/lib/use-objective-dictation";
 import { useAnalytics } from "@/lib/use-analytics";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { objectiveProgress, useObjectivesQuery } from "@/lib/use-objectives-query";
 import {
   OBJECTIVE_STATUSES,
@@ -312,7 +312,6 @@ export function ObjectiveDetail({
  round trip of the focus would recommit the outdated reflection of the field - otherwise
  said would cancel what the dictation has just written. */
   const descriptionEdited = useRef(false);
-  const fade = useScrollFade<HTMLDivElement>();
   /** The microphone, stored in the menu: this is how you turn it on. */
   const dictateRef = useRef<DictateButtonHandle>(null);
   const mod = useModKey();
@@ -591,11 +590,7 @@ export function ObjectiveDetail({
         </div>
       </AppContentHeader>
 
-      <div
-        ref={fade.ref}
-        {...fade.scrollProps}
-        className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
-      >
+      <PageScroll className={PAGE_SCROLL}>
         <div className="mx-auto flex max-w-content flex-col gap-4">
           <AutoTextarea
             ref={titleBody.titleRef}
@@ -733,7 +728,7 @@ export function ObjectiveDetail({
             canModerate={canWrite}
           />
         </div>
-      </div>
+      </PageScroll>
 
       {canComment && (
       <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">

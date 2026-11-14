@@ -287,7 +287,7 @@ Consent is distinct from data needed to operate the account. Review the instance
 
 Export data you need to retain from the **Privacy & data** tab before deletion. Read the preview of owned projects, affected members, issues, comments and active subscription. Owned-project consequences affect other people; resolve those before confirming.
 
-Open the deletion confirmation only when ready. Type your account email and, for password accounts, the password. Accounts without a password need a recent sign-in. Follow any fresh-authentication refusal rather than retrying blindly. A successful deletion signs out and returns to the public site. If the account signs in with Apple, deletion also asks Apple to revoke minddy’s access to your Apple Account. This is not recoverable trash. Keep exports private and handle any remaining subscription or provider concerns through the relevant billing and provider controls.
+Open the deletion confirmation only when ready. Type **Delete my account** and, for password accounts, the password. Accounts without a password need a recent sign-in. Follow any fresh-authentication refusal rather than retrying blindly. A successful deletion signs out and returns to the public site. If the account signs in with Apple, deletion also asks Apple to revoke minddy’s access to your Apple Account. This is not recoverable trash. Keep exports private and handle any remaining subscription or provider concerns through the relevant billing and provider controls.
 
 
 ## Routine controls {#routines}

@@ -2,6 +2,7 @@
 
 import { expandParam } from "@/lib/ref-registry";
 import { hasVisibleOpenDialog } from "@/lib/visible-overlays";
+import { primeMobileKeyboard } from "@/lib/mobile-sheet-focus";
 
 import {
   createContext,
@@ -320,6 +321,9 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     (opts?: OpenIssueOptions) => {
       const pid = resolveTarget(opts?.projectId, true);
       if (!pid) return;
+      // The sheet focuses its first field once mounted; on a phone browser
+      // only the opening tap can raise the keyboard for it.
+      primeMobileKeyboard(document.activeElement);
       // On an objective-filtered board (/projects/[id]?objective=X), default the
       // new issue into that objective — so `C` and the header "New issue" land it
       // there like the column "+" already does. Only when the caller left the
@@ -358,6 +362,9 @@ export function CreateProvider({ children }: { children: ReactNode }) {
     (opts?: OpenObjectiveOptions) => {
       const pid = resolveTarget(opts?.projectId, true);
       if (!pid) return;
+      // The sheet focuses its first field once mounted; on a phone browser
+      // only the opening tap can raise the keyboard for it.
+      primeMobileKeyboard(document.activeElement);
       setObjectiveTarget(pid);
       setObjectiveName(opts?.name?.trim() || undefined);
       objectiveCreatedRef.current = opts?.onCreated ?? null;

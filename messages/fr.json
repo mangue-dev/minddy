@@ -2336,7 +2336,6 @@
   "Keyboard": {
     "then": "puis",
     "shortcutsTitle": "Raccourcis clavier",
-    "shortcutsDescription": "Appuyez sur ? pour rouvrir cette liste.",
     "searchLabel": "Rechercher un raccourci",
     "searchPlaceholder": "Rechercher un raccourci…",
     "noSearchResults": "Aucun raccourci trouvé.",
@@ -3218,7 +3217,8 @@
     "confirmTitle": "Supprimer définitivement votre compte ?",
     "confirmDescription": "Cette action est irréversible. Vos données seront supprimées immédiatement.",
     "confirmDescriptionWithProjects": "Cette action est irréversible. {count, plural, one {Le projet dont vous êtes propriétaire sera supprimé} other {Les # projets dont vous êtes propriétaire seront supprimés}}, avec leurs tickets, leurs fichiers et l'accès de leurs membres.",
-    "confirmLabel": "Saisissez {email} pour confirmer",
+    "confirmLabel": "Saisissez « {phrase} » pour confirmer",
+    "confirmPhrase": "Supprimer mon compte",
     "confirmButton": "Supprimer définitivement",
     "confirmPasswordLabel": "Votre mot de passe",
     "confirmPasswordPlaceholder": "Saisissez votre mot de passe",

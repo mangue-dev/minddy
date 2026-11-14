@@ -80,7 +80,7 @@ function PlanBadge({ user }: { user: AdminUserRow }) {
       <TooltipContent>
         <span>{t(`billing.source_${user.billing.source}`)}</span>
         {until ? (
-          <span className="block text-background/70">
+          <span className="block text-muted-foreground">
             {t("billing.giftUntil", {
               at: format.dateTime(new Date(until), {
                 day: "numeric",

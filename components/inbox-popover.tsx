@@ -83,7 +83,7 @@ export const InboxPopover = memo(function InboxPopover({ open, onOpenChange: set
         sideOffset={8}
         collisionPadding={collisionPadding}
         updatePositionStrategy="always"
-        className="mobile-inbox-sheet h-[min(600px,calc(100dvh-96px))] max-h-[var(--radix-popover-content-available-height)] w-[480px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
+        className="mobile-inbox-sheet app-desktop:rounded-[1.75rem] h-[min(600px,calc(100dvh-96px))] max-h-[var(--radix-popover-content-available-height)] w-[480px] max-w-[calc(100vw-24px)] gap-0 overflow-hidden p-0"
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           contentRef.current?.focus({ preventScroll: true });

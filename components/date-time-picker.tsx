@@ -469,7 +469,11 @@ export function DateTimePicker({
         // Wheel listener mark above — it recognizes the popover
         // to this attribute rather than to a ref, which does not cross the facade.
         data-datetime-picker=""
-        className="max-h-(--radix-popover-content-available-height) w-auto overflow-y-auto overscroll-contain p-3"
+        // Concentric with the Once | Recurring pill: its 16px radius plus
+        // the 12px padding. `min-w-0`: the popover is as wide as the
+        // calendar, not as its trigger; a wide field (a panel row) otherwise
+        // stretched the time row and actions past the calendar's right edge.
+        className="max-h-(--radix-popover-content-available-height) w-auto overflow-y-auto overscroll-contain p-3 min-w-0 app-desktop:rounded-[1.75rem]"
         onClick={stop}
         onPointerDown={stop}
         // Anchored variant: it opens with an action (shortcut D, entry of

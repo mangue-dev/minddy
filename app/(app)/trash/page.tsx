@@ -35,7 +35,7 @@ import {
   TRASH_TYPE_ORDER,
   useTrashQuery,
 } from "@/lib/use-trash-query";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { useTrackView } from "@/lib/use-track-view";
 import { ROUTINE_ICON } from "@/components/feature-icons";
 import { TruncatedText } from "@/components/ui/truncated-text";
@@ -202,7 +202,6 @@ export default function TrashPage() {
   const t = useTranslations("Trash");
   const tCommon = useTranslations("Common");
   const tPages = useTranslations("Pages");
-  const contentFade = useScrollFade<HTMLDivElement>();
   const { items, retentionDays, loading, restore, purge, empty } =
     useTrashQuery();
   const [filter, setFilter] = useState<TrashFilter>("all");
@@ -325,11 +324,7 @@ export default function TrashPage() {
           ) : null}
         </AppContentHeader>
 
-        <div
-          ref={contentFade.ref}
-          {...contentFade.scrollProps}
-          className="min-h-0 flex-1 overflow-y-auto"
-        >
+        <PageScroll>
           <div className="mx-auto box-content max-w-content px-4 py-6 app-desktop:px-6">
             {loading ? (
               <div className="flex flex-col gap-2">
@@ -364,7 +359,7 @@ export default function TrashPage() {
               ))
             )}
           </div>
-        </div>
+        </PageScroll>
       </div>
 
       <ConfirmDeleteDialog

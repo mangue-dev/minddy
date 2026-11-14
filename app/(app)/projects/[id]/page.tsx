@@ -65,6 +65,7 @@ import { useAppTabLocalState } from "@/lib/app-tab-local-state";
 import { IssueFamilyBoardHeader } from "@/components/issue-family-banner";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
+import { PageScroll } from "@/components/page-scroll";
 // Deferred: the import wizard (and its papaparse CSV machinery) only runs from
 // ?setup=import — a one-time gesture that must not tax every board navigation.
 const ProjectImportDialog = dynamic(
@@ -722,7 +723,7 @@ function ProjectBoard() {
  conversation with Numo. Nothing to read to understand: the scene says
  “nothing here, a first card will land there”, the buttons say the
  remains. Import and seed remain with the owner (the API reserves them for him, and he pays for the call). */
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+        <PageScroll className="px-6 py-8">
           <div className="mx-auto max-w-content">
             <EmptyScene icon={BOARD_ICON} title={t("emptyTitle")}>
               {isOwner ? (
@@ -770,7 +771,7 @@ function ProjectBoard() {
               )}
             </EmptyScene>
           </div>
-        </div>
+        </PageScroll>
       ) : (
         <>
           {activeFamily ? (

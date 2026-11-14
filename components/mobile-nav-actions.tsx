@@ -61,7 +61,12 @@ export function MobileCreateButton() {
         <HugeiconsIcon icon={Add01Icon} className="size-[22px]" />
       </button>
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent aria-describedby={undefined} onCloseAutoFocus={(event) => { event.preventDefault(); createTrigger.current?.focus(); }}>
+        <DialogContent aria-describedby={undefined} onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          // A creation sheet opened from this one owns the focus and its keyboard.
+          if (document.activeElement?.closest('[role="dialog"]')) return;
+          createTrigger.current?.focus();
+        }}>
           <DialogTitle>{tn("new")}</DialogTitle>
           {actions.map((action) => <button type="button" key={action.key} disabled={action.disabled}
             data-mobile-sheet-row className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-left hover:bg-control-hover disabled:opacity-50"

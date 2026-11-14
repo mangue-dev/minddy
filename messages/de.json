@@ -2336,7 +2336,6 @@
   "Keyboard": {
     "then": "dann",
     "shortcutsTitle": "Tastaturkürzel",
-    "shortcutsDescription": "Drücke ?, um diese Liste erneut zu öffnen.",
     "searchLabel": "Tastaturkürzel suchen",
     "searchPlaceholder": "Tastaturkürzel suchen…",
     "noSearchResults": "Keine Tastaturkürzel gefunden.",
@@ -3218,7 +3217,8 @@
     "confirmTitle": "Dein Konto dauerhaft löschen?",
     "confirmDescription": "Dies kann nicht rückgängig gemacht werden. Deine Daten werden sofort gelöscht.",
     "confirmDescriptionWithProjects": "Dies kann nicht rückgängig gemacht werden. {count, plural, one {Das Projekt, das dir gehört, wird gelöscht} other {Die # Projekte, die dir gehören, werden gelöscht}}, zusammen mit ihren Tickets, Dateien und dem Zugriff ihrer Mitglieder.",
-    "confirmLabel": "Gib zur Bestätigung {email} ein",
+    "confirmLabel": "Gib zur Bestätigung „{phrase}“ ein",
+    "confirmPhrase": "Mein Konto löschen",
     "confirmButton": "Endgültig löschen",
     "confirmPasswordLabel": "Dein Passwort",
     "confirmPasswordPlaceholder": "Gib dein Passwort ein",

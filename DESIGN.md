@@ -66,6 +66,12 @@ where `lib/theme-presets.test.ts` measures their contrast.
   frosted glass by default; `html[data-transparency="off"]` (and high
   contrast) makes them opaque. Mark a new floating surface with
   `data-floating-surface` rather than styling its blur by hand.
+- **Floating surfaces share the composer's gray.** `--popover` is the Numo
+  composer's `--control` fill in every palette. Inside a floating surface the
+  control scale moves one shade down (`--floating-control`), so fields,
+  switches and the highlighted row stay visible. Tooltips use the same gray
+  with a `border-border` edge and no arrow; never paint one with
+  `bg-foreground` / `text-background`.
 
 ## Type, shape and spacing
 

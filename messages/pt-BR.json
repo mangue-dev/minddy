@@ -2336,7 +2336,6 @@
   "Keyboard": {
     "then": "depois",
     "shortcutsTitle": "Atalhos de teclado",
-    "shortcutsDescription": "Pressione ? para reabrir esta lista.",
     "searchLabel": "Pesquisar atalhos",
     "searchPlaceholder": "Pesquisar atalhos…",
     "noSearchResults": "Nenhum atalho encontrado.",
@@ -3218,7 +3217,8 @@
     "confirmTitle": "Excluir permanentemente sua conta?",
     "confirmDescription": "Isso não pode ser desfeito. Seus dados serão excluídos imediatamente.",
     "confirmDescriptionWithProjects": "Isso não pode ser desfeito. {count, plural, =0 {Os # projetos que você possui serão excluídos} one {O projeto que você possui será excluído} other {Os # projetos que você possui serão excluídos}}, junto com os tickets, arquivos e o acesso dos membros.",
-    "confirmLabel": "Digite {email} para confirmar",
+    "confirmLabel": "Digite “{phrase}” para confirmar",
+    "confirmPhrase": "Excluir minha conta",
     "confirmButton": "Excluir permanentemente",
     "confirmPasswordLabel": "Sua senha",
     "confirmPasswordPlaceholder": "Insira sua senha",

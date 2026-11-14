@@ -15,6 +15,7 @@ import type { CycleInfo } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { EmptyScene } from "@/components/empty-scene";
 import { DATE_ICON } from "@/components/feature-icons";
+import { PageScroll } from "@/components/page-scroll";
 
 /**
  * The three empty states of the cycle view (MIN-32):
@@ -61,7 +62,7 @@ export function CycleActivationWelcome() {
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+    <PageScroll className="px-6 py-8">
       <EmptyScene icon={CycleIcon} title={t("welcomeTitle")}>
         <div className="flex flex-col items-center gap-4">
           <ul className="flex max-w-sm flex-col gap-1 text-sm text-muted-foreground">
@@ -75,7 +76,7 @@ export function CycleActivationWelcome() {
           </Button>
         </div>
       </EmptyScene>
-    </div>
+    </PageScroll>
   );
 }
 
@@ -87,14 +88,14 @@ export function CycleFutureNotice({ cycle }: { cycle: CycleInfo }) {
     month: "long",
   });
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+    <PageScroll className="px-6 py-8">
       <div className="mx-auto max-w-content">
         <EmptyScene
           icon={DATE_ICON}
           title={t("futureCycle", { date: start })}
         />
       </div>
-    </div>
+    </PageScroll>
   );
 }
 

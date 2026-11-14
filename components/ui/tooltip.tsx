@@ -203,13 +203,12 @@ export function TooltipContent({
         sideOffset={sideOffset}
         collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
-          "z-[60] max-w-[220px] rounded-md bg-foreground px-2.5 py-2 text-xs leading-snug text-background text-left [overflow-wrap:anywhere] origin-(--radix-tooltip-content-transform-origin) duration-150 ease-out data-closed:duration-120 data-closed:ease-in animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+          "z-[60] max-w-[220px] rounded-md border border-border bg-popover px-2.5 py-2 text-xs leading-snug text-popover-foreground shadow-md text-left [overflow-wrap:anywhere] origin-(--radix-tooltip-content-transform-origin) duration-150 ease-out data-closed:duration-120 data-closed:ease-in animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           className,
         )}
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="fill-foreground" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );

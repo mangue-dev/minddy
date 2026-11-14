@@ -80,6 +80,7 @@ import {
   sharedCurrent,
 } from "@/components/command-palette-options";
 import { useDocumentEditorForFirstContent } from "@/components/editor/document-editor-lazy";
+import { PageScroll } from "@/components/page-scroll";
 
 const ObjectiveDialog = dynamic(
   () => import("@/components/objective-dialog").then((m) => m.ObjectiveDialog),
@@ -868,7 +869,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
       <div className="flex h-full min-h-0">
         {sidebar}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+          <PageScroll className="px-6 py-8">
             <div className="mx-auto max-w-content">
               {/* Same form as the empty board (MIN-173): a scene, a sentence,
  the gestures that fill the page. The scene is the
@@ -902,7 +903,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
                 </Button>
               </EmptyScene>
             </div>
-          </div>
+          </PageScroll>
         </div>
         {createDialog}
       </div>

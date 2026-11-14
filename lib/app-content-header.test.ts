@@ -57,8 +57,7 @@ describe("application content header", () => {
   it("uses fixed headers and faded scroll panes on account-level pages", () => {
     for (const page of [billing, admin]) {
       expect(page).toContain("<AppContentHeader");
-      expect(page).toContain("useScrollFade<HTMLDivElement>()");
-      expect(page).toContain("{...contentFade.scrollProps}");
+      expect(page).toContain("<PageScroll");
     }
 
     expect(billing).toContain('t("manageSubscription")');

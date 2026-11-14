@@ -22,7 +22,7 @@ import { AppTabRouteBoundary, useAppTabRoute } from "@/lib/app-tab-route-context
 import { useMobileCollectionState } from "@/lib/mobile-collection-state";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { projectIdFromPath } from "@/lib/project-id-from-path";
 import {
   SETTINGS_SECTION_PARAM,
@@ -204,7 +204,6 @@ function SettingsTabs({
     : (visibleTabs[0]?.value ?? defaultTab);
   const activeTab = tabParam && validValues.has(tabParam) ? tabParam : fallback;
 
-  const contentFade = useScrollFade<HTMLDivElement>();
 
   // A query change on the screen already shown needs no server round trip:
   // Next's patched history keeps `useSearchParams` in sync, so the tab flips
@@ -421,11 +420,7 @@ function SettingsTabs({
           {[title, visibleTabs.find((tab) => tab.value === activeTab)?.label].filter(Boolean).join(" · ")}
         </h1>
 
-        <div
-          ref={contentFade.ref}
-          {...contentFade.scrollProps}
-          className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 app-desktop:px-6 app-desktop:pt-6"
-        >
+        <PageScroll className="px-4 pt-1 pb-8 app-desktop:px-6 app-desktop:pt-6">
           <div className={cn("mx-auto flex flex-col gap-4", SETTINGS_MAX_WIDTH)}>
             {/* Only the open tab is mounted — that's already what it did
                 `TabsContent`, which dismantles the others. The key forces a
@@ -440,7 +435,7 @@ function SettingsTabs({
               {visibleTabs.find((tab) => tab.value === activeTab)?.content}
             </div>
           </div>
-        </div>
+        </PageScroll>
       </div>
     </div>
   );

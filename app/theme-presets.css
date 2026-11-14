@@ -130,7 +130,7 @@ html:not(.dark)[data-theme-light="solarized-light"] {
   --foreground: #073642;
   --card: #fdf6e3;
   --card-foreground: #073642;
-  --popover: #fdf6e3;
+  --popover: #f4eddb; /* = --control, the Numo composer fill */
   --popover-foreground: #073642;
   --primary: #073642;
   --primary-foreground: #fdf6e3;
@@ -164,7 +164,7 @@ html:not(.dark)[data-theme-light="catppuccin-latte"] {
   --foreground: #4c4f69;
   --card: #eff1f5;
   --card-foreground: #4c4f69;
-  --popover: #eff1f5;
+  --popover: #e6e9ef; /* = --control, the Numo composer fill */
   --popover-foreground: #4c4f69;
   --primary: #8839ef;
   --primary-foreground: #ffffff;
@@ -198,7 +198,7 @@ html:not(.dark)[data-theme-light="nord-light"] {
   --foreground: #2e3440;
   --card: #eceff4;
   --card-foreground: #2e3440;
-  --popover: #eceff4;
+  --popover: #e5e9f0; /* = --control, the Numo composer fill */
   --popover-foreground: #2e3440;
   --primary: #4a6b94;
   --primary-foreground: #ffffff;
@@ -232,7 +232,7 @@ html:not(.dark)[data-theme-light="high-contrast-light"] {
   --foreground: #000000;
   --card: #ffffff;
   --card-foreground: #000000;
-  --popover: #ffffff;
+  --popover: #ebebeb; /* = --control, the Numo composer fill */
   --popover-foreground: #000000;
   --primary: #000000;
   --primary-foreground: #ffffff;
@@ -269,7 +269,7 @@ html.dark[data-theme-dark="solarized-dark"] {
   --foreground: #eee8d5;
   --card: #002b36;
   --card-foreground: #eee8d5;
-  --popover: #002b36;
+  --popover: #0a3d4a; /* = --control, the Numo composer fill */
   --popover-foreground: #eee8d5;
   --primary: #eee8d5;
   --primary-foreground: #002b36;
@@ -303,7 +303,7 @@ html.dark[data-theme-dark="catppuccin-mocha"] {
   --foreground: #cdd6f4;
   --card: #1e1e2e;
   --card-foreground: #cdd6f4;
-  --popover: #181825;
+  --popover: #313244; /* = --control, the Numo composer fill */
   --popover-foreground: #cdd6f4;
   --primary: #cba6f7;
   --primary-foreground: #11111b;
@@ -337,7 +337,7 @@ html.dark[data-theme-dark="nord-dark"] {
   --foreground: #eceff4;
   --card: #2e3440;
   --card-foreground: #eceff4;
-  --popover: #2e3440;
+  --popover: #3b4252; /* = --control, the Numo composer fill */
   --popover-foreground: #eceff4;
   --primary: #88c0d0;
   --primary-foreground: #2e3440;
@@ -371,7 +371,7 @@ html.dark[data-theme-dark="high-contrast-dark"] {
   --foreground: #ffffff;
   --card: #000000;
   --card-foreground: #ffffff;
-  --popover: #0d0d0d;
+  --popover: #1f1f1f; /* = --control, the Numo composer fill */
   --popover-foreground: #ffffff;
   --primary: #ffffff;
   --primary-foreground: #000000;

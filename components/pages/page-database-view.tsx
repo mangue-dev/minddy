@@ -169,7 +169,7 @@ function SortablePropertyRow({ property, sortable, children }: {
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       data-mobile-sheet-row
-      className={`relative flex min-h-9 items-center gap-1 rounded-sm bg-popover px-1 hover:bg-muted/50 ${isDragging ? "z-10 shadow-md" : ""}`}
+      className={`relative flex min-h-9 items-center gap-1 rounded-sm px-1 hover:bg-muted/50 ${isDragging ? "z-10 bg-popover shadow-md" : ""}`}
     >
       <AppTooltip label={t("reorderColumnHint")}>
         <button

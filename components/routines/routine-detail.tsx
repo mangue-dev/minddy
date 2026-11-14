@@ -1,7 +1,6 @@
 "use client";
 
 
-import { cn } from "@/lib/utils";
 import { PAGE_SCROLL } from "@/components/page-heading";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon, PlayIcon } from "@hugeicons/core-free-icons";
@@ -32,7 +31,7 @@ import {
 import { useRoutineRunsQuery } from "@/lib/use-routines-query";
 import { RoutineTrashDialog, useRoutineActions } from "@/components/routines/use-routine-actions";
 import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { DateMentionChip } from "@/components/date-mention-chip";
 import { dayKey, type MentionDate } from "@/lib/mention-date";
 import { PlainPreview } from "@/components/typed-mention-chip";
@@ -129,8 +128,6 @@ export function RoutineDetail({
    */
   const [openRunId, setOpenRunId] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  // The fade from the bottom of the list, like everywhere where content overflows.
-  const listFade = useScrollFade<HTMLDivElement>();
 
   // The instruction, which the sidebar's "Edit" brings into view and focuses.
   const instructionRef = useRef<HTMLDivElement>(null);
@@ -316,11 +313,7 @@ export function RoutineDetail({
 
       {/* One column, as wide as an objective's page: what the routine does,
           its settings, then what it has done. The whole page scrolls. */}
-      <div
-        ref={listFade.ref}
-        {...listFade.scrollProps}
-        className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
-      >
+      <PageScroll className={PAGE_SCROLL}>
         <div className="mx-auto flex max-w-content flex-col gap-6">
           <div className="flex flex-col gap-1 empty:hidden">
             {!agentCapabilitiesLoading &&
@@ -507,7 +500,7 @@ export function RoutineDetail({
           )}
           </section>
         </div>
-      </div>
+      </PageScroll>
 
       <RoutineTrashDialog
         routine={routine}

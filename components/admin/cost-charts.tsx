@@ -116,7 +116,7 @@ export function StackedBarChart({
                   {series.keys
                     .filter((key) => (day.values[key] ?? 0) > 0)
                     .map((key) => (
-                      <span key={key} className="mt-1 flex items-center justify-between gap-4 text-background/80">
+                      <span key={key} className="mt-1 flex items-center justify-between gap-4 text-muted-foreground">
                         <span className="flex min-w-0 items-center gap-1.5">
                           <span className={cn("size-2 shrink-0 rounded-[2px]", styles(key).color)} aria-hidden />
                           <span className="truncate">{styles(key).label}</span>
@@ -124,7 +124,7 @@ export function StackedBarChart({
                         <span className="tabular-nums">{format(day.values[key])}</span>
                       </span>
                     ))}
-                  <span className="mt-1.5 flex justify-between gap-4 border-t border-background/20 pt-1.5 font-medium">
+                  <span className="mt-1.5 flex justify-between gap-4 border-t border-border pt-1.5 font-medium">
                     <span>{totalLabel}</span>
                     <span className="tabular-nums">{format(totals[index])}</span>
                   </span>

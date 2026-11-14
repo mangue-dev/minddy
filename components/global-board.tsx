@@ -69,6 +69,7 @@ import type {
   Project,
 } from "@/lib/types";
 import { boardIntegrationFacets } from "@/lib/board-integrations";
+import { PageScroll } from "@/components/page-scroll";
 
 // Like the project board: the panel (editor, timeline, Markdown) loads after
 // the first content or on the first opened issue, not with the board (MIN-880).
@@ -679,7 +680,7 @@ function GlobalBoardInner() {
  is but not a single ticket, and it is the same screen as on the
  board of a project. The ticket is created from the shared dialog, which
  asks WHICH project: here, none is in front of you. */
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+        <PageScroll className="px-6 py-8">
           <div className="mx-auto max-w-content">
             {projects.length === 0 ? (
               <EmptyScene icon={FolderAddIcon} title={t("emptyNoProject")}>
@@ -703,7 +704,7 @@ function GlobalBoardInner() {
               </EmptyScene>
             )}
           </div>
-        </div>
+        </PageScroll>
       ) : (
         /* No ticket passes the filters: the board remains standing, columns
  empty. “Empty in this view” is not a dead end — it's a

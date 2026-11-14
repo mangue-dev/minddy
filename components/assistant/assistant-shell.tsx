@@ -598,9 +598,11 @@ export const AssistantShell = forwardRef<
   }, [isBusy, t]);
   const hasMessages = state.messages.length > 0 || isBusy;
   // With content under the composer, the empty page scrolls as one and fades
-  // at the edge that still hides some of it, like the other pages.
+  // at the edge that still hides some of it, over the same size as
+  // `PageScroll`. That component is not used here because this element is the
+  // chat area itself, which only scrolls while it has no conversation.
   const pageScrolls = !!afterComposer && !hasMessages;
-  const pageFade = useScrollFade<HTMLDivElement>();
+  const pageFade = useScrollFade<HTMLDivElement>("y", "var(--page-scroll-fade)");
   // The suggestions follow the page under the composer and step aside as soon
   // as the user starts writing their own message.
   const pathname = usePathname();
