@@ -3,6 +3,7 @@ import { Skeleton as BaseSkeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AppContentHeader, APP_CONTENT_HEADER_LEADING_INSET } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { PageScroll } from "@/components/page-scroll";
 
 function Skeleton({ className, ...props }: ComponentProps<typeof BaseSkeleton>) {
   return <BaseSkeleton {...props} className={cn("bg-foreground/10", className)} />;
@@ -148,7 +149,7 @@ export function PrDetailSkeleton() {
         <Skeleton aria-hidden className="h-4 w-24" />
         <PrHeaderActionsSkeleton />
       </AppContentHeader>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
+      <PageScroll className="px-4 app-desktop:px-6">
         <div className="mx-auto flex max-w-content flex-col gap-6 py-6">
           <PrMetadataSkeleton />
           <PrStatusSkeleton />
@@ -157,7 +158,7 @@ export function PrDetailSkeleton() {
           </div>
           <PrActivitySkeleton />
         </div>
-      </div>
+      </PageScroll>
     </div>
   );
 }

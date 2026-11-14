@@ -84,7 +84,7 @@ function DetailRow({ swatch, value, unit }: { swatch: string; value: number; uni
     <div className="flex items-center gap-1.5">
       <span className={`size-2 shrink-0 rounded-[2px] ${swatch}`} />
       <span className="font-semibold tabular-nums">{value}</span>
-      <span className="text-background/65">{unit}</span>
+      <span className="text-muted-foreground">{unit}</span>
     </div>
   );
 }
@@ -125,14 +125,14 @@ function DayDetail({ day, joined }: { day: HeatmapDay; joined: boolean }) {
         ) : null}
         {day.tasks > 0 ? (
           <DetailRow
-            swatch="bg-background/45"
+            swatch="bg-foreground/45"
             value={day.tasks}
             unit={t("dayTasksUnit", { count: day.tasks })}
           />
         ) : null}
         {/* “Nothing finished” only makes sense if the box has nothing else to say — the day of registration already has its mark. */}
         {day.count === 0 && !joined ? (
-          <div className="text-background/65">{t("dayNone")}</div>
+          <div className="text-muted-foreground">{t("dayNone")}</div>
         ) : null}
       </div>
     </div>

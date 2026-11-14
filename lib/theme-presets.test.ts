@@ -22,13 +22,13 @@ const TOKENS_CSS = readFileSync(join(__dirname, "../app/tokens.css"), "utf8");
  * overrides, converted from oklch): what a preset block leaves undeclared. */
 const MINDDY_TOKENS = {
   light: {
-    "--background": "#ffffff", "--card": "#ffffff", "--popover": "#ffffff", "--sidebar": "#f3f4f6",
+    "--background": "#ffffff", "--card": "#ffffff", "--popover": "#f4f6f9", "--sidebar": "#f3f4f6",
     "--foreground": "#0a0a0a", "--muted-foreground": "#606369", "--muted": "#e7e9ef",
     "--accent": "#eaedf4", "--control": "#f4f6f9", "--primary": "#7059c4", "--primary-foreground": "#ffffff",
     "--ring": "#7059c4", "--border": "#d9dce5",
   },
   dark: {
-    "--background": "#0f0f0f", "--card": "#0f0f0f", "--popover": "#0f0f0f", "--sidebar": "#0d0e10",
+    "--background": "#0f0f0f", "--card": "#0f0f0f", "--popover": "#232427", "--sidebar": "#0d0e10",
     "--foreground": "#fafafa", "--muted-foreground": "#858688", "--muted": "#1d1e21",
     "--accent": "#222326", "--control": "#232427", "--primary": "#b6a5f0", "--primary-foreground": "#1b1530",
     "--ring": "#b6a5f0", "--border": "#1e1e1e",
@@ -240,9 +240,13 @@ describe("app/theme-presets.css", () => {
     for (const surface of surfaces) {
       expect(contrast(t["--foreground"], t[surface]), `foreground on ${surface}`).toBeGreaterThanOrEqual(text);
     }
-    for (const surface of ["--background", "--card", "--popover", "--sidebar"]) {
+    for (const surface of ["--background", "--card", "--sidebar"]) {
       expect(contrast(t["--muted-foreground"], t[surface]), `muted text on ${surface}`).toBeGreaterThanOrEqual(text);
     }
+    // Floating surfaces lift their muted text 15% toward the foreground
+    // (`--floating-muted-foreground`, globals.css): they wear the composer's gray.
+    const floatingMuted = mix(t["--muted-foreground"], t["--foreground"], 0.85);
+    expect(contrast(floatingMuted, t["--popover"]), "muted text on --popover").toBeGreaterThanOrEqual(text);
     expect(contrast(t["--primary-foreground"], t["--primary"]), "primary action").toBeGreaterThanOrEqual(4.5);
     expect(contrast(t["--ring"], t["--background"]), "focus ring").toBeGreaterThanOrEqual(3);
     if (highContrast) {

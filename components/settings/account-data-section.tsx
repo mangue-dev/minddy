@@ -48,7 +48,7 @@ export function AccountDataSection() {
   const importInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<DeletionPreview | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmEmail, setConfirmEmail] = useState("");
+  const [confirmText, setConfirmText] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
 
@@ -144,7 +144,8 @@ export function AccountDataSection() {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          confirm: confirmEmail.trim(),
+          // The API still checks the account email; the phrase only gates the dialog.
+          confirm: email,
           ...(hasPassword ? { password: confirmPassword } : {}),
         }),
       });
@@ -170,8 +171,9 @@ export function AccountDataSection() {
   };
 
   const ownedCount = preview?.ownedProjects.length ?? 0;
+  const confirmPhrase = t("confirmPhrase");
   const canDelete =
-    confirmEmail.trim().toLowerCase() === email.toLowerCase() &&
+    confirmText.trim().toLocaleLowerCase() === confirmPhrase.toLocaleLowerCase() &&
     !!email &&
     (!hasPassword || confirmPassword.length > 0);
 
@@ -239,7 +241,7 @@ export function AccountDataSection() {
               variant="destructive"
               size="sm"
               onClick={() => {
-                setConfirmEmail("");
+                setConfirmText("");
                 setConfirmPassword("");
                 setConfirmOpen(true);
               }}
@@ -317,16 +319,17 @@ export function AccountDataSection() {
           </AlertDialogHeader>
 
           <div className="space-y-1.5">
-            <label htmlFor="delete-confirm-email" className="text-sm font-medium">
-              {t("confirmLabel", { email })}
+            <label htmlFor="delete-confirm-phrase" className="text-sm font-medium">
+              {t("confirmLabel", { phrase: confirmPhrase })}
             </label>
             <Input
-              id="delete-confirm-email"
-              type="email"
+              id="delete-confirm-phrase"
               autoComplete="off"
-              value={confirmEmail}
-              onChange={(e) => setConfirmEmail(e.target.value)}
-              placeholder={email}
+              autoCapitalize="off"
+              spellCheck={false}
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={confirmPhrase}
             />
           </div>
 

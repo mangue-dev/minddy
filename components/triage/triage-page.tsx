@@ -92,7 +92,7 @@ import {
   useAssistantPanelActions,
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { secondarySelectionId, triageSelectionItems } from "@/lib/secondary-view-selection";
 import type { Issue, IssueUpdateInput } from "@/lib/types";
 
@@ -165,9 +165,6 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
       ])
     );
   }, [triageIssues, query, project, properties, user?.id]);
-  // The fade that replaces the border under the detail header: it doesn't seem
-  // only on the side where there is still something to discover.
-  const detailFade = useScrollFade<HTMLDivElement>();
   const selected = triageIssues.find((i) => i.id === selectedId) ?? null;
   // ⇧C (MIN-803): the open issue's comment field.
   useCommentSurface(canComment && selected ? commentTarget("issue", selected.id) : null);
@@ -684,11 +681,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
               )}
             </AppContentHeader>
 
-            <div
-              ref={detailFade.ref}
-              {...detailFade.scrollProps}
-              className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
-            >
+            <PageScroll className={PAGE_SCROLL}>
               <div className="mx-auto flex max-w-content flex-col gap-6">
                 {/* Title + description */}
                 <div className={cn("flex flex-col", PAGE_HEADING_GAP)}>
@@ -829,7 +822,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                   canModerate={canWrite}
                 />
               </div>
-            </div>
+            </PageScroll>
 
             {canComment && (
             <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
@@ -850,11 +843,11 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
           /* Nothing in the yard: the same scene the whole page used to show,
              kept in the pane now that the sidebar stays up. */
           <div className="flex h-full flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+            <PageScroll className="px-6 py-8">
               <div className="mx-auto max-w-content">
                 <EmptyScene icon={CircleDotDashed} title={t("emptyTitle")} />
               </div>
-            </div>
+            </PageScroll>
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center p-6">

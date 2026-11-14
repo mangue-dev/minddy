@@ -39,7 +39,7 @@ vi.mock("@/lib/use-feedback-timeline", () => ({ useFeedbackTimeline: () => ({ it
 vi.mock("@/lib/use-feedback-categories", () => ({ useFeedbackCategories: () => vi.fn() }));
 vi.mock("@/lib/use-feedback-dictation", () => ({ useFeedbackDictation: () => ({ busy: false,
   onTranscript: vi.fn(), noteRun: vi.fn(), reset: vi.fn() }) }));
-vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: { current: null }, scrollProps: {}, edges: {} }) }));
+vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: () => {}, scrollProps: { onScroll: () => {} }, edges: {} }) }));
 vi.mock("@/lib/assistant-panel-context", () => ({ useAssistantContext: vi.fn(), useAssistantPanelActions: () => ({ open: vi.fn() }) }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/lib/ask-numo-context", async () => {

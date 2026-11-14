@@ -17,7 +17,7 @@ import { UsageHistorySection } from "@/components/billing/usage-history-section"
 import { useBillingSummary } from "@/lib/use-billing-query";
 import { createPortalApi } from "@/lib/billing-api";
 import { usePurchasesHidden } from "@/lib/native-app";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import {
   billingStatusQueryKey,
   billingUsageQueryKey,
@@ -35,7 +35,6 @@ export default function BillingPage() {
   const hasManagedService = status?.managedBilling || usage?.managedAi;
   const hasSubscription = !!status?.subscription;
   const [openingPortal, setOpeningPortal] = useState(false);
-  const contentFade = useScrollFade<HTMLDivElement>();
 
   const openPortal = useCallback(async () => {
     setOpeningPortal(true);
@@ -60,11 +59,7 @@ export default function BillingPage() {
     return (
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
         <AppContentHeader />
-        <div
-          ref={contentFade.ref}
-          {...contentFade.scrollProps}
-          className="min-h-0 flex-1 overflow-y-auto"
-        >
+        <PageScroll>
           <div className="mx-auto box-content max-w-content px-4 py-6 app-desktop:px-6">
             <div className="rounded-xl border border-border bg-card px-5 py-4">
               <h2 className="text-sm font-semibold">{t("selfHostedTitle")}</h2>
@@ -73,7 +68,7 @@ export default function BillingPage() {
               </p>
             </div>
           </div>
-        </div>
+        </PageScroll>
       </div>
     );
   }
@@ -97,11 +92,7 @@ export default function BillingPage() {
         ) : null}
       </AppContentHeader>
 
-      <div
-        ref={contentFade.ref}
-        {...contentFade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto"
-      >
+      <PageScroll>
         <div className="mx-auto box-content max-w-content px-4 py-6 app-desktop:px-6">
           <div className="min-w-0 space-y-6 sm:space-y-8">
             <PageHeading
@@ -132,7 +123,7 @@ export default function BillingPage() {
             )}
           </div>
         </div>
-      </div>
+      </PageScroll>
     </div>
   );
 }

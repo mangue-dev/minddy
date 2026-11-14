@@ -229,6 +229,34 @@ html[data-desktop-app] .sidebar-nav-hotzone {
   isolation: isolate;
 }
 
+/* Floating surfaces are painted with the Numo composer's `--control` gray
+   (`--popover`). What they hold takes the next shade down, so a field, a
+   switch track, a key cap or a highlighted row still stands out from the
+   surface instead of melting into it. The steps are read at the root, where
+   the palette sets `--control` and `--control-hover`. */
+:root {
+  --floating-control: var(--control-hover);
+  --floating-control-hover: color-mix(in oklab, var(--control-hover) 90%, var(--foreground));
+  /* Secondary text keeps its contrast on the gray (lib/theme-presets.test.ts). */
+  --floating-muted-foreground: color-mix(in oklab, var(--muted-foreground) 85%, var(--foreground));
+}
+:is(
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"],
+  [data-slot="hover-card-content"],
+  [data-slot="tooltip-content"],
+  [data-floating-surface],
+  [role="menu"]
+) {
+  --control: var(--floating-control);
+  --control-hover: var(--floating-control-hover);
+  --accent: var(--floating-control);
+  --muted: var(--floating-control);
+  --muted-foreground: var(--floating-muted-foreground);
+}
+
 /* Elevate floating surfaces above their surrounding content. Local panels can
    opt out when they intentionally sit below a confirmation dialog. */
 :is(
@@ -595,13 +623,14 @@ button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
 /* ── Shell surfaces ────────────────────────────────────────────────────────────
    Light-gray sidebars around a white content area and header. The AppShell
    root uses --background (white) and shows through the transparent <main>; the
-   sidebar uses --sidebar while the header stays on bg-background. Cards/popovers
-   stay white with the content surface. */
+   sidebar uses --sidebar while the header stays on bg-background. Cards stay
+   white with the content surface; floating surfaces (menus, popovers, selects,
+   hover cards, tooltips) take the Numo composer's gray, `--control`. */
 :root {
   --background: oklch(1 0 0);              /* content area — white */
   --sidebar: oklch(0.967 0.003 264);       /* chrome — light gray */
   --card: oklch(1 0 0);
-  --popover: oklch(1 0 0);
+  --popover: var(--control);
   --sidebar-border: oklch(0.912 0.008 264);
   --app-tab-background: color-mix(in oklab, var(--sidebar-accent) 55%, transparent);
   --app-tab-active-background: var(--background);
@@ -625,7 +654,7 @@ button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
   --background: oklch(0.165 0.004 264);
   --sidebar: #0f0f0f;
   --card: #0f0f0f;
-  --popover: #0f0f0f;
+  --popover: var(--control);
   --sidebar-border: oklch(0.27 0.006 264);
 
   /* Darken the neutral scale together, preserving the lightness differences
@@ -1677,15 +1706,17 @@ html[data-app-shell] textarea {
 }
 
 /* Stylish tooltip of the “copy section” button (replaces the native title) —
-   same skin as <TooltipContent> of components/ui/tooltip.tsx (dark bubble + arrow). */
+   same skin as <TooltipContent> of components/ui/tooltip.tsx. */
 .scratchpad-editor .scratchpad-section-tip {
   position: absolute;
   z-index: 60;
   transform: translate(-50%, calc(-100% - 8px));
   padding: 0.375rem 0.625rem;
   border-radius: 0.375rem;
-  background: var(--foreground);
-  color: var(--background);
+  border: 1px solid var(--border);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   font-size: 0.75rem;
   line-height: 1rem;
   white-space: nowrap;
@@ -1695,15 +1726,6 @@ html[data-app-shell] textarea {
 }
 .scratchpad-editor .scratchpad-section-tip.is-visible {
   opacity: 1;
-}
-.scratchpad-editor .scratchpad-section-tip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: var(--foreground);
 }
 
 /* Placeholder placed by the Placeholder extension on the current empty line

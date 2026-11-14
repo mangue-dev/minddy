@@ -82,7 +82,7 @@ function WeeklyBars({ weeks, series }: { weeks: string[]; series: BarSeries[] })
             <TooltipContent className="min-w-40">
               <span className="font-medium">{t("weekOf", { date: weekLabel(week) })}</span>
               {series.map((s) => (
-                <span key={s.key} className="mt-1 flex items-center justify-between gap-4 text-background/80">
+                <span key={s.key} className="mt-1 flex items-center justify-between gap-4 text-muted-foreground">
                   <span className="flex items-center gap-1.5">
                     <span className={cn("size-2 shrink-0 rounded-[2px]", s.color)} aria-hidden />
                     {s.label}
@@ -152,7 +152,7 @@ function StatusSegment({
           <StatusIndicator status={status} className="size-3.5" />
           {tStatus(status)}
         </span>
-        <span className="mt-1 flex justify-between gap-4 text-background/80">
+        <span className="mt-1 flex justify-between gap-4 text-muted-foreground">
           <span>{t("sliceIssues", { count })}</span>
           <span className="tabular-nums">{share}</span>
         </span>

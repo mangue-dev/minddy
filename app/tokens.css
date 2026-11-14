@@ -293,6 +293,10 @@
      inside its column (wiki pages). */
   --content-width: 900px;
 
+  /* The fade at the top and bottom of a page that scrolls, drawn by
+     `PageScroll` (components/page-scroll.tsx, MIN-985). */
+  --page-scroll-fade: 32px;
+
   /* The side insets of a screen whose content is centred. On iPhone Duo the
      status bar and the system controls stand on a side of the screen, not at
      its top: the right inset is 84px on both displays and the left one is 0.
@@ -317,7 +321,8 @@
   --foreground: oklch(0.145 0 0);
   --card: oklch(0.995 0.002 266);
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(0.995 0.002 266);
+  /* Floating surfaces take the Numo composer's fill (--control). */
+  --popover: var(--control);
   --popover-foreground: oklch(0.145 0 0);
 
   /* Lavender, with white text on top (5.4:1). */
@@ -418,7 +423,7 @@
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.170 0.003 250);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.170 0.003 250);
+  --popover: var(--control);
   --popover-foreground: oklch(0.985 0 0);
 
   /* Lavender, with deep-lavender text on top (8.1:1). */

@@ -125,6 +125,7 @@ import {
 } from "@/components/pages/use-page-autosave";
 import type { PagesLookup } from "@/components/pages/pages-lookup";
 import { usePageCollaboration } from "@/lib/use-page-collaboration";
+import { PageScroll } from "@/components/page-scroll";
 import {
   Tooltip,
   TooltipContent,
@@ -1120,9 +1121,12 @@ function PageSurface({
           in the document, and it's scrolling through it. */}
       {!panel && <PageToc editor={editor} scrollRef={scrollRef} />}
 
-      <div
+      {/* A database scrolls sideways inside this page and the side panel has
+          its own edges: only a document page in the main pane fades. */}
+      <PageScroll
         ref={scrollRef}
-        className="scrollbar-quiet min-h-0 flex-1 overflow-y-auto overscroll-none"
+        fade={!panel && page.database_schema == null}
+        className="scrollbar-quiet overscroll-none"
       >
         {/* The COLUMN of the document. She carries two things, and she's the only one
             be able to carry them together: the GUTTER reserve on the left (56 px,
@@ -1219,7 +1223,7 @@ function PageSurface({
             </PageTaskSurface>
           </div>}
         </div>
-      </div>
+      </PageScroll>
 
       {/* The announced account is the REAL account: the page that we see disappear
           plus all her descendants, who leave with her without being on screen.

@@ -119,7 +119,7 @@ function ToastOverflowTooltip({ pane }: { pane: HTMLElement }) {
       ref={bubble}
       role="tooltip"
       data-slot="tooltip-content"
-      className="pointer-events-none fixed z-[1210] max-w-[320px] rounded-md bg-foreground px-2.5 py-2 text-left text-xs leading-snug text-background [overflow-wrap:anywhere] animate-in fade-in-0 zoom-in-95"
+      className="pointer-events-none fixed z-[1210] max-w-[320px] rounded-md border border-border bg-popover px-2.5 py-2 text-left text-xs leading-snug text-popover-foreground shadow-md [overflow-wrap:anywhere] animate-in fade-in-0 zoom-in-95"
       style={position ? { left: position.left, bottom: position.bottom } : { visibility: "hidden", left: 0, bottom: 0 }}
     >
       {target.textContent}

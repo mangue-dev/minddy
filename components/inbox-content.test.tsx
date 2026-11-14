@@ -61,7 +61,8 @@ function render(focus: InboxFocus | null) {
 }
 
 /** The view picker's trigger names the view on screen (MIN-975). */
-const pressedFilter = () => host.querySelector("[data-inbox-sheet-bar] button")?.textContent;
+// On a desktop the views are tabs: the selected one is the view shown.
+const pressedFilter = () => host.querySelector('[data-inbox-sheet-bar] [role="tab"][aria-selected="true"]')?.textContent;
 const pulsing = () =>
   Array.from(host.querySelectorAll<HTMLElement>(".inbox-row-target")).map((row) => row.dataset.notificationId);
 

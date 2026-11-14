@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { SearchSelect } from "@/components/search-select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IssueActionsMenu } from "@/components/issue-context-menu";
 import { useMobileLayout } from "@/lib/use-mobile-layout";
 import { InboxRowsSkeleton } from "@/components/inbox-skeleton";
@@ -167,22 +168,53 @@ export default function InboxContent({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* The views are one picker and the actions one menu, on every layout
-          (MIN-975): the same bar as the phone's, so the rows keep the room. */}
+      {/* The views and the actions menu share one bar. A phone picks the view
+          from a picker (MIN-975); a desktop shows the views as tabs, the
+          same tabs as the routines home. */}
       <div
         data-inbox-sheet-bar
         className={cn("flex shrink-0 items-center gap-2", mobile ? "px-3 pb-2" : "px-3 pt-3 pb-1")}
       >
-        <div className="min-w-0 flex-1">
-          <SearchSelect
-            value={filter}
-            onChange={(next) => { if (next) setFilter(next as InboxFilter); }}
-            options={FILTERS.map(({ key }) => ({
-              value: key,
-              label: filterLabel(key),
-              labelNode: (
-                <span className="flex min-w-0 flex-1 items-center gap-2">
-                  <span className="truncate">{filterLabel(key)}</span>
+        {mobile ? (
+          <div className="min-w-0 flex-1">
+            <SearchSelect
+              value={filter}
+              onChange={(next) => { if (next) setFilter(next as InboxFilter); }}
+              options={FILTERS.map(({ key }) => ({
+                value: key,
+                label: filterLabel(key),
+                labelNode: (
+                  <span className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="truncate">{filterLabel(key)}</span>
+                    {filterCounts[key] > 0 && (
+                      <span
+                        className="rounded-full bg-muted px-1.5 text-xs tabular-nums"
+                        aria-label={t("filterUnreadCount", { count: filterCounts[key] })}
+                      >
+                        {filterCounts[key]}
+                      </span>
+                    )}
+                  </span>
+                ),
+              }))}
+              trigger={
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-11 min-w-0 max-w-full justify-start gap-1.5 px-4 text-base"
+                >
+                  <span className="truncate">{filterLabel(filter)}</span>
+                  <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
+                </Button>
+              }
+            />
+          </div>
+        ) : (
+          <Tabs value={filter} onValueChange={(next) => setFilter(next as InboxFilter)} className="min-w-0 flex-1">
+            <TabsList variant="line" aria-label={t("title")} className="justify-start">
+              {FILTERS.map(({ key }) => (
+                <TabsTrigger key={key} value={key} className="gap-1.5">
+                  {filterLabel(key)}
                   {filterCounts[key] > 0 && (
                     <span
                       className="rounded-full bg-muted px-1.5 text-xs tabular-nums"
@@ -191,21 +223,11 @@ export default function InboxContent({
                       {filterCounts[key]}
                     </span>
                   )}
-                </span>
-              ),
-            }))}
-            trigger={
-              <Button
-                variant="outline"
-                size={mobile ? "lg" : "sm"}
-                className={cn("min-w-0 max-w-full justify-start gap-1.5", mobile && "h-11 px-4 text-base")}
-              >
-                <span className="truncate">{filterLabel(filter)}</span>
-                <HugeiconsIcon icon={ArrowDown01Icon} className="size-4 shrink-0" />
-              </Button>
-            }
-          />
-        </div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
         <IssueActionsMenu
           tooltip={tCommon("moreActions")}
           trigger={

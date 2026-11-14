@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
+import { PageScroll } from "@/components/page-scroll";
 
 /**
  * Segment skeletons (MIN-89).
@@ -14,7 +15,9 @@ import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
  * skeleton that doesn't fall in the right place produces a hydration jump,
  * which is worse than the blank screen it replaces.
  *
- * Server Components: no "use client" here, `Skeleton` is a simple <div>.
+ * Server Components: no "use client" here, `Skeleton` is a simple <div>. The
+ * page scroller is the client `PageScroll`, so a skeleton has the same scroll
+ * box as the page that replaces it.
  */
 
 /**
@@ -93,9 +96,9 @@ export function ListDetailSkeleton({
             <Skeleton className="h-8 w-48" />
           </div>
         )}
-        <div
+        <PageScroll
           className={cn(
-            "min-h-0 flex-1 px-4 pt-1 pb-8 app-desktop:px-6",
+            "px-4 pt-1 pb-8 app-desktop:px-6",
             emptyHeader && "app-desktop:pt-6",
           )}
         >
@@ -104,7 +107,7 @@ export function ListDetailSkeleton({
               <Skeleton key={i} className="h-32 rounded-xl" />
             ))}
           </div>
-        </div>
+        </PageScroll>
       </div>
     </div>
   );
@@ -172,21 +175,23 @@ export function PageDocumentSkeleton({ panel = false }: { panel?: boolean }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {!panel && <AppContentHeader contentClassName="gap-2"><span /></AppContentHeader>}
-      <div
-        className={cn(
-          "relative mx-auto w-full px-6 py-10",
-          panel ? PAGE_COLUMN.panelDocument : PAGE_COLUMN.document
-        )}
-      >
-        <PageTitleSkeleton />
-        <div className="mt-6 flex flex-col">
-          {["w-full", "w-11/12", "w-4/5", "w-2/3"].map((width) => (
-            <div key={width} className="flex h-[1.625rem] items-center">
-              <Skeleton className={cn("h-4", width)} />
-            </div>
-          ))}
+      <PageScroll fade={!panel} className="scrollbar-quiet overscroll-none">
+        <div
+          className={cn(
+            "relative mx-auto w-full px-6 py-10",
+            panel ? PAGE_COLUMN.panelDocument : PAGE_COLUMN.document
+          )}
+        >
+          <PageTitleSkeleton />
+          <div className="mt-6 flex flex-col">
+            {["w-full", "w-11/12", "w-4/5", "w-2/3"].map((width) => (
+              <div key={width} className="flex h-[1.625rem] items-center">
+                <Skeleton className={cn("h-4", width)} />
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </PageScroll>
     </div>
   );
 }

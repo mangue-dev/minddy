@@ -68,7 +68,7 @@ import { matchesFeedbackFilters, collectionFilterParams } from "@/lib/collection
 import { useCollectionFilters } from "@/lib/use-collection-filters";
 import { SearchMenu } from "@/components/search-menu";
 import { SearchSelect } from "@/components/search-select";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { usePublishCurrentView } from "@/lib/current-view-context";
 import { buildViewHref } from "@/lib/view-href";
 import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
@@ -488,7 +488,7 @@ function AuthorValue({
           type="button"
           onClick={copy}
           aria-label={copied ? tCommon("copied") : t("copyEmail")}
-          className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-background/70 outline-none transition-colors hover:bg-background/15 hover:text-background focus-visible:bg-background/15 focus-visible:text-background focus-visible:ring-1 focus-visible:ring-background/60"
+          className="-m-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none transition-colors hover:bg-control-hover hover:text-foreground focus-visible:bg-control-hover focus-visible:text-foreground focus-visible:ring-1 focus-visible:ring-ring/60"
         >
           <CopyStateIcon copied={copied} className="size-3.5" />
         </button>
@@ -1451,7 +1451,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
              collection up. Same scene as the page before the sidebar came
              to stay. */
           <div className="flex h-full flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+            <PageScroll className="px-6 py-8">
               <div className="mx-auto max-w-content">
                 <EmptyScene icon={MessageMultiple01Icon} title={t("emptyTitle")}>
                   {canWrite && (
@@ -1480,7 +1480,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
                   )}
                 </EmptyScene>
               </div>
-            </div>
+            </PageScroll>
           </div>
         )}
       </div>
@@ -1807,17 +1807,6 @@ function FeedbackDetail({
     ? { disabledReason: boardEnabled ? undefined : t("publicNeedsBoard") }
     : undefined, [canWrite, boardEnabled, t]);
 
-  // The fade that replaces the border under the top bar: it only appears
-  // on the side where there is still something to discover.
-  //
-  // It is declared HERE, far from the JSX which uses it, and not just above
-  // him: it's a HOOK, and the loading skeleton makes it lower. Called
-  // after this `return`, it did not exist at the first rendering (`post` still null)
-  // and appeared in the second — “Rendered more hooks than during the previous
-  // render", and the entire Returns screen fell on its error boundary as soon as
-  // that a project had feedback to display.
-  const detailFade = useScrollFade<HTMLDivElement>();
-
   if (isPending || !post) return <FeedbackDetailSkeleton />;
 
   const rawDiffers =
@@ -1960,11 +1949,7 @@ function FeedbackDetail({
       </AppContentHeader>
 
       {/* Scrolling body, centered like the yard. */}
-      <div
-        ref={detailFade.ref}
-        {...detailFade.scrollProps}
-        className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
-      >
+      <PageScroll className={PAGE_SCROLL}>
         <div className="mx-auto flex max-w-content flex-col gap-6">
         {post.suggested_merge_into_id && post.suggested_title && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2">
@@ -2380,7 +2365,7 @@ function FeedbackDetail({
           />
         </div>
         </div>
-      </div>
+      </PageScroll>
 
       {canComment && (
       <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">

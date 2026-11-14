@@ -110,7 +110,7 @@ import { REPO_PROVIDERS } from "@/lib/repo-providers";
 import { PrEndpointProvider } from "@/lib/pr-endpoint-context";
 import { usePrLive } from "@/lib/use-pr-live";
 import { pullRequestStateToPropagate } from "@/lib/pr-state";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { useForgeUploads } from "@/lib/use-forge-uploads";
 import { buildAiReviewStatuses } from "@/lib/pr-ai-review";
 import type { AiReviewProvider } from "@/lib/pr-ai-review/types";
@@ -852,22 +852,6 @@ export function PrDetail({
   const [unresolvedSidebarOpen, setUnresolvedSidebarOpen] = useState(false);
   // The checks property and the merge-state control open the same popover.
   const [checksDetailsOpen, setChecksDetailsOpen] = useState(false);
-  // Soft fade up and down the feed — the same as the agent conversation and
-  // than the columns of the board: it only lights up on the side where there REMAINS some
-  // something to see, what a fixed border cannot say.
-  const feedFade = useScrollFade<HTMLDivElement>();
-  // The scroll host carries BOTH the fade's ref (edge measuring) and the raw
-  // node (the floating back-to-top scrolls it). A stable callback, and not an
-  // inline arrow: an inline identity detaches and reattaches at every render,
-  // which used to schedule one render per render and blow up as React #185
-  // under the merge flow's synchronous burst (MIN-560).
-  const scrollHostRef = useCallback(
-    (el: HTMLDivElement | null) => {
-      feedFade.ref(el);
-      scrollContainerRef.current = el;
-    },
-    [feedFade.ref],
-  );
   // “Cite” written in the draft from outside the composer: this
   // counter tells him to go take the cursor again.
   const [quoteFocus, setQuoteFocus] = useState(0);
@@ -1514,13 +1498,13 @@ export function PrDetail({
           <span className="shrink-0 font-mono text-sm text-foreground">{identifier}</span>
           <PrHeaderActionsSkeleton />
         </AppContentHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
+        <PageScroll className="px-4 app-desktop:px-6">
           <div data-testid="pr-detail-loading-content" className="mx-auto flex w-full max-w-content flex-col gap-6 py-6" aria-hidden>
             <PrMetadataSkeleton title={item.title ?? item.issue?.title} />
             <PrStatusSkeleton />
             <PrActivitySkeleton />
           </div>
-        </div>
+        </PageScroll>
       </div>
     }>
     <div className="flex h-full min-h-0 flex-col">
@@ -1766,19 +1750,16 @@ export function PrDetail({
           back-to-top of the Files tab can anchor to the viewport of the
           scroll container instead of the page. */}
       <div className="relative min-h-0 flex-1">
-        <div
-          ref={scrollHostRef}
-          onScroll={(e) => {
-            feedFade.scrollProps.onScroll();
-            setScrolledDown(e.currentTarget.scrollTop > 600);
-          }}
-          style={tab === "files" ? undefined : feedFade.scrollProps.style}
+        <PageScroll
+          ref={scrollContainerRef}
+          onScroll={(e) => setScrolledDown(e.currentTarget.scrollTop > 600)}
+          fade={tab !== "files"}
           // The VERTICAL padding has gone down a notch, on the envelope (MIN-182).
           // Measured: `position: sticky` fits on the CONTENT of the container
           // scrolling, not on its edge — a `py-6` here stopped the header from
           // 24 px file too low, and `scroll-padding-top: 0` changes nothing.
           // When lowered, it scrolls with the content and the header sticks to the banner.
-          className="h-full overflow-y-auto px-4 app-desktop:px-6"
+          className="h-full px-4 app-desktop:px-6"
         >
         <div className="mx-auto flex max-w-content flex-col gap-6 py-6">
           {/* PR title + meta. The TITLE of the pull request, not that of the
@@ -2130,7 +2111,7 @@ export function PrDetail({
             </TabsContent>
           </Tabs>
         </div>
-        </div>
+        </PageScroll>
 
         {/* The diff of a big PR scrolls far: one floating gesture brings back
             the toolbar and the file tree, without hunting for the wheel. */}

@@ -508,6 +508,9 @@ export function ObjectiveDialog({
   }, [open, initialDraftId, drafts.find]);
 
   const showsName = !writesName || nameRequested || form.name !== "";
+  // A phone raises its keyboard for a new objective only: editing one opens
+  // on what it already says.
+  const focusesOnOpen = !mobile || !objective;
   const hasDescription = form.description.trim() !== "" || editorNonEmptyRef.current;
   const canSubmitText = form.name.trim() !== "" || (writesName && hasDescription);
   const showsSmartFillField = (field: "targetDate" | "color") =>
@@ -822,7 +825,7 @@ export function ObjectiveDialog({
                 key={resets}
                 id={titleId}
                 enterKeyHint={mobile ? "next" : undefined}
-                autoFocus={!mobile && !focusDescription && !writesName}
+                autoFocus={focusesOnOpen && !focusDescription && !writesName}
                 required={!writesName}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -857,7 +860,8 @@ export function ObjectiveDialog({
                 key={editorKey}
                 mentions={mentions}
                 onLeaveTop={titleBody.leaveBody}
-                autoFocus={focusDescription || (!mobile && writesName && !showsName)}
+                // "requested" on a phone: the editor holds back a plain `true`.
+                autoFocus={(focusDescription || (focusesOnOpen && writesName && !showsName)) && (mobile ? "requested" : true)}
                 value={form.description}
                 uploadScope={activeProjectId ? `projects/${activeProjectId}` : null}
                 onUploadingChange={setImagesUploading}

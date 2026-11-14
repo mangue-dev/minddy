@@ -15,7 +15,7 @@ import { AppContentHeader } from "@/components/app-content-header";
 import { AdminHeaderSlotContext } from "@/components/admin/admin-header-slot";
 import { SidebarNavRail } from "@/components/sidebar-nav-rail";
 import { matchesFilter } from "@/components/sidebar-filter-field";
-import { useScrollFade } from "@/lib/use-scroll-fade";
+import { PageScroll } from "@/components/page-scroll";
 import { useAdminCapabilities } from "@/lib/use-admin-capabilities";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
 import {
@@ -137,7 +137,6 @@ export function AdminDashboard() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const reduceMotion = useReducedMotion();
-  const contentFade = useScrollFade<HTMLDivElement>();
   // A query change on the page already shown needs no server round trip:
   // Next's patched history keeps `useSearchParams` in sync, so tabs flip at
   // once. The state must not be Next's own (`window.history.state`): Next
@@ -337,11 +336,7 @@ export function AdminDashboard() {
           <div ref={setHeaderHost} className="flex min-w-0 flex-1 items-center justify-end gap-1" />
         </AppContentHeader>
 
-        <div
-          ref={contentFade.ref}
-          {...contentFade.scrollProps}
-          className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
-        >
+        <PageScroll className={PAGE_SCROLL}>
           <div className={cn("mx-auto flex flex-col gap-4", ADMIN_MAX_WIDTH)}>
             {/* Only the open panel is mounted: each one fetches its data
                 when it mounts, and the others would load for nothing. */}
@@ -352,7 +347,7 @@ export function AdminDashboard() {
               {active === "instance" && <AdminInstanceDashboard />}
             </AdminHeaderSlotContext.Provider>
           </div>
-        </div>
+        </PageScroll>
       </div>
     </div>
   );

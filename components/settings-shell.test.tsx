@@ -24,7 +24,7 @@ vi.mock("@/components/secondary-sidebar", () => ({
 vi.mock("@/lib/mobile-collection-state", () => ({
   useMobileCollectionState: (_path: string, _slot: string, initial: string) => [initial, () => {}],
 }));
-vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: { current: null }, scrollProps: {} }) }));
+vi.mock("@/lib/use-scroll-fade", () => ({ useScrollFade: () => ({ ref: () => {}, scrollProps: { onScroll: () => {} } }) }));
 vi.mock("@/lib/settings-sections", () => ({
   SETTINGS_SECTION_PARAM: "section",
   settingsSectionAnchor: (id: string) => id,

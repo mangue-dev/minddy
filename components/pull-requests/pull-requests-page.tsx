@@ -81,6 +81,7 @@ import {
   isTerminalPrState,
 } from "@/lib/sidebar-deep-link";
 import { commentTarget } from "@/lib/comment-focus";
+import { PageScroll } from "@/components/page-scroll";
 
 const PrDetail = dynamic(
   loadPullRequestDetailSurface,
@@ -1003,9 +1004,9 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
 
   if (!loading && readFailed) {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+      <PageScroll className="px-6 py-8">
         <PrListReadFailed error={active.readError} onRetry={() => void active.refetch()} />
-      </div>
+      </PageScroll>
     );
   }
 
@@ -1015,7 +1016,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
     return (
       <div className="flex h-full min-h-0">
         {sidebar}
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-6 py-8">
+        <PageScroll className="min-w-0 px-6 py-8">
           <div className="mx-auto max-w-content">
             {projects.length === 0 ? (
               <EmptyScene icon={GitPullRequestIcon} title={t("emptyNoProject")}>
@@ -1033,7 +1034,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
               />
             )}
           </div>
-        </div>
+        </PageScroll>
       </div>
     );
   }
