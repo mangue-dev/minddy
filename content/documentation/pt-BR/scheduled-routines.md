@@ -17,7 +17,7 @@
   "revision": 13,
   "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-06",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -34,6 +34,7 @@
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
       "components/routines/routines-panel.tsx",
+      "components/routines/routines-home.tsx",
       "components/routines/use-routine-actions.tsx",
       "docs/security/project-roles.md",
       "lib/project-roles.ts"
@@ -41,9 +42,9 @@
   },
   "review": {
     "revision": 13,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-06"
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-983: routines home with the Numo composer, examples and Start from scratch; source audit against the change and catalogs; no browser walkthrough of the procedures; existing figure shows the trigger editor, unchanged, not recaptured)",
+    "language": "agent:claude-code (pt-BR changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (pt-BR MIN-983 passages, UI labels checked against messages/pt-BR.json; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [],
   "aliases": [],
@@ -77,9 +78,9 @@
 
 ## Criar uma rotina {#scheduled-routines}
 
-Somente o proprietário do projeto pode criar, editar ou ativar uma rotina. Abra Rotinas, escolha um projeto seu e escreva as instruções para Numo. Mencione tickets, páginas ou objetivos relevantes. Cada execução tem uma conversa privada com Numo, histórico e ferramentas minddy. As rotinas organizam e acompanham o trabalho, por exemplo uma triagem semanal, uma revisão de tickets parados ou um resumo semanal; elas não alteram o código do repositório.
+Somente o proprietário do projeto pode criar, editar ou ativar uma rotina. Abra **Rotinas**. Sem nenhuma rotina selecionada, a página mostra o campo de texto do Numo e rotinas de exemplo; o **+** no topo da lista ou ao lado de um projeto também leva até ela. Descreva a rotina no campo de texto, o que o Numo deve fazer e quando, e envie: a conversa com o Numo ocupa a página, o Numo pergunta o que falta, como o projeto, e configura a rotina. Um exemplo em **Destaques**, **Triagem**, **Acompanhamento**, **Relatórios** ou **Planejamento** preenche o campo com as instruções dele, que você pode ajustar antes de enviar. Para configurar você mesmo, escolha **Começar do zero**, escolha um projeto seu e escreva as instruções para Numo. Mencione tickets, páginas ou objetivos relevantes. Sem um provedor de IA, a página não tem campo de texto e um exemplo abre **Começar do zero** com as instruções dele. Cada execução tem uma conversa privada com Numo, histórico e ferramentas minddy. As rotinas organizam e acompanham o trabalho, por exemplo uma triagem semanal, uma revisão de tickets parados ou um resumo semanal; elas não alteram o código do repositório.
 
-Escolha **Agendado** ou **Evento**. As chegadas a um banco são uma opção da lista de eventos.
+Em **Começar do zero**, escolha **Agendado** ou **Evento**. As chegadas a um banco são uma opção da lista de eventos.
 
 - **Agendado:** frequência diária, semanal ou mensal, horário e seu fuso. Confira a prévia da primeira execução.
 - **Evento:** criação de ticket, entrada em um status específico, atribuição, comentário em um ticket acompanhado, recebimento de feedback ou uma nova entrada em um banco. Selecione status, pessoa ou ticket quando solicitado. O gatilho de status inclui tickets criados diretamente nesse status. Uma atribuição exige uma mudança real da pessoa responsável. Um comentário escrito por um leitor não inicia uma rotina de comentário.
@@ -104,7 +105,7 @@ Uma entrada sem a propriedade exigida aguarda uma edição que satisfaça o filt
 
 Abra a rotina para consultar as esperas, mudar instruções ou gatilho, pausar ou ler as execuções. Na página dela, o proprietário escreve a instrução diretamente (ela é salva enquanto você digita e continua igual nas suas abas e dispositivos abertos, mesmo quando Numo a reescreve), expande **Gatilho** para mudá-lo, escolhe o **Limite de gastos** e alterna entre **Ativa** e **Pausada** pelo selo de estado no topo. Pausar, excluir ou mudar a configuração invalida as esperas. Retomar passa a ouvir eventos futuros sem repetir chegadas antigas. A execução manual funciona com qualquer gatilho sem aguardar seu evento e também consome orçamento.
 
-Clique com o botão direito em uma rotina da lista para abrir a última execução sem selecioná-la primeiro; **Abrir a última execução** fica indisponível até a rotina ter sido executada. O proprietário do projeto também pode escolher **Executar agora**, **Pausar** ou **Retomar**, **Editar** ou **Mover para a lixeira** no mesmo menu. **Retomar** fica indisponível quando a instância não pode agendar rotinas. Os outros membros só veem entradas que não alteram a rotina. Para criar uma rotina, clique com o botão direito em **Rotinas** na barra lateral e escolha **Nova rotina**.
+Clique com o botão direito em uma rotina da lista para abrir a última execução sem selecioná-la primeiro; **Abrir a última execução** fica indisponível até a rotina ter sido executada. O proprietário do projeto também pode escolher **Executar agora**, **Pausar** ou **Retomar**, **Editar** ou **Mover para a lixeira** no mesmo menu. **Retomar** fica indisponível quando a instância não pode agendar rotinas. Os outros membros só veem entradas que não alteram a rotina. Para criar uma rotina, clique com o botão direito em **Rotinas** na barra lateral e escolha **Nova rotina**: a página abre no campo de texto.
 
 Mantenha Shift pressionado e clique em rotinas da lista para selecionar várias; um clique no espaço vazio da lista limpa a seleção. **Ações** na barra flutuante, ou Command+K no macOS ou Ctrl+K nos outros sistemas, executa agora as rotinas selecionadas das quais você é proprietário, as pausa ou retoma, ou as move para a lixeira após uma confirmação; rotinas de projetos que não são seus ficam inalteradas, e cada execução consome uso. **Pergunte ao Numo** abre o Numo com todas as rotinas selecionadas no contexto.
 

@@ -43,9 +43,10 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 
 /**
  * Set up a ROUTINE (MIN-185), by hand: where, what, and on what schedule.
+ * The routines home opens it with "Start from scratch" (MIN-983); describing
+ * the routine to Numo there is the other way in.
  *
- * **A wizard, not a form**, and it is the only door to creation
- * manual. A routine is resolved in four independent decisions, three of which
+ * **A wizard, not a form**, and it is the only door to manual creation. A routine is resolved in four independent decisions, three of which
  * have no obvious answer; an eight-field form would ask them
  * four at the same time. The [shared shell](components/wizard/wizard-dialog.tsx)
  * provides modal, stepper, animation and buttons — it remains to be said
@@ -64,19 +65,11 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 
 type StepId = "project" | "job" | "schedule" | "done";
 
-/** Pre-written instructions for step `job` — the blank page is the real one
-    obstacle of this step, and these three describe what a routine does
-    better: return to what we never look at spontaneously. */
-const EXAMPLE_KEYS = [
-  "exampleTriage",
-  "exampleStale",
-  "exampleDigest",
-] as const;
-
 export function CreateRoutineWizard({
   open,
   onOpenChange,
   initialProjectId,
+  initialPrompt,
   onCreated,
 }: {
   open: boolean;
@@ -84,6 +77,8 @@ export function CreateRoutineWizard({
   /** Opened from the header of a project: this project is already chosen, and its
    * step disappears from the route. */
   initialProjectId?: string | null;
+  /** An example's instruction from the routines home, to start the `job` step with. */
+  initialPrompt?: string;
   /** The created routine — the caller selects it and refreshes its list. */
   onCreated: (routine: Routine) => void;
 }) {
@@ -106,7 +101,7 @@ export function CreateRoutineWizard({
   const [chosenProjectId, setChosenProjectId] = useState(
     initialProjectId ?? "",
   );
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(initialPrompt ?? "");
   const [promptMentions, setPromptMentions] = useState<AssistantMention[]>([]);
   /** What a passage is allowed to spend, as a % of the monthly budget. */
   const [spendCap, setSpendCap] = useState(DEFAULT_MAX_SPEND_PERCENT);
@@ -165,7 +160,7 @@ export function CreateRoutineWizard({
     sessionRef.current += 1;
     setCreating(false);
     setChosenProjectId(initialProjectId ?? "");
-    setPrompt("");
+    setPrompt(initialPrompt ?? "");
     setPromptMentions([]);
     setSpendCap(DEFAULT_MAX_SPEND_PERCENT);
     setTrigger({ type: "schedule" });
@@ -307,7 +302,9 @@ export function CreateRoutineWizard({
                 role="radio"
                 aria-checked={projectId === p.id}
                 onClick={() => {
-                  if (p.id !== projectId) {
+                  // Mentions belong to a project: switching clears them. A
+                  // first pick keeps the example the wizard opened with.
+                  if (projectId && p.id !== projectId) {
                     setPrompt("");
                     setPromptMentions([]);
                   }
@@ -354,25 +351,6 @@ export function CreateRoutineWizard({
             }}
             disabled={creating}
           />
-
-          {/* Three pre-written instructions: they replace the field, they do not
-              are not added to it — we choose a starting point, we do not stick
-              three examples end to end. */}
-          <div className="flex flex-wrap gap-2">
-            {EXAMPLE_KEYS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setPrompt(t(key));
-                  setPromptMentions([]);
-                }}
-                className="rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-brand/40 hover:text-foreground"
-              >
-                {t(`${key}Label` as "exampleTriageLabel")}
-              </button>
-            ))}
-          </div>
 
           <p className="text-xs text-muted-foreground">{t("notifyHint")}</p>
         </div>

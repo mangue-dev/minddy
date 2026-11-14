@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { PAGE_COLUMN } from "@/components/pages/page-column";
 import { cn } from "@/lib/utils";
 import { AppContentHeader } from "@/components/app-content-header";
 import { SecondarySidebar } from "@/components/secondary-sidebar";
@@ -16,17 +17,20 @@ import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
  * Server Components: no "use client" here, `Skeleton` is a simple <div>.
  */
 
-/** Two families of templates in the app: centered document page, and full-screen board. */
+/**
+ * Centred pages share one content width (`max-w-content`, MIN-983). The two
+ * names stay for the callers that once chose a narrow or a wide column.
+ */
 type DocWidth = "3xl" | "5xl";
 
 const MAX_W: Record<DocWidth, string> = {
-  "3xl": "max-w-3xl",
-  "5xl": "max-w-5xl",
+  "3xl": "max-w-content",
+  "5xl": "max-w-content",
 };
 
 /**
  * Document page: title then stacked blocks. Resumes
- * `mx-auto w-full max-w-Nxl px-6 py-10` of the affected pages.
+ * `mx-auto w-full max-w-content px-6 py-10` of the affected pages.
  */
 export function DocPageSkeleton({
   width = "5xl",
@@ -95,7 +99,7 @@ export function ListDetailSkeleton({
             emptyHeader && "app-desktop:pt-6",
           )}
         >
-          <div className="mx-auto flex max-w-3xl flex-col gap-4">
+          <div className="mx-auto flex max-w-content flex-col gap-4">
             {Array.from({ length: cards }).map((_, i) => (
               <Skeleton key={i} className="h-32 rounded-xl" />
             ))}
@@ -170,8 +174,8 @@ export function PageDocumentSkeleton({ panel = false }: { panel?: boolean }) {
       {!panel && <AppContentHeader contentClassName="gap-2"><span /></AppContentHeader>}
       <div
         className={cn(
-          "relative mx-auto w-full max-w-3xl px-6 py-10",
-          panel ? "app-desktop:px-16" : "app-desktop:pl-24 app-desktop:pr-10"
+          "relative mx-auto w-full px-6 py-10",
+          panel ? PAGE_COLUMN.panelDocument : PAGE_COLUMN.document
         )}
       >
         <PageTitleSkeleton />
@@ -202,7 +206,7 @@ export function DatabaseSkeleton({ panel = false }: { panel?: boolean }) {
       <div
         className={cn(
           "relative mx-auto w-full px-6 py-10",
-          panel ? "max-w-3xl app-desktop:pl-24 app-desktop:pr-16" : "max-w-none app-desktop:pl-24 app-desktop:pr-10"
+          panel ? PAGE_COLUMN.panelDatabase : PAGE_COLUMN.database
         )}
       >
         {/* A database spans the pane: a share of it would be far longer than

@@ -2412,8 +2412,8 @@ html.marquee-drawing * {
     padding-left: 96px;
     margin-left: -96px;
   }
-  /* The right reserve of a page column (`app-desktop:pr-10`), where the
-     hovered block's comment button sits. */
+  /* The part of a page column's right reserve (components/pages/page-column.ts)
+     where the hovered block's comment button sits. */
   .page-editor[data-comment-gutter] .ProseMirror {
     padding-right: 40px;
     margin-right: -40px;

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeading } from "@/components/page-heading";
 import { AdminHeaderActions } from "@/components/admin/admin-header-slot";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, FileExportIcon, FileImportIcon } from "@hugeicons/core-free-icons";
@@ -171,10 +172,7 @@ export function AdminModelsDashboard() {
   return (
     /* Width and margins inherited from the shell (`admin-dashboard`). */
     <div className="space-y-8">
-      <header className="min-w-0">
-        <h2 className="text-sm font-semibold">{t("title")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
-      </header>
+      <PageHeading as="h2" title={t("title")} description={t("subtitle")} />
       {/* Import and export drive the whole tab: they sit in the pane's header. */}
       <AdminHeaderActions>
         <ModelsFileActions values={values} onImported={reload} />

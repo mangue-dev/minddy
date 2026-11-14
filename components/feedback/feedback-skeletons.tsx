@@ -54,7 +54,7 @@ const PROPERTY_VALUE_WIDTHS = ["w-20", "w-6", "w-16", "w-20", "w-28", "w-24", "w
 /**
  * The opened post (`FeedbackDetail`): the borderless content header with the
  * Promote, Decline and “…” actions on the right, the scrolling column
- * (`px-4 py-6`, `max-w-3xl`, `gap-6`) with the title, the description and the
+ * (`px-4 py-6`, `max-w-content`, `gap-6`) with the title, the description and the
  * key/value rows, then the activity, and the comment composer docked below.
  */
 export function FeedbackDetailSkeleton() {
@@ -70,7 +70,7 @@ export function FeedbackDetailSkeleton() {
         </div>
       </AppContentHeader>
       <div className="min-h-0 flex-1 overflow-hidden px-4 py-6 app-desktop:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <div className="mx-auto flex max-w-content flex-col gap-6">
           {/* Title (text-2xl, leading-tight), then the description. */}
           <div className="flex flex-col gap-2">
             <div className="flex h-[1.875rem] items-center">
@@ -105,7 +105,7 @@ export function FeedbackDetailSkeleton() {
         </div>
       </div>
       <div className="shrink-0 px-4 py-3 app-desktop:px-6">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-content">
           <Skeleton className="h-[5.5rem] w-full rounded-lg" />
         </div>
       </div>

@@ -61,6 +61,11 @@ const RoutineDetail = dynamic(
   },
 );
 
+const RoutinesHome = dynamic(
+  () => import("@/components/routines/routines-home").then((m) => m.RoutinesHome),
+  { ssr: false },
+);
+
 const CreateRoutineWizard = dynamic(
   () =>
     import("@/components/routines/create-routine-wizard").then(
@@ -119,8 +124,14 @@ export function RoutinesPanel({
   const actions = useRoutineActions({ schedulingConfigured: routineSchedulingConfigured });
   const [trashTarget, setTrashTarget] = useState<Routine | null>(null);
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
+  const [wizardPrompt, setWizardPrompt] = useState<string | undefined>(undefined);
+  // A fresh wizard per opening: its draft starts from the prompt given then.
+  const [wizardSession, setWizardSession] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardMounted, setWizardMounted] = useState(false);
+  // The home's project, set by a project header's "+" (MIN-983).
+  const [homeProjectId, setHomeProjectId] = useState<string | null>(null);
+  const [homeFocusRequest, setHomeFocusRequest] = useState(0);
   const [query, setQuery] = useMobileCollectionState("/routines", "query", "");
   // The groups the user toggled away from their default: a project with
   // routines starts open, an empty one starts collapsed.
@@ -136,6 +147,7 @@ export function RoutinesPanel({
     const warm = () => {
       void import("@/components/routines/routine-detail");
       void import("@/components/routines/create-routine-wizard");
+      void import("@/components/routines/routines-home");
     };
     if (typeof requestIdleCallback === "function") {
       const id = requestIdleCallback(warm, { timeout: 4000 });
@@ -276,6 +288,7 @@ export function RoutinesPanel({
   );
 
   const anyEligible = projects.some((p) => canCreateIn(p.id));
+  const eligibleProjects = offeredProjects.filter((p) => canCreateIn(p.id));
   /**
  * WHY we can't put anything down, when this is the case. Three different walls,
  * and confusing them lets you search: no project at all, projects but
@@ -306,18 +319,37 @@ export function RoutinesPanel({
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: routinesQueryKey() });
 
-  const openWizard = (projectId?: string | null) => {
+  /** "Start from scratch" on the home: the manual wizard. */
+  const openWizard = (projectId?: string | null, prompt?: string) => {
     setWizardProjectId(projectId ?? null);
+    setWizardPrompt(prompt);
+    setWizardSession((n) => n + 1);
     setWizardMounted(true);
     setWizardOpen(true);
   };
 
+  /**
+   * Every "+" leads to the routines home (MIN-983), where the user describes
+   * the routine to Numo, picks an example or starts from scratch. A project
+   * header's "+" carries its project there. Browsing from another page, the
+   * "+" navigates to the Routines page itself.
+   */
+  const goHome = (projectId?: string | null) => {
+    if (browse) {
+      browse.onSelect("/routines?new=1");
+      return;
+    }
+    setHomeProjectId(projectId ?? null);
+    onSelect(null);
+    setHomeFocusRequest((n) => n + 1);
+  };
+
   // "New routine" from the Routines row of the sidebar: wait for the
-  // scheduler and project ownership to be known, then open the wizard — or
+  // scheduler and project ownership to be known, then show the home — or
   // say why no routine can be created here.
   useEffect(() => {
     if (!createIntent || agentCapabilitiesLoading || projectsLoading) return;
-    if (anyEligible) openWizard();
+    if (anyEligible) goHome();
     else if (emptyReason) toast.error(t(emptyReason as "emptyNoProject"));
     onCreateIntentConsumed?.();
   }, [createIntent, agentCapabilitiesLoading, projectsLoading, anyEligible]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -507,13 +539,11 @@ export function RoutinesPanel({
  “+” — but only from the second routine: as long as there is none, a stack of empty accordions says “there is nothing
  here” less well than a sentence and a button.
 
- One only call to action: the wizard. The pre-written examples live IN
- its `job` step — providing them twice would require keeping them updated in
- two places. */
+ Its button leads to the routines home, where the examples are. */
     <div className="px-3 py-6">
       <EmptyScene icon={ROUTINE_ICON} title={emptyTitle} size="compact">
         {anyEligible ? (
-          <Button size="sm" onClick={() => openWizard()}>
+          <Button size="sm" onClick={() => goHome()}>
             <HugeiconsIcon icon={Add01Icon} />
             {t("createFirst")}
           </Button>
@@ -555,7 +585,7 @@ export function RoutinesPanel({
                   <Button
                     size="icon-sm"
                     variant="ghost"
-                    onClick={() => openWizard(g.project?.id)}
+                    onClick={() => goHome(g.project?.id)}
                     aria-label={t("newInProject", { project: g.project?.name ?? "" })}
                     className="pointer-events-none size-6 shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/project:pointer-events-auto group-hover/project:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100 touch:pointer-events-auto touch:opacity-100"
                   >
@@ -625,7 +655,7 @@ export function RoutinesPanel({
                 <Button
                   size="icon-sm"
                   variant="ghost"
-                  onClick={() => openWizard()}
+                  onClick={() => goHome()}
                   className={SIDEBAR_HEADER_ACTION_CLASS}
                   aria-label={t("newRoutine")}
                 >
@@ -643,9 +673,11 @@ export function RoutinesPanel({
 
   const wizard = wizardMounted ? (
         <CreateRoutineWizard
+          key={wizardSession}
           open={wizardOpen}
           onOpenChange={setWizardOpen}
           initialProjectId={wizardProjectId}
+          initialPrompt={wizardPrompt}
           onCreated={(routine) => {
             void refresh();
             onSelect(routine.id);
@@ -681,32 +713,28 @@ export function RoutinesPanel({
              before having the answer would flash an empty state on a list
              that is not empty, and a blank pane read as nothing coming. */
           <RoutineDetailSkeleton />
+        ) : agentCapabilitiesLoading || projectsLoading ? (
+          // Whether the home can be offered is not known yet.
+          <div className="flex-1" />
+        ) : anyEligible ? (
+          /* Nothing selected: the routines home (MIN-983), where a routine
+             starts — described to Numo, from an example, or by hand. The
+             project is known when a header's "+" led here, or when only one
+             project can take a routine. */
+          <RoutinesHome
+            projectId={homeProjectId ?? (eligibleProjects.length === 1 ? eligibleProjects[0].id : null)}
+            focusRequest={homeFocusRequest}
+            onStartFresh={(prompt) => openWizard(homeProjectId, prompt)}
+          />
         ) : routines.length === 0 ? (
-          /* NO routine: the pane says the SAME thing as the column, en
- large. This is the surface we look at when arriving at the tab —
- leaving “choose a routine” when there is none
- sent searching in an empty column. */
+          /* NO routine and no way to create one: the pane says WHY, in large,
+             the same sentence as the column. */
           <div className="flex flex-1 flex-col items-center justify-center p-6">
-            <EmptyScene icon={ROUTINE_ICON} title={emptyTitle}>
-              {anyEligible ? (
-                <Button onClick={() => openWizard()}>
-                  <HugeiconsIcon icon={Add01Icon} className="size-4" />
-                  {t("createFirst")}
-                </Button>
-              ) : null}
-            </EmptyScene>
+            <EmptyScene icon={ROUTINE_ICON} title={emptyTitle} />
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6">
             <p className="text-sm text-muted-foreground">{t("noSelection")}</p>
-            {/* The gesture, under the sentence: arriving here without anything selected,
- is as often wanting to place one as wanting to read one. */}
-            {anyEligible ? (
-              <Button size="sm" variant="outline" onClick={() => openWizard()}>
-                <HugeiconsIcon icon={Add01Icon} className="size-4" />
-                {t("newRoutine")}
-              </Button>
-            ) : null}
           </div>
         )}
       </div>

@@ -1016,7 +1016,7 @@ function PullRequestsPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
       <div className="flex h-full min-h-0">
         {sidebar}
         <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-6 py-8">
-          <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-content">
             {projects.length === 0 ? (
               <EmptyScene icon={GitPullRequestIcon} title={t("emptyNoProject")}>
                 <Button onClick={openCreateProject}>

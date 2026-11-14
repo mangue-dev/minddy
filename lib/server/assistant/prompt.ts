@@ -770,6 +770,12 @@ export function buildPageContextBlock(ctx: AssistantPageContext): string {
       `Two things about routines that change your answer: only the project's OWNER can create or change one, because it is their usage budget that leaves at every occurrence — a member gets a refusal you must relay plainly rather than retry. And rewriting the instruction REWRITES the routine's title, which minddy derives from it; say so when you change it.`,
     );
   }
+  if (ctx.newRoutine) {
+    lines.push(
+      "- The user wrote from the Routines page's composer: they are describing a NEW routine to set up, not a task to do now.",
+      `Set it up with create_routine${ctx.projectId ? ` on project ${ctx.projectId}` : ""} instead of doing the work once. Follow the usual routine rules: ask about the missing decisions in one bundled round${ctx.projectId ? "" : " (which project, when several are possible)"}, then create it and say when it first runs. If the request is not something a routine can do, say so and suggest the closest routine.`,
+    );
+  }
   if (ctx.selectedItems?.length) lines.push(...selectedItemsLines(ctx.selectedItems, ctx.projectId));
   if (ctx.pullRequestId) {
     lines.push(

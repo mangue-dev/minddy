@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_SCROLL } from "@/components/page-heading";
 import { BotIcon, DollarCircleIcon as CircleDollarSign, ServerStack01Icon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -84,9 +85,9 @@ const ICONS: Record<AdminTab, AppIcon> = {
   instance: ServerStack01Icon,
 };
 
-/** The content column is wider than the settings column (`max-w-3xl`):
- the cost table is already cramped there. */
-const ADMIN_MAX_WIDTH = "max-w-5xl";
+/** The content column: the page content width shared by every centred page
+ (MIN-983), the same as the settings column. */
+const ADMIN_MAX_WIDTH = "max-w-content";
 const FOCUS_HIGHLIGHT_MS = 2000;
 const FOCUS_WAIT_MS = 5000;
 
@@ -339,7 +340,7 @@ export function AdminDashboard() {
         <div
           ref={contentFade.ref}
           {...contentFade.scrollProps}
-          className="min-h-0 flex-1 overflow-y-auto px-4 pt-1 pb-8 app-desktop:px-6 app-desktop:pt-6"
+          className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
         >
           <div className={cn("mx-auto flex flex-col gap-4", ADMIN_MAX_WIDTH)}>
             {/* Only the open panel is mounted: each one fetches its data

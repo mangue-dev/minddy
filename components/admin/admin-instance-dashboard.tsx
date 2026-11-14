@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeading } from "@/components/page-heading";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, Cancel01Icon, Clock01Icon, PencilEdit02Icon, Refresh01Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -210,10 +211,13 @@ export function AdminInstanceDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <header id={adminSectionAnchor(ADMIN_SECTIONS.instanceVariables)} className="scroll-mt-20 rounded-lg">
-        <h2 className="text-sm font-semibold">{t("instance.title")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("instance.subtitle")}</p>
-      </header>
+      <PageHeading
+        as="h2"
+        id={adminSectionAnchor(ADMIN_SECTIONS.instanceVariables)}
+        className="scroll-mt-20 rounded-lg"
+        title={t("instance.title")}
+        description={t("instance.subtitle")}
+      />
 
       <div className="relative max-w-sm">
         <HugeiconsIcon icon={Search01Icon} className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />

@@ -17,7 +17,7 @@
   "revision": 13,
   "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-06",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -34,6 +34,7 @@
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
       "components/routines/routines-panel.tsx",
+      "components/routines/routines-home.tsx",
       "components/routines/use-routine-actions.tsx",
       "docs/security/project-roles.md",
       "lib/project-roles.ts"
@@ -41,9 +42,9 @@
   },
   "review": {
     "revision": 13,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-06"
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-983: routines home with the Numo composer, examples and Start from scratch; source audit against the change and catalogs; no browser walkthrough of the procedures; existing figure shows the trigger editor, unchanged, not recaptured)",
+    "language": "agent:claude-code (fr changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (fr MIN-983 passages, UI labels checked against messages/fr.json; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [],
   "aliases": [],
@@ -77,9 +78,9 @@
 
 ## Créer une routine {#scheduled-routines}
 
-Seul le propriétaire du projet peut créer, modifier ou activer une routine. Ouvrez Routines, choisissez un projet dont vous êtes propriétaire et rédigez les instructions pour Numo. Mentionnez les tickets, pages ou objectifs utiles. Chaque occurrence possède une conversation Numo privée, un historique et les outils minddy. Les routines organisent et suivent le travail, par exemple un tri hebdomadaire, une revue des tickets inactifs ou un résumé hebdomadaire ; elles ne modifient pas le code du dépôt.
+Seul le propriétaire du projet peut créer, modifier ou activer une routine. Ouvrez **Routines**. Sans routine sélectionnée, la page affiche le champ de saisie de Numo et des exemples de routines ; le **+** en haut de la liste ou à côté d’un projet y mène aussi. Décrivez la routine dans le champ de saisie, ce que Numo doit faire et quand, puis envoyez : la conversation avec Numo occupe la page, Numo demande ce qui manque, comme le projet, puis met la routine en place. Un exemple sous **À la une**, **Tri**, **Relances**, **Comptes rendus** ou **Planification** remplit le champ avec ses instructions, que vous pouvez ajuster avant d’envoyer. Pour la configurer vous-même, choisissez **Partir de zéro**, choisissez un projet dont vous êtes propriétaire et rédigez les instructions pour Numo. Mentionnez les tickets, pages ou objectifs utiles. Sans fournisseur d’IA, la page n’a pas de champ de saisie et un exemple ouvre **Partir de zéro** avec ses instructions. Chaque occurrence possède une conversation Numo privée, un historique et les outils minddy. Les routines organisent et suivent le travail, par exemple un tri hebdomadaire, une revue des tickets inactifs ou un résumé hebdomadaire ; elles ne modifient pas le code du dépôt.
 
-Choisissez **Programmé** ou **Événement**. L’arrivée dans une base est un choix de la liste des événements.
+Dans **Partir de zéro**, choisissez **Programmé** ou **Événement**. L’arrivée dans une base est un choix de la liste des événements.
 
 - **Programmé :** choisissez une fréquence quotidienne, hebdomadaire ou mensuelle, une heure et votre fuseau. Vérifiez l’aperçu de la première exécution.
 - **Événement :** choisissez la création d’un ticket, son entrée dans un statut cible, une affectation, un commentaire sur un ticket suivi, la réception d’un retour ou une nouvelle entrée dans une base. Sélectionnez le statut, la personne ou le ticket demandé. Le déclencheur de statut inclut les tickets créés directement dans ce statut. Une affectation exige un changement réel de personne assignée. Un commentaire écrit par un lecteur ne déclenche pas de routine de commentaire.
@@ -104,7 +105,7 @@ Une entrée créée sans sa propriété requise attend qu’une modification sat
 
 Ouvrez la routine pour consulter ses attentes, modifier ses instructions ou son déclencheur, la mettre en pause ou lire ses occurrences. Sur sa page, le propriétaire écrit l’instruction directement (elle est enregistrée au fil de la frappe et reste identique dans vos onglets et appareils ouverts, même quand Numo la réécrit), déplie **Déclencheur** pour le modifier, choisit le **Plafond de dépense** et passe de **Active** à **En pause** depuis le badge d’état en haut. La pause, la suppression ou une modification de configuration invalide les attentes. La réactivation écoute les futurs événements sans rejouer les anciennes arrivées. Une exécution manuelle peut lancer chaque type de routine sans attendre son événement et consomme également du budget.
 
-Faites un clic droit sur une routine de la liste pour ouvrir sa dernière exécution sans la sélectionner d’abord ; **Ouvrir la dernière exécution** reste indisponible si la routine n’a jamais été exécutée. Le propriétaire du projet peut aussi choisir **Lancer maintenant**, **Mettre en pause** ou **Réactiver**, **Modifier** ou **Déplacer vers la corbeille** depuis le même menu. **Réactiver** est indisponible lorsque l’instance ne peut pas planifier de routines. Les autres membres ne voient que les entrées qui ne modifient pas la routine. Pour créer une routine, faites un clic droit sur **Routines** dans la barre latérale et choisissez **Nouvelle routine**.
+Faites un clic droit sur une routine de la liste pour ouvrir sa dernière exécution sans la sélectionner d’abord ; **Ouvrir la dernière exécution** reste indisponible si la routine n’a jamais été exécutée. Le propriétaire du projet peut aussi choisir **Lancer maintenant**, **Mettre en pause** ou **Réactiver**, **Modifier** ou **Déplacer vers la corbeille** depuis le même menu. **Réactiver** est indisponible lorsque l’instance ne peut pas planifier de routines. Les autres membres ne voient que les entrées qui ne modifient pas la routine. Pour créer une routine, faites un clic droit sur **Routines** dans la barre latérale et choisissez **Nouvelle routine** : la page s’ouvre sur le champ de saisie.
 
 Maintenez Maj et cliquez sur des routines de la liste pour en sélectionner plusieurs ; un clic dans l’espace vide de la liste vide la sélection. **Actions** dans la barre flottante, ou Command+K sur macOS ou Ctrl+K ailleurs, lance maintenant les routines sélectionnées dont vous êtes propriétaire, les met en pause ou les réactive, ou les déplace vers la corbeille après confirmation ; les routines des projets qui ne vous appartiennent pas restent inchangées, et chaque exécution consomme de l’usage. **Demander à Numo** ouvre Numo avec toutes les routines sélectionnées dans son contexte.
 

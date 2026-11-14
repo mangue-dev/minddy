@@ -258,6 +258,7 @@ function parsePageContext(raw: unknown): AssistantPageContext | null {
     feedbackTitle: pick("feedbackTitle"),
     routineId: pick("routineId"),
     routineTitle: pick("routineTitle"),
+    newRoutine: obj.newRoutine === true ? true : undefined,
     viewId: pick("viewId"),
     viewName: pick("viewName"),
     cycleId: pick("cycleId"),

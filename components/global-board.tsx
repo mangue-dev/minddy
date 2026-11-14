@@ -680,7 +680,7 @@ function GlobalBoardInner() {
  board of a project. The ticket is created from the shared dialog, which
  asks WHICH project: here, none is in front of you. */
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-          <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-content">
             {projects.length === 0 ? (
               <EmptyScene icon={FolderAddIcon} title={t("emptyNoProject")}>
                 <Button onClick={openCreateProject}>

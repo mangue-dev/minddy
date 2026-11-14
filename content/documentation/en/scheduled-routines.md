@@ -17,7 +17,7 @@
   "revision": 13,
   "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-06",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -34,6 +34,7 @@
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
       "components/routines/routines-panel.tsx",
+      "components/routines/routines-home.tsx",
       "components/routines/use-routine-actions.tsx",
       "docs/security/project-roles.md",
       "lib/project-roles.ts"
@@ -41,9 +42,9 @@
   },
   "review": {
     "revision": 13,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-924 passage; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-06"
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-983: routines home with the Numo composer, examples and Start from scratch; source audit against the change and catalogs; no browser walkthrough of the procedures; existing figure shows the trigger editor, unchanged, not recaptured)",
+    "language": "agent:claude-code (en changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-924 passage; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-983 passages, UI labels checked against messages/en.json; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [],
   "aliases": [],
@@ -77,9 +78,9 @@
 
 ## Create a routine {#scheduled-routines}
 
-Only the project owner can create, edit or enable a routine. Open Routines, choose an owned project and write the instruction Numo should receive. Mention relevant issues, pages or objectives. Each occurrence has a private Numo conversation, history and minddy tools. Routines organize and track work, for example a weekly triage, a review of stale issues or a weekly summary; they do not change repository code.
+Only the project owner can create, edit or enable a routine. Open **Routines**. With no routine selected, the page shows the Numo composer and example routines; the **+** at the top of the list or next to a project also leads there. Describe the routine in the composer, what Numo should do and when, and send it: the conversation with Numo takes the page, Numo asks for what is missing, such as the project, then sets the routine up. An example under **Featured**, **Triage**, **Follow-up**, **Reports** or **Planning** fills the composer with its instruction, which you can adjust before sending. To set it up yourself, choose **Start from scratch**, choose an owned project and write the instruction Numo should receive. Mention relevant issues, pages or objectives. Without an AI provider, the page has no composer and an example opens **Start from scratch** with its instruction. Each occurrence has a private Numo conversation, history and minddy tools. Routines organize and track work, for example a weekly triage, a review of stale issues or a weekly summary; they do not change repository code.
 
-Choose **Scheduled** or **Event**. Database arrivals are an option in the event list.
+In **Start from scratch**, choose **Scheduled** or **Event**. Database arrivals are an option in the event list.
 
 - **Scheduled:** choose daily, weekly or monthly, the time and your timezone. Check the first-run preview.
 - **Event:** choose issue creation, entry into a target status, assignment, a comment on a followed issue, feedback receipt, or a new database entry. Choose the target status, person or followed issue where requested. A status trigger includes issues created directly in that status. Assignment requires an actual change of assignee. A comment written by a reader does not start a comment routine.
@@ -104,7 +105,7 @@ An entry created without its required property stays waiting until an edit satis
 
 Open the routine to inspect waiting conditions, change its instruction or trigger, pause it, or review occurrences. On its page, the owner writes the instruction in place (it is saved as you type and stays the same across your open tabs and devices, even while Numo rewrites it), unfolds **Trigger** to change it, chooses the **Spending cap**, and switches between **Active** and **Paused** from the state badge at the top. Pausing, deleting or changing its configuration invalidates waiting items. Re-enabling listens to future events without replaying old arrivals. A manual run can start any trigger type without waiting for its event and also consumes usage.
 
-Right-click a routine in the list to open its latest run without selecting it first; **Open latest run** stays unavailable until the routine has run. The project owner can also choose **Run now**, **Pause** or **Resume**, **Edit** or **Move to trash** from the same menu. **Resume** is unavailable when the instance cannot schedule routines. Other members only see entries that leave the routine unchanged. To create a routine, right-click **Routines** in the sidebar and choose **New routine**.
+Right-click a routine in the list to open its latest run without selecting it first; **Open latest run** stays unavailable until the routine has run. The project owner can also choose **Run now**, **Pause** or **Resume**, **Edit** or **Move to trash** from the same menu. **Resume** is unavailable when the instance cannot schedule routines. Other members only see entries that leave the routine unchanged. To create a routine, right-click **Routines** in the sidebar and choose **New routine**: the page opens on the composer.
 
 Hold Shift and click routines in the list to select several; a click on the list's empty space clears the selection. **Actions** in the floating bar, or Command+K on macOS or Ctrl+K on Windows/Linux, runs the selected routines you own now, pauses or resumes them, or moves them to the trash after a confirmation; routines of projects you do not own are left unchanged, and each run consumes usage. **Ask Numo** opens Numo with every selected routine in its context.
 

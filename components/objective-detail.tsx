@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_SCROLL, PAGE_TITLE_FIELD } from "@/components/page-heading";
 import { objectiveBoardHref } from "@/lib/app-urls";
 import type { JSONContent } from "@tiptap/core";
 import { useRichDocument } from "@/lib/use-rich-document";
@@ -593,9 +594,9 @@ export function ObjectiveDetail({
       <div
         ref={fade.ref}
         {...fade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
+        className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
+        <div className="mx-auto flex max-w-content flex-col gap-4">
           <AutoTextarea
             ref={titleBody.titleRef}
             value={name}
@@ -605,7 +606,7 @@ export function ObjectiveDetail({
             onKeyDown={(e) => {
               titleBody.onTitleKeyDown(e);
             }}
-            className="w-full shrink-0 title-field bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+            className={cn("shrink-0", PAGE_TITLE_FIELD)}
             placeholder={t("namePlaceholder")}
           />
 
@@ -736,7 +737,7 @@ export function ObjectiveDetail({
 
       {canComment && (
       <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-content">
           <CommentComposer
             members={members}
             projectId={projectId}

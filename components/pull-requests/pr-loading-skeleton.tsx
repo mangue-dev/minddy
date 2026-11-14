@@ -149,7 +149,7 @@ export function PrDetailSkeleton() {
         <PrHeaderActionsSkeleton />
       </AppContentHeader>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
+        <div className="mx-auto flex max-w-content flex-col gap-6 py-6">
           <PrMetadataSkeleton />
           <PrStatusSkeleton />
           <div aria-hidden className="flex gap-5">

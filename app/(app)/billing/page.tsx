@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeading } from "@/components/page-heading";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -64,7 +65,7 @@ export default function BillingPage() {
           {...contentFade.scrollProps}
           className="min-h-0 flex-1 overflow-y-auto"
         >
-          <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+          <div className="mx-auto box-content max-w-content px-4 py-6 app-desktop:px-6">
             <div className="rounded-xl border border-border bg-card px-5 py-4">
               <h2 className="text-sm font-semibold">{t("selfHostedTitle")}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -101,16 +102,12 @@ export default function BillingPage() {
         {...contentFade.scrollProps}
         className="min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+        <div className="mx-auto box-content max-w-content px-4 py-6 app-desktop:px-6">
           <div className="min-w-0 space-y-6 sm:space-y-8">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">
-                {t("billingUsageTitle")}
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("billingUsageSubtitle")}
-              </p>
-            </div>
+            <PageHeading
+              title={t("billingUsageTitle")}
+              description={t("billingUsageSubtitle")}
+            />
             <section aria-label={t("usageTitle")}>
               <UsageSection />
             </section>

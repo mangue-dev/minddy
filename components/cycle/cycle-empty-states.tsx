@@ -88,7 +88,7 @@ export function CycleFutureNotice({ cycle }: { cycle: CycleInfo }) {
   });
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-content">
         <EmptyScene
           icon={DATE_ICON}
           title={t("futureCycle", { date: start })}
