@@ -1,6 +1,8 @@
 "use client";
 
 
+import { cn } from "@/lib/utils";
+import { PAGE_SCROLL } from "@/components/page-heading";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, ArrowLeft01Icon, ArrowRight01Icon, Delete02Icon, MoreHorizontalIcon, PlayIcon } from "@hugeicons/core-free-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -317,9 +319,9 @@ export function RoutineDetail({
       <div
         ref={listFade.ref}
         {...listFade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
+        className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <div className="mx-auto flex max-w-content flex-col gap-6">
           <div className="flex flex-col gap-1 empty:hidden">
             {!agentCapabilitiesLoading &&
             !routineSchedulingConfigured ? (

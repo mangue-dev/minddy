@@ -723,7 +723,7 @@ function ProjectBoard() {
  “nothing here, a first card will land there”, the buttons say the
  remains. Import and seed remain with the owner (the API reserves them for him, and he pays for the call). */
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-          <div className="mx-auto max-w-5xl">
+          <div className="mx-auto max-w-content">
             <EmptyScene icon={BOARD_ICON} title={t("emptyTitle")}>
               {isOwner ? (
                 <SplitButton

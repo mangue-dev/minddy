@@ -45,7 +45,7 @@ export function PagesHome({
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-content">
         <EmptyScene
           icon={File02Icon}
           title={pages.length === 0 ? t("emptyTitle") : t("pickTitle")}

@@ -17,7 +17,7 @@
   "revision": 13,
   "sourceRevision": 13,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-06",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -34,6 +34,7 @@
       "components/routines/create-routine-wizard.tsx",
       "components/routines/routine-detail.tsx",
       "components/routines/routines-panel.tsx",
+      "components/routines/routines-home.tsx",
       "components/routines/use-routine-actions.tsx",
       "docs/security/project-roles.md",
       "lib/project-roles.ts"
@@ -41,9 +42,9 @@
   },
   "review": {
     "revision": 13,
-    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured)",
-    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-06"
+    "fact": "agent:claude-code (Aligned quoted UI labels with the MIN-885 copy audit, checked against messages/*.json; not checked in the running app; rest of the article unchanged since the previous review; no figure recaptured); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 1 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-924: routine runs never ask questions, and when they notify the owner, source audit against the change; no browser walkthrough; existing figures checked against the change and kept, not recaptured); agent:claude-code (MIN-983: routines home with the Numo composer, examples and Start from scratch; source audit against the change and catalogs; no browser walkthrough of the procedures; existing figure shows the trigger editor, unchanged, not recaptured)",
+    "language": "agent:claude-code (de changed passages with catalog UI labels; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-924 passage translated from en with catalog UI labels and the locale register; self-reviewed; agent review, not human acceptance); agent:claude-code (de MIN-983 passages, UI labels checked against messages/de.json; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [],
   "aliases": [],
@@ -77,9 +78,9 @@
 
 ## Eine Routine erstellen {#scheduled-routines}
 
-Nur der Projekteigentümer kann Routinen erstellen, bearbeiten oder aktivieren. Öffne Routinen, wähle ein eigenes Projekt und formuliere die Anweisung für Numo. Erwähne relevante Tickets, Seiten oder Ziele. Jede Ausführung besitzt eine private Numo-Konversation, einen Verlauf und minddy-Werkzeuge. Routinen organisieren und verfolgen Arbeit, etwa eine wöchentliche Triage, eine Prüfung liegengebliebener Tickets oder eine Wochenzusammenfassung; sie ändern keinen Repository-Code.
+Nur der Projekteigentümer kann Routinen erstellen, bearbeiten oder aktivieren. Öffne **Routinen**. Ist keine Routine ausgewählt, zeigt die Seite das Eingabefeld von Numo und Beispielroutinen; das **+** oben in der Liste oder neben einem Projekt führt ebenfalls dorthin. Beschreib die Routine im Eingabefeld, was Numo tun soll und wann, und sende sie ab: Die Konversation mit Numo füllt die Seite, Numo fragt nach dem, was fehlt, etwa dem Projekt, und richtet die Routine ein. Ein Beispiel unter **Empfohlen**, **Triage**, **Nachfassen**, **Berichte** oder **Planung** füllt das Eingabefeld mit seiner Anweisung, die du vor dem Senden anpassen kannst. Um sie selbst einzurichten, wähle **Ohne Vorlage starten**, wähle ein eigenes Projekt und formuliere die Anweisung für Numo. Erwähne relevante Tickets, Seiten oder Ziele. Ohne KI-Anbieter hat die Seite kein Eingabefeld, und ein Beispiel öffnet **Ohne Vorlage starten** mit seiner Anweisung. Jede Ausführung besitzt eine private Numo-Konversation, einen Verlauf und minddy-Werkzeuge. Routinen organisieren und verfolgen Arbeit, etwa eine wöchentliche Triage, eine Prüfung liegengebliebener Tickets oder eine Wochenzusammenfassung; sie ändern keinen Repository-Code.
 
-Wähle **Geplant** oder **Ereignis**. Datenbankeingänge sind eine Option in der Ereignisliste.
+Wähle in **Ohne Vorlage starten** **Geplant** oder **Ereignis**. Datenbankeingänge sind eine Option in der Ereignisliste.
 
 - **Geplant:** täglich, wöchentlich oder monatlich mit Uhrzeit und deiner Zeitzone. Prüfe die Vorschau des ersten Starts.
 - **Ereignis:** Ticketerstellung, Eintritt in einen Zielstatus, Zuweisung, Kommentar zu einem verfolgten Ticket, eingegangenes Feedback oder ein neuer Datenbankeintrag. Wähle den erforderlichen Status, die Person oder das Ticket. Der Statusauslöser umfasst direkt in diesem Status erstellte Tickets. Eine Zuweisung erfordert einen tatsächlichen Wechsel der zuständigen Person. Ein Kommentar eines Lesers startet keine Kommentarroutine.
@@ -104,7 +105,7 @@ Ein Eintrag ohne erforderliche Eigenschaft wartet auf eine passende Bearbeitung.
 
 Öffne die Routine, um wartende Bedingungen zu prüfen, Anweisung oder Auslöser zu ändern, zu pausieren oder Ausführungen zu lesen. Auf ihrer Seite schreibt der Eigentümer die Anweisung direkt (sie wird beim Tippen gespeichert und bleibt in deinen offenen Tabs und auf deinen Geräten gleich, auch wenn Numo sie umschreibt), klappt **Auslöser** zum Ändern auf, wählt die **Ausgabenobergrenze** und wechselt über das Statusabzeichen oben zwischen **Aktiv** und **Pausiert**. Pausieren, Löschen und Konfigurationsänderungen verwerfen wartende Einträge. Eine erneute Aktivierung wartet auf künftige Ereignisse ohne alte Eingänge zu wiederholen. Ein manueller Start funktioniert mit jedem Auslöser ohne dessen Ereignis und verbraucht ebenfalls Budget.
 
-Klicke mit der rechten Maustaste auf eine Routine in der Liste, um ihre letzte Ausführung zu öffnen, ohne sie zuerst auszuwählen; **Letzte Ausführung öffnen** bleibt nicht verfügbar, solange die Routine noch nie gelaufen ist. Der Projekteigentümer kann im selben Menü außerdem **Jetzt ausführen**, **Pausieren** oder **Fortsetzen**, **Bearbeiten** oder **In den Papierkorb verschieben** wählen. **Fortsetzen** ist nicht verfügbar, wenn die Instanz keine Routinen planen kann. Andere Mitglieder sehen nur Einträge, die die Routine nicht verändern. Um eine Routine zu erstellen, klicke in der Seitenleiste mit der rechten Maustaste auf **Routinen** und wähle **Neue Routine**.
+Klicke mit der rechten Maustaste auf eine Routine in der Liste, um ihre letzte Ausführung zu öffnen, ohne sie zuerst auszuwählen; **Letzte Ausführung öffnen** bleibt nicht verfügbar, solange die Routine noch nie gelaufen ist. Der Projekteigentümer kann im selben Menü außerdem **Jetzt ausführen**, **Pausieren** oder **Fortsetzen**, **Bearbeiten** oder **In den Papierkorb verschieben** wählen. **Fortsetzen** ist nicht verfügbar, wenn die Instanz keine Routinen planen kann. Andere Mitglieder sehen nur Einträge, die die Routine nicht verändern. Um eine Routine zu erstellen, klicke in der Seitenleiste mit der rechten Maustaste auf **Routinen** und wähle **Neue Routine**: Die Seite öffnet sich mit dem Eingabefeld.
 
 Halte die Umschalttaste gedrückt und klicke auf Routinen in der Liste, um mehrere auszuwählen; ein Klick auf eine leere Stelle der Liste hebt die Auswahl auf. **Aktionen** in der schwebenden Leiste oder Command+K unter macOS bzw. Strg+K auf anderen Systemen führt die ausgewählten Routinen, deren Eigentümer du bist, jetzt aus, pausiert sie, setzt sie fort oder verschiebt sie nach einer Bestätigung in den Papierkorb; Routinen aus Projekten, die dir nicht gehören, bleiben unverändert, und jede Ausführung verbraucht Nutzung. **Numo fragen** öffnet Numo mit allen ausgewählten Routinen im Kontext.
 

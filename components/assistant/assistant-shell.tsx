@@ -92,6 +92,7 @@ import { SidebarFilterField } from "@/components/sidebar-filter-field";
 import { SIDEBAR_HEADER_ACTION_CLASS } from "@/lib/sidebar-control-styles";
 import { assistantStarterPage } from "@/lib/assistant-starters";
 import { AssistantStarterList } from "@/components/assistant/assistant-starter-list";
+import { useScrollFade } from "@/lib/use-scroll-fade";
 
 export type AssistantDisplayMode = "compact" | "expanded";
 
@@ -127,8 +128,8 @@ export interface AssistantShellProps {
   mobileSubtitle?: string;
   /** Tighten the layout for narrow surfaces like the global FAB panel. */
   compact?: boolean;
-  /** Current panel display mode. In "expanded" the centered conversation
-   *  column widens (max-w-4xl) and the toolbar toggle shows the collapse icon. */
+  /** Current panel display mode. The conversation column keeps the
+   *  page content width (`max-w-content`) in both modes; in "expanded" the toolbar toggle shows the collapse icon. */
   displayMode?: AssistantDisplayMode;
   /** Toggles compact ⇄ expanded from the compact-header toolbar (desktop). */
   onToggleDisplayMode?: () => void;
@@ -186,6 +187,17 @@ export interface AssistantShellProps {
   hideStartersWhileComposing?: boolean;
   /** Shown instead of the "no AI provider" screen (Home keeps its greeting). */
   unavailableFallback?: ReactNode;
+  /**
+   * Shown under the composer while the conversation is empty (Routines home,
+   * MIN-983: the example routines). The composer then follows the intro
+   * instead of sitting at the bottom, and the page scrolls as one.
+   * The first message replaces both with the conversation.
+   */
+  afterComposer?: ReactNode;
+  /** The composer's placeholder in place of Numo's default one. */
+  composerPlaceholder?: string;
+  /** `false`: the empty composer does not take the focus on mount. */
+  autoFocusComposer?: boolean;
 }
 
 export const AssistantShell = forwardRef<
@@ -213,14 +225,22 @@ export const AssistantShell = forwardRef<
     startersPending = false,
     hideStartersWhileComposing = false,
     unavailableFallback = null,
+    afterComposer = null,
+    composerPlaceholder,
+    autoFocusComposer = true,
   },
   ref
 ) {
   const isExpanded = displayMode === "expanded";
-  // Expanded mode keeps the conversation centered (mx-auto) but widens the
-  // reading column to use more of the larger surface.
+  // The conversation column is the page content width in both modes (MIN-983):
+  // Home and the Routines home are pages like the others.
   const mobile = useMobileLayout() === true;
-  const convoMaxW = isExpanded ? "max-w-4xl" : "max-w-3xl";
+  // Its gutters sit inside the column: each width adds them back, so the
+  // text itself is the page content width (`--content-width`). Literal
+  // strings, for Tailwind.
+  const convoColumn = compact
+    ? "max-w-[calc(var(--content-width)+2rem)] px-4"
+    : "max-w-[calc(var(--content-width)+1rem)] px-2 app-desktop:max-w-content app-desktop:px-0";
   const t = useTranslations("Assistant");
   const tc = useTranslations("Common");
   const tToolCall = useTranslations("ToolCall");
@@ -577,6 +597,10 @@ export const AssistantShell = forwardRef<
     wasBusy.current = isBusy;
   }, [isBusy, t]);
   const hasMessages = state.messages.length > 0 || isBusy;
+  // With content under the composer, the empty page scrolls as one and fades
+  // at the edge that still hides some of it, like the other pages.
+  const pageScrolls = !!afterComposer && !hasMessages;
+  const pageFade = useScrollFade<HTMLDivElement>();
   // The suggestions follow the page under the composer and step aside as soon
   // as the user starts writing their own message.
   const pathname = usePathname();
@@ -998,8 +1022,17 @@ export const AssistantShell = forwardRef<
         </Sheet>
       )}
 
-      {/* Main chat area */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Main chat area. With content under the composer, the empty page
+          scrolls as one: intro, composer and that content, on a phone too. */}
+      <div
+        ref={pageScrolls ? pageFade.ref : undefined}
+        onScroll={pageScrolls ? pageFade.scrollProps.onScroll : undefined}
+        style={pageScrolls ? pageFade.scrollProps.style : undefined}
+        className={cn(
+          "flex min-h-0 min-w-0 flex-1 flex-col",
+          pageScrolls && "overflow-y-auto",
+        )}
+      >
         {compactHeader}
 
         {/* Mobile conversations toggle — non-compact only. */}
@@ -1060,8 +1093,8 @@ export const AssistantShell = forwardRef<
                 <ConversationContent
                    className={
                      compact
-                       ? `mx-auto w-full ${convoMaxW} gap-6 p-4 app-desktop:p-4`
-                       : `mx-auto w-full ${convoMaxW} gap-6 p-4 app-desktop:p-6`
+                       ? "mx-auto w-full max-w-[calc(var(--content-width)+2rem)] gap-6 p-4"
+                       : "mx-auto w-full max-w-[calc(var(--content-width)+2rem)] gap-6 p-4 app-desktop:max-w-[calc(var(--content-width)+3rem)] app-desktop:p-6"
                    }
                  >
                   {keptShown ? kept?.header : null}
@@ -1262,12 +1295,16 @@ export const AssistantShell = forwardRef<
             ) : (
               /* Empty state — the host's intro and the error; the suggestions
                  sit above the composer. */
-              <div className={cn("flex flex-1 justify-center", intro ? "overflow-y-auto" : "items-center px-4")}>
+              <div className={cn(
+                "flex justify-center",
+                afterComposer ? "shrink-0" : "flex-1",
+                intro ? (afterComposer ? "" : "overflow-y-auto") : "items-center px-4",
+              )}>
                 {/* An intro takes the composer's own box (same width, same
                     gutter), so its text never runs wider than the input. */}
                 <div className={cn(
                   "flex w-full min-w-0 flex-col gap-4",
-                  intro ? cn(`mx-auto ${convoMaxW} py-6`, compact ? "px-4" : "px-2 app-desktop:px-0") : "max-w-2xl",
+                  intro ? cn("mx-auto py-6", convoColumn) : "max-w-2xl",
                 )}>
                   {intro}
                   {state.error ? (
@@ -1295,9 +1332,12 @@ export const AssistantShell = forwardRef<
                 setComposing(next instanceof Node && event.currentTarget.contains(next) && isTextEntry(next));
               }}
               className={cn(
-                `mx-auto w-full min-w-0 ${convoMaxW} shrink-0`,
-                compact ? "px-4" : "px-2 app-desktop:px-0",
+                "mx-auto w-full min-w-0 shrink-0",
+                convoColumn,
                 "sticky bottom-0 pb-4",
+                // Mid-page above `afterComposer`, the composer does not clear
+                // the phone's navigation bar: the end of the page does.
+                afterComposer && !hasMessages && "mb-0!",
               )}
             >
               <AssistantStarterList
@@ -1327,6 +1367,8 @@ export const AssistantShell = forwardRef<
                   // The composer carries its own legacy 12px click margin
                   // (MIN-167); the shell's concentric 16px gutter replaces it.
                   className="px-0 py-0 pb-0"
+                  placeholder={composerPlaceholder}
+                  autoFocus={autoFocusComposer}
                   onSend={handleSend}
                   onEmptyChange={setComposerEmpty}
                   onAbort={abort}
@@ -1360,6 +1402,16 @@ export const AssistantShell = forwardRef<
                 />
               </div>
             </div>
+            {afterComposer && !hasMessages ? (
+              <div className="shrink-0">
+                <div className={cn(
+                  "mx-auto w-full min-w-0 pt-4 pb-10 app-mobile:pb-[calc(2.5rem+var(--mobile-nav-clearance))]",
+                  convoColumn,
+                )}>
+                  {afterComposer}
+                </div>
+              </div>
+            ) : null}
           </>
         )}
       </div>

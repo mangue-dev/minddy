@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_HEADING_GAP, PAGE_SCROLL, PAGE_TITLE } from "@/components/page-heading";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -147,7 +148,7 @@ function HomeConversation() {
   // Left-aligned, like the composer and the messages below it. The page's
   // heading is the greeting, kept for screen readers whatever is shown.
   const welcome = (
-    <p aria-hidden className="w-full text-left font-display text-2xl font-semibold tracking-tight">
+    <p aria-hidden className={cn("w-full text-left", PAGE_TITLE)}>
       {greeting}
     </p>
   );
@@ -184,7 +185,7 @@ function HomeConversation() {
           displayMode="expanded"
           visible={!panelOpen}
           intro={
-            <div className={cn("flex flex-col gap-6", reveal)} aria-busy={!revealed}>
+            <div className={cn("flex flex-col", PAGE_HEADING_GAP, reveal)} aria-busy={!revealed}>
               {welcome}
               {/* Until Numo has a word of its own, it introduces itself. */}
               {brief ? <HomeNumoBrief brief={brief} /> : briefLoading ? null : <NumoIntro />}
@@ -205,13 +206,15 @@ function HomeConversation() {
           // On a phone the rows give their room to the keyboard while you write.
           hideStartersWhileComposing
           unavailableFallback={
-            <div className="flex h-full items-center justify-center overflow-y-auto px-4">
-              <div className={cn("mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-3", reveal)}>
-                <div className="mb-2">{welcome}</div>
-                <PendingInvitationsBanner />
-                <HomeSmartAssignWarning />
-                <DesktopInstallBanner />
-                <MobileInstallHint key={user?.id} />
+            <div className="h-full overflow-y-auto">
+              <div className={cn("mx-auto box-content flex max-w-content min-w-0 flex-col", PAGE_SCROLL, PAGE_HEADING_GAP, reveal)}>
+                {welcome}
+                <div className="flex flex-col gap-3">
+                  <PendingInvitationsBanner />
+                  <HomeSmartAssignWarning />
+                  <DesktopInstallBanner />
+                  <MobileInstallHint key={user?.id} />
+                </div>
               </div>
             </div>
           }

@@ -1,4 +1,5 @@
 "use client";
+import { PAGE_HEADING_GAP, PAGE_TITLE } from "@/components/page-heading";
 import { allowInputAutoFocus } from "@/lib/mobile-sheet-focus";
 import { PrLinkedIssues, linkedIssues } from "./pr-linked-issues";
 
@@ -1514,7 +1515,7 @@ export function PrDetail({
           <PrHeaderActionsSkeleton />
         </AppContentHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 app-desktop:px-6">
-          <div data-testid="pr-detail-loading-content" className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-6" aria-hidden>
+          <div data-testid="pr-detail-loading-content" className="mx-auto flex w-full max-w-content flex-col gap-6 py-6" aria-hidden>
             <PrMetadataSkeleton title={item.title ?? item.issue?.title} />
             <PrStatusSkeleton />
             <PrActivitySkeleton />
@@ -1779,14 +1780,14 @@ export function PrDetail({
           // When lowered, it scrolls with the content and the header sticks to the banner.
           className="h-full overflow-y-auto px-4 app-desktop:px-6"
         >
-        <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
+        <div className="mx-auto flex max-w-content flex-col gap-6 py-6">
           {/* PR title + meta. The TITLE of the pull request, not that of the
               ticket: since MIN-143 they no longer come in pairs, and a PR
               human may have none. (Numo names his
               “MIN-42: <titre du ticket>” — the display does not change for them.) */}
           {loading ? <PrMetadataSkeleton /> : (
-            <div className="flex flex-col gap-2">
-              <h1 className="min-w-0 flex-1 font-display text-2xl leading-tight font-semibold break-words">
+            <div className={cn("flex flex-col", PAGE_HEADING_GAP)}>
+              <h1 className={cn("min-w-0 flex-1 break-words", PAGE_TITLE)}>
                 {pr?.title ?? item.title ?? item.issue?.title ?? identifier}
               </h1>
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-muted-foreground">

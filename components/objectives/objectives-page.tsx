@@ -869,7 +869,7 @@ function ObjectivesInner({ projectId: browseProjectId, browse, board }: {
         {sidebar}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-content">
               {/* Same form as the empty board (MIN-173): a scene, a sentence,
  the gestures that fill the page. The scene is the
  tab icon, placed on the ground — the page can be recognized by what names it

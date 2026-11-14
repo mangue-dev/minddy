@@ -353,7 +353,9 @@ describe("other touch pitfalls", () => {
     const files = execSync("git grep -l 'title-field' -- components", { encoding: "utf8" })
       .split("\n").filter(Boolean);
     for (const file of files) {
-      for (const match of read(file).matchAll(/className="([^"]*\btitle-field\b[^"]*)"/g)) {
+      // Any class string that holds `title-field`: a `className="…"`, or a
+      // shared constant such as `PAGE_TITLE_FIELD` (components/page-heading.tsx).
+      for (const match of read(file).matchAll(/"([^"\n]*\btitle-field\b[^"\n]*)"/g)) {
         // `text-lg` and up, or an arbitrary rem size from 1.125rem (18 px).
         expect(match[1], file).toMatch(/\btext-(lg|xl|[2-9]xl|\[(1\.(1[2-9]|[2-9])\d*|[2-9](\.\d+)?)rem\])(?![\w-])/);
       }

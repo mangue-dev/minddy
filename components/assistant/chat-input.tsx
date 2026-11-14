@@ -469,6 +469,12 @@ export interface ChatInputProps {
    */
   sendDisabled?: boolean;
   sendDisabledTooltip?: string;
+  /**
+   * `false`: an empty composer does not take the focus when it mounts. A
+   * page that is more than its composer (the Routines home, MIN-983) leaves
+   * the keyboard to the user.
+   */
+  autoFocus?: boolean;
 }
 
 export interface ChatInputHandle {
@@ -509,6 +515,7 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
       sendWhileStreaming,
       sendDisabled,
       sendDisabledTooltip,
+      autoFocus = true,
     },
     ref
   ) {
@@ -1687,10 +1694,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     );
 
     useEffect(() => {
-      if (noBorder && allowInputAutoFocus() && editorRef.current) {
+      if (autoFocus && noBorder && allowInputAutoFocus() && editorRef.current) {
         editorRef.current.focus();
       }
-    }, [noBorder]);
+    }, [noBorder, autoFocus]);
 
     // A surface remount restores the same DOM tokens and upload queue. Avoid
     // writing when this editor produced the snapshot so the caret stays put.

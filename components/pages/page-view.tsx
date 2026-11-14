@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_COLUMN } from "@/components/pages/page-column";
 import { useOptionalPagePanelActions } from "@/lib/page-panel-context";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Message01Icon, MoreHorizontalIcon, CheckIcon } from "@hugeicons/core-free-icons";
@@ -1129,7 +1130,7 @@ function PageSurface({
             the chrome is used to place itself there. Title and blocks therefore share the
             same left edge, and the hover margin falls into the reserve instead
             to shift the body under the title. */}
-        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? page.database_schema != null ? "max-w-3xl app-desktop:pl-24 app-desktop:pr-16" : "max-w-3xl app-desktop:px-16" : page.database_schema != null ? "max-w-none app-desktop:pl-24 app-desktop:pr-10" : "max-w-3xl app-desktop:pl-24 app-desktop:pr-10")}>
+        <div className={cn("relative mx-auto w-full px-6 py-10", panel ? page.database_schema != null ? PAGE_COLUMN.panelDatabase : PAGE_COLUMN.panelDocument : page.database_schema != null ? PAGE_COLUMN.database : PAGE_COLUMN.document)}>
           {page.database_schema != null && canWrite && <DatabaseSetupBanner projectId={projectId} page={summary ?? page} />}
           <PageHeader
             title={title}

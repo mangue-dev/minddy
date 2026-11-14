@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeading } from "@/components/page-heading";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, FilterIcon, Globe02Icon, SparklesIcon, WorkHistoryIcon } from "@hugeicons/core-free-icons";
 import { useCallback, useMemo, useState } from "react";
@@ -294,10 +295,7 @@ export function AdminCostsDashboard() {
   return (
     /* The width and margins come from the shell (`admin-dashboard`). */
     <div className="flex flex-col gap-5">
-      <header>
-        <h2 className="text-sm font-semibold">{t("costs.title")}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("costs.subtitle")}</p>
-      </header>
+      <PageHeading as="h2" title={t("costs.title")} description={t("costs.subtitle")} />
       {/* The filters and the period drive the whole tab: they sit in the
           pane's header, the filters behind one button as on the board. */}
       <AdminHeaderActions>

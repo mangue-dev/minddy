@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_HEADING_GAP, PAGE_SCROLL, PAGE_TITLE_FIELD } from "@/components/page-heading";
 import { issueHref, projectPath, resolveIssueRef } from "@/lib/app-urls";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { CollectionFilterMenu } from "@/components/collection-filter-items";
@@ -686,11 +687,11 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
             <div
               ref={detailFade.ref}
               {...detailFade.scrollProps}
-              className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
+              className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
             >
-              <div className="mx-auto flex max-w-3xl flex-col gap-6">
+              <div className="mx-auto flex max-w-content flex-col gap-6">
                 {/* Title + description */}
-                <div className="flex flex-col gap-2">
+                <div className={cn("flex flex-col", PAGE_HEADING_GAP)}>
                   <AutoTextarea
                     ref={titleBody.titleRef}
                     value={title}
@@ -700,7 +701,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
                     onKeyDown={(e) => {
                       titleBody.onTitleKeyDown(e);
                     }}
-                    className="w-full title-field bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+                    className={PAGE_TITLE_FIELD}
                     placeholder={tIssueUI("titlePlaceholder")}
                   />
                   <div ref={titleBody.bodyRef}>
@@ -832,7 +833,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
 
             {canComment && (
             <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
-              <div className="mx-auto max-w-3xl">
+              <div className="mx-auto max-w-content">
                 <CommentComposer
                   members={members}
                   projectId={projectId}
@@ -850,7 +851,7 @@ export function TriagePage({ browse }: { browse?: SidebarBrowseTarget } = {}) {
              kept in the pane now that the sidebar stays up. */
           <div className="flex h-full flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-              <div className="mx-auto max-w-5xl">
+              <div className="mx-auto max-w-content">
                 <EmptyScene icon={CircleDotDashed} title={t("emptyTitle")} />
               </div>
             </div>

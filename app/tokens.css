@@ -161,6 +161,11 @@
 }
 
 @theme inline {
+  /* `max-w-content`: the one width of every page whose content sits in a
+     centred column (routines, objectives, feedback, triage, settings, admin,
+     billing, pages, trash…), gutters excluded. Full-width surfaces such as
+     the board do not use it. */
+  --container-content: var(--content-width);
   /* Menu separators: the general border, light enough to divide a list
      without drawing a line across it. Its own name keeps menus apart should
      the two ever differ again. */
@@ -283,6 +288,11 @@
 }
 
 :root {
+  /* The width of a centred page column, gutters excluded (MIN-983). Read
+     through `max-w-content`, or in a `calc()` when a page's own gutters sit
+     inside its column (wiki pages). */
+  --content-width: 900px;
+
   /* The side insets of a screen whose content is centred. On iPhone Duo the
      status bar and the system controls stand on a side of the screen, not at
      its top: the right inset is 84px on both displays and the left one is 0.

@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_HEADING_GAP, PAGE_SCROLL, PAGE_TITLE, PAGE_TITLE_FIELD } from "@/components/page-heading";
 import { expandParam } from "@/lib/ref-registry";
 import { feedbackPostHref, projectPath } from "@/lib/app-urls";
 import { TruncatedText } from "@/components/ui/truncated-text";
@@ -1451,7 +1452,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
              to stay. */
           <div className="flex h-full flex-col">
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-              <div className="mx-auto max-w-5xl">
+              <div className="mx-auto max-w-content">
                 <EmptyScene icon={MessageMultiple01Icon} title={t("emptyTitle")}>
                   {canWrite && (
                   <Button onClick={() => setCreateOpen(true)}>
@@ -1962,9 +1963,9 @@ function FeedbackDetail({
       <div
         ref={detailFade.ref}
         {...detailFade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-6 app-desktop:px-6"
+        className={cn("min-h-0 flex-1 overflow-y-auto", PAGE_SCROLL)}
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <div className="mx-auto flex max-w-content flex-col gap-6">
         {post.suggested_merge_into_id && post.suggested_title && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2">
             <HugeiconsIcon icon={SparklesIcon} className="size-3.5 shrink-0 text-brand" />
@@ -2043,15 +2044,15 @@ function FeedbackDetail({
         ) : null}
 
         {translation && showTranslated ? (
-          <div className="flex flex-col gap-2">
-            <h2 className="content-selectable text-2xl leading-tight font-semibold">{translation.title}</h2>
+          <div className={cn("flex flex-col", PAGE_HEADING_GAP)}>
+            <h2 className={cn("content-selectable", PAGE_TITLE)}>{translation.title}</h2>
             {translation.body ? (
               <Markdown className="comment-selectable text-sm">{translation.body}</Markdown>
             ) : null}
             <p className="text-xs text-muted-foreground">{t("translatedReadOnly")}</p>
           </div>
         ) : (
-        <div className="flex flex-col gap-2">
+        <div className={cn("flex flex-col", PAGE_HEADING_GAP)}>
           <AutoTextarea
             ref={titleBody.titleRef}
             value={title}
@@ -2064,7 +2065,7 @@ function FeedbackDetail({
             onKeyDown={(e) => {
               titleBody.onTitleKeyDown(e);
             }}
-            className="w-full title-field bg-transparent text-2xl leading-tight font-semibold outline-none placeholder:text-muted-foreground/50"
+            className={PAGE_TITLE_FIELD}
             maxLength={200}
           />
           <div ref={titleBody.bodyRef}>
@@ -2383,7 +2384,7 @@ function FeedbackDetail({
 
       {canComment && (
       <div data-keyboard-dock className="dock-above-nav shrink-0 bg-background px-4 py-3 app-desktop:px-6">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-content">
           <CommentComposer
             members={members}
             projectId={projectId}

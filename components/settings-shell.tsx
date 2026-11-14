@@ -75,9 +75,9 @@ type SettingsShellProps = {
     account took in 880 px and the project in 1080: two screens which share a
     shell and do not have the same width, it is already "each tab has a different look
     different ". Since the tab rail came out in the sidebar
-    secondary, it is `max-w-3xl` — the same column centered as the detail of a
-    triage, return or pull request. */
-const SETTINGS_MAX_WIDTH = "max-w-3xl";
+    secondary, it is `max-w-content` — the page content width every centred
+    page shares (MIN-983). */
+const SETTINGS_MAX_WIDTH = "max-w-content";
 
 /** The time the ring lasts: that of placing the eye, no more. */
 const FOCUS_HIGHLIGHT_MS = 2000;

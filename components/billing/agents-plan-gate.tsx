@@ -25,7 +25,7 @@ export function AgentsPlanGate({ children }: { children: React.ReactNode }) {
   if (loading || agentsAllowed) return <>{children}</>;
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-16">
+    <div className="mx-auto w-full max-w-[calc(var(--content-width)+3rem)] px-6 py-16">
       <EmptyState
         icon={<HugeiconsIcon icon={BotIcon} className="size-6" />}
         title={t("agentsGateTitle")}

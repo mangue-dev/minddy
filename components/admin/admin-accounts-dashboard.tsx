@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeading } from "@/components/page-heading";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Search01Icon, Undo02Icon } from "@hugeicons/core-free-icons";
 import {useCallback, useEffect, useRef, useState} from "react";
@@ -714,6 +715,7 @@ export function AdminAccountsDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
+      <PageHeading as="h2" title={t("tabs.accounts")} />
       <AccountCount />
       <div className="flex flex-col gap-4">
       <div id={adminSectionAnchor(ADMIN_SECTIONS.accountsSupport)} className="flex scroll-mt-20 flex-col gap-1 rounded-lg">

@@ -675,18 +675,25 @@ describe("the gutter hover surface", () => {
   });
 
   it("equals exactly the reserve given by the document column", () => {
-    // `app-desktop:pl-24` = 6rem = 96 px. It is the column that decides the width of
-    // the gutter; the style rule only copies it. If one of the
-    // two moves without the other, either the box comes out of the column, or it
-    // remains a dead band — both are invisible on replay.
+    // `app-desktop:px-24` (or `pl-24`) = 6rem = 96 px of left padding. It is the
+    // column that decides the width of the gutter; the style rule only copies
+    // it. If one of the two moves without the other, either the box comes out
+    // of the column, or it remains a dead band — both are invisible on replay.
+    // The page column lives in components/pages/page-column.ts (MIN-983).
+    const columns = readFileSync(
+      join(process.cwd(), "components/pages/page-column.ts"),
+      "utf8"
+    );
+    const document = columns.match(/document:\s*"([^"]+)"/)?.[1] ?? "";
+    const step = (GUTTER_HOVER / 16) * 4;
+    expect(document, `the page column no longer has a ${GUTTER_HOVER}px left padding`).toMatch(
+      new RegExp(`app-desktop:p[lx]-${step}(\\s|$)`)
+    );
     const view = readFileSync(
       join(process.cwd(), "components/pages/page-view.tsx"),
       "utf8"
     );
-    const rem = GUTTER_HOVER / 16;
-    expect(view, `the content column no longer has app-desktop:pl-${rem * 4}`).toContain(
-      `app-desktop:pl-${rem * 4}`
-    );
+    expect(view).toContain("PAGE_COLUMN.document");
   });
 
   it("stays off where there is no gutter", () => {

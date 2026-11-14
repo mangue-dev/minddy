@@ -16,7 +16,7 @@ export function RoutineDetailSkeleton() {
         <Skeleton className="h-6 w-16 rounded-full" />
       </AppContentHeader>
       <div className="min-h-0 flex-1 overflow-hidden px-4 py-6 app-desktop:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <div className="mx-auto flex max-w-content flex-col gap-6">
           {/* Instruction: its label, then a few lines of text. */}
           <div className="flex flex-col gap-3">
             <Skeleton className="h-3.5 w-24 rounded-md" />

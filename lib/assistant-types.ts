@@ -253,6 +253,11 @@ export interface AssistantPageContext {
   /** The routine open in the Agents page's Routines tab, when any (MIN-185). */
   routineId?: string;
   routineTitle?: string;
+  /**
+   * Sent from the routines home composer (MIN-983): the user describes a
+   * routine to set up, not a task to do once.
+   */
+  newRoutine?: true;
   /** Canonical Minddy pull-request row. Unlike `prRunId`, this also exists for
       human pull requests and survives worker changes. */
   pullRequestId?: string;
