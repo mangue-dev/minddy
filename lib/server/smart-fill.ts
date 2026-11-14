@@ -7,6 +7,8 @@ import { hasUsageBudget } from "@/lib/server/usage";
 import { runDecision } from "@/lib/server/decisions/runner";
 import { buildSmartFillSpec } from "@/lib/server/decisions/prepare";
 import type { DecisionAnswers } from "@/lib/server/decisions/types";
+import { aiInstructionPromptBlock, type AiInstructions } from "@/lib/ai-instructions";
+import { readAiInstructions } from "@/lib/server/ai-instructions";
 import {
   resolveSmartFill,
   resolveSmartFillScope,
@@ -258,7 +260,12 @@ export function sanitizeSmartFill(
 /** The system prompt. Explicitly separates what is valued (priority, effort) from
  * what is RECOGNIZED (categories, objective): the first two have always
  * an answer, the other two only have one if there is something. */
-export function buildSmartFillPrompt(projectName: string, ctx: SmartFillContext): string {
+export function buildSmartFillPrompt(
+  projectName: string,
+  ctx: SmartFillContext,
+  /** The owner's instructions (MIN-988); only `properties` and `objectives` are read. */
+  instructions: AiInstructions = {},
+): string {
   const categoryLines =
     ctx.categories
       .slice(0, MAX_CONTEXT_ITEMS)
@@ -285,7 +292,10 @@ Rules:
 ${categoryLines}
 
 ## Objectives of this project
-${objectiveLines}`;
+${objectiveLines}${aiInstructionPromptBlock([
+    { about: "Priority, effort and categories", text: instructions.properties },
+    { about: "Objective", text: instructions.objectives },
+  ])}`;
 }
 
 /**
@@ -345,9 +355,11 @@ export function fillParameters(ctx: SmartFillContext): Record<string, unknown> {
  * single path prevents one day one of the two paths from rendering an empty list without
  * let no one see it.
  */
-async function gatherContext(projectId: string): Promise<SmartFillContext> {
+async function gatherContext(
+  projectId: string,
+): Promise<SmartFillContext & { instructions: AiInstructions }> {
   const service = getServiceClient();
-  const [{ data: categories, error: categoryError }, { data: objectives, error: objectiveError }] = await Promise.all([
+  const [{ data: categories, error: categoryError }, { data: objectives, error: objectiveError }, instructions] = await Promise.all([
     categoryStore(service).select("id, name").eq("project_id", projectId),
     objectiveStore(service)
       .select("id, name, status")
@@ -355,12 +367,19 @@ async function gatherContext(projectId: string): Promise<SmartFillContext> {
       // A completed or abandoned objective does not accommodate a ticket that arises:
       // proposing it to the model is inviting him to reopen closed work.
       .in("status", ["planned", "in_progress"]),
+    // The owner's instructions (MIN-988), in the same wait. Unreadable
+    // instructions never cost the pass: it then runs without them.
+    readAiInstructions(service, projectId).catch(() => {
+      console.error("[smart-fill] instructions_unavailable");
+      return {} as AiInstructions;
+    }),
   ]);
   if (objectiveError) throw new Error("Unable to read smart-fill objective context");
   if (categoryError) throw new Error("Unable to read smart-fill category context");
   return {
     categories: (categories ?? []) as SmartFillContext["categories"],
     objectives: (objectives ?? []) as SmartFillContext["objectives"],
+    instructions,
   };
 }
 
@@ -425,7 +444,9 @@ export async function runSmartFill({
       console.error("[smart-fill] fill failed: context_unavailable");
       return {};
     }
-    const spec = buildSmartFillSpec({ projectName, title, description, ctx });
+    const spec = buildSmartFillSpec({
+      projectName, title, description, ctx, instructions: ctx.instructions,
+    });
     // A failed LLM fallback keeps the decision-model fields that met the floor on their
     // own (MIN-687): a partly filled ticket beats an empty one.
     const outcome = await runDecision(spec, {

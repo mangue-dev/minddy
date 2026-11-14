@@ -786,6 +786,7 @@ function FeedbackTeamPageInner({ browse }: { browse?: SidebarBrowseTarget }) {
   const memberSeeds = useMemberSeeds(members);
   const teamLanguage =
     normalizeLanguage(project?.feedback_team_language) ??
+    normalizeLanguage(project?.ai_language) ??
     (normalizeLanguage(defaultLocale) as FeedbackLanguage);
 
   // Publishes the selected feedback to Numo (MIN-52): it resolves “this feedback”,
@@ -1639,6 +1640,7 @@ function FeedbackDetail({
   // two judge a translation valid on the same criterion.
   const teamLanguage =
     normalizeLanguage(project?.feedback_team_language) ??
+    normalizeLanguage(project?.ai_language) ??
     (normalizeLanguage(defaultLocale) as FeedbackLanguage);
   const {
     items: activityItems,

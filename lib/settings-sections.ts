@@ -61,6 +61,7 @@ export type ProjectSettingsTab =
   | "members"
   | "recurrences"
   | "smart-assign"
+  | "ai-instructions"
   | "feedback"
   | "git"
   | "import"
@@ -130,6 +131,7 @@ export const SETTINGS_SECTIONS = {
   projectMembers: "project-members",
   projectRecurrences: "project-recurrences",
   projectSmartAssign: "project-smart-assign",
+  projectAiInstructions: "project-ai-instructions",
   projectFeedbackBoard: "project-feedback-board",
   projectFeedbackApi: "project-feedback-api",
   projectFeedbackReview: "project-feedback-review",
@@ -236,6 +238,7 @@ export function useSettingsSections(): SettingsSection[] {
       members: tSettings("membersTab"),
       recurrences: tSettings("recurrencesTab"),
       "smart-assign": tSettings("smartAssignTab"),
+      "ai-instructions": tSettings("aiInstructionsTab"),
       feedback: tSettings("feedbackTab"),
       git: tSettings("gitTab"),
       import: tSettings("importTab"),
@@ -853,6 +856,17 @@ export function useSettingsSections(): SettingsSection[] {
           "smart assign", "assignation", "assignment", "assigné", "assigne",
           "assignee", "règles", "regles", "rules", "répartition",
           "repartition", "automatique", "automatic",
+        ],
+      }),
+      project({
+        id: SETTINGS_SECTIONS.projectAiInstructions,
+        tab: "ai-instructions",
+        icon: SMART_FILL_ICON,
+        title: tSettings("aiInstructionsTab"),
+        keywords: [
+          "smart fill", "smart assign", "instructions", "consignes",
+          "langue", "language", "titres", "titles", "priorité", "priorite",
+          "priority", "ia", "ai",
         ],
       }),
       project({

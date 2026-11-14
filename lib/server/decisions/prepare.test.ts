@@ -125,6 +125,89 @@ describe("buildSmartFillSpec", () => {
   });
 });
 
+describe("buildSmartFillSpec — the owner's instructions (MIN-988)", () => {
+  const base = {
+    projectName: "minddy",
+    title: "Card payment fails on checkout",
+    description: null,
+    ctx: CTX,
+  };
+  const plain = buildSmartFillSpec(base);
+  const guided = buildSmartFillSpec({
+    ...base,
+    instructions: {
+      properties: "Anything about payments is at least high",
+      objectives: "Billing work goes to v2",
+      title: "Not read by this pass",
+      assign: "Not read by this pass",
+    },
+  });
+  const label = (spec: typeof plain, key: string) => spec.questions.find((q) => q.key === key)?.label ?? "";
+
+  it("changes nothing for a project without instructions", () => {
+    expect(buildSmartFillSpec({ ...base, instructions: {} })).toEqual(plain);
+    expect(plain.state).not.toHaveProperty("project_instructions");
+    expect(plain.llm.systemPrompt).not.toContain("project_instructions");
+  });
+
+  it("gives each question the instruction of its use case, and the state only those two", () => {
+    expect(guided.state.project_instructions).toEqual({
+      properties: "Anything about payments is at least high",
+      objectives: "Billing work goes to v2",
+    });
+    for (const key of ["priority", "effort", "category_ids"]) {
+      expect(label(guided, key)).toContain("Anything about payments is at least high");
+      expect(label(guided, key)).not.toContain("Billing work goes to v2");
+    }
+    expect(label(guided, "objective_id")).toContain("Billing work goes to v2");
+    expect(guided.llm.systemPrompt).toContain("Priority, effort and categories: Anything about payments is at least high");
+    expect(guided.llm.systemPrompt).toContain("Objective: Billing work goes to v2");
+    expect(guided.llm.systemPrompt).not.toContain("Not read by this pass");
+  });
+
+  it("never changes what an engine may answer: same options, same tool schema, a valid spec", () => {
+    const options = (spec: typeof plain) => spec.questions.map((q) => "options" in q ? q.options : null);
+    expect(options(guided)).toEqual(options(plain));
+    expect(guided.llm.parameters).toEqual(plain.llm.parameters);
+    expect(validateDecisionSpec(guided)).toEqual(validateDecisionSpec(plain));
+  });
+
+  it("caps an oversized instruction before it reaches either engine", () => {
+    const long = buildSmartFillSpec({ ...base, instructions: { properties: "p".repeat(2_000) } });
+    expect((long.state.project_instructions as { properties: string }).properties).toHaveLength(500);
+    expect(label(long, "priority").length).toBeLessThan(label(plain, "priority").length + 700);
+  });
+});
+
+describe("buildSmartAssignSpec — the owner's general instruction (MIN-988)", () => {
+  const input = {
+    projectName: "minddy",
+    issue: { title: "Fix login", description: null, categories: "", priority: null, effort: null },
+    members: [
+      { id: "user-owner", name: "Clément", owner: true, rule: null },
+      { id: "user-dev", name: "Ada", owner: false, rule: "Backend" },
+    ],
+  };
+  const plain = buildSmartAssignSpec(input);
+  const guided = buildSmartAssignSpec({ ...input, instruction: "Never give Ada more than five open issues" });
+
+  it("changes nothing without an instruction", () => {
+    expect(buildSmartAssignSpec({ ...input, instruction: "   " })).toEqual(plain);
+    expect(plain.state).not.toHaveProperty("project_instructions");
+  });
+
+  it("reaches both engines next to the member rules, with the same electorate", () => {
+    expect(guided.state.project_instructions).toEqual({ assign: "Never give Ada more than five open issues" });
+    expect(guided.questions[0].label).toContain("Never give Ada more than five open issues");
+    expect(guided.llm.systemPrompt).toContain("Never give Ada more than five open issues");
+    expect(guided.llm.systemPrompt).toContain("Match the issue against these rules first");
+    expect(guided.llm.parameters).toEqual(plain.llm.parameters);
+    expect("options" in guided.questions[0] && guided.questions[0].options).toEqual(
+      "options" in plain.questions[0] && plain.questions[0].options,
+    );
+  });
+});
+
 describe("buildSmartAssignSpec", () => {
   const spec = buildSmartAssignSpec({
     projectName: "minddy",

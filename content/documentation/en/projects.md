@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 20,
-  "sourceRevision": 20,
+  "revision": 21,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -70,14 +70,18 @@
       "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
-      "app/api/projects/[id]/pull-request-stats/route.ts"
+      "app/api/projects/[id]/pull-request-stats/route.ts",
+      "components/settings/ai-instructions-section.tsx",
+      "components/ai-instruction-proposal-card.tsx",
+      "lib/ai-instructions.ts",
+      "lib/server/ai-instruction-proposals.ts"
     ]
   },
   "review": {
-    "revision": 20,
-    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (en changed passage written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 21,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "issues",
@@ -101,7 +105,7 @@
       "src": "/documentation/en/project-general.png",
       "alt": "Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.",
       "caption": "Select the icon, the name or the key to change it in place; moving the project to trash stays a separate action below.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +122,7 @@
       "src": "/documentation/en/project-members.png",
       "alt": "Invite people card above the Members card, which lists three demonstration members with the owner identified.",
       "caption": "Invite by account email and check who owns the project before removing another member’s access.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -135,7 +139,7 @@
       "src": "/documentation/en/project-statistics.png",
       "alt": "Momentum, Where things stand and Contributors sections of a project with about a thousand issues: weekly created and completed bars, a status bar, health counts and one status bar per person.",
       "caption": "The momentum compares the last four weeks with the four before; overdue and stalled counts flag the work to look at.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -152,7 +156,7 @@
       "src": "/documentation/en/project-issue-graph.png",
       "alt": "Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend, the Include closed issues and objectives switch and the Enlarge the graph button at the top right.",
       "caption": "Hover over a dot to read its issue and highlight its links; select it to open the issue in the side panel.",
-      "revision": 20,
+      "revision": 21,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -187,12 +191,25 @@ Below the header come the project's statistics, built from its own data and visi
 
 ![Issue graph of the open issues gathered in colored bubbles per objective around square anchors, with gray arrows from parent to sub-issue, red blocking arrows, dashed related links, gray summary lines between objectives, the legend, the Include closed issues and objectives switch and the Enlarge the graph button at the top right.](/documentation/en/project-issue-graph.png)
 
-The other tabs are **Categories**, **Members**, **Recurrences**, **Smart Assign**, **Feedback**, **Git**, **Import** and **Integrations**. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
+The other tabs are **Categories**, **Members**, **Recurrences**, **Smart Assign**, **AI instructions**, **Feedback**, **Git**, **Import** and **Integrations**. Follow the corresponding task guide before enabling a provider or automatic work. Account preferences such as your interface language are separate from project configuration.
 
 In **Categories**, the owner and members manage the categories used to label issues. Choose **New category** on the card's title line: a row with a color dot and a name field appears at the top of the list. Press Enter or choose **Add** to create the category; Escape leaves without creating it. Select a category's color dot to open the list of colors, where you can type a color's name to find it; the color you choose applies at once (on a phone the list opens in a sheet), or select its name to rename it in place. The delete button asks for confirmation, then removes the category from every issue. Once the project has two categories or more, each row has a handle on its left: drag it to move the category up or down. From the keyboard, focus the handle, press Space, move the category with the Up and Down arrows and press Space again to drop it; Escape cancels. This order is the one every category menu and filter shows to everyone in the project. Numo and minddy MCP clients can read and change it too, for example when you ask Numo to put a category first.
 
 
 ![Project header with the icon and its edit badge, the name, the key and the Issues, Members, Objectives, Categories and Created figures.](/documentation/en/project-general.png)
+
+### Guide Smart Fill and Smart Assign {#ai-instructions}
+
+The **AI instructions** tab holds what Smart Fill and Smart Assign follow in this project, whoever creates the issue and however it is created: the form, Numo, an integration or an MCP client. Only the owner changes it; members can read it.
+
+**Working language** sets the language Smart Fill writes issue titles and objective names in, whatever language the description uses. Feedback is also translated into it when the project has no team language. **Automatic**, the default, keeps each title in the language of its description.
+
+Instructions are optional: Smart Fill and Smart Assign work without any. Add one when your team, or one of its members, works in a way the AI should follow. Choose **New instruction**, then what it is about: **Issue titles**, **Priority, effort and categories**, **Objectives** or **Assignment**. Write it in plain words, in 500 characters at most, for example "anything about payments is at least high priority", then choose **Save**. Each of the four can hold one instruction; the cross on its line removes it at the next **Save**. **Assignment** adds to the per-member rules of the **Smart Assign** tab and does not replace them; with it, Smart Assign chooses between several members even when none has a rule. An instruction guides a choice among the project's existing categories, objectives and members. It cannot add one, and it does not lift a usage limit. You can also ask Numo to set the language or an instruction ([Numo guide](/docs/numo#project-instructions)).
+### Suggested instructions {#ai-instruction-suggestions}
+
+Once a week, minddy counts the values Smart Fill or Smart Assign set that someone changed by hand within seven days. When the same property was corrected on at least five issues of a project in thirty days, minddy looks for what these corrections have in common and, if it finds a pattern, suggests an instruction to the owner. Changes made by Numo, an integration, an MCP client, a routine or a repository sync are not counted.
+
+The suggestion appears on **Home** and at the top of the **AI instructions** tab, with the instruction in a field you can edit. **Add instruction** saves that text as the instruction of its field; it already includes what the field said before. **Dismiss** sets the suggestion aside. Nothing changes until you choose one of them. After a suggestion, minddy makes no other for the same field for thirty days, and a project has one suggestion at a time. Drafting a suggestion uses AI and counts toward the owner's **Automations** share; it is skipped while that budget is exhausted.
 
 ### Hide a project for yourself {#hide-project}
 

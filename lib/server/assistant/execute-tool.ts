@@ -572,6 +572,8 @@ const SETTINGS_ERROR_MESSAGES: Record<string, string> = {
   projectKeyAlreadyUsed:
     "That project key is already used by another of your projects.",
   noFieldsToUpdate: "No fields to update.",
+  invalidAiLanguage:
+    "Unknown working language: pass one of en, fr, es, de, it, pt, nl, pl, tr, ru, ar, ja, ko, zh, or null.",
   invalidEmail: "That email address is invalid.",
   alreadyOwner: "That person is the project owner.",
   alreadyMember: "That person is already a member of the project.",
@@ -3416,6 +3418,11 @@ async function executeToolUnlisted(
               feedback_team_language: result.project.feedback_team_language,
               feedback_no_translate_languages:
                 result.project.feedback_no_translate_languages,
+              ai_language: result.project.ai_language ?? null,
+              // Present when this call changed them: the map as it now is.
+              ...(result.project.ai_instructions
+                ? { ai_instructions: result.project.ai_instructions }
+                : {}),
             },
           },
           success: true,

@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 22,
-  "sourceRevision": 20,
+  "revision": 23,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -70,14 +70,18 @@
       "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
-      "app/api/projects/[id]/pull-request-stats/route.ts"
+      "app/api/projects/[id]/pull-request-stats/route.ts",
+      "components/settings/ai-instructions-section.tsx",
+      "components/ai-instruction-proposal-card.tsx",
+      "lib/ai-instructions.ts",
+      "lib/server/ai-instruction-proposals.ts"
     ]
   },
   "review": {
-    "revision": 22,
-    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (de changed passage translated from en revision 20 with catalog UI labels and the glossary register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 23,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (de changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "issues",
@@ -101,7 +105,7 @@
       "src": "/documentation/de/project-general.png",
       "alt": "Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Tickets, Mitglieder, Ziele, Kategorien und Erstellt.",
       "caption": "Wähle Symbol, Namen oder Schlüssel, um sie direkt zu ändern; das Verschieben in den Papierkorb bleibt eine eigene Aktion weiter unten.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +122,7 @@
       "src": "/documentation/de/project-members.png",
       "alt": "Karte „Personen einladen“ über der Karte Mitglieder mit drei Demo-Mitgliedern, der Eigentümer ist gekennzeichnet.",
       "caption": "Lade Mitglieder über ihre Konto-E-Mail ein und prüfe den Eigentümer, bevor du einen Zugang entfernst.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -135,7 +139,7 @@
       "src": "/documentation/de/project-statistics.png",
       "alt": "Abschnitte Dynamik, Aktueller Stand und Mitwirkende eines Projekts mit rund tausend Tickets: wöchentliche Balken für erstellte und erledigte Tickets, ein Statusbalken, Kennzahlen und ein Statusbalken pro Person.",
       "caption": "Die Dynamik vergleicht die letzten vier Wochen mit den vier davor; überfällige und stockende Tickets zeigen, wo du hinschauen solltest.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -152,7 +156,7 @@
       "src": "/documentation/de/project-issue-graph.png",
       "alt": "Ticket-Graph der offenen Tickets, in farbigen Blasen pro Ziel um quadratische Anker gruppiert, mit grauen Pfeilen vom übergeordneten Ticket zum Unterticket, roten Blockierpfeilen, gestrichelten Verwandt-Linien, grauen Verbindungslinien zwischen Zielen, der Legende, dem Schalter Abgeschlossene Tickets und Ziele einbeziehen und der Schaltfläche Graph vergrößern oben rechts.",
       "caption": "Fahre über einen Punkt, um sein Ticket zu lesen und seine Verknüpfungen hervorzuheben; wähle ihn aus, um das Ticket im Seitenbereich zu öffnen.",
-      "revision": 22,
+      "revision": 23,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -187,12 +191,25 @@ Unter der Kopfzeile folgen die Statistiken des Projekts, berechnet aus seinen ei
 
 ![Ticket-Graph der offenen Tickets, in farbigen Blasen pro Ziel um quadratische Anker gruppiert, mit grauen Pfeilen vom übergeordneten Ticket zum Unterticket, roten Blockierpfeilen, gestrichelten Verwandt-Linien, grauen Verbindungslinien zwischen Zielen, der Legende, dem Schalter Abgeschlossene Tickets und Ziele einbeziehen und der Schaltfläche Graph vergrößern oben rechts.](/documentation/de/project-issue-graph.png)
 
-Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Smart Assign**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
+Die weiteren Tabs sind **Kategorien**, **Mitglieder**, **Wiederholungen**, **Smart Assign**, **KI-Anweisungen**, **Feedback**, **Git**, **Importieren** und **Integrationen**. Lies die jeweilige Aufgabenanleitung, bevor du einen Anbieter oder automatische Arbeit aktivierst. Kontoeinstellungen wie deine Oberflächensprache sind von der Projektkonfiguration getrennt.
 
 Unter **Kategorien** verwalten der Eigentümer und die Mitglieder die Kategorien, mit denen Tickets eingeordnet werden. Wähle **Neue Kategorie** in der Titelzeile der Karte: Oben in der Liste erscheint eine Zeile mit einem Farbpunkt und einem Namensfeld. Drücke Enter oder wähle **Hinzufügen**, um die Kategorie anzulegen; Escape schließt die Zeile, ohne sie anzulegen. Wähle den Farbpunkt einer Kategorie, um die Liste der Farben zu öffnen, in der du den Namen einer Farbe eintippen kannst, um sie zu finden; die gewählte Farbe gilt sofort (auf dem Telefon öffnet sich die Liste in einem Blatt), oder wähle ihren Namen, um sie direkt umzubenennen. Die Löschschaltfläche fragt nach einer Bestätigung und entfernt die Kategorie dann aus allen Tickets. Sobald das Projekt mindestens zwei Kategorien hat, trägt jede Zeile links einen Ziehgriff: Ziehe ihn, um die Kategorie nach oben oder unten zu verschieben. Mit der Tastatur setzt du den Fokus auf den Griff, drückst die Leertaste, verschiebst die Kategorie mit den Pfeiltasten nach oben und unten und drückst erneut die Leertaste, um sie abzulegen; Escape bricht ab. Diese Reihenfolge zeigen alle Kategoriemenüs und -filter für alle im Projekt. Numo und minddy-MCP-Clients können sie ebenfalls lesen und ändern, etwa wenn du Numo bittest, eine Kategorie an den Anfang zu stellen.
 
 
 ![Projektkopf mit Symbol und Bearbeitungssymbol, Name, Schlüssel sowie den Kennzahlen Tickets, Mitglieder, Ziele, Kategorien und Erstellt.](/documentation/de/project-general.png)
+
+### Smart Fill und Smart Assign anleiten {#ai-instructions}
+
+Der Tab **KI-Anweisungen** enthält, woran sich Smart Fill und Smart Assign in diesem Projekt halten, egal wer das Ticket erstellt und auf welchem Weg: über das Formular, Numo, eine Integration oder einen MCP-Client. Nur der Owner ändert ihn; Mitglieder können ihn lesen.
+
+**Arbeitssprache** legt fest, in welcher Sprache Smart Fill Tickettitel und Zielnamen schreibt, unabhängig von der Sprache der Beschreibung. Feedback wird ebenfalls in sie übersetzt, wenn das Projekt keine Teamsprache hat. **Automatisch**, die Voreinstellung, belässt jeden Titel in der Sprache seiner Beschreibung.
+
+Anweisungen sind optional: Smart Fill und Smart Assign funktionieren ohne sie. Füge eine hinzu, wenn dein Team oder eines seiner Mitglieder auf eine Weise arbeitet, der die KI folgen soll. Wähle **Neue Anweisung** und dann, worum es geht: **Tickettitel**, **Priorität, Aufwand und Kategorien**, **Ziele** oder **Zuweisung**. Schreibe sie in einfachen Worten, mit höchstens 500 Zeichen, zum Beispiel „alles rund um Zahlungen hat mindestens hohe Priorität“, und wähle dann **Speichern**. Jedes der vier Themen nimmt eine Anweisung auf; das Kreuz in ihrer Zeile entfernt sie beim nächsten **Speichern**. **Zuweisung** ergänzt die Regeln pro Mitglied im Tab **Smart Assign** und ersetzt sie nicht; damit wählt Smart Assign zwischen mehreren Mitgliedern, auch wenn keines eine Regel hat. Eine Anweisung lenkt eine Wahl zwischen den vorhandenen Kategorien, Zielen und Mitgliedern des Projekts. Sie kann keine hinzufügen und hebt kein Nutzungslimit auf. Du kannst auch Numo bitten, die Sprache oder eine Anweisung festzulegen ([Numo-Anleitung](/docs/numo#project-instructions)).
+### Vorgeschlagene Anweisungen {#ai-instruction-suggestions}
+
+Einmal pro Woche zählt minddy die Werte, die Smart Fill oder Smart Assign gesetzt hat und die jemand innerhalb von sieben Tagen von Hand geändert hat. Wurde dieselbe Eigenschaft in dreißig Tagen bei mindestens fünf Tickets eines Projekts korrigiert, sucht minddy, was diese Korrekturen gemeinsam haben, und schlägt dem Owner eine Anweisung vor, wenn es ein Muster findet. Änderungen durch Numo, eine Integration, einen MCP-Client, eine Routine oder die Synchronisierung eines Repositorys werden nicht gezählt.
+
+Der Vorschlag erscheint auf der **Startseite** und oben im Tab **KI-Anweisungen**, mit der Anweisung in einem Feld, das du bearbeiten kannst. **Anweisung hinzufügen** speichert diesen Text als Anweisung seines Feldes; er enthält bereits, was dort vorher stand. **Verwerfen** legt den Vorschlag beiseite. Nichts ändert sich, bevor du eines von beiden wählst. Nach einem Vorschlag macht minddy dreißig Tage lang keinen weiteren für dasselbe Feld, und ein Projekt hat immer nur einen Vorschlag. Das Formulieren eines Vorschlags nutzt KI und zählt zum Anteil **Automatisierungen** des Owners; es wird übersprungen, solange dieses Budget aufgebraucht ist.
 
 ### Ein Projekt für dich ausblenden {#hide-project}
 

@@ -48,6 +48,11 @@ import { toNamed } from "@/lib/server/auth-users";
 import { displayName } from "@/lib/display-name";
 import type { User } from "@supabase/supabase-js";
 import type { DecisionOption, DecisionQuestion, DecisionSpec } from "@/lib/server/decisions/types";
+import {
+  aiInstructionQuestionSuffix,
+  normalizeAiInstruction,
+  type AiInstructions,
+} from "@/lib/ai-instructions";
 
 /**
  * MODULE-LEVEL RULE — the reason `NO_OBJECTIVE`/`NO_EFFORT` below are built
@@ -67,6 +72,28 @@ function choiceOptions(entries: { value: string; label: string }[]): DecisionOpt
   return entries.map((e) => ({ value: e.value, label: e.label }));
 }
 
+/**
+ * The owner's instructions a use case reads (MIN-988), as the structured
+ * state carries them: only the use cases passed, only those with a text, and
+ * no key at all when there is none, so the state of a project without
+ * instructions is exactly what it was.
+ *
+ * An instruction reaches both engines as text to weigh. It never touches the
+ * option lists or the tool schema: the answers an engine may give, and the
+ * sanitizer they go through, are the same with or without it.
+ */
+function instructionState(
+  instructions: AiInstructions | undefined,
+  useCases: readonly (keyof AiInstructions)[],
+): { project_instructions?: AiInstructions } {
+  const kept: AiInstructions = {};
+  for (const useCase of useCases) {
+    const text = normalizeAiInstruction(instructions?.[useCase]);
+    if (text) kept[useCase] = text;
+  }
+  return Object.keys(kept).length > 0 ? { project_instructions: kept } : {};
+}
+
 function truncate(text: string | null | undefined, max: number): string | null {
   const trimmed = text?.trim() || null;
   return trimmed ? trimmed.slice(0, max) : null;
@@ -79,25 +106,34 @@ function truncate(text: string | null | undefined, max: number): string | null {
  * categories, open objectives) in structured form; the questions are the
  * four fields of `fill_issue`, keyed exactly like the tool arguments so the
  * answers feed `sanitizeSmartFill` whichever engine produced them.
+ *
+ * `instructions` are the owner's (MIN-988): `properties` goes to the
+ * priority, effort and category questions, `objectives` to the objective
+ * question, and both to the LLM pass's prompt.
  */
 export function buildSmartFillSpec(input: {
   projectName: string;
   title: string;
   description: string | null;
   ctx: SmartFillContext;
+  instructions?: AiInstructions;
 }): DecisionSpec {
-  const { projectName, title, description, ctx } = input;
+  const { projectName, title, description, ctx, instructions } = input;
+  // The decision model has no system prompt: the question is where it reads
+  // the instruction, like the hint rule of Smart Assign.
+  const forProperties = aiInstructionQuestionSuffix(instructions?.properties);
+  const forObjective = aiInstructionQuestionSuffix(instructions?.objectives);
   const questions: DecisionQuestion[] = [
     {
       key: "priority",
       kind: "single_choice",
-      label: "How urgent does this issue read?",
+      label: `How urgent does this issue read?${forProperties}`,
       options: choiceOptions(ISSUE_PRIORITIES.map((p) => ({ value: p, label: p }))),
     },
     {
       key: "effort",
       kind: "single_choice",
-      label: "What is the t-shirt size of the work described?",
+      label: `What is the t-shirt size of the work described?${forProperties}`,
       options: [
         ...choiceOptions(ISSUE_EFFORTS.map((e) => ({ value: e, label: e }))),
         {
@@ -117,7 +153,7 @@ export function buildSmartFillSpec(input: {
     questions.push({
       key: "category_ids",
       kind: "multi_choice",
-      label: "Which of this project's categories does the issue belong to?",
+      label: `Which of this project's categories does the issue belong to?${forProperties}`,
       options: choiceOptions(
         ctx.categories.slice(0, MAX_CONTEXT_ITEMS).map((c) => ({ value: c.id, label: c.name }))
       ),
@@ -127,7 +163,7 @@ export function buildSmartFillSpec(input: {
   questions.push({
     key: "objective_id",
     kind: "single_choice",
-    label: "Which objective does the issue plainly belong to?",
+    label: `Which objective does the issue plainly belong to?${forObjective}`,
     options: [
       ...choiceOptions(
         ctx.objectives.slice(0, MAX_CONTEXT_ITEMS).map((o) => ({ value: o.id, label: o.name }))
@@ -149,13 +185,15 @@ export function buildSmartFillSpec(input: {
       },
       categories: ctx.categories.slice(0, MAX_CONTEXT_ITEMS),
       objectives: ctx.objectives.slice(0, MAX_CONTEXT_ITEMS),
+      ...instructionState(instructions, ["properties", "objectives"]),
     },
     questions,
-    // The existing pass, verbatim: prompts and tool schema unchanged (MIN-562).
+    // The existing pass: same tool schema, and the same prompt for a project
+    // without instructions (MIN-562).
     llm: {
       toolName: "fill_issue",
       parameters: fillParameters(ctx),
-      systemPrompt: buildSmartFillPrompt(projectName, ctx),
+      systemPrompt: buildSmartFillPrompt(projectName, ctx, instructions),
       userMessage: buildSmartFillUserMessage(title, description),
     },
   };
@@ -183,10 +221,13 @@ export function buildSmartAssignSpec(input: {
     effort: string | null;
   };
   members: SmartAssignMember[];
+  /** The owner's general instruction (MIN-988), next to the member rules. */
+  instruction?: string | null;
 }): DecisionSpec {
-  const { projectName, issue, members } = input;
+  const { projectName, issue, members, instruction } = input;
   const hinted = members.some((m) => m.hints);
   const question = "Which team member is best suited to handle this issue?";
+  const forAssign = aiInstructionQuestionSuffix(instruction);
   return {
     useCase: "smart_assign",
     state: {
@@ -213,6 +254,7 @@ export function buildSmartAssignSpec(input: {
             }
           : {}),
       })),
+      ...instructionState({ assign: instruction ?? undefined }, ["assign"]),
     },
     questions: [
       {
@@ -220,16 +262,18 @@ export function buildSmartAssignSpec(input: {
         kind: "single_choice",
         // The decision model has no system prompt: the question is where it
         // learns that the hints only break ties.
-        label: hinted
-          ? `${question} Each member has an assignment rule, a workload (open_issues, open_effort_points) and context marks (leads_objective, related_issues, recent_category_issues). ${smartAssignHintGuidance()}`
-          : question,
+        label: `${
+          hinted
+            ? `${question} Each member has an assignment rule, a workload (open_issues, open_effort_points) and context marks (leads_objective, related_issues, recent_category_issues). ${smartAssignHintGuidance()}`
+            : question
+        }${forAssign}`,
         options: choiceOptions(members.map((m) => ({ value: m.id, label: m.name }))),
       },
     ],
     llm: {
       toolName: "choose_assignee",
       parameters: smartAssignParameters(members.map((m) => m.id)),
-      systemPrompt: buildSmartAssignSystemPrompt(projectName),
+      systemPrompt: buildSmartAssignSystemPrompt(projectName, instruction),
       userMessage: buildSmartAssignUserMessage(issue, buildSmartAssignMemberLines(members)),
     },
   };
@@ -268,6 +312,8 @@ export function prepareSmartAssign(input: {
   /** Workload and context per member (MIN-957), or nothing when the caller
    * could not read them: the spec is then the rules-only one. */
   hints?: ReadonlyMap<string, SmartAssignMemberHints> | null;
+  /** The owner's general instruction for Smart Assign (MIN-988). */
+  instruction?: string | null;
 }): DecisionSpec {
   const members: SmartAssignMember[] = input.memberIds.map((id) => {
     const hints = input.hints?.get(id);
@@ -289,6 +335,7 @@ export function prepareSmartAssign(input: {
       effort: input.issue.effort,
     },
     members,
+    instruction: input.instruction,
   });
 }
 

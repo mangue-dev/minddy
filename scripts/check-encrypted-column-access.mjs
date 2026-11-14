@@ -250,6 +250,18 @@ const rules = [
     allowed: new Set(["lib/server/numo/memory-content.ts"]),
   },
   {
+    // Project AI instructions (MIN-988) are the owner's sealed free text:
+    // only their repository reads or writes the table.
+    access: /\.\s*from\s*\(\s*["'`]project_ai_instructions["'`]\s*\)/,
+    allowed: new Set(["lib/server/ai-instructions.ts"]),
+  },
+  {
+    // Instructions proposed from corrections (MIN-988) hold a sealed draft:
+    // only their repository reads or writes the table.
+    access: /\.\s*from\s*\(\s*["'`]ai_instruction_proposals["'`]\s*\)/,
+    allowed: new Set(["lib/server/ai-instruction-proposals.ts"]),
+  },
+  {
     // Numo's journal (MIN-927) is the user's sealed free text too: only its
     // repository reads or writes the table, the retention sweep included.
     access: /\.\s*from\s*\(\s*["'`]numo_journal_entries["'`]\s*\)/,

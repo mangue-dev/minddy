@@ -175,6 +175,7 @@ export const PROJECT_TAB_COVERAGE: Readonly<Record<string, TabCoverage>> = {
   },
   recurrences: { tools: ["update_issues"] },
   "smart-assign": { tools: ["update_project"] },
+  "ai-instructions": { tools: ["update_project"] },
   feedback: { tools: ["update_project", "configure_feedback_board"] },
   git: {
     tools: [],
@@ -207,6 +208,8 @@ export const PROJECT_FIELD_COVERAGE: Readonly<Record<string, "update_project" | 
   feedback_translate_enabled: "update_project",
   feedback_team_language: "update_project",
   feedback_no_translate_languages: "update_project",
+  ai_language: "update_project",
+  ai_instructions: "update_project",
   automations: { humanOnly: "Retired: project automations became routines, and the core refuses it." },
   automations_enabled: { humanOnly: "Retired: project automations became routines, and the core refuses it." },
 };

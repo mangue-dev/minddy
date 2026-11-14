@@ -6,7 +6,11 @@ const {
   canUseAutomationsMock,
   hasUsageBudgetMock,
   fromMock,
+  readAiInstructionsMock,
+  writeAiInstructionsMock,
 } = vi.hoisted(() => ({
+  readAiInstructionsMock: vi.fn<() => Promise<Record<string, string>>>(),
+  writeAiInstructionsMock: vi.fn<(...args: unknown[]) => Promise<Record<string, string>>>(),
   getProjectAccessMock: vi.fn<(userId: string, projectId: string) => Promise<unknown>>(),
   canUseSmartAssignMock: vi.fn<(ownerId: string) => Promise<boolean>>(),
   canUseAutomationsMock: vi.fn<(ownerId: string) => Promise<boolean>>(),
@@ -26,6 +30,11 @@ vi.mock("@/lib/server/entitlements", () => ({
 }));
 vi.mock("@/lib/server/usage", () => ({
   hasUsageBudget: hasUsageBudgetMock,
+}));
+
+vi.mock("@/lib/server/ai-instructions", () => ({
+  readAiInstructions: readAiInstructionsMock,
+  writeAiInstructions: writeAiInstructionsMock,
 }));
 
 import { updateProjectSettings } from "./update-project";
@@ -67,6 +76,55 @@ beforeEach(() => {
   canUseSmartAssignMock.mockResolvedValue(true);
   canUseAutomationsMock.mockResolvedValue(true);
   hasUsageBudgetMock.mockResolvedValue(true);
+  readAiInstructionsMock.mockReset().mockResolvedValue({});
+  writeAiInstructionsMock.mockReset().mockImplementation(async (...args) => args[3] as Record<string, string>);
+});
+
+describe("updateProjectSettings — working language and AI instructions (MIN-988)", () => {
+  const update = (input: Record<string, unknown>) =>
+    updateProjectSettings({ projectId: "project-1", actorId: "user-owner", input });
+
+  it("normalizes the working language and clears it with null", async () => {
+    expect((await update({ ai_language: "EN" })).ok).toBe(true);
+    expect(updated?.ai_language).toBe("en");
+    expect((await update({ ai_language: null })).ok).toBe(true);
+    expect(updated?.ai_language).toBeNull();
+  });
+
+  it("refuses an unknown language instead of reading it as 'clear'", async () => {
+    expect(await update({ ai_language: "English" })).toEqual({
+      ok: false, status: 400, errorKey: "invalidAiLanguage",
+    });
+    expect(updated).toBeNull();
+  });
+
+  it("merges a partial instruction update without writing the project row", async () => {
+    readAiInstructionsMock.mockResolvedValue({ title: "In English", properties: "Old rule" });
+    const result = await update({ ai_instructions: { properties: "Payment bugs are at least high", title: "" } });
+    expect(writeAiInstructionsMock).toHaveBeenCalledWith(
+      expect.anything(), "project-1", "user-owner", { properties: "Payment bugs are at least high" });
+    expect(updated).toBeNull();
+    expect(result).toMatchObject({
+      ok: true,
+      project: { ai_instructions: { properties: "Payment bugs are at least high" } },
+    });
+  });
+
+  it("leaves the instructions to the owner alone", async () => {
+    getProjectAccessMock.mockResolvedValue({ ...ACCESS, isOwner: false });
+    expect(await update({ ai_instructions: { title: "In English" } })).toEqual({
+      ok: false, status: 403, errorKey: "ownerOnly",
+    });
+    expect(readAiInstructionsMock).not.toHaveBeenCalled();
+    expect(writeAiInstructionsMock).not.toHaveBeenCalled();
+  });
+
+  it("does not report a saved instruction when the write fails", async () => {
+    writeAiInstructionsMock.mockRejectedValue(new Error("down"));
+    expect(await update({ ai_instructions: { title: "In English" } })).toEqual({
+      ok: false, status: 500, errorKey: "databaseError",
+    });
+  });
 });
 
 describe("updateProjectSettings — smart_triage_mode", () => {

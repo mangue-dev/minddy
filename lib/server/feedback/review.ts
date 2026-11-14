@@ -172,6 +172,9 @@ async function loadSettings(): Promise<ReviewSettings> {
  * those created outside the wizard. We then fall back to the default locale of the app
  * rather than cutting the translation: a team that has not adjusted anything reads
  * probably English, and the setting is one click away to say the opposite.
+ *
+ * Before that last resort, a project that set a working language (MIN-988)
+ * and no team language of its own is read in its working language.
  */
 export async function projectTranslationSettings(
   projectId: string
@@ -180,7 +183,7 @@ export async function projectTranslationSettings(
   const { data } = await service
     .from("projects")
     .select(
-      "feedback_translate_enabled, feedback_team_language, feedback_no_translate_languages"
+      "feedback_translate_enabled, feedback_team_language, feedback_no_translate_languages, ai_language"
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -189,6 +192,7 @@ export async function projectTranslationSettings(
     enabled: (data?.feedback_translate_enabled as boolean | undefined) ?? true,
     teamLanguage:
       normalizeLanguage(data?.feedback_team_language) ??
+      normalizeLanguage(data?.ai_language) ??
       (normalizeLanguage(defaultLocale) as FeedbackLanguage),
     skipLanguages: Array.isArray(skip) ? (skip as string[]) : [],
   };

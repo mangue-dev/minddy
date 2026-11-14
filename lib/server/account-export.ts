@@ -1,3 +1,4 @@
+import { readAiInstructions } from "@/lib/server/ai-instructions";
 import { issueStore } from "@/lib/server/issue-store";
 import { listNumoMemories } from "@/lib/server/numo/memory-content";
 import { listAllJournalEntries } from "@/lib/server/numo/journal-content";
@@ -241,10 +242,15 @@ export async function buildAccountExport(userId: string): Promise<AccountExport>
     "smart_assign_rules", "auto_assign_enabled", "feedback_review_enabled",
     "feedback_review_skip_over_budget", "automations_enabled", "automations",
     "feedback_translate_enabled", "feedback_team_language",
-    "feedback_no_translate_languages", "orb_seed"];
+    "feedback_no_translate_languages", "orb_seed", "ai_language"];
   const ownedProjects = await Promise.all(ownedProjectRows.map(async (row) => {
     const plain = await decodeProject(row, userId);
-    return Object.fromEntries(projectFields.map((field) => [field, plain[field]]));
+    return {
+      ...Object.fromEntries(projectFields.map((field) => [field, plain[field]])),
+      // What the owner told Smart Fill and Smart Assign (MIN-988), kept in
+      // its own sealed row.
+      ai_instructions: await readAiInstructions(service, row.id as string, userId),
+    };
   }));
   const exportedProjects = await includeProjectIcons(service, ownedProjects);
   const ownedIds = exportedProjects.map((p) => p.id as string);

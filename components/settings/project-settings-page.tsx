@@ -25,7 +25,8 @@ import type { SidebarBrowseTarget } from "@/components/secondary-sidebar";
 import { SettingsShell, type SettingsTab } from "@/components/settings-shell";
 import { SettingsPageSkeleton } from "@/components/route-skeletons";
 import { useAssistantContext } from "@/lib/assistant-panel-context";
-import { SMART_ASSIGN_ICON } from "@/components/feature-icons";
+import { SMART_ASSIGN_ICON, SMART_FILL_ICON } from "@/components/feature-icons";
+import { AiInstructionsSection } from "@/components/settings/ai-instructions-section";
 
 export default function ProjectSettingsPage(props: { browse?: SidebarBrowseTarget; projectId?: string } = {}) {
   return (
@@ -127,6 +128,12 @@ function ProjectSettingsInner({ browse, projectId }: { browse?: SidebarBrowseTar
         ? t("smartAssignIncompleteTab")
         : undefined,
       content: <SmartAssignSection project={project} isOwner={isOwner} />,
+    },
+    {
+      value: "ai-instructions",
+      label: t("aiInstructionsTab"),
+      icon: SMART_FILL_ICON,
+      content: <AiInstructionsSection project={project} isOwner={isOwner} />,
     },
     {
       value: "feedback",

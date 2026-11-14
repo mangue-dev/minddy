@@ -12,6 +12,7 @@ import type { RecurrenceCadence } from "./recurrence";
 import type { BillingPlanId } from "./billing-plans";
 import type { SmartTriageMode } from "./smart-triage";
 import type { SmartAssignFromStatus } from "./smart-assign-config";
+import type { AiInstructions } from "./ai-instructions";
 import type { CommentVisibility } from "./feedback/types";
 import type { MemberRole, ProjectRole } from "./project-roles";
 
@@ -616,6 +617,14 @@ export interface Project {
   feedback_team_language: string | null;
   /** Languages ​​that we read without help, left as they are. */
   feedback_no_translate_languages: string[];
+  /** Working language of the project (MIN-988, ISO 639-1): the language Smart
+      Fill writes titles and objective names in, and the fallback team
+      language of feedback translation. `null` follows each text's language. */
+  ai_language?: string | null;
+  /** The owner's instructions to Smart Fill and Smart Assign (MIN-988). Only
+      on the answer of a settings update that changed them: project reads do
+      not carry them, the settings read them from their own endpoint. */
+  ai_instructions?: AiInstructions;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -660,6 +669,11 @@ export interface ProjectUpdateInput {
   feedback_translate_enabled?: boolean;
   feedback_team_language?: string | null;
   feedback_no_translate_languages?: string[];
+  /** Working language (MIN-988); null follows each text's language. */
+  ai_language?: string | null;
+  /** Partial map (MIN-988): a passed use case replaces its instruction, an
+      empty text removes it. */
+  ai_instructions?: AiInstructions;
 }
 
 export interface Member {

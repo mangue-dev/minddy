@@ -6,7 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * gates of the call. The model call itself is mocked.
  */
 
-const { forcedToolCall, hasUsageBudget, resolveConfiguredModel } = vi.hoisted(() => ({
+const { forcedToolCall, hasUsageBudget, resolveConfiguredModel, readProjectAiGuidance } = vi.hoisted(() => ({
+  readProjectAiGuidance: vi.fn(),
   forcedToolCall: vi.fn(),
   hasUsageBudget: vi.fn(),
   resolveConfiguredModel: vi.fn(async () => ({ model: "test/model" })),
@@ -17,6 +18,7 @@ vi.mock("@/lib/server/feedback/forced-tool-call", () => ({ forcedToolCall }));
 vi.mock("@/lib/server/usage", () => ({ hasUsageBudget }));
 vi.mock("@/lib/server/model-config", () => ({ resolveConfiguredModel }));
 vi.mock("@/lib/server/smart-fill", () => ({ MAX_DESCRIPTION_CHARS: 4000 }));
+vi.mock("@/lib/server/ai-instructions", () => ({ readProjectAiGuidance }));
 
 import {
   buildIssueTitlePrompt,
@@ -76,6 +78,25 @@ describe("buildIssueTitlePrompt", () => {
     expect(buildIssueTitlePrompt("Minddy", null)).not.toContain("UNCHANGED");
     expect(buildIssueTitlePrompt("Minddy", "Export PDF fails")).toContain('"Export PDF fails"');
   });
+
+  it("follows the description's language unless the project sets a working language (MIN-988)", () => {
+    const follow = buildIssueTitlePrompt("Minddy", null);
+    expect(follow).toContain("Write it in the SAME language as the description.");
+    expect(buildIssueTitlePrompt("Minddy", null, { language: null })).toBe(follow);
+    const english = buildIssueTitlePrompt("Minddy", null, { language: "en" });
+    expect(english).toContain("Write it in English, whatever language the description is written in.");
+    expect(english).not.toContain("SAME language as the description");
+  });
+
+  it("carries the owner's title instruction as fenced data, after the rules (MIN-988)", () => {
+    const prompt = buildIssueTitlePrompt("Minddy", null, {
+      language: null,
+      instruction: "Start with the screen concerned",
+    });
+    expect(prompt.indexOf("You MUST call set_issue_title")).toBeLessThan(prompt.indexOf("<project_instructions>"));
+    expect(prompt).toContain("Start with the screen concerned");
+    expect(buildIssueTitlePrompt("Minddy", null)).not.toContain("project_instructions");
+  });
 });
 
 describe("generateIssueTitle", () => {
@@ -89,6 +110,21 @@ describe("generateIssueTitle", () => {
   beforeEach(() => {
     forcedToolCall.mockReset();
     hasUsageBudget.mockReset().mockResolvedValue(true);
+    readProjectAiGuidance.mockReset().mockResolvedValue({ language: null, instructions: {} });
+  });
+
+  it("writes in the project's working language and follows its title instruction (MIN-988)", async () => {
+    readProjectAiGuidance.mockResolvedValue({
+      language: "en",
+      instructions: { title: "Start with the screen concerned", properties: "Not for titles" },
+    });
+    forcedToolCall.mockResolvedValue({ title: "Board: columns lose their order" });
+    await generateIssueTitle({ ...input, description: "Les colonnes du tableau perdent leur ordre." });
+    expect(readProjectAiGuidance).toHaveBeenCalledWith("project-1");
+    const prompt = forcedToolCall.mock.calls[0]?.[1] as string;
+    expect(prompt).toContain("Write it in English");
+    expect(prompt).toContain("Start with the screen concerned");
+    expect(prompt).not.toContain("Not for titles");
   });
 
   it("bills the Smart Fill payer on the admin-set title model and cleans the answer", async () => {

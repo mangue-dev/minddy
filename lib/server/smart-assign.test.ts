@@ -422,6 +422,40 @@ describe("runSmartAssign — decision layer", () => {
     }
   });
 
+  it("asks the layer when nobody has a rule but the owner wrote a general instruction (MIN-988)", async () => {
+    DB.project.smart_assign_rules = {};
+    const wired = fromMock.getMockImplementation()!;
+    fromMock.mockImplementation((table: string) =>
+      table === "project_ai_instructions"
+        ? fakeQuery(() => ({
+            data: {
+              project_id: "project-1",
+              content: { assign: "Bugs go to whoever has the fewest open issues" },
+              encrypted_content: null,
+              encryption_version: 0,
+            },
+            error: null,
+          }))
+        : wired(table));
+    runModelDecisionMock.mockResolvedValue(answered(modelAnswer("user-qa", 0.8)));
+    try {
+      await expect(sweepRun()).resolves.toBe("user-qa");
+      const spec = runModelDecisionMock.mock.calls[0]?.[0] as {
+        state: { project_instructions?: unknown };
+        questions: { options: { value: string }[] }[];
+      };
+      expect(spec.state.project_instructions).toEqual({
+        assign: "Bugs go to whoever has the fewest open issues",
+      });
+      // The instruction steers the choice; the electorate is still the team.
+      expect(spec.questions[0].options.map((option) => option.value)).toEqual([
+        "user-owner", "user-dev", "user-qa",
+      ]);
+    } finally {
+      DB.project.smart_assign_rules = { "user-dev": "All things backend" };
+    }
+  });
+
   it("stays silent when the toggle is off, the ticket is taken, or the status is ineligible", async () => {
     DB.project.smart_assign_enabled = false;
     try {
