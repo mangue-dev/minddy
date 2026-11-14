@@ -5,6 +5,7 @@ import {
   isLocalAgentProvider,
   type AgentProviderId,
 } from "@/lib/agent-providers";
+import { aiChatProviderHeaders } from "@/lib/ai-chat";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
 
@@ -91,6 +92,8 @@ function probeRequestFor(
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "content-type": "application/json",
+          // Go answers 400 before reading the key without these.
+          ...aiChatProviderHeaders(provider, "minddy key check"),
         },
       };
     default:

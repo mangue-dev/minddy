@@ -222,7 +222,9 @@ for (const provider of AGENT_PROVIDERS.filter((entry) => entry.id !== "openroute
       // `gpt-4o-mini-transcribe` is deprecated since 2026-08-26 (shutdown
       // 2027-02-26); the OpenAI changelog names `gpt-transcribe` as its
       // replacement on the same /audio/transcriptions endpoint.
-      fallback = provider.id === "openai" ? "gpt-transcribe" : "";
+      fallback = provider.id === "openai"
+        ? "gpt-transcribe"
+        : provider.id === "google" ? "gemini-3.5-transcribe" : "";
     } else if (modelKey === "issue_embedding_model") {
       fallback =
         provider.id === "openai"

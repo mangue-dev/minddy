@@ -42,6 +42,7 @@ const {
   resolveUnbilledAiRuntime,
   usesByokForSurface,
 } = await import("@/lib/server/ai-runtime");
+const { resetClaudeCapabilities } = await import("@/lib/anthropic-model-capabilities");
 
 describe("resolveAiRuntime", () => {
   beforeEach(() => {
@@ -192,7 +193,7 @@ describe("resolveAiRuntime", () => {
     getUserByok.mockResolvedValue({
       provider: "opencode-go",
       apiKey: "opencode-key",
-      baseUrl: "https://opencode.ai/zen/go/v1",
+      baseUrl: "https://opencode.ai/inference/go/openai/v1",
       featureModels: {},
     });
     // The gateway lists only chat models: sending the chat default as an
@@ -437,5 +438,72 @@ describe("per-account managed keys (MIN-761)", () => {
     await expect(
       handleManagedKeyRejection({ apiKey: "k", managedKeyOwner: "u1" }, 403, "model not allowed"),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("fetchAiChat native transports (MIN-979)", () => {
+  beforeEach(() => safeFetchResponse.mockReset());
+
+  it("sends GPT-6 Astra to the Responses API and reads the reply as a chat completion", async () => {
+    safeFetchResponse.mockResolvedValueOnce(Response.json({
+      id: "resp_1", model: "gpt-6-astra", status: "completed",
+      output: [{ type: "function_call", id: "fc_1", call_id: "call_1", name: "fill", arguments: "{}" }],
+      usage: { input_tokens: 3, output_tokens: 2 },
+    }));
+    const runtime = {
+      apiKey: "sk", mode: "byok" as const, provider: "openai" as const,
+      baseUrl: "https://api.openai.com/v1", model: "gpt-6-astra",
+      requestProfile: { outputTokenField: "max_completion_tokens" as const },
+    };
+    const { response } = await fetchAiChat(runtime, "gpt-6-astra", (model) => ({
+      model, messages: [{ role: "user", content: "Hi" }],
+      tools: [{ type: "function", function: { name: "fill" } }],
+      toolChoice: { type: "function", function: { name: "fill" } },
+      reasoning: { effort: "high" },
+    }), "t", "[t]");
+    const [url, init] = safeFetchResponse.mock.calls[0]!;
+    expect(url).toBe("https://api.openai.com/v1/responses");
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      store: false, reasoning: { effort: "high" }, tool_choice: { type: "function", name: "fill" },
+    });
+    const body = await response.json() as { choices: Array<{ finish_reason: string; message: { tool_calls: unknown[] } }> };
+    expect(body.choices[0]!.finish_reason).toBe("tool_calls");
+    expect(body.choices[0]!.message.tool_calls).toHaveLength(1);
+  });
+
+  it("reads a Claude model's published capabilities once before its first request", async () => {
+    resetClaudeCapabilities();
+    const model = "claude-zephyr-1";
+    safeFetchResponse
+      .mockResolvedValueOnce(Response.json({
+        id: model,
+        capabilities: {
+          effort: { supported: true, low: { supported: true }, medium: { supported: true }, high: { supported: true }, max: { supported: false }, xhigh: null },
+          thinking: { supported: true, types: {
+            adaptive: { supported: true }, enabled: { supported: false },
+            disabled: { supported: false }, between_tools: { supported: false },
+          } },
+        },
+      }))
+      .mockImplementation(async () => Response.json({ id: "m", model, content: [], stop_reason: "end_turn", usage: {} }));
+    const runtime = {
+      apiKey: "ak", mode: "byok" as const, provider: "anthropic" as const,
+      baseUrl: "https://api.anthropic.com/v1", model,
+      requestProfile: { outputTokenField: "max_tokens" as const },
+    };
+    const request = (m: string) => ({ model: m, messages: [], reasoning: { effort: "max" as const } });
+    await fetchAiChat(runtime, model, request, "t", "[t]");
+    await fetchAiChat(runtime, model, request, "t", "[t]");
+    const urls = safeFetchResponse.mock.calls.map(([url]) => url);
+    expect(urls).toEqual([
+      `https://api.anthropic.com/v1/models/${model}`,
+      "https://api.anthropic.com/v1/messages",
+      "https://api.anthropic.com/v1/messages",
+    ]);
+    // A family the name rules do not know now thinks adaptively, at the
+    // highest effort it published.
+    expect(JSON.parse(String(safeFetchResponse.mock.calls[1]![1].body))).toMatchObject({
+      thinking: { type: "adaptive" }, output_config: { effort: "high" },
+    });
   });
 });

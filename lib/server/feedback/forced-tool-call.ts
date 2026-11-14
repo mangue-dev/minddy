@@ -8,12 +8,13 @@ import {
   type AiUsageBillTo,
   type OpenRouterUsage,
 } from "@/lib/server/ai-usage";
-import { getAgentProvider } from "@/lib/agent-providers";
+import { downgradesForcedToolChoice } from "@/lib/ai-chat";
 import type { ReasoningLevel } from "@/lib/agent-reasoning";
 import type { AiProviderChoice, AiSurface, ByokModelKey } from "@/lib/ai-surfaces";
 import {
   fetchAiChat,
   resolveAiRuntime,
+  platformRuntime,
   resolvePlatformApiKey,
   type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
@@ -194,15 +195,9 @@ export async function forcedToolCall(
   const provider = runtime?.provider ?? "openrouter";
   const resolvedModel = runtime?.model ?? model;
   const effectiveRuntime: ResolvedAiRuntime | null =
-    runtime ?? (platformKey && {
-      ...platformKey,
-      mode: "platform",
-      provider: "openrouter",
-      baseUrl: "https://openrouter.ai/api/v1",
-      model: resolvedModel,
-      requestProfile: getAgentProvider("openrouter")!.requestProfile,
-    });
+    runtime ?? (platformKey ? platformRuntime(platformKey, resolvedModel) : null);
   if (!effectiveRuntime) return null;
+  const callRuntime: ResolvedAiRuntime = effectiveRuntime;
 
   const signal = options?.signal
     ? AbortSignal.any([options.signal, AbortSignal.timeout(options?.timeoutMs ?? 45_000)])
@@ -225,14 +220,33 @@ export async function forcedToolCall(
       logRequestFailure();
       return null;
     }
+    // Some providers refuse a forced tool choice and get `auto`
+    // (lib/ai-chat.ts), which does not guarantee the call: the prompt asks for
+    // it, and one missing call is retried with a direct reminder.
+    const toolChoiceDowngraded = downgradesForcedToolChoice(provider, resolvedModel);
+    const system = toolChoiceDowngraded
+      ? `${systemPrompt}\n\nAnswer only by calling the \`${toolName}\` tool.`
+      : systemPrompt;
+    let attemptModel = resolvedModel;
+    for (let attempt = 0; attempt < (toolChoiceDowngraded ? 2 : 1); attempt += 1) {
+      const outcome = await requestToolCall(attempt > 0);
+      if (outcome !== "missing") return outcome;
+      if (signal.aborted) break;
+    }
+    return null;
+
+    async function requestToolCall(remind: boolean): Promise<Record<string, unknown> | null | "missing"> {
     const call = await fetchAiChat(
-      effectiveRuntime,
-      resolvedModel,
-      (attemptModel) => ({
-        model: attemptModel,
+      callRuntime,
+      attemptModel,
+      (model) => ({
+        model,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: system },
           { role: "user", content: userMessage },
+          ...(remind
+            ? [{ role: "user", content: `Call the \`${toolName}\` tool now, with every required argument.` }]
+            : []),
         ],
         tools: [
           {
@@ -255,6 +269,7 @@ export async function forcedToolCall(
       { signal },
     );
     const response = call.response;
+    attemptModel = call.model;
     if (!response.ok) {
       console.error(`${logPrefix} LLM call failed: provider_http_${response.status}`);
       return null;
@@ -301,15 +316,16 @@ export async function forcedToolCall(
     }
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
     if (toolCall?.name !== toolName) {
-      console.error(`${logPrefix} LLM call failed: ${data.choices?.[0]?.finish_reason === "length"
-        ? "output_truncated" : "expected_tool_missing"}`);
-      return null;
+      const truncated = data.choices?.[0]?.finish_reason === "length";
+      console.error(`${logPrefix} LLM call failed: ${truncated ? "output_truncated" : "expected_tool_missing"}`);
+      return truncated ? null : "missing";
     }
     try {
       return JSON.parse(toolCall.arguments || "{}") as Record<string, unknown>;
     } catch {
       console.error(`${logPrefix} LLM call failed: tool_arguments_invalid`);
       return null;
+    }
     }
   } catch {
     logRequestFailure();

@@ -20,7 +20,7 @@ describe("BYOK provider model capabilities", () => {
       "transcription",
       "embedding",
     ]);
-    expect(byokCapabilitiesForProvider("google")).toEqual(["text", "embedding"]);
+    expect(byokCapabilitiesForProvider("google")).toEqual(["text", "transcription", "embedding"]);
   });
 
   it("maps runtime model keys to their required family", () => {

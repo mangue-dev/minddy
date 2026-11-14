@@ -30,6 +30,56 @@ interface ChatMessage {
   content?: unknown;
   tool_calls?: ChatToolCall[];
   tool_call_id?: unknown;
+  reasoning_details?: unknown;
+}
+
+/**
+ * Claude's thinking blocks travel in the chat shape as `reasoning_details`,
+ * the field OpenRouter documents for the same purpose: `reasoning.text`
+ * carries a `thinking` block and its signature, `reasoning.encrypted` a
+ * `redacted_thinking` block. Within a tool-use turn the API needs them back
+ * complete and unmodified, before the `tool_use` blocks.
+ */
+export const ANTHROPIC_REASONING_FORMAT = "anthropic-claude-v1";
+
+export interface ReasoningDetail {
+  type: "reasoning.text" | "reasoning.encrypted";
+  text?: string;
+  signature?: string;
+  data?: string;
+  format: typeof ANTHROPIC_REASONING_FORMAT;
+}
+
+function thinkingDetail(block: Json): ReasoningDetail | null {
+  if (block.type === "thinking" && typeof block.signature === "string" && block.signature) {
+    return {
+      type: "reasoning.text",
+      text: String(block.thinking ?? ""),
+      signature: block.signature,
+      format: ANTHROPIC_REASONING_FORMAT,
+    };
+  }
+  if (block.type === "redacted_thinking" && typeof block.data === "string") {
+    return { type: "reasoning.encrypted", data: block.data, format: ANTHROPIC_REASONING_FORMAT };
+  }
+  return null;
+}
+
+/** `reasoning_details` → thinking blocks to replay. Entries of another format are skipped. */
+function thinkingBlocks(details: unknown): Json[] {
+  if (!Array.isArray(details)) return [];
+  const blocks: Json[] = [];
+  for (const raw of details) {
+    if (!raw || typeof raw !== "object") continue;
+    const detail = raw as Partial<ReasoningDetail>;
+    if (detail.format !== ANTHROPIC_REASONING_FORMAT) continue;
+    if (detail.type === "reasoning.text" && typeof detail.signature === "string") {
+      blocks.push({ type: "thinking", thinking: detail.text ?? "", signature: detail.signature });
+    } else if (detail.type === "reasoning.encrypted" && typeof detail.data === "string") {
+      blocks.push({ type: "redacted_thinking", data: detail.data });
+    }
+  }
+  return blocks;
 }
 
 interface AnthropicMessage {
@@ -122,7 +172,9 @@ export function toAnthropicMessages(messages: unknown[]): {
     } else if (message.role === "user") {
       push("user", contentBlocks(message.content));
     } else if (message.role === "assistant") {
-      const blocks = contentBlocks(message.content);
+      // Thinking first: the API reads a tool-use turn's blocks in the order
+      // the model produced them.
+      const blocks = [...thinkingBlocks(message.reasoning_details), ...contentBlocks(message.content)];
       for (const call of message.tool_calls ?? []) {
         if (typeof call?.id !== "string" || typeof call.function?.name !== "string") continue;
         blocks.push({
@@ -262,6 +314,7 @@ export function toChatCompletion(message: Json): Json {
   const text = content.filter((b) => b.type === "text").map((b) => String(b.text ?? "")).join("");
   const reasoning = content.filter((b) => b.type === "thinking")
     .map((b) => String(b.thinking ?? "")).join("");
+  const reasoningDetails = content.map(thinkingDetail).filter((d): d is ReasoningDetail => d !== null);
   const toolCalls = content.filter((b) => b.type === "tool_use").map((b) => ({
     id: b.id,
     type: "function",
@@ -277,6 +330,7 @@ export function toChatCompletion(message: Json): Json {
         role: "assistant",
         content: text || null,
         ...(reasoning ? { reasoning } : {}),
+        ...(reasoningDetails.length > 0 ? { reasoning_details: reasoningDetails } : {}),
         ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
       },
       finish_reason: toChatFinishReason(message.stop_reason),
@@ -315,6 +369,17 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
   let usage: AnthropicUsage = {};
   let toolIndex = -1;
   const toolIndexByBlock = new Map<number, number>();
+  /** Open thinking blocks by stream index, completed with their signature. */
+  const thinkingByBlock = new Map<number, Json>();
+  const mergeUsage = (next: unknown) => {
+    // Counts are cumulative, and a field may arrive as `null`: only a number
+    // replaces what `message_start` reported.
+    if (!next || typeof next !== "object") return;
+    for (const [key, value] of Object.entries(next)) {
+      if (typeof value === "number") (usage as Record<string, number>)[key] = value;
+    }
+  };
+  const detailChunk = (detail: ReasoningDetail) => chunk({ reasoning_details: [detail] });
 
   const chunk = (delta: Json, extra: Json = {}) =>
     encoder.encode(`data: ${JSON.stringify({
@@ -329,13 +394,19 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
         const message = (event.message ?? {}) as Json;
         id = String(message.id ?? "");
         model = String(message.model ?? "");
-        usage = { ...(message.usage as AnthropicUsage | undefined) };
+        usage = {};
+        mergeUsage(message.usage);
         emit(chunk({ role: "assistant" }));
         break;
       }
       case "content_block_start": {
         const block = (event.content_block ?? {}) as Json;
-        if (block.type === "tool_use") {
+        if (block.type === "thinking") {
+          thinkingByBlock.set(Number(event.index), { type: "thinking", thinking: "", signature: "" });
+        } else if (block.type === "redacted_thinking") {
+          const detail = thinkingDetail(block);
+          if (detail) emit(detailChunk(detail));
+        } else if (block.type === "tool_use") {
           toolIndex += 1;
           toolIndexByBlock.set(Number(event.index), toolIndex);
           emit(chunk({
@@ -352,7 +423,12 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
         if (delta.type === "text_delta" && typeof delta.text === "string") {
           emit(chunk({ content: delta.text }));
         } else if (delta.type === "thinking_delta" && typeof delta.thinking === "string") {
+          const open = thinkingByBlock.get(Number(event.index));
+          if (open) open.thinking = String(open.thinking) + delta.thinking;
           emit(chunk({ reasoning: delta.thinking }));
+        } else if (delta.type === "signature_delta" && typeof delta.signature === "string") {
+          const open = thinkingByBlock.get(Number(event.index));
+          if (open) open.signature = String(open.signature) + delta.signature;
         } else if (delta.type === "input_json_delta" && typeof delta.partial_json === "string") {
           const index = toolIndexByBlock.get(Number(event.index));
           if (index !== undefined) {
@@ -361,8 +437,18 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
         }
         break;
       }
+      case "content_block_stop": {
+        const index = Number(event.index);
+        const open = thinkingByBlock.get(index);
+        if (open) {
+          thinkingByBlock.delete(index);
+          const detail = thinkingDetail(open);
+          if (detail) emit(detailChunk(detail));
+        }
+        break;
+      }
       case "message_delta": {
-        usage = { ...usage, ...(event.usage as AnthropicUsage | undefined) };
+        mergeUsage(event.usage);
         const stopReason = (event.delta as Json | undefined)?.stop_reason;
         if (stopReason !== undefined && stopReason !== null) {
           emit(encoder.encode(`data: ${JSON.stringify({
@@ -385,7 +471,7 @@ export function toChatCompletionStream(source: ReadableStream<Uint8Array>): Read
         break;
       }
       default:
-        // `ping` and `content_block_stop` carry nothing the chat shape needs.
+        // `ping` carries nothing the chat shape needs.
         break;
     }
   };

@@ -597,6 +597,10 @@ export async function processChat(
       number,
       { id: string; name: string; arguments: string; extraContent?: unknown }
     > = new Map();
+    // Claude's signed thinking blocks and OpenAI's encrypted reasoning items of
+    // this round (their native transports only), replayed with its tool calls
+    // on the next round of the same turn.
+    const roundReasoningDetails: unknown[] = [];
     let roundReasoning: AssistantReasoning | null = resumingTools
       ? resumeCheckpoint?.assistantReasoning ?? null
       : null;
@@ -680,7 +684,7 @@ export async function processChat(
           }),
           "Numo (minddy)",
           "[assistant]",
-          { signal: generationController.signal },
+          { signal: generationController.signal, sessionId: context.conversationId },
         );
       } catch (error) {
         closeRound();
@@ -796,6 +800,10 @@ export async function processChat(
               ? delta.reasoning
               : typeof delta.reasoning_content === "string" ? delta.reasoning_content : "";
             if (reasoningDelta) reasoningStream.push(reasoningDelta);
+            if ((aiRuntime.provider === "anthropic" || aiRuntime.provider === "openai")
+              && Array.isArray(delta.reasoning_details)) {
+              roundReasoningDetails.push(...delta.reasoning_details);
+            }
             if (delta.content) {
               roundReasoning = reasoningStream.finish();
               rawContent += delta.content;
@@ -997,6 +1005,7 @@ export async function processChat(
         role: "assistant",
         content: fullContent || null,
         tool_calls: assistantToolCalls,
+        ...(roundReasoningDetails.length > 0 ? { reasoning_details: roundReasoningDetails } : {}),
       });
 
       allToolCalls.push(...assistantToolCalls);

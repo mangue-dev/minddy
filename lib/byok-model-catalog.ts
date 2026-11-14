@@ -33,6 +33,19 @@ const VENDOR_PREFIXES: Record<ByokCatalogProvider, string> = {
 const NON_CHAT_RE =
   /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
+/**
+ * Native ids a `/models` listing returns without any capability field, and
+ * that minddy's transports cannot serve (MIN-979). Every Numo turn on one of
+ * them failed with a 400:
+ * - OpenAI models built for other tools than a chat with functions (Codex,
+ *   deep research, computer use) and Sora. The Responses-only chat models
+ *   (GPT-6 Astra, GPT-6.1, `-pro`) go through the Responses transport;
+ * - Gemini ids that are not chat models (Live audio, Lyria music, Omni video,
+ *   Nano Banana images, agents, robotics, the decision model).
+ */
+export const NOT_ON_CHAT_COMPLETIONS_RE =
+  /^(?:sora|computer-use)(?:-|$)|codex|deep-research|(?:^|-)live(?:-|$)|^lyria|^gemini-omni|nano-banana|antigravity|robotics|^gemini-decision/i;
+
 /** Minimal shape this module needs from an index entry. */
 export interface ByokCatalogSourceModel {
   id: string;
@@ -77,6 +90,8 @@ export function byokModelsForProvider(
       })
       .filter((m) => m.id.startsWith(prefix))
       .filter((m) => capability !== "text" || !NON_CHAT_RE.test(m.id.slice(prefix.length)))
+      // Same Chat Completions limit as the account listings (MIN-979).
+      .filter((m) => capability !== "text" || !NOT_ON_CHAT_COMPLETIONS_RE.test(m.id.slice(prefix.length)))
       .map((m) => ({ id: m.id.slice(prefix.length), name: m.name ?? m.id })),
   ).sort((a, b) => a.id.localeCompare(b.id));
 }

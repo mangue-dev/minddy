@@ -76,11 +76,24 @@ function anthropicEffort(model: string, level: ReasoningLevel): ReasoningLevel {
 }
 
 /**
+ * OpenAI models that the transport sends to the Responses API
+ * (`lib/server/openai-responses.ts`) instead of Chat Completions: GPT-6 Astra
+ * and GPT-6.1, which call tools only there; GPT-5.6, GPT-6 Sol and GPT-6
+ * Luna, which can reason while calling tools only there; and the Responses-only
+ * `-pro` models.
+ */
+export function usesOpenAiResponses(model: string): boolean {
+  return /^gpt-6(?:[-.]|$)/i.test(model) ||
+    /^gpt-5\.6(?:-|$)/i.test(model) ||
+    /^(?:o\d|gpt-5(?:\.\d+)?)-pro(?:-|$)/i.test(model);
+}
+
+/**
  * Families whose Chat Completions function calling only works with
  * `reasoning_effort: "none"`: GPT-5.6, and GPT-6 Sol and GPT-6 Luna (OpenAI
- * guide "Using GPT-6"). GPT-6 Astra, GPT-6.1 Sol and GPT-6.1 Terra are left
- * out on purpose: they reject `none` and need Responses for tool calling, so
- * no effort value makes them usable on this transport.
+ * guide "Using GPT-6"). They now go through Responses (`usesOpenAiResponses`),
+ * where tools and reasoning combine; the rule stays for any caller that still
+ * reaches Chat Completions with them.
  */
 function needsReasoningOffWithFunctionTools(model: string): boolean {
   return (
@@ -90,14 +103,17 @@ function needsReasoningOffWithFunctionTools(model: string): boolean {
 }
 
 /**
- * Families that reject forced tool choice with a 400 on every request:
- * Claude Opus 5.5, Sonnet 5.5, Fable 5.1, and Mythos 5.1. Downgrade to `auto`
- * at the compatibility boundary to keep these requests usable.
+ * Families that reject forced tool choice with a 400 on every request: Claude
+ * Opus and Sonnet 5.5, Fable and Mythos 5.1 and 5.2 (Anthropic thinking guide),
+ * and, by default, the later generations. Downgraded to `auto` at the
+ * compatibility boundary; `forcedToolCall` then checks that the call came.
  */
-function rejectsForcedToolChoice(model: string): boolean {
+export function rejectsForcedToolChoice(model: string): boolean {
   return (
-    /^claude-(?:opus|sonnet)-5-5(?:-|$)/i.test(model) ||
-    /^claude-(?:fable|mythos)-5-1(?:-|$)/i.test(model)
+    /^claude-(?:opus|sonnet)-5-(?:[5-9]|\d{2,})(?:-|$)/i.test(model) ||
+    /^claude-(?:fable|mythos)-5-(?:[1-9]|\d{2,})(?:-|$)/i.test(model) ||
+    // Every Claude generation after 5 so far keeps the rule.
+    /^claude-(?:opus|sonnet|haiku|fable|mythos)-(?:[6-9]|\d{2,})(?:-|$)/i.test(model)
   );
 }
 
@@ -109,14 +125,25 @@ function isForcedOpenAiToolChoice(value: unknown): boolean {
     (choice.type === "allowed_tools" && choice.allowed_tools?.mode === "required");
 }
 
+/**
+ * Whether a forced tool choice must be sent as `auto` to this provider and
+ * model: the Claude families above, and the OpenCode gateways, whose `/models`
+ * metadata publishes `tools.choice: ["auto"]` for most models (GLM, MiMo,
+ * MiniMax, Kimi), the default model included. `auto` does not guarantee the
+ * call, so a caller that needs one checks it came (`forcedToolCall`).
+ */
+export function downgradesForcedToolChoice(provider: AgentProviderId, model: string): boolean {
+  if (provider === "opencode-go" || provider === "opencode-zen") return true;
+  return provider === "anthropic" && rejectsForcedToolChoice(model);
+}
+
 function normalizeProviderToolChoice(
   body: Record<string, unknown>,
   provider: AgentProviderId,
 ): void {
   if (
-    provider === "anthropic" &&
     typeof body.model === "string" &&
-    rejectsForcedToolChoice(body.model) &&
+    downgradesForcedToolChoice(provider, body.model) &&
     isForcedOpenAiToolChoice(body.tool_choice)
   ) {
     body.tool_choice = "auto";
@@ -134,8 +161,11 @@ function normalizeAnthropicBody(
   provider: AgentProviderId,
 ): void {
   if (provider !== "anthropic" || typeof body.model !== "string") return;
-  if (rejectsSamplingTemperature(body.model)) delete body.temperature;
   const thinking = (body.thinking as { type?: unknown } | undefined)?.type;
+  // Older families take a temperature, but not together with thinking.
+  if (rejectsSamplingTemperature(body.model) || (thinking !== undefined && thinking !== "disabled")) {
+    delete body.temperature;
+  }
   if (thinking === "enabled" && isForcedOpenAiToolChoice(body.tool_choice)) {
     delete body.thinking;
   }
@@ -205,9 +235,12 @@ function compatEffortFields(
   const reasoning = provider === "openai" ? openAiModelReasoning(model) : geminiModelReasoning(model);
   if (!reasoning) return {};
   if (level === "off") {
-    // A mandatory model has no "off": the server already lowers it, and the
-    // model's own default is the safe fallback for any other caller.
-    return reasoning.mandatory ? {} : { reasoning_effort: "none" };
+    // A mandatory model has no "off": its cheapest level is the closest
+    // request it accepts. Leaving the field out ran it at its default
+    // (`medium` or `high`), whose reasoning shares the output ceiling.
+    return reasoning.mandatory
+      ? (reasoning.efforts[0] ? { reasoning_effort: reasoning.efforts[0] } : {})
+      : { reasoning_effort: "none" };
   }
   return { reasoning_effort: nearestReasoningLevel(level, reasoning.efforts) };
 }
@@ -220,13 +253,19 @@ function providerReasoningFields(
   hasFunctionTools: boolean,
 ): Record<string, unknown> {
   // GPT-5.6 and GPT-6 Sol/Luna call functions via Chat Completions only
-  // without an active reasoning effort. Responses is the full path; as long as
-  // this transport remains Chat Completions, `none` is the documented contract.
-  if (provider === "openai" && hasFunctionTools && needsReasoningOffWithFunctionTools(model)) {
+  // without an active reasoning effort; on Responses they keep their effort.
+  if (provider === "openai" && hasFunctionTools && needsReasoningOffWithFunctionTools(model) &&
+    !usesOpenAiResponses(model)) {
     return { reasoning_effort: "none" };
   }
-  if (provider === "openrouter" && reasoning?.enabled === false) {
-    return { reasoning: { enabled: false } };
+  // An explicit "no optional reasoning" is each provider's off.
+  if (reasoning?.enabled === false) {
+    if (provider === "openrouter") return { reasoning: { enabled: false } };
+    if (provider === "openai" || provider === "google") return compatEffortFields(provider, model, "off");
+    if (provider === "anthropic") {
+      return anthropicReasoningFields({ model, effort: "off", maxOutputTokens });
+    }
+    return {};
   }
   if (
     reasoning === undefined ||
@@ -261,18 +300,37 @@ function providerReasoningFields(
 }
 
 /**
- * Gemini 3 returns a `thought_signature` in each tool call's `extra_content`,
- * and requires it back on the next round. The loop keeps it in history; any
- * other provider receives the tool calls without that Gemini-only field.
+ * History fields only one provider reads. Gemini 3 returns a
+ * `thought_signature` in each tool call's `extra_content` and requires it back
+ * on the next round; Claude's signed thinking blocks and OpenAI's encrypted
+ * reasoning items ride in `reasoning_details`
+ * (`lib/server/anthropic-messages.ts`, `lib/server/openai-responses.ts`). The loop keeps both
+ * in history; every other provider receives the messages without them, as a
+ * strict OpenAI-compatible server may reject an unknown field.
  */
-function withoutGeminiToolExtras(messages: unknown[]): unknown[] {
+function withProviderHistoryFields(
+  messages: unknown[],
+  provider: AgentProviderId,
+  model: string,
+): unknown[] {
+  const keepToolExtras = provider === "google";
+  // OpenAI's encrypted reasoning items ride the same field on Responses.
+  const keepReasoningDetails = provider === "anthropic" ||
+    (provider === "openai" && usesOpenAiResponses(model));
   return messages.map((message) => {
-    const calls = (message as { tool_calls?: unknown } | null)?.tool_calls;
-    if (!Array.isArray(calls) || !calls.some((call) => call && typeof call === "object" && "extra_content" in call)) {
-      return message;
+    if (!message || typeof message !== "object") return message;
+    let next = message as Record<string, unknown>;
+    if (!keepReasoningDetails && "reasoning_details" in next) {
+      const { reasoning_details: _details, ...rest } = next;
+      next = rest;
+    }
+    const calls = next.tool_calls;
+    if (keepToolExtras || !Array.isArray(calls) ||
+      !calls.some((call) => call && typeof call === "object" && "extra_content" in call)) {
+      return next;
     }
     return {
-      ...(message as Record<string, unknown>),
+      ...next,
       tool_calls: calls.map((call) => {
         if (!call || typeof call !== "object" || !("extra_content" in call)) return call;
         const { extra_content: _extra, ...rest } = call as Record<string, unknown>;
@@ -292,7 +350,7 @@ export function translateAiChatRequest(
 
   const body: Record<string, unknown> = {
     model: request.model,
-    messages: provider === "google" ? request.messages : withoutGeminiToolExtras(request.messages),
+    messages: withProviderHistoryFields(request.messages, provider, request.model),
     ...(request.stream !== undefined ? { stream: request.stream } : {}),
     ...(request.tools ? { tools: request.tools } : {}),
     ...(request.toolChoice !== undefined ? { tool_choice: request.toolChoice } : {}),
@@ -332,16 +390,31 @@ export function translateAiChatRequest(
   return body;
 }
 
-/** Provider-specific headers; authentication remains in transport. */
+/** How Minddy names itself to a gateway that asks clients to identify. */
+export const MINDDY_AI_USER_AGENT = `minddy (+${SITE_URL})`;
+
+/**
+ * Provider-specific headers; authentication remains in transport.
+ *
+ * OpenCode Go refuses a request without `x-opencode-session` (400
+ * `MissingSessionID`, checked before the key) and asks each client for a
+ * stable session id per conversation and its own user agent
+ * (opencode.ai/docs/console/go). `sessionId` is the conversation or run the
+ * call belongs to; a one-off call gets its own id.
+ */
 export function aiChatProviderHeaders(
   provider: AgentProviderId,
   title: string,
+  sessionId?: string | null,
 ): Record<string, string> {
   const profile = getAgentProvider(provider)?.requestProfile;
   if (!profile) throw new Error(`Unknown AI provider: ${provider}`);
-  return profile.attribution
-    ? { "HTTP-Referer": SITE_URL, "X-Title": title }
-    : {};
+  return {
+    ...(profile.attribution ? { "HTTP-Referer": SITE_URL, "X-Title": title } : {}),
+    ...(profile.sessionHeader
+      ? { [profile.sessionHeader]: sessionId || crypto.randomUUID(), "User-Agent": MINDDY_AI_USER_AGENT }
+      : {}),
+  };
 }
 
 /**
@@ -468,12 +541,11 @@ export function translateLegacyAiChatBody(
   normalizeAnthropicBody(body, provider);
 
   if (profile.usageAccounting && body.usage === undefined) body.usage = { include: true };
-  // This border is only used by the opencode client, which streams all its rounds.
-  // However, some versions omit `stream: true` from the intermediate body.
-  if (profile.streamUsage && body.stream_options === undefined) {
+  // `stream_options` is only valid on a streamed request (OpenAI reference).
+  if (profile.streamUsage && body.stream === true && body.stream_options === undefined) {
     body.stream_options = { include_usage: true };
   }
   if (!profile.usageAccounting) delete body.usage;
-  if (!profile.streamUsage) delete body.stream_options;
+  if (!profile.streamUsage || body.stream !== true) delete body.stream_options;
   return body;
 }

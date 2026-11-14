@@ -30,7 +30,8 @@ export const BYOK_PROVIDER_CAPABILITIES: Readonly<
   openrouter: MODEL_CATALOG_CAPABILITIES,
   openai: MODEL_CATALOG_CAPABILITIES,
   anthropic: ["text"],
-  google: ["text", "embedding"],
+  // Speech to text through Gemini 3.5 Transcribe on the native Interactions API.
+  google: MODEL_CATALOG_CAPABILITIES,
   "opencode-go": ["text"],
   "opencode-zen": ["text"],
   generic: ["text"],
