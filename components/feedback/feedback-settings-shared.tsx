@@ -576,6 +576,7 @@ export function FeedbackTranslationGroup({
   // default of the app, and the selector therefore shows the same thing as it.
   const teamLanguage =
     normalizeLanguage(project.feedback_team_language) ??
+    normalizeLanguage(project.ai_language) ??
     (normalizeLanguage(defaultLocale) as FeedbackLanguage);
   const skipped = new Set(
     (project.feedback_no_translate_languages ?? [])

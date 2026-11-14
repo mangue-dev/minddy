@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 53,
-  "sourceRevision": 53,
+  "revision": 54,
+  "sourceRevision": 54,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-12",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -138,14 +138,15 @@
       "components/settings/smart-assign-section.tsx",
       "components/import/import-guide.tsx",
       "lib/import-guides.ts",
-      "components/settings/import-panel.tsx"
+      "components/settings/import-panel.tsx",
+      "lib/ai-instructions.ts"
     ]
   },
   "review": {
-    "revision": 53,
-    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls); agent:claude-code (MIN-907 import guide: the settings Import tab now picks the tool being left in a select list (Linear by default) and shows its export steps, the GitHub command and the documentation link below it, without tabs or a grey box; checked against components/import/import-guide.tsx, lib/import-guides.ts, components/settings/import-panel.tsx and messages/*.json; no browser walkthrough; figure import-issues-preview-workflow still shows the former tabs and needs a recapture; kept unchanged)",
-    "language": "agent:claude-code (en passages changed and added for MIN-957; self-reviewed against the en catalog and glossary; agent review, not human acceptance); agent:claude-code (en MIN-907 import paragraph, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-12"
+    "revision": 54,
+    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "feedback",
@@ -190,7 +191,7 @@
       "src": "/documentation/en/new-issue.png",
       "alt": "Unsent issue draft in the Aurora project with a localized title and description, manually available properties and the Create AUR-21 button.",
       "caption": "Describe the expected result, then choose the useful properties before creating the issue.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -206,7 +207,7 @@
       "src": "/documentation/en/triage-incoming.png",
       "alt": "Incoming demonstration issue AUR-19 with its report, properties and duplicate, Decline and Accept controls.",
       "caption": "Read the incoming report before accepting it, declining it or linking a duplicate.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -223,7 +224,7 @@
       "src": "/documentation/en/issue-statuses.png",
       "alt": "Eight issue statuses in the picker, with backlog currently selected.",
       "caption": "The check marks the current status. Choose the status that reflects the work’s actual state.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -240,7 +241,7 @@
       "src": "/documentation/en/work-resources.png",
       "alt": "Add-link dialog with an example contact URL.",
       "caption": "Review the destination before adding a resource. This example link has not been submitted.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -257,7 +258,7 @@
       "src": "/documentation/en/work-dependencies.png",
       "alt": "The command palette lists the issues that can block this one, with the relation's question in its search field.",
       "caption": "Choose the relation direction before selecting its endpoint. The picker is shown without submitting a relation.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -274,7 +275,7 @@
       "src": "/documentation/en/work-sub-issues.png",
       "alt": "Sub-issues section of a demonstration parent issue, with the Create a sub-issue button and its options chevron.",
       "caption": "Create a sub-issue opens the creation dialog with this issue as parent; a child keeps its own status and discussion.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -291,7 +292,7 @@
       "src": "/documentation/en/work-implementation-plan.png",
       "alt": "Demonstration plan showing two of six work tasks complete.",
       "caption": "The saved demonstration plan separates completed, active and pending steps. Its progress does not prove the fictional code task was executed.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -308,7 +309,7 @@
       "src": "/documentation/en/issue-date-recurrence.png",
       "alt": "Due-date picker in recurring mode with a weekly Sunday preview and optional time.",
       "caption": "Recurring mode previews the weekly cadence. Confirm the first due date before creating the issue.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -325,7 +326,7 @@
       "src": "/documentation/en/import-issues-preview-workflow.png",
       "alt": "CSV preview with two localized demonstration rows and detected column mappings.",
       "caption": "CSV preview with two localized demonstration rows and detected column mappings. No import was submitted; optional AI planning was blocked for the capture.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -342,7 +343,7 @@
       "src": "/documentation/en/file-preview.png",
       "alt": "Full-window CSV reader with sample project tasks, a large Close button and a File actions menu offering Download, Rename and Remove.",
       "caption": "The shared file reader keeps Close below the preview. The File actions menu offers Download and, when permitted, Rename and Remove.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -424,7 +425,7 @@ Each change appears in the issue's activity with Smart Fill as its author, and a
 
 With **Write missing titles** on, you create an issue by describing it. It is on by default and depends on **Enable Smart Fill**. While Smart Fill is on for the issue, the creation form shows only the description, with the cursor in it. Describe the work and create the issue. To write the title yourself, open the arrow next to the Smart Fill button and choose **Set manually** → **Title**: the title field appears above the description, and a title you type is kept as written. If you leave the field empty and move elsewhere, it disappears again. Switching Smart Fill off for the issue also brings the title back. This applies to the creation form; Numo, the MCP server and CSV imports write their own titles.
 
-Smart Fill writes a short title that summarizes the description and tells the issue apart from similar ones, in the language of the description. The issue appears once its title and properties are filled, and its activity names Smart Fill. If no title can be written, because the provider fails or your **Automations** budget is exhausted, the issue takes the first line of its description instead. A description that contains only an image still needs a title.
+Smart Fill writes a short title that summarizes the description and tells the issue apart from similar ones, in the language of the description, or in the project's working language when its owner set one. The owner can also give Smart Fill instructions for titles, properties and objectives in the project's [**AI instructions**](/docs/projects#ai-instructions) tab. The issue appears once its title and properties are filled, and its activity names Smart Fill. If no title can be written, because the provider fails or your **Automations** budget is exhausted, the issue takes the first line of its description instead. A description that contains only an image still needs a title.
 
 A title written this way stays Smart Fill's until someone changes it. With **Re-evaluate edited issues** on, a later [reading](#smart-fill-reevaluation) can replace it when the description now describes other work, and keeps it while it still fits. That pass rewrites the title only when the person who made the latest edit has not turned off **Write missing titles**. As soon as you, Numo or a connected agent edits the title, Smart Fill leaves it alone for good.
 

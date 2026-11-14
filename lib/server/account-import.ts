@@ -1,3 +1,5 @@
+import { normalizeAiInstructions, normalizeAiLanguage } from "@/lib/ai-instructions";
+import { writeAiInstructions } from "@/lib/server/ai-instructions";
 import { withRoutineEventsSuppressed } from "@/lib/server/supabase-fetch";
 import { NumoMemoryError, createNumoMemory, listNumoMemories } from "@/lib/server/numo/memory-content";
 import { normalizeNumoMemoryContent } from "@/lib/numo-memory";
@@ -482,11 +484,24 @@ async function importProjects(
       smart_assign_from_status:
         parseSmartAssignFromStatus(source.smart_assign_from_status) ??
         smartAssignFromStatusOf(old),
+      // An archive written before the setting existed keeps the project's
+      // current working language (MIN-988).
+      ai_language: "ai_language" in source
+        ? normalizeAiLanguage(source.ai_language)
+        : normalizeAiLanguage(old?.ai_language),
       encryption_version: existingRow?.encryption_version ?? 0,
     };
     rows.push(await encodeProject(candidate, { service }));
   }
   await upsertRows(service, "projects", rows);
+  // The owner's instructions to Smart Fill and Smart Assign (MIN-988) live in
+  // their own sealed row. An archive without them leaves the current ones.
+  for (const source of document.owned_projects) {
+    const sourceId = uuidValue(source, "id");
+    const targetId = sourceId ? projectIds.get(sourceId) : null;
+    if (!targetId || !("ai_instructions" in source)) continue;
+    await writeAiInstructions(service, targetId, userId, normalizeAiInstructions(source.ai_instructions));
+  }
   for (const source of document.owned_projects) {
     const sourceId = uuidValue(source, "id");
     const targetId = sourceId ? projectIds.get(sourceId) : null;

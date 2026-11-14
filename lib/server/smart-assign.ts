@@ -31,6 +31,8 @@ import {
 import { effortToPoints } from "@/lib/cycle";
 import type { IssueEffort } from "@/lib/issue-constants";
 import type { SmartAssignConfigWarning } from "@/lib/types";
+import { aiInstructionPromptBlock, normalizeAiInstruction, type AiInstructions } from "@/lib/ai-instructions";
+import { readAiInstructions } from "@/lib/server/ai-instructions";
 
 /**
  * Smart Assign (MIN-31) — guarantees no active issue stays unassigned on
@@ -172,7 +174,7 @@ async function runSmartAssignUntagged(
   // The three readings IN PARALLEL: they do not depend on each other, and it
   // is the length of this prelude that decides whether the assignment
   // survives. One clock round trip, not three.
-  const [{ data: project }, { data: issue }, { data: memberRows }] =
+  const [{ data: project }, { data: issue }, { data: memberRows }, instructions] =
     await Promise.all([
       service
         .from("projects")
@@ -191,6 +193,12 @@ async function runSmartAssignUntagged(
         .eq("project_id", params.projectId)
         // Readers are never assignees (MIN-693).
         .eq("role", "member"),
+      // The owner's general instruction (MIN-988), in the same wait. When it
+      // cannot be read the run goes on with the member rules alone.
+      readAiInstructions(service, params.projectId).catch(() => {
+        console.error("[smart-assign] instructions_unavailable");
+        return {} as AiInstructions;
+      }),
     ]);
 
   // Re-check everything at execution time — the world may have moved since
@@ -229,7 +237,10 @@ async function runSmartAssignUntagged(
   // prompt already tells the model to fall back on the owner in this case.
   // Might as well not pay the call — the result is the same, cheaper and
   // without latency.
-  if (memberIds.length === 1 || !hasAnyRule(memberIds, rules)) {
+  // A general instruction (MIN-988) counts as a rule: it tells the engines
+  // how to choose even when no member has a rule of their own.
+  const instruction = normalizeAiInstruction(instructions.assign);
+  if (memberIds.length === 1 || (!hasAnyRule(memberIds, rules) && !instruction)) {
     // Only member, or no rules: no ambiguity to remove, no AI — therefore
     // nothing to charge, nothing to keep, and no reason to wait for a response
     // to write. This is the case for the vast majority of projects.
@@ -284,6 +295,7 @@ async function runSmartAssignUntagged(
         authUsers,
         categoryNames: (decodedCategories ?? []).map((row) => row.name as string),
         hints,
+        instruction,
       });
       // One decision, two engines: the decision model first on the structured state, the
       // `choose_assignee` LLM pass replayed verbatim as the fallback, one
@@ -589,7 +601,11 @@ export function smartAssignHintGuidance(): string {
 
 /** The system prompt. Rules first: the per-member written rules are what
  * makes the choice possible; workload and context only break ties. */
-export function buildSmartAssignSystemPrompt(projectName: string): string {
+export function buildSmartAssignSystemPrompt(
+  projectName: string,
+  /** The owner's general instruction (MIN-988), read after the rules. */
+  instruction: string | null = null,
+): string {
   return `You are Smart Assign, minddy's automatic issue router for the project "${projectName}".
 A new issue needs an owner. Choose the ONE team member best suited to handle it and call choose_assignee.
 
@@ -599,7 +615,7 @@ Rules:
 - Use the issue's title, description and categories to identify the type of work; priority and effort are tiebreakers only.
 - A member may carry a Workload line (the issues they already have in todo, in progress or in review, and their total effort points) and a Context line (what ties them to this issue). ${smartAssignHintGuidance()}
 - A member without a rule can still be chosen if nothing else matches better.
-- If nothing clearly matches, pick the project owner.`;
+- If nothing clearly matches, pick the project owner.${aiInstructionPromptBlock(instruction)}`;
 }
 
 /** The user message: the issue to route, then the members it can route to. */

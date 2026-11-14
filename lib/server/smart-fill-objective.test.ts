@@ -148,6 +148,20 @@ describe("objectiveFillParameters", () => {
     expect(prompt).toContain("version name");
     expect(prompt).toContain("technical identifier");
   });
+
+  it("names in the text's language unless the project sets a working language (MIN-988)", () => {
+    const clock = objectiveFillClock("Europe/Paris", new Date(`${TODAY}T12:00:00Z`));
+    const follow = buildObjectiveFillPrompt("Minddy", clock);
+    expect(follow).toContain("in the SAME language as the text");
+    expect(follow).not.toContain("project_instructions");
+    const guided = buildObjectiveFillPrompt("Minddy", clock, {
+      language: "fr",
+      instruction: "Prefix the quarter",
+    });
+    expect(guided).toContain("in French, whatever language the text is written in");
+    expect(guided).not.toContain("in the SAME language as the text");
+    expect(guided).toContain("Prefix the quarter");
+  });
 });
 
 describe("runObjectiveSmartFill", () => {

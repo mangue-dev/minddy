@@ -23,6 +23,7 @@ import { HomeNumoBrief } from "@/components/home/home-numo-brief";
 import { NumoIntro } from "@/components/assistant/numo-intro";
 import { PendingInvitationsBanner } from "@/components/pending-invitations-banner";
 import { HomeSmartAssignWarning } from "@/components/home/home-smart-assign-warning";
+import { HomeAiInstructionProposals } from "@/components/home/home-ai-instruction-proposals";
 import { DesktopInstallBanner } from "@/components/home/desktop-install-banner";
 import { MobileInstallHint } from "@/components/home/mobile-install-hint";
 
@@ -212,6 +213,7 @@ function HomeConversation() {
                 <div className="flex flex-col gap-3">
                   <PendingInvitationsBanner />
                   <HomeSmartAssignWarning />
+                  <HomeAiInstructionProposals />
                   <DesktopInstallBanner />
                   <MobileInstallHint key={user?.id} />
                 </div>

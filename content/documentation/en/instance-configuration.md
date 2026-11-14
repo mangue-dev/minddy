@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 14,
-  "sourceRevision": 14,
+  "revision": 15,
+  "sourceRevision": 15,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-08",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -42,14 +42,15 @@
       "deploy/self-hosted/compose.full.yml",
       "deploy/self-hosted/scheduler.mjs",
       "app/api/cron/issue-index/route.ts",
-      "app/api/cron/smart-fill-reevaluation/route.ts"
+      "app/api/cron/smart-fill-reevaluation/route.ts",
+      "app/api/cron/ai-instruction-proposals/route.ts"
     ]
   },
   "review": {
-    "revision": 14,
-    "fact": "agent:claude-code (MIN-847 MINDDY_CONFIG_OVERRIDES sentence checked against lib/server/instance-variables.ts and scripts/self-hosting-install.mjs); agent:claude-code (MIN-829 MINDDY_PUBLISH_MODEL_CONFIG sentence checked against app/api/recommended-models/route.ts); agent:/root/min750 (schedule table and release delta sentence checked against vercel.json and deploy/self-hosted/scheduler.mjs after adding smart-fill-reevaluation; rest of the article unchanged since the 0.20.0 release review; no screenshot in scope); agent:claude-code (manual figures rebuilt on the Aurora demo, catalog review labels and informal register; figures recaptured on 2026-10-22 from a local candidate against the preview demo account and inspected; no form submitted); agent:claude-code (MIN-788: Supabase self-hosted/v0.8.3 pin, api-gw gateway name and the upstream release change checked against the pinned upstream files and overlay; full profile installed on v0.8.3 and a v0.7.2 instance moved with the documented sequence on a local Docker host, then sign-in, realtime and attachment SHA-256 verified; no screenshot in scope); agent:claude-code (0.30.0 release review, MIN-794: its evidence changes in the v0.20.0..0.30.0 delta were documented by the pull requests that made them; the article was updated by pull requests in that delta; not re-audited line by line; 0 screenshot(s) recaptured on 2026-11-04 from a local candidate against the preview demo account and inspected; no browser walkthrough of the procedures); agent:claude-code (MIN-923: scheduler sentence extended to Numo's reminders, checked against app/api/cron/routines/route.ts and vercel.json; rest unchanged; no figure recaptured)",
-    "language": "agent:claude-code (en MIN-829 sentence; self-reviewed; agent review, not human acceptance); agent:/root/min750 (en table row and release delta sentence; agent review, not human acceptance); agent:claude-code (en manual figures rebuilt on the Aurora demo, catalog review labels and informal register; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-788 changed passages; self-reviewed; agent review, not human acceptance); agent:claude-code (en MIN-923 sentence; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-08"
+    "revision": 15,
+    "fact": "agent:claude-code (MIN-988: weekly /api/cron/ai-instruction-proposals row of the scheduled jobs table, checked against vercel.json, deploy/self-hosted/scheduler.mjs and app/api/cron/ai-instruction-proposals/route.ts; rest of the article unchanged since the previous review; no figure recaptured)",
+    "language": "agent:claude-code (en changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "workspace-encryption",
@@ -74,7 +75,7 @@
       "src": "/documentation/en/optional-providers-flow.svg",
       "alt": "Diagram: Operator selects an optional capability. Complete credentials and provider conditions. Explicit outbound provider data path. Verify behavior and monitor usage costs.",
       "caption": "Enabling an optional service adds its own credentials, data destination and usage costs.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -106,7 +107,7 @@
       "src": "/documentation/en/proxy-network-and-jobs-flow.svg",
       "alt": "Diagram: Public HTTPS reverse proxy. Application and public Supabase origins. Private database and internal ports. Authenticated scheduler; stopped in maintenance.",
       "caption": "Public access uses HTTPS while internal services stay private and scheduled jobs pause during maintenance.",
-      "revision": 14,
+      "revision": 15,
       "reviewed": true,
       "capturedAt": "2026-10-08",
       "viewport": [
@@ -204,6 +205,7 @@ Compared with the v0.11.0 scheduler, this release adds `numo-turns`, `forge-rela
 | `/api/cron/fx-rate` | `30 15 * * *` |
 | `/api/cron/encryption-maintenance` | `15 * * * *` |
 | `/api/cron/data-retention` | `45 3 * * *` |
+| `/api/cron/ai-instruction-proposals` | `20 4 * * 1` |
 
 ### Stop jobs during maintenance {#maintenance}
 

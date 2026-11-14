@@ -3111,6 +3111,7 @@
         "content_revision"
       ],
       "operational_configuration": [
+        "ai_language",
         "color",
         "feedback_no_translate_languages",
         "feedback_team_language",
@@ -4594,6 +4595,64 @@
       ],
       "timestamp": [
         "updated_at"
+      ]
+    }
+  },
+  "project_ai_instructions": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "content"
+    ],
+    "clear": {
+      "routing_identity": [
+        "project_id",
+        "updated_by"
+      ],
+      "timestamp": [
+        "created_at",
+        "updated_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
+      ]
+    }
+  },
+  "ai_instruction_proposals": {
+    "scope": {
+      "kind": "project",
+      "column": "project_id"
+    },
+    "encrypted": [
+      "instruction",
+      "observation"
+    ],
+    "clear": {
+      "bounded_metadata": [
+        "correction_count"
+      ],
+      "operational_configuration": [
+        "field",
+        "status",
+        "use_case"
+      ],
+      "routing_identity": [
+        "evidence_issue_ids",
+        "id",
+        "project_id",
+        "resolved_by"
+      ],
+      "timestamp": [
+        "created_at",
+        "dismissed_until",
+        "resolved_at"
+      ],
+      "encryption_metadata": [
+        "encrypted_content",
+        "encryption_version"
       ]
     }
   }

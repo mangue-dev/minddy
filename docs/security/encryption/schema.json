@@ -1305,6 +1305,11 @@
         "type": "text",
         "nullable": false,
         "generated": false
+      },
+      "ai_language": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
       }
     },
     "primaryKey": [
@@ -11359,6 +11364,154 @@
       {
         "table": "users",
         "column": "user_id",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "project_ai_instructions": {
+    "columns": {
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "content": {
+        "type": "jsonb",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "updated_by": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      },
+      "updated_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "project_id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "users",
+        "column": "updated_by",
+        "targetColumn": "id"
+      }
+    ]
+  },
+  "ai_instruction_proposals": {
+    "columns": {
+      "id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "project_id": {
+        "type": "uuid",
+        "nullable": false,
+        "generated": false
+      },
+      "use_case": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "field": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "correction_count": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "instruction": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "observation": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encrypted_content": {
+        "type": "text",
+        "nullable": true,
+        "generated": false
+      },
+      "encryption_version": {
+        "type": "integer",
+        "nullable": false,
+        "generated": false
+      },
+      "evidence_issue_ids": {
+        "type": "uuid[]",
+        "nullable": false,
+        "generated": false
+      },
+      "status": {
+        "type": "text",
+        "nullable": false,
+        "generated": false
+      },
+      "dismissed_until": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "resolved_by": {
+        "type": "uuid",
+        "nullable": true,
+        "generated": false
+      },
+      "resolved_at": {
+        "type": "timestamp with time zone",
+        "nullable": true,
+        "generated": false
+      },
+      "created_at": {
+        "type": "timestamp with time zone",
+        "nullable": false,
+        "generated": false
+      }
+    },
+    "primaryKey": [
+      "id"
+    ],
+    "foreignKeys": [
+      {
+        "table": "projects",
+        "column": "project_id",
+        "targetColumn": "id"
+      },
+      {
+        "table": "users",
+        "column": "resolved_by",
         "targetColumn": "id"
       }
     ]

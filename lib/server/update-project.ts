@@ -11,6 +11,9 @@ import { parseSmartAssignFromStatus, smartAssignFromStatusOf } from "@/lib/smart
 import type { Project } from "@/lib/types";
 import { decodeProject, encodeProject, projectContentValues } from
   "@/lib/server/project-content";
+import { mergeAiInstructions, normalizeAiLanguage, sameAiInstructions, type AiInstructions } from
+  "@/lib/ai-instructions";
+import { readAiInstructions, writeAiInstructions } from "@/lib/server/ai-instructions";
 
 /**
  * Shared project-settings update core, used by PATCH /api/projects/[id] and the
@@ -25,6 +28,13 @@ import { decodeProject, encodeProject, projectContentValues } from
  * enable; `smart_assign_rules` replaces the whole map, with keys restricted to
  * the current team. `smart_assign_from_status` only accepts the known start
  * statuses. `smart_triage_mode` only accepts deterministic rules.
+ *
+ * `ai_language` (MIN-988) is the project's working language, a code from the
+ * application's closed list or null to follow each text. `ai_instructions`
+ * is a PARTIAL map: a use case that is passed replaces that instruction, an
+ * empty text removes it, a use case left out keeps its text. The instructions
+ * live in their own sealed row and are written last, once the project row
+ * accepted every other field; the returned project carries the resulting map.
  */
 export type UpdateProjectResult =
   | { ok: true; project: Project }
@@ -41,6 +51,7 @@ export type UpdateProjectResult =
         | "smartAssignNotAllowed"
         | "invalidSmartAssignFromStatus"
         | "invalidSmartTriageMode"
+        | "invalidAiLanguage"
         | "projectAutomationsRetired"
         | "databaseError";
     };
@@ -150,6 +161,15 @@ export async function updateProjectSettings({
       updates.smart_assign_enabled_at = new Date().toISOString();
     }
   }
+  if ("ai_language" in input) {
+    const language = normalizeAiLanguage(input.ai_language);
+    // Null clears the setting; an unknown code is refused rather than read
+    // as "clear", which would silently change the language of every title.
+    if (input.ai_language !== null && !language) {
+      return { ok: false, status: 400, errorKey: "invalidAiLanguage" };
+    }
+    updates.ai_language = language;
+  }
   if ("smart_triage_mode" in input) {
     const mode = parseSmartTriageMode(input.smart_triage_mode);
     if (!mode) {
@@ -186,8 +206,46 @@ export async function updateProjectSettings({
     updates.smart_assign_rules = rules;
   }
 
+  // The instructions as they will be once this update is written, or null
+  // when the input does not touch them.
+  let instructions: AiInstructions | null = null;
+  if (
+    typeof input.ai_instructions === "object" &&
+    input.ai_instructions !== null &&
+    !Array.isArray(input.ai_instructions)
+  ) {
+    try {
+      const current = await readAiInstructions(service, projectId, actorId);
+      const merged = mergeAiInstructions(current, input.ai_instructions);
+      instructions = sameAiInstructions(current, merged) && Object.keys(updates).length > 0
+        ? null
+        : merged;
+    } catch {
+      console.error("[update-project] failed: ai_instructions_unreadable");
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+  }
+  const withInstructions = async (project: Project): Promise<UpdateProjectResult> => {
+    if (!instructions) return { ok: true, project };
+    try {
+      const saved = await writeAiInstructions(service, projectId, actorId, instructions);
+      return { ok: true, project: { ...project, ai_instructions: saved } };
+    } catch {
+      console.error("[update-project] failed: ai_instructions_unwritable");
+      return { ok: false, status: 500, errorKey: "databaseError" };
+    }
+  };
+
   if (Object.keys(updates).length === 0) {
-    return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
+    if (!instructions) return { ok: false, status: 400, errorKey: "noFieldsToUpdate" };
+    // Only the instructions change: the project row is read, not written.
+    const { data, error } = await service.from("projects").select("*")
+      .eq("id", projectId).is("deleted_at", null).maybeSingle();
+    if (error) return { ok: false, status: 500, errorKey: "databaseError" };
+    if (!data) return { ok: false, status: 404, errorKey: "projectNotFound" };
+    if (data.owner_id !== actorId) return { ok: false, status: 403, errorKey: "ownerOnly" };
+    return withInstructions({ ...projectForClient(await decodeProject(data, actorId)),
+      my_role: "owner", my_can_comment: true } as unknown as Project);
   }
   const contentChange = ["name", "smart_assign_rules"]
     .some((key) => Object.hasOwn(updates, key));
@@ -219,9 +277,9 @@ export async function updateProjectSettings({
         return { ok: false, status: 500, errorKey: "databaseError" };
       }
       if (write.data) {
-        return { ok: true, project: { ...projectForClient(await decodeProject(write.data, actorId)),
+        return withInstructions({ ...projectForClient(await decodeProject(write.data, actorId)),
           // Settings are owner-only, so the writer is the owner (MIN-693).
-          my_role: "owner", my_can_comment: true } as unknown as Project };
+          my_role: "owner", my_can_comment: true } as unknown as Project);
       }
     }
     return { ok: false, status: 409, errorKey: "databaseError" };
@@ -242,7 +300,7 @@ export async function updateProjectSettings({
     return { ok: false, status: 500, errorKey: "databaseError" };
   }
   if (!data) return { ok: false, status: 404, errorKey: "projectNotFound" };
-  return { ok: true, project: { ...projectForClient(await decodeProject(data, actorId)),
+  return withInstructions({ ...projectForClient(await decodeProject(data, actorId)),
           // Settings are owner-only, so the writer is the owner (MIN-693).
-          my_role: "owner", my_can_comment: true } as unknown as Project };
+          my_role: "owner", my_can_comment: true } as unknown as Project);
 }

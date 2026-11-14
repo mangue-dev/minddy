@@ -25,10 +25,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 53,
-  "sourceRevision": 53,
+  "revision": 54,
+  "sourceRevision": 54,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-12",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -138,14 +138,15 @@
       "components/settings/smart-assign-section.tsx",
       "components/import/import-guide.tsx",
       "lib/import-guides.ts",
-      "components/settings/import-panel.tsx"
+      "components/settings/import-panel.tsx",
+      "lib/ai-instructions.ts"
     ]
   },
   "review": {
-    "revision": 53,
-    "fact": "agent:claude-code (MIN-957: a new paragraph describes the Assign from setting, where an empty assignee then reads Unassigned, and the workload and context Smart Assign uses to choose between members whose rules fit; the paragraph on assigning open issues now says what the setting changes; checked against lib/smart-assign-config.ts, lib/server/smart-assign.ts, lib/server/decisions/prepare.ts and components/settings/smart-assign-section.tsx, quoted labels against messages/*.json; no figure recaptured: none shows the changed controls); agent:claude-code (MIN-907 import guide: the settings Import tab now picks the tool being left in a select list (Linear by default) and shows its export steps, the GitHub command and the documentation link below it, without tabs or a grey box; checked against components/import/import-guide.tsx, lib/import-guides.ts, components/settings/import-panel.tsx and messages/*.json; no browser walkthrough; figure import-issues-preview-workflow still shows the former tabs and needs a recapture; kept unchanged)",
-    "language": "agent:claude-code (fr passages changed and added for MIN-957; self-reviewed against the fr catalog and glossary; agent review, not human acceptance); agent:claude-code (fr MIN-907 import paragraph, with catalog UI labels, in the locale's register and glossary; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-12"
+    "revision": 54,
+    "fact": "agent:claude-code (MIN-988: working-language and instructions sentence of #smart-fill-title, source audit against lib/server/smart-fill-title.ts, lib/ai-instructions.ts and messages/*.json; no browser walkthrough; no figure shows this flow; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (fr changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "feedback",
@@ -190,7 +191,7 @@
       "src": "/documentation/fr/new-issue.png",
       "alt": "Brouillon de ticket non envoyé dans le projet Aurora, avec titre, description, propriétés manuelles et le bouton Créer AUR-21.",
       "caption": "Décrivez le résultat attendu, puis choisissez les propriétés utiles avant de créer le ticket.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -206,7 +207,7 @@
       "src": "/documentation/fr/triage-incoming.png",
       "alt": "Ticket de démonstration AUR-19 reçu dans le triage, avec son signalement, ses propriétés et les commandes Doublon, Refuser et Accepter.",
       "caption": "Lisez le signalement reçu avant de l’accepter, de le refuser ou de le relier à un doublon.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -223,7 +224,7 @@
       "src": "/documentation/fr/issue-statuses.png",
       "alt": "Les huit statuts du ticket dans le sélecteur, avec Backlog sélectionné.",
       "caption": "La coche indique le statut actuel. Choisissez celui qui reflète l’état réel du travail.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -240,7 +241,7 @@
       "src": "/documentation/fr/work-resources.png",
       "alt": "Dialogue d’ajout de lien avec une adresse de contact d’exemple.",
       "caption": "Vérifiez la destination avant d’ajouter la ressource. Ce lien d’exemple n’a pas été envoyé.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -257,7 +258,7 @@
       "src": "/documentation/fr/work-dependencies.png",
       "alt": "La palette de commandes liste les tickets qui peuvent bloquer celui-ci, avec la question de la relation dans son champ de recherche.",
       "caption": "Choisissez le sens de la relation avant sa destination. Aucune relation n’a été envoyée dans ce sélecteur.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -274,7 +275,7 @@
       "src": "/documentation/fr/work-sub-issues.png",
       "alt": "Section des sous-tickets d’un ticket parent de démonstration, avec le bouton Créer un sous-ticket et son chevron d’options.",
       "caption": "Créer un sous-ticket ouvre la création avec ce ticket comme parent ; chaque enfant conserve son état et sa discussion.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -291,7 +292,7 @@
       "src": "/documentation/fr/work-implementation-plan.png",
       "alt": "Plan de démonstration avec deux tâches de travail terminées sur six.",
       "caption": "Le plan enregistré distingue les étapes terminées, actives et en attente. Sa progression ne prouve pas l’exécution de la tâche de code fictive.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -308,7 +309,7 @@
       "src": "/documentation/fr/issue-date-recurrence.png",
       "alt": "Sélecteur d’échéance en mode récurrent avec aperçu hebdomadaire le dimanche et heure optionnelle.",
       "caption": "Le mode récurrent prévisualise la cadence hebdomadaire. Confirmez la première échéance avant de créer le ticket.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -325,7 +326,7 @@
       "src": "/documentation/fr/import-issues-preview-workflow.png",
       "alt": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées.",
       "caption": "Aperçu CSV de deux lignes de démonstration localisées et des colonnes détectées. Aucun import n’a été lancé ; la préparation IA optionnelle a été bloquée pour la capture.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -342,7 +343,7 @@
       "src": "/documentation/fr/file-preview.png",
       "alt": "Lecteur CSV sur toute la fenêtre avec des tâches de projet d’exemple, un grand bouton Fermer et le menu Actions du fichier proposant Télécharger, Renommer et Retirer.",
       "caption": "Le lecteur commun place Fermer sous l’aperçu. Le menu Actions du fichier propose Télécharger et, si les droits le permettent, Renommer et Retirer.",
-      "revision": 53,
+      "revision": 54,
       "reviewed": true,
       "capturedAt": "2026-10-19",
       "viewport": [
@@ -424,7 +425,7 @@ Chaque modification apparaît dans l’activité du ticket avec Smart Fill pour 
 
 Avec **Rédiger les titres manquants** activé, vous créez un ticket en le décrivant. L’option est activée par défaut et dépend de **Activer Smart Fill**. Tant que Smart Fill est actif pour le ticket, le formulaire de création n’affiche que la description, avec le curseur dedans. Décrivez le travail et créez le ticket. Pour rédiger le titre vous-même, ouvrez la flèche à côté du bouton Smart Fill et choisissez **Définir manuellement** → **Titre** : le champ du titre apparaît au-dessus de la description, et un titre que vous saisissez est conservé tel quel. Si vous laissez le champ vide et passez à autre chose, il disparaît de nouveau. Désactiver Smart Fill pour le ticket fait aussi revenir le titre. Cela concerne le formulaire de création ; Numo, le serveur MCP et l’import CSV rédigent leurs propres titres.
 
-Smart Fill rédige un titre court qui résume la description et distingue le ticket des tickets semblables, dans la langue de la description. Le ticket apparaît une fois son titre et ses propriétés remplis, et son activité nomme Smart Fill. Si aucun titre ne peut être rédigé, parce que le fournisseur échoue ou que votre budget **Automatisations** est épuisé, le ticket prend la première ligne de sa description. Une description qui ne contient qu’une image demande toujours un titre.
+Smart Fill rédige un titre court qui résume la description et distingue le ticket des tickets semblables, dans la langue de la description, ou dans la langue de travail du projet lorsque son propriétaire en a défini une. Le propriétaire peut aussi donner à Smart Fill des consignes pour les titres, les propriétés et les objectifs dans l’onglet [**Consignes de l'IA**](/docs/projects#ai-instructions) du projet. Le ticket apparaît une fois son titre et ses propriétés remplis, et son activité nomme Smart Fill. Si aucun titre ne peut être rédigé, parce que le fournisseur échoue ou que votre budget **Automatisations** est épuisé, le ticket prend la première ligne de sa description. Une description qui ne contient qu’une image demande toujours un titre.
 
 Un titre rédigé ainsi reste celui de Smart Fill tant que personne ne le modifie. Avec **Réévaluer les tickets modifiés** activé, une [relecture](#smart-fill-reevaluation) ultérieure peut le remplacer quand la description décrit désormais un autre travail, et le garde tant qu’il convient. Cette passe ne réécrit le titre que si la personne qui a fait la dernière modification n’a pas désactivé **Rédiger les titres manquants**. Dès que vous, Numo ou un agent connecté modifiez le titre, Smart Fill n’y touche plus.
 

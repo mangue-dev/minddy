@@ -17,6 +17,9 @@ const JOBS = [
   ["15 * * * *", "/api/cron/encryption-maintenance"],
   ["30 15 * * *", "/api/cron/fx-rate"],
   ["45 3 * * *", "/api/cron/data-retention"],
+  // Weekly, Monday: instructions proposed from corrected Smart Fill and
+  // Smart Assign values. The request returns before a long run would end.
+  ["20 4 * * 1", "/api/cron/ai-instruction-proposals"],
 ];
 
 const secret = process.env.CRON_SECRET;

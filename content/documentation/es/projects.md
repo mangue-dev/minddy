@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 23,
-  "sourceRevision": 20,
+  "revision": 24,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -70,14 +70,18 @@
       "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
-      "app/api/projects/[id]/pull-request-stats/route.ts"
+      "app/api/projects/[id]/pull-request-stats/route.ts",
+      "components/settings/ai-instructions-section.tsx",
+      "components/ai-instruction-proposal-card.tsx",
+      "lib/ai-instructions.ts",
+      "lib/server/ai-instruction-proposals.ts"
     ]
   },
   "review": {
-    "revision": 23,
-    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (es changed passage translated from en revision 20 with catalog UI labels and the glossary register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 24,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (es changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "issues",
@@ -101,7 +105,7 @@
       "src": "/documentation/es/project-general.png",
       "alt": "Cabecera del proyecto con el icono y su distintivo de edición, el nombre, la clave y las cifras Incidencias, Miembros, Objetivos, Categorías y Creado.",
       "caption": "Selecciona el icono, el nombre o la clave para cambiarlos ahí mismo; mover el proyecto a la papelera sigue siendo una acción aparte, más abajo.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +122,7 @@
       "src": "/documentation/es/project-members.png",
       "alt": "Tarjeta «Invitar a personas» sobre la tarjeta Miembros, que lista tres miembros de demostración con la persona propietaria identificada.",
       "caption": "Invita con el correo de la cuenta e identifica al propietario antes de retirar el acceso de un miembro.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -135,7 +139,7 @@
       "src": "/documentation/es/project-statistics.png",
       "alt": "Secciones Ritmo, Estado actual y Colaboradores de un proyecto con unas mil incidencias: barras semanales de incidencias creadas y hechas, una barra de estados, indicadores de salud y una barra de estados por persona.",
       "caption": "El ritmo compara las últimas cuatro semanas con las cuatro anteriores; las incidencias vencidas y estancadas señalan el trabajo que conviene revisar.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -152,7 +156,7 @@
       "src": "/documentation/es/project-issue-graph.png",
       "alt": "Grafo de las incidencias abiertas agrupadas en burbujas de color por objetivo alrededor de anclas cuadradas, con flechas grises de la incidencia principal a la subincidencia, flechas rojas de bloqueo, vínculos Relacionada en discontinuo, líneas grises entre objetivos, la leyenda, el interruptor Incluir incidencias y objetivos cerrados y el botón Ampliar el grafo arriba a la derecha.",
       "caption": "Pasa el cursor sobre un punto para leer su incidencia y resaltar sus vínculos; selecciónalo para abrir la incidencia en el panel lateral.",
-      "revision": 23,
+      "revision": 24,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -187,12 +191,25 @@ Debajo de la cabecera aparecen las estadísticas del proyecto, calculadas con su
 
 ![Grafo de las incidencias abiertas agrupadas en burbujas de color por objetivo alrededor de anclas cuadradas, con flechas grises de la incidencia principal a la subincidencia, flechas rojas de bloqueo, vínculos Relacionada en discontinuo, líneas grises entre objetivos, la leyenda, el interruptor Incluir incidencias y objetivos cerrados y el botón Ampliar el grafo arriba a la derecha.](/documentation/es/project-issue-graph.png)
 
-Las demás pestañas son **Categorías**, **Miembros**, **Recurrencias**, **Smart Assign**, **Sugerencias**, **Git**, **Importar** e **Integraciones**. Sigue la guía correspondiente antes de activar un proveedor o trabajo automático. Las preferencias de la cuenta, como el idioma de la interfaz, son independientes de los ajustes del proyecto.
+Las demás pestañas son **Categorías**, **Miembros**, **Recurrencias**, **Smart Assign**, **Instrucciones de la IA**, **Sugerencias**, **Git**, **Importar** e **Integraciones**. Sigue la guía correspondiente antes de activar un proveedor o trabajo automático. Las preferencias de la cuenta, como el idioma de la interfaz, son independientes de los ajustes del proyecto.
 
 En **Categorías**, el propietario y los miembros gestionan las categorías que clasifican las incidencias. Elige **Nueva categoría** en la línea de título de la tarjeta: aparece arriba de la lista una fila con un punto de color y un campo de nombre. Pulsa Intro o elige **Añadir** para crear la categoría; Escape cierra la fila sin crearla. Selecciona el punto de color de una categoría para abrir la lista de colores, donde puedes escribir el nombre de un color para encontrarlo; el color que eliges se aplica al instante (en un teléfono la lista se abre en una hoja), o selecciona su nombre para renombrarla allí mismo. El botón de eliminar pide confirmación y después quita la categoría de todas las incidencias. En cuanto el proyecto tiene dos categorías o más, cada fila muestra un asa a la izquierda: arrástrala para subir o bajar la categoría. Con el teclado, enfoca el asa, pulsa Espacio, mueve la categoría con las flechas Arriba y Abajo y pulsa Espacio de nuevo para soltarla; Escape cancela. Este orden es el que muestran todos los menús y filtros de categorías a todo el proyecto. Numo y los clientes MCP de minddy también pueden leerlo y cambiarlo, por ejemplo cuando pides a Numo que ponga una categoría en primer lugar.
 
 
 ![Cabecera del proyecto con el icono y su distintivo de edición, el nombre, la clave y las cifras Incidencias, Miembros, Objetivos, Categorías y Creado.](/documentation/es/project-general.png)
+
+### Orientar a Smart Fill y Smart Assign {#ai-instructions}
+
+La pestaña **Instrucciones de la IA** contiene lo que Smart Fill y Smart Assign siguen en este proyecto, la cree quien la cree y sea cual sea la forma de crear la incidencia: el formulario, Numo, una integración o un cliente MCP. Solo el propietario la cambia; los miembros pueden leerla.
+
+**Idioma de trabajo** fija el idioma en el que Smart Fill escribe los títulos de las incidencias y los nombres de los objetivos, sea cual sea el idioma de la descripción. Las sugerencias también se traducen a él cuando el proyecto no tiene un idioma del equipo. **Automático**, el valor por defecto, mantiene cada título en el idioma de su descripción.
+
+Las instrucciones son opcionales: Smart Fill y Smart Assign funcionan sin ninguna. Añade una cuando tu equipo, o uno de sus miembros, trabaje de una forma que la IA deba seguir. Elige **Nueva instrucción** y después de qué trata: **Títulos de las incidencias**, **Prioridad, esfuerzo y categorías**, **Objetivos** o **Asignación**. Escríbela con palabras sencillas, en 500 caracteres como máximo, por ejemplo «todo lo relacionado con pagos tiene como mínimo prioridad alta», y elige **Guardar**. Cada uno de los cuatro temas admite una instrucción; la cruz de su línea la quita en el siguiente **Guardar**. **Asignación** se suma a las reglas por miembro de la pestaña **Smart Assign** y no las sustituye; con ella, Smart Assign elige entre varios miembros aunque ninguno tenga una regla. Una instrucción orienta una elección entre las categorías, los objetivos y los miembros que ya existen en el proyecto. No puede añadir ninguno ni levanta un límite de uso. También puedes pedirle a Numo que fije el idioma o una instrucción ([guía de Numo](/docs/numo#project-instructions)).
+### Instrucciones propuestas {#ai-instruction-suggestions}
+
+Una vez por semana, minddy cuenta los valores que Smart Fill o Smart Assign fijaron y que alguien cambió a mano en los siete días siguientes. Cuando la misma propiedad se ha corregido en al menos cinco incidencias de un proyecto en treinta días, minddy busca qué tienen en común esas correcciones y, si encuentra un patrón, propone una instrucción al propietario. Los cambios hechos por Numo, una integración, un cliente MCP, una rutina o la sincronización de un repositorio no se cuentan.
+
+La propuesta aparece en **Inicio** y en la parte superior de la pestaña **Instrucciones de la IA**, con la instrucción en un campo que puedes editar. **Añadir instrucción** guarda ese texto como instrucción de su campo; ya incluye lo que el campo decía antes. **Descartar** aparta la propuesta. Nada cambia hasta que elijas una de las dos opciones. Después de una propuesta, minddy no hace otra para el mismo campo durante treinta días, y un proyecto tiene una sola propuesta a la vez. Redactar una propuesta usa IA y cuenta en la parte **Automatizaciones** del propietario; se omite mientras ese presupuesto esté agotado.
 
 ### Ocultar un proyecto para ti {#hide-project}
 

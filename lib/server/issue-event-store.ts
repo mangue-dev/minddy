@@ -111,3 +111,62 @@ export async function previouslyAssignedIssues(service: SupabaseClient, ids: str
   if (error) throw new Error("Unable to read assignment history");
   return new Set((data ?? []).map((row) => row.issue_id as string));
 }
+
+/** The issue fields whose corrections are counted (MIN-988). */
+const CORRECTED_FIELDS = ["title", "priority", "effort", "objective_id", "assignee_id"] as const;
+const CATEGORY_CHANGE_TYPES = ["category_added", "category_removed"] as const;
+
+/** A row of activity reduced to what no key protects: no value, no actor. */
+export interface FieldEventMark {
+  issue_id: string;
+  type: string;
+  field: string | null;
+  created_at: string;
+  via_smart_fill: boolean;
+  smart_assign_ai: boolean;
+}
+
+const MARK_COLUMNS = "issue_id, type, field, created_at, via_smart_fill, smart_assign_ai";
+
+/**
+ * Field changes made by a person, by hand, since `since`: an actor, and none
+ * of the marks of an automated write (Smart Fill, Smart Assign, Numo, MCP,
+ * an automation, an integration, a forge sync). Newest first, `limit` rows
+ * at most. Reads clear metadata only: the values stay sealed.
+ */
+export async function listManualFieldChanges(service: SupabaseClient,
+  options: { since: string; limit: number }): Promise<FieldEventMark[]> {
+  const rows: FieldEventMark[] = [];
+  for (let offset = 0; offset < options.limit; offset += 1000) {
+    const { data, error } = await service.from("issue_events").select(MARK_COLUMNS)
+      .not("issue_id", "is", null).not("actor_id", "is", null)
+      .eq("via_smart_fill", false).eq("via_smart_assign", false).eq("via_assistant", false)
+      .eq("via_mcp", false).eq("via_automation", false)
+      .is("forge_sync", null).is("integration_id", null)
+      .gte("created_at", options.since)
+      .or(`and(type.eq.updated,field.in.(${CORRECTED_FIELDS.join(",")})),type.in.(${CATEGORY_CHANGE_TYPES.join(",")})`)
+      .order("created_at", { ascending: false }).order("id", { ascending: true })
+      .range(offset, Math.min(offset + 999, options.limit - 1));
+    if (error) throw new Error("Unable to read manual field changes");
+    rows.push(...((data ?? []) as unknown as FieldEventMark[]));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
+}
+
+/** What Smart Fill, or the model of Smart Assign, wrote on these issues since `since`. */
+export async function listAiFieldWrites(service: SupabaseClient,
+  options: { issueIds: readonly string[]; since: string }): Promise<FieldEventMark[]> {
+  const rows: FieldEventMark[] = [];
+  const ids = [...new Set(options.issueIds)];
+  for (let offset = 0; offset < ids.length; offset += 150) {
+    const { data, error } = await service.from("issue_events").select(MARK_COLUMNS)
+      .in("issue_id", ids.slice(offset, offset + 150))
+      .or("via_smart_fill.eq.true,smart_assign_ai.eq.true")
+      .gte("created_at", options.since)
+      .order("created_at", { ascending: true }).limit(5000);
+    if (error) throw new Error("Unable to read automated field writes");
+    rows.push(...((data ?? []) as unknown as FieldEventMark[]));
+  }
+  return rows;
+}

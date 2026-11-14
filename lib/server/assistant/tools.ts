@@ -40,6 +40,7 @@ import { TRASH_TYPES } from "@/lib/server/trash";
 import { VIEW_SORTS } from "@/lib/server/views";
 import { SMART_TRIAGE_MODES } from "@/lib/smart-triage";
 import { SMART_ASSIGN_FROM_STATUSES } from "@/lib/smart-assign-config";
+import { AI_INSTRUCTION_MAX_LENGTH } from "@/lib/ai-instructions";
 import { MEMBER_ROLES } from "@/lib/project-roles";
 import { locales } from "@/i18n/config";
 
@@ -1854,7 +1855,7 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
     function: {
       name: "update_project",
       description:
-        "Update the project's own settings: identity (name, key, accent color — the icon itself is set from the project's Settings → General page, you have no tool for it), Smart Assign and its per-member rules, Smart Triage's mode ('rules' only — the deterministic board sort; the AI scoring pass was retired), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign is plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
+        "Update the project's own settings: identity (name, key, accent color — the icon itself is set from the project's Settings → General page, you have no tool for it), Smart Assign and its per-member rules, the working language and the instructions Smart Fill and Smart Assign follow (ai_language, ai_instructions), Smart Triage's mode ('rules' only — the deterministic board sort; the AI scoring pass was retired), AI review of incoming feedback, and feedback translation (enabled, team language, languages to skip). OWNER ONLY — fails for a non-owner. Changing the key rewrites how every issue is referenced (MIND-42 → NEW-42): confirm with the user before doing it. Only pass the fields to change. Smart Assign is plan- or budget-gated: turning one ON can be refused for the owner's plan or usage budget — relay that refusal, don't retry.",
       parameters: {
         type: "object",
         properties: {
@@ -1916,6 +1917,32 @@ export const ASSISTANT_TOOLS: AssistantToolDef[] = [
             items: { type: "string" },
             description:
               "Languages whose feedback should not be translated. Replaces the whole list.",
+          },
+          ai_language: {
+            type: ["string", "null"],
+            description:
+              "The project's working language, as a two-letter code (en, fr, es, de, it, pt, nl, pl, tr, ru, ar, ja, ko, zh): Smart Fill then writes issue titles and objective names in it, whatever language the description is in, and feedback is translated into it when no team language is set. null goes back to following the language of each text.",
+          },
+          ai_instructions: {
+            type: "object",
+            description:
+              `The owner's instructions to Smart Fill and Smart Assign, one short free text per use case, ${AI_INSTRUCTION_MAX_LENGTH} characters at most each. They apply to the whole project, for every member and every way an issue is created. PARTIAL: a use case you pass replaces that instruction (resend its current text with your addition to extend it), an empty string removes it, a use case you leave out is kept. An instruction steers a choice among the real values; it cannot add a category, an objective or a member.`,
+            properties: {
+              title: { type: "string", description: "How Smart Fill titles issues." },
+              properties: {
+                type: "string",
+                description: "How Smart Fill sets priority, effort and categories (\"anything about payments is at least high\").",
+              },
+              objectives: {
+                type: "string",
+                description: "How Smart Fill attaches issues to objectives, and how it names an objective.",
+              },
+              assign: {
+                type: "string",
+                description: "How Smart Assign chooses in general, next to the per-member rules, which stay as they are.",
+              },
+            },
+            additionalProperties: false,
           },
         },
       },

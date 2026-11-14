@@ -114,6 +114,7 @@ must be checked before a column is declared migrated.
 | Data | Encrypt or remove from database plaintext | Clear metadata and reason |
 | --- | --- | --- |
 | `projects` | `name`, `smart_assign_rules`, `automations`; legacy user-provided `icon_url` values migrate to a guarded local route and encrypted object bytes | IDs, owner, key, colors, flags, counters, timestamps and the opaque icon path. Project key is a shared identifier used in issue references and URLs; keep it clear. |
+| `project_ai_instructions`, `ai_instruction_proposals` | The owner's instructions to Smart Fill and Smart Assign (`content`) and an instruction drafted from corrections (`instruction`, `observation`) | Project, use case, corrected field, counts, status, evidence issue IDs and timestamps. `projects.ai_language` is a two-letter code and stays clear. |
 | `objectives` | `name`, `description` | IDs, project and user references, status, target date, color, timestamps. |
 | `issues` | `title`, `description`, `plan`, user-supplied `remote_url` and automation content | IDs, number, project and user references, status, priority, effort, dates, position, recurrence and forge routing identifiers. |
 | `issue_events` | `from_value`, `to_value` when they contain content; event history must not preserve old plaintext | IDs, actor, type, field name, timestamps and flags. |

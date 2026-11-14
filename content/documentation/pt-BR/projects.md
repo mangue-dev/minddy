@@ -16,10 +16,10 @@
   ],
   "visibility": "public",
   "status": "published",
-  "revision": 21,
-  "sourceRevision": 20,
+  "revision": 22,
+  "sourceRevision": 21,
   "owner": "@mangue-dev",
-  "updatedAt": "2026-11-10",
+  "updatedAt": "2026-11-14",
   "compatibility": {
     "version": "0.30.0 (MIN-794 release review)",
     "editions": [
@@ -70,14 +70,18 @@
       "components/stats/issue-graph-viewer.tsx",
       "lib/project-stats.ts",
       "lib/issue-graph-layout.ts",
-      "app/api/projects/[id]/pull-request-stats/route.ts"
+      "app/api/projects/[id]/pull-request-stats/route.ts",
+      "components/settings/ai-instructions-section.tsx",
+      "components/ai-instruction-proposal-card.tsx",
+      "lib/ai-instructions.ts",
+      "lib/server/ai-instruction-proposals.ts"
     ]
   },
   "review": {
-    "revision": 21,
-    "fact": "agent:claude-code (MIN-897: enlarged issue graph documented from components/stats/issue-graph.tsx and issue-graph-viewer.tsx and walked through in a local build against the preview demo project Lumen: enlarge, wheel zoom, drag, zoom buttons, selecting an issue; project-issue-graph recaptured on 2026-11-10 and inspected in fr; rest of the article unchanged since the previous review)",
-    "language": "agent:claude-code (pt-BR changed passage translated from en revision 20 with catalog UI labels and the glossary register; self-reviewed; agent review, not human acceptance)",
-    "date": "2026-11-10"
+    "revision": 22,
+    "fact": "agent:claude-code (MIN-988: AI instructions tab in the tab list, new sections #ai-instructions and #ai-instruction-suggestions, source audit against components/settings/ai-instructions-section.tsx, components/ai-instruction-proposal-card.tsx, lib/ai-instructions.ts, lib/server/update-project.ts, lib/server/ai-instruction-proposals.ts and messages/*.json; no browser walkthrough; no figure shows this tab; existing figures kept, not recaptured; rest of the article unchanged since the previous review)",
+    "language": "agent:claude-code (pt-BR changed passages written from the code and catalog UI labels; self-reviewed; agent review, not human acceptance)",
+    "date": "2026-11-14"
   },
   "related": [
     "issues",
@@ -101,7 +105,7 @@
       "src": "/documentation/pt-BR/project-general.png",
       "alt": "Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.",
       "caption": "Selecione o ícone, o nome ou a chave para alterá-los no lugar; mover o projeto para a lixeira continua sendo uma ação separada, mais abaixo.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -118,7 +122,7 @@
       "src": "/documentation/pt-BR/project-members.png",
       "alt": "Cartão “Convidar pessoas” acima do cartão Membros, que lista três membros de demonstração com o proprietário identificado.",
       "caption": "Convide pelo email da conta e identifique o proprietário antes de remover o acesso de um membro.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -135,7 +139,7 @@
       "src": "/documentation/pt-BR/project-statistics.png",
       "alt": "Seções Ritmo, Situação atual e Colaboradores de um projeto com cerca de mil tickets: barras semanais de tickets criados e concluídos, uma barra de status, indicadores de saúde e uma barra de status por pessoa.",
       "caption": "O ritmo compara as últimas quatro semanas com as quatro anteriores; os tickets atrasados e parados apontam o trabalho a observar.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-04",
       "viewport": [
@@ -152,7 +156,7 @@
       "src": "/documentation/pt-BR/project-issue-graph.png",
       "alt": "Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda, o interruptor Incluir tickets e objetivos fechados e o botão Ampliar o grafo no canto superior direito.",
       "caption": "Passe o cursor sobre um ponto para ler o ticket e destacar suas ligações; selecione-o para abrir o ticket no painel lateral.",
-      "revision": 21,
+      "revision": 22,
       "reviewed": true,
       "capturedAt": "2026-11-10",
       "viewport": [
@@ -187,12 +191,25 @@ Abaixo do cabeçalho vêm as estatísticas do projeto, calculadas a partir dos p
 
 ![Grafo dos tickets abertos agrupados em bolhas coloridas por objetivo em torno de âncoras quadradas, com setas cinza do ticket pai para o subticket, setas vermelhas de bloqueio, ligações Relacionado tracejadas, linhas cinza entre objetivos, a legenda, o interruptor Incluir tickets e objetivos fechados e o botão Ampliar o grafo no canto superior direito.](/documentation/pt-BR/project-issue-graph.png)
 
-As outras abas são **Categorias**, **Membros**, **Recorrências**, **Smart Assign**, **Feedback**, **Git**, **Importar** e **Integrações**. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
+As outras abas são **Categorias**, **Membros**, **Recorrências**, **Smart Assign**, **Instruções da IA**, **Feedback**, **Git**, **Importar** e **Integrações**. Siga o guia correspondente antes de habilitar um provedor ou trabalho automático. As preferências da conta, como o idioma da interface, são separadas da configuração do projeto.
 
 Em **Categorias**, o proprietário e os membros gerenciam as categorias que classificam os tickets. Escolha **Nova categoria** na linha de título do cartão: uma linha com um ponto de cor e um campo de nome aparece no topo da lista. Pressione Enter ou escolha **Adicionar** para criar a categoria; Esc fecha a linha sem criá-la. Selecione o ponto de cor de uma categoria para abrir a lista de cores, onde você pode digitar o nome de uma cor para encontrá-la; a cor escolhida é aplicada na hora (no celular a lista abre em um painel), ou selecione o nome dela para renomeá-la ali mesmo. O botão de excluir pede confirmação e depois remove a categoria de todos os tickets. Assim que o projeto tem duas categorias ou mais, cada linha mostra uma alça à esquerda: arraste-a para subir ou descer a categoria. Pelo teclado, coloque o foco na alça, pressione Espaço, mova a categoria com as setas para cima e para baixo e pressione Espaço de novo para soltá-la; Esc cancela. Essa ordem é a que todos os menus e filtros de categorias mostram para todo o projeto. O Numo e os clientes MCP do minddy também podem lê-la e alterá-la, por exemplo quando você pede ao Numo para colocar uma categoria em primeiro lugar.
 
 
 ![Cabeçalho do projeto com o ícone e seu selo de edição, o nome, a chave e os números Tickets, Membros, Objetivos, Categorias e Criado em.](/documentation/pt-BR/project-general.png)
+
+### Orientar o Smart Fill e o Smart Assign {#ai-instructions}
+
+A aba **Instruções da IA** contém o que o Smart Fill e o Smart Assign seguem neste projeto, seja quem for que crie o ticket e de que forma: pelo formulário, pelo Numo, por uma integração ou por um cliente MCP. Só o proprietário a altera; os membros podem lê-la.
+
+**Idioma de trabalho** define o idioma em que o Smart Fill escreve os títulos dos tickets e os nomes dos objetivos, qualquer que seja o idioma da descrição. O feedback também é traduzido para ele quando o projeto não tem um idioma da equipe. **Automático**, o padrão, mantém cada título no idioma da sua descrição.
+
+As instruções são opcionais: o Smart Fill e o Smart Assign funcionam sem nenhuma. Adicione uma quando sua equipe, ou um dos membros, trabalhar de um jeito que a IA deva seguir. Escolha **Nova instrução** e depois o assunto: **Títulos dos tickets**, **Prioridade, esforço e categorias**, **Objetivos** ou **Atribuição**. Escreva com palavras simples, em até 500 caracteres, por exemplo "tudo o que envolve pagamentos tem pelo menos prioridade alta", e escolha **Salvar**. Cada um dos quatro assuntos recebe uma instrução; o X na linha dela a remove no próximo **Salvar**. **Atribuição** se soma às regras por membro da aba **Smart Assign** e não as substitui; com ela, o Smart Assign escolhe entre vários membros mesmo quando nenhum tem uma regra. Uma instrução orienta uma escolha entre as categorias, os objetivos e os membros que já existem no projeto. Ela não pode adicionar nenhum e não remove um limite de uso. Você também pode pedir ao Numo que defina o idioma ou uma instrução ([guia do Numo](/docs/numo#project-instructions)).
+### Instruções sugeridas {#ai-instruction-suggestions}
+
+Uma vez por semana, o minddy conta os valores definidos pelo Smart Fill ou pelo Smart Assign que alguém alterou manualmente em até sete dias. Quando a mesma propriedade foi corrigida em pelo menos cinco tickets de um projeto em trinta dias, o minddy procura o que essas correções têm em comum e, se encontra um padrão, sugere uma instrução ao proprietário. As alterações feitas pelo Numo, por uma integração, por um cliente MCP, por uma rotina ou pela sincronização de um repositório não são contadas.
+
+A sugestão aparece na **Página inicial** e no topo da aba **Instruções da IA**, com a instrução em um campo que você pode editar. **Adicionar instrução** salva esse texto como a instrução do campo; ele já inclui o que o campo dizia antes. **Dispensar** deixa a sugestão de lado. Nada muda até você escolher uma das duas opções. Depois de uma sugestão, o minddy não faz outra para o mesmo campo por trinta dias, e um projeto tem uma sugestão por vez. Redigir uma sugestão usa IA e conta na parcela **Automações** do proprietário; isso é ignorado enquanto esse orçamento estiver esgotado.
 
 ### Ocultar um projeto para você {#hide-project}
 

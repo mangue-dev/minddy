@@ -98,6 +98,7 @@ import {
 import { notifyRoutineOfNumoTurn } from "@/lib/server/routine-hooks";
 import { afterOrNow } from "@/lib/server/after-safe";
 import { loadNumoMemoryPrompt } from "./memory-prompt";
+import { loadProjectAiInstructionsPrompt } from "./project-instructions-prompt";
 import { touchNumoMemories } from "./memory-content";
 import { scheduleHomeBriefRewrite } from "./home-brief";
 import { HOME_BRIEF_MESSAGE_META } from "./home-brief-opening";
@@ -557,6 +558,13 @@ async function buildExecutionInput(input: {
       readerAccess = { canComment: access.canComment };
       systemPrompt += `\n## Access
 - The user is a Reader in this project: it is read-only for them${access.canComment ? ", except for comments" : ""}. Do not offer changes to it; tools that would change it are refused.`;
+    }
+    // What guides Smart Fill and Smart Assign is the project's (MIN-988):
+    // Numo reads it here so a stated preference lands there, not in memory.
+    if (access.role !== "reader") {
+      systemPrompt += await loadProjectAiInstructionsPrompt({
+        service, projectId: intent.projectId, isOwner: access.isOwner,
+      });
     }
   } else {
     systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
