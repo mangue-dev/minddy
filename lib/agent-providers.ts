@@ -61,6 +61,11 @@ export interface ProviderRequestProfile {
  * refused returns to 400. The levels and their translation: lib/agent-reasoning.ts.
  */
   reasoningField?: "reasoning" | "reasoning_effort" | "thinking";
+  /**
+   * Header carrying a stable per-conversation session id, sent with a Minddy
+   * user agent (`aiChatProviderHeaders`). OpenCode Go refuses a call without it.
+   */
+  sessionHeader?: "x-opencode-session";
 }
 
 export interface AgentProviderDef {
@@ -160,7 +165,8 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     id: "google",
     label: "Google (Gemini)",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
-    defaultModel: "gemini-3.5-flash",
+    // 3.5 Flash is retired in AI Studio and rerouted to 3.6 Flash.
+    defaultModel: "gemini-3.6-flash",
     logoModel: "google/x",
     listStrategy: "openai",
     requestProfile: {
@@ -172,7 +178,7 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
   },
   {
     // OpenCode Go is a $10/month subscription of the OpenCode Zen gateway:
-    // same console, same API, another base path (`/zen/go/v1`). Every model
+    // same console, same API, another base path (`/inference/go`). Every model
     // the gateway lists is served through OpenAI-compatible
     // `<baseUrl>/chat/completions` (models.dev declares both providers on
     // @ai-sdk/openai-compatible), so the uniform loop/VM transport works as-is.
@@ -180,7 +186,9 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     // a key — see `probeRequestFor` (byok-validate.ts).
     id: "opencode-go",
     label: "OpenCode Go",
-    baseUrl: "https://opencode.ai/zen/go/v1",
+    // The `/inference` paths replace the legacy `/zen/go/v1` (still served);
+    // Go models declare this chat base in their `/models` entry.
+    baseUrl: "https://opencode.ai/inference/go/openai/v1",
     defaultModel: "glm-5.3-flash",
     logoModel: "opencode/x",
     listStrategy: "openai",
@@ -190,15 +198,17 @@ export const AGENT_PROVIDERS: AgentProviderDef[] = [
     requestProfile: {
       streamUsage: true,
       outputTokenField: "max_tokens",
+      sessionHeader: "x-opencode-session",
     },
     keysUrl: "https://opencode.ai/auth",
   },
   {
     // OpenCode Zen is the pay-as-you-go twin of Go: same console, same API
-    // shape, base path `/zen/v1`.
+    // shape, base path `/inference`.
     id: "opencode-zen",
     label: "OpenCode Zen",
-    baseUrl: "https://opencode.ai/zen/v1",
+    // Replaces the legacy `/zen/v1`; chat models declare this base.
+    baseUrl: "https://opencode.ai/inference/openai/v1",
     defaultModel: "glm-5.3-flash",
     logoModel: "opencode/x",
     listStrategy: "openai",

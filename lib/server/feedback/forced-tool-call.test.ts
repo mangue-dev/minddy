@@ -455,3 +455,46 @@ describe("forcedToolCall log redaction", () => {
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(sentinel);
   });
 });
+
+describe("forcedToolCall where the provider refuses a forced choice (MIN-979)", () => {
+  const textOnly = () => ({
+    ok: true,
+    json: async () => ({ choices: [{ finish_reason: "stop", message: { content: "Sure." } }] }),
+  }) as unknown as Response;
+
+  beforeEach(() => {
+    vi.spyOn(aiRuntime, "resolveAiRuntime").mockResolvedValue({
+      apiKey: "go-key", mode: "byok", provider: "opencode-go",
+      baseUrl: "https://opencode.ai/inference/go/openai/v1", model: "glm-5.3-flash",
+      requestProfile: getAgentProvider("opencode-go")!.requestProfile,
+    });
+  });
+
+  it("asks for the tool, then retries once with a reminder when the call is missing", async () => {
+    const sent: Array<{ body: Record<string, unknown>; headers: Record<string, string> }> = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_url, init) => {
+      sent.push({ body: JSON.parse(init!.body as string), headers: init!.headers as Record<string, string> });
+      return sent.length === 1 ? textOnly() : okResponse("glm-5.3-flash");
+    });
+    const result = await forcedToolCall("platform-model", "Classify.", "user", "pick", {}, {
+      modelKey: "smart_fill_model", record: { feature: "smart_fill", billTo: { userId: "user-id" } },
+    });
+    expect(result).toEqual({ model: "glm-5.3-flash" });
+    expect(sent).toHaveLength(2);
+    expect(sent[0]!.body.tool_choice).toBe("auto");
+    const firstMessages = sent[0]!.body.messages as Array<{ role: string; content: string }>;
+    expect(firstMessages[0]!.content).toContain("`pick`");
+    expect((sent[1]!.body.messages as unknown[]).length).toBe(firstMessages.length + 1);
+    expect(sent[0]!.headers["x-opencode-session"]).toBeTruthy();
+    expect(sent[1]!.headers["x-opencode-session"]).toBeTruthy();
+  });
+
+  it("gives up after the single retry", async () => {
+    const fetch = vi.spyOn(globalThis, "fetch").mockImplementation(async () => textOnly());
+    const result = await forcedToolCall("platform-model", "Classify.", "user", "pick", {}, {
+      modelKey: "smart_fill_model", record: { feature: "smart_fill", billTo: { userId: "user-id" } },
+    });
+    expect(result).toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});

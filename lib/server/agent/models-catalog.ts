@@ -20,7 +20,9 @@ import {
 import type { ModelReasoning } from "@/lib/agent-reasoning";
 import { DEFAULT_RECOMMENDED_MODELS } from "@/lib/recommended-models";
 import { dedupeModelVariants } from "@/lib/model-variants";
+import { NOT_ON_CHAT_COMPLETIONS_RE } from "@/lib/byok-model-catalog";
 import { nativeModelReasoning } from "@/lib/model-reasoning-rules";
+import { parseClaudeCapabilities, rememberClaudeCapabilities } from "@/lib/anthropic-model-capabilities";
 import {
   getAgentProvider,
   isLocalAgentProvider,
@@ -129,6 +131,26 @@ const NON_CHAT_RE =
   /(embed(?:ding)?|whisper|tts|dall-e|moderation|audio|image|imagen|veo|realtime|transcribe|rerank)/i;
 
 /**
+ * Speech-to-text ids the `/audio/transcriptions` request cannot use: realtime
+ * and live models, and the diarizing model, which refuses `prompt` and needs a
+ * chunking strategy beyond 30 seconds.
+ */
+const NOT_FILE_TRANSCRIPTION_RE = /(realtime|live|diarize)/i;
+
+/**
+ * Whether a native id fits a model role. Pure; exported for the listing tests.
+ * `ada-002` takes no `dimensions`, which the feedback board's fixed-size
+ * vectors need, so it is left out of the embedding list.
+ */
+export function nativeIdFitsCapability(id: string, capability: ModelCatalogCapability): boolean {
+  if (capability === "transcription") {
+    return /(transcri|whisper)/i.test(id) && !NOT_FILE_TRANSCRIPTION_RE.test(id);
+  }
+  if (capability === "embedding") return /embed/i.test(id) && !/ada-00/i.test(id);
+  return !NON_CHAT_RE.test(id) && !NOT_ON_CHAT_COMPLETIONS_RE.test(id);
+}
+
+/**
  * The list as PROPOSED: without its version duplicates, and row.
  *
  * The deduplication is valid for the four strategies and not only for
@@ -210,6 +232,13 @@ function withNativeReasoning(provider: AgentProviderId, entry: AgentModelEntry):
   return reasoning === undefined ? entry : { ...entry, reasoning };
 }
 
+/** A shutdown date (ISO string or Unix seconds) already past. */
+function isPastShutdown(value: string | number | null | undefined, now: number): boolean {
+  if (value === null || value === undefined || value === "") return false;
+  const at = typeof value === "number" ? value * 1000 : Date.parse(value);
+  return Number.isFinite(at) && at <= now;
+}
+
 /** OpenAI-compatible `/models` endpoint (OpenAI, Google, generic). */
 async function listOpenAICompat(
   provider: AgentProviderId,
@@ -223,16 +252,21 @@ async function listOpenAICompat(
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = JSON.parse(res.bytes.toString("utf8")) as {
-    data?: Array<{ id: string }>;
+    data?: Array<{
+      id: string;
+      shutdown_date?: string | number | null;
+      capabilities?: { tools?: { supported?: unknown } };
+    }>;
   };
+  const now = Date.now();
   const models = (body.data ?? [])
+    // OpenAI publishes a shutdown date; a model past it refuses every call.
+    .filter((m) => !isPastShutdown(m.shutdown_date, now))
+    // OpenCode publishes tool support per model; Numo and every text task
+    // call tools, so a model that declares none cannot serve the language role.
+    .filter((m) => capability !== "text" || m.capabilities?.tools?.supported !== false)
     .map((m) => m.id?.replace(/^models\//, "")) // Gemini prefix `models/…`
-    .filter((id): id is string => {
-      if (!id) return false;
-      if (capability === "transcription") return /(transcri|whisper)/i.test(id);
-      if (capability === "embedding") return /embed/i.test(id);
-      return !NON_CHAT_RE.test(id);
-    })
+    .filter((id): id is string => !!id && nativeIdFitsCapability(id, capability))
     .map((id) => withNativeReasoning(provider, { id, name: id }));
   return sortById(models);
 }
@@ -252,11 +286,16 @@ async function listAnthropic(
   );
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const body = JSON.parse(res.bytes.toString("utf8")) as {
-    data?: Array<{ id: string; display_name?: string }>;
+    data?: Array<{ id: string; display_name?: string; capabilities?: unknown }>;
   };
   const models = (body.data ?? [])
     .filter((m) => !!m.id)
-    .map((m) => withNativeReasoning("anthropic", { id: m.id, name: m.display_name ?? m.id }));
+    .map((m) => {
+      // The published thinking and effort support drives the reasoning rules
+      // for this model from now on, in the picker and in requests (MIN-979).
+      rememberClaudeCapabilities(m.id, parseClaudeCapabilities(m.capabilities));
+      return withNativeReasoning("anthropic", { id: m.id, name: m.display_name ?? m.id });
+    });
   return sortById(models);
 }
 

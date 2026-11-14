@@ -35,9 +35,12 @@ import type { ModelCatalogCapability } from "@/lib/model-catalog-capability";
 import {
   byokCapabilitiesForProvider,
   isModelCatalogCapability,
+  modelCatalogCapabilityForKey,
   providerSupportsModelKey,
   providerSupportsModelCapability,
 } from "@/lib/model-catalog-capability";
+import { stripModelSuffix } from "@/lib/ai-model-config";
+import { getActiveByokModelCatalog } from "@/lib/server/agent/models-catalog";
 
 /**
  * Account BYOK credentials (MIN-46 / MIN-10 / MIN-573). An account may keep
@@ -526,6 +529,22 @@ export async function PATCH(request: NextRequest) {
         { error: "Model type is not supported by the active BYOK provider" },
         { status: 400 },
       );
+    }
+    // An embedding or transcription field must name a model of that kind:
+    // a chat id there is refused by the provider on every call, and indexing
+    // or dictation degrade silently. The key's own catalog is the evidence;
+    // when it cannot be listed, the choice is kept unverified.
+    for (const [modelKey, model] of Object.entries(models)) {
+      const capability = modelCatalogCapabilityForKey(modelKey);
+      if (capability === "text") continue;
+      const catalog = await getActiveByokModelCatalog(auth.user.id, capability, activeProvider);
+      if (catalog.models.length > 0 &&
+        !catalog.models.some((entry) => entry.id === stripModelSuffix(model))) {
+        return NextResponse.json(
+          { error: "Model type does not match this setting", code: "capability_mismatch" },
+          { status: 400 },
+        );
+      }
     }
     update.feature_models = models;
   }

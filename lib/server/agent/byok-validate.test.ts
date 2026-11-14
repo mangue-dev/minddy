@@ -46,12 +46,12 @@ describe("BYOK provider probes", () => {
       probeByokKey({
         provider: "opencode-go",
         apiKey: "oc-bogus",
-        baseUrl: "https://opencode.ai/zen/go/v1",
+        baseUrl: "https://opencode.ai/inference/go/openai/v1",
         rateLimitKey: "opencode-go-probe-user",
       }),
     ).resolves.toBe("invalid");
     const [, url, options] = fetchAiProviderBytes.mock.calls[0];
-    expect(url).toBe("https://opencode.ai/zen/go/v1/chat/completions");
+    expect(url).toBe("https://opencode.ai/inference/go/openai/v1/chat/completions");
     expect(options.method).toBe("POST");
     const body = JSON.parse(options.body) as {
       model: string;
@@ -69,11 +69,11 @@ describe("BYOK provider probes", () => {
       probeByokKey({
         provider: "opencode-zen",
         apiKey: "oc-live",
-        baseUrl: "https://opencode.ai/zen/v1",
+        baseUrl: "https://opencode.ai/inference/openai/v1",
         rateLimitKey: "opencode-zen-probe-user",
       }),
     ).resolves.toBe("valid");
     const [, url] = fetchAiProviderBytes.mock.calls[0];
-    expect(url).toBe("https://opencode.ai/zen/v1/chat/completions");
+    expect(url).toBe("https://opencode.ai/inference/openai/v1/chat/completions");
   });
 });

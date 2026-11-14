@@ -207,6 +207,7 @@ export async function POST(request: NextRequest) {
         return transcribeAudio(m, audioBase64, format, runtime.apiKey, {
           language,
           prompt: spellings.length ? spellings.join(", ") : undefined,
+          vocabulary: spellings,
           temperature: 0,
           provider: runtime.provider === "openrouter" ? provider : undefined,
           title: "minddy Dictate",

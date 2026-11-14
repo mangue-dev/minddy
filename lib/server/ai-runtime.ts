@@ -31,8 +31,13 @@ import {
   aiChatProviderHeaders,
   repairRejectedAiChatBody,
   translateAiChatRequest,
+  usesOpenAiResponses,
   type AiChatRequest,
 } from "@/lib/ai-chat";
+import {
+  toChatCompletionsResponse as toResponsesChatResponse,
+  toResponsesBody,
+} from "@/lib/server/openai-responses";
 import { fetchOpenRouterWithSuffixFallback } from "@/lib/server/model-config";
 import { isManagedAiEnabled, managedAiKeyMode } from "@/lib/managed-services";
 import { PlanLimitError } from "@/lib/server/plan-limit-error";
@@ -50,6 +55,11 @@ import {
 import { providerSupportsModelKey } from "@/lib/model-catalog-capability";
 import { modelCatalogCapabilityForKey } from "@/lib/model-catalog-capability";
 import { assertAiAllowedInBackground } from "@/lib/server/ai-consent";
+import {
+  claudeCapabilities,
+  parseClaudeCapabilities,
+  rememberClaudeCapabilities,
+} from "@/lib/anthropic-model-capabilities";
 
 export type AiKeyMode = "platform" | "byok";
 
@@ -271,7 +281,12 @@ export async function resolveAiRuntime(params: {
   );
 }
 
-function platformRuntime(platformKey: PlatformApiKey | null, model: string): ResolvedAiRuntime {
+/**
+ * The managed OpenRouter runtime for a key already resolved: the one shape
+ * every managed call uses, whether it comes from `resolveAiRuntime` or from a
+ * caller that falls back to managed AI itself (`forcedToolCall`).
+ */
+export function platformRuntime(platformKey: PlatformApiKey | null, model: string): ResolvedAiRuntime {
   if (!platformKey) throw new ManagedAiUnavailableError();
   const baseUrl = resolveProviderBaseUrl(DEFAULT_AGENT_PROVIDER);
   if (!baseUrl) throw new Error("OpenRouter base URL not configured");
@@ -343,6 +358,35 @@ async function retryRejectedChatRequest(
     : request(endpoint, { ...firstRequest, body: retryBody });
 }
 
+const CLAUDE_LOOKUP_TIMEOUT_MS = 3_000;
+const CLAUDE_LOOKUP_RETRY_MS = 10 * 60 * 1000;
+const claudeLookups = new Map<string, number>();
+
+/**
+ * Reads a Claude model's published capabilities once per process before its
+ * first request (`GET /v1/models/{id}`), so the thinking and effort fields
+ * follow what the model supports rather than its family name. A failed or
+ * slow lookup keeps the family rules and is not retried for ten minutes.
+ */
+async function ensureClaudeCapabilities(runtime: ResolvedAiRuntime, model: string): Promise<void> {
+  if (claudeCapabilities(model)) return;
+  const lastTry = claudeLookups.get(model);
+  if (lastTry && Date.now() - lastTry < CLAUDE_LOOKUP_RETRY_MS) return;
+  claudeLookups.set(model, Date.now());
+  try {
+    const response = await fetchAiProvider("anthropic",
+      `${normalizeBaseUrl(runtime.baseUrl)}/models/${encodeURIComponent(model)}`, {
+        headers: { "x-api-key": runtime.apiKey, "anthropic-version": ANTHROPIC_API_VERSION },
+        signal: AbortSignal.timeout(CLAUDE_LOOKUP_TIMEOUT_MS),
+      });
+    if (!response.ok) return;
+    const entry = await response.json() as { capabilities?: unknown };
+    rememberClaudeCapabilities(model, parseClaudeCapabilities(entry.capabilities));
+  } catch {
+    // The family rules still apply.
+  }
+}
+
 /**
  * Anthropic through its native Messages API (MIN-826): the chat body built for
  * every provider is converted, and the reply converted back, so callers keep
@@ -368,6 +412,24 @@ async function fetchAnthropicMessages(
 }
 
 /**
+ * OpenAI models that need the Responses API (MIN-979): the chat body is
+ * converted to `POST /responses` and the reply converted back, so callers keep
+ * parsing one shape.
+ */
+async function fetchOpenAiResponses(
+  runtime: ResolvedAiRuntime,
+  chatRequest: RequestInit,
+  http: (url: string, init: RequestInit) => Promise<Response>,
+): Promise<Response> {
+  const body = toResponsesBody(JSON.parse(String(chatRequest.body)) as Record<string, unknown>);
+  const response = await http(`${normalizeBaseUrl(runtime.baseUrl)}/responses`, {
+    ...chatRequest,
+    body: JSON.stringify(body),
+  });
+  return toResponsesChatResponse(response, body.stream === true);
+}
+
+/**
  * Fetch chat OpenAI-compatible, with the particularities of the provider resolved.
  *
  * Profiles choose the documented contract. Only two 400s are
@@ -381,9 +443,15 @@ export async function fetchAiChat(
   requestFor: (model: string) => AiChatRequest,
   title: string,
   logPrefix: string,
-  init?: Pick<RequestInit, "signal">,
+  init?: Pick<RequestInit, "signal"> & {
+    /** The conversation or run this call belongs to (OpenCode Go session header). */
+    sessionId?: string | null;
+  },
 ): Promise<{ response: Response; model: string }> {
   const endpoint = chatCompletionsUrl(runtime.baseUrl);
+  const { sessionId, ...fetchInit } = init ?? {};
+  // One id for every attempt of this call, so a replay stays in the session.
+  const session = sessionId || crypto.randomUUID();
   const request = (attemptModel: string): RequestInit => {
     const body = translateAiChatRequest(
       { ...requestFor(attemptModel), model: attemptModel },
@@ -394,10 +462,10 @@ export async function fetchAiChat(
       headers: {
         Authorization: `Bearer ${runtime.apiKey}`,
         "Content-Type": "application/json",
-        ...aiChatProviderHeaders(runtime.provider, title),
+        ...aiChatProviderHeaders(runtime.provider, title, session),
       },
       body: JSON.stringify(body),
-      ...init,
+      ...fetchInit,
     };
   };
   if (runtime.provider === "openrouter") {
@@ -408,20 +476,36 @@ export async function fetchAiChat(
       logPrefix,
       (url, options) => fetchAiProvider(runtime.provider, url, options),
     );
-    if (!result.response.ok && runtime.managedKeyOwner) {
+    // The same documented repairs as every other provider (a refused ceiling
+    // alias, an "off" sent to a model that must reason).
+    const repaired = await retryRejectedChatRequest(
+      endpoint,
+      result.response,
+      request(result.model),
+      (url, options) => fetchAiProvider(runtime.provider, url, options),
+    );
+    const final = { response: repaired, model: result.model };
+    if (!final.response.ok && runtime.managedKeyOwner) {
       await handleManagedKeyRejection(
         runtime,
-        result.response.status,
-        await result.response.clone().text().catch(() => ""),
+        final.response.status,
+        await final.response.clone().text().catch(() => ""),
       );
     }
-    return reportFailedChat(runtime, result, logPrefix);
+    return reportFailedChat(runtime, final, logPrefix);
   }
   const http = (url: string, options: RequestInit) =>
     fetchAiProvider(runtime.provider, url, options);
   if (runtime.provider === "anthropic") {
+    await ensureClaudeCapabilities(runtime, model);
     return reportFailedChat(runtime, {
       response: await fetchAnthropicMessages(runtime, request(model), http),
+      model,
+    }, logPrefix);
+  }
+  if (runtime.provider === "openai" && usesOpenAiResponses(model)) {
+    return reportFailedChat(runtime, {
+      response: await fetchOpenAiResponses(runtime, request(model), http),
       model,
     }, logPrefix);
   }

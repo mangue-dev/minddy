@@ -34,8 +34,8 @@ describe("providers BYOK locaux", () => {
 
 describe("OpenCode BYOK providers (MIN-544)", () => {
   it("exposes the Go subscription and the Zen gateway as first-class cloud providers", () => {
-    expect(getAgentProvider("opencode-go")?.baseUrl).toBe("https://opencode.ai/zen/go/v1");
-    expect(getAgentProvider("opencode-zen")?.baseUrl).toBe("https://opencode.ai/zen/v1");
+    expect(getAgentProvider("opencode-go")?.baseUrl).toBe("https://opencode.ai/inference/go/openai/v1");
+    expect(getAgentProvider("opencode-zen")?.baseUrl).toBe("https://opencode.ai/inference/openai/v1");
     // The public `/models` listing feeds the picker, exactly like OpenAI and Google.
     expect(getAgentProvider("opencode-go")?.listStrategy).toBe("openai");
     expect(getAgentProvider("opencode-zen")?.listStrategy).toBe("openai");
@@ -45,9 +45,11 @@ describe("OpenCode BYOK providers (MIN-544)", () => {
   });
 
   it("keeps a conservative wire profile: no reasoning field, OpenAI max_tokens alias", () => {
-    const profile = getAgentProvider("opencode-go")?.requestProfile;
-    expect(profile).toEqual({ streamUsage: true, outputTokenField: "max_tokens" });
-    expect(getAgentProvider("opencode-zen")?.requestProfile).toEqual(profile);
+    expect(getAgentProvider("opencode-zen")?.requestProfile)
+      .toEqual({ streamUsage: true, outputTokenField: "max_tokens" });
+    // Go refuses a call without a session id (MIN-979).
+    expect(getAgentProvider("opencode-go")?.requestProfile)
+      .toEqual({ streamUsage: true, outputTokenField: "max_tokens", sessionHeader: "x-opencode-session" });
   });
 
   it("defaults both gateways to the cheapest strong coder they share", () => {

@@ -56,6 +56,8 @@ const OPENROUTER_EMBEDDINGS_URL = "https://openrouter.ai/api/v1/embeddings";
 export const EMBEDDING_DIMENSIONS = 1536;
 const MAX_INPUT_CHARS = 6000;
 const DEFAULT_TIMEOUT_MS = 8000;
+/** Inputs per embeddings request. */
+const MAX_BATCH_INPUTS = 32;
 
 export type EmbeddingModelKey = Extract<ByokModelKey, "feedback_embedding_model" | "issue_embedding_model">;
 
@@ -116,8 +118,16 @@ export async function requestEmbeddings(
   const keyMode = runtime?.mode ?? "platform";
   const requestedDimensions = opts.dimensions === "any" ? null : opts.dimensions;
 
-  const input = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
-  const attempt = async (model: string): Promise<(number[] | null)[]> => {
+  const inputs = texts.map((t) => t.slice(0, MAX_INPUT_CHARS));
+  // `ada-002` refuses `dimensions` ("only supported in text-embedding-3 and
+  // later models"); its native size is already 1536.
+  const sendsDimensions = (model: string) =>
+    requestedDimensions !== null && !/text-embedding-ada-00/i.test(model);
+  const requestChunk = async (
+    model: string,
+    input: string[],
+    offset: number,
+  ): Promise<{ index?: number; embedding?: number[] }[]> => {
     const response = await fetchAiProvider(provider, endpoint, {
       method: "POST",
       headers: {
@@ -134,8 +144,7 @@ export async function requestEmbeddings(
         // (`"any"`) leaves the model at its native size: some embedding
         // models refuse the parameter, and the index version records the
         // returned dimensions anyway.
-        ...(requestedDimensions !== null ? { dimensions: requestedDimensions } : {}),
-        ...(provider === "openrouter" ? { usage: { include: true } } : {}),
+        ...(sendsDimensions(model) ? { dimensions: requestedDimensions } : {}),
       }),
       signal: AbortSignal.timeout(opts.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
@@ -168,7 +177,16 @@ export async function requestEmbeddings(
         projectId: opts.record.projectId ?? null,
       });
     }
-    return keepVectors(texts.length, data.data ?? [], opts.dimensions);
+    return (data.data ?? []).map((item, i) => ({ ...item, index: offset + (item.index ?? i) }));
+  };
+  // A backfill sends up to a hundred long texts: one request per bounded
+  // chunk keeps each under the providers' batch and time limits.
+  const attempt = async (model: string): Promise<(number[] | null)[]> => {
+    const items: { index?: number; embedding?: number[] }[] = [];
+    for (let offset = 0; offset < inputs.length; offset += MAX_BATCH_INPUTS) {
+      items.push(...await requestChunk(model, inputs.slice(offset, offset + MAX_BATCH_INPUTS), offset));
+    }
+    return keepVectors(texts.length, items, opts.dimensions);
   };
 
   try {

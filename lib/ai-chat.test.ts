@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   alternateOutputTokenBody,
   aiChatProviderHeaders,
+  downgradesForcedToolChoice,
+  usesOpenAiResponses,
   repairRejectedAiChatBody,
   translateAiChatRequest,
   translateLegacyAiChatBody,
@@ -34,42 +36,26 @@ describe("translateAiChatRequest", () => {
     expect(body).not.toHaveProperty("reasoning");
   });
 
-  it("explicitly disables GPT-5.6 reasoning with function tools", () => {
-    const withTools = translateAiChatRequest(
-      {
-        ...base,
-        model: "gpt-5.6-sol",
-        tools: [{ type: "function", function: { name: "search" } }],
-      },
-      "openai",
-    );
-    expect(withTools.reasoning_effort).toBe("none");
-
-    const withoutTools = translateAiChatRequest(
-      { ...base, model: "gpt-5.6-sol" },
-      "openai",
-    );
-    expect(withoutTools.reasoning_effort).toBe("high");
+  it("keeps the GPT-5.6 and GPT-6 effort with tools, as they go through Responses", () => {
+    const tools = [{ type: "function", function: { name: "search" } }];
+    for (const model of ["gpt-5.6-sol", "gpt-6-sol", "gpt-6-luna", "gpt-6-astra", "gpt-6.1-sol"]) {
+      expect(usesOpenAiResponses(model)).toBe(true);
+      expect(translateAiChatRequest({ ...base, model, tools }, "openai").reasoning_effort).toBe("high");
+    }
+    // Chat Completions models keep their transport.
+    for (const model of ["gpt-5.1", "gpt-4.1", "o3"]) expect(usesOpenAiResponses(model)).toBe(false);
+    expect(usesOpenAiResponses("gpt-5-pro")).toBe(true);
   });
 
-  it("applies the no-reasoning-with-tools contract to GPT-6 Sol and Luna", () => {
-    const tools = [{ type: "function", function: { name: "search" } }];
-    for (const model of ["gpt-6-sol", "gpt-6-luna"]) {
-      expect(
-        translateAiChatRequest({ ...base, model, tools }, "openai").reasoning_effort,
-      ).toBe("none");
-    }
-    // Without tools the contract does not apply.
-    expect(
-      translateAiChatRequest({ ...base, model: "gpt-6-sol" }, "openai").reasoning_effort,
-    ).not.toBe("none");
-    // GPT-6 Astra and GPT-6.1 Sol reject `none` and need Responses for tools:
-    // no effort value fixes them, so the adapter never sends `none` to them.
-    for (const model of ["gpt-6-astra", "gpt-6.1-sol"]) {
-      expect(
-        translateAiChatRequest({ ...base, model, tools }, "openai").reasoning_effort,
-      ).not.toBe("none");
-    }
+  it("keeps OpenAI reasoning items only for the Responses models", () => {
+    const messages = [{
+      role: "assistant", content: null,
+      reasoning_details: [{ type: "reasoning.encrypted", id: "rs_1", data: "x", format: "openai-responses-v1" }],
+    }];
+    const first = (model: string) =>
+      (translateAiChatRequest({ model, messages }, "openai").messages as Record<string, unknown>[])[0]!;
+    expect(first("gpt-6-astra")).toHaveProperty("reasoning_details");
+    expect(first("gpt-5.1")).not.toHaveProperty("reasoning_details");
   });
 
   it("translates OpenRouter with its counting and reasoning extensions", () => {
@@ -167,13 +153,21 @@ describe("translateAiChatRequest", () => {
     for (const model of ["gpt-4o", "gpt-4.1-mini", "chatgpt-4o-latest"]) {
       expect(translateAiChatRequest({ ...base, model }, "openai")).not.toHaveProperty("reasoning_effort");
     }
-    // GPT-5.1+ really turns reasoning off with "none"; GPT-5 and o-series cannot.
+    // GPT-5.1+ really turns reasoning off with "none"; GPT-5 and o-series
+    // cannot, and get their cheapest level rather than their default.
     expect(translateAiChatRequest({ ...base, model: "gpt-5.1", reasoning: { effort: "off" } }, "openai"))
       .toMatchObject({ reasoning_effort: "none" });
-    for (const model of ["gpt-5", "o3"]) {
-      expect(translateAiChatRequest({ ...base, model, reasoning: { effort: "off" } }, "openai"))
-        .not.toHaveProperty("reasoning_effort");
-    }
+    expect(translateAiChatRequest({ ...base, model: "gpt-5", reasoning: { effort: "off" } }, "openai"))
+      .toMatchObject({ reasoning_effort: "minimal" });
+    expect(translateAiChatRequest({ ...base, model: "o3", reasoning: { effort: "off" } }, "openai"))
+      .toMatchObject({ reasoning_effort: "low" });
+    // GPT-5.6 and GPT-6 go up to max; GPT-6 Astra cannot stop reasoning.
+    expect(translateAiChatRequest({ ...base, model: "gpt-5.6-sol", reasoning: { effort: "max" } }, "openai"))
+      .toMatchObject({ reasoning_effort: "max" });
+    expect(translateAiChatRequest({ ...base, model: "gpt-6-sol", reasoning: { effort: "xhigh" } }, "openai"))
+      .toMatchObject({ reasoning_effort: "xhigh" });
+    expect(translateAiChatRequest({ ...base, model: "gpt-6-astra", reasoning: { effort: "off" } }, "openai"))
+      .toMatchObject({ reasoning_effort: "low" });
     expect(translateAiChatRequest({ ...base, model: "gpt-5-mini", reasoning: { effort: "minimal" } }, "openai"))
       .toMatchObject({ reasoning_effort: "minimal" });
     expect(translateAiChatRequest({ ...base, model: "gpt-5.2", reasoning: { effort: "max" } }, "openai"))
@@ -183,11 +177,21 @@ describe("translateAiChatRequest", () => {
   it("follows Gemini's per-model thinking rules", () => {
     expect(translateAiChatRequest({ ...base, model: "gemini-2.5-flash", reasoning: { effort: "off" } }, "google"))
       .toMatchObject({ reasoning_effort: "none" });
-    // 2.5 Pro and Gemini 3 cannot stop thinking; 3 Pro only takes low / high.
+    // 2.5 Pro and Gemini 3 cannot stop thinking: "off" is their cheapest
+    // level. 3 Pro only takes low / high; the 3 Flash families have minimal.
     for (const model of ["gemini-2.5-pro", "gemini-3-pro-preview"]) {
       expect(translateAiChatRequest({ ...base, model, reasoning: { effort: "off" } }, "google"))
-        .not.toHaveProperty("reasoning_effort");
+        .toMatchObject({ reasoning_effort: "low" });
     }
+    expect(translateAiChatRequest({ ...base, model: "gemini-3.6-flash", reasoning: { effort: "off" } }, "google"))
+      .toMatchObject({ reasoning_effort: "minimal" });
+    expect(translateAiChatRequest({ ...base, model: "gemini-3.1-pro-preview", reasoning: { effort: "medium" } }, "google"))
+      .toMatchObject({ reasoning_effort: "medium" });
+    // Gemini 4 reasons on every request; only Hydrogen takes xhigh.
+    expect(translateAiChatRequest({ ...base, model: "gemini-4-hydrogen", reasoning: { effort: "xhigh" } }, "google"))
+      .toMatchObject({ reasoning_effort: "xhigh" });
+    expect(translateAiChatRequest({ ...base, model: "gemini-4-carbon", reasoning: { effort: "xhigh" } }, "google"))
+      .toMatchObject({ reasoning_effort: "high" });
     expect(translateAiChatRequest({ ...base, model: "gemini-3-pro-preview", reasoning: { effort: "medium" } }, "google"))
       .toMatchObject({ reasoning_effort: "low" });
     expect(translateAiChatRequest({ ...base, model: "gemini-2.0-flash" }, "google"))
@@ -233,8 +237,11 @@ describe("translateAiChatRequest", () => {
       expect(translateAiChatRequest({ ...request, model }, "anthropic"))
         .not.toHaveProperty("temperature");
     }
-    expect(translateAiChatRequest({ ...request, model: "claude-sonnet-4-6" }, "anthropic"))
+    // Older families keep it, except next to thinking, which they refuse.
+    expect(translateAiChatRequest({ ...request, model: "claude-sonnet-4-6", reasoning: undefined }, "anthropic"))
       .toMatchObject({ temperature: 0 });
+    expect(translateAiChatRequest({ ...request, model: "claude-sonnet-4-6" }, "anthropic"))
+      .not.toHaveProperty("temperature");
     expect(translateAiChatRequest({ ...request, model: "claude-opus-5-5" }, "openrouter"))
       .toMatchObject({ temperature: 0 });
   });
@@ -463,5 +470,65 @@ describe("aiChatProviderHeaders", () => {
       "HTTP-Referer": SITE_URL,
       "X-Title": "Minddy",
     });
+  });
+});
+
+describe("provider boundaries (MIN-979)", () => {
+  it("maps an explicit reasoning opt-out to each provider's off", () => {
+    const optOut = { model: "", messages: [], reasoning: { enabled: false as const } };
+    expect(translateAiChatRequest({ ...optOut, model: "gpt-5.1" }, "openai"))
+      .toMatchObject({ reasoning_effort: "none" });
+    expect(translateAiChatRequest({ ...optOut, model: "gemini-3.6-flash" }, "google"))
+      .toMatchObject({ reasoning_effort: "minimal" });
+    expect(translateAiChatRequest({ ...optOut, model: "claude-sonnet-4-6" }, "anthropic"))
+      .toMatchObject({ thinking: { type: "disabled" } });
+    expect(translateAiChatRequest({ ...optOut, model: "openai/gpt-5.1" }, "openrouter"))
+      .toMatchObject({ reasoning: { enabled: false } });
+    expect(translateAiChatRequest({ ...optOut, model: "glm-5.3-flash" }, "opencode-go"))
+      .not.toHaveProperty("reasoning");
+  });
+
+  it("keeps Claude's thinking blocks for Anthropic only", () => {
+    const messages = [{
+      role: "assistant", content: null,
+      reasoning_details: [{ type: "reasoning.text", text: "t", signature: "s", format: "anthropic-claude-v1" }],
+      tool_calls: [{ id: "c", type: "function", function: { name: "list", arguments: "{}" } }],
+    }];
+    const first = (provider: "anthropic" | "openai" | "google" | "generic") =>
+      (translateAiChatRequest({ model: "m", messages }, provider).messages as Record<string, unknown>[])[0]!;
+    expect(first("anthropic")).toHaveProperty("reasoning_details");
+    for (const provider of ["openai", "google", "generic"] as const) {
+      expect(first(provider)).not.toHaveProperty("reasoning_details");
+    }
+  });
+
+  it("sends a forced tool choice as auto where the provider refuses it", () => {
+    const forced = { type: "function", function: { name: "fill" } };
+    const tools = [{ type: "function", function: { name: "fill" } }];
+    const choice = (provider: "anthropic" | "opencode-go" | "opencode-zen" | "openai", model: string) =>
+      translateAiChatRequest({ model, messages: [], tools, toolChoice: forced }, provider).tool_choice;
+    for (const model of ["claude-fable-5-2", "claude-mythos-5-2", "claude-sonnet-5-5"]) {
+      expect(choice("anthropic", model)).toBe("auto");
+    }
+    expect(choice("anthropic", "claude-sonnet-5")).toEqual(forced);
+    expect(choice("opencode-go", "glm-5.3-flash")).toBe("auto");
+    expect(choice("opencode-zen", "glm-5.3-flash")).toBe("auto");
+    expect(choice("openai", "gpt-4.1")).toEqual(forced);
+    expect(downgradesForcedToolChoice("anthropic", "claude-opus-6")).toBe(true);
+  });
+
+  it("identifies itself to OpenCode Go with a session id", () => {
+    const headers = aiChatProviderHeaders("opencode-go", "t", "conversation-1");
+    expect(headers).toMatchObject({ "x-opencode-session": "conversation-1" });
+    expect(headers["User-Agent"]).toMatch(/^minddy/);
+    expect(aiChatProviderHeaders("opencode-go", "t")["x-opencode-session"]).toBeTruthy();
+    expect(aiChatProviderHeaders("openai", "t")).toEqual({});
+  });
+
+  it("sends stream_options on the legacy path only for a streamed body", () => {
+    expect(translateLegacyAiChatBody({ model: "gpt-5.1", messages: [] }, "openai"))
+      .not.toHaveProperty("stream_options");
+    expect(translateLegacyAiChatBody({ model: "gpt-5.1", messages: [], stream: true }, "openai"))
+      .toMatchObject({ stream_options: { include_usage: true } });
   });
 });

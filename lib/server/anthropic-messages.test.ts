@@ -204,3 +204,66 @@ describe("toChatCompletionsResponse", () => {
     expect(toChatErrorBody("plain text")).toBe("plain text");
   });
 });
+
+describe("Claude thinking blocks across tool rounds (MIN-979)", () => {
+  const signed = { type: "reasoning.text", text: "Plan the call.", signature: "sig-1", format: "anthropic-claude-v1" };
+  const redacted = { type: "reasoning.encrypted", data: "opaque", format: "anthropic-claude-v1" };
+
+  it("replays signed and redacted thinking before the tool use of an assistant turn", () => {
+    const body = toAnthropicMessagesBody({
+      model: "claude-sonnet-5",
+      max_tokens: 100,
+      messages: [
+        { role: "user", content: "List my issues" },
+        {
+          role: "assistant", content: "Looking.",
+          reasoning_details: [signed, redacted, { type: "reasoning.text", text: "x", format: "other" }],
+          tool_calls: [{ id: "toolu_1", function: { name: "list", arguments: "{}" } }],
+        },
+        { role: "tool", tool_call_id: "toolu_1", content: "[]" },
+      ],
+    });
+    const assistant = (body.messages as Array<{ role: string; content: Array<Record<string, unknown>> }>)[1]!;
+    expect(assistant.content.map((block) => block.type))
+      .toEqual(["thinking", "redacted_thinking", "text", "tool_use"]);
+    expect(assistant.content[0]).toEqual({ type: "thinking", thinking: "Plan the call.", signature: "sig-1" });
+    expect(assistant.content[1]).toEqual({ type: "redacted_thinking", data: "opaque" });
+  });
+
+  it("streams each finished thinking block with its signature", async () => {
+    const response = await toChatCompletionsResponse(new Response(sse([
+      { type: "message_start", message: { id: "m", model: "c", usage: { input_tokens: 12, output_tokens: 1 } } },
+      { type: "content_block_start", index: 0, content_block: { type: "thinking", thinking: "" } },
+      { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "Plan " } },
+      { type: "content_block_delta", index: 0, delta: { type: "thinking_delta", thinking: "the call." } },
+      { type: "content_block_delta", index: 0, delta: { type: "signature_delta", signature: "sig-1" } },
+      { type: "content_block_stop", index: 0 },
+      { type: "content_block_start", index: 1, content_block: { type: "redacted_thinking", data: "opaque" } },
+      { type: "content_block_stop", index: 1 },
+      // A `null` count does not erase the one `message_start` reported.
+      { type: "message_delta", delta: { stop_reason: "tool_use" }, usage: { input_tokens: null, output_tokens: 30 } },
+      { type: "message_stop" },
+    ])), true);
+    const chunks = chatChunks(await response.text());
+    const details = chunks.flatMap((chunk) => chunk.choices.flatMap((choice) =>
+      (choice.delta.reasoning_details as unknown[] | undefined) ?? []));
+    expect(details).toEqual([
+      { type: "reasoning.text", text: "Plan the call.", signature: "sig-1", format: "anthropic-claude-v1" },
+      { type: "reasoning.encrypted", data: "opaque", format: "anthropic-claude-v1" },
+    ]);
+    expect(chunks.at(-1)?.usage).toEqual({ prompt_tokens: 12, completion_tokens: 30, total_tokens: 42 });
+  });
+
+  it("keeps thinking blocks on a JSON reply", () => {
+    const completion = toChatCompletion({
+      id: "m", model: "c", stop_reason: "tool_use",
+      content: [
+        { type: "thinking", thinking: "Plan.", signature: "sig" },
+        { type: "tool_use", id: "t", name: "fill", input: {} },
+      ],
+    }) as { choices: Array<{ message: Record<string, unknown> }> };
+    expect(completion.choices[0]!.message.reasoning_details).toEqual([
+      { type: "reasoning.text", text: "Plan.", signature: "sig", format: "anthropic-claude-v1" },
+    ]);
+  });
+});
