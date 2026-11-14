@@ -43,6 +43,16 @@ describe("dictation context", () => {
     );
   });
 
+  it("asks the mobile editor toolbar's dictation for structure-following Markdown", () => {
+    expect(resolveDictationContext("editor_markdown")).toBe("editor_markdown");
+    const prompt = buildDictationPolishPrompt("editor_markdown");
+    expect(prompt).toContain("Write clean CommonMark");
+    expect(prompt).toContain('write a bullet list with "- "');
+    expect(prompt).toContain('"- [ ] " only when the speaker explicitly dictates things to do');
+    expect(prompt).toContain("never invent one");
+    expect(prompt).toContain("Never wrap the text in a code block");
+  });
+
   it("uses cleaned text when valid and never loses a successful transcription", () => {
     expect(resolvePolishedDictation("um hello there", "Hello there.")).toEqual({
       text: "Hello there.",

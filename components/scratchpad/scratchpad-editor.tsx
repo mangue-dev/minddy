@@ -174,6 +174,7 @@ export function ScratchpadEditor({
     onTranscription: (text) => insertTasks(dictatedTasksFromText(text)),
   });
   startDictationRef.current = dictation.start;
+  const startMobileDictation = useCallback(() => startDictationRef.current(), []);
 
   // The blocks come from the shared catalog, like on a page; the notebook adds
   // the one gesture that is its own: dictating tasks.
@@ -465,6 +466,8 @@ export function ScratchpadEditor({
           uploads={canUpload ? imageUploads : undefined}
           immediateRender
           autoFocus
+          // The phone toolbar's microphone dictates tasks here, like “/”.
+          onMobileDictate={startMobileDictation}
         />
 
         <DictationPill recorder={dictation} />

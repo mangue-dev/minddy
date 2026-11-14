@@ -334,6 +334,9 @@ export interface RichEditorProps {
   escapeSelectsBlock?: boolean;
   onFocus?: (editor: Editor) => void;
   onBlur?: (editor: Editor) => void;
+  /** The microphone of the phone toolbar runs the surface's own dictation
+   *  instead of the Markdown one (the notebook dictates tasks). */
+  onMobileDictate?: () => void;
   className?: string;
   contentClassName?: string;
 }
@@ -370,6 +373,7 @@ export function RichEditor({
   escapeSelectsBlock = true,
   onFocus,
   onBlur,
+  onMobileDictate,
   className,
   contentClassName,
 }: RichEditorProps) {
@@ -888,6 +892,7 @@ export function RichEditor({
           mentionItems={mentionItems}
           onMentionQuery={onMentionQuery}
           onComment={onComment ? () => commentAtCaret(editor, onComment) : undefined}
+          onDictate={onMobileDictate}
         />
       )}
       {editor && hasFind && <FindBar editor={editor} editable={canEdit} />}
