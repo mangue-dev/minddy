@@ -5,6 +5,8 @@
 // focus. It replaces what a touch screen cannot reach comfortably — the
 // selection bubble, the block gutter, the “@” and “/” menus that open under a
 // caret the keyboard hides:
+// - the microphone, first, dictates at the caret, cleaned up as Markdown so
+//   a dictated list or checklist lands as blocks (MIN-984);
 // - “+” lists the blocks of this editor's catalog in a bottom sheet, and runs
 //   the one picked at the caret like the “/” menu would;
 // - “@” opens the mentions in a bottom sheet (typing “@” stays a letter);
@@ -28,6 +30,8 @@ import {
   Search01Icon,
   Link02Icon,
   MessageAdd01Icon,
+  Mic01Icon,
+  SquareIcon,
   TextBoldIcon,
   TextColorIcon,
   TextIndentLessIcon,
@@ -42,6 +46,11 @@ import type { Editor } from "@tiptap/core";
 import type { EditorView } from "@tiptap/pm/view";
 import { useEditorState } from "@tiptap/react";
 import { AppIcon } from "@/components/icon";
+import { Spinner } from "@/components/ui/spinner";
+import { DictationPill } from "@/components/ai-elements/dictation-pill";
+import { useDictationRecorder } from "@/components/ai-elements/use-dictation-recorder";
+import { insertDictatedMarkdown } from "@/components/editor/dictation-insert";
+import { useAuthOptional } from "@/lib/auth-context";
 import { searchInputClass } from "@/components/search-menu";
 import { Sheet, SheetTitle } from "@/components/ui/sheet";
 import { MobileSheetContent, MobileSheetScrollArea } from "@/components/ui/mobile-sheet";
@@ -219,6 +228,7 @@ export function MobileEditorToolbar({
   mentionItems,
   onMentionQuery,
   onComment,
+  onDictate,
 }: {
   editor: Editor;
   /** The “/” catalog of this editor, read when the sheet opens. */
@@ -228,11 +238,17 @@ export function MobileEditorToolbar({
   onMentionQuery?: () => void;
   /** Comment on the block under the caret (pages). */
   onComment?: () => void;
+  /** The surface's own dictation (the notebook's tasks), in place of the
+   *  Markdown one. */
+  onDictate?: () => void;
 }) {
   const locale = useLocale();
   const weekStart = useWeekStart();
   const t = useTranslations("Pages");
   const tPicker = useTranslations("Picker");
+  const tDictate = useTranslations("Dictate");
+  // /api/transcribe needs a session: no microphone where nobody is signed in.
+  const signedIn = !!useAuthOptional()?.user;
   const colorName = useTranslations("Categories.colors");
   const [focused, setFocused] = useState(() => editor.isFocused);
   const [sheet, setSheet] = useState<"blocks" | "mentions" | "color" | null>(null);
@@ -247,6 +263,13 @@ export function MobileEditorToolbar({
   // The carousel's edges fade where more tools hide, and only there.
   const { ref: fadeRef, scrollProps, edges } = useScrollFade<HTMLDivElement>("x");
   const carouselRef = useMergedRef(fadeRef, scrollableOutsideDialogs);
+  // Where the caret was when the take started: the dictation pill takes the
+  // focus while it runs, and the text lands back there.
+  const dictateAt = useRef(0);
+  const dictation = useDictationRecorder({
+    context: "editor_markdown",
+    onTranscription: (text) => insertDictatedMarkdown(editor, dictateAt.current, text),
+  });
 
   useEffect(() => {
     let frame = 0;
@@ -324,6 +347,17 @@ export function MobileEditorToolbar({
     setSheet(next);
   };
   const close = () => setSheet(null);
+  const dictate = () => {
+    if (onDictate) {
+      onDictate();
+      return;
+    }
+    if (dictation.status === "recording") dictation.stop();
+    else if (dictation.status === "idle") {
+      dictateAt.current = editor.state.selection.from;
+      dictation.start();
+    }
+  };
   const at = () => Math.min(insertAt.current, editor.state.doc.content.size);
 
   // Grouped by the same sections as the “/” and “@” menus of a computer.
@@ -410,6 +444,22 @@ export function MobileEditorToolbar({
             <div ref={carouselRef} onScroll={scrollProps.onScroll}
               className="no-scrollbar flex h-full min-w-0 flex-1 snap-x snap-mandatory items-center overflow-x-auto overflow-y-hidden overscroll-x-contain"
               style={{ touchAction: "pan-x" }}>
+              {signedIn && (
+                <ToolbarButton
+                  label={dictation.status === "recording" ? tDictate("stop") : tDictate("start")}
+                  active={dictation.status !== "idle"}
+                  disabled={dictation.status === "starting" || dictation.status === "processing"}
+                  onPress={dictate}
+                >
+                  {dictation.status === "processing" ? (
+                    <Spinner className="size-5" />
+                  ) : dictation.status === "recording" ? (
+                    <HugeiconsIcon icon={SquareIcon} className="size-5 fill-current" />
+                  ) : (
+                    <HugeiconsIcon icon={Mic01Icon} className="size-6" />
+                  )}
+                </ToolbarButton>
+              )}
               <ToolbarButton label={t("mobileInsertBlock")} onPress={() => open("blocks")}>
                 <HugeiconsIcon icon={Add01Icon} className="size-6" />
               </ToolbarButton>
@@ -544,6 +594,7 @@ export function MobileEditorToolbar({
         </MobileSheetContent>
       </Sheet>
       <MarkdownLinkEditDialog editor={editor} open={linkOpen} onOpenChange={setLinkOpen} />
+      <DictationPill recorder={dictation} />
     </>
   );
 }

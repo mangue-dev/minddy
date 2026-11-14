@@ -16,6 +16,7 @@ export const DICTATION_CONTEXTS = [
   "routine_instruction",
   "agent_instruction",
   "form_field",
+  "editor_markdown",
 ] as const;
 
 export type DictationContext = (typeof DICTATION_CONTEXTS)[number];
@@ -208,6 +209,21 @@ export const DICTATION_DESTINATIONS: Record<DictationContext, DictationDestinati
     destination: "descriptive text in a product form field",
     guidance:
       "Keep the described use case, placement, audience, constraints, names, and examples. Use compact readable prose without guessing what the surrounding form should contain.",
+  },
+  // The mobile keyboard toolbar of the shared editor (MIN-984): the text is
+  // inserted at the caret as Markdown, which the editor turns into blocks.
+  editor_markdown: {
+    destination:
+      "Markdown inserted at the caret of a rich-text document (a page, a description, a comment), where it becomes headings, lists and paragraphs",
+    guidance: [
+      "Write clean CommonMark that reads well once rendered, and let the structure follow what was spoken.",
+      "Separate paragraphs with one blank line; use a paragraph break where the speaker moves to a new point.",
+      "When the speaker enumerates several items, write a bullet list with \"- \"; when they dictate ordered steps (first, then, finally), write a numbered list with \"1. \".",
+      "Write a task list with \"- [ ] \" only when the speaker explicitly dictates things to do, a to-do list or a checklist.",
+      "Write a heading (\"## \" or \"### \") only when the speaker explicitly announces a title or a section, and never invent one.",
+      "Use **bold** only for words the speaker explicitly asks to emphasize, and backticks only for code identifiers, commands and file names.",
+      "Keep short single-point dictation as plain prose without any list or heading. Never wrap the text in a code block, a quote or a document title.",
+    ].join(" "),
   },
 };
 
