@@ -227,7 +227,9 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
     );
     const rows = allIssues ?? issues;
     const issuesByObjective = new Map<string, string[]>();
+    const objectiveByIssue = new Map<string, string | null>();
     for (const issue of rows) {
+      objectiveByIssue.set(issue.id, issue.objective_id);
       if (!issue.objective_id) continue;
       const list = issuesByObjective.get(issue.objective_id);
       if (list) list.push(issue.id);
@@ -255,6 +257,7 @@ export const GlobalKanbanBoard = memo(function GlobalKanbanBoard({
       {
         relations: known,
         statusById,
+        objectiveByIssue,
       },
       sortDirection ?? "asc"
     );
