@@ -9,6 +9,7 @@ import { issueStore } from "@/lib/server/issue-store";
 import { abortableReadClient } from "./abortable-read-client";
 import { categoryStore } from "@/lib/server/category-store";
 import { objectiveStore } from "@/lib/server/objective-store";
+import { readObjective } from "@/lib/server/objective-read";
 import { commentStore } from "@/lib/server/comment-store";
 import "server-only";
 
@@ -89,7 +90,6 @@ import {
   addCommentToIssue,
   addCommentToObjective,
 } from "@/lib/server/add-comment";
-import { resolveApiKeyActors } from "@/lib/server/api-key-actors";
 import { setIssueCategories } from "@/lib/server/set-issue-categories";
 import { getServiceClient } from "@/lib/supabase-service";
 import { attachmentOffset, attachmentReadLimit, listConversationAttachments, readConversationAttachment,
@@ -205,7 +205,6 @@ import {
   getIssue,
   listIssues,
   listMembers,
-  resolveEntityRelations,
   resolveIssueRef,
   resolveObjectiveRef,
   searchIssues,
@@ -246,7 +245,12 @@ import {
   resolvePullRequest,
   type PullRequestWriteToolName,
 } from "@/lib/server/assistant/pull-request-writes";
-import { groupReviewThreads } from "@/lib/pr-review-threads";
+import {
+  pullRequestFileView,
+  pullRequestState,
+  readPullRequestFromForge,
+  reviewThreadView,
+} from "@/lib/server/agent/pull-request-read";
 import {
   runWebSearchTool,
   MAX_WEB_SEARCHES_PER_TURN,
@@ -310,7 +314,7 @@ import {
   type InboxReadState,
 } from "@/lib/inbox-tool";
 import { resolveAssistantProjectTarget } from "./project-scope";
-import { MAX_BULK_ISSUES, MAX_PATCH_CHARS } from "@/lib/server/mcp/surface-limits";
+import { MAX_BULK_ISSUES } from "@/lib/server/mcp/surface-limits";
 import { smartAssignFromStatusOf } from "@/lib/smart-assign-config";
 import { readPlanUsageTool, readUserStatsTool } from "./stats-tools";
 
@@ -1866,98 +1870,46 @@ async function executeProjectTool(
       if (!UUID_PATTERN.test(objectiveId)) {
         return toolError("objective_id must be an objective UUID from list_objectives.");
       }
-      const { data: objective, error } = await objectiveStore(ctx.supabase)
-        .select("id, name, description, status, lead_user_id, target_date")
-        .is("deleted_at", null)
-        .eq("project_id", projectId)
-        .eq("id", objectiveId)
-        .maybeSingle();
-      if (error) return toolError(error.message);
-      if (!objective) return toolError("Objective not found in this project.");
-      // The objective's own comment thread, as on an issue: without it Numo
-      // believed objectives had none (MIN-793).
-      const [relations, { data: comments, error: commentsError }, { data: commentResources }, forecast] =
-        await Promise.all([
-          resolveEntityRelations(
-            ctx.supabase,
-            { projectId, projectKey: access.project.key },
-            objective.id,
-          ),
-          commentStore(ctx.supabase, "comments", ctx.userId)
-            .select("id, author_id, body, parent_id, via_assistant, via_mcp, api_key_id, created_at")
-            .eq("objective_id", objective.id)
-            .order("created_at", { ascending: true }),
-          ctx.supabase
-            .from("attachments")
-            .select(
-              "id, comment_id, kind, url, page_id, file_name, mime_type, size_bytes, page:pages(id, project_id, title, encrypted_content, encryption_version)",
-            )
-            .eq("objective_id", objective.id)
-            .not("comment_id", "is", null)
-            .order("created_at", { ascending: true }),
-          // The Momentum panel's estimated finish date (MIN-977), from the
-          // same server forecast and in the user's zone, so both agree. It
-          // is a best-effort extra: a failure leaves the rest of the read.
-          getObjectiveForecast(ctx.userId, objective.id, { timeZone: ctx.timezone || "UTC" })
-            .then((value) => value?.forecastDate
-              ? {
-                  estimated_finish_date: value.forecastDate,
-                  estimated_days: value.forecastDays,
-                  basis: value.basis,
-                }
-              : null)
-            .catch((error: unknown) => {
-              console.error("[numo] objective forecast failed:", (error as Error).message);
-              return null;
-            }),
-        ]);
-      if (commentsError) return toolError("Unable to read objective comments.");
-      const resourcesByComment = new Map<string, Record<string, unknown>[]>();
-      for (const stored of commentResources ?? []) {
-        const row = await decodeAttachmentRow("attachments", stored, ctx.userId, projectId);
-        const list = resourcesByComment.get(row.comment_id as string) ?? [];
-        list.push(resourceSummary(row));
-        resourcesByComment.set(row.comment_id as string, list);
+      const read = await readObjective(
+        ctx.supabase,
+        ctx.service,
+        {
+          projectId,
+          projectKey: access.project.key,
+          objectiveId,
+          actorId: ctx.userId,
+          columns: "id, name, description, status, lead_user_id, target_date",
+        },
+        // The Momentum panel's estimated finish date (MIN-977), from the
+        // same server forecast and in the user's zone, so both agree. It is a
+        // best-effort extra: a failure leaves the rest of the read.
+        (objective) => getObjectiveForecast(ctx.userId, objective.id as string, { timeZone: ctx.timezone || "UTC" })
+          .then((value) => value?.forecastDate
+            ? {
+                estimated_finish_date: value.forecastDate,
+                estimated_days: value.forecastDays,
+                basis: value.basis,
+              }
+            : null)
+          .catch((error: unknown) => {
+            console.error("[numo] objective forecast failed:", (error as Error).message);
+            return null;
+          }),
+      );
+      if (!read.ok) {
+        return toolError(read.reason === "database_error"
+          ? read.message
+          : read.reason === "not_found"
+            ? "Objective not found in this project."
+            : "Unable to read objective comments.");
       }
-      const [authors, keyActors] = await Promise.all([
-        fetchAuthUsersById(ctx.service, (comments ?? []).map((c) => c.author_id as string)),
-        resolveApiKeyActors((comments ?? []).map((c) => c.api_key_id as string | null)),
-      ]);
       return {
         result: {
-          objective,
-          forecast,
-          comments: (comments ?? []).map((c) => {
-            const resources = resourcesByComment.get(c.id as string);
-            return {
-              id: c.id,
-              author: c.via_assistant
-                ? "Numo"
-                : c.via_mcp
-                  ? `${keyActors.get(c.api_key_id as string)?.name ?? "Agent"} (mcp)`
-                  : displayName(toNamed(authors.get(c.author_id as string)), "User"),
-              body: c.body,
-              parent_id: c.parent_id,
-              created_at: c.created_at,
-              ...(resources ? { resources } : {}),
-            };
-          }),
-          linked_feedback: await listFeedbackForObjective(projectId, objective.id),
-          relations: relations.map((r) => r.kind === "objective"
-            ? {
-                relation: r.relation,
-                objective_id: r.other.id,
-                name: r.other.name,
-                status: r.other.status,
-                lead_user_id: r.other.lead_user_id,
-              }
-            : {
-                relation: r.relation,
-                issue_id: r.other.id,
-                identifier: r.other.identifier,
-                title: r.other.title,
-                status: r.other.status,
-              }),
+          objective: read.objective,
+          forecast: read.extras,
+          comments: read.comments,
+          linked_feedback: await listFeedbackForObjective(projectId, objectiveId),
+          relations: read.relations,
         },
         success: true,
       };
@@ -2706,59 +2658,8 @@ async function executeProjectTool(
       );
       if ("error" in resolved) return toolError(resolved.error);
       const { forge, target, number: prNumber, row } = resolved;
-
-      const [pr, diff, reviewComments, reviewThreads, conversationComments] =
-        await Promise.all([
-          forge.getPullRequest({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge.listPullRequestFiles({
-            token: target.token,
-            repoFullName: target.repoFullName,
-            number: prNumber,
-          }),
-          forge
-            .listPullRequestReviewComments({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-            })
-            .catch(() => []),
-          // Thread resolution (MIN-139), best-effort as above.
-          forge
-            .listReviewThreads({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-            })
-            .catch(() => []),
-          // Conversation comments (MIN-550): the thread Numo's own comments
-          // live in — their ids are what edit_own_pull_request_comment
-          // targets. Best-effort like the two lists above.
-          forge
-            .listPullRequestComments({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-            })
-            .catch(() => []),
-        ]);
-
-      // CI checks (MIN-138): a red CI is useful only when Numo sees what
-      // breaks. `null` = unreadable (App permission not accepted, repository
-      // without CI), never blocking, like the review comments above.
-      const checks = pr.headSha
-        ? await forge
-            .listChecks({
-              token: target.token,
-              repoFullName: target.repoFullName,
-              number: prNumber,
-              sha: pr.headSha,
-            })
-            .catch(() => null)
-        : null;
+      const read = await readPullRequestFromForge(forge, target, prNumber, { conversation: true });
+      const pr = read.pullRequest;
 
       // Conversation comments: at most 30, of 2,000 characters each.
       const MAX_CONVERSATION_COMMENTS = 30;
@@ -2770,67 +2671,28 @@ async function executeProjectTool(
           ...(row ? { id: row.id } : {}),
           number: pr.number,
           url: pr.url,
-          state: pr.merged ? "merged" : pr.state,
+          state: pullRequestState(pr),
           title: pr.title,
           body: pr.body,
           head: pr.head,
           base: pr.base,
           draft: !!pr.draft,
-          checks: checks
+          checks: read.checks
             ? {
-                state: checks.state,
-                passing: checks.passing,
-                total: checks.total,
-                failing: checks.checks
+                state: read.checks.state,
+                passing: read.checks.passing,
+                total: read.checks.total,
+                failing: read.checks.checks
                   .filter((c) => c.state === "failure")
                   .map((c) => ({ name: c.name, url: c.url })),
               }
             : null,
-          files: diff.files.map((f) => ({
-            filename: f.filename,
-            status: f.status,
-            additions: f.additions,
-            deletions: f.deletions,
-            patch:
-              f.patch && f.patch.length > MAX_PATCH_CHARS
-                ? f.patch.slice(0, MAX_PATCH_CHARS) + "\n… (diff truncated)"
-                : (f.patch ?? null),
-          })),
-          // The pagination of the forge cut the list: say it rather than
-          // let conclude on what has been seen.
-          files_truncated: diff.truncated,
-          // Comments anchored to the code, grouped into threads. `id` is the
-          // ROOT comment of the thread — what resolve_pull_request_threads
-          // targets. `line: null` = the target code has changed since: the
-          // anchor is no longer worth, only the hunk says what the
-          // discussion was about.
-          review_comments: groupReviewThreads(
-            reviewComments,
-            reviewThreads,
-          ).map((thread) => ({
-            id: thread.id,
-            path: thread.root.path,
-            line: thread.root.line,
-            original_line: thread.root.original_line,
-            side: thread.root.side,
-            // First line of a multi-line remark (`line` = the
-            // last) — without it, the target range is reduced to one point.
-            start_line: thread.root.start_line,
-            original_start_line: thread.root.original_start_line,
-            outdated: thread.resolution?.outdated ?? thread.root.line == null,
-            // Thread marked resolved = point set (`false` also covers the unknown).
-            resolved: !!thread.resolution?.resolved,
-            diff_hunk: thread.root.diff_hunk,
-            comments: thread.comments.map((c) => ({
-              author: c.user?.login ?? null,
-              body: c.body,
-              created_at: c.created_at,
-            })),
-          })),
-          // The conversation thread, most recent last — the same slice the
-          // PR page renders. `id` is what edit_own_pull_request_comment
-          // targets; `body` is capped so a long thread stays readable.
-          conversation_comments: conversationComments
+          files: read.files.map(pullRequestFileView),
+          files_truncated: read.filesTruncated,
+          review_comments: read.threads.map((thread) => reviewThreadView(thread, { withUrl: false })),
+          // The conversation thread, most recent last: the same slice the PR
+          // page renders. `id` is what edit_own_pull_request_comment targets.
+          conversation_comments: read.conversation
             .slice(-MAX_CONVERSATION_COMMENTS)
             .map((c) => ({
               id: c.id,

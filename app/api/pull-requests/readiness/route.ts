@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getAuthedUser } from "@/lib/server/api-auth";
-import { prReadinessBatchResponse } from "@/lib/server/agent/pr-actions";
+import { prReadinessBatchResponse } from "@/lib/server/agent/pr-detail";
 
 const MAX_BATCH_SIZE = 100;
 

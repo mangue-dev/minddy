@@ -1,10 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  parseReactionPayload,
-  setPrCommentReactionResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { parseReactionPayload } from "@/lib/server/agent/pr-review-comments";
+import { setPrCommentReactionResponse } from "@/lib/server/agent/pr-comments";
 
 /**
  * Conversation THREAD emoji reactions (MIN-147) — the exact counterpart of

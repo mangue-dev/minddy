@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 
-import { authorizePrRequest, prMembersResponse } from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prMembersResponse } from "@/lib/server/agent/pr-members";
 
 /**
  * GET /api/pull-requests/[prId]/members — the forge accounts we can

@@ -30,8 +30,8 @@ const { findPullRequest, findPullRequestForIssue, upsertPullRequest, pullRequest
     upsertPullRequest: vi.fn(),
     pullRequestIssueIds: vi.fn(),
   }));
-const { resolveRepoCloneTarget } = vi.hoisted(() => ({
-  resolveRepoCloneTarget: vi.fn(),
+const { resolveLinkedRepository } = vi.hoisted(() => ({
+  resolveLinkedRepository: vi.fn(),
 }));
 const { forgeFor } = vi.hoisted(() => ({ forgeFor: vi.fn() }));
 const { syncIssueStatusFromPr } = vi.hoisted(() => ({
@@ -60,7 +60,7 @@ vi.mock("@/lib/server/agent/pull-requests", () => ({
   upsertPullRequest,
   pullRequestIssueIds,
 }));
-vi.mock("@/lib/server/agent/repo-access", () => ({ resolveRepoCloneTarget }));
+vi.mock("@/lib/server/agent/repo-access", () => ({ resolveLinkedRepository }));
 vi.mock("@/lib/server/agent/forge", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/server/agent/forge")>();
   return { ...actual, forgeFor };
@@ -117,7 +117,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   findPullRequest.mockResolvedValue(ROW);
   findPullRequestForIssue.mockResolvedValue(ROW);
-  resolveRepoCloneTarget.mockResolvedValue(TARGET);
+  resolveLinkedRepository.mockResolvedValue(TARGET);
   upsertPullRequest.mockResolvedValue(ROW);
   pullRequestIssueIds.mockResolvedValue([ISSUE_OK]);
   syncIssueStatusFromPr.mockResolvedValue(undefined);
@@ -206,7 +206,7 @@ describe("merge_pull_request", () => {
   it.each(["github", "gitlab"])("settles every current issue association after a %s merge", async (provider) => {
     const ids = ["issue-b", "issue-c", "issue-d"];
     pullRequestIssueIds.mockResolvedValue(ids);
-    resolveRepoCloneTarget.mockResolvedValue({ ...TARGET, provider });
+    resolveLinkedRepository.mockResolvedValue({ ...TARGET, provider });
     findPullRequest.mockResolvedValue({ ...ROW, provider });
     findPullRequestForIssue.mockResolvedValue({ ...ROW, provider });
     forgeFor.mockReturnValue(forgeWith({
@@ -407,7 +407,7 @@ describe("edit_own_pull_request_comment", () => {
   });
 
   it("accepts a GitLab comment recognized by the Numo signature", async () => {
-    resolveRepoCloneTarget.mockResolvedValue({ ...TARGET, provider: "gitlab" });
+    resolveLinkedRepository.mockResolvedValue({ ...TARGET, provider: "gitlab" });
     findPullRequestForIssue.mockResolvedValue({ ...ROW, provider: "gitlab" });
     const { success } = await run(
       [

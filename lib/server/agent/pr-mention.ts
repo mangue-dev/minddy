@@ -6,9 +6,8 @@ import { repositoryStorageName } from "@/lib/server/git/repository-name-content"
 import { mentionsNumo } from "@/lib/server/assistant/comment-agent";
 import type { RepoProviderId } from "@/lib/repo-providers";
 import { findPullRequestByNumber, type PullRequestRow } from "./pull-requests";
-// Type-only import: the value import stays lazy below because `pr-actions`
-// pulls in the complete PR route module, including `next/server`.
-import type { PrScope } from "./pr-actions";
+import { startNumoPrReview } from "./pr-numo-review";
+import { resolvePrScope, type PrScope } from "./pr-scope";
 import {
   claimDenialNotice,
   claimMemberMention,
@@ -216,7 +215,6 @@ export async function handleForgeNumoMention(opts: {
       if (!notify) return;
       // Resolving the range COSTS a forge token: we only do it for the
       // only refusal that we comment on, not for each of them.
-      const { resolvePrScope } = await import("./pr-actions");
       const scope = await resolvePrScope(userId, pr);
       if (scope) {
         await replyOnPr(
@@ -227,9 +225,6 @@ export async function handleForgeNumoMention(opts: {
       return;
     }
 
-    // Lazy import: `pr-actions` pulls the entire module from PR routes (and
-    // `next/server`), where this file is loaded by the webhook receiver.
-    const { resolvePrScope, startNumoPrReview } = await import("./pr-actions");
     const scope = await resolvePrScope(userId, pr);
     if (!scope) return;
 

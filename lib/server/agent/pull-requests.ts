@@ -919,7 +919,7 @@ export interface VisibleRepo {
  * Repositories that this user can see, via the AUTHENTICATED client (the RLS of
  * `project_git_links` does the filtering — no manual project filtering). A repository linked
  * by several of its projects appears once per project: it is the caller
- * who decides which one to display, and `resolveRepoCloneTargetForRepo` which one to use
+ * who decides which one to display, and `resolveLinkedRepositoryForRepo` which one to use
  * to mint a token.
  */
 export async function listVisibleRepos(

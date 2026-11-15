@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  isCommitSha,
-  prCommitDiffResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { isCommitSha, prCommitDiffResponse } from "@/lib/server/agent/pr-commits";
 
 /**
  * The diff of ONE commit of the pull request — what THIS commit changes, versus its

@@ -1,6 +1,7 @@
 import { type NextRequest } from "next/server";
 
-import { authorizePrRequest, prCommitsResponse } from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prCommitsResponse } from "@/lib/server/agent/pr-commits";
 
 /**
  * The commits that make up a pull request, read at the forge with a token

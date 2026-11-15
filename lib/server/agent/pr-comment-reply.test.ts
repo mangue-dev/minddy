@@ -32,11 +32,9 @@ vi.mock("@/lib/server/comment-store", () => ({
 vi.mock("./pull-requests", () => ({
   findPullRequest: async () => ({ id: "pr-1", provider: "github", repo_full_name: "acme/app", number: 7 }),
 }));
-vi.mock("./pr-actions", () => ({
-  resolvePrScope: async () => mocks.scope,
-  createPrReviewCommentResponse: mocks.createPrReviewCommentResponse,
-  createPrCommentResponse: mocks.createPrCommentResponse,
-}));
+vi.mock("./pr-scope", () => ({ resolvePrScope: async () => mocks.scope }));
+vi.mock("./pr-review-comments", () => ({ createPrReviewCommentResponse: mocks.createPrReviewCommentResponse }));
+vi.mock("./pr-comments", () => ({ createPrCommentResponse: mocks.createPrCommentResponse }));
 vi.mock("./pr-comment-sync", () => ({ syncPrCommentToIssues: mocks.syncPrCommentToIssues }));
 // The author sees each mention under its current name.
 vi.mock("@/lib/server/mention-access", async () => {

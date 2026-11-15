@@ -17,6 +17,7 @@ import {
 import { syncIssueStatusFromPr } from "./issue-status-sync";
 import type { PullRequestState } from "@/lib/pull-request-contract";
 import { findPullRequestByNumber } from "./pull-requests";
+import { forgeFor } from "./forge";
 
 /**
  * Window during which an identical gesture ALREADY drawn is echoed. The hook
@@ -114,7 +115,7 @@ export async function minddyUsersForForgeAccount(opts: {
   if (terms.length === 0) return [];
 
   const service = getServiceClient();
-  const table = opts.provider === "github" ? "git_user_identities" : "git_connections";
+  const table = forgeFor(opts.provider).identity.accountTable;
   const { data } = await service
     .from(table)
     .select("user_id, provider_account_id, account_login")

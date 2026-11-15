@@ -1,8 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  authorizePrRequest,
-  prRequestReviewerResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prRequestReviewerResponse } from "@/lib/server/agent/pr-reviews";
 
 export const maxDuration = 60;
 

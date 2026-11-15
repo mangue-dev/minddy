@@ -1,10 +1,8 @@
 import type { NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  prActionResponse,
-  prDetailResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prActionResponse } from "@/lib/server/agent/pr-actions";
+import { prDetailResponse } from "@/lib/server/agent/pr-detail";
 
 /**
  * In-app review of a pull request, addressed by the PR (MIN-143).
@@ -12,7 +10,7 @@ import {
  * and what the viewer may do.
  * POST → `{ action, ... }`, one of `PR_ACTIONS` (`lib/pull-request-contract`).
  *
- * The gestures live in `lib/server/agent/pr-actions`; this route only routes.
+ * `lib/server/agent/pr-actions` dispatches each gesture to its domain module; this route only routes.
  */
 
 type RouteContext = { params: Promise<{ prId: string }> };

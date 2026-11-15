@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { authorizePrRequest, prFileBytesResponse } from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prFileBytesResponse } from "@/lib/server/agent/pr-files";
 
 /**
  * Bytes of a pull request diff file (MIN-66) — what the diff view

@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  parseReactionPayload,
-  setPrReviewCommentReactionResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { parseReactionPayload, setPrReviewCommentReactionResponse } from "@/lib/server/agent/pr-review-comments";
 
 /**
  * Emoji reactions from a review comment (MIN-139).

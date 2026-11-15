@@ -14,11 +14,9 @@ import {
   parseThreadKey,
   type PrCommentMirror,
 } from "@/lib/pr-comment-mirror";
-import {
-  createPrCommentResponse,
-  createPrReviewCommentResponse,
-  resolvePrScope,
-} from "./pr-actions";
+import { createPrCommentResponse } from "./pr-comments";
+import { createPrReviewCommentResponse } from "./pr-review-comments";
+import { resolvePrScope } from "./pr-scope";
 import { syncPrCommentToIssues } from "./pr-comment-sync";
 import { splitMentionLinks } from "@/lib/mention-link";
 import { markdownForReader } from "@/lib/server/mention-access";

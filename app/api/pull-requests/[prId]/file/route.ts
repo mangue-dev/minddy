@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { authorizePrRequest, prFileSourceResponse } from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { prFileSourceResponse } from "@/lib/server/agent/pr-files";
 
 /**
  * BASE version of a pull request diff file (MIN-143) — source

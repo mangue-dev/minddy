@@ -125,13 +125,13 @@ const createPullRequestComment = vi.fn(async (_opts: { body: string }) => ({
 }));
 const startNumoPrReview = vi.fn(async (_input: { userId: string; actorId?: string }) => null);
 
-vi.mock("./pr-actions", () => ({
+vi.mock("./pr-scope", () => ({
   resolvePrScope: vi.fn(async () => ({
     forge: { createPullRequestComment },
     call: { token: "t", repoFullName: REPO, number: 42 },
   })),
-  startNumoPrReview,
 }));
+vi.mock("./pr-numo-review", () => ({ startNumoPrReview }));
 
 const { handleForgeNumoMention } = await import("./pr-mention");
 const { MENTION_LIMIT_PER_AUTHOR } = await import("./forge-mention-guard");

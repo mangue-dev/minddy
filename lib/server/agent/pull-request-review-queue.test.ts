@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { VisibleRepo } from "./pull-requests";
 import type { PullRequestRef } from "@/lib/pull-request-contract";
 const mocks = vi.hoisted(() => ({ resolve: vi.fn(), list: vi.fn() }));
-vi.mock("./repo-access", () => ({ resolveRepoCloneTargetForRepo: mocks.resolve }));
+vi.mock("./repo-access", () => ({ resolveLinkedRepositoryForRepo: mocks.resolve }));
 vi.mock("./forge", () => ({ forgeFor: () => ({ listPullRequests: mocks.list }) }));
 import { invalidateReviewQueue, readReviewQueue, rememberReviewQueue } from "./pull-request-review-queue";
 const repo = { provider: "github", repoFullName: "acme/app" } as VisibleRepo;

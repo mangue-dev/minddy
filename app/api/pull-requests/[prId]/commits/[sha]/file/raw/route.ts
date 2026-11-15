@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  isCommitSha,
-  prCommitFileBytesResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { isCommitSha, prCommitFileBytesResponse } from "@/lib/server/agent/pr-commits";
 
 /**
  * Bytes of a commit diff file — what the diff view puts in its

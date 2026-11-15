@@ -40,7 +40,7 @@ describe("common Numo intent entry", () => {
   });
 
   it("keeps PR mentions inside Numo without a direct worker launch", () => {
-    const contents = source("lib/server/agent/pr-actions.ts");
+    const contents = source("lib/server/agent/pr-numo-review.ts");
     expect(contents).toContain("startNumoIntent");
     expect(contents).not.toContain("launchAgentRun(");
   });

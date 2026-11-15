@@ -1,10 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  authorizePrRequest,
-  isCommitSha,
-  prCommitFileSourceResponse,
-} from "@/lib/server/agent/pr-actions";
+import { authorizePrRequest } from "@/lib/server/agent/pr-access";
+import { isCommitSha, prCommitFileSourceResponse } from "@/lib/server/agent/pr-commits";
 
 /**
  * BEFORE-commit version of a file its diff — context unfolding

@@ -20,7 +20,7 @@ import {
   PrOperationInProgressError,
   withPrOperation,
 } from "@/lib/server/agent/pr-operation-lock";
-import { resolveRepoCloneTarget } from "@/lib/server/agent/repo-access";
+import { resolveLinkedRepository } from "@/lib/server/agent/repo-access";
 
 /**
  * Direct PR-management gestures for Numo (MIN-550): merge, rename /
@@ -106,7 +106,7 @@ export async function resolvePullRequest(
   const row = pullRequestId
     ? await findPullRequest(pullRequestId)
     : await findPullRequestForIssue(issueId);
-  const target = await resolveRepoCloneTarget(ctx.projectId);
+  const target = await resolveLinkedRepository(ctx.projectId);
   if (!target) {
     return { error: "This project has no linked repository." };
   }

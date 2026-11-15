@@ -1932,101 +1932,80 @@
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
-    "operation": "rpc",
-    "resource": "reserve_forge_attachment_publications",
-    "line": 1026,
+    "file": "lib/server/agent/pr-activity.ts",
+    "operation": "from",
+    "resource": null,
+    "line": 119,
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
-    "operation": "rpc",
-    "resource": "finish_forge_attachment_publications",
-    "line": 1035,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/pr-actions.ts",
-    "operation": "rpc",
-    "resource": "finish_forge_attachment_publications",
-    "line": 1039,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-activity.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1139,
+    "line": 284,
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-attachments.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 1753,
+    "line": 56,
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-attachments.ts",
     "operation": "rpc",
     "resource": "activate_forge_attachment_encryption",
-    "line": 1761,
+    "line": 64,
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-attachments.ts",
     "operation": "from",
     "resource": null,
-    "line": 1765,
+    "line": 68,
     "storage": true
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-attachments.ts",
     "operation": "from",
     "resource": null,
-    "line": 1775,
+    "line": 78,
     "storage": true
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-attachments.ts",
     "operation": "from",
     "resource": "forge_attachment_objects",
-    "line": 1782,
+    "line": 85,
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-attachments.ts",
     "operation": "from",
     "resource": null,
-    "line": 1789,
+    "line": 92,
     "storage": true
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
+    "file": "lib/server/agent/pr-attachments.ts",
     "operation": "rpc",
-    "resource": "unlink_pull_request_from_issue_atomic",
-    "line": 2101,
+    "resource": "reserve_forge_attachment_publications",
+    "line": 112,
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-actions.ts",
-    "operation": "from",
-    "resource": "pull_requests",
-    "line": 2550,
+    "file": "lib/server/agent/pr-attachments.ts",
+    "operation": "rpc",
+    "resource": "finish_forge_attachment_publications",
+    "line": 121,
     "storage": false
   },
   {
-    "file": "lib/server/agent/pr-activity.ts",
-    "operation": "from",
-    "resource": null,
-    "line": 118,
-    "storage": false
-  },
-  {
-    "file": "lib/server/agent/pr-activity.ts",
-    "operation": "from",
-    "resource": "project_git_links",
-    "line": 283,
+    "file": "lib/server/agent/pr-attachments.ts",
+    "operation": "rpc",
+    "resource": "finish_forge_attachment_publications",
+    "line": 125,
     "storage": false
   },
   {
@@ -2065,10 +2044,31 @@
     "storage": false
   },
   {
+    "file": "lib/server/agent/pr-linking.ts",
+    "operation": "rpc",
+    "resource": "unlink_pull_request_from_issue_atomic",
+    "line": 91,
+    "storage": false
+  },
+  {
+    "file": "lib/server/agent/pr-maintenance.ts",
+    "operation": "from",
+    "resource": "pull_requests",
+    "line": 145,
+    "storage": false
+  },
+  {
     "file": "lib/server/agent/pr-mention.ts",
     "operation": "from",
     "resource": "project_git_links",
-    "line": 103,
+    "line": 102,
+    "storage": false
+  },
+  {
+    "file": "lib/server/agent/pr-numo-review.ts",
+    "operation": "from",
+    "resource": "project_git_links",
+    "line": 55,
     "storage": false
   },
   {
@@ -2621,77 +2621,70 @@
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 813,
+    "line": 817,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "views",
-    "line": 836,
+    "line": 840,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 872,
+    "line": 876,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 877,
+    "line": 881,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 894,
+    "line": 898,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 933,
+    "line": 937,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1890,
-    "storage": false
-  },
-  {
-    "file": "lib/server/assistant/execute-tool.ts",
-    "operation": "from",
-    "resource": "attachments",
-    "line": 1981,
+    "line": 1933,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 2030,
+    "line": 1982,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 2490,
+    "line": 2442,
     "storage": false
   },
   {
     "file": "lib/server/assistant/execute-tool.ts",
     "operation": "from",
     "resource": "numo_routine_occurrences",
-    "line": 2662,
+    "line": 2614,
     "storage": false
   },
   {
@@ -7682,63 +7675,56 @@
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "integrations",
-    "line": 723,
+    "line": 728,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "project_members",
-    "line": 1185,
+    "line": 1190,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "projects",
-    "line": 1195,
+    "line": 1200,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 1858,
-    "storage": false
-  },
-  {
-    "file": "lib/server/mcp/tools.ts",
-    "operation": "from",
-    "resource": "attachments",
-    "line": 2015,
+    "line": 1784,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "pages",
-    "line": 3054,
+    "line": 2900,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "attachments",
-    "line": 3213,
+    "line": 3059,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 5287,
+    "line": 5133,
     "storage": false
   },
   {
     "file": "lib/server/mcp/tools.ts",
     "operation": "from",
     "resource": "view_shares",
-    "line": 5301,
+    "line": 5147,
     "storage": false
   },
   {
@@ -8606,42 +8592,42 @@
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "assistant_messages",
-    "line": 71,
+    "line": 72,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 93,
+    "line": 94,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 184,
+    "line": 185,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 202,
+    "line": 203,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "numo_surface_events",
-    "line": 242,
+    "line": 243,
     "storage": false
   },
   {
     "file": "lib/server/numo/surface-projection.ts",
     "operation": "from",
     "resource": "pull_requests",
-    "line": 283,
+    "line": 284,
     "storage": false
   },
   {
@@ -9482,6 +9468,13 @@
     "operation": "from",
     "resource": "projects",
     "line": 82,
+    "storage": false
+  },
+  {
+    "file": "lib/server/objective-read.ts",
+    "operation": "from",
+    "resource": "attachments",
+    "line": 73,
     "storage": false
   },
   {

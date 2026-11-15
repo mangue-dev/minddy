@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { prRequestReviewerResponse, type PrScope } from "./pr-actions";
+import { prRequestReviewerResponse } from "./pr-reviews";
+import { type PrScope } from "./pr-scope";
 import { broadcastPrChanged } from "./pr-live";
 
 vi.mock("./pr-live", () => ({ broadcastPrChanged: vi.fn() }));

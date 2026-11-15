@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { prDeploymentResponse, prDetailResponse, type PrScope } from "./pr-actions";
+import { prDeploymentResponse, prDetailResponse } from "./pr-detail";
+import { type PrScope } from "./pr-scope";
+
+const identity = { accountTable: "git_connections", userAuthConfigured: () => true, botLogin: () => null };
 
 describe("pull request detail and deployment reads", () => {
   it("starts independent forge reads together, the checks with the policy", async () => {
@@ -24,6 +27,7 @@ describe("pull request detail and deployment reads", () => {
       call: { token: "token", repoFullName: "acme/app", number: 42 },
       actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
       forge: {
+        identity,
         getPullRequest: async () => ({ state: "open", base: "main", headSha: "live-head" }),
         listReviews, getRepositoryMergePolicy, listChecks, getPullRequestDeployment, listPullRequestFiles,
         listReviewThreads: async () => null,
@@ -55,6 +59,7 @@ describe("pull request detail and deployment reads", () => {
       call: { token: "token", repoFullName: "acme/app", number: 42 },
       actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
       forge: {
+        identity,
         getPullRequest: () => new Promise((resolve) => { releasePr = resolve; }),
         listPullRequestFiles,
         listReviews: async () => null,
@@ -84,6 +89,7 @@ describe("pull request detail and deployment reads", () => {
       call: { token: "token", repoFullName: "acme/app", number: 42 },
       actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
       forge: {
+        identity,
         getPullRequest: async () => ({ state: "open", base: "main", headSha: "new-head" }),
         listPullRequestFiles: async () => ({ files: [], truncated: false }),
         listReviews: async () => null,
@@ -123,6 +129,7 @@ describe("pull request detail and deployment reads", () => {
       call: { token: "token", repoFullName: "acme/app", number: 42 },
       actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
       forge: {
+        identity,
         getPullRequest: async () => ({
           number: 42,
           url: "https://gitlab.example.com/acme/app/-/merge_requests/42",
@@ -168,6 +175,7 @@ describe("pull request detail and deployment reads", () => {
       call: { token: "token", repoFullName: "acme/app", number: 42 },
       actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
       forge: {
+        identity,
         getPullRequest: async () => ({
           number: 42,
           url: "https://github.com/acme/app/pull/42",
@@ -218,6 +226,7 @@ describe("pull request detail and deployment reads", () => {
       call: { token: "token", repoFullName: "acme/app", number: 42 },
       actor: async () => ({ kind: "unavailable", reason: "notConfigured", login: null }),
       forge: {
+        identity,
         getPullRequest: async () => ({
           number: 42,
           url: "https://github.com/acme/app/pull/42",

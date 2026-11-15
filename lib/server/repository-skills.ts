@@ -12,144 +12,24 @@ import {
   type RepositorySkillSummary,
 } from "@/lib/repository-skills";
 import {
-  resolveRepoCloneTarget,
-  type RepoCloneTarget,
+  resolveLinkedRepository,
+  type LinkedRepository,
 } from "@/lib/server/agent/repo-access";
 import { isValidGitBranchName } from "@/lib/server/agent/branch-name";
 import { forgeFor } from "@/lib/server/agent/forge";
-import { GITHUB_API_BASE, githubHeaders } from "@/lib/server/git/github-rest";
-import {
-  GITLAB_API_BASE,
-  gitlabHeaders,
-  gitlabNextPage,
-} from "@/lib/server/git/gitlab-rest";
 
-const MAX_DISCOVERY_DIRECTORIES = 300;
-const MAX_GITLAB_PAGES_PER_ROOT = 10;
-
-function splitGithubRepo(repoFullName: string): {
-  owner: string;
-  repo: string;
-} {
-  const [owner, repo] = repoFullName.split("/");
-  if (!owner || !repo) throw new Error("Invalid GitHub repository name");
-  return { owner, repo };
-}
-
-function encodeGithubPath(path: string): string {
-  return path.split("/").map(encodeURIComponent).join("/");
-}
-
-async function githubSkillPaths(
-  target: RepoCloneTarget,
-  ref: string,
-  fetcher: typeof fetch,
-): Promise<string[]> {
-  const { owner, repo } = splitGithubRepo(target.repoFullName);
-  const queue: string[] = [...REPOSITORY_SKILL_ROOTS];
-  const paths: string[] = [];
-  let visited = 0;
-
-  while (queue.length > 0 && visited < MAX_DISCOVERY_DIRECTORIES) {
-    const directory = queue.shift()!;
-    visited += 1;
-    const url =
-      `${GITHUB_API_BASE}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}` +
-      `/contents/${encodeGithubPath(directory)}?ref=${encodeURIComponent(ref)}`;
-    const response = await fetcher(url, {
-      headers: githubHeaders(target.token),
-      cache: "no-store",
-    });
-    if (response.status === 404) continue;
-    if (!response.ok) {
-      throw new Error(`GitHub skill discovery failed (${response.status})`);
-    }
-    const data = (await response.json()) as unknown;
-    if (!Array.isArray(data)) continue;
-    const entries = data.flatMap((entry) => {
-      if (!entry || typeof entry !== "object") return [];
-      const item = entry as { path?: unknown; type?: unknown; name?: unknown };
-      return typeof item.path === "string" && typeof item.type === "string"
-        ? [{ path: item.path, type: item.type, name: item.name }]
-        : [];
-    });
-    const entrypoint = entries.find(
-      (entry) => entry.type === "file" && entry.name === "SKILL.md",
-    );
-    if (entrypoint) {
-      paths.push(entrypoint.path);
-      continue;
-    }
-    for (const entry of entries) {
-      if (entry.type === "dir") queue.push(entry.path);
-    }
-  }
-
-  return paths;
-}
-
-async function gitlabSkillPaths(
-  target: RepoCloneTarget,
-  ref: string,
-  fetcher: typeof fetch,
-): Promise<string[]> {
-  const paths: string[] = [];
-  for (const root of REPOSITORY_SKILL_ROOTS) {
-    let page = 1;
-    for (let count = 0; count < MAX_GITLAB_PAGES_PER_ROOT; count += 1) {
-      const query = new URLSearchParams({
-        path: root,
-        ref,
-        recursive: "true",
-        per_page: "100",
-        page: String(page),
-      });
-      const response = await fetcher(
-        `${GITLAB_API_BASE}/projects/${encodeURIComponent(target.repoFullName)}/repository/tree?${query}`,
-        { headers: gitlabHeaders(target.token), cache: "no-store" },
-      );
-      if (response.status === 404) break;
-      if (!response.ok) {
-        throw new Error(`GitLab skill discovery failed (${response.status})`);
-      }
-      const data = (await response.json()) as unknown;
-      if (!Array.isArray(data)) break;
-      for (const entry of data) {
-        if (!entry || typeof entry !== "object") continue;
-        const item = entry as {
-          path?: unknown;
-          type?: unknown;
-          name?: unknown;
-        };
-        if (
-          item.type === "blob" &&
-          item.name === "SKILL.md" &&
-          typeof item.path === "string" &&
-          isRepositorySkillPath(item.path)
-        ) {
-          paths.push(item.path);
-        }
-      }
-      const next = gitlabNextPage(response);
-      if (!next) break;
-      page = next;
-    }
-  }
-  return paths;
-}
-
-async function repositorySkillPaths(
-  target: RepoCloneTarget,
-  ref: string,
-  fetcher: typeof fetch = fetch,
-): Promise<string[]> {
-  return target.provider === "github"
-    ? githubSkillPaths(target, ref, fetcher)
-    : gitlabSkillPaths(target, ref, fetcher);
+async function repositorySkillPaths(target: LinkedRepository, ref: string): Promise<string[]> {
+  return forgeFor(target.provider).findFilesNamed({
+    token: target.token,
+    repoFullName: target.repoFullName,
+    ref,
+    roots: REPOSITORY_SKILL_ROOTS,
+    fileName: "SKILL.md",
+  });
 }
 
 async function readRepositoryFile(
-  target: RepoCloneTarget,
+  target: LinkedRepository,
   path: string,
   ref: string,
 ): Promise<string | null> {
@@ -165,7 +45,7 @@ export async function listProjectRepositorySkills(
   projectId: string,
   requestedRef?: string | null,
 ): Promise<RepositorySkillSummary[]> {
-  const target = await resolveRepoCloneTarget(projectId);
+  const target = await resolveLinkedRepository(projectId);
   if (!target) return [];
   const ref = requestedRef?.trim() || target.defaultBranch;
   if (!isValidGitBranchName(ref)) throw new Error("Invalid repository ref");
@@ -190,7 +70,7 @@ export async function loadProjectRepositorySkills(
   ) {
     return null;
   }
-  const target = await resolveRepoCloneTarget(projectId);
+  const target = await resolveLinkedRepository(projectId);
   if (!target) return null;
   const ref = requestedRef?.trim() || target.defaultBranch;
   if (!isValidGitBranchName(ref)) return null;

@@ -55,9 +55,9 @@ vi.mock("@/lib/server/git/forge-provider", () => ({
 }));
 
 import {
-  resolveRepoCloneTarget,
-  resolveRepoCloneTargetForRepo,
-  resolveRepoCloneTargetWithAccess,
+  resolveLinkedRepository,
+  resolveLinkedRepositoryForRepo,
+  resolveLinkedRepositoryWithAccess,
 } from "./repo-access";
 
 beforeEach(() => {
@@ -91,7 +91,7 @@ describe("incomplete GitHub repository links", () => {
     h.row = githubLink({
       git_connections: { provider: "github", installation_id: 4242, source },
     });
-    const target = await resolveRepoCloneTarget("project-1");
+    const target = await resolveLinkedRepository("project-1");
     expect(target?.connectionId).toBe("connection-1");
     expect(h.installationCalls).toEqual([{
       installationId: 4242,
@@ -105,7 +105,7 @@ describe("incomplete GitHub repository links", () => {
     h.row = githubLink({
       git_connections: [{ provider: "github", installation_id: 4242, source: "relay" }],
     });
-    expect(await resolveRepoCloneTarget("project-1")).not.toBeNull();
+    expect(await resolveLinkedRepository("project-1")).not.toBeNull();
     expect(h.installationCalls[0]).toMatchObject({ installationId: 4242 });
     expect(h.providerSources).toEqual(["relay"]);
   });
@@ -118,7 +118,7 @@ describe("incomplete GitHub repository links", () => {
     null,
   ])("returns no target when the linked connection has no GitHub installation: %j", async (connection) => {
     h.row = githubLink({ git_connections: connection });
-    await expect(resolveRepoCloneTarget("project-1")).resolves.toBeNull();
+    await expect(resolveLinkedRepository("project-1")).resolves.toBeNull();
     expect(h.installationCalls).toEqual([]);
     expect(h.gitlabCalls).toEqual([]);
   });
@@ -128,7 +128,7 @@ describe("incomplete GitHub repository links", () => {
       installation_id: 42,
       git_connections: { provider: "github", installation_id: 4242, source: "local" },
     });
-    expect(await resolveRepoCloneTarget("project-1")).not.toBeNull();
+    expect(await resolveLinkedRepository("project-1")).not.toBeNull();
     expect(h.installationCalls[0]).toMatchObject({ installationId: 42 });
   });
 
@@ -137,7 +137,7 @@ describe("incomplete GitHub repository links", () => {
       external_repo_id: "fixture-repo",
       git_connections: { provider: "github", installation_id: 4242, source: "local" },
     });
-    await expect(resolveRepoCloneTarget("project-1")).rejects.toThrow(
+    await expect(resolveLinkedRepository("project-1")).rejects.toThrow(
       "GitHub link is missing a stable repository id",
     );
     expect(h.installationCalls).toEqual([]);
@@ -150,7 +150,7 @@ describe("incomplete GitHub repository links", () => {
     })];
     h.accessibleProjects.add("project-1");
     h.accessibleProjects.add("project-2");
-    const target = await resolveRepoCloneTargetForRepo({
+    const target = await resolveLinkedRepositoryForRepo({
       userId: "reader", provider: "github", repoFullName: "acme/private-app",
     });
     expect(target?.linkId).toBe("link-2");
@@ -164,7 +164,7 @@ describe("incomplete GitHub repository links", () => {
       git_connections: { provider: "github", installation_id: 4242, source: "relay" },
     })];
     h.accessibleProjects.add("project-1");
-    await expect(resolveRepoCloneTargetForRepo({
+    await expect(resolveLinkedRepositoryForRepo({
       userId: "reader", provider: "github", repoFullName: "acme/private-app",
     })).resolves.toBeNull();
     expect(h.installationCalls).toEqual([]);
@@ -174,7 +174,7 @@ describe("incomplete GitHub repository links", () => {
 describe("forge credentials", () => {
   it("scopes the GitHub token to the linked repository and returns no credential URL", async () => {
     h.row = githubLink({ installation_id: 42 });
-    const target = await resolveRepoCloneTarget("project-1");
+    const target = await resolveLinkedRepository("project-1");
     expect(h.installationCalls).toEqual([
       { installationId: 42, scope: { repositoryIds: [9001] } },
     ]);
@@ -191,14 +191,14 @@ describe("forge credentials", () => {
       repo_full_name: "group/private-app",
       git_connections: { source: "local" },
     });
-    const target = await resolveRepoCloneTarget("project-1");
+    const target = await resolveLinkedRepository("project-1");
     expect(h.gitlabCalls).toEqual(["connection-2"]);
     expect(target).toMatchObject({ provider: "gitlab", token: "gitlab-account-wide-token" });
   });
 
   it("refuses an unknown provider", async () => {
     h.row = githubLink({ provider: "bitbucket", installation_id: 42 });
-    await expect(resolveRepoCloneTarget("project-1")).rejects.toThrow("Unknown repo provider");
+    await expect(resolveLinkedRepository("project-1")).rejects.toThrow("Unknown repo provider");
   });
 });
 
@@ -213,7 +213,7 @@ describe("project roles (MIN-693)", () => {
     h.accessibleProjects.add("project-1");
     h.accessibleProjects.add("project-2");
     h.readOnlyProjects.add("project-1");
-    const resolved = await resolveRepoCloneTargetWithAccess({
+    const resolved = await resolveLinkedRepositoryWithAccess({
       userId: "user", provider: "github", repoFullName: "acme/private-app",
     });
     expect(resolved).toMatchObject({ canWrite: true, target: { linkId: "link-2" } });
@@ -223,7 +223,7 @@ describe("project roles (MIN-693)", () => {
     h.rows = twoLinks();
     h.accessibleProjects.add("project-1");
     h.readOnlyProjects.add("project-1");
-    const resolved = await resolveRepoCloneTargetWithAccess({
+    const resolved = await resolveLinkedRepositoryWithAccess({
       userId: "user", provider: "github", repoFullName: "acme/private-app",
     });
     expect(resolved).toMatchObject({ canWrite: false, target: { linkId: "link-1" } });

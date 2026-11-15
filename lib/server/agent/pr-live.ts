@@ -18,9 +18,9 @@ import { findPullRequestByNumber } from "./pull-requests";
  *
  * Two families of transmitters, and you need both:
  * - WEBHOOK RECEIVERS, for what happens on the forge ;
- * - in-app writing ROUTES (`pr-actions.ts`), otherwise a teammate who
- * looks at the same PR would not see anything before the webhook echo — and on the GitHub side there
- * is NO echo for reactions, the event does not exist.
+ * - the in-app PR gestures (`pr-comments.ts`, `pr-state-actions.ts`…), or a
+ *   teammate on the same PR would see nothing before the webhook echo, and
+ *   GitHub sends no echo at all for reactions.
  *
  * Everything is best-effort: a failed broadcast should never cause a webhook
  * or a user gesture to fail. The residual polling and the refetch when
