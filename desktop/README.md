@@ -21,7 +21,8 @@ to be checked back and forth rather than reread twice separately.
 
 | | |
 | --- | --- |
-| `src/main.ts` | window, navigation guard, `minddy://`, dock badge, IPC |
+| `src/main.ts` | window, navigation guard, `minddy://`, and the dependencies it hands the handler modules |
+| `src/*-handlers.ts` | the bridge's channels, one module per concern: navigation, local instance, updates, notifications and push, window |
 | `src/channel-store.ts` | rewrites a retired preview channel in `userData/channel.json` to stable |
 | `src/server-store.ts` | the selected self-hosted origin (`userData/server.json`) |
 | `src/server-choice.ts` | serves the bundled server-choice page (`minddy-app://welcome/`) and answers only it |

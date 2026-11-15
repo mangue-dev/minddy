@@ -9,8 +9,9 @@
  * prompt parameter and nothing else. A link to any other route of those apps
  * (settings, plugins, a folder to open) is refused.
  *
- * PURE module: `desktop/src/main.ts` asks it before `shell.openExternal`, and
- * the web page builds the same links in `lib/prompt-delivery.ts`.
+ * Pure module: the bridge contract (ipc-contract.ts) admits only these links
+ * before `shell.openExternal`, and the web page builds the same links in
+ * `lib/prompt-delivery.ts`.
  */
 
 interface AgentAppRoute {

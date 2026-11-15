@@ -23,7 +23,6 @@ import { createDesktopAuthLinkDelivery } from "@/lib/desktop/auth-link-delivery"
 import { discoverLocalModels } from "@/lib/desktop/local-models";
 import {
   DESKTOP_APP_NAME,
-  DESKTOP_BUNDLE_ID,
   DESKTOP_ENTRY_PATH,
   DESKTOP_ORIGIN,
   DESKTOP_PROTOCOL,
@@ -56,11 +55,7 @@ import {
   type DesktopNotificationCapabilities,
 } from "@/lib/desktop/notification-capabilities";
 import { parseDesktopOpenLink } from "@/lib/desktop/open-link";
-import { WINDOWS_STORE_DEEP_LINK } from "@/lib/desktop/install-prompt";
-import {
-  nativeNotificationSettingsUrl,
-  nativePushContent,
-} from "@/lib/desktop/native-push";
+import { nativePushContent } from "@/lib/desktop/native-push";
 import {
   desktopServerUnavailableHtml,
   isDesktopServerUnavailable,
@@ -85,7 +80,6 @@ import {
 import { parseWindowsStoreUpdateProbe } from "@/lib/desktop/windows-store-update";
 import {
   desktopWindowFrameOptions,
-  desktopTitleBarOverlay,
   desktopDocumentChrome,
   MACOS_TRAFFIC_LIGHT_POSITION,
   rememberableWindowChrome,
@@ -104,6 +98,11 @@ import { hideWindow } from "./hide-window";
 import { buildAppMenu } from "./menu";
 import { installEditContextMenu } from "./edit-context-menu";
 import { registerServerChoiceScheme, serveServerChoicePage, serverChoiceHandlers } from "./server-choice";
+import { navigationHandlers } from "./navigation-handlers";
+import { localHandlers } from "./local-handlers";
+import { updateHandlers } from "./update-handlers";
+import { notificationHandlers, pushHandlers } from "./notification-handlers";
+import { windowHandlers } from "./window-handlers";
 import { localAccountSession } from "./local-account";
 import {
   LOCAL_INSTALL_RELEASE,
@@ -141,15 +140,16 @@ import { openDesktopExternal } from "./open-external";
 import { grantDesktopMicrophoneAccess } from "./microphone-access";
 
 /**
- * Minddy's shell (MIN-291) — §2 from docs/desktop-electron.md.
+ * minddy's desktop shell (MIN-291), §2 of docs/desktop-electron.md.
  *
  * The main `BrowserWindow` loads the selected minddy origin, so the desktop app
  * and web interface stay identical. The only local screen is the bundled
  * self-hosting page (`minddy-app://welcome/`), which holds no product UI.
  *
  * Decisions live in pure modules of `lib/desktop/`, tested with the
- * repository: this file only wires them to Electron, because an installed
- * shell is updated far less often than the site.
+ * repository, because an installed shell is updated far less often than the
+ * site. The bridge's channels are answered by the `*-handlers.ts` modules,
+ * which receive what they use from here; this file wires them to Electron.
  */
 
 let pendingOpenPath: string | null = null;
@@ -218,10 +218,6 @@ const localNotifications = new DesktopLocalNotificationRegistry();
 /** Electron closes windows before `before-quit` during an updater relaunch. */
 let quittingForUpdate = false;
 let quitting = false;
-/** Only one APNs registration at a time, shared between site mounts. */
-let apnsRegistration: Promise<string> | null = null;
-/** One WNS channel request at a time; each new process still obtains a fresh URI. */
-let wnsRegistration: Promise<string | null> | null = null;
 const backgroundLaunchRequested =
   process.platform === "linux" && isLinuxBackgroundLaunch(process.argv);
 let linuxBackgroundEnabled = false;
@@ -328,12 +324,11 @@ function startWindowsStoreUpdateChecks(): void {
 /**
  * The origin the window shows: minddy Cloud, or the server the person chose.
  *
- * Everything that speaks of origin in this file - the navigation guard, the
- * loadings, the micro permission - reads `origin`, never the constant, without
- * which half of the app would stay on minddy Cloud while the window displays a
- * custom server. A navigation guard that compares to the wrong origin returns
- * the entire app to the system browser: this is the kind of fault that is only
- * seen on the first click.
+ * Everything in this file that compares with an origin (the navigation guard,
+ * window loads, the microphone permission) reads `origin`, never the
+ * constant: otherwise half the app stays on minddy Cloud while the window
+ * shows a custom server, and a guard comparing with the wrong origin sends
+ * the whole app to the system browser on the first click.
  */
 let origin: string = DESKTOP_ORIGIN;
 let customServerOrigin: string | null = null;
@@ -497,20 +492,18 @@ function useMinddyCloud(): void {
 }
 
 /**
- * The “About” window. The native panel exists anyway (`about`
- * role in the menu): without these options it announces the name and version of Electron, which
- * is true and does not inform anyone. The name comes from `app.getName()`, so from
- * `setName` lower — not one more string.
+ * The "About" panel. The native panel exists anyway (the menu's `about`
+ * role); without these options it shows Electron's name and version. The
+ * name comes from `app.getName()`, set by `setName` below.
  */
 function applyAboutPanel(): void {
   app.setAboutPanelOptions({
     applicationName: app.getName(),
     applicationVersion: app.getVersion(),
     copyright: "© 2026 mangue",
-    // `credits` is the only free line that macOS displays; `website` does not
-    // does not exist (this is a Linux option). We put the ACTIVE origin there and not the
-    // constant: on a custom server, it's the only place that says it without
-    // that we have to open a menu.
+    // `credits` is the only free-form line macOS displays (`website` is a
+    // Linux option). It shows the active origin, not the constant: on a custom
+    // server it is the only place that names it without opening a menu.
     credits: origin,
   });
 }
@@ -546,18 +539,16 @@ function applyWindowButtons(target?: BrowserWindow): void {
 }
 
 /**
- * macOS delivers the deep link by `open-url`, and it often does it BEFORE the
- * window exists: clicking on the email link LAUNCHES the app. We therefore keep it, and
- * the renderer comes to get it when he subscribes (`minddy:auth-link-ready`).
+ * macOS delivers a deep link through `open-url`, often before the window
+ * exists: clicking the email link launches the app. The sign-in link is kept
+ * until the page subscribes (`minddy:auth-link-ready`).
  */
 function receiveDeepLink(raw: string): void {
-  // `minddy://open?next=…` — the return of a detour through the browser (Stripe,
-  // MIN-293). It asks NOTHING from the renderer: it changes the page, which only
-  // the main process can do it anyway when the window is
-  // open. Full loading rather than client navigation, for the same
-  // reason for the return of authentication: we are returning from a purchase, the subscription
-  // changed on the server side, and a new rendering costs less than reasoning on this
-  // which had already been rendered with the old plan.
+  // `minddy://open?next=…`: the return from a detour through the browser
+  // (Stripe, MIN-293). It needs nothing from the renderer: it changes the
+  // page, which only the main process can do. A full load rather than client
+  // navigation, as after sign-in: the subscription changed on the server, and
+  // a fresh render costs less than reconciling one made with the old plan.
   const next = parseDesktopOpenLink(raw);
   if (next) {
     pendingOpenPath = next;
@@ -598,43 +589,41 @@ function revealLocalNotificationTarget(target: string | null): void {
 }
 
 /**
- * The navigation guard. Without it, a link to a third-party site opens this site
- * IN minddy, with our `preload` loaded — that is, with the bridge.
+ * The navigation guard. Without it, a link to a third-party site opens that
+ * site inside minddy, with our preload loaded, that is with the bridge.
  *
- * It answers two separate questions, in this order: **is this at
- * us?** (`navigationDecision`, lib/desktop/nav-guard.ts), then **is this a
- * page that the window has the right to show?** (`routeDisposition`,
- * lib/desktop/window-routes.ts). The second is what keeps the app on its two
- * only screens: authentication and the app.
+ * It answers two questions in order: is this ours? (`navigationDecision`,
+ * lib/desktop/nav-guard.ts), then may the window show this page?
+ * (`routeDisposition`, lib/desktop/window-routes.ts). The second keeps the
+ * app on its only two screens: authentication and the app.
  *
- * **You have to plug in FOUR events, and each one catches up with what the others don't see.** It's the kind of list that you think is finished in two :
+ * Four events are needed, each catching what the others miss:
  *
- * - `will-navigate` — ordinary click on a link ;
- * - `will-redirect` — SERVER redirects. This is where we reach the
- * feedback board: `/feedback` places a JWT and returns to `/f/<token>`,
- * without any link having ever pointed to the board. Without this event,
- * the entire public token surface entered the window through the door of
- * behind ;
- * - `did-navigate-in-page` — the navigations of the SPA, which Next pushes into
- * the history without loading any document. This is where the links go through
- * CGU and confidentiality of the registration screen;
- * - `setWindowOpenHandler` — the `target="_blank"`.
+ * - `will-navigate`: an ordinary link click;
+ * - `will-redirect`: server redirects. The feedback board is reached this
+ *   way: `/feedback` sets a JWT and redirects to `/f/<token>` without any link
+ *   pointing at the board, so without this event the whole public token
+ *   surface would enter the window by the back door;
+ * - `did-navigate-in-page`: the SPA's navigations, which Next pushes into the
+ *   history without loading a document, such as the sign-up screen's links
+ *   to the terms and privacy policy;
+ * - `setWindowOpenHandler`: `target="_blank"`.
  */
 function guardNavigation(window: BrowserWindow): void {
   const guard = (event: { preventDefault: () => void }, url: string) => {
     const decision = navigationDecision(url, origin);
     if (decision !== "allow") {
       event.preventDefault();
-      // A third-party site goes to the browser; an unknown pattern isn't going anywhere.
+      // A third-party site goes to the browser; an unknown scheme goes nowhere.
       if (decision === "external") void openDesktopExternal(url);
       return;
     }
     const disposition = routeDisposition(url);
     if (disposition === "allow") return;
     event.preventDefault();
-    // The landing is not a destination we ask for: we fall there. We bring back
-    // so at the entrance rather than launching a browser under the fingers of
-    // someone who just clicked the logo.
+    // Nobody asks for the landing page, they land on it: bring them back to
+    // the entry rather than opening a browser under someone who just clicked
+    // the logo.
     if (disposition === "home") goHome(window);
     else void openDesktopExternal(url);
   };
@@ -644,20 +633,20 @@ function guardNavigation(window: BrowserWindow): void {
     if (details.isMainFrame) guard(details, details.url);
   });
 
-  // ⚠ **This cannot be canceled**: navigation has already taken place when we
-  // learns it. It can therefore only REPAIR, and the only repair that works
-  // every hit is to reload the input.
+  // This one cannot be canceled: the navigation has already happened when the
+  // event arrives. It can only repair, and the only repair that works every
+  // time is reloading the entry.
   //
-  // Undo cleanly was tried twice, and both failed:
-  // `navigationHistory.goBack()` ne fait rien (`canGoBack()` rend `false` juste
-  // after a `pushState`), and `executeJavaScript("history.back()")` sees its
-  // REJECT promise — the navigation it triggers destroys the context
-  // execution that was waiting for it. Measured in the window, not deducted.
+  // Undoing it cleanly was tried twice and failed both times, as measured in
+  // the window: `navigationHistory.goBack()` does nothing (`canGoBack()` is
+  // `false` right after a `pushState`), and `executeJavaScript("history.back()")`
+  // rejects, because the navigation it triggers destroys the execution context
+  // awaiting it.
   //
-  // Hence the sharing of roles: this net guarantees that no public page
-  // is never displayed here, and **it's the PAGE that avoids getting there** — the
-  // legal notices from the registration screen open the browser themselves
-  // (`LegalLink`, components/auth/login-form.tsx) rather than navigating.
+  // So the roles are split: this net guarantees no public page is shown
+  // here, and the page itself avoids getting there: the sign-up screen's
+  // legal links open the browser themselves (`LegalLink`,
+  // components/auth/login-form.tsx) rather than navigating.
   window.webContents.on("did-navigate-in-page", (_event, url, isMainFrame) => {
     if (!isMainFrame) return;
     const disposition = routeDisposition(url);
@@ -668,9 +657,8 @@ function guardNavigation(window: BrowserWindow): void {
 
   window.webContents.setWindowOpenHandler(({ url }) => {
     const decision = navigationDecision(url, origin);
-    // Even a URL from us: we don't make a second window. A
-    // internal `target="_blank"` goes to the browser like the rest — the app has a
-    // window, and only one.
+    // Even one of our URLs: the app has a single window, so an internal
+    // `target="_blank"` goes to the browser like the rest.
     if (decision !== "block") void openDesktopExternal(url);
     return { action: "deny" };
   });
@@ -684,17 +672,14 @@ function createWindow(
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
-    // **The floor is not that of a site, it is that of a WINDOW.** A
-    //browser goes down to 720x480 because someone may want to stick there
-    // anything ; an installed app has only one content, and the
-    // let it reduce to a board column stretched over the entire width
-    // doesn't help anyone — it's a size you reach by resizing, not
-    // one that we choose.
+    // The minimum is a window's, not a site's. A browser goes down to 720x480
+    // because it may hold anything; an installed app has one content, and a
+    // single board column stretched across the width helps nobody.
     //
-    // 960: the sidebar is folded (it returns to 1200), but the board is there
-    // holds TWO columns (`BOARD_COLUMN_CLASS`, 640 px the threshold) and the header
-    // keep its breadcrumbs next to the macOS buttons. 640: the conversation of
-    // Numo keeps its thread above its composer.
+    // 960: the sidebar is collapsed (it returns at 1200), but the board still
+    // holds two columns (`BOARD_COLUMN_CLASS`, 640 px threshold) and the
+    // header keeps its breadcrumbs next to the macOS buttons. 640: Numo's
+    // conversation keeps its thread above its composer.
     minWidth: 960,
     minHeight: 640,
     // macOS integrates its traffic lights into the app header. Windows and Linux
@@ -706,8 +691,8 @@ function createWindow(
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
-      // The three settings which cannot be discussed (§2): the renderer takes care of
-      // remote code, it should only reach what the preload exposes.
+      // The three non-negotiable settings (§2): the renderer runs remote code,
+      // and must reach only what the preload exposes.
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -723,15 +708,15 @@ function createWindow(
           windowMaterial: currentWindowMaterial(),
         }),
       ],
-      // The spell checker goes through `NSSpellChecker` on macOS, at
-      // each text modification, on the UI thread of the browser process.
+      // On macOS the spell checker calls `NSSpellChecker` on every text
+      // change, on the browser process's UI thread.
       // The edit context menu (`edit-context-menu.ts`, MIN-797) offers no
       // suggestions, so only the red underlines would remain. Turning it back
       // on one day asks first to add suggestions to that menu (MIN-322).
       spellcheck: false,
-      // The MIN-290 probe measured it: the Supabase WebSocket survives very well
-      // at seven minutes in the background with throttling ACTIVE. We don't cut it
-      // so not — that would be paying for battery for a problem we don't have.
+      // The MIN-290 probe measured it: the Supabase WebSocket survives seven
+      // minutes in the background with throttling on. Turning it off would
+      // spend battery on a problem we do not have.
       backgroundThrottling: true,
     },
   });
@@ -896,11 +881,11 @@ function createWindow(
   // A page's own full screen (a video, the editor) arrives by these two events.
   window.on("enter-html-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
   window.on("leave-html-full-screen", () => { applyWindowButtons(); applyWindowMaterial(); });
-  // The window hides instead of dying (see ⌘W in menu.ts): the app remains
+  // The window hides instead of closing (see ⌘W in menu.ts): the app stays
   // alive, so notifications keep coming.
   //
-  // ⚠ `hideWindow` and not `window.hide()`: in full screen, hide without being
-  // exiting Space leaves a black and empty office in the foreground (MIN-353).
+  // `hideWindow`, not `window.hide()`: hiding in full screen without leaving
+  // its Space leaves an empty black desktop in front (MIN-353).
   window.on("close", (event) => {
     if (mainWindow !== window) return;
     if (windowCloseAction(quittingForUpdate) === "close") return;
@@ -908,19 +893,17 @@ function createWindow(
     hideWindow(window);
   });
 
-  // What the page cannot know (MIN-307): ⌘W and the red light HIDE
-  // the window, the same document therefore experiences dozens of cycles per day, and
-  // this is what triggers the restarts. `powerMonitor` carries the most common cause
-  // frequent socket outages, of which the page only sees the consequence.
+  // What the page cannot know (MIN-307): ⌘W and the red button hide the
+  // window, so one document goes through dozens of hide/show cycles a day,
+  // which is what triggers reconnections. `powerMonitor` reports the most
+  // frequent cause of socket drops, of which the page sees only the effect.
   window.on("show", () => trace("window:show"));
   window.on("hide", () => trace("window:hide"));
   window.on("blur", () => trace("window:blur"));
-  // Four lines and not a loop, and it doesn't tighten: each event
-  // of `powerMonitor` is a distinct literal-named OVERLOAD in typings
-  // from Electron. A union does not satisfy any of them — `tsc` retains the
-  // last overload and refuse everything. The loop that lived here was breaking
-  // `npm --prefix desktop run typecheck`, and the only other outcome would be a cast,
-  // that is, turn off the only check that checks these names.
+  // Four lines, not a loop: each `powerMonitor` event is a separate overload
+  // in Electron's typings, and a union of names satisfies none of them (`tsc`
+  // keeps the last overload and rejects everything). A loop would need a cast,
+  // which turns off the only check of these names.
   const onSuspend = () => trace("power:suspend");
   const onResume = () => {
     trace("power:resume");
@@ -946,210 +929,109 @@ function createWindow(
 type ShellIpcEvent = IpcMainEvent | IpcMainInvokeEvent;
 
 /**
- * Every channel of the bridge (lib/desktop/ipc-contract.ts). The contract's
- * sender policy and parser run before each handler below.
+ * Every channel of the bridge (lib/desktop/ipc-contract.ts), each answered by
+ * one handler module. The contract's sender policy and parser run before
+ * every handler.
  */
 function registerIpc(): void {
+  const openExternal = (url: string) => void openDesktopExternal(url);
+  const mainWindowOrNull = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
   registerDesktopIpc<ShellIpcEvent>(
     {
       ipcMain,
-      mainContents: () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow.webContents : null),
+      mainContents: () => mainWindowOrNull()?.webContents ?? null,
       context: () => ({ origin, localOrigin: LOCAL_SELF_HOST_ORIGIN, customServerOrigin }),
     },
     {
       ...serverChoiceIpcHandlers(),
-
-      "minddy:open-external": (_event, url) => {
-        // Handing a `file://` URL or another app's scheme to the system is
-        // execution: only what the navigation guard lets out leaves.
-        if (navigationDecision(url, origin) === "block") return;
-        void openDesktopExternal(url);
-      },
-      // Only the exact "new conversation" link of a known agent app (MIN-951).
-      "minddy:open-agent-app": (_event, link) => void openDesktopExternal(link),
-      "minddy:windows-store:open": () => {
-        if (process.platform !== "win32" || !process.windowsStore) return;
-        void openDesktopExternal(WINDOWS_STORE_DEEP_LINK);
-      },
-      "minddy:windows-store-update-status": {
-        ready: ({ sender }) => sendDesktopEvent(sender, "minddy:windows-store-update-status", windowsStoreUpdateAvailable),
-      },
-      "minddy:auth-link": {
-        ready: ({ sender }) => authLinkDelivery.ready(sender.id),
-        notReady: ({ sender }) => authLinkDelivery.notReady(sender.id),
-      },
-      "minddy:server-picker:open": () => showServerChoice(),
-
-      // The local instance's managed account (MIN-781): the password never
-      // leaves this process. Only while the launcher this app started is
-      // alive: whatever else answers on the local port is not that instance.
-      "minddy:local-account:session": () => {
-        const root = readLocalRuntimeRoot();
-        if (!root || !ownsLocalRuntime(root)) return null;
-        return localAccountSession(root);
-      },
-      // Applies an instance variable changed in the admin dashboard that needs
-      // a restart (MIN-847).
-      "minddy:local-runtime:restart": async () => {
-        const root = readLocalRuntimeRoot();
-        if (!root || !ownsLocalRuntime(root)) return false;
-        stopLocalRuntime();
-        await startLocalRuntime(root);
-        mainWindow?.webContents.reload();
-        return true;
-      },
-
-      "minddy:update:check": () => checkForUpdatesManually(),
-      "minddy:update-status": { ready: ({ sender }) => replayUpdateStatus(sender) },
-      // Reopens the native dialog, which asks for the last yes (updater.ts).
-      "minddy:install-update": () => requestInstall(),
-
-      "minddy:set-badge": (_event, count) => {
-        const badge = notificationCapabilities().badge;
-        if (badge === "dock") app.dock?.setBadge(count > 0 ? String(count) : "");
-        else if (badge === "windows") void runWnsHelper(["badge", String(count)]);
-      },
-      "minddy:notification:show": (_event, payload) => {
-        // Not the page's capabilities: after a failed banner they report none
-        // available, and a later banner is what notices the recovery.
-        if (!NativeNotification.isSupported()) return;
-        const notification = new NativeNotification({ id: payload.id, title: payload.title, body: payload.body });
-        if (!localNotifications.track(payload, notification)) return;
-        const notificationOrigin = origin;
-        notification.on("click", () => {
-          if (!localNotifications.dismiss(payload.id, notification)) return;
-          revealLocalNotificationTarget(notificationOrigin === origin ? payload.target : null);
-        });
-        notification.on("show", () => setNativeNotificationsAvailable(true));
-        notification.on("close", () => localNotifications.forget(payload.id, notification));
-        notification.on("failed", () => {
-          if (localNotifications.forget(payload.id, notification)) setNativeNotificationsAvailable(false);
-        });
-        notification.show();
-      },
-      "minddy:notification:dismiss": (_event, id) => {
-        localNotifications.dismiss(id);
-      },
-
-      "minddy:linux-background:get": () => currentLinuxBackgroundState(),
-      "minddy:linux-background:set": (_event, enabled) => {
-        if (notificationCapabilities().backgroundSession !== "linux") return null;
-        writeLinuxBackgroundPreference(app.getPath("userData"), enabled);
-        linuxBackgroundEnabled = enabled;
-        linuxAutostartInstalled = syncLinuxBackgroundAutostart({
-          enabled,
-          environment: process.env,
-          home: os.homedir(),
-          execPath: process.execPath,
-        });
-        return currentLinuxBackgroundState();
-      },
-      "minddy:linux-background:changed": {
-        ready: ({ sender }) => {
-          const state = currentLinuxBackgroundState();
-          if (state) sendDesktopEvent(sender, "minddy:linux-background:changed", state);
+      ...navigationHandlers<ShellIpcEvent>({
+        origin: () => origin,
+        openExternal,
+        authLinks: authLinkDelivery,
+        showServerChoice,
+      }),
+      ...localHandlers<ShellIpcEvent>({
+        runtimeRoot: readLocalRuntimeRoot,
+        ownsRuntime: ownsLocalRuntime,
+        accountSession: localAccountSession,
+        stopRuntime: stopLocalRuntime,
+        startRuntime: startLocalRuntime,
+        reloadWindow: () => mainWindow?.webContents.reload(),
+        discoverModels: discoverLocalModels,
+      }),
+      ...updateHandlers<ShellIpcEvent>({
+        checkForUpdates: checkForUpdatesManually,
+        replayUpdateStatus,
+        requestInstall,
+        windowsStore: process.platform === "win32" && process.windowsStore === true,
+        windowsStoreUpdateAvailable: () => windowsStoreUpdateAvailable,
+        openExternal,
+      }),
+      ...notificationHandlers<ShellIpcEvent>({
+        capabilities: notificationCapabilities,
+        bannersSupported: () => NativeNotification.isSupported(),
+        createBanner: ({ id, title, body }) => new NativeNotification({ id, title, body }),
+        banners: localNotifications,
+        origin: () => origin,
+        revealTarget: revealLocalNotificationTarget,
+        setBannersAvailable: setNativeNotificationsAvailable,
+        setDockBadge: (text) => app.dock?.setBadge(text),
+        setWindowsBadge: (count) => void runWnsHelper(["badge", String(count)]),
+        linuxBackgroundState: currentLinuxBackgroundState,
+        setLinuxBackground: (enabled) => {
+          writeLinuxBackgroundPreference(app.getPath("userData"), enabled);
+          linuxBackgroundEnabled = enabled;
+          linuxAutostartInstalled = syncLinuxBackgroundAutostart({
+            enabled,
+            environment: process.env,
+            home: os.homedir(),
+            execPath: process.execPath,
+          });
         },
-      },
-
-      "minddy:push:register": async (_event, { activate }) => {
-        const transport = notificationCapabilities().backgroundTransport;
-        if (transport === null) return null;
-        try {
-          const userData = app.getPath("userData");
-          if (activate) await setNativePushAllowed(userData, true);
-          else if (!(await nativePushAllowed(userData))) return null;
-          const installationId = await pushInstallationId(userData);
-          if (transport === "wns") {
-            wnsRegistration ??= requestWnsChannel();
-            const channelUri = await wnsRegistration;
-            if (!channelUri) wnsRegistration = null;
-            return channelUri ? { transport, endpoint: channelUri, installationId } : null;
-          }
-          apnsRegistration ??= pushNotifications.registerForAPNSNotifications();
-          const token = await apnsRegistration;
-          return { transport, endpoint: `apns:${token}`, installationId };
-        } catch {
-          apnsRegistration = null;
-          wnsRegistration = null;
-          console.error("[push] native_registration_failed");
-          return null;
-        }
-      },
-      "minddy:push:unregister": async () => {
-        const transport = notificationCapabilities().backgroundTransport;
-        if (transport === "apns") {
-          apnsRegistration = null;
-          await disableNativePush(app.getPath("userData"), () => pushNotifications.unregisterForAPNSNotifications());
-        } else if (transport === "wns") {
-          wnsRegistration = null;
-          await disableNativePush(app.getPath("userData"), () => runWnsHelper(["unregister"]));
-        }
-      },
-      // The main process builds the system destination itself; no URL from
-      // the page travels on this channel.
-      "minddy:push:open-settings": () => {
-        const settings = notificationCapabilities().settings;
-        if (settings === "macos") void openDesktopExternal(nativeNotificationSettingsUrl(DESKTOP_BUNDLE_ID));
-        else if (settings === "windows") void openDesktopExternal("ms-settings:notifications");
-      },
-      "minddy:window-chrome": (_event, theme, followsSystem) => {
-        if (!mainWindow) return;
-        // The native material is tinted by the app's appearance, not the
-        // page's: it follows the page's theme, or dark text lands on a dark
-        // blur. A page that follows the system leaves the app on the system,
-        // so its own `prefers-color-scheme` keeps tracking the OS. Older pages
-        // send no second argument and keep the previous behavior.
-        if (followsSystem !== undefined) {
-          const source = followsSystem ? "system" : theme;
-          if (nativeTheme.themeSource !== source) nativeTheme.themeSource = source;
-        }
-        if (process.platform === "darwin" || !integratedFrames.get(mainWindow)) return;
-        mainWindow.setTitleBarOverlay(desktopTitleBarOverlay(process.platform, theme));
-      },
-      // The device preference (MIN-810).
-      "minddy:window-material:set": (_event, enabled) => {
-        if (enabled !== windowMaterialEnabled) {
+      }),
+      ...pushHandlers<ShellIpcEvent>({
+        capabilities: notificationCapabilities,
+        allowPush: () => setNativePushAllowed(app.getPath("userData"), true),
+        pushAllowed: () => nativePushAllowed(app.getPath("userData")),
+        disablePush: (unregister) => disableNativePush(app.getPath("userData"), unregister),
+        installationId: () => pushInstallationId(app.getPath("userData")),
+        registerApns: () => pushNotifications.registerForAPNSNotifications(),
+        unregisterApns: () => pushNotifications.unregisterForAPNSNotifications(),
+        requestWnsChannel,
+        unregisterWns: () => runWnsHelper(["unregister"]),
+        openExternal,
+      }),
+      ...windowHandlers<ShellIpcEvent>({
+        platform: process.platform,
+        mainWindow: () => mainWindow,
+        integratedFrame: () => mainWindow !== null && integratedFrames.get(mainWindow) === true,
+        nativeTheme,
+        currentMaterial: currentWindowMaterial,
+        materialEnabled: () => windowMaterialEnabled,
+        setMaterialEnabled: (enabled) => {
           windowMaterialEnabled = enabled;
           writeWindowMaterialEnabled(enabled);
           applyWindowMaterial();
-        }
-        return windowMaterialForWindow(currentWindowMaterial(), mainWindow?.isFullScreen() ?? false);
-      },
-      "minddy:window-material-state": {
-        ready: ({ sender }) => {
-          const window = BrowserWindow.fromWebContents(sender);
-          sendDesktopEvent(sender, "minddy:window-material-state",
-            windowMaterialForWindow(currentWindowMaterial(), window?.isFullScreen() ?? false));
         },
-      },
-      "minddy:window-buttons-state": {
-        ready: ({ sender }) => sendDesktopEvent(sender, "minddy:window-buttons-state", windowButtonsVisible),
-      },
-      "minddy:focus": () => {
-        if (mainWindow) revealWindow(mainWindow);
-      },
-
-      // Loopback only, and nothing back but model ids (local-models.ts).
-      "minddy:local-models:discover": (_event, input) => discoverLocalModels(input),
-      // Chromium defers DOM storage commits by several seconds; a forced quit
-      // in that window loses an acknowledged local draft.
-      "minddy:storage:flush": ({ sender }) => {
-        sender.session.flushStorageData();
-      },
+        senderFullScreen: (sender) => BrowserWindow.fromWebContents(sender)?.isFullScreen() ?? false,
+        windowButtonsVisible: () => windowButtonsVisible,
+        focus: () => {
+          if (mainWindow) revealWindow(mainWindow);
+        },
+      }),
     },
   );
 }
 
 /**
- * What the page has the right to request from the system. Notifications, yes —
- * it's §3. The clipboard too, the app uses it on both sides. The
- * geolocation, the camera: no, minddy does not use them, and a permission
- * that we do not use is a permission that we do not have to leave open to the
+ * What the page may request from the system. Notifications (§3) and the
+ * clipboard, which the app uses both ways. Not geolocation or the camera:
+ * minddy does not use them, and an unused permission need not be open to
  * remote code.
  *
- * The MIC is not in this list and is not there will not be: it arrives under the
- * permission `media`, which also covers the camera, and it therefore decides separately —
- * see `microphoneRequestAllowed` and the manager just below.
+ * The microphone is not in this list: it arrives under the `media`
+ * permission, which also covers the camera, so it is decided separately by
+ * `microphoneRequestAllowed` in the handler below.
  */
 const ALLOWED_PERMISSIONS = new Set([
   "notifications",
@@ -1166,8 +1048,8 @@ const MICROPHONE_SETTINGS_URL =
 let microphoneDialogOpen = false;
 
 /**
- * The denial says, and the gesture that fixes it — natively, because the denial comes
- * from the system and the page has no way of raising it itself.
+ * Explains the denial and how to fix it, natively: the denial comes from the
+ * system, and the page has no way to lift it.
  */
 async function offerMicrophoneSettings(): Promise<void> {
   if (microphoneDialogOpen) return;
@@ -1224,23 +1106,21 @@ function hardenSession(): void {
   );
 }
 
-// The name, BEFORE everything else: `app.getPath("userData")` derives from it, and a
-// just one line further down it would already be too late — the session, the caches and the
-// worktrees of the local agent would fall under “Electron”. Change it once
-// once the app is installed in people's homes it would require a folder migration to
-// un simple renommage.
+// The name comes before everything else: `app.getPath("userData")` derives
+// from it, and one line later is already too late (the session and caches
+// would land under "Electron"). Changing it once the app is installed would
+// turn a rename into a folder migration.
 //
-// ⚠ **In development, the name is CHANGING, and it is not cosmetic.** The lock
-// single instance just below lives IN `userData`, which derives from this name:
-// with the same name, the shell launched by `npm run desktop:dev` requested the same
-// lock that the installed app. When it turns - that is to say always, on
-// the station where we develop — the dev shell immediately left, in silence and
-// with a code 0, and the installed app just came to the foreground.
-// We then think we have launched the shell: we are in fact watching the production.
+// In development the name differs, and not for looks: the single-instance
+// lock below lives in `userData`. With the same name, the shell started by
+// `npm run desktop:dev` asked for the installed app's lock; whenever that app
+// was running, the dev shell exited silently with code 0 and the installed
+// app came to the front, so you watched production thinking it was the dev
+// shell.
 //
-// The separate profile costs nothing: cookies are by ORIGIN, and a window
-// of dev pointed to `localhost` would not have the session in any case
-// `www.minddy.app`. You have to log in once, and that's it.
+// The separate profile costs nothing: cookies are per origin, and a dev
+// window on `localhost` would not have the `www.minddy.app` session anyway.
+// Sign in once.
 app.setName(app.isPackaged ? DESKTOP_APP_NAME : `${DESKTOP_APP_NAME}-dev`);
 
 // Keep all Linux shell state inside the XDG locations selected by the user.
@@ -1271,10 +1151,10 @@ if (process.platform === "linux") {
   }
 }
 
-// Electron test bench only: allows Playwright to launch a second
-// shell with a COPY of the connected profile, without taking the lock or touching
-// to data from the development window used by the person. An app
-// packaged always ignores this variable, even if its environment carries it.
+// Electron test bench only: lets Playwright launch a second shell on a copy
+// of the signed-in profile, without taking the lock or touching the data of
+// the development window in use. A packaged app always ignores this
+// variable, even when its environment sets it.
 if (!app.isPackaged && process.env.MINDDY_DESKTOP_TEST_USER_DATA?.trim()) {
   app.setPath("userData", process.env.MINDDY_DESKTOP_TEST_USER_DATA.trim());
   app.setPath("sessionData", process.env.MINDDY_DESKTOP_TEST_USER_DATA.trim());
@@ -1296,10 +1176,11 @@ function revealWindow(window: BrowserWindow, focus = true): void {
   if (focus) window.focus();
 }
 
-// Single instance: the deep link must reach the app ALREADY opened, not in
-// launch a second which would have neither its session nor its window.
 // The bundled server-choice page's origin (MIN-781); must precede `ready`.
 registerServerChoiceScheme();
+
+// Single instance: a deep link must reach the app already open, not launch a
+// second one without its session or window.
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -1333,10 +1214,9 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(() => {
     nativeNotificationsAvailable = NativeNotification.isSupported();
-    // The suffix is ​​ADDED, it does not replace: falsify the user agent to
-    // passing a login screen is fragile and against policy
-    // which we would pretend to circumvent (§2). It is there so that the server and the UI
-    // know that we are in the app, nothing more.
+    // The suffix is added, not substituted: faking the user agent to get
+    // past a sign-in screen is fragile and against the policy it would
+    // circumvent (§2). It only tells the server and the UI they are in the app.
     app.userAgentFallback = withDesktopUserAgent(
       app.userAgentFallback,
       app.getVersion()
@@ -1411,9 +1291,9 @@ if (!app.requestSingleInstanceLock()) {
     } else if (localSelected) {
       showServerChoice();
     }
-    // When the app is running, macOS puts the load back on the process instead of displaying
-    // the banner itself. We make it native here; when the app is exited,
-    // APNs and macOS display it without any minddy process — the heart of the ticket.
+    // While the app runs, macOS hands the push to the process instead of
+    // showing the banner itself, so it is shown natively here. When the app
+    // is closed, APNs and macOS show it without any minddy process.
     if (notificationCapabilities().backgroundTransport === "apns") {
       pushNotifications.on("received-apns-notification", (_event, payload) => {
         const content = nativePushContent(payload);
@@ -1428,8 +1308,8 @@ if (!app.requestSingleInstanceLock()) {
       });
     }
     rebuildAppMenu();
-    // The window is passed to the updater so that its installation proposal
-    // attaches to it, rather than floating alone in the middle of the screen.
+    // The updater gets the window so its install prompt attaches to it
+    // rather than floating alone in the middle of the screen.
     startAutoUpdates(() => mainWindow);
     startWindowsStoreUpdateChecks();
     flushOpenLink();
@@ -1442,9 +1322,9 @@ if (!app.requestSingleInstanceLock()) {
     });
   });
 
-  // On macOS an app without a window remains alive, and that's what we want: it
-  // ONLY closes with ⌘Q. This is also what keeps notifications going —
-  // and which explains why they stop when you leave (§3).
+  // On macOS an app without a window stays alive, as intended: it quits only
+  // with ⌘Q. That is what keeps notifications coming, and why they stop once
+  // it quits (§3).
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
   });

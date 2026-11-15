@@ -143,6 +143,15 @@ applies the policy and the parser before the handler runs: a channel without
 a handler does not compile, and no handler sees an unchecked sender or raw
 arguments.
 
+The handlers live in `desktop/src/*-handlers.ts`, one module per concern
+(`navigation-handlers.ts`, `local-handlers.ts`, `update-handlers.ts`,
+`notification-handlers.ts`, `window-handlers.ts`, and `server-choice.ts` for
+the self-hosting page). Each exports a function that takes the getters and
+actions it uses and returns its part of the handler map; `main.ts` builds
+those dependencies once and spreads the parts into `registerDesktopIpc`.
+`lib/desktop/main-handlers-ipc.test.ts` drives them through the registry
+with fake senders and checks that every channel has exactly one handler.
+
 Every policy requires the main window's top frame, then:
 
 | Policy | Documents | Channels |
