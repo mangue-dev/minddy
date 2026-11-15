@@ -22,7 +22,7 @@
 import { HugeiconsIcon } from "@hugeicons/react";
 import { AppIcon } from "@/components/icon";
 import { ArrowLeft01Icon, ArrowRight01Icon, CheckIcon, CodeSimpleIcon as Code2, Copy01Icon, Link02Icon, MessageAdd01Icon, TextBoldIcon, TextClearIcon, TextItalicIcon, TextStrikethroughIcon, TextUnderlineIcon } from "@hugeicons/core-free-icons";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import type { Editor } from "@tiptap/core";
@@ -87,14 +87,88 @@ export function commentAtCaret(editor: Editor, onComment: (anchor: PageCommentAn
 
 const SELECTION_MENU_DELAY_MS = 300;
 
-/** The block-type submenu: its width, and the grace period that lets the
-    pointer travel from the row to it. */
-const TURN_INTO_WIDTH = 224;
-const TURN_INTO_CLOSE_MS = 150;
+/** The card's distance to the passage it acts on. */
+const SELECTION_MENU_GAP = 8;
+
+/** The grace period that lets the pointer travel from the block-type row
+    to its submenu, across the card's other rows. */
+const TURN_INTO_CLOSE_MS = 300;
 /** The submenu's gap to the card, and its own padding (its first row level
     with the card's row). */
 const TURN_INTO_GAP = 4;
 const TURN_INTO_INSET = 8;
+/** The whole list when the window has room for it, so it does not scroll. */
+const TURN_INTO_MAX_HEIGHT = `calc(100dvh - ${OVERLAY_COLLISION_PADDING * 2}px)`;
+
+const preventFocusLoss = (event: { preventDefault(): void }) => event.preventDefault();
+
+type Box = Pick<DOMRect, "top" | "bottom" | "left" | "right">;
+
+/**
+ * The passage the card is placed against, grown by the card's gap above and
+ * below. Tiptap applies its `offset` after `flip` and `shift`, so those two
+ * would judge the room without the gap and let the card cross the window's
+ * edge by it; carried by the reference, the gap is part of every decision.
+ */
+export function selectionMenuReference(passage: DOMRect, gap = SELECTION_MENU_GAP): DOMRect {
+  return new DOMRect(passage.x, passage.y - gap, passage.width, passage.height + gap * 2);
+}
+
+/**
+ * Where the block-type submenu stands, in viewport coordinates: beside the
+ * card on the side that has room (the right one first), its first row level
+ * with the card's row, and always whole inside the window.
+ */
+export function turnIntoPosition({
+  card,
+  row,
+  menu,
+  viewport,
+  padding = OVERLAY_COLLISION_PADDING,
+}: {
+  card: Box;
+  row: Box;
+  menu: { width: number; height: number };
+  viewport: { width: number; height: number };
+  padding?: number;
+}): { top: number; left: number } {
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(value, max));
+  const right = card.right + TURN_INTO_GAP;
+  const left = card.left - TURN_INTO_GAP - menu.width;
+  const fitsRight = right + menu.width <= viewport.width - padding;
+  const fitsLeft = left >= padding;
+  return {
+    left: clamp(fitsRight || !fitsLeft ? right : left, padding, viewport.width - padding - menu.width),
+    top: clamp(row.top - TURN_INTO_INSET, padding, viewport.height - padding - menu.height),
+  };
+}
+
+/**
+ * Lets a surface fade out once it has left the page. Tiptap removes the card
+ * from the document the moment it hides it, and the submenu unmounts with
+ * its state: a static, inert copy takes their place for the length of the
+ * exit animation, then goes too.
+ */
+function fadeOutCopy(element: HTMLElement | null, parent: Element | null) {
+  if (!element || !parent?.isConnected) return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const copy = element.cloneNode(true) as HTMLElement;
+  copy.removeAttribute(SELECTION_TOOLBAR_ATTR);
+  copy.removeAttribute("role");
+  copy.removeAttribute("tabindex");
+  copy.setAttribute("aria-hidden", "true");
+  copy.inert = true;
+  // Tiptap hides the card through its inline style before removing it.
+  copy.style.visibility = "visible";
+  copy.style.opacity = "";
+  copy.style.pointerEvents = "none";
+  copy.classList.remove("animate-in");
+  copy.classList.add("animate-out", "fade-out-0", "zoom-out-98", "animation-duration-100", "ease-in", "fill-mode-forwards");
+  const remove = () => copy.remove();
+  copy.addEventListener("animationend", remove, { once: true });
+  setTimeout(remove, 300);
+  parent.appendChild(copy);
+}
 
 /** What counts as another menu taking the screen from the card. */
 const OTHER_MENU = '[role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"]';
@@ -163,13 +237,15 @@ function ToolbarRow({
   onClick,
   children,
   className,
+  ...attributes
 }: {
   onClick: () => void;
   children: React.ReactNode;
   className?: string;
-}) {
+} & Pick<React.ButtonHTMLAttributes<HTMLButtonElement>, "aria-haspopup" | "aria-expanded">) {
   return (
     <button
+      {...attributes}
       type="button"
       onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
@@ -257,26 +333,54 @@ export function PageCommentBubble({
   // the focus, and the toolbar only shows while the editor has it. The block
   // types open as a submenu beside the card, on hover, like a menu's.
   const [panel, setPanel] = useState<"main" | "color">("main");
-  // Where the submenu stands, in viewport coordinates, while it is open.
-  const [turnInto, setTurnInto] = useState<CSSProperties | null>(null);
+  const [turnInto, setTurnInto] = useState(false);
   const turnIntoClose = useRef<ReturnType<typeof setTimeout> | null>(null);
   const turnIntoRow = useRef<HTMLDivElement>(null);
-  const openTurnInto = (row: HTMLElement) => {
+  const turnIntoMenu = useRef<HTMLDivElement>(null);
+  const card = useRef<HTMLDivElement>(null);
+  // Where the card stood when Tiptap removed it, for its fade-out copy.
+  const cardParent = useRef<Element | null>(null);
+  // Beside the card, level with its row, inside the window. Written to the
+  // element rather than through state: it follows the card on every one of
+  // its moves (Tiptap's `onUpdate`) without a render.
+  const placeTurnInto = useCallback(() => {
+    const menu = turnIntoMenu.current;
+    const row = turnIntoRow.current;
+    const surface = row?.closest(`[${SELECTION_TOOLBAR_ATTR}]`);
+    if (!menu || !row || !surface) return;
+    const { top, left } = turnIntoPosition({
+      card: surface.getBoundingClientRect(),
+      row: row.getBoundingClientRect(),
+      menu: { width: menu.offsetWidth, height: menu.offsetHeight },
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    });
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
+  }, []);
+  useLayoutEffect(() => {
+    if (turnInto) placeTurnInto();
+  }, [turnInto, placeTurnInto]);
+  // Read by the closers, which can run twice before a render (the card
+  // hiding, then the selection change that hid it).
+  const turnIntoOpen = useRef(false);
+  const openTurnInto = () => {
     if (turnIntoClose.current) clearTimeout(turnIntoClose.current);
-    // Beside the card, on the side that has room for it, level with the row.
-    const card = row.closest(`[${SELECTION_TOOLBAR_ATTR}]`)?.getBoundingClientRect();
-    if (!card) return;
-    const top = row.getBoundingClientRect().top - TURN_INTO_INSET;
-    const room = window.innerWidth - card.right;
-    setTurnInto(
-      room >= TURN_INTO_WIDTH + OVERLAY_COLLISION_PADDING + TURN_INTO_GAP
-        ? { top, left: card.right + TURN_INTO_GAP }
-        : { top, right: window.innerWidth - card.left + TURN_INTO_GAP }
-    );
+    turnIntoOpen.current = true;
+    setTurnInto(true);
   };
+  // Closes now, the submenu fading out where it stood.
+  const hideTurnInto = useCallback(() => {
+    if (turnIntoClose.current) clearTimeout(turnIntoClose.current);
+    if (!turnIntoOpen.current) return;
+    turnIntoOpen.current = false;
+    const menu = turnIntoMenu.current;
+    if (menu) fadeOutCopy(menu, menu.parentElement);
+    setTurnInto(false);
+  }, []);
+  // Closes after the grace period, unless the pointer comes back first.
   const closeTurnInto = () => {
     if (turnIntoClose.current) clearTimeout(turnIntoClose.current);
-    turnIntoClose.current = setTimeout(() => setTurnInto(null), TURN_INTO_CLOSE_MS);
+    turnIntoClose.current = setTimeout(hideTurnInto, TURN_INTO_CLOSE_MS);
   };
   useEffect(() => () => {
     if (turnIntoClose.current) clearTimeout(turnIntoClose.current);
@@ -284,7 +388,7 @@ export function PageCommentBubble({
   useEffect(() => {
     const reset = () => {
       setPanel("main");
-      setTurnInto(null);
+      hideTurnInto();
     };
     editor.on("selectionUpdate", reset);
     editor.on("blur", reset);
@@ -292,7 +396,7 @@ export function PageCommentBubble({
       editor.off("selectionUpdate", reset);
       editor.off("blur", reset);
     };
-  }, [editor]);
+  }, [editor, hideTurnInto]);
   const active = useEditorState({
     editor,
     selector: ({ editor: current }) => ({
@@ -431,11 +535,37 @@ export function PageCommentBubble({
     () => () => {
       if (editor.isDestroyed || !editor.view.dom.isConnected) return null;
       const { from, to } = editor.state.selection;
-      const rect = () => posToDOMRect(editor.view, from, to);
+      const rect = () => selectionMenuReference(posToDOMRect(editor.view, from, to));
       return { getBoundingClientRect: rect, getClientRects: () => [rect()], contextElement: editor.view.dom };
     },
     [editor]
   );
+  // Stable across renders: Tiptap re-sends its options to the plugin, in a
+  // transaction, each time one of these props changes identity.
+  const appendTo = useMemo(() => (floating ? () => document.body : undefined), [floating]);
+  const menuOptions = useMemo(
+    () => ({
+      // Above the passage, flipped under it when the room is missing there,
+      // kept whole along the line and, when it fits neither above nor below
+      // (a passage taller than the window), held inside the window over the
+      // passage. The gap comes from the reference (selectionMenuReference).
+      placement: "top-start" as const,
+      offset: false,
+      flip: { padding: OVERLAY_COLLISION_PADDING },
+      shift: { padding: OVERLAY_COLLISION_PADDING, crossAxis: true },
+      onShow: () => {
+        cardParent.current = card.current?.parentElement ?? null;
+      },
+      onHide: () => {
+        fadeOutCopy(card.current, cardParent.current);
+        hideTurnInto();
+      },
+      // The submenu moves with the card.
+      onUpdate: placeTurnInto,
+    }),
+    [hideTurnInto, placeTurnInto]
+  );
+
   // Scrolls are caught in the capture phase on the document: they do not
   // bubble, and the pane an editor ends up in is only known once it is laid
   // out (a retained page, a side panel). Only a scroll of something that
@@ -464,9 +594,6 @@ export function PageCommentBubble({
       const target = event.target === document ? document.documentElement : event.target;
       if (!(target instanceof Element) || !target.contains(editor.view.dom)) return;
       scroller = target;
-      // The block-type submenu stands fixed beside the card: it closes
-      // rather than stay behind while the card follows the passage.
-      setTurnInto(null);
       if (!frame) frame = requestAnimationFrame(update);
     };
     document.addEventListener("scroll", onScroll, { capture: true, passive: true });
@@ -492,6 +619,7 @@ export function PageCommentBubble({
   return (
     <>
       <BubbleMenu
+        ref={card}
         editor={editor}
         pluginKey={SELECTION_MENU_KEY}
         updateDelay={SELECTION_MENU_DELAY_MS}
@@ -500,21 +628,21 @@ export function PageCommentBubble({
         resizeDelay={0}
         shouldShow={shouldShowSelectionMenu}
         getReferencedVirtualElement={reference}
-        // Kept whole along the line, and flipped under the passage near the
-        // top: it stays WITH the passage rather than pinned to the window's
-        // edge, and closes when the passage scrolls away (above).
-        options={{
-          placement: "top-start",
-          offset: 8,
-          flip: { padding: OVERLAY_COLLISION_PADDING },
-          shift: { padding: OVERLAY_COLLISION_PADDING },
-        }}
-        appendTo={floating ? () => document.body : undefined}
+        appendTo={appendTo}
+        options={menuOptions}
+        // No press on the card — a button, its padding, a separator — takes
+        // the focus or the text selection from the editor: the card stays,
+        // and the action the press starts finds its selection.
+        onMouseDown={preventFocusLoss}
         data-floating-surface
         {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
         className={cn(
-          // The surface of the app's dropdown menus.
+          // The surface of the app's dropdown menus, and a short fade in.
+          // `animation-duration-*`, never `duration-*`: that one also sets
+          // `transition-duration`, and with the default `transition: all`
+          // the card would glide to each new position instead of moving.
           "flex w-64 flex-col rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border",
+          "animate-in fade-in-0 zoom-in-98 animation-duration-120 ease-out motion-reduce:animate-none",
           // On the body, under a modal dialog that sets `pointer-events: none`
           // on it: the toolbar takes its clicks back, like the "/" and "@" menus.
           floating && "pointer-events-auto z-[70]",
@@ -527,13 +655,15 @@ export function PageCommentBubble({
                 <div
                   ref={turnIntoRow}
                   className="relative"
-                  onMouseEnter={(event) => openTurnInto(event.currentTarget)}
+                  onMouseEnter={openTurnInto}
                   onMouseLeave={closeTurnInto}
                 >
                   <ToolbarRow
-                    onClick={() => {
-                      if (!turnInto && turnIntoRow.current) openTurnInto(turnIntoRow.current);
-                    }}
+                    aria-haspopup="menu"
+                    aria-expanded={turnInto}
+                    // Opens only, as a menu's submenu row does: the pointer
+                    // that clicks it has already opened it on its way in.
+                    onClick={openTurnInto}
                     className={cn(turnInto && "bg-control")}
                   >
                     {current && <AppIcon icon={current.icon} className="size-4 shrink-0" />}
@@ -548,18 +678,26 @@ export function PageCommentBubble({
                   {turnInto
                     ? createPortal(
                         <div
+                          ref={turnIntoMenu}
                           role="menu"
                           aria-label={t("turnInto")}
                           data-floating-surface
                           {...{ [SELECTION_TOOLBAR_ATTR]: "" }}
                           onMouseDown={(event) => event.preventDefault()}
-                          className="pointer-events-auto fixed z-[71] flex max-h-72 flex-col overflow-y-auto rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border"
-                          style={{ ...turnInto, width: TURN_INTO_WIDTH }}
+                          className={cn(
+                            "pointer-events-auto fixed top-0 left-0 z-[71] flex w-max max-w-72 flex-col overflow-y-auto no-scrollbar rounded-xl bg-popover p-2 text-popover-foreground shadow-md ring-1 ring-border",
+                            "animate-in fade-in-0 zoom-in-98 animation-duration-120 ease-out motion-reduce:animate-none",
+                          )}
+                          // Never taller than the window, so it always fits whole.
+                          // In a window too short for the list it scrolls without
+                          // a bar: the app's styled bar would reserve its 10 px on
+                          // the right even while hidden, a gap beside every row.
+                          style={{ maxHeight: TURN_INTO_MAX_HEIGHT }}
                         >
                           {blocks.map(({ block, active: isCurrent }) => (
                             <ToolbarRow key={block.id} onClick={() => {
                               turnBlocksInto(editor, block);
-                              setTurnInto(null);
+                              hideTurnInto();
                             }}>
                               <AppIcon icon={block.icon} className="size-4 shrink-0" />
                               <span className="min-w-0 flex-1 truncate">{t(block.labelKey)}</span>
