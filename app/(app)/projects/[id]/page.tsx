@@ -55,6 +55,7 @@ import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { NumoIcon } from "@/components/numo-icon";
 import { EmptyScene } from "@/components/empty-scene";
 import { KanbanBoard } from "@/components/kanban-board";
+import { singleProjectBoard } from "@/lib/board-projects";
 import { BOARD_ICON } from "@/components/feature-icons";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
@@ -149,6 +150,11 @@ function ProjectBoard() {
   const { categories } = useCategoriesQuery(projectId);
   const { objectives } = useObjectivesQuery(projectId);
   const { integrations } = useIntegrationsQuery(projectId);
+  const projectKey = project?.key ?? "";
+  const boardProjects = useMemo(
+    () => singleProjectBoard({ id: projectId, key: projectKey }, members, categories, objectives),
+    [projectId, projectKey, members, categories, objectives]
+  );
   const { user } = useAuth();
   const myUserId = user?.id ?? null;
   // Import and seeding by Numo are the owner's (the API reserves them): the
@@ -759,17 +765,14 @@ function ProjectBoard() {
               buildMenuActions={buildIssueMenuActions}
               currentCycleId={currentCycle?.id ?? null}
               onSetCycle={onSetIssueCycle}
-              projectId={project.id}
-              projectKey={project.key}
-              members={members}
-              categories={categories}
-              objectives={objectives}
+              projects={boardProjects}
               onOpenIssue={handleOpenIssue}
               onOpenIssueById={openIssueById}
               onAddRelation={handleAddRelation}
               onRemoveRelation={handleRemoveRelation}
               onOpenPlan={handleOpenPlan}
-              onCreateIssue={openCreate}
+              // Project readers (MIN-693) create nothing.
+              onCreateIssue={canWrite ? openCreate : undefined}
               onAskNumo={handleAskNumoForIssues}
               onUpdateIssue={updateIssue}
               onSetCategories={setCategories}

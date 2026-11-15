@@ -44,7 +44,8 @@ import {
 } from "@/lib/assistant-panel-context";
 import { issuesPageContext } from "@/lib/assistant-issue-context";
 import { EmptyScene } from "@/components/empty-scene";
-import { GlobalKanbanBoard } from "@/components/global-kanban-board";
+import { KanbanBoard } from "@/components/kanban-board";
+import { multiProjectBoard } from "@/lib/board-projects";
 import { BoardToolbar } from "@/components/board-toolbar";
 import { CycleControls, formatCycleRange } from "@/components/cycle/cycle-header";
 import {
@@ -56,13 +57,7 @@ import {
 import { useCycleMenuActions } from "@/components/cycle/use-cycle-menu-actions";
 import { BoardLoadingSkeleton } from "@/components/board-loading-skeleton";
 import { BOARD_ICON } from "@/components/feature-icons";
-import type {
-  Category,
-  Issue,
-  Member,
-  Objective,
-  Project,
-} from "@/lib/types";
+import type { Issue, Member, Project } from "@/lib/types";
 import { boardIntegrationFacets } from "@/lib/board-integrations";
 import { PageScroll } from "@/components/page-scroll";
 
@@ -74,17 +69,6 @@ const IssueSidePanel = dynamic(() => loadIssueSidePanel().then((m) => m.IssueSid
     system's storage: useBoardViews self-heals unknown view ids by rewriting
     its slot, so a "cycle" sentinel in there would be destroyed on reload. */
 const CYCLE_MODE_KEY = "minddy:cycle-mode";
-
-/** Turn a projectId → rows[] record into a Map of per-project id → row maps. */
-function toIdMaps<T extends { id: string }>(
-  byProject: Record<string, T[]>
-): Map<string, Map<string, T>> {
-  const out = new Map<string, Map<string, T>>();
-  for (const [pid, rows] of Object.entries(byProject)) {
-    out.set(pid, new Map(rows.map((r) => [r.id, r])));
-  }
-  return out;
-}
 
 /**
  * The cross-project “All tickets” board (MIN-29). A real kanban: issues
@@ -280,20 +264,17 @@ function GlobalBoardInner() {
     [issues, projectMap]
   );
 
-  const memberMapByProject = useMemo(() => {
-    const out = new Map<string, Map<string, Member>>();
-    for (const [pid, list] of Object.entries(membersByProject)) {
-      out.set(pid, new Map(list.map((m) => [m.user_id, m])));
-    }
-    return out;
-  }, [membersByProject]);
-  const categoryMapByProject = useMemo(
-    () => toIdMaps<Category>(categoriesByProject),
-    [categoriesByProject]
-  );
-  const objectiveMapByProject = useMemo(
-    () => toIdMaps<Objective>(objectivesByProject),
-    [objectivesByProject]
+  // Each card resolves its own project's key, members, categories and
+  // objectives, and shows that project's chip.
+  const boardProjects = useMemo(
+    () =>
+      multiProjectBoard(
+        projectMap.values(),
+        membersByProject,
+        categoriesByProject,
+        objectivesByProject
+      ),
+    [projectMap, membersByProject, categoriesByProject, objectivesByProject]
   );
 
   // Deduped union of members across all projects — the global assignee filter
@@ -584,7 +565,7 @@ function GlobalBoardInner() {
               </div>
             )}
             <div className="min-h-0 flex-1">
-              <GlobalKanbanBoard
+              <KanbanBoard
                 issues={cycleBoardIssues}
                 statuses={cycleStatuses}
                 sort="manual"
@@ -608,10 +589,7 @@ function GlobalBoardInner() {
                 onSetCycle={
                   selectedPhase === "current" ? onSetIssueCycle : undefined
                 }
-                projectMap={projectMap}
-                memberMapByProject={memberMapByProject}
-                categoryMapByProject={categoryMapByProject}
-                objectiveMapByProject={objectiveMapByProject}
+                projects={boardProjects}
                 allIssues={scopedIssues}
                 relations={relations}
                 {...boardHandlers}
@@ -655,16 +633,12 @@ function GlobalBoardInner() {
            columns. "Empty in this view" is a filter setting, not a dead end,
            as on a project board. */
         <div className="min-h-0 flex-1 pt-3">
-          <GlobalKanbanBoard
+          <KanbanBoard
             issues={filtered}
             statuses={statuses}
             sort={config.sort}
             sortDirection={config.display.sortDirection}
-            // The Smart sort's AI scores (jev-mode projects, MIN-576).
-            projectMap={projectMap}
-            memberMapByProject={memberMapByProject}
-            categoryMapByProject={categoryMapByProject}
-            objectiveMapByProject={objectiveMapByProject}
+            projects={boardProjects}
             buildMenuActions={buildCycleMenuActions}
             currentCycleId={cycles?.enabled ? (cycles.current?.id ?? null) : null}
             onSetCycle={onSetIssueCycle}

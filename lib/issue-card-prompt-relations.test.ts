@@ -51,7 +51,7 @@ function boardRelations(file: string) {
   return evaluateInitializer<Map<string, ChipRelation[]>>(file, "relationsByIssue", {
     useMemo: (callback: () => unknown) => callback(),
     issues: [issue], relations, allIssueMap, resolveDisplayRelationsByIssue,
-    objectiveMap, objectiveMapByProject: new Map([["project", objectiveMap]]),
+    objectiveMap,
   }).get(issue.id)!;
 }
 
@@ -63,7 +63,7 @@ function promptContext(rows?: ChipRelation[], objectives = objectiveMap) {
   });
 }
 
-describe.each(["kanban-board.tsx", "global-kanban-board.tsx"])("%s copied prompt relations", (file) => {
+describe.each(["kanban-board.tsx"])("%s copied prompt relations", (file) => {
   it.each(["copyPrompt", "copyPlanPrompt", "copyVerifyPrompt", "runCustomPrompt"])("includes objective, hidden issue and pull request context in %s", async (handlerName) => {
     const rows = boardRelations(file);
     expect(rows).toHaveLength(4);

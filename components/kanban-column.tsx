@@ -14,14 +14,8 @@ import {
 } from "@/components/board-drop-indicator";
 import { useTranslations } from "next-intl";
 import type { StatusMeta, IssueStatus } from "@/lib/issue-constants";
-import type {
-  Category,
-  Issue,
-  IssueRelationType,
-  IssueUpdateInput,
-  Member,
-  Objective,
-} from "@/lib/types";
+import type { Issue, IssueRelationType, IssueUpdateInput } from "@/lib/types";
+import type { BoardProject } from "@/lib/board-projects";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
 import { BoardWindowedItems } from "@/components/board-windowed-items";
@@ -30,6 +24,23 @@ import { StatusIndicator } from "@/components/issue-indicators";
 import type { ChipRelation } from "@/components/relation-chips";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
+
+/** A card's project, as the board resolves it for the viewer. */
+export interface BoardCardProject extends BoardProject {
+  canWrite: boolean;
+  /** Read lazily when the relation picker opens or a prompt is copied. */
+  getCandidateIssues: () => Issue[] | undefined;
+}
+
+const UNKNOWN_PROJECT: BoardCardProject = {
+  id: "",
+  key: "",
+  members: new Map(),
+  categories: new Map(),
+  objectives: new Map(),
+  canWrite: false,
+  getCandidateIssues: () => undefined,
+};
 
 /**
  * ⚠ Memoized (MIN-316): the board used to re-render every column, and so every
@@ -40,12 +51,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   issues,
   issueMap,
   relationsByIssue,
-  getCandidateIssues,
-  projectId,
-  projectKey,
-  memberMap,
-  categoryMap,
-  objectiveMap,
+  projects,
   onOpenIssue,
   onOpenIssueById,
   onOpenPlan,
@@ -65,32 +71,27 @@ export const KanbanColumn = memo(function KanbanColumn({
 }: {
   status: StatusMeta;
   issues: Issue[];
-  /** All project issues by id — used to resolve a sub-issue's parent. */
+  /** Every board issue by id — resolves a sub-issue's parent. */
   issueMap: Map<string, Issue>;
   /** Resolved relation chips per issue id (MIN-25). */
   relationsByIssue: Map<string, ChipRelation[]>;
-  /** Read lazily when the relation picker opens or a prompt is copied. */
-  getCandidateIssues: () => Issue[];
-  projectId: string;
-  projectKey: string;
-  memberMap: Map<string, Member>;
-  categoryMap: Map<string, Category>;
-  objectiveMap?: Map<string, Objective>;
+  /** Each card's project, by `issue.project_id`. */
+  projects: ReadonlyMap<string, BoardCardProject>;
   onOpenIssue: (issue: Issue) => void;
-  onOpenIssueById: (issueId: string) => void;
+  onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
-  /** Absent for project readers: the column has no "new issue" slot. */
+  /** Absent → the column has no "new issue" slot. */
   onCreateIssue?: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
-  onAddRelation: (
+  onAddRelation?: (
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
     kinds?: RelationKinds,
   ) => void;
   onRemoveRelation?: (relationId: string) => void;
-  /** Trash from right-clicking a card (absent → entry disappears). */
+  /** Trash from right-clicking a card (absent → the entry disappears). */
   onDeleteIssue?: (issueId: string) => Promise<boolean>;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
@@ -104,7 +105,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   dropPreview?: DropPreview;
   /** The reserved destination slot while the overlay is landing. */
   landingPreview?: BoardLandingPreview;
-  /** Absent for project readers: shift-click selects nothing. */
+  /** Offered only on the cards of projects the viewer may edit (MIN-693). */
   onSelect?: (issueId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status.value });
@@ -169,6 +170,7 @@ export const KanbanColumn = memo(function KanbanColumn({
             dropPreview={dropPreview}
             landingPreview={landingPreview}
             renderIssue={(issue, onInteractionChange) => {
+              const project = projects.get(issue.project_id) ?? UNKNOWN_PROJECT;
               const parent = issue.parent_id
                 ? (issueMap.get(issue.parent_id) ?? null)
                 : null;
@@ -177,14 +179,15 @@ export const KanbanColumn = memo(function KanbanColumn({
                   onInteractionChange={onInteractionChange}
                   onNavigate={router.push}
                   issue={issue}
-                  projectId={projectId}
-                  projectKey={projectKey}
-                  memberMap={memberMap}
-                  categoryMap={categoryMap}
-                  objectiveMap={objectiveMap}
+                  projectId={issue.project_id}
+                  projectKey={project.key}
+                  project={project.chip}
+                  memberMap={project.members}
+                  categoryMap={project.categories}
+                  objectiveMap={project.objectives}
                   parent={parent}
                   relations={relationsByIssue.get(issue.id)}
-                  getCandidateIssues={getCandidateIssues}
+                  getCandidateIssues={project.getCandidateIssues}
                   onOpenRelated={onOpenIssueById}
                   onAddRelation={onAddRelation}
                   onRemoveRelation={onRemoveRelation}
@@ -198,7 +201,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                   landingOutOfFlow={
                     landingPreview?.activeIds.has(issue.id) ? true : undefined
                   }
-                  onSelect={onSelect}
+                  onSelect={project.canWrite ? onSelect : undefined}
                   buildMenuActions={buildMenuActions}
                   inCurrentCycle={
                     !!currentCycleId && issue.cycle_id === currentCycleId
@@ -209,14 +212,14 @@ export const KanbanColumn = memo(function KanbanColumn({
           />
 
           {onCreateIssue && (
-          <button
-            type="button"
-            onClick={() => onCreateIssue(status.value)}
-            className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
-          >
-            <HugeiconsIcon icon={Add01Icon} className="size-4" />
-            {t("newIssue")}
-          </button>
+            <button
+              type="button"
+              onClick={() => onCreateIssue(status.value)}
+              className="flex w-full shrink-0 items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border py-6 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-muted/40 hover:text-foreground"
+            >
+              <HugeiconsIcon icon={Add01Icon} className="size-4" />
+              {t("newIssue")}
+            </button>
           )}
         </div>
         <ScrollFadeEdges edges={edges} className="z-30" />

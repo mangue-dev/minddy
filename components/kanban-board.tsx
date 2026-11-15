@@ -1,10 +1,11 @@
 "use client";
 
 import {
+  memo,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
-  memo,
   useMemo,
   useRef,
   useState,
@@ -25,22 +26,28 @@ import { DragCursor } from "@/components/drag-cursor";
 import { cn } from "@/lib/utils";
 import type { IssueStatus, StatusMeta } from "@/lib/issue-constants";
 import type {
-  Category,
   Issue,
   IssueRelation,
   IssueRelationType,
   IssueUpdateInput,
-  Member,
-  Objective,
   SortDirection,
   ViewSort,
 } from "@/lib/types";
 import { resolveDisplayRelationsByIssue } from "@/lib/relation-constants";
 import { boardBlockingContext } from "@/lib/cycle";
-import { isIssueStatus, issueIdentifier } from "@/lib/issue-constants";
+import { isIssueStatus } from "@/lib/issue-constants";
+import { ProjectRolesContext } from "@/lib/projects-context-store";
+import { projectCapabilities } from "@/lib/project-roles";
+import {
+  boardObjectives,
+  boardPromptInput,
+  selectionProjectId,
+  sharedMembers,
+  writableSelection,
+  type BoardProjects,
+} from "@/lib/board-projects";
 import { useTranslations } from "next-intl";
 import { useBoardCardInstructions, useDragAnnouncements } from "@/lib/use-drag-announcements";
-import { promptRelations } from "@/lib/issue-prompt";
 import { useBulkSelectionActions } from "@/lib/use-bulk-selection-actions";
 import type { RelationKinds } from "@/lib/use-issue-relations-query";
 import { boardComparatorFactory } from "@/lib/smart-triage";
@@ -61,11 +68,10 @@ import { useBoardCardAnimations } from "@/lib/use-board-card-animations";
 import { useScrollFade } from "@/lib/use-scroll-fade";
 import { BOARD_SCROLLER_CLASS } from "@/lib/board-layout";
 import { ScrollFadeEdges } from "@/components/scroll-fade-edges";
-import { KanbanColumn } from "@/components/kanban-column";
+import { KanbanColumn, type BoardCardProject } from "@/components/kanban-column";
 import type { BoardLandingPreview } from "@/components/board-drop-indicator";
 import { IssuePrProvider } from "@/components/issue-pr-context";
 import { BulkIssueActions, BulkIssueActionsPresence } from "@/components/bulk-issue-actions";
-import { useProjectCapabilities } from "@/lib/use-project-capabilities";
 import { AskNumoProvider } from "@/lib/ask-numo-context";
 import { IssueSelectionProvider } from "@/lib/issue-selection-context";
 import { useUndoHistory } from "@/lib/undo/undo-context";
@@ -81,9 +87,15 @@ import {
   type BoardScrollPosition,
 } from "@/lib/board-scroll";
 
-/** Readers' boards register no sensor, so no drag can ever start. */
+/** Read-only boards (past cycles) register no sensor, so no drag can start. */
 const NO_SENSORS: SensorDescriptor<SensorOptions>[] = [];
 
+/**
+ * The kanban of a project board and of the cross-project `/all` board
+ * (MIN-29): drag a card between columns to change its status, or reorder
+ * within a column under manual sort. Each card is resolved in its own project
+ * (`projects`); a project board is the one-project case.
+ */
 export const KanbanBoard = memo(function KanbanBoard({
   issues,
   allIssues,
@@ -91,11 +103,7 @@ export const KanbanBoard = memo(function KanbanBoard({
   statuses,
   sort,
   sortDirection,
-  projectId,
-  projectKey,
-  members,
-  categories,
-  objectives,
+  projects,
   onOpenIssue,
   onOpenIssueById,
   onOpenPlan,
@@ -107,14 +115,17 @@ export const KanbanBoard = memo(function KanbanBoard({
   onAddRelation,
   onRemoveRelation,
   onMove,
+  comparator,
   buildMenuActions,
   currentCycleId,
+  bulkCycleId,
   onSetCycle,
+  readOnly = false,
   horizontalScroll,
 }: {
   issues: Issue[];
-  /** Every project issue (unfiltered) — resolves relation targets that a view
-      filter hides from the board, and feeds the "add relation" picker. */
+  /** Every issue of the board's projects (unfiltered) — resolves relation
+      targets that a view filter hides, and feeds the "add relation" picker. */
   allIssues: Issue[];
   relations: IssueRelation[];
   statuses: StatusMeta[];
@@ -122,20 +133,18 @@ export const KanbanBoard = memo(function KanbanBoard({
   /** Direction of the sort (MIN-592) — reversed by the invert button for the
       directional sorts; ignored by "smart" and "manual". */
   sortDirection?: SortDirection;
-  projectId: string;
-  projectKey: string;
-  members: Member[];
-  categories: Category[];
-  objectives: Objective[];
+  projects: BoardProjects;
   onOpenIssue: (issue: Issue) => void;
-  onOpenIssueById: (issueId: string) => void;
+  /** Opens a related issue's side panel (clicking a relation chip). */
+  onOpenIssueById?: (issueId: string) => void;
   onOpenPlan: (issue: Issue) => void;
-  onCreateIssue: (status: IssueStatus) => void;
+  /** Absent → the columns have no "new issue" slot. */
+  onCreateIssue?: (status: IssueStatus) => void;
   onUpdateIssue: (issueId: string, patch: IssueUpdateInput) => void;
   onDeleteIssue?: (issueId: string) => Promise<boolean>;
   onAskNumo: (issues: Issue[]) => void;
   onSetCategories: (issueId: string, ids: string[]) => void;
-  onAddRelation: (
+  onAddRelation?: (
     sourceId: string,
     type: IssueRelationType,
     targetId: string,
@@ -144,30 +153,25 @@ export const KanbanBoard = memo(function KanbanBoard({
   /** Removes a relation from a card's relation popover. */
   onRemoveRelation?: (relationId: string) => void;
   onMove: (issueId: string, patch: { status?: IssueStatus; position: number }) => void;
+  /** Cycle mode (MIN-32): the reco order replaces `sort` — the ONLY order, so
+      same-column reordering is disabled; cross-column drag still moves status. */
+  comparator?: (a: Issue, b: Issue) => number;
   /** Per-issue extra right-click actions (cycle add/remove — MIN-32). */
   buildMenuActions?: (issue: Issue) => ContextMenuAction[];
   /** My current cycle's id — its cards show the blue cycle icon. */
   currentCycleId?: string | null;
+  /** The cycle the SELECTION's bulk moves target, when it is not
+      `currentCycleId`: the cycle view hides the badge (every card is in the
+      cycle) but still offers bulk removal. */
+  bulkCycleId?: string | null;
   /** Moves one issue in/out of the cycle — same handler as the right-click
       action, reused by the selection's bulk cycle rows. */
   onSetCycle?: (issue: Issue, cycleId: string | null) => void;
+  /** Past cycles are read-only: no drag at all. */
+  readOnly?: boolean;
   /** Shared with the loading shell so replacing it does not reset the board. */
   horizontalScroll?: BoardScrollPosition;
 }) {
-  // Project readers (MIN-693): no drag, no selection actions, no create slot.
-  const { canWrite } = useProjectCapabilities(projectId);
-  const memberMap = useMemo(
-    () => new Map(members.map((m) => [m.user_id, m])),
-    [members],
-  );
-  const categoryMap = useMemo(
-    () => new Map(categories.map((c) => [c.id, c])),
-    [categories],
-  );
-  const objectiveMap = useMemo(
-    () => new Map(objectives.map((o) => [o.id, o])),
-    [objectives],
-  );
   const issueMap = useMemo(
     () => new Map(issues.map((i) => [i.id, i])),
     [issues],
@@ -178,21 +182,55 @@ export const KanbanBoard = memo(function KanbanBoard({
     () => new Map(allIssues.map((i) => [i.id, i])),
     [allIssues],
   );
-  const candidateIssuesRef = useRef(allIssues);
-  candidateIssuesRef.current = allIssues;
-  const getCandidateIssues = useCallback(() => candidateIssuesRef.current, []);
+  const objectiveMap = useMemo(() => boardObjectives(projects), [projects]);
   const relationsByIssue = useMemo(() => resolveDisplayRelationsByIssue(
     relations, allIssueMap, objectiveMap,
   ), [relations, allIssueMap, objectiveMap]);
 
+  // Project readers (MIN-693) browse their cards but never select them, so
+  // the selection's bulk actions only ever edit writable issues.
+  const roles = useContext(ProjectRolesContext);
+  const canWriteIn = useCallback(
+    (projectId: string) =>
+      projectCapabilities(roles?.get(projectId)?.role ?? "member").canWrite,
+    [roles],
+  );
+
+  // The relation picker lists the card's own project only. Its reader is read
+  // lazily, so the cards keep their memoization (MIN-316) as issues change.
+  const issuesByProject = useMemo(() => {
+    const map = new Map<string, Issue[]>();
+    for (const issue of allIssues) {
+      const list = map.get(issue.project_id);
+      if (list) list.push(issue);
+      else map.set(issue.project_id, [issue]);
+    }
+    return map;
+  }, [allIssues]);
+  const issuesByProjectRef = useRef(issuesByProject);
+  issuesByProjectRef.current = issuesByProject;
+  const cardProjects = useMemo(() => {
+    const out = new Map<string, BoardCardProject>();
+    for (const [id, project] of projects.byId) {
+      out.set(id, {
+        ...project,
+        canWrite: canWriteIn(id),
+        getCandidateIssues: () => issuesByProjectRef.current.get(id),
+      });
+    }
+    return out;
+  }, [projects, canWriteIn]);
+
   const buildColumns = useMemo(() => createBoardColumnsBuilder(), []);
-  // The smart sort reads blocking across ALL issues (a filter may hide the
-  // other end), objective-ended edges folded onto their tickets (MIN-576).
+  // A fixed comparator (cycle mode) orders every column; otherwise the view
+  // sort reads blocking across ALL issues (a filter may hide the other end),
+  // objective-ended edges folded onto their tickets (MIN-576).
   const makeComparator = useMemo(() => {
+    if (comparator) return () => comparator;
     const context = boardBlockingContext(
       allIssues,
       relations,
-      new Map(objectives.map((o) => [o.id, o.status])),
+      new Map(Array.from(objectiveMap.values(), (o) => [o.id, o.status])),
     );
     return boardComparatorFactory(
       sort,
@@ -203,7 +241,7 @@ export const KanbanBoard = memo(function KanbanBoard({
       },
       sortDirection ?? "asc",
     );
-  }, [sort, sortDirection, relations, allIssues, objectives]);
+  }, [comparator, sort, sortDirection, relations, allIssues, objectiveMap]);
   const columns = useMemo(
     () => buildColumns(statuses, issues, makeComparator),
     [buildColumns, issues, statuses, makeComparator],
@@ -218,9 +256,16 @@ export const KanbanBoard = memo(function KanbanBoard({
       return next;
     });
   }, []);
+  const selectWritable = useCallback(
+    (next: Set<string>) => setSelectedIds(writableSelection(next, issueMap, canWriteIn)),
+    [issueMap, canWriteIn],
+  );
   const selectedIssues = useMemo(
-    () => issues.filter((issue) => selectedIds.has(issue.id)),
-    [issues, selectedIds],
+    () =>
+      issues.filter(
+        (issue) => selectedIds.has(issue.id) && canWriteIn(issue.project_id),
+      ),
+    [issues, selectedIds, canWriteIn],
   );
   const updateSelected = useCallback(
     (patch: IssueUpdateInput) => {
@@ -239,55 +284,59 @@ export const KanbanBoard = memo(function KanbanBoard({
     overlayRef: marqueeOverlayRef,
   } = useMarqueeSelection<HTMLDivElement>({
     selected: selectedIds,
-    onChange: setSelectedIds,
+    onChange: selectWritable,
   });
+  // Objectives and relations belong to a project: the bulk actions that need
+  // one exist only while the whole selection is in the same project.
+  const selectionProject = useMemo(
+    () => selectionProjectId(selectedIssues),
+    [selectedIssues],
+  );
+  const bulkObjectives = useMemo(() => {
+    const objectives = selectionProject
+      ? projects.byId.get(selectionProject)?.objectives
+      : undefined;
+    return objectives ? Array.from(objectives.values()) : undefined;
+  }, [selectionProject, projects]);
+  const bulkMembers = useMemo(
+    () => sharedMembers(selectedIssues, projects),
+    [selectedIssues, projects],
+  );
   // Cycle moves on the selection: an issue already in the cycle can leave it,
   // an open one can join it — a mixed selection offers both.
+  const cycleTargetId = bulkCycleId ?? currentCycleId ?? null;
   const bulkCycle = useMemo(() => {
-    if (!currentCycleId || !onSetCycle) return undefined;
+    if (!cycleTargetId || !onSetCycle) return undefined;
     const { addable, removable } = splitCycleSelection(
       selectedIssues,
-      currentCycleId,
+      cycleTargetId,
     );
     if (addable.length === 0 && removable.length === 0) return undefined;
     return {
       addable: addable.length,
       removable: removable.length,
-      onAdd: () =>
-        addable.forEach((issue) => onSetCycle(issue, currentCycleId)),
+      onAdd: () => addable.forEach((issue) => onSetCycle(issue, cycleTargetId)),
       onRemove: () => removable.forEach((issue) => onSetCycle(issue, null)),
     };
-  }, [currentCycleId, onSetCycle, selectedIssues]);
+  }, [cycleTargetId, onSetCycle, selectedIssues]);
   // A relation has exactly two ends: the action only exists on two issues.
   const bulkLink = useMemo(() => {
-    if (selectedIssues.length !== 2) return undefined;
+    if (selectedIssues.length !== 2 || !selectionProject || !onAddRelation) {
+      return undefined;
+    }
     const [first, second] = selectedIssues;
     return () => {
       onAddRelation(first.id, "related", second.id);
       clearSelection();
     };
-  }, [selectedIssues, onAddRelation, clearSelection]);
+  }, [selectedIssues, selectionProject, onAddRelation, clearSelection]);
   // ⇧P on the selection (MIN-539): ONE combined prompt for all the checked
   // tickets, copied to the clipboard or handed to Numo. The selection
   // outranks the hovered card — the same precedence “@” follows.
   const bulkPromptActions = useBulkSelectionActions({
     selectedIssues,
-    buildInput: (issue) => ({
-      issue,
-      projectId,
-      projectKey,
-      resourceCount: issue.resource_count,
-      // In the project's category order (MIN-760), which the map follows.
-      categories: [...categoryMap]
-        .filter(([id]) => issue.category_ids.includes(id))
-        .map(([, category]) => category.name),
-      relations: promptRelations(relationsByIssue.get(issue.id), {
-        identifierOf: (otherId) =>
-          issueIdentifier(projectKey, allIssueMap.get(otherId)?.number ?? 0),
-        titleOf: (otherId) =>
-          objectiveMap.get(otherId)?.name ?? allIssueMap.get(otherId)?.title ?? "",
-      }),
-    }),
+    buildInput: (issue) =>
+      boardPromptInput(issue, projects, relationsByIssue.get(issue.id), allIssueMap),
     onUpdateIssue: (issue, patch) => onUpdateIssue(issue.id, patch),
   });
   // The dragged bundle, drop marker, and persisted move all come from the same
@@ -300,11 +349,14 @@ export const KanbanBoard = memo(function KanbanBoard({
     manual: sort === "manual",
     issueMap,
     selectedIds,
+    // A fixed order is kept as displayed: only cross-column status changes
+    // are persisted.
+    crossColumnOnly: !!comparator,
   });
   // The menu's keyboard twin of a reorder drag (WCAG 2.5.7).
   const cardMenuActions = useBoardReorderActions({
     columns,
-    enabled: sort === "manual",
+    enabled: sort === "manual" && !comparator,
     move: async (planned) => onMove(planned.issue.id, planned.patch),
     extra: buildMenuActions,
   });
@@ -489,7 +541,10 @@ export const KanbanBoard = memo(function KanbanBoard({
   };
 
   return (
-    <IssuePrProvider projectId={projectId}>
+    <IssuePrProvider
+      projectId={projects.projectId}
+      projectIds={projects.projectId ? undefined : [...projects.byId.keys()]}
+    >
       {/* “@” on card hover or selection opens Numo with the same context as
           the button on the selection pill (MIN-105). */}
       <AskNumoProvider selectedIssues={selectedIssues} onAskNumo={onAskNumo}>
@@ -497,7 +552,7 @@ export const KanbanBoard = memo(function KanbanBoard({
         <IssueSelectionProvider selectedIssues={selectedIssues} relationsByIssue={relationsByIssue} copyActions={bulkPromptActions}>
           <DndContext
             accessibility={{ announcements: dragAnnouncements, screenReaderInstructions: dragInstructions }}
-            sensors={canWrite ? sensors : NO_SENSORS}
+            sensors={readOnly ? NO_SENSORS : sensors}
             collisionDetection={boardCollision}
             onDragStart={handleDragStart}
             // The drop side can change without the target changing, so the marker
@@ -510,12 +565,12 @@ export const KanbanBoard = memo(function KanbanBoard({
             <DragCursor />
             <div className="flex h-full flex-col">
               <BulkIssueActionsPresence>
-                {canWrite && selectedIssues.length > 0 && (
+                {selectedIssues.length > 0 && (
                   <BulkIssueActions
                     key="bulk-actions"
                     count={selectedIssues.length}
                     issues={selectedIssues}
-                    members={members}
+                    members={bulkMembers}
                     onUpdate={updateSelected}
                     onDelete={
                       onDeleteIssue
@@ -533,9 +588,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                     onAskNumo={() => onAskNumo(selectedIssues)}
                     onCopyPrompt={() => void bulkPromptActions.copyPrompt()}
                     cycle={bulkCycle}
-                    // A project-board selection always belongs to one project, so
-                    // all of that project's objectives are available.
-                    objectives={objectives}
+                    objectives={bulkObjectives}
                     onLink={bulkLink}
                   />
                 )}
@@ -562,16 +615,11 @@ export const KanbanBoard = memo(function KanbanBoard({
                       issues={items}
                       issueMap={allIssueMap}
                       relationsByIssue={relationsByIssue}
-                      getCandidateIssues={getCandidateIssues}
-                      projectId={projectId}
-                      projectKey={projectKey}
-                      memberMap={memberMap}
-                      categoryMap={categoryMap}
-                      objectiveMap={objectiveMap}
+                      projects={cardProjects}
                       onOpenIssue={onOpenIssue}
                       onOpenIssueById={onOpenIssueById}
                       onOpenPlan={onOpenPlan}
-                      onCreateIssue={canWrite ? onCreateIssue : undefined}
+                      onCreateIssue={onCreateIssue}
                       onUpdateIssue={onUpdateIssue}
                       onSetCategories={onSetCategories}
                       onAddRelation={onAddRelation}
@@ -585,7 +633,7 @@ export const KanbanBoard = memo(function KanbanBoard({
                         preview?.status === status.value ? preview : undefined
                       }
                       landingPreview={landingPreview ?? undefined}
-                      onSelect={canWrite ? toggleSelection : undefined}
+                      onSelect={toggleSelection}
                     />
                   ))}
                 </div>

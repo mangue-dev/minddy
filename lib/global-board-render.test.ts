@@ -3,13 +3,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, createElement, memo, useState, type ComponentProps } from "react";
 import { createRoot } from "react-dom/client";
-import type { GlobalKanbanBoard } from "@/components/global-kanban-board";
+import type { KanbanBoard } from "@/components/kanban-board";
 import type { IssueSidePanel } from "@/components/issue-side-panel";
 import type { Issue, Project } from "./types";
 import { DEFAULT_CONFIG } from "./view-filter";
 
 const state = vi.hoisted(() => ({
-  board: null as ComponentProps<typeof GlobalKanbanBoard> | null,
+  board: null as ComponentProps<typeof KanbanBoard> | null,
   panel: null as ComponentProps<typeof IssueSidePanel> | null,
   cardRender: vi.fn(),
   update: vi.fn(async () => {}),
@@ -75,12 +75,12 @@ vi.mock("@/components/cycle/cycle-empty-states", () => ({ CycleActivationWelcome
 vi.mock("@/components/cycle/use-cycle-menu-actions", () => ({ useCycleMenuActions: () => state.noop }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: () => ({}) }));
 vi.mock("@/components/issue-side-panel", () => ({ IssueSidePanel: (props: ComponentProps<typeof IssueSidePanel>) => { state.panel = props; return null; } }));
-vi.mock("@/components/global-kanban-board", () => {
+vi.mock("@/components/kanban-board", () => {
   const Card = memo((props: { issue: Issue; onOpenIssue: (issue: Issue) => void; onUpdateIssue: unknown }) => {
     state.cardRender(props.issue.id);
     return createElement("button", { onClick: () => props.onOpenIssue(props.issue) }, props.issue.title);
   });
-  return { GlobalKanbanBoard: memo((props: ComponentProps<typeof GlobalKanbanBoard>) => {
+  return { KanbanBoard: memo((props: ComponentProps<typeof KanbanBoard>) => {
     state.board = props;
     return createElement("div", null, ...props.issues.map((issue) => createElement(Card, { key: issue.id, issue, onOpenIssue: props.onOpenIssue, onUpdateIssue: props.onUpdateIssue })));
   }) };
