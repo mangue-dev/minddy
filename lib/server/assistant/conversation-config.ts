@@ -13,7 +13,7 @@ import {
   resolveAiRuntime,
   type ResolvedAiRuntime,
 } from "@/lib/server/ai-runtime";
-import { isKnownAgentProvider, isLocalAgentProvider } from "@/lib/agent-providers";
+import { isKnownAgentProvider } from "@/lib/agent-providers";
 import { MINDDY_CLOUD_PROVIDER, type AiProviderChoice } from "@/lib/ai-surfaces";
 import { catalogModelReasoning } from "@/lib/model-reasoning-rules";
 import { getAssistantReasoningLevel } from "@/lib/server/assistant/reasoning";
@@ -180,8 +180,7 @@ export async function resolveNumoTurnConfiguration(input: {
     // A generic endpoint owns its model namespace and may not expose a model
     // list. Every catalog-backed provider must prove that the selected id is
     // currently available instead of silently falling back to another model.
-    const catalogUnavailable = models.length === 0 &&
-      runtime.provider !== "generic" && !isLocalAgentProvider(runtime.provider);
+    const catalogUnavailable = models.length === 0 && runtime.provider !== "generic";
     if (hasExplicitModel && catalogUnavailable) {
       throw new NumoConversationConfigError(
         "model_catalog_unavailable",

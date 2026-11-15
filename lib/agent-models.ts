@@ -16,7 +16,7 @@ export interface AgentModelOption {
 /**
  * Curated labels from a handful of top models. The picker (launch +
  * personal default) is NO LONGER limited to this list: it searches the entire index
- * OpenRouter (`/api/agent/models`) and formats the names via `formatModelName`.
+ * OpenRouter (`/api/assistant/models`) and formats the names via `formatModelName`.
  * This list is only used to provide nice known labels (cf. `model-display`)
  * for these specific ids. Ids to be confirmed against OpenRouter index `/models`.
  */

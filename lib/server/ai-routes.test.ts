@@ -1,3 +1,4 @@
+import type { AiProviderChoice } from "@/lib/ai-surfaces";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -68,7 +69,7 @@ const {
 const key = (provider: string, extra: Row = {}): Row => ({
   id: `key-${provider}`, user_id: "user", provider, key_encrypted: "sealed", base_url: null,
   validated_at: "2026-10-01T00:00:00Z", updated_at: "2026-10-01T00:00:00Z",
-  enabled_surfaces: [], feature_models: {}, ...extra,
+  feature_models: {}, ...extra,
 });
 
 beforeEach(() => {
@@ -123,8 +124,9 @@ describe("call-type routes", () => {
     expect(h.tables.user_ai_usage_routes).toEqual([]);
     await expect(setAiRoute("user", "feedback_analysis_model", "google")).rejects.toBeInstanceOf(AiRouteError);
     await expect(setAiRoute("user", "transcription_model", "anthropic")).rejects.toBeInstanceOf(AiRouteError);
+    // A local key saved before MIN-996 names a provider outside the registry.
     h.tables.user_ai_keys!.push(key("ollama"));
-    await expect(setAiRoute("user", "assistant_model", "ollama")).rejects.toBeInstanceOf(AiRouteError);
+    await expect(setAiRoute("user", "assistant_model", "ollama" as AiProviderChoice)).rejects.toBeInstanceOf(AiRouteError);
     h.tables.user_ai_keys!.push(key("google", { validated_at: null }));
     await expect(setAiRoute("user", "assistant_model", "google")).rejects.toBeInstanceOf(AiRouteError);
   });

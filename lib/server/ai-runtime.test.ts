@@ -14,9 +14,6 @@ vi.mock("@/lib/server/app-config", () => ({
 
 vi.mock("@/lib/server/agent/model", () => ({
   getUserByok,
-  LocalEndpointRequiresLocalRunError: class LocalEndpointRequiresLocalRunError extends Error {
-    code = "localEndpointRequiresLocalRun";
-  },
   resolveProviderDefaultModel: vi.fn(async () => null),
 }));
 vi.mock("@/lib/server/safe-fetch", () => ({ safeFetchResponse }));
@@ -219,19 +216,6 @@ describe("resolveAiRuntime", () => {
       provider: "openrouter",
       model: "openai/whisper-large-v3",
     });
-  });
-
-  it("rejects a corrupted local-provider assignment on a server surface", async () => {
-    getUserByok.mockResolvedValue({
-      provider: "local_openai",
-      apiKey: "local-key",
-      baseUrl: "http://127.0.0.1:1234/v1",
-      featureModels: { assistant_model: "local-model" },
-    });
-
-    await expect(
-      resolveAiRuntime({ userId: "u1", modelKey: "assistant_model" }),
-    ).rejects.toMatchObject({ code: "localEndpointRequiresLocalRun" });
   });
 });
 

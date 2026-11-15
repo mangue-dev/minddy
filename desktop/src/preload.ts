@@ -74,24 +74,27 @@ const bridge: DesktopBridge = {
   focus: () => ipc.send("minddy:focus"),
   onUpdateStatus: (handler) => ipc.subscribe("minddy:update-status", handler),
   installUpdate: () => ipc.send("minddy:install-update"),
-  discoverLocalModels: (input) => ipc.invoke("minddy:local-models:discover", input),
   restartLocalInstance: () => ipc.invoke("minddy:local-runtime:restart"),
   flushStorage: () => ipc.invoke("minddy:storage:flush"),
 };
 
 /**
- * Members of retired features that pages of minddy 0.10.19 to 0.10.30 call
+ * Members of retired features that pages of earlier minddy releases call
  * without checking they exist (self-hosted servers may still run those
  * releases: deploy/self-hosted/compatibility.json). Without them those pages
- * would throw a TypeError. `localRepo` never settles, so their local folder
- * card, shown once it answers, stays hidden; their composer's "My machine"
- * gets `none` and does nothing, as since local runs left the shell (MIN-721).
+ * would throw a TypeError. Pages of 0.10.19 to 0.10.30 call the first four:
+ * `localRepo` never settles, so their local folder card, shown once it
+ * answers, stays hidden; their composer's "My machine" gets `none` and does
+ * nothing, as since local runs left the shell (MIN-721). Pages up to 0.30.1
+ * call `discoverLocalModels` for an account with a local provider key; it
+ * finds nothing, so they keep the server's empty list (MIN-996).
  */
 const retiredMembers = {
   setWindowButtonsVisible: () => {},
   localRepo: () => new Promise<never>(() => {}),
   chooseLocalRepo: async () => ({ status: "none" as const }),
   forgetLocalRepo: async () => ({ status: "none" as const }),
+  discoverLocalModels: async () => ({ ok: false as const, reason: "invalid_endpoint" as const }),
 };
 
 contextBridge.exposeInMainWorld("minddy", { ...retiredMembers, ...bridge });

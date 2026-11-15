@@ -35,7 +35,7 @@ describe("tab destination prefetch", () => {
       ["page", "document"], ["pages", "p"], ["issues", "p"], ["members", "p"], ["objectives", "p"],
     ]);
     expect(appTabPreparationQueries(client, "/routines?routine=one").map((option) => option.queryKey)).toEqual([
-      ["routines"], ["agent-models"], ["routines", "one", "runs"],
+      ["routines"], ["routines", "one", "runs"],
     ]);
     expect(appTabPreparationQueries(client, "/projects/p/objectives").map((option) => option.queryKey)).toEqual([
       ["issues", "p"], ["members", "p"], ["objectives", "p"], ["issue-relations", "p"], ["pages", "p"],
@@ -109,11 +109,11 @@ describe("tab destination prefetch", () => {
     expect(client.getQueryState(["mfa-status"])).toBeDefined();
   });
 
-  it("warms the routines list and the agent catalog once per destination", async () => {
+  it("warms the routines list once per destination", async () => {
     prefetchAppTabDestination(client, "/routines", new Set());
-    await vi.waitFor(() => expect(requested()).toEqual(["/api/routines", "/api/agent/models"]));
+    await vi.waitFor(() => expect(requested()).toEqual(["/api/routines"]));
     prefetchAppTabDestination(client, "/routines", new Set());
-    await vi.waitFor(() => expect(requested()).toEqual(["/api/routines", "/api/agent/models"]));
+    await vi.waitFor(() => expect(requested()).toEqual(["/api/routines"]));
   });
 
   it("maps project destinations to every retained board prerequisite", async () => {

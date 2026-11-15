@@ -31,8 +31,7 @@ same rules the translator applies, so the picker never offers a level the
 request would drop (MIN-826). A model with `reasoning: null` has no level at
 all and the Numo slider stays on "Off": a non-reasoning OpenRouter model, an
 OpenAI chat model (`gpt-4o`), a non-thinking Gemini, and every model of an
-endpoint without a reasoning field (OpenCode gateways, generic, LM Studio,
-Ollama).
+endpoint without a reasoning field (OpenCode gateways, generic).
 
 The internal vocabulary therefore expands to that of OpenRouter — `off`, `minimal`,
 `low`, `medium`, `high`, `xhigh`, `max` — except for one word: their `none` is our
@@ -327,6 +326,4 @@ BYOK **OpenAI and Gemini direct** have not been probed (no key on hand):
 their rules follow the providers' documentation (developers.openai.com
 reasoning guide, ai.google.dev OpenAI compatibility and thinking pages). The
 ones to confirm first: a GPT-5.x turn at "off" (`"none"`), a Gemini 3 turn
-with two tool rounds (the `thought_signature` echo), and Ollama, which
-documents `reasoning_effort` but is left without a field until a local model
-confirms it.
+with two tool rounds (the `thought_signature` echo).

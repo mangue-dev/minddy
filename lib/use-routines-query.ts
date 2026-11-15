@@ -4,7 +4,7 @@ import { useQuery, type QueryClient } from "@tanstack/react-query";
 
 import { fetchRoutineRunsApi, fetchRoutinesApi, type Routine } from "./routines-api";
 import { refetchOnRevealWhenStale } from "./reveal-freshness";
-import { agentModelsQueryKey, fetchAgentModels } from "./use-agent-models-query";
+import { useOptionalRuntimeConfig } from "./runtime-config-provider";
 
 /**
  * ROUTINES (MIN-185) on the client side.
@@ -22,6 +22,14 @@ import { agentModelsQueryKey, fetchAgentModels } from "./use-agent-models-query"
  * project topic, plus the catch-up), so a retained Routines tab reads again on
  * reveal only when that coverage cannot vouch for the cache.
  */
+
+/**
+ * Whether this instance runs scheduled routines (its `scheduler` capability):
+ * without it the server answers scheduling or resuming with a 503.
+ */
+export function useRoutineSchedulingConfigured(): boolean {
+  return useOptionalRuntimeConfig()?.capabilities.scheduler?.configured === true;
+}
 
 export function routinesQueryKey() {
   return ["routines"] as const;
@@ -91,8 +99,7 @@ export function useRoutineRunsQuery(routineId: string | null) {
 const warmedRoutines = new WeakMap<QueryClient, Set<string>>();
 
 /**
- * Starts a routine pane's reads (its runs, plus the model catalog its toggle
- * waits on) before the pane mounts, from browsing intent on its list row or
+ * Starts a routine pane's runs read before the pane mounts, from browsing intent on its list row or
  * from a selection arriving with the URL. One attempt per routine per query
  * client: repeated hovers do nothing, and `prefetchQuery` itself skips a
  * fresh cache entry.
@@ -105,9 +112,5 @@ export function prefetchRoutineDetail(queryClient: QueryClient, routineId: strin
   void queryClient.prefetchQuery({
     queryKey: routineRunsQueryKey(routineId),
     queryFn: () => fetchRoutineRunsApi(routineId),
-  });
-  void queryClient.prefetchQuery({
-    queryKey: agentModelsQueryKey,
-    queryFn: () => fetchAgentModels("user", "text"),
   });
 }

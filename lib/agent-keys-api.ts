@@ -42,6 +42,7 @@ export interface AiKey {
    * account remains on the minddy quota as long as she does not respond.
    */
   validated_at: string | null;
+  /** Surfaces with at least one call type routed to this key (list only). */
   enabled_surfaces: AiSurface[];
   feature_models: ByokFeatureModels;
   /** Model families automatically covered by the active provider. */
@@ -56,12 +57,15 @@ export async function fetchAiKeysApi(): Promise<{ keys: AiKey[] }> {
   return parseJson(await fetch("/api/account/ai-keys"));
 }
 
-/** Adds or updates one provider credential. Local providers may not have a key. */
+/** The key a write returns: everything but the list's routing summary. */
+type SavedAiKey = Omit<AiKey, "enabled_surfaces">;
+
+/** Adds or updates one provider credential. */
 export async function addAiKeyApi(input: {
   provider: string;
-  key?: string;
+  key: string;
   baseUrl?: string;
-}): Promise<{ key: AiKey }> {
+}): Promise<{ key: SavedAiKey }> {
   // Never the key, obviously — only the chosen supplier.
   trackEvent("ai_key_added", { provider: input.provider });
   return parseJson(
@@ -70,7 +74,7 @@ export async function addAiKeyApi(input: {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         provider: input.provider,
-        key: input.key ?? "",
+        key: input.key,
         base_url: input.baseUrl,
       }),
     }),
@@ -87,12 +91,11 @@ export async function deleteAiKeyApi(keyId: string): Promise<void> {
   );
 }
 
-/** Updates the surfaces and/or models of the active key, never its secret. */
+/** Replaces a key's model overrides, never its secret. */
 export async function updateAiKeyPreferencesApi(patch: {
   key_id: string;
-  enabled_surfaces?: AiSurface[];
-  feature_models?: ByokFeatureModels;
-}): Promise<{ key: AiKey }> {
+  feature_models: ByokFeatureModels;
+}): Promise<{ key: SavedAiKey }> {
   return parseJson(
     await fetch("/api/account/ai-keys", {
       method: "PATCH",

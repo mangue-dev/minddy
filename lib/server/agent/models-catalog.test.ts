@@ -100,16 +100,15 @@ async function freshCatalog(
     loadOpenRouterIndex: vi.fn(async () => {}),
   }));
   vi.doMock("./model", () => ({
-    resolveAgentApiKey: vi.fn(async () => {
-      if (endpoint) return { ...endpoint, credentialVersion: `${endpoint.apiKey}-version` };
-      return {
-        provider: "openrouter",
-        baseUrl: "https://openrouter.ai/api/v1",
-        apiKey: "platform-key",
-        credentialVersion: null,
-        mode: "platform",
-      };
-    }),
+    resolveCatalogEndpoint: vi.fn((byok: { credentialVersion: string } | null) => byok && endpoint
+      ? { ...endpoint, credentialVersion: byok.credentialVersion }
+      : {
+          provider: "openrouter",
+          baseUrl: "https://openrouter.ai/api/v1",
+          apiKey: "platform-key",
+          credentialVersion: null,
+          mode: "platform",
+        }),
     getUserByok: vi.fn(async () => endpoint
       ? {
           ...endpoint,
@@ -164,13 +163,13 @@ afterEach(() => {
 describe("getPlatformModelCatalog", () => {
   it("validates a Numo choice using the same public filters without account picker reads", async () => {
     const { getOpenRouterConversationModels } = await freshCatalog();
-    const { resolveAgentApiKey, getUserByok } = await import("./model");
+    const { resolveCatalogEndpoint, getUserByok } = await import("./model");
     const { getModelPlanLimit } = await import("./model-plan");
     const models = await getOpenRouterConversationModels("test-key");
     expect(models.map(model => model.id)).toEqual([
       "anthropic/claude-opus-5", "deepseek/deepseek-v4-flash",
     ]);
-    expect(resolveAgentApiKey).not.toHaveBeenCalled();
+    expect(resolveCatalogEndpoint).not.toHaveBeenCalled();
     expect(getUserByok).not.toHaveBeenCalled();
     expect(getModelPlanLimit).not.toHaveBeenCalled();
   });
@@ -200,17 +199,17 @@ describe("getPlatformModelCatalog", () => {
   });
 });
 
-describe("getAgentModelsForUser", () => {
-  it("serves the same filtered list to the agent picker", async () => {
-    const { getAgentModelsForUser } = await freshCatalog();
-    const catalog = await getAgentModelsForUser("user-1");
+describe("getAssistantModelsForUser", () => {
+  it("serves the same filtered list to the Numo picker", async () => {
+    const { getAssistantModelsForUser } = await freshCatalog();
+    const catalog = await getAssistantModelsForUser("user-1");
     expect(catalog.models.map((m) => m.id)).toEqual([
       "anthropic/claude-opus-5",
       "deepseek/deepseek-v4-flash",
     ]);
   });
 
-  it("reports the assistant feature default instead of the code-agent default", async () => {
+  it("reports the assistant feature default", async () => {
     const { getAssistantModelsForUser } = await freshCatalog();
 
     await expect(getAssistantModelsForUser("user-1")).resolves.toMatchObject({
@@ -218,27 +217,8 @@ describe("getAgentModelsForUser", () => {
     });
   });
 
-  it("returns a local address to the shell without probing it server-side", async () => {
-    const { getAgentModelsForUser } = await freshCatalog(
-      INDEX,
-      null,
-      {
-        provider: "ollama",
-        baseUrl: "http://127.0.0.1:11434/v1",
-        apiKey: "",
-        mode: "byok",
-      },
-    );
-
-    await expect(getAgentModelsForUser("user-1")).resolves.toMatchObject({
-      provider: "ollama",
-      localEndpoint: { provider: "ollama", baseUrl: "http://127.0.0.1:11434/v1" },
-      models: [],
-    });
-  });
-
   it("uses pinned fetching without contacting OpenRouter for a native BYOK catalog", async () => {
-    const { getAgentModelsForUser } = await freshCatalog(
+    const { getAssistantModelsForUser } = await freshCatalog(
       INDEX,
       ["claude-sonnet-5"],
       {
@@ -251,7 +231,7 @@ describe("getAgentModelsForUser", () => {
     const { listOpenRouterIndex } = await import("./openrouter-index");
     const { safeFetch } = await import("@/lib/server/safe-fetch");
 
-    const catalog = await getAgentModelsForUser("user-1");
+    const catalog = await getAssistantModelsForUser("user-1");
 
     expect(catalog.recommended).toEqual(["claude-sonnet-5"]);
     expect(safeFetch).toHaveBeenCalledWith("https://api.anthropic.com/v1/models?limit=1000", {
@@ -348,11 +328,11 @@ describe("recommended models", () => {
     // The list is a set: the order is calculated, otherwise a handwritten
     // rank would survive the prices that justified it. Here the list names
     // the dear one first — it should come out second.
-    const { getAgentModelsForUser } = await freshCatalog(
+    const { getAssistantModelsForUser } = await freshCatalog(
       INDEX,
       ["anthropic/claude-opus-5", "deepseek/deepseek-v4-flash"],
     );
-    const catalog = await getAgentModelsForUser("user-1");
+    const catalog = await getAssistantModelsForUser("user-1");
     expect(catalog.recommended).toEqual([
       "deepseek/deepseek-v4-flash",
       "anthropic/claude-opus-5",
@@ -363,11 +343,11 @@ describe("recommended models", () => {
     // We don't know where to place it: putting it in the middle would give it a rank
     // that we have not measured.
     const index = [...INDEX, entry({ id: "aaa/no-price", pricing: null })];
-    const { getAgentModelsForUser } = await freshCatalog(
+    const { getAssistantModelsForUser } = await freshCatalog(
       index,
       ["aaa/no-price", "anthropic/claude-opus-5", "deepseek/deepseek-v4-flash"],
     );
-    const catalog = await getAgentModelsForUser("user-1");
+    const catalog = await getAssistantModelsForUser("user-1");
     expect(catalog.recommended).toEqual([
       "deepseek/deepseek-v4-flash",
       "anthropic/claude-opus-5",
@@ -378,19 +358,19 @@ describe("recommended models", () => {
   it("drops a recommendation that the catalog does not offer", async () => {
     // Advising an absent model would make a dead line in the picker — and
     // this is the common case in BYOK, whose ids are native.
-    const { getAgentModelsForUser } = await freshCatalog(
+    const { getAssistantModelsForUser } = await freshCatalog(
       INDEX,
       ["anthropic/claude-opus-5", "openai/gpt-audio", "nobody/nothing"],
     );
-    const catalog = await getAgentModelsForUser("user-1");
+    const catalog = await getAssistantModelsForUser("user-1");
     expect(catalog.recommended).toEqual(["anthropic/claude-opus-5"]);
   });
 
   it("opens on the product's list, a row saved by an admin before MIN-954 being ignored", async () => {
     // The fallback is the list written in code: from this false index, it only crosses
     // Minddy's flaw — and it's this one that must stand out.
-    const { getAgentModelsForUser } = await freshCatalog();
-    const catalog = await getAgentModelsForUser("user-1");
+    const { getAssistantModelsForUser } = await freshCatalog();
+    const catalog = await getAssistantModelsForUser("user-1");
     expect(catalog.recommended).toEqual(["deepseek/deepseek-v4-flash"]);
   });
 
@@ -398,8 +378,8 @@ describe("recommended models", () => {
     // The case of a BYOK provider, whose ids are native (`claude-sonnet-5`):
     // no advice is right, and the picker must reopen on the catalog
     // integer rather than a selection of zero models.
-    const { getAgentModelsForUser } = await freshCatalog(INDEX, ["nobody/nothing"]);
-    const catalog = await getAgentModelsForUser("user-1");
+    const { getAssistantModelsForUser } = await freshCatalog(INDEX, ["nobody/nothing"]);
+    const catalog = await getAssistantModelsForUser("user-1");
     expect(catalog.recommended).toEqual([]);
   });
 

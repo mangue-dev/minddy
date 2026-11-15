@@ -7,6 +7,7 @@ vi.mock("server-only", () => ({}));
 
 const h = vi.hoisted(() => ({
   turn: null as Record<string, unknown> | null,
+  promptTools: null as string[] | null,
   events: [] as Array<Record<string, unknown>>,
   checkpoints: [] as Array<Record<string, unknown>>,
   messages: [] as Array<Record<string, unknown>>,
@@ -151,9 +152,15 @@ vi.mock("@/lib/server/assistant/loop", async (importOriginal) => ({
 }));
 vi.mock("@/lib/server/assistant/prompt", () => ({
   buildClockBlock: () => "",
-  buildGlobalSystemPrompt: () => "System",
+  buildGlobalSystemPrompt: (_locale: string, offered: ReadonlySet<string>) => {
+    h.promptTools = [...offered];
+    return "System";
+  },
   buildPageContextBlock: () => "Context",
-  buildSystemPrompt: () => "Project system",
+  buildSystemPrompt: (_project: unknown, _locale: string, offered: ReadonlySet<string>) => {
+    h.promptTools = [...offered];
+    return "Project system";
+  },
 }));
 vi.mock("@/lib/server/assistant/prompt-context", () => ({
   gatherProjectPromptContext: vi.fn(),
@@ -575,6 +582,21 @@ describe("durable Numo execution", () => {
     expect(h.processChat.mock.calls[0][3]).toMatchObject({ reminder: true, memoryWritable: false, proactive: false });
     expect(String((h.processChat.mock.calls[0][0] as Array<{ content: unknown }>)[0].content))
       .toContain("## Reminder turn");
+  });
+
+  it("writes the prompt for the tools the turn offers, not the full catalog", async () => {
+    h.turn = {
+      ...h.turn,
+      intent: {
+        ...(h.turn?.intent as Record<string, unknown>),
+        reminder: { watchId: "watch-1", projectId: "project-1", targetType: "issue", targetId: "issue-1" },
+      },
+    };
+    await executeNumoTurn({ turnId: h.turn.id as string, readClient: service, aiRuntime: runtime });
+    const offered = (h.processChat.mock.calls[0][1] as { function: { name: string } }[])
+      .map((tool) => tool.function.name);
+    expect(h.promptTools).not.toContain("create_watch");
+    expect([...(h.promptTools ?? [])].sort()).toEqual([...offered].sort());
   });
 
   it("runs an occurrence of a recurring reminder under the background guard, with its grants (MIN-953)", async () => {

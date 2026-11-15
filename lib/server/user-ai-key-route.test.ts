@@ -61,7 +61,7 @@ describe("BYOK account projection", () => {
       key_encrypted: "sk-highly-private-secret",
       key_prefix: "sk-h…", base_url: "https://private-model.example/v1",
       feature_models: { assistant: "private-model" },
-      enabled_surfaces: ["agent"], created_at: "2026-09-26T00:00:00Z",
+      created_at: "2026-09-26T00:00:00Z",
       updated_at: "2026-09-26T00:00:00Z", last_used_at: null,
       validated_at: null,
     }, { force: true });
@@ -73,5 +73,23 @@ describe("BYOK account projection", () => {
     expect(body.keys[0].feature_models).toEqual({ assistant: "private-model" });
     expect(JSON.stringify(body)).not.toContain("sk-highly-private-secret");
     expect(JSON.stringify(body)).not.toContain("encrypted_content");
+  });
+
+  it("keeps listing a retired local key so its owner can remove it (MIN-996)", async () => {
+    state.row = {
+      id: randomUUID(), user_id: randomUUID(), provider: "ollama",
+      key_encrypted: "minddy:local-endpoint-without-api-key:v1",
+      key_prefix: null, base_url: "http://127.0.0.1:11434",
+      feature_models: {}, created_at: "2026-09-26T00:00:00Z",
+      updated_at: "2026-09-26T00:00:00Z", last_used_at: null,
+      validated_at: "2026-09-26T00:00:00Z", encrypted_content: null,
+      encryption_version: 0, content_revision: 0,
+    };
+    const response = await GET(new Request("https://minddy.example/api/account/ai-keys") as never);
+    expect(response.status).toBe(200);
+    const [key] = (await response.json()).keys;
+    expect(key).toMatchObject({ id: state.row.id, provider: "ollama",
+      supported_capabilities: [], assigned_capabilities: [], enabled_surfaces: [] });
+    expect(JSON.stringify(key)).not.toContain("local-endpoint-without-api-key");
   });
 });

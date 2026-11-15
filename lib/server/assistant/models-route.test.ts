@@ -27,7 +27,7 @@ vi.mock("@/lib/supabase-service", () => ({
       const key = {
         id: "key-1", user_id: "user-1", provider: "anthropic", key_encrypted: "sealed",
         base_url: null, validated_at: "2026-01-01T00:00:00.000Z",
-        updated_at: "2026-01-02T00:00:00.000Z", enabled_surfaces: null, feature_models: {},
+        updated_at: "2026-01-02T00:00:00.000Z", feature_models: {},
       };
       const list = () => {
         h.log.push(table);

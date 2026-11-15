@@ -7,11 +7,7 @@ import { randomUUID } from "node:crypto";
 import { getAuthedUser } from "@/lib/server/api-auth";
 import { getServiceClient } from "@/lib/supabase-service";
 import { assertPublicHttpUrl } from "@/lib/server/safe-fetch";
-import {
-  encryptUserAiKey,
-  keyPrefix,
-  LOCAL_ENDPOINT_WITHOUT_API_KEY,
-} from "@/lib/server/agent/byok-credentials";
+import { encryptUserAiKey, keyPrefix } from "@/lib/server/agent/byok-credentials";
 import { decodeUserAiKeyRow, encodeUserAiKeyRow,
   shouldProtectUserAiKeys, type UserAiKeyRow } from
   "@/lib/server/user-ai-key-content";
@@ -21,12 +17,12 @@ import {
 } from "@/lib/server/agent/byok-validate";
 import {
   getAgentProvider,
-  isLocalAgentProvider,
   isKnownAgentProvider,
+  isRetiredLocalProvider,
   normalizeBaseUrl,
   resolveProviderBaseUrl,
 } from "@/lib/agent-providers";
-import { parseAiSurfaces, parseByokFeatureModels } from "@/lib/ai-surfaces";
+import { parseByokFeatureModels } from "@/lib/ai-surfaces";
 import { BYOK_MODEL_KEYS } from "@/lib/ai-surfaces";
 import { resolveByokFeatureDefaultModel } from "@/lib/server/ai-runtime";
 import type { AgentProviderId } from "@/lib/agent-providers";
@@ -51,10 +47,14 @@ import { getActiveByokModelCatalog } from "@/lib/server/agent/models-catalog";
  * (AES-256-GCM). Changing or removing the provider leaves the account worker
  * preference untouched; the provider-bound resolver fails closed until the
  * user deliberately chooses a compatible model in Account settings.
+ *
+ * The local providers retired in MIN-996 are refused on creation. A row saved
+ * before keeps being listed (its provider outside the registry, so it serves
+ * nothing) until its owner removes it.
  */
 
 const STORED =
-  "id, user_id, provider, key_encrypted, key_prefix, base_url, created_at, updated_at, last_used_at, validated_at, enabled_surfaces, feature_models, encrypted_content, encryption_version, content_revision";
+  "id, user_id, provider, key_encrypted, key_prefix, base_url, created_at, updated_at, last_used_at, validated_at, feature_models, encrypted_content, encryption_version, content_revision";
 
 // Wide bounds: an actual API key and base URL fit well below.
 const MAX_KEY_LENGTH = 1024;
@@ -69,7 +69,6 @@ interface SanitizedAiKeyRow {
   updated_at: string;
   last_used_at: string | null;
   validated_at: string | null;
-  enabled_surfaces: string[];
   feature_models: ByokFeatureModels;
 }
 
@@ -83,7 +82,6 @@ async function sanitizedAiKey(row: UserAiKeyRow, actorId: string):
     updated_at: plain.updated_at as string,
     last_used_at: plain.last_used_at as string | null,
     validated_at: plain.validated_at as string | null,
-    enabled_surfaces: plain.enabled_surfaces as string[],
     feature_models: plain.feature_models as ByokFeatureModels };
 }
 
@@ -134,12 +132,6 @@ async function decorateAiKey(
   };
 }
 
-/**
- * Local endpoints are never reached from this route: check their
- * host by `assertPublicHttpUrl` would be both false (localhost is intended) and
- * dangerous (a future server probe would become an SSRF). We only validate
- * the form that the local harness will use.
- */
 function isHttpEndpointUrl(raw: string): boolean {
   try {
     const url = new URL(raw);
@@ -156,8 +148,8 @@ export async function GET(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const service = getServiceClient();
-  // A call type's credential is its route now (MIN-826); `enabled_surfaces`
-  // reports the surfaces with at least one call type on each credential.
+  // A call type's credential is its route (MIN-826); `enabled_surfaces`
+  // reports the surfaces with at least one call type routed to each credential.
   const [{ data }, { data: assignments }, routed] = await Promise.all([
     service
       .from("user_ai_keys")
@@ -208,25 +200,26 @@ export async function POST(request: NextRequest) {
   const key = typeof body.key === "string" ? body.key.trim() : "";
   const provider =
     typeof body.provider === "string" ? body.provider.trim() : "";
+  if (isRetiredLocalProvider(provider)) {
+    const t = await getTranslations("ApiErrors");
+    return NextResponse.json(
+      { error: t("aiLocalProviderRetired"), code: "local_provider_retired" },
+      { status: 400 },
+    );
+  }
   if (!isKnownAgentProvider(provider)) {
     return NextResponse.json(
       { error: "Unsupported provider" },
       { status: 400 },
     );
   }
-  const localProvider = isLocalAgentProvider(provider);
-  // An Ollama installation or a local OpenAI-compatible server has most
-  // often no authentication. An empty key is therefore ONLY valid
-  // for these providers: all cloud endpoints remain fail-closed.
-  if (!key && !localProvider)
+  if (!key)
     return NextResponse.json({ error: "Missing key" }, { status: 400 });
   if (key.length > MAX_KEY_LENGTH) {
     return NextResponse.json({ error: "Invalid key" }, { status: 400 });
   }
 
-  // Base URL required for the generic provider and local providers. A URL
-  // cloud remains subject to anti-SSRF guard; a local URL will NEVER go outside
-  // this machine and should therefore never be resolved or probed by this server.
+  // The generic provider needs a base URL, held to the anti-SSRF guard.
   const def = getAgentProvider(provider)!;
   let baseUrl: string | null = null;
   if (def.requiresBaseUrl) {
@@ -234,15 +227,10 @@ export async function POST(request: NextRequest) {
     if (raw.length > MAX_BASE_URL_LENGTH || !isHttpEndpointUrl(raw)) {
       return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
     }
-    if (!localProvider) {
-      try {
-        await assertPublicHttpUrl(raw);
-      } catch {
-        return NextResponse.json(
-          { error: "Invalid base URL" },
-          { status: 400 },
-        );
-      }
+    try {
+      await assertPublicHttpUrl(raw);
+    } catch {
+      return NextResponse.json({ error: "Invalid base URL" }, { status: 400 });
     }
     baseUrl = normalizeBaseUrl(raw);
   }
@@ -253,20 +241,14 @@ export async function POST(request: NextRequest) {
   // (provider unreachable) stores the key without a validation date: it lifts
   // nothing, and `getUserByok` tries again on first use.
   const effectiveBaseUrl = resolveProviderBaseUrl(provider, baseUrl);
-  // A local endpoint is deliberately opaque to the cloud: no listing or
-  // probe should only bring this query out of the desktop app. The key is
-  // considered configured so that the local run can receive it; the first
-  // Calling the proxy will return an explicit error if the endpoint is unavailable.
-  const verdict = localProvider
-    ? "valid"
-    : effectiveBaseUrl
-      ? await probeByokKey({
-          provider,
-          apiKey: key,
-          baseUrl: effectiveBaseUrl,
-          rateLimitKey: auth.user.id,
-        })
-      : "unknown";
+  const verdict = effectiveBaseUrl
+    ? await probeByokKey({
+        provider,
+        apiKey: key,
+        baseUrl: effectiveBaseUrl,
+        rateLimitKey: auth.user.id,
+      })
+    : "unknown";
   if (verdict === "rate_limited") {
     return NextResponse.json(
       {
@@ -303,7 +285,7 @@ export async function POST(request: NextRequest) {
         const encoded = await encodeUserAiKeyRow({
           ...plain, id: previous?.id ?? randomUUID(),
           user_id: auth.user.id, provider,
-          key_encrypted: key || LOCAL_ENDPOINT_WITHOUT_API_KEY,
+          key_encrypted: key,
           base_url: baseUrl,
           feature_models: plain?.feature_models ?? {},
         } as UserAiKeyRow, { service, force: true });
@@ -313,7 +295,7 @@ export async function POST(request: NextRequest) {
           p_revision: previous?.content_revision ?? 0,
           p_encrypted_content: encoded.encrypted_content,
           p_encryption_version: encoded.encryption_version,
-          p_key_prefix: key ? keyPrefix(key) : null,
+          p_key_prefix: keyPrefix(key),
           p_validated_at: validatedAt,
         }).select(STORED).single();
         if (result.error?.code === "40001" && attempt === 0) continue;
@@ -323,9 +305,9 @@ export async function POST(request: NextRequest) {
         error = { message: "Protected BYOK write failed" };
       }
     } else {
-      let encrypted = LOCAL_ENDPOINT_WITHOUT_API_KEY;
+      let encrypted: string;
       try {
-        if (key) encrypted = encryptUserAiKey(key);
+        encrypted = encryptUserAiKey(key);
       } catch {
         error = { message: "Legacy BYOK encryption is unavailable" };
         break;
@@ -333,7 +315,7 @@ export async function POST(request: NextRequest) {
       const result = await service.rpc("upsert_user_ai_key", {
         p_user_id: auth.user.id, p_provider: provider,
         p_key_encrypted: encrypted,
-        p_key_prefix: key ? keyPrefix(key) : null,
+        p_key_prefix: keyPrefix(key),
         p_base_url: baseUrl, p_validated_at: validatedAt,
       }).select(STORED).single();
       data = result.data as UserAiKeyRow | null;
@@ -399,9 +381,9 @@ export async function DELETE(request: NextRequest) {
 }
 
 /**
- * Non-sensitive active BYOK settings. The writing is partial but each
- * provided value replaces its complete set: this is what makes it possible to
- * Uncheck all surfaces or clear all model overrides.
+ * Non-sensitive BYOK settings: the capability assignment, or a credential's
+ * model overrides. A supplied `feature_models` replaces the whole set, which
+ * is what lets the account clear every override.
  */
 export async function PATCH(request: NextRequest) {
   const auth = await getAuthedUser(request);
@@ -409,7 +391,6 @@ export async function PATCH(request: NextRequest) {
 
   let body: {
     key_id?: unknown;
-    enabled_surfaces?: unknown;
     feature_models?: unknown;
     capability?: unknown;
     assigned_key_id?: unknown;
@@ -491,66 +472,43 @@ export async function PATCH(request: NextRequest) {
     );
   }
   const activeProvider = activeProviderValue;
-  const localProvider = isLocalAgentProvider(activeProvider);
-  const update: {
-    enabled_surfaces?: string[];
-    feature_models?: Record<string, string>;
-  } = {};
-  if ("enabled_surfaces" in body) {
-    const surfaces = parseAiSurfaces(body.enabled_surfaces);
-    if (!surfaces)
-      return NextResponse.json(
-        { error: "Invalid AI surfaces" },
-        { status: 400 },
-      );
-    if (localProvider && surfaces.some((surface) => surface !== "agent")) {
-      return NextResponse.json(
-        { error: "Local endpoints are available only for local agent runs" },
-        { status: 400 },
-      );
-    }
-    update.enabled_surfaces = surfaces;
-  }
-  if ("feature_models" in body) {
-    const models = parseByokFeatureModels(body.feature_models);
-    if (!models)
-      return NextResponse.json(
-        { error: "Invalid feature models" },
-        { status: 400 },
-      );
-    if (
-      Object.keys(models).some(
-        (modelKey) => !providerSupportsModelKey(activeProvider, modelKey),
-      )
-    ) {
-      return NextResponse.json(
-        { error: "Model type is not supported by the active BYOK provider" },
-        { status: 400 },
-      );
-    }
-    // An embedding or transcription field must name a model of that kind:
-    // a chat id there is refused by the provider on every call, and indexing
-    // or dictation degrade silently. The key's own catalog is the evidence;
-    // when it cannot be listed, the choice is kept unverified.
-    for (const [modelKey, model] of Object.entries(models)) {
-      const capability = modelCatalogCapabilityForKey(modelKey);
-      if (capability === "text") continue;
-      const catalog = await getActiveByokModelCatalog(auth.user.id, capability, activeProvider);
-      if (catalog.models.length > 0 &&
-        !catalog.models.some((entry) => entry.id === stripModelSuffix(model))) {
-        return NextResponse.json(
-          { error: "Model type does not match this setting", code: "capability_mismatch" },
-          { status: 400 },
-        );
-      }
-    }
-    update.feature_models = models;
-  }
-  if (Object.keys(update).length === 0) {
+  if (!("feature_models" in body)) {
     return NextResponse.json(
       { error: "No preference supplied" },
       { status: 400 },
     );
+  }
+  const models = parseByokFeatureModels(body.feature_models);
+  if (!models)
+    return NextResponse.json(
+      { error: "Invalid feature models" },
+      { status: 400 },
+    );
+  if (
+    Object.keys(models).some(
+      (modelKey) => !providerSupportsModelKey(activeProvider, modelKey),
+    )
+  ) {
+    return NextResponse.json(
+      { error: "Model type is not supported by the active BYOK provider" },
+      { status: 400 },
+    );
+  }
+  // An embedding or transcription field must name a model of that kind:
+  // a chat id there is refused by the provider on every call, and indexing
+  // or dictation degrade silently. The key's own catalog is the evidence;
+  // when it cannot be listed, the choice is kept unverified.
+  for (const [modelKey, model] of Object.entries(models)) {
+    const capability = modelCatalogCapabilityForKey(modelKey);
+    if (capability === "text") continue;
+    const catalog = await getActiveByokModelCatalog(auth.user.id, capability, activeProvider);
+    if (catalog.models.length > 0 &&
+      !catalog.models.some((entry) => entry.id === stripModelSuffix(model))) {
+      return NextResponse.json(
+        { error: "Model type does not match this setting", code: "capability_mismatch" },
+        { status: 400 },
+      );
+    }
   }
 
   let data: UserAiKeyRow | null = null;
@@ -561,9 +519,8 @@ export async function PATCH(request: NextRequest) {
     try {
       const plain = await decodeUserAiKeyRow(active as UserAiKeyRow,
         auth.user.id);
-      const featureModels = update.feature_models ?? plain.feature_models ?? {};
       const encoded = await encodeUserAiKeyRow({ ...plain,
-        feature_models: Object.fromEntries(Object.entries(featureModels)
+        feature_models: Object.fromEntries(Object.entries(models)
           .filter(([name]) => !["agent_model", "automation_agent_model",
             "pr_review_model"].includes(name))) }, { service, force: true });
       const result = await service.rpc(
@@ -572,7 +529,6 @@ export async function PATCH(request: NextRequest) {
           p_revision: (active as UserAiKeyRow).content_revision ?? 0,
           p_encrypted_content: encoded.encrypted_content,
           p_encryption_version: encoded.encryption_version,
-          p_enabled_surfaces: update.enabled_surfaces ?? null,
         }).select(STORED).maybeSingle();
       data = result.data as UserAiKeyRow | null;
       error = result.error;
@@ -583,8 +539,7 @@ export async function PATCH(request: NextRequest) {
     const result = await service.rpc("update_user_ai_key_preferences", {
       p_user_id: auth.user.id,
       p_key_id: body.key_id,
-      p_enabled_surfaces: update.enabled_surfaces ?? null,
-      p_feature_models: update.feature_models ?? null,
+      p_feature_models: models,
     }).select(STORED).maybeSingle();
     data = result.data as UserAiKeyRow | null;
     error = result.error;

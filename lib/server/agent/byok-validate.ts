@@ -1,10 +1,6 @@
 import "server-only";
 
-import {
-  getAgentProvider,
-  isLocalAgentProvider,
-  type AgentProviderId,
-} from "@/lib/agent-providers";
+import { getAgentProvider, type AgentProviderId } from "@/lib/agent-providers";
 import { aiChatProviderHeaders } from "@/lib/ai-chat";
 import { fetchAiProviderBytes } from "@/lib/server/ai-provider-request";
 import { checkSessionRateLimit } from "@/lib/server/session-rate-limit";
@@ -119,9 +115,6 @@ export async function probeByokKey(params: {
   const { provider, apiKey, baseUrl, rateLimitKey } = params;
   if (!apiKey || !baseUrl) return "invalid";
   if (!getAgentProvider(provider)) return "invalid";
-  // A probe from the cloud deployment would precisely cancel the promise of
-  // local provider. Its state is established by the first call to the local proxy.
-  if (isLocalAgentProvider(provider)) return "unknown";
 
   if (
     rateLimitKey &&

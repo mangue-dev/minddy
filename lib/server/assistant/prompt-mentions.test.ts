@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 const { buildSharedRules } = await import("./prompt");
 
 describe("Numo's mention rules", () => {
-  const rules = buildSharedRules("en");
+  const rules = buildSharedRules("en", new Set());
 
   it("names every mention type, with where its id comes from", () => {
     for (const type of ["issue", "objective, project, page", "member", "pull_request", "routine", "scratchpad", "cycle", "mcp", "skill", "date"]) {

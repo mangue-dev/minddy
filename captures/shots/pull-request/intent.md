@@ -23,9 +23,9 @@ answers are provided by the capture:
 | `/api/agent-runs/<id>/pr` | the PR header and its 3 files with their patches |
 | `/api/agent-runs/<id>/comments` | a human proofreading and Numo's response |
 
-`/api/agent/models` and `/api/account/agent-preferences` are **not**
-intercepted: they respond normally for the demo account, there is no
-no reason to replace them. `/api/agent-runs/<id>/pr/review-comments`
+`/api/account/agent-preferences` is **not**
+intercepted: it responds normally for the demo account, there is no
+reason to replace it. `/api/agent-runs/<id>/pr/review-comments`
 would respond `[]` in real life — we neutralize it so that it does not call the
 forge, mais son contenu reste vide.
 

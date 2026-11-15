@@ -3,7 +3,6 @@ import "server-only";
 import {
   DEFAULT_AGENT_PROVIDER,
   getAgentProvider,
-  isLocalAgentProvider,
   resolveProviderBaseUrl,
   type AgentProviderId,
   type ProviderRequestProfile,
@@ -21,11 +20,7 @@ import {
 import { aiModelFallback } from "@/lib/ai-model-config";
 import { getAppConfigValues } from "@/lib/server/app-config";
 import { modelConfigKeys, resolveFromValues } from "@/lib/server/model-config";
-import {
-  getUserByok,
-  getUserByokForProvider,
-  LocalEndpointRequiresLocalRunError,
-} from "@/lib/server/agent/model";
+import { getUserByok, getUserByokForProvider } from "@/lib/server/agent/model";
 import { chatCompletionsUrl, normalizeBaseUrl } from "@/lib/agent-providers";
 import {
   aiChatProviderHeaders,
@@ -243,9 +238,6 @@ export async function resolveAiRuntime(params: {
   }
 
   if (byok && providerSupportsModelKey(byok.provider, params.modelKey)) {
-    if (isLocalAgentProvider(byok.provider)) {
-      throw new LocalEndpointRequiresLocalRunError();
-    }
     // The account's model for the call's role (MIN-954): the LLM is the one
     // Numo runs on this provider, embeddings and speech to text the key's own.
     const chosen = params.applicationModelDefault || modelOverride

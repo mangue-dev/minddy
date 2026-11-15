@@ -528,6 +528,55 @@ async function loadContextSummary(service: SupabaseClient, turn: NumoTurn): Prom
   }
 }
 
+/** The tools a turn offers, decided before its prompt is written. */
+function offeredTools(input: {
+  intent: NumoTurn["intent"];
+  adminGrant: AdminGrant | null;
+  memoryWritable: boolean;
+  journalSource: NumoJournalSource | null;
+  recurringGrants: NonNullable<NonNullable<NumoTurn["intent"]["reminder"]>["recurring"]>["grants"] | null;
+  readerAccess: { canComment: boolean } | null;
+}): AssistantToolDef[] {
+  const { intent, adminGrant, memoryWritable, journalSource, recurringGrants, readerAccess } = input;
+  let tools: AssistantToolDef[] = adminGrant
+    ? [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS]
+    : CONVERSATION_ASSISTANT_TOOLS;
+  if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
+  // The search in earlier conversations (MIN-956) goes with the memory:
+  // offered where the user talks to Numo directly, never on a shared surface
+  // (a mention) or in an unattended turn, whose instructions may come from
+  // someone else.
+  if (!memoryWritable) tools = tools.filter((tool) => !MEMORY_TOOLS.has(tool.function.name));
+  if (!journalSource) tools = tools.filter((tool) => !JOURNAL_TOOLS.has(tool.function.name));
+  // A routine runs unattended: nobody is there to answer a question or review
+  // a proposal, so the tools that wait for the user are not offered.
+  if (intent.routineId || intent.reminder) {
+    tools = tools.filter((tool) => !WAITS_FOR_USER_TOOLS.has(tool.function.name));
+  }
+  // Reminders (MIN-923) are set and cancelled only in a conversation the
+  // user holds with Numo: not by a routine or a mention, whose instructions
+  // come from other people, nor by a reminder's own turn. A routine and a
+  // mention do not list them either: a mention replies on a shared thread.
+  if (intent.routineId || intent.reminder || intent.triggerSource === "mention") {
+    const hidden = intent.reminder ? REMINDER_WRITE_TOOLS : REMINDER_TOOLS;
+    tools = tools.filter((tool) => !hidden.has(tool.function.name));
+  }
+  // A background turn is unattended too, and its guarded tools take the
+  // memory that allows them (`authorized_by`). An occurrence of a recurring
+  // reminder is guarded by its grants instead.
+  if (intent.wake) tools = proactiveToolSet(tools);
+  else if (recurringGrants) tools = proactiveToolSet(tools, { reminderGrants: recurringGrants });
+  if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
+  // An @Numo mention runs on the shared surface of this one project: a
+  // reader's mention is offered read tools only (plus comments when allowed).
+  // Chat conversations stay cross-project, so there the per-call gate in
+  // executeTool refuses writes in read-only projects.
+  else if (readerAccess && intent.triggerSource === "mention") {
+    tools = readerToolSet(tools, readerAccess.canComment);
+  }
+  return tools;
+}
+
 async function buildExecutionInput(input: {
   turn: NumoTurn;
   readClient: SupabaseClient;
@@ -545,37 +594,15 @@ async function buildExecutionInput(input: {
 }> {
   const { turn, readClient, service, runtime } = input;
   const intent = turn.intent;
-  let systemPrompt: string;
   // Re-read on every execution, so a deferred or retried turn uses the role
   // the user has NOW (MIN-693).
-  let readerAccess: { canComment: boolean } | null = null;
-  if (intent.documentation) {
-    systemPrompt = await buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId, intent.documentation.selfHosting);
-  } else if (intent.projectId) {
-    const access = await getProjectAccess(turn.user_id, intent.projectId);
-    if (!access) throw new Error("The attached project is no longer accessible");
-    const promptProject = await gatherProjectPromptContext({
-      supabase: readClient,
-      service,
-      project: access.project,
-    });
-    systemPrompt = buildSystemPrompt(promptProject, intent.locale, intent.numoDefaultStatus);
-    if (access.role === "reader") {
-      readerAccess = { canComment: access.canComment };
-      systemPrompt += `\n## Access
-- The user is a Reader in this project: it is read-only for them${access.canComment ? ", except for comments" : ""}. Do not offer changes to it; tools that would change it are refused.`;
-    }
-    // What guides Smart Fill and Smart Assign is the project's (MIN-988):
-    // Numo reads it here so a stated preference lands there, not in memory.
-    if (access.role !== "reader") {
-      systemPrompt += await loadProjectAiInstructionsPrompt({
-        service, projectId: intent.projectId, isOwner: access.isOwner,
-      });
-    }
-  } else {
-    systemPrompt = buildGlobalSystemPrompt(intent.locale, intent.numoDefaultStatus);
+  const access = !intent.documentation && intent.projectId
+    ? await getProjectAccess(turn.user_id, intent.projectId)
+    : null;
+  if (!intent.documentation && intent.projectId && !access) {
+    throw new Error("The attached project is no longer accessible");
   }
-  if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
+  const readerAccess = access?.role === "reader" ? { canComment: access.canComment } : null;
   // Instance administration (MIN-829): re-verified on every execution, like
   // the project role above, so a retried turn uses the session's state NOW.
   // Background Numo (MIN-944) acts for the user alone: an admin account's
@@ -596,10 +623,6 @@ async function buildExecutionInput(input: {
     intent.adminSession && await adminGrantIsLive(turn.user_id, intent.adminSession)) {
     adminGrant = intent.adminSession;
   }
-  if (adminGrant) {
-    systemPrompt += !("background" in adminGrant) ? ADMIN_PROMPT_BLOCK
-      : recurringGrants ? REMINDER_ADMIN_PROMPT_BLOCK : BACKGROUND_ADMIN_PROMPT_BLOCK;
-  }
   // Numo's memory (MIN-915): read in every turn of a user with the memory on,
   // written only where the user talks to Numo directly. A routine runs
   // unattended and a comment mention sits on a shared surface, so neither can
@@ -607,19 +630,6 @@ async function buildExecutionInput(input: {
   const memoryOn = !intent.documentation && intent.memoryEnabled !== false;
   const memoryWritable = memoryOn && !intent.routineId && !intent.wake && !intent.reminder &&
     intent.triggerSource !== "mention";
-  if (memoryOn) {
-    // An unreadable memory degrades the turn rather than failing it.
-    const memory = await loadNumoMemoryPrompt({
-      service, userId: turn.user_id, projectId: intent.projectId, writable: memoryWritable,
-    }).catch(() => {
-      console.error("[numo-memory] prompt_load_failed");
-      return null;
-    });
-    if (memory) {
-      systemPrompt += memory.block;
-      afterOrNow(() => touchNumoMemories(service, turn.user_id, memory.shownIds));
-    }
-  }
   // Numo's journal (MIN-927): every turn but public help reads and writes
   // it, a routine and an @Numo mention included: what Numo did there, or
   // found waiting for the user, belongs on their home page as much.
@@ -633,6 +643,53 @@ async function buildExecutionInput(input: {
   const journalScope: JournalScope | null = journalSource === "routine" || journalSource === "mention"
     ? { projectId: intent.projectId }
     : null;
+  // The tools come first: the prompt gives the rules of a tool family only
+  // in a turn that offers it.
+  const tools = offeredTools({ intent, adminGrant, memoryWritable, journalSource, recurringGrants, readerAccess });
+  const offeredToolNames = new Set(tools.map((tool) => tool.function.name));
+
+  let systemPrompt: string;
+  if (intent.documentation) {
+    systemPrompt = await buildDocumentationHelpPrompt(intent.locale, intent.documentation.articleId, intent.documentation.selfHosting);
+  } else if (access) {
+    const promptProject = await gatherProjectPromptContext({
+      supabase: readClient,
+      service,
+      project: access.project,
+    });
+    systemPrompt = buildSystemPrompt(promptProject, intent.locale, offeredToolNames, intent.numoDefaultStatus);
+    if (readerAccess) {
+      systemPrompt += `\n## Access
+- The user is a Reader in this project: it is read-only for them${access.canComment ? ", except for comments" : ""}. Do not offer changes to it; tools that would change it are refused.`;
+    }
+    // What guides Smart Fill and Smart Assign is the project's (MIN-988):
+    // Numo reads it here so a stated preference lands there, not in memory.
+    if (access.role !== "reader") {
+      systemPrompt += await loadProjectAiInstructionsPrompt({
+        service, projectId: access.project.id, isOwner: access.isOwner,
+      });
+    }
+  } else {
+    systemPrompt = buildGlobalSystemPrompt(intent.locale, offeredToolNames, intent.numoDefaultStatus);
+  }
+  if (intent.timezone) systemPrompt += buildClockBlock(intent.timezone);
+  if (adminGrant) {
+    systemPrompt += !("background" in adminGrant) ? ADMIN_PROMPT_BLOCK
+      : recurringGrants ? REMINDER_ADMIN_PROMPT_BLOCK : BACKGROUND_ADMIN_PROMPT_BLOCK;
+  }
+  if (memoryOn) {
+    // An unreadable memory degrades the turn rather than failing it.
+    const memory = await loadNumoMemoryPrompt({
+      service, userId: turn.user_id, projectId: intent.projectId, writable: memoryWritable,
+    }).catch(() => {
+      console.error("[numo-memory] prompt_load_failed");
+      return null;
+    });
+    if (memory) {
+      systemPrompt += memory.block;
+      afterOrNow(() => touchNumoMemories(service, turn.user_id, memory.shownIds));
+    }
+  }
   if (journalSource) {
     // An unreadable journal degrades the turn rather than failing it.
     const journal = await loadNumoJournalPrompt({
@@ -791,42 +848,6 @@ async function buildExecutionInput(input: {
     return chatMessage;
   });
   for (const message of historyMessages) if (message) messages.push(message);
-  let tools: AssistantToolDef[] = adminGrant
-    ? [...CONVERSATION_ASSISTANT_TOOLS, ...ADMIN_ASSISTANT_TOOLS]
-    : CONVERSATION_ASSISTANT_TOOLS;
-  if (!intent.webSearchEnabled) tools = withoutWebSearch(tools);
-  // The search in earlier conversations (MIN-956) goes with the memory:
-  // offered where the user talks to Numo directly, never on a shared surface
-  // (a mention) or in an unattended turn, whose instructions may come from
-  // someone else.
-  if (!memoryWritable) tools = tools.filter((tool) => !MEMORY_TOOLS.has(tool.function.name));
-  if (!journalSource) tools = tools.filter((tool) => !JOURNAL_TOOLS.has(tool.function.name));
-  // A routine runs unattended: nobody is there to answer a question or review
-  // a proposal, so the tools that wait for the user are not offered.
-  if (intent.routineId || intent.reminder) {
-    tools = tools.filter((tool) => !WAITS_FOR_USER_TOOLS.has(tool.function.name));
-  }
-  // Reminders (MIN-923) are set and cancelled only in a conversation the
-  // user holds with Numo: not by a routine or a mention, whose instructions
-  // come from other people, nor by a reminder's own turn. A routine and a
-  // mention do not list them either: a mention replies on a shared thread.
-  if (intent.routineId || intent.reminder || intent.triggerSource === "mention") {
-    const hidden = intent.reminder ? REMINDER_WRITE_TOOLS : REMINDER_TOOLS;
-    tools = tools.filter((tool) => !hidden.has(tool.function.name));
-  }
-  // A background turn is unattended too, and its guarded tools take the
-  // memory that allows them (`authorized_by`). An occurrence of a recurring
-  // reminder is guarded by its grants instead.
-  if (intent.wake) tools = proactiveToolSet(tools);
-  else if (recurringGrants) tools = proactiveToolSet(tools, { reminderGrants: recurringGrants });
-  if (intent.documentation) tools = CONVERSATION_ASSISTANT_TOOLS.filter(tool => tool.function.name === "get_help");
-  // An @Numo mention runs on the shared surface of this one project: a
-  // reader's mention is offered read tools only (plus comments when allowed).
-  // Chat conversations stay cross-project, so there the per-call gate in
-  // executeTool refuses writes in read-only projects.
-  else if (readerAccess && intent.triggerSource === "mention") {
-    tools = readerToolSet(tools, readerAccess.canComment);
-  }
   return {
     messages, contextSummary: stored.summary, originOf: (message) => origins.get(message),
     tools, adminGrant, memoryWritable, journalSource, journalScope,

@@ -11,7 +11,7 @@ describe("isAiSurfaceAvailable", () => {
     expect(
       isAiSurfaceAvailable(false, [
         { validated_at: null, enabled_surfaces: ["assistant"] },
-        { validated_at: "2026-08-20T12:00:00.000Z", enabled_surfaces: ["agent"] },
+        { validated_at: "2026-08-20T12:00:00.000Z", enabled_surfaces: ["voice"] },
       ], "assistant"),
     ).toBe(false);
     expect(

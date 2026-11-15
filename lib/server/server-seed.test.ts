@@ -60,7 +60,7 @@ describe("reads a page load carries (MIN-880)", () => {
   });
 
   it("names the routines and admin reads", async () => {
-    expect(await pageReads("/routines")).toEqual(["/api/routines", "/api/agent/models"]);
+    expect(await pageReads("/routines")).toEqual(["/api/routines"]);
     expect(await pageReads("/admin")).toEqual(["/api/admin/capabilities", "/api/admin/overview"]);
   });
 

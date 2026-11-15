@@ -11,10 +11,6 @@
  */
 
 import type { DesktopAuthLink } from "@/lib/desktop/auth-link";
-import type {
-  LocalModelDiscoveryInput,
-  LocalModelDiscoveryResult,
-} from "@/lib/desktop/local-models";
 import type { DesktopLocalNotificationPayload } from "@/lib/desktop/local-notification";
 import type { LinuxBackgroundNotificationState } from "@/lib/desktop/linux-background";
 import type { DesktopNotificationCapabilities } from "@/lib/desktop/notification-capabilities";
@@ -165,12 +161,6 @@ export interface DesktopBridge {
    * person's click. No effect when nothing is ready.
    */
   installUpdate(): void;
-  /**
-   * Reads models exposed by Ollama or an OpenAI-compatible endpoint on the
-   * local loop. The main process refuses any URL that does not point to
-   * loopback, and returns nothing but model ids.
-   */
-  discoverLocalModels(input: LocalModelDiscoveryInput): Promise<LocalModelDiscoveryResult>;
   /**
    * Commits this window's DOM storage to disk now. Chromium otherwise defers
    * localStorage commits by several seconds, so a crash or forced quit right

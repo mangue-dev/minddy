@@ -33,8 +33,8 @@ const project = {
 };
 
 const surfaces: Record<string, string> = {
-  "project chat": buildSystemPrompt(project, "fr"),
-  "global chat": buildGlobalSystemPrompt("fr"),
+  "project chat": buildSystemPrompt(project, "fr", new Set()),
+  "global chat": buildGlobalSystemPrompt("fr", new Set()),
 };
 
 describe("how to respond to distress", () => {

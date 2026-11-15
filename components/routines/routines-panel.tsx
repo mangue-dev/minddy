@@ -32,10 +32,9 @@ import { selectedItemsPageContext } from "@/lib/assistant-selected-items";
 import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/projects-context";
 import { useOfferedProjects } from "@/lib/use-offered-projects";
-import { prefetchRoutineDetail, routinesQueryKey, useRoutinesQuery } from "@/lib/use-routines-query";
+import { prefetchRoutineDetail, routinesQueryKey, useRoutineSchedulingConfigured, useRoutinesQuery } from "@/lib/use-routines-query";
 import { describeSchedule } from "@/lib/routine-schedule";
 import { orderRoutinesWithinWeek } from "@/lib/routine-week-order";
-import { useAgentModelsQuery } from "@/lib/use-agent-models-query";
 import { SIDEBAR_HEADER_ACTION_CLASS, SIDEBAR_ROW_HOVER_CLASS, SIDEBAR_ROW_SELECTED_CLASS } from "@/lib/sidebar-control-styles";
 import type { Routine } from "@/lib/routines-api";
 import type { ContextMenuAction } from "@/components/issue-context-menu";
@@ -116,10 +115,7 @@ export function RoutinesPanel({
   // An empty accordion offers creation: none for a hidden project (MIN-751).
   const offeredProjects = useOfferedProjects(projects);
   const { routines, loading } = useRoutinesQuery();
-  const {
-    routineSchedulingConfigured,
-    loading: agentCapabilitiesLoading,
-  } = useAgentModelsQuery();
+  const routineSchedulingConfigured = useRoutineSchedulingConfigured();
 
   const actions = useRoutineActions({ schedulingConfigured: routineSchedulingConfigured });
   const [trashTarget, setTrashTarget] = useState<Routine | null>(null);
@@ -181,7 +177,6 @@ export function RoutinesPanel({
  * type-check does not see, since the reference is perfectly typed.
  */
   const canCreateIn = (projectId: string | undefined) =>
-    !agentCapabilitiesLoading &&
     routineSchedulingConfigured &&
     !!projectId &&
     projectById.get(projectId)?.owner_id === user?.id;
@@ -298,15 +293,13 @@ export function RoutinesPanel({
  * page said nothing, and its blank screen read like a bug.
  */
   const emptyReason =
-    agentCapabilitiesLoading
-      ? null
-      : !routineSchedulingConfigured
-          ? "emptyNoScheduler"
-          : projects.length === 0
-            ? "emptyNoProject"
-            : anyEligible
-                ? null
-                : "emptyNotOwner";
+    !routineSchedulingConfigured
+      ? "emptyNoScheduler"
+      : projects.length === 0
+        ? "emptyNoProject"
+        : anyEligible
+          ? null
+          : "emptyNotOwner";
   /**
  * What the screen says when there is NO routine — the same phrase on both
  * sides, the column and the pane. A wall that prevents putting one (no
@@ -348,11 +341,11 @@ export function RoutinesPanel({
   // scheduler and project ownership to be known, then show the home — or
   // say why no routine can be created here.
   useEffect(() => {
-    if (!createIntent || agentCapabilitiesLoading || projectsLoading) return;
+    if (!createIntent || projectsLoading) return;
     if (anyEligible) goHome();
     else if (emptyReason) toast.error(t(emptyReason as "emptyNoProject"));
     onCreateIntentConsumed?.();
-  }, [createIntent, agentCapabilitiesLoading, projectsLoading, anyEligible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [createIntent, projectsLoading, anyEligible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openIntent = (routine: Routine, action: RoutineDetailIntent) => {
     if (onIntent) onIntent(routine.id, action);
@@ -392,14 +385,14 @@ export function RoutinesPanel({
             id: "routine-pause",
             label: t("pause"),
             icon: <HugeiconsIcon icon={PauseCircleIcon} className="size-4" />,
-            disabled: pending || agentCapabilitiesLoading,
+            disabled: pending,
             onSelect: () => actions.toggleEnabled(routine, false),
           }
         : {
             id: "routine-resume",
             label: t("resume"),
             icon: <HugeiconsIcon icon={PlayCircleIcon} className="size-4" />,
-            disabled: pending || agentCapabilitiesLoading || !routineSchedulingConfigured,
+            disabled: pending || !routineSchedulingConfigured,
             onSelect: () => actions.toggleEnabled(routine, true),
           },
       {
@@ -713,7 +706,7 @@ export function RoutinesPanel({
              before having the answer would flash an empty state on a list
              that is not empty, and a blank pane read as nothing coming. */
           <RoutineDetailSkeleton />
-        ) : agentCapabilitiesLoading || projectsLoading ? (
+        ) : projectsLoading ? (
           // Whether the home can be offered is not known yet.
           <div className="flex-1" />
         ) : anyEligible ? (

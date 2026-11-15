@@ -15,7 +15,7 @@
  * Pure module: shared by the admin dashboard, the account settings and the
  * server.
  */
-import { isLocalAgentProvider, type AgentProviderId } from "@/lib/agent-providers";
+import type { AgentProviderId } from "@/lib/agent-providers";
 import { providerSupportsModelCapability } from "@/lib/model-catalog-capability";
 
 export const DECISION_ENGINES = ["model", "llm"] as const;
@@ -40,10 +40,9 @@ export function toDecisionEngine(value: string | null | undefined): DecisionEngi
 /**
  * Whether an account credential of this provider can answer decisions with
  * this engine. Only OpenRouter publishes the decisions endpoint; any provider
- * that serves a language model on the server can answer as an LLM. Local
- * endpoints are never reached from the server.
+ * that serves a language model on the server can answer as an LLM.
  */
 export function providerServesDecisions(provider: AgentProviderId, engine: DecisionEngine): boolean {
   if (engine === "model") return provider === "openrouter";
-  return !isLocalAgentProvider(provider) && providerSupportsModelCapability(provider, "text");
+  return providerSupportsModelCapability(provider, "text");
 }

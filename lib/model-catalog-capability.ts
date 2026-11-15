@@ -20,7 +20,7 @@ export type AdminCatalogCapability = (typeof ADMIN_CATALOG_CAPABILITIES)[number]
  *
  * This is deliberately provider-derived rather than user-configurable. Replacing
  * a key or changing its provider therefore recomputes coverage immediately and
- * cannot leave a stale capability selection behind. Generic and local endpoints
+ * cannot leave a stale capability selection behind. Generic endpoints
  * only promise the OpenAI-compatible chat contract, so specialized endpoints
  * stay on managed AI unless a future discovery contract can prove otherwise.
  */
@@ -35,8 +35,6 @@ export const BYOK_PROVIDER_CAPABILITIES: Readonly<
   "opencode-go": ["text"],
   "opencode-zen": ["text"],
   generic: ["text"],
-  local_openai: ["text"],
-  ollama: ["text"],
 };
 
 export function isModelCatalogCapability(

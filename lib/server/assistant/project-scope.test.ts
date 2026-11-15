@@ -31,6 +31,7 @@ describe("Numo project scope", () => {
         categories: [],
       },
       "en",
+      new Set(),
     );
 
     expect(prompt).toContain("Conversations have no project identity");
