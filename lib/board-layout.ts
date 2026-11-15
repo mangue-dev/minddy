@@ -86,4 +86,4 @@ export const BOARD_COLUMN_CLASS =
  * of it is the cards'.
  */
 export const BOARD_SCROLLER_CLASS =
-  "flex gap-3 overflow-x-auto px-4 scroll-px-4 max-sm:px-2 max-sm:scroll-px-2 after:w-1 after:shrink-0 after:content-[''] snap-x snap-mandatory sm:px-6 sm:scroll-px-6 sm:after:w-3 wide:after:hidden wide:snap-none";
+  "scrollbar-pane-inset flex gap-3 overflow-x-auto px-4 scroll-px-4 max-sm:px-2 max-sm:scroll-px-2 after:w-1 after:shrink-0 after:content-[''] snap-x snap-mandatory sm:px-6 sm:scroll-px-6 sm:after:w-3 wide:after:hidden wide:snap-none";

@@ -186,6 +186,10 @@ export function TooltipPortalContainer({
 
 // `overflow-wrap: anywhere` breaks a word only when it cannot fit the width:
 // a long file name or URL with no space wraps instead of leaving the bubble.
+//
+// One pixel more above than below (9px / 7px): Inter sets its capitals about
+// a pixel above the middle of a 12px line, so even padding left the label
+// visibly closer to the top of the bubble. The bubble keeps its height.
 export function TooltipContent({
   className,
   sideOffset = 5,
@@ -203,7 +207,7 @@ export function TooltipContent({
         sideOffset={sideOffset}
         collisionPadding={collisionPadding ?? defaultCollisionPadding}
         className={cn(
-          "z-[60] max-w-[220px] rounded-md border border-border bg-popover px-2.5 py-2 text-xs leading-snug text-popover-foreground shadow-md text-left [overflow-wrap:anywhere] origin-(--radix-tooltip-content-transform-origin) duration-150 ease-out data-closed:duration-120 data-closed:ease-in animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+          "z-[60] max-w-[220px] rounded-md border border-border bg-popover px-2.5 pt-[9px] pb-[7px] text-xs leading-snug text-popover-foreground shadow-md text-left [overflow-wrap:anywhere] origin-(--radix-tooltip-content-transform-origin) duration-150 ease-out data-closed:duration-120 data-closed:ease-in animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
           className,
         )}
         {...props}

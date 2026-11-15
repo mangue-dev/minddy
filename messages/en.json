@@ -402,6 +402,7 @@
   "Billing": {
     "usageAria": "Plan usage",
     "usagePercent": "{percent}%",
+    "usageTooltip": "Remaining AI budget",
     "planFree": "Free",
     "planGo": "Go",
     "planPro": "Pro",
@@ -2292,7 +2293,7 @@
     "feedbackSubmitError": "Couldn't share feedback. Check your connection and try again.",
     "feedbackDescriptionTooLong": "The description is too long ({max, number} characters max).",
     "feedbackRateLimited": "You've shared several ideas. Wait a moment and try again.",
-    "whatsNew": "What's new",
+    "help": "Help",
     "version": "Version",
     "webVersion": "Web version",
     "appVersion": "App version",

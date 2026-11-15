@@ -402,6 +402,7 @@
   "Billing": {
     "usageAria": "Plannutzung",
     "usagePercent": "{percent} %",
+    "usageTooltip": "Verbleibendes KI-Budget",
     "planFree": "Free",
     "planGo": "Go",
     "planPro": "Pro",
@@ -2292,7 +2293,7 @@
     "feedbackSubmitError": "Feedback konnte nicht geteilt werden. Prüfe deine Verbindung und versuche es erneut.",
     "feedbackDescriptionTooLong": "Die Beschreibung ist zu lang (höchstens {max, number} Zeichen).",
     "feedbackRateLimited": "Du hast mehrere Ideen geteilt. Warte kurz und versuche es erneut.",
-    "whatsNew": "Was ist neu",
+    "help": "Hilfe",
     "version": "Version",
     "webVersion": "Webversion",
     "appVersion": "App-Version",

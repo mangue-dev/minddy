@@ -402,6 +402,7 @@
   "Billing": {
     "usageAria": "Usage de l’offre",
     "usagePercent": "{percent} %",
+    "usageTooltip": "Budget IA restant",
     "planFree": "Free",
     "planGo": "Go",
     "planPro": "Pro",
@@ -2292,7 +2293,7 @@
     "feedbackSubmitError": "Impossible de partager votre retour. Vérifiez votre connexion et réessayez.",
     "feedbackDescriptionTooLong": "La description est trop longue ({max, number} caractères au maximum).",
     "feedbackRateLimited": "Vous avez partagé plusieurs idées. Patientez un instant avant de réessayer.",
-    "whatsNew": "Nouveautés",
+    "help": "Aide",
     "version": "Version",
     "webVersion": "Version web",
     "appVersion": "Version de l'application",

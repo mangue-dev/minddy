@@ -38,6 +38,9 @@ export function AppTooltip({
 
 function ShortcutKeys({ keys }: { keys: readonly string[] }) {
   return (
+    // Centered on the label, so they follow the pixel the bubble's padding
+    // gives it (tooltip.tsx): their letters sit high in the chip like the
+    // label's do in its line, and the two then read as one row.
     <span className="inline-flex items-center gap-0.5">
       {keys.map((key, index) => (
         <Kbd key={`${index}-${key}`} size="sm">

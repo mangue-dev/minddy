@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildPageTree, type PageRow } from "./pages";
-import { computePageMove, dropModeAt, type PageDropMode } from "./pages-move";
+import { computePageMove, dropModeAt, favoriteDropEffect, type PageDropMode } from "./pages-move";
 
 /**
  * MIN-270 — drag and drop of the tree.
@@ -119,5 +119,34 @@ describe("computePageMove", () => {
     expect(move).not.toBeNull();
     expect(move!.position > "1").toBe(true);
     expect(move!.position < "2").toBe(true);
+  });
+});
+
+describe("favoriteDropEffect", () => {
+  const favoriteRootIds = new Set(["fav"]);
+  const favoriteSectionIds = new Set(["fav", "fav-child"]);
+  const effect = (draggedFavorite: boolean, targetId: string, mode: PageDropMode) =>
+    favoriteDropEffect({ draggedFavorite, targetId, mode, favoriteRootIds, favoriteSectionIds });
+
+  it("pins a regular page dropped beside a favorite root", () => {
+    expect(effect(false, "fav", "before")).toBe("pin");
+    expect(effect(false, "fav", "after")).toBe("pin");
+  });
+
+  it("still nests a regular page dropped inside a favorite", () => {
+    expect(effect(false, "fav", "inside")).toBe("move");
+  });
+
+  it("only moves a regular page dropped beside a favorite's subpage", () => {
+    expect(effect(false, "fav-child", "after")).toBe("move");
+  });
+
+  it("unpins a favorite dropped in the regular tree", () => {
+    expect(effect(true, "plain", "before")).toBe("unpin-and-move");
+    expect(effect(true, "plain", "inside")).toBe("unpin-and-move");
+  });
+
+  it("keeps a favorite pinned when it moves within the favorites section", () => {
+    expect(effect(true, "fav-child", "inside")).toBe("move");
   });
 });

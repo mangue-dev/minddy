@@ -53,7 +53,8 @@ import {
  * ticket plan: without them, correcting a sentence costs the entire document in tokens, and
  * anything that has not been touched risks being rewritten in the process.
  *
- * No deletion, voluntarily: the trash remains a human gesture.
+ * Trashing a page, a reversible gesture, lives with the other trash tools in
+ * `trash-tools.ts`.
  */
 
 /** Pages one minddy_create_page call may create. */

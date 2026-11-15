@@ -17,6 +17,7 @@ import { NativeMobileAppearance } from "@/components/mobile/native-appearance";
 import { PublicLinksOutside } from "@/components/mobile/public-links-outside";
 import { DesktopChrome } from "@/components/desktop-chrome";
 import { KeyboardModality } from "@/components/keyboard-modality";
+import { ScrollbarActivity } from "@/components/scrollbar-activity";
 import { PostHogInit } from "@/components/posthog-init";
 import { AppLayoutInitScript } from "@/components/app-layout-init-script";
 import { ThemeInitScript } from "@/components/theme-init-script";
@@ -241,7 +242,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
+        className={`${inter.variable} ${instrumentSerif.variable}`}
       >
         <CspNonceProvider nonce={nonce}>
         <ThemeProvider defaultTheme={defaultTheme}>
@@ -277,6 +278,7 @@ export default async function RootLayout({
                 other possible source than the page. Don't give anything back. */}
             <DesktopChrome />
             <KeyboardModality />
+            <ScrollbarActivity />
             <NativeMobileAppearance />
             <PublicLinksOutside />
             <CookieBanner />

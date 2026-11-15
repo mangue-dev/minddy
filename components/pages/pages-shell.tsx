@@ -181,11 +181,13 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
   );
 
   const move = useCallback(
-    (dragId: string, targetId: string, mode: PageDropMode) => {
-      const patch = computePageMove(pages, dragId, targetId, mode);
+    (dragId: string, targetId: string, mode: PageDropMode, options?: { unpin?: boolean }): boolean => {
+      const move = computePageMove(pages, dragId, targetId, mode);
       // `null` = gesture without effect (on oneself) or loop: nothing to say, nothing
-      // didn't move on the screen either.
-      if (!patch) return;
+      // didn't move on the screen either. A favorite dropped in the regular tree
+      // is still unpinned, in the same write as its move.
+      const patch = options?.unpin ? { ...move, favorite: false } : move;
+      if (!patch) return false;
       void updatePage(dragId, patch).catch((err: unknown) => {
         // The tree is already back in place (the cache was replayed in reverse);
         // it remains to SAY why, otherwise the gesture seems to have served no purpose.
@@ -197,6 +199,7 @@ function PagesShellInner({ browse }: { browse?: SidebarBrowseTarget }) {
               : t("moveFailed")
         );
       });
+      return true;
     },
     [pages, updatePage, t]
   );

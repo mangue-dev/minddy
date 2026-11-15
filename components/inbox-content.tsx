@@ -245,7 +245,7 @@ export default function InboxContent({
       <div
         ref={setListRef}
         {...contentFade.scrollProps}
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="scrollbar-pane-inset min-h-0 flex-1 overflow-y-auto"
       >
         <ul data-inbox-list className="w-full divide-y divide-border/60 py-1">
           {showInvitations && invitations.map((invitation) => (

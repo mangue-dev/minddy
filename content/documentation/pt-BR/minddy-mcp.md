@@ -185,6 +185,8 @@ Para converter um tipo, use `operation=convert` com `propertyId`, `targetType`, 
 
 As ferramentas de rotinas, exclusivas do proprietário, criam, alteram, pausam ou removem rotinas acionadas por um agendamento, um evento ou uma nova entrada de banco de dados. Leia antes de criar para evitar duplicatas. `minddy_add_resource` limita os arquivos a 10 MB; as ferramentas de página não inventam URLs.
 
+`minddy_trash_page` move uma página e suas subpáginas para a lixeira; confirme antes com o usuário. `minddy_list_trash` lista o que foi excluído dos seus projetos e `minddy_restore_from_trash` restaura um item como ele era, com o `type` e o `id` que a lista retorna. Só o proprietário do projeto pode restaurar um projeto ou uma rotina.
+
 ### Conferir com um exemplo {#example}
 
 O exemplo altera a primeira tarefa de um plano já lido. Substitua o UUID do projeto e o ticket pelos valores encontrados na descoberta e use o índice da última leitura. Depois confira `plan_tasks` e `plan_progress`. Para um erro de acesso, verifique conta e projeto; para conflito, releia e aplique apenas a alteração necessária. Não repita uma alteração externa de resultado incerto sem conferir o resultado.

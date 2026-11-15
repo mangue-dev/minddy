@@ -65,7 +65,7 @@ export function PageScroll({
       ref={setRef}
       onScroll={handleScroll}
       style={fade && scrollProps.style ? { ...style, ...scrollProps.style } : style}
-      className={cn("min-h-0 flex-1 overflow-y-auto", className)}
+      className={cn("scrollbar-pane-inset min-h-0 flex-1 overflow-y-auto", className)}
     />
   );
 }

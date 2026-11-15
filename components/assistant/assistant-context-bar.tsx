@@ -455,7 +455,8 @@ export function AssistantContextBar({
   if (items.length === 0 && !showAddButton) return null;
 
   return (
-    <div className="flex items-center gap-1.5 px-2.5 pt-2.5">
+    // Inside the composer, whose radius sets the gutter (chat-input.tsx).
+    <div className="flex items-center gap-1.5 px-[var(--composer-gutter,10px)] pt-[var(--composer-gutter,10px)]">
       <ScrollableContextRow items={items} className="flex-1" />
       {showAddButton && (
         <AddContextButton

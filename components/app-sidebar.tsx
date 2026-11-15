@@ -2,7 +2,7 @@
 
 import { projectPath } from "@/lib/app-urls";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Book02Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, LogOutIcon, NewspaperIcon, Comment01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Book02Icon, CreditCardIcon, Delete02Icon, HelpCircleIcon, Home01Icon, KeyboardIcon, LogOutIcon, NewspaperIcon, Comment01Icon, Settings01Icon, Shield01Icon, CheckIcon } from "@hugeicons/core-free-icons";
 import { AppIcon } from "@/components/icon";
 import { useMobileAccountIdentity } from "@/components/mobile-account";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -68,7 +68,7 @@ import { ProjectOrb } from "@/components/project-orb";
 import { UserAvatar } from "@/components/user-avatar";
 import { projectOrbSeed } from "@/lib/project-orb-colors";
 import { HOME_BACK_NAV_KEY } from "@/components/project-nav-model";
-import { useChordPrefix, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
+import { useChordPrefix, useCheatsheet, CHORD_PREFIX } from "@/lib/keyboard/keyboard-context";
 import { sidebarTakesProjectSwitch } from "@/lib/keyboard/project-switch-shortcut";
 import { useModKey } from "@/lib/keyboard/use-mod-shortcut";
 import { useAppRouter } from "@/lib/use-app-router";
@@ -1033,6 +1033,9 @@ function ChangelogButton({
   portalOwner: string;
 }) {
   const t = useTranslations("Nav");
+  const tk = useTranslations("Keyboard");
+  // The keyboard shortcuts panel, also opened by `?` and the palette.
+  const { setOpen: openCheatsheet } = useCheatsheet();
   const documentationHref = documentationPath(null, useLocale());
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1064,7 +1067,7 @@ function ChangelogButton({
   const control = (
     <button
       type="button"
-      aria-label={t("whatsNew")}
+      aria-label={t("help")}
       className={SIDEBAR_COMPACT_CONTROL_CLASS}
     >
       <HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" />
@@ -1072,10 +1075,10 @@ function ChangelogButton({
   );
 
   if (mobile) return <>
-    <button type="button" aria-label={t("whatsNew")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => handleMenuOpenChange(true)} className={SIDEBAR_COMPACT_CONTROL_CLASS}><HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" /></button>
+    <button type="button" aria-label={t("help")} aria-haspopup="dialog" aria-expanded={menuOpen} onClick={() => handleMenuOpenChange(true)} className={SIDEBAR_COMPACT_CONTROL_CLASS}><HugeiconsIcon icon={HelpCircleIcon} className="size-[18px]" /></button>
     <Dialog open={menuOpen} onOpenChange={handleMenuOpenChange}>
       <DialogContent aria-describedby={undefined}>
-        <DialogTitle>{t("whatsNew")}</DialogTitle>
+        <DialogTitle>{t("help")}</DialogTitle>
         <MobileSheetScrollArea>
           <a href={documentationHref} target="_blank" rel="noopener noreferrer" onClick={() => handleMenuOpenChange(false)}
             data-mobile-sheet-row className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm hover:bg-muted">
@@ -1116,7 +1119,7 @@ function ChangelogButton({
   return (
     <>
       <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
-        <AppTooltip label={t("whatsNew")}>
+        <AppTooltip label={t("help")}>
           <DropdownMenuTrigger asChild>{control}</DropdownMenuTrigger>
         </AppTooltip>
         <DropdownMenuContent
@@ -1131,6 +1134,17 @@ function ChangelogButton({
               <span className="min-w-0 flex-1 truncate">{t("documentation")}</span>
               <HugeiconsIcon icon={ArrowUpRight01Icon} className="ml-auto size-4 shrink-0 text-muted-foreground" aria-hidden />
             </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              handleMenuOpenChange(false);
+              openCheatsheet(true);
+            }}
+            className="py-1.5 max-[1199px]:py-1.5"
+          >
+            <HugeiconsIcon icon={KeyboardIcon} className="size-4 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate">{tk("shortcutsTitle")}</span>
+            <Kbd size="sm" className="ml-auto shrink-0">?</Kbd>
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => {

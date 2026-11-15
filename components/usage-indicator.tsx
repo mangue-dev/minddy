@@ -8,6 +8,7 @@ import {
 import { useCallback, useState } from "react";
 import Link from "@/components/app-link";
 import { useTranslations } from "next-intl";
+import { AppTooltip } from "@/components/ui/app-tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ResponsivePopover, ResponsivePopoverContent, ResponsivePopoverTrigger } from "@/components/ui/responsive-popover";
@@ -73,53 +74,58 @@ export function UsageIndicator({
 
   return (
     <ResponsivePopover open={open} onOpenChange={handleOpenChange}>
-      <ResponsivePopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          // The name keeps the visible value (WCAG 2.5.3).
-          aria-label={
-            usage
-              ? tIssueUI("fieldValueAria", {
-                  field: t("usageAria"),
-                  value: t("usagePercent", { percent: roundRemainingPercent(remainingPercent) }),
-                })
-              : t("usageAria")
-          }
-          className={cn(
-            "gap-1.5 text-xs font-medium tabular-nums shadow-none",
-            sidebar
-              ? cn(
-                  SIDEBAR_COMPACT_CONTROL_CLASS,
-                  "text-sidebar-foreground/70 hover:text-sidebar-foreground",
-                )
-              : "h-8 rounded-full border border-border bg-card px-2.5 hover:bg-card",
-            stateClass,
-          )}
-        >
-          {(!sidebar || collapsed) && (
-            <HugeiconsIcon
-              icon={DashboardSpeedIcon}
-              className="size-[15px]"
-              strokeWidth={2}
-            />
-          )}
-          {!collapsed
-            ? loading
-              ? "…"
-              : usageError && !usage
-                ? "—"
-                : t("usagePercent", {
-                    percent: roundRemainingPercent(remainingPercent),
+      <AppTooltip label={t("usageTooltip")}>
+        <ResponsivePopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            // The name keeps the visible value (WCAG 2.5.3).
+            aria-label={
+              usage
+                ? tIssueUI("fieldValueAria", {
+                    field: t("usageAria"),
+                    value: t("usagePercent", { percent: roundRemainingPercent(remainingPercent) }),
                   })
-            : null}
-        </Button>
-      </ResponsivePopoverTrigger>
+                : t("usageAria")
+            }
+            className={cn(
+              "gap-1.5 text-xs font-medium tabular-nums shadow-none",
+              sidebar
+                ? cn(
+                    SIDEBAR_COMPACT_CONTROL_CLASS,
+                    "text-sidebar-foreground/70 hover:text-sidebar-foreground",
+                  )
+                : "h-8 rounded-full border border-border bg-card px-2.5 hover:bg-card",
+              stateClass,
+            )}
+          >
+            {(!sidebar || collapsed) && (
+              <HugeiconsIcon
+                icon={DashboardSpeedIcon}
+                className="size-[15px]"
+                strokeWidth={2}
+              />
+            )}
+            {!collapsed
+              ? loading
+                ? "…"
+                : usageError && !usage
+                  ? "—"
+                  : t("usagePercent", {
+                      percent: roundRemainingPercent(remainingPercent),
+                    })
+              : null}
+          </Button>
+        </ResponsivePopoverTrigger>
+      </AppTooltip>
       <ResponsivePopoverContent
         align="end"
         sideOffset={8}
         mobileTitle={t("usageAria")}
-        className="w-80 max-w-[calc(100vw-1.25rem)] p-0"
+        // Concentric with what sits in its corners (26px): the footer's
+        // pill buttons (16px radius, 10px from the edge) and the plan badge
+        // (14px radius, 12px from the top and right, usage-budget.tsx).
+        className="w-80 max-w-[calc(100vw-1.25rem)] p-0 app-desktop:rounded-[26px]"
       >
         <MobileSheetScrollArea>
           <UsageBreakdownBody compact touch={mobile} />
@@ -176,7 +182,7 @@ function UsageFooter({ onNavigate }: { onNavigate?: () => void }) {
   if (purchasesHidden) return null;
 
   return (
-    <div className="shrink-0 space-y-1 p-2">
+    <div className="shrink-0 space-y-1 p-2.5">
       {canUpgrade && nextPlanId && (
         <Button
           type="button"

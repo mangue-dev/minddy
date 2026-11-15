@@ -155,7 +155,7 @@ export function AppShell({
           tabIndex={-1}
           // No reserve for the mobile pill: content scrolls under it, and each
           // page's scrolling column ends with its room (app/globals.css).
-          className="min-h-0 flex-1 overflow-y-auto outline-none"
+          className="scrollbar-pane-inset min-h-0 flex-1 overflow-y-auto outline-none"
         >
           {children}
         </main>

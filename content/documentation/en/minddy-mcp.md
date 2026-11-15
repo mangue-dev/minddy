@@ -184,6 +184,8 @@ For a type conversion, use `operation=convert` with `propertyId`, `targetType`, 
 
 Owner-only routine tools create, change, pause or remove routines with a schedule, an event or a new database entry as their trigger. Read existing routines first to avoid duplicates. Resource uploads through `minddy_add_resource` are capped at 10 MB; page tools do not invent file URLs.
 
+`minddy_trash_page` moves a page and its subpages to the trash; confirm with the user first. `minddy_list_trash` lists what was deleted from your projects, and `minddy_restore_from_trash` brings an item back as it was, with the `type` and `id` the list returns. Only the project's owner can restore a project or a routine.
+
 ### Verify the returned state {#example}
 
 The sanitized example updates the first task of an already-read plan. Replace the project UUID and issue with values from discovery; `task_index` must come from the latest read. Confirm returned `plan_tasks` and `plan_progress`. On access errors, check the account/project authorization; on stale conflicts, read again and apply only the intended change. Do not retry an uncertain external mutation before checking its result.

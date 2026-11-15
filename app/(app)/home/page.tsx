@@ -207,7 +207,7 @@ function HomeConversation() {
           // On a phone the rows give their room to the keyboard while you write.
           hideStartersWhileComposing
           unavailableFallback={
-            <div className="h-full overflow-y-auto">
+            <div className="scrollbar-pane-inset h-full overflow-y-auto">
               <div className={cn("mx-auto box-content flex max-w-content min-w-0 flex-col", PAGE_SCROLL, PAGE_HEADING_GAP, reveal)}>
                 {welcome}
                 <div className="flex flex-col gap-3">

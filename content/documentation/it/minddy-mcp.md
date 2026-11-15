@@ -186,6 +186,8 @@ Per convertire un tipo, usa `operation=convert` con `propertyId`, `targetType`, 
 
 Gli strumenti delle routine, riservati al proprietario, creano, modificano, sospendono o eliminano routine attivate da una pianificazione, da un evento o da una nuova voce di database. Leggi prima di creare per evitare duplicati. `minddy_add_resource` limita i file a 10 MB; gli strumenti delle pagine non inventano URL.
 
+`minddy_trash_page` sposta una pagina e le sue sottopagine nel cestino; chiedi prima conferma all’utente. `minddy_list_trash` elenca ciò che è stato eliminato dai tuoi progetti e `minddy_restore_from_trash` ripristina un elemento com’era, con il `type` e l’`id` restituiti dall’elenco. Solo il proprietario del progetto può ripristinare un progetto o una routine.
+
 ### Verificare con un esempio {#example}
 
 L’esempio modifica la prima attività di un piano già letto. Sostituisci l’UUID del progetto e il ticket con quelli trovati tramite discovery, e usa l’indice dell’ultima lettura. Controlla poi `plan_tasks` e `plan_progress`. Per un errore di accesso, verifica account e progetto; per un conflitto, rileggi e applica solo la modifica necessaria. Non ripetere una modifica esterna con esito incerto senza averne verificato il risultato.

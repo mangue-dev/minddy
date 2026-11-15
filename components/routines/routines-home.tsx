@@ -145,7 +145,7 @@ function RoutinesConversation({
           autoFocusComposer={false}
           starterItems={NO_STARTERS}
           unavailableFallback={
-            <div className="h-full overflow-y-auto">
+            <div className="scrollbar-pane-inset h-full overflow-y-auto">
               <div className="mx-auto box-content flex max-w-content min-w-0 flex-col gap-8 px-4 py-6 app-desktop:px-6">
                 {heading}
                 {examples}

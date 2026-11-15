@@ -209,7 +209,7 @@ export const ConversationContent = ({
     <div
       ref={setScrollRef}
       onScroll={handleScroll}
-      className="h-full w-full overflow-y-auto"
+      className="scrollbar-pane-inset h-full w-full overflow-y-auto"
       style={{
         scrollbarGutter: "stable both-edges",
         ...fadeStyle,

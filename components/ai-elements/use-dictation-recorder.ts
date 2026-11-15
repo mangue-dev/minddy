@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useAuthOptional } from "@/lib/auth-context";
 import { resolveDictationCleanup, type DictationContext } from "@/lib/dictation-context";
 import { resolveDictationVocabulary } from "@/lib/dictation-vocabulary";
+import { holdScreenWakeLock } from "@/lib/screen-wake-lock";
 
 /**
  * The one recording pipeline behind every voice dictation (MIN-773): the
@@ -156,6 +157,13 @@ export function useDictationRecorder({
       cleanup();
     };
   }, [cleanup]);
+
+  // The screen stays on while the microphone listens: a phone that locks
+  // mid-sentence suspends the page and the take with it.
+  useEffect(() => {
+    if (status !== "recording") return;
+    return holdScreenWakeLock();
+  }, [status]);
 
   const transcribe = useCallback(
     async (blob: Blob) => {

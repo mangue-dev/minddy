@@ -811,46 +811,141 @@ button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
 }
 
 
+/* A scroller that reaches the edges of the rounded content pane (a page, the
+   board's columns strip): its track stops short of the pane's corners, so the
+   curve that clips the pane's children never cuts the thumb. The content and
+   the scroll distance stay the same; only the track is shorter. Vertical
+   tracks step back at the top and bottom, horizontal ones at both sides.
+
+   A track margin exists only on the WebKit scrollbar pseudo-elements, which
+   paint every scrollbar in Chromium and Safari (see "Scrollbars" below).
+   Firefox has no track margin and keeps its standard thin bar. */
+@utility scrollbar-pane-inset {
+  &::-webkit-scrollbar-track:vertical {
+    margin-block: var(--scrollbar-pane-inset);
+  }
+  &::-webkit-scrollbar-track:horizontal {
+    margin-inline: var(--scrollbar-pane-inset);
+  }
+}
+
+:root {
+  --scrollbar-pane-inset: 0px;
+}
+:root[data-app-layout="desktop"] {
+  /* The thumb runs 3 to 7px from the pane's inner edge; at 3px, a 24px
+     padding-box corner curves in over about 12.5px. */
+  --scrollbar-pane-inset: calc(var(--app-pane-radius) * 0.6);
+}
+
+/* ─── Low-density screens ──────────────────────────────────────────────────
+   On a 1x screen (a 27 or 32 inch 2560x1440 monitor, for one) each CSS pixel
+   is a single device pixel, and two habits of retina design lose sharpness:
+
+   - Grayscale smoothing (`-webkit-font-smoothing: antialiased`) turns off
+     macOS's own text smoothing, which thickens glyph stems a little. On a
+     retina screen that only makes light text on dark look less heavy; at 1x
+     the text comes out thin and washed out. It is kept for dense screens only.
+   - The icons' 1.5 stroke on a 24px grid becomes a line of about 1.1px at
+     16 to 18px, which never fills a whole pixel row and reads as a faint
+     gray. At 1x the default stroke goes to 1.75; icons given their own
+     stroke width keep it.
+
+   Chromium already snaps each icon to a whole pixel, so the position of an
+   icon is not the cause. */
+@media (min-resolution: 2dppx) {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+@media (max-resolution: 1.5dppx) {
+  svg [stroke-width="1.5"] {
+    stroke-width: 1.75;
+  }
+}
+
 /* Application tokens; the design tokens live in app/tokens.css. */
 :root {
   --ticket-urgent: oklch(0.62 0.24 25);
 }
 
-/* ─── Scrollbars ─────────────────────── ───────────────────────
+/* ─── Scrollbars ──────────────────────────────────────────────────────────────
 
-   That of the browser no longer appears ANYWHERE: everywhere a transparent rail
-   and a thin, rounded thumb, which becomes tinted when hovered over it. Only one rule, on the
-   universal selector, so that nothing escapes — a screen that keeps the bar
-   gray of the system in the middle of an app which no longer has one is visible immediately.
+   The browser's own bar appears NOWHERE: everywhere a transparent track and a
+   thin, rounded thumb. One rule on the universal selector, so nothing escapes:
+   a screen that kept the gray system bar would show at once.
 
-   The thumb is painted in ALPHA, black in light and white in dark: it is placed
-   both on a card and on the sidebar or the bottom of the content,
-   without having to vary one tone per surface.
+   The thumb is painted in ALPHA, black in light and white in dark, so it sits
+   as well on a card as on the sidebar, without a tone per surface. A 10px
+   track gives a comfortable pointer target and the thumb fills 4px of it: the
+   3px transparent border thins it without shrinking what you can grab
+   (`background-clip: content-box`).
 
-   A 10 px wide track for a comfortable pointer target, and a thumb
-   which only occupies 4: the transparent border of 3 px thins it without
-   shrink the area that can be caught (`background-clip: content-box`).
+   It behaves like the native overlay bars of macOS and iOS: hidden at rest,
+   shown while the scroller moves, faded out a second after it stops
+   (lib/scrollbar-activity.ts marks the scroller with `data-scrollbar`).
+   Hovering where the thumb lies, or dragging it, shows it too where the
+   browser paints the WebKit pseudo-elements. Each element sets its own
+   `--scrollbar-thumb-shown`, so a scroller never inherits the state of the
+   one around it; its scrollbar pseudo-elements inherit it from the element.
 
-   PLEASE NOTE: styling a scrollbar causes it to lose its OVERLAY mode.
-   On macOS, where it floated above the content without taking anything from it, it
-   now reserves its 10 px as soon as there is something to scroll. This is the price of one
-   bar that belongs to us; `no-scrollbar` (app/tokens.css) stays where we prefer
-   have nothing at all, like the columns of the board.
+   Chromium and Safari paint the WebKit pseudo-elements only while
+   `scrollbar-width` and `scrollbar-color` are `auto`, and only they offer a
+   hover state and a track margin (`scrollbar-pane-inset`), so where they
+   exist both stay `auto`. Firefox reads the standard pair.
 
-   The thumb (`--scrollbar-thumb`, `--scrollbar-thumb-hover`) and the utility
-   `scrollbar-quiet` come from app/tokens.css. What remains here is
-   the only thing that the library leaves to the app: the decision to apply this
-   bar on ALL surfaces, via the universal selector. */
+   WORTH KNOWING: a styled scrollbar loses the OVERLAY mode. On macOS, where
+   the bar floated over the content, it now reserves its 10px as soon as there
+   is something to scroll, even while hidden. `no-scrollbar` (app/tokens.css)
+   stays for the places that want no bar at all, like the board's columns.
+
+   The thumb colors (`--scrollbar-thumb`, `--scrollbar-thumb-hover`) and the
+   `scrollbar-quiet` utility of the navigation columns come from
+   app/tokens.css. */
+@property --scrollbar-thumb-shown {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
+@keyframes scrollbar-fade {
+  from {
+    --scrollbar-thumb-shown: var(--scrollbar-thumb);
+  }
+  to {
+    --scrollbar-thumb-shown: transparent;
+  }
+}
+
 @layer base {
-  /* Standard (Firefox, Chrome 121+, Safari 18.2+). */
   * {
+    --scrollbar-thumb-shown: transparent;
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
+    scrollbar-color: var(--scrollbar-thumb-shown) transparent;
+  }
+  [data-scrollbar="active"] {
+    --scrollbar-thumb-shown: var(--scrollbar-thumb);
+  }
+  /* 300ms: SCROLLBAR_FADE_DURATION in lib/scrollbar-activity.ts. */
+  [data-scrollbar="fading"] {
+    animation: scrollbar-fade 300ms ease-out forwards;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-scrollbar="fading"] {
+      animation: none;
+    }
   }
 
-  /* WebKit/Blink, for versions that don't yet read the two above.
-     In @layer base, so any utility covers them — that's what
-     lets `no-scrollbar` and `scrollbar-quiet` take control again. */
+  @supports selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: auto;
+      scrollbar-color: auto;
+    }
+  }
+
+  /* In @layer base, so any utility covers them: that is what lets
+     `no-scrollbar` and `scrollbar-quiet` take over. */
   *::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -860,12 +955,13 @@ button[data-variant="ghost"]:is(:active, [data-pressed]):not(:disabled) {
     background: transparent;
   }
   *::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb);
+    background-color: var(--scrollbar-thumb-shown);
     background-clip: content-box;
     border: 3px solid transparent;
     border-radius: 9999px;
   }
-  *::-webkit-scrollbar-thumb:hover {
+  *::-webkit-scrollbar-thumb:hover,
+  *::-webkit-scrollbar-thumb:active {
     background-color: var(--scrollbar-thumb-hover);
   }
 
@@ -1730,7 +1826,9 @@ html[data-app-shell] textarea {
   position: absolute;
   z-index: 60;
   transform: translate(-50%, calc(-100% - 8px));
-  padding: 0.375rem 0.625rem;
+  /* 7px above, 5px below: the label sits optically centered, as in
+     <TooltipContent>. */
+  padding: 7px 0.625rem 5px;
   border-radius: 0.375rem;
   border: 1px solid var(--border);
   background: var(--popover);

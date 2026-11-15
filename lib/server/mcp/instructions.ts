@@ -9,8 +9,8 @@ export const MCP_DISCOVERY_INSTRUCTIONS =
   "minddy is a stateless issue tracker MCP. Start with minddy_list_projects to " +
   "discover project_id values, then choose a minddy_* tool by its action-specific " +
   "description. Issue references accept a UUID, an identifier such as MIND-42, or a " +
-  "bare issue number. Read before writing; failures return stable error codes. The " +
-  "complete usage guide is available at /llms-full.txt.";
+  "bare issue number. Read before writing; failures return stable error codes. Full " +
+  "usage guide: /llms-full.txt.";
 
 /**
  * How an agent cites what it writes about (MIN-872), appended to every
@@ -168,8 +168,11 @@ export const MCP_FULL_USAGE_GUIDE =
       "asks whoever wrote it, an edit overwrites them. " +
       "Pages are markdown on both sides, never ProseMirror JSON, and they are how " +
       "'turn this page into tickets' works: read the page, then create the issues " +
-      "with the issue tools. Pages are never deleted from here — the trash is a " +
-      "human gesture. " +
+      "with the issue tools. minddy_trash_page moves a page and its subpages to " +
+      "the trash, a reversible delete: confirm with the user first. " +
+      "minddy_list_trash shows what was deleted from your projects (issues, " +
+      "objectives, feedback, pages, routines, projects) and " +
+      "minddy_restore_from_trash brings an item back exactly as it was. " +
       "A project can also collect user requests on a FEEDBACK board (also fed by its " +
       "API and internal entry), separate from issues: a user need with a public " +
       "status and votes. minddy_list_feedback / minddy_get_feedback read them (the " +

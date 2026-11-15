@@ -1178,21 +1178,6 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
     const [textWraps, setTextWraps] = useState(false);
     const [surfaceHeight, setSurfaceHeight] = useState<number | null>(null);
     const expandedLayout = textWraps;
-    // The pill is for one row. With badges above the text (context chips,
-    // attachments) the surface holds two rows, and a pill's half-circle ends
-    // cut into them: it takes the card's corners, as wrapped text does.
-    const [hasTopRow, setHasTopRow] = useState(false);
-    useLayoutEffect(() => {
-      const row = surfaceTopRef.current;
-      if (!row) return;
-      const update = () => setHasTopRow(row.offsetHeight > 0);
-      update();
-      if (typeof ResizeObserver === "undefined") return;
-      const observer = new ResizeObserver(update);
-      observer.observe(row);
-      return () => observer.disconnect();
-    }, []);
-    const cardShape = expandedLayout || hasTopRow;
     const expandedLayoutRef = useRef(expandedLayout);
     expandedLayoutRef.current = expandedLayout;
     // What the compact row takes from the grid's width besides the text and
@@ -1916,19 +1901,24 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
             {mergedContext}
           </div>
         ) : null}
-        <AgentBeam active={!!beam} keepMounted className={cn("relative z-10", cardShape ? "rounded-[1.625rem]" : "rounded-full")}>
+        {/* One radius at every height: half the compact row (52px, or 54px
+        under a finger, whose 16px text sets a taller line), so a taller
+        composer never rounds further than the pill it grows from. The rows
+        inside take their gutter from it: a `rounded-md` pill behind
+        `radius - radius-md` stays concentric with the surface, as the 32px
+        round buttons do behind the row's own padding. */}
+        <AgentBeam
+          active={!!beam}
+          keepMounted
+          className="relative z-10 rounded-(--composer-radius) [--composer-gutter:calc(var(--composer-radius)_-_var(--radius-md))] [--composer-radius:26px] pointer-coarse:[--composer-radius:27px]"
+        >
         <div
           data-composer-layout={expandedLayout ? "expanded" : "compact"}
           className={cn(
             // No focus ring, no border: the Numo composer
             // is a borderless `bg-control` surface (the editor caret is the
             // signal), brand colors are kept for drag feedback only.
-            "chat-input-surface relative overflow-hidden bg-control",
-            // One line is a pill at any height: on a phone the row's 44px
-            // targets make it taller than on a desktop, where 26px already
-            // rounded it whole. Several lines, or a row of badges above the
-            // text, keep a card's corners.
-            cardShape ? "rounded-[1.625rem]" : "rounded-full",
+            "chat-input-surface relative overflow-hidden rounded-(--composer-radius) bg-control",
             // The context row is pinned to the top and the controls row to
             // the bottom: while the height animates, both keep their gutter
             // to their edge, and only the text between them moves.
@@ -1946,10 +1936,10 @@ export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(
           <div ref={surfaceTopRef} className="shrink-0">
           {/* The host can merge semantic context and attachments into this
           single adaptive row. Concentric nesting: its rounded-md pills sit
-          behind a 10px gutter. */}
+          behind the `--composer-gutter` set above. */}
           {contextPlacement === "inside" ? mergedContext : null}
           {!contextIncludesAttachments && standaloneAttachmentItems.length > 0 && (
-            <div className="px-2.5 pt-2.5">
+            <div className="px-(--composer-gutter) pt-(--composer-gutter)">
               <ScrollableContextRow items={standaloneAttachmentItems} />
             </div>
           )}
